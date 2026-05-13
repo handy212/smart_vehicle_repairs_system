@@ -54,8 +54,7 @@ const emptyForm: AssetCategoryForm = {
 const methodLabels: Record<string, string> = {
   straight_line: "Straight line",
   declining_balance: "Declining balance",
-  double_declining: "Double declining",
-  sum_of_years_digits: "Sum of years digits",
+  units_of_production: "Units of production",
 };
 
 export default function AssetCategoriesPage() {
@@ -156,7 +155,7 @@ export default function AssetCategoriesPage() {
           </div>
           <h1 className="text-lg font-semibold text-foreground">Asset Categories</h1>
         </div>
-        <PermissionGuard permission="manage_settings">
+        <PermissionGuard permission="manage_assets">
           <Button size="sm" onClick={() => openDialog()} className="h-8">
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Add Category
@@ -194,7 +193,7 @@ export default function AssetCategoriesPage() {
                   <div className="truncate text-xs text-muted-foreground">{methodLabels[category.default_depreciation_method] || category.default_depreciation_method}</div>
                   <div className="text-xs text-muted-foreground">{category.is_active ? "Active" : "Inactive"}</div>
                   <div className="flex justify-end gap-1">
-                    <PermissionGuard permission="manage_settings">
+                    <PermissionGuard permission="manage_assets">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDialog(category)} title="Edit">
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
@@ -246,8 +245,7 @@ export default function AssetCategoriesPage() {
                     <SelectContent>
                       <SelectItem value="straight_line">Straight line</SelectItem>
                       <SelectItem value="declining_balance">Declining balance</SelectItem>
-                      <SelectItem value="double_declining">Double declining</SelectItem>
-                      <SelectItem value="sum_of_years_digits">Sum of years digits</SelectItem>
+                      <SelectItem value="units_of_production">Units of production</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

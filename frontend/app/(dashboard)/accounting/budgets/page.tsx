@@ -15,6 +15,30 @@ import apiClient from "@/lib/api/client";
 import Link from "next/link";
 import { useBranchStore } from "@/store/branchStore";
 
+interface BranchOption {
+    id: number;
+    name: string;
+}
+
+interface Budget {
+    id: number;
+    name: string;
+    fiscal_year: number;
+    start_date: string;
+    end_date: string;
+    branch_name?: string | null;
+    status: string;
+}
+
+interface BudgetFormData {
+    name: string;
+    fiscal_year: number;
+    start_date: string;
+    end_date: string;
+    description: string;
+    branch: number | string;
+}
+
 export default function BudgetsPage() {
     const { activeBranchId } = useBranchStore();
     const queryClient = useQueryClient();
@@ -49,7 +73,7 @@ export default function BudgetsPage() {
     // Create budget mutation
     const createMutation = useMutation({
 
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: BudgetFormData) => {
             const response = await apiClient.post("/accounting/budgets/", data);
             return response.data;
         },
@@ -188,7 +212,7 @@ export default function BudgetsPage() {
                                 >
                                     <option value="">Company-wide</option>
 
-                                    {branches?.map((branch: any) => (
+                                    {branches?.map((branch: BranchOption) => (
                                         <option key={branch.id} value={branch.id}>{branch.name}</option>
                                     ))}
                                 </select>
@@ -240,7 +264,7 @@ export default function BudgetsPage() {
                                 </TableHeader>
                                 <TableBody>
 
-                                    {budgets.map((budget: any) => (
+                                    {budgets.map((budget: Budget) => (
                                         <TableRow key={budget.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {budget.name}

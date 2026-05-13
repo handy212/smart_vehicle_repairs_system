@@ -328,3 +328,190 @@ class AssetMaintenance(models.Model):
     
     def __str__(self):
         return f"{self.asset.name} - {self.maintenance_type} on {self.maintenance_date}"
+
+
+class AssetAcquisitionRequest(models.Model):
+    """Capital expenditure request — approval before asset is capitalized into the register."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_approval', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('received', 'Received'),
+    ]
+
+    DEPRECIATION_METHOD_CHOICES = [
+        ('straight_line', 'Straight Line'),
+        ('declining_balance', 'Declining Balance'),
+        ('units_of_production', 'Units of Production'),
+        ('none', 'No Depreciation'),
+    ]
+
+    request_number = models.CharField(max_length=32, unique=True, db_index=True, editable=False)
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='draft', db_index=True)
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    proposed_asset_name = models.CharField(max_length=200)
+
+    category = models.ForeignKey(
+        AssetCategory,
+        on_delete=models.PROTECT,
+        related_name='acquisition_requests',
+    )
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='asset_acquisition_requests',
+    )
+    supplier = models.ForeignKey(
+        'inventory.Supplier',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='asset_acquisition_requests',
+    )
+
+    expected_acquisition_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    salvage_value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+    )
+
+    depreciation_method = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        choices=DEPRECIATION_METHOD_CHOICES,
+        help_text='Leave blank to use category default useful-life method mapping',
+    )
+    useful_life_years = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Leave blank to use category default useful life',
+    )
+
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='asset_acquisition_requests_created',
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='asset_acquisitions_approved',
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    rejected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='asset_acquisitions_rejected',
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+
+    received_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='asset_acquisitions_received',
+    )
+    received_at = models.DateTimeField(null=True, blank=True)
+    received_notes = models.TextField(blank=True)
+
+    created_asset = models.OneToOneField(
+        FixedAsset,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='source_acquisition_request',
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'branch']),
+            models.Index(fields=['request_number']),
+        ]
+
+    def __str__(self):
+        return self.request_number
+
+    def save(self, *args, **kwargs):
+        if not self.request_number:
+            self.request_number = type(self)._generate_request_number()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_request_number():
+        year = timezone.now().year
+        prefix = f'FA-REQ-{year}-'
+        existing = AssetAcquisitionRequest.objects.filter(
+            request_number__startswith=prefix,
+        ).values_list('request_number', flat=True)
+        max_seq = 0
+        for num in existing:
+            try:
+                seq = int(str(num).split('-')[-1])
+                max_seq = max(max_seq, seq)
+            except (ValueError, IndexError):
+                continue
+        return f'{prefix}{max_seq + 1:05d}'
+
+
+class AssetAcquisitionApproval(models.Model):
+    """Per-approver row for acquisition requests (any-one approval policy on the parent request)."""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    acquisition_request = models.ForeignKey(
+        AssetAcquisitionRequest,
+        on_delete=models.CASCADE,
+        related_name='approvals',
+    )
+    approver = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='asset_acquisition_approvals',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        unique_together = [['acquisition_request', 'approver']]
+        indexes = [
+            models.Index(fields=['acquisition_request', 'status']),
+            models.Index(fields=['approver', 'status']),
+        ]
+
+    def __str__(self):
+        return f'{self.acquisition_request.request_number} — {self.approver}'

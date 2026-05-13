@@ -31,16 +31,63 @@ from apps.branches.utils import resolve_branch
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.types import OpenApiTypes
 
+def request_has_branch_hint(request):
+    if request.query_params.get('branch') or request.query_params.get('branch_id'):
+        return True
+    if (
+        request.headers.get('X-Branch-ID')
+        or request.META.get('HTTP_X_BRANCH_ID')
+        or request.headers.get('X_BRANCH_ID')
+    ):
+        return True
+    session = getattr(request, 'session', None)
+    return bool(session and session.get('active_branch_id'))
+
+
+def get_accounting_branch_id(request):
+    """Return the active branch for branch-scoped accounting endpoints."""
+    is_global_user = request.user.is_superuser or getattr(request.user, 'role', None) == 'super-admin'
+    if is_global_user and not request_has_branch_hint(request):
+        return None
+    branch = resolve_branch(request)
+    return branch.id if branch else None
+
+
+def scope_journal_entries(queryset, request):
+    branch_id = get_accounting_branch_id(request)
+    if branch_id is None:
+        return queryset
+    return queryset.filter(branch_id=branch_id)
+
+
+def scope_budgets(queryset, request):
+    branch_id = get_accounting_branch_id(request)
+    if branch_id is None:
+        return queryset
+    return queryset.filter(Q(branch_id=branch_id) | Q(branch__isnull=True))
+
+
+def scope_budget_lines(queryset, request):
+    branch_id = get_accounting_branch_id(request)
+    if branch_id is None:
+        return queryset
+    return queryset.filter(Q(budget__branch_id=branch_id) | Q(budget__branch__isnull=True))
+
+
+def scope_accruals(queryset, request):
+    branch_id = get_accounting_branch_id(request)
+    if branch_id is None:
+        return queryset
+    return queryset.filter(branch_id=branch_id)
+
+
 def get_report_branch_id(request):
     """
     Get branch ID for reports.
     Superusers can see global data (None) if no branch specified.
     Regular users are forced to a branch context.
     """
-    if request.user.is_superuser and not request.query_params.get('branch') and not request.query_params.get('branch_id'):
-        return None
-    branch = resolve_branch(request)
-    return branch.id if branch else None
+    return get_accounting_branch_id(request)
 
 class BalanceSheetView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
@@ -106,7 +153,7 @@ class GeneralLedgerView(ListAPIView):
             .order_by('-journal_entry__date', '-journal_entry_id', 'id')
         )
         account_id = self.request.query_params.get('account_id')
-        branch_id = self.request.query_params.get('branch_id')
+        branch_id = get_accounting_branch_id(self.request)
         reference = (self.request.query_params.get('reference') or '').strip()
 
         start_raw = self.request.query_params.get('start_date')
@@ -116,7 +163,7 @@ class GeneralLedgerView(ListAPIView):
 
         if account_id:
             qs = qs.filter(account_id=account_id)
-        if branch_id:
+        if branch_id is not None:
             qs = qs.filter(journal_entry__branch_id=branch_id)
         if start_date:
             qs = qs.filter(journal_entry__date__gte=start_date)
@@ -251,11 +298,11 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_bank_statements'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_bank_statements'))
         else:
-            permission_classes.append(HasPermission('manage_banking'))
+            permission_classes.append(HasPermission('reconcile_bank_statements'))
         return [permission() for permission in permission_classes]
     
     def perform_create(self, serializer):
@@ -384,11 +431,11 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_bank_statements'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_bank_statements'))
         else:
-            permission_classes.append(HasPermission('manage_banking'))
+            permission_classes.append(HasPermission('reconcile_bank_statements'))
         return [permission() for permission in permission_classes]
     filterset_fields = ['bank_statement', 'matched']
     
@@ -411,7 +458,11 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Statement line must have exactly one debit or credit amount'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            transaction = Transaction.objects.select_related('journal_entry', 'account').get(id=transaction_id)
+            transaction_qs = Transaction.objects.select_related('journal_entry', 'account')
+            branch_id = get_accounting_branch_id(request)
+            if branch_id is not None:
+                transaction_qs = transaction_qs.filter(journal_entry__branch_id=branch_id)
+            transaction = transaction_qs.get(id=transaction_id)
             if transaction.matched_bank_lines.exists():
                 return Response({'error': 'Transaction is already matched to a bank line'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -463,11 +514,11 @@ class UnreconciledTransactionsView(ListAPIView):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_bank_statements'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_bank_statements'))
         else:
-            permission_classes.append(HasPermission('manage_banking'))
+            permission_classes.append(HasPermission('reconcile_bank_statements'))
         return [permission() for permission in permission_classes]
     serializer_class = TransactionSerializer # This now includes date
     
@@ -484,6 +535,10 @@ class UnreconciledTransactionsView(ListAPIView):
             journal_entry__posted=True,
             matched_bank_lines__isnull=True # Not matched to any bank line
         ).select_related('journal_entry', 'account')
+
+        branch_id = get_accounting_branch_id(self.request)
+        if branch_id is not None:
+            qs = qs.filter(journal_entry__branch_id=branch_id)
         
         if start_date:
             qs = qs.filter(journal_entry__date__gte=start_date)
@@ -500,16 +555,26 @@ class FundTransferViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_transfer_requests'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_banking'))
+            permission_classes.append(HasPermission('view_transfer_requests'))
         else:
-            permission_classes.append(HasPermission('manage_banking'))
+            permission_classes.append(HasPermission('manage_transfers'))
         return [permission() for permission in permission_classes]
     filterset_fields = ['status', 'from_account', 'to_account']
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """Submit a draft transfer for approval"""
+        transfer = self.get_object()
+        if transfer.status != 'draft':
+            return Response({'error': 'Only draft transfers can be submitted'}, status=status.HTTP_400_BAD_REQUEST)
+        transfer.status = 'pending'
+        transfer.save(update_fields=['status', 'updated_at'])
+        return Response({'status': 'pending'})
     
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -530,8 +595,8 @@ class FundTransferViewSet(viewsets.ModelViewSet):
         """Complete a fund transfer (triggers GL posting)"""
         transfer = self.get_object()
         
-        if transfer.status not in ['draft', 'approved']:
-            return Response({'error': f'Transfer must be draft or approved (current status: {transfer.status})'}, status=status.HTTP_400_BAD_REQUEST)
+        if transfer.status != 'approved':
+            return Response({'error': f'Transfer must be approved (current status: {transfer.status})'}, status=status.HTTP_400_BAD_REQUEST)
         
         transfer.status = 'completed'
         transfer.save()  # Signal will auto-post GL entry
@@ -550,7 +615,7 @@ class JobProfitabilityView(APIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_financial_reports'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('view_financial_reports'))
         return [permission() for permission in permission_classes]
     
     def get(self, request):
@@ -592,6 +657,9 @@ class BudgetViewSet(viewsets.ModelViewSet):
             permission_classes.append(HasPermission('manage_budgets'))
         return [permission() for permission in permission_classes]
     filterset_fields = ['fiscal_year', 'status', 'branch']
+
+    def get_queryset(self):
+        return scope_budget_lines(super().get_queryset(), self.request)
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -638,6 +706,9 @@ class BudgetLineViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     filterset_fields = ['budget', 'account', 'period']
 
+    def get_queryset(self):
+        return scope_budgets(super().get_queryset(), self.request)
+
 
 class BudgetVsActualView(APIView):
     """Budget vs Actual variance analysis"""
@@ -658,6 +729,8 @@ class BudgetVsActualView(APIView):
         
         if not budget_id:
             return Response({'error': 'budget_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not scope_budgets(Budget.objects.filter(id=budget_id), request).exists():
+            return Response({'error': 'Budget not found'}, status=status.HTTP_404_NOT_FOUND)
         
         start_date = parse_date(start_date_str) if start_date_str else None
         end_date = parse_date(end_date_str) if end_date_str else None
@@ -674,7 +747,7 @@ class AccountingControlView(RetrieveUpdateAPIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_accounting'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('manage_accounting_periods'))
         return [permission() for permission in permission_classes]
     serializer_class = AccountingControlSerializer
     
@@ -692,7 +765,7 @@ class AuditLogView(ListAPIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_accounting'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('manage_accounting_periods'))
         return [permission() for permission in permission_classes]
     serializer_class = AuditLogSerializer
     queryset = AuditLog.objects.all()
@@ -704,18 +777,18 @@ class JournalEntryListView(ListAPIView):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_accounting'))
+            permission_classes.append(HasPermission('view_journal_entries'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_accounting'))
+            permission_classes.append(HasPermission('view_journal_entries'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('create_journal_entries'))
         return [permission() for permission in permission_classes]
     serializer_class = JournalEntrySerializer
     queryset = JournalEntry.objects.all().order_by('-date', '-created_at')
     # pagination_class = StandardResultsSetPagination # Assuming default pagination is set in settings
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = scope_journal_entries(super().get_queryset(), self.request)
         posted = self.request.query_params.get('posted')
         if posted is not None:
              qs = qs.filter(posted=posted.lower() == 'true')
@@ -734,14 +807,17 @@ class JournalEntryDetailView(RetrieveAPIView):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_accounting'))
+            permission_classes.append(HasPermission('view_journal_entries'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_accounting'))
+            permission_classes.append(HasPermission('view_journal_entries'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('create_journal_entries'))
         return [permission() for permission in permission_classes]
     serializer_class = JournalEntrySerializer
     queryset = JournalEntry.objects.all()
+
+    def get_queryset(self):
+        return scope_journal_entries(super().get_queryset(), self.request)
 
 
 class JournalEntryCreateView(CreateAPIView):
@@ -752,7 +828,7 @@ class JournalEntryCreateView(CreateAPIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_accounting'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('create_journal_entries'))
         return [permission() for permission in permission_classes]
     serializer_class = JournalEntryCreateSerializer
     queryset = JournalEntry.objects.all()
@@ -760,7 +836,7 @@ class JournalEntryCreateView(CreateAPIView):
 
 class JournalEntryReverseView(APIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('manage_accounting')]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('create_journal_entries')]
         return [permission() for permission in permission_classes]
 
     def post(self, request, pk):
@@ -768,8 +844,12 @@ class JournalEntryReverseView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
+            journal_entry = scope_journal_entries(
+                JournalEntry.objects.all(),
+                request,
+            ).get(pk=pk)
             reversal = AccountingService.reverse_journal_entry(
-                journal_entry=JournalEntry.objects.get(pk=pk),
+                journal_entry=journal_entry,
                 user=request.user,
                 date=serializer.validated_data.get('date'),
                 reason=serializer.validated_data.get('reason', ''),
@@ -785,11 +865,11 @@ class JournalEntryReverseView(APIView):
 
 class PeriodCloseView(APIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('manage_accounting')]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('manage_accounting_periods')]
         return [permission() for permission in permission_classes]
 
     def post(self, request):
-        serializer = PeriodCloseSerializer(data=request.data)
+        serializer = PeriodCloseSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -814,7 +894,7 @@ class AccountListView(ListCreateAPIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_accounting'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('manage_chart_of_accounts'))
         return [permission() for permission in permission_classes]
     queryset = Account.objects.all().order_by('code')
     pagination_class = None
@@ -843,7 +923,7 @@ class AccountDetailView(RetrieveUpdateAPIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_accounting'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('manage_chart_of_accounts'))
         return [permission() for permission in permission_classes]
     queryset = Account.objects.all()
     
@@ -871,7 +951,7 @@ class ManagementDashboardView(APIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_financial_reports'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('export_reports'))
         return [permission() for permission in permission_classes]
     
     def get(self, request):
@@ -923,9 +1003,12 @@ class AccrualViewSet(viewsets.ModelViewSet):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_accounting'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('create_journal_entries'))
         return [permission() for permission in permission_classes]
     filterset_fields = ['status', 'accrual_type']
+
+    def get_queryset(self):
+        return scope_accruals(super().get_queryset(), self.request)
     
     @action(detail=False, methods=['get'])
     def candidates(self, request):
@@ -936,7 +1019,8 @@ class AccrualViewSet(viewsets.ModelViewSet):
         if cutoff_date:
             cutoff_date = parse_date(cutoff_date)
             
-        candidates = AccrualService.identify_accruals(cutoff_date)
+        branch_id = get_accounting_branch_id(request)
+        candidates = AccrualService.identify_accruals(cutoff_date, branch_id=branch_id)
         
         # Flatten and serialize
         # The service returns {'revenue': [], 'expense': []}
@@ -973,9 +1057,11 @@ class AccrualViewSet(viewsets.ModelViewSet):
         Reverse an existing accrual.
         """
         try:
-            accrual = AccrualService.reverse_accrual(request.user, self.get_object())
-            if not accrual:
+            accrual = self.get_object()
+            reversal = AccrualService.reverse_accrual(request.user, accrual)
+            if not reversal:
                 return Response({'error': 'Accrual already reversed or not found'}, status=status.HTTP_400_BAD_REQUEST)
+            accrual.refresh_from_db()
             serializer = self.get_serializer(accrual)
             return Response(serializer.data)
         except Exception as e:
@@ -1008,6 +1094,7 @@ class AccrualViewSet(viewsets.ModelViewSet):
                 source_model=data.get('source_model', ''),
                 source_id=data.get('source_id'),
                 source_reference=data.get('source_reference', ''),
+                branch_id=get_accounting_branch_id(request),
             )
             serializer = self.get_serializer(accrual)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1023,13 +1110,13 @@ class AnalyticsDashboardView(APIView):
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_financial_reports'))
         else:
-            permission_classes.append(HasPermission('manage_accounting'))
+            permission_classes.append(HasPermission('view_financial_reports'))
         return [permission() for permission in permission_classes]
     
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
-        branch_id = request.query_params.get('branch')
+        branch_id = get_report_branch_id(request)
         
         # Default to current month if dates not provided
         today = timezone.now().date()

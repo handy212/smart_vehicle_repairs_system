@@ -1458,8 +1458,6 @@ class ReportingService:
             Q(code__startswith='10') | Q(name__icontains='bank') | Q(name__icontains='cash'),
             account_type='asset'
         )
-        cash_account_ids = cash_accounts.values_list('id', flat=True)
-        
         # 2. Initialize Report Structure
         report = {
             'operating_activities': {'inflows': Decimal('0.00'), 'outflows': Decimal('0.00'), 'net': Decimal('0.00')},
@@ -1505,20 +1503,42 @@ class ReportingService:
             amount = txn.amount
             is_inflow = (txn.transaction_type == 'debit')
             
-            # Simple Classification Heuristic based on contra-accounts
-            # Create a set of account types involved in the OTHER side of the JE
-            contra_types = set()
+            # Classify based on contra-accounts. Account only has broad types,
+            # so use stable code/name heuristics for fixed assets and financing.
+            contra_accounts = []
             other_txns = je.transactions.exclude(id=txn.id)
             for other in other_txns:
-                contra_types.add(other.account.account_type)
+                contra_accounts.append(other.account)
             
             activity = 'operating_activities' # Default
-            
-            if 'fixed_asset' in contra_types or 'non_current_asset' in contra_types:
+
+            def is_fixed_asset(account):
+                code = account.code or ''
+                name = (account.name or '').lower()
+                return (
+                    account.account_type == 'asset'
+                    and (
+                        code.startswith(('16', '17', '18'))
+                        or any(term in name for term in ['fixed asset', 'equipment', 'vehicle', 'building', 'furniture'])
+                    )
+                )
+
+            def is_financing_account(account):
+                code = account.code or ''
+                if account.account_type == 'equity' or code.startswith('3'):
+                    return True
+                if account.account_type != 'liability':
+                    return False
+                return code.startswith(('24', '25', '26', '27', '28', '29')) or any(
+                    term in (account.name or '').lower()
+                    for term in ['loan', 'note payable', 'long-term', 'long term', 'due to owner']
+                )
+
+            if any(is_fixed_asset(account) for account in contra_accounts):
                 activity = 'investing_activities'
-            elif 'equity' in contra_types or 'long_term_liability' in contra_types:
+            elif any(is_financing_account(account) for account in contra_accounts):
                 activity = 'financing_activities'
-            # else: operating (income, expense, current_asset, current_liability)
+            # else: operating (income, expense, current assets, current liabilities)
             
             if is_inflow:
                 report[activity]['inflows'] += amount

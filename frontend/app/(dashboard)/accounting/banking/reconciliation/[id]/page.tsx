@@ -27,7 +27,7 @@ type ApiError = {
 };
 
 type BankLine = {
-    id: string;
+    id: string | number;
     transaction_date: string;
     description: string;
     debit_amount: string;
@@ -36,7 +36,7 @@ type BankLine = {
 };
 
 type SystemTransaction = {
-    id: string;
+    id: string | number;
     account: {
         id: string | number;
     };
@@ -47,7 +47,7 @@ type SystemTransaction = {
 };
 
 type BankStatement = {
-    id: string;
+    id: string | number;
     bank_account: string | number;
     bank_account_name: string;
     statement_date: string;
@@ -97,7 +97,7 @@ export default function ReconciliationDetailPage() {
     // Fetch Statement
     const { data: statement, isLoading: isStatementLoading, refetch: refetchStatement } = useQuery<BankStatement>({
         queryKey: ["bank-statement", id],
-        queryFn: () => accountingApi.getBankStatement(id),
+        queryFn: () => accountingApi.getBankStatement(id) as Promise<BankStatement>,
         enabled: !!id
     });
 
@@ -110,7 +110,7 @@ export default function ReconciliationDetailPage() {
                 String(statement.bank_account),
                 undefined,
                 new Date(new Date(statement.statement_date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-            );
+            ) as Promise<SystemTransaction[]>;
         },
         enabled: !!statement?.bank_account
     });
@@ -173,7 +173,7 @@ export default function ReconciliationDetailPage() {
 
         try {
             setIsMatchLoading(true);
-            await accountingApi.matchBankLine(selectedBankLine.id, selectedSysTx.id);
+            await accountingApi.matchBankLine(String(selectedBankLine.id), String(selectedSysTx.id));
             toast({
                 title: "Matched",
                 description: "Transaction matched successfully",
@@ -200,7 +200,7 @@ export default function ReconciliationDetailPage() {
 
         try {
             setIsMatchLoading(true);
-            await accountingApi.unmatchBankLine(selectedBankLine.id);
+            await accountingApi.unmatchBankLine(String(selectedBankLine.id));
             toast({
                 title: "Unmatched",
                 description: "Transaction unmatched successfully",
@@ -298,16 +298,16 @@ export default function ReconciliationDetailPage() {
             const isMoneyIn = bankDebit > 0;
 
             const bankTx = {
-                account_id: statement.bank_account,
+                account_id: Number(statement.bank_account),
                 amount: amount,
-                transaction_type: isMoneyIn ? 'debit' : 'credit',
+                transaction_type: isMoneyIn ? 'debit' as const : 'credit' as const,
                 description: createTxDescription
             };
 
             const otherTx = {
-                account_id: createTxAccount,
+                account_id: Number(createTxAccount),
                 amount: amount,
-                transaction_type: isMoneyIn ? 'credit' : 'debit',
+                transaction_type: isMoneyIn ? 'credit' as const : 'debit' as const,
                 description: createTxDescription
             };
 
@@ -318,12 +318,12 @@ export default function ReconciliationDetailPage() {
                 transactions: [bankTx, otherTx]
             };
 
-            const je = await accountingApi.createJournalEntry(jePayload) as CreatedJournalEntry;
+            const je = await accountingApi.createJournalEntry(jePayload) as unknown as CreatedJournalEntry;
 
             const createdBankTx = je.transactions.find((transaction) => transaction.account.id.toString() === statement.bank_account.toString());
 
             if (createdBankTx) {
-                await accountingApi.matchBankLine(selectedBankLine.id, createdBankTx.id);
+                await accountingApi.matchBankLine(String(selectedBankLine.id), String(createdBankTx.id));
                 toast({
                     title: "Created & Matched",
                     description: "Transaction created and matched to bank line",

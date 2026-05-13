@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { accountingApi } from "@/lib/api/accounting";
+import { accountingApi, type AccountingSettings, type AuditLog as AccountingAuditLog, type AuditLogResponse } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,15 +29,7 @@ type ApiError = {
     };
 };
 
-type AuditLog = {
-    id: number;
-    timestamp: string;
-    user_name?: string;
-    action: string;
-    resource_type: string;
-    resource_id: string;
-    details: string;
-};
+type AuditLog = AccountingAuditLog;
 
 function getErrorMessage(error: unknown, fallback: string) {
     const data = (error as ApiError)?.response?.data;
@@ -53,7 +45,7 @@ export default function ControlPanelPage() {
     const [closeEndDate, setCloseEndDate] = useState(format(endOfYear(new Date()), "yyyy-MM-dd"));
 
     // Fetch Settings
-    const { data: settings, isLoading: settingsLoading } = useQuery({
+    const { data: settings, isLoading: settingsLoading } = useQuery<AccountingSettings>({
         queryKey: ["accounting", "settings"],
         queryFn: accountingApi.getAccountingSettings,
     });
@@ -103,12 +95,14 @@ export default function ControlPanelPage() {
     });
 
     // Fetch Audit Logs
-    const { data: auditLogsData, isLoading: logsLoading } = useQuery({
+    const { data: auditLogsData, isLoading: logsLoading } = useQuery<AuditLogResponse | AuditLog[]>({
         queryKey: ["accounting", "audit-logs"],
         queryFn: () => accountingApi.getAuditLogs(),
     });
 
-    const auditLogs: AuditLog[] = auditLogsData?.results || auditLogsData || [];
+    const auditLogs: AuditLog[] = Array.isArray(auditLogsData)
+        ? auditLogsData
+        : auditLogsData?.results || [];
 
     const handleSaveLockDate = () => {
         updateSettingsMutation.mutate({ period_lock_date: currentLockDate || null });

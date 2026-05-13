@@ -1,9 +1,13 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { accountingApi } from "@/lib/api/accounting";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+    accountingApi,
+    type Account,
+    type ApiError,
+    type JournalEntryCreatePayload,
+} from "@/lib/api/accounting";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -25,6 +29,15 @@ import {
 } from "@/components/ui/table";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
+type JournalLineField = "account_id" | "description" | "debit" | "credit";
+
+interface JournalLine {
+    account_id: string;
+    description: string;
+    debit: string;
+    credit: string;
+}
+
 export default function NewJournalEntryPage() {
     const router = useRouter();
     const { toast } = useToast();
@@ -36,7 +49,7 @@ export default function NewJournalEntryPage() {
     const [reference, setReference] = useState("");
 
     // Initial lines: 2 empty lines
-    const [lines, setLines] = useState([
+    const [lines, setLines] = useState<JournalLine[]>([
         { account_id: "", description: "", debit: "", credit: "" },
         { account_id: "", description: "", debit: "", credit: "" },
     ]);
@@ -49,7 +62,7 @@ export default function NewJournalEntryPage() {
 
     const createMutation = useMutation({
 
-        mutationFn: (data: any) => accountingApi.createJournalEntry(data),
+        mutationFn: (data: JournalEntryCreatePayload) => accountingApi.createJournalEntry(data),
         onSuccess: () => {
             toast({
                 title: "Journal Entry Created",
@@ -60,7 +73,7 @@ export default function NewJournalEntryPage() {
             router.push("/accounting");
         },
 
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
             toast({
                 title: "Error",
                 description: error.response?.data?.detail || "Failed to create journal entry.",
@@ -69,16 +82,16 @@ export default function NewJournalEntryPage() {
         },
     });
 
-    const updateLine = (index: number, field: string, value: string) => {
+    const updateLine = (index: number, field: JournalLineField, value: string) => {
         const newLines = [...lines];
 
-        (newLines[index] as any)[field] = value;
+        newLines[index] = { ...newLines[index], [field]: value };
 
         // Auto-clear opposite field if debit/credit is entered
 
-        if (field === 'debit' && value) (newLines[index] as any).credit = "";
+        if (field === 'debit' && value) newLines[index].credit = "";
 
-        if (field === 'credit' && value) (newLines[index] as any).debit = "";
+        if (field === 'credit' && value) newLines[index].debit = "";
 
         setLines(newLines);
     };
@@ -105,7 +118,7 @@ export default function NewJournalEntryPage() {
             account_id: parseInt(line.account_id),
             description: line.description || description, // Fallback to header description if line desc empty
             amount: parseFloat(line.debit) || parseFloat(line.credit),
-            transaction_type: parseFloat(line.debit) ? 'debit' : 'credit'
+            transaction_type: parseFloat(line.debit) ? 'debit' as const : 'credit' as const
         }));
 
         createMutation.mutate({
@@ -192,7 +205,7 @@ export default function NewJournalEntryPage() {
                                             </SelectTrigger>
                                             <SelectContent>
 
-                                                {accounts?.map((acc: any) => (
+                                                {accounts?.map((acc: Account) => (
                                                     <SelectItem key={acc.id} value={acc.id.toString()}>
                                                         {acc.code} - {acc.name}
                                                     </SelectItem>

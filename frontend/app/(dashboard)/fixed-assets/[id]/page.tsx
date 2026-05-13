@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Building2, Calendar, DollarSign, Tag, MapPin, Factory, Hash, Activity, User } from "lucide-react";
+import { ArrowLeft, Edit, Building2, Calendar, DollarSign, Tag, MapPin, Factory, Hash, Activity, User, FileText, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -12,6 +12,9 @@ import { format } from "date-fns";
 import { use } from "react";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
+import { documentsApi } from "@/lib/api/documents";
+import type { FixedAssetInvoiceReceiptDoc } from "@/lib/api/fixed-assets";
+import { sameOriginMediaPath } from "@/lib/utils/media";
 
 export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     return (
@@ -39,6 +42,23 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
     if (!asset) {
         return <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">Asset not found</div>;
     }
+
+    const docs = asset.invoice_receipt_documents ?? [];
+
+    const handleDownload = async (doc: FixedAssetInvoiceReceiptDoc) => {
+        try {
+            const blob = await documentsApi.download(doc.id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = doc.original_filename || `document-${doc.id}`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            const path = sameOriginMediaPath(doc.file);
+            if (path) window.open(path, "_blank", "noopener,noreferrer");
+        }
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -206,6 +226,76 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                     </CardContent>
                 </Card>
             </div>
+
+            <Card>
+                    <CardHeader className="px-4 py-3">
+                        <CardTitle className="flex items-center text-sm font-semibold">
+                            <FileText className="mr-2 h-4 w-4" />
+                            Invoice & receipt
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-3">
+                        {asset.source_acquisition_request_id ? (
+                            <p className="text-xs text-muted-foreground">
+                                <Link
+                                    href={`/fixed-assets/acquisitions/${asset.source_acquisition_request_id}`}
+                                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                                >
+                                    Acquisition {asset.source_acquisition_request_number}
+                                    <ExternalLink className="h-3 w-3" />
+                                </Link>
+                            </p>
+                        ) : null}
+                        {docs.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                No invoice or receipt on file. Add files on the{" "}
+                                <Link href={`/fixed-assets/${assetId}/edit`} className="text-primary font-medium hover:underline">
+                                    edit asset
+                                </Link>{" "}
+                                page.
+                            </p>
+                        ) : (
+                            <ul className="divide-y rounded-md border border-border">
+                                {docs.map((d) => (
+                                    <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                                        <div className="min-w-0">
+                                            <span className="font-medium capitalize text-foreground">{d.acquisition_document_kind}</span>
+                                            <span className="text-muted-foreground"> — </span>
+                                            <span className="truncate">{d.original_filename}</span>
+                                            {d.uploaded_at ? (
+                                                <span className="block text-xs text-muted-foreground">
+                                                    {format(new Date(d.uploaded_at), "MMM d, yyyy")}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <div className="flex gap-2 shrink-0">
+                                            {d.file ? (
+                                                <Button type="button" variant="outline" size="sm" className="h-8 text-xs" asChild>
+                                                    <a
+                                                        href={sameOriginMediaPath(d.file) ?? d.file}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        Open
+                                                    </a>
+                                                </Button>
+                                            ) : null}
+                                            {/* <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                className="h-8 text-xs"
+                                                onClick={() => handleDownload(d)}
+                                            >
+                                                Download
+                                            </Button> */}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </CardContent>
+                </Card>
         </div>
     );
 }

@@ -38,6 +38,7 @@ class NotificationTemplate(models.Model):
         ('password_reset_link', 'Password Reset Link'),
         ('purchase_order_approval', 'Purchase Order Approval'),
         ('stock_transfer_approval', 'Stock Transfer Approval'),
+        ('asset_acquisition_approval', 'Fixed Asset Acquisition Approval'),
         ('custom', 'Custom'),
     ]
     

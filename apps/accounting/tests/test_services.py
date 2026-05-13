@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from decimal import Decimal
 from rest_framework.test import APIClient
-from apps.accounting.models import Account, BankStatement, BankStatementLine, JournalEntry
+from apps.accounting.models import Account, BankStatement, BankStatementLine, FundTransfer, JournalEntry
 from apps.accounting.services import AccountingService, ReportingService
 from apps.accounts.models import User
 from apps.billing.models import Invoice, InvoiceLineItem, Payment
@@ -409,3 +409,180 @@ class AccountingServiceTests(TestCase):
         response = client.post(f'/api/accounting/bank-statement-lines/{line.id}/unmatch/', {}, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertIn('reconciled', response.data['error'])
+
+    @override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)
+    def test_manual_journal_entry_create_uses_active_branch_header(self):
+        self.user.is_superuser = True
+        self.user.save(update_fields=['is_superuser'])
+
+        other_branch = Branch.objects.create(
+            name='Other Branch',
+            code='OTH',
+            phone='555-0101',
+            address='456 Test Street',
+            city='Elsewhere',
+            state='TS',
+            zip_code='12346',
+            created_by=self.user,
+        )
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.post(
+            '/api/accounting/journal-entries/create/',
+            {
+                'date': timezone.now().date().isoformat(),
+                'description': 'Branch adjustment',
+                'reference': 'BR-ADJ',
+                'transactions': [
+                    {'account_id': self.expense_account.id, 'amount': '25.00', 'transaction_type': 'debit'},
+                    {'account_id': self.asset_account.id, 'amount': '25.00', 'transaction_type': 'credit'},
+                ],
+            },
+            format='json',
+            HTTP_X_BRANCH_ID=str(other_branch.id),
+        )
+
+        self.assertEqual(response.status_code, 201)
+        entry = JournalEntry.objects.get(reference='BR-ADJ')
+        self.assertEqual(entry.branch, other_branch)
+
+    @override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)
+    def test_journal_entry_list_and_general_ledger_respect_active_branch_header(self):
+        self.user.is_superuser = True
+        self.user.save(update_fields=['is_superuser'])
+        other_branch = Branch.objects.create(
+            name='Second Branch',
+            code='SEC',
+            phone='555-0102',
+            address='789 Test Street',
+            city='Elsewhere',
+            state='TS',
+            zip_code='12347',
+            created_by=self.user,
+        )
+        first_entry = AccountingService.create_journal_entry(
+            user=self.user,
+            date=timezone.now().date(),
+            description='First branch entry',
+            lines=[
+                {'account_id': self.expense_account.id, 'type': 'debit', 'amount': Decimal('10.00')},
+                {'account_id': self.asset_account.id, 'type': 'credit', 'amount': Decimal('10.00')},
+            ],
+            posted=True,
+            branch=self.branch,
+        )
+        AccountingService.create_journal_entry(
+            user=self.user,
+            date=timezone.now().date(),
+            description='Second branch entry',
+            lines=[
+                {'account_id': self.expense_account.id, 'type': 'debit', 'amount': Decimal('20.00')},
+                {'account_id': self.asset_account.id, 'type': 'credit', 'amount': Decimal('20.00')},
+            ],
+            posted=True,
+            branch=other_branch,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+        response = client.get('/api/accounting/journal-entries/', HTTP_X_BRANCH_ID=str(self.branch.id))
+        self.assertEqual(response.status_code, 200)
+        ids = {item['id'] for item in response.data['results']}
+        self.assertEqual(ids, {first_entry.id})
+
+        response = client.get('/api/accounting/reports/general-ledger/', HTTP_X_BRANCH_ID=str(self.branch.id))
+        self.assertEqual(response.status_code, 200)
+        branch_ids = {item['branch_id'] for item in response.data['results']}
+        self.assertEqual(branch_ids, {self.branch.id})
+
+    @override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)
+    def test_banking_and_transfer_state_cannot_be_mutated_directly(self):
+        self.user.is_superuser = True
+        self.user.save(update_fields=['is_superuser'])
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+        bank_account = AccountingService.get_or_create_account('1030', 'Workflow Bank', 'asset', 'debit')
+        statement = BankStatement.objects.create(
+            bank_account=bank_account,
+            statement_date=timezone.now().date(),
+            opening_balance=Decimal('0.00'),
+            closing_balance=Decimal('50.00'),
+            created_by=self.user,
+        )
+        line = BankStatementLine.objects.create(
+            bank_statement=statement,
+            transaction_date=timezone.now().date(),
+            description='Direct mutation attempt',
+            debit_amount=Decimal('50.00'),
+            credit_amount=Decimal('0.00'),
+            balance=Decimal('50.00'),
+        )
+
+        response = client.patch(
+            f'/api/accounting/bank-statements/{statement.id}/',
+            {'reconciled': True},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        statement.refresh_from_db()
+        self.assertFalse(statement.reconciled)
+
+        response = client.patch(
+            f'/api/accounting/bank-statement-lines/{line.id}/',
+            {'matched': True},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        line.refresh_from_db()
+        self.assertFalse(line.matched)
+
+        response = client.post(
+            '/api/accounting/fund-transfers/',
+            {
+                'from_account': bank_account.id,
+                'to_account': self.asset_account.id,
+                'amount': '15.00',
+                'transfer_date': timezone.now().date().isoformat(),
+                'description': 'Transfer mutation attempt',
+                'status': 'completed',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        transfer = FundTransfer.objects.get(id=response.data['id'])
+        self.assertEqual(transfer.status, 'draft')
+
+    def test_cash_flow_classifies_investing_and_financing_by_account_code(self):
+        cash = AccountingService.get_or_create_account('1005', 'Operating Cash', 'asset', 'debit')
+        equipment = AccountingService.get_or_create_account('1600', 'Shop Equipment', 'asset', 'debit')
+        loan = AccountingService.get_or_create_account('2500', 'Equipment Loan Payable', 'liability', 'credit')
+        report_date = timezone.now().date()
+
+        AccountingService.create_journal_entry(
+            user=self.user,
+            date=report_date,
+            description='Buy equipment',
+            lines=[
+                {'account_id': equipment.id, 'type': 'debit', 'amount': Decimal('40.00')},
+                {'account_id': cash.id, 'type': 'credit', 'amount': Decimal('40.00')},
+            ],
+            posted=True,
+            branch=self.branch,
+        )
+        AccountingService.create_journal_entry(
+            user=self.user,
+            date=report_date,
+            description='Loan proceeds',
+            lines=[
+                {'account_id': cash.id, 'type': 'debit', 'amount': Decimal('100.00')},
+                {'account_id': loan.id, 'type': 'credit', 'amount': Decimal('100.00')},
+            ],
+            posted=True,
+            branch=self.branch,
+        )
+
+        report = ReportingService.get_cash_flow_statement(report_date, report_date, branch_id=self.branch.id)
+
+        self.assertEqual(report['investing_activities']['outflows'], Decimal('40.00'))
+        self.assertEqual(report['financing_activities']['inflows'], Decimal('100.00'))

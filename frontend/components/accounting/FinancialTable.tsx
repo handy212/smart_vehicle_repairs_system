@@ -19,10 +19,12 @@ interface FinancialTableColumn {
     className?: string;
 }
 
+type FinancialValue = string | number | null | undefined;
+type FinancialRow = Record<string, FinancialValue>;
+
 interface FinancialTableSection {
     title?: string;
-
-    data: any[];
+    data: FinancialRow[];
     className?: string;
     showTotal?: boolean;
     totalLabel?: string;
@@ -44,7 +46,7 @@ export function FinancialTable({
     const { formatCurrency } = useCurrency();
 
 
-    const formatValue = (value: any, format?: string) => {
+    const formatValue = (value: FinancialValue, format?: string) => {
         if (value === null || value === undefined) return "—";
 
         switch (format) {
@@ -59,7 +61,7 @@ export function FinancialTable({
 
     const calculateTotal = (section: FinancialTableSection, columnKey: string) => {
         return section.data.reduce((sum, row) => {
-            const value = parseFloat(row[columnKey] || 0);
+            const value = parseFloat(String(row[columnKey] || 0));
             return sum + (isNaN(value) ? 0 : value);
         }, 0);
     };

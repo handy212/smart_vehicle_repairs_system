@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -5,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count, Q, Avg, F
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from decimal import Decimal
 import logging
@@ -166,8 +169,19 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
         """Calculate depreciation for a specific asset for a period"""
         asset = self.get_object()
         
-        period_months = int(request.data.get('period_months', 1))
-        units_produced = int(request.data.get('units_produced', 0))
+        try:
+            period_months = int(request.data.get('period_months', 1))
+            units_produced = int(request.data.get('units_produced', 0))
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'period_months and units_produced must be integers'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if period_months < 1:
+            return Response(
+                {'error': 'period_months must be >= 1'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         depreciation_amount = DepreciationService.calculate_depreciation(
             asset,
@@ -188,22 +202,40 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
         """Manually post depreciation for an asset"""
         asset = self.get_object()
         
-        depreciation_amount = Decimal(str(request.data.get('depreciation_amount', 0)))
         period_start_date = request.data.get('period_start_date')
         period_end_date = request.data.get('period_end_date')
         post_to_gl = request.data.get('post_to_gl', True)
-        
+
         if not period_start_date or not period_end_date:
             return Response(
                 {'error': 'period_start_date and period_end_date are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
-            from datetime import datetime
-            period_start = datetime.strptime(period_start_date, '%Y-%m-%d').date()
-            period_end = datetime.strptime(period_end_date, '%Y-%m-%d').date()
-            
+            depreciation_amount = Decimal(str(request.data.get('depreciation_amount', 0)))
+        except Exception:
+            return Response(
+                {'error': 'depreciation_amount must be a valid decimal number'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if depreciation_amount <= 0:
+            return Response(
+                {'error': 'depreciation_amount must be greater than zero'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            period_start = datetime.strptime(str(period_start_date), '%Y-%m-%d').date()
+            period_end = datetime.strptime(str(period_end_date), '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'Invalid date format; use YYYY-MM-DD'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
             schedule, je_id = DepreciationService.post_depreciation(
                 asset,
                 depreciation_amount,
@@ -211,7 +243,7 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
                 period_end,
                 post_to_gl=post_to_gl
             )
-            
+
             if schedule:
                 return Response({
                     'message': 'Depreciation posted successfully',
@@ -219,16 +251,17 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
                     'journal_entry_id': je_id,
                     'schedule_id': schedule.id
                 })
-            else:
-                return Response(
-                    {'error': 'Failed to post depreciation'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-                
+            return Response(
+                {'error': 'Failed to post depreciation'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f'Error posting depreciation: {e}', exc_info=True)
             return Response(
-                {'error': str(e)},
+                {'error': 'An unexpected error occurred while posting depreciation'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -241,7 +274,17 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
         - as_of_date: Valuation as of date (defaults to today)
         - category: Filter by category ID
         """
-        as_of_date = request.query_params.get('as_of_date', timezone.now().date())
+        as_of_raw = request.query_params.get('as_of_date')
+        if as_of_raw:
+            try:
+                as_of_date = datetime.strptime(str(as_of_raw), '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid as_of_date; use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            as_of_date = timezone.now().date()
         category_id = request.query_params.get('category')
         
         assets = self.get_queryset().filter(status='active')
@@ -321,27 +364,55 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
         target_year = request.data.get('target_year')
         branch_id = request.data.get('branch_id')
         post_to_gl = request.data.get('post_to_gl', True)
-        
+
+        if target_month is not None or target_year is not None:
+            if target_month is None or target_year is None:
+                return Response(
+                    {'error': 'Provide both target_month and target_year or omit both for previous month'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                target_month = int(target_month)
+                target_year = int(target_year)
+            except (TypeError, ValueError):
+                return Response(
+                    {'error': 'target_month and target_year must be integers'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if not (1 <= target_month <= 12):
+                return Response(
+                    {'error': 'target_month must be between 1 and 12'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if target_year < 1900 or target_year > 2100:
+                return Response(
+                    {'error': 'target_year is out of allowed range'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        from apps.branches.models import Branch
+
         try:
-            from apps.branches.models import Branch
             branch = None
-            if branch_id:
-                branch = Branch.objects.get(id=branch_id)
-            
+            if branch_id is not None:
+                branch = get_object_or_404(Branch, pk=branch_id)
+
             summary = DepreciationService.run_monthly_depreciation(
                 target_month=target_month,
                 target_year=target_year,
                 branch=branch,
                 post_to_gl=post_to_gl
             )
-            
+
             serializer = DepreciationSummarySerializer(summary)
             return Response(serializer.data)
-            
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f'Error running depreciation: {e}', exc_info=True)
             return Response(
-                {'error': str(e)},
+                {'error': 'Failed to run depreciation for the selected period'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

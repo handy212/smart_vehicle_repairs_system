@@ -347,10 +347,10 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
   ],
   accounting: [
-    { name: "Overview", href: "/accounting", permission: "view_accounting_dashboard", icon: BarChart3 },
+    { name: "Overview", href: "/accounting", permission: "view_accounting", icon: BarChart3 },
     { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries", icon: BookOpen },
-    { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounts", icon: Hash },
-    { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_accounting", icon: Landmark },
+    { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounting", icon: Hash },
+    { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_bank_statements", icon: Landmark },
     { name: "Balance Sheet", href: "/accounting/reports/balance-sheet", permission: "view_financial_reports", icon: Scale },
     { name: "Profit & Loss", href: "/accounting/reports/profit-loss", permission: "view_financial_reports", icon: PieChart },
     { name: "Trial Balance", href: "/accounting/reports/trial-balance", permission: "view_financial_reports", icon: Library },
@@ -359,10 +359,10 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Tax Report", href: "/accounting/reports/tax", permission: "view_financial_reports", icon: Percent },
     { name: "Job Profitability", href: "/accounting/reports/job-profitability", permission: "view_financial_reports", icon: Target },
     { name: "Expense Breakdown", href: "/accounting/reports/expense-breakdown", permission: "view_financial_reports", icon: BarChart3 },
-    { name: "Budgets", href: "/accounting/budgets", permission: "view_accounting_settings", icon: Wallet },
-    { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_accounting_settings", icon: Repeat },
-    { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting_settings", icon: Zap },
-    { name: "Controls & Compliance", href: "/accounting/controls", permission: "view_accounting_settings", icon: Shield },
+    { name: "Budgets", href: "/accounting/budgets", permission: "view_budgets", icon: Wallet },
+    { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_transfer_requests", icon: Repeat },
+    { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting", icon: Zap },
+    { name: "Controls & Compliance", href: "/accounting/controls", permission: "manage_accounting_periods", icon: Shield },
   ],
   hr: [
     { name: "Dashboard", href: "/hr", permission: "view_hr", icon: LayoutDashboard },
@@ -386,7 +386,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   ],
   fixedAssets: [
     { name: "Assets", href: "/fixed-assets", permission: "view_assets", icon: Landmark },
-    { name: "Categories", href: "/fixed-assets/categories", permission: "manage_assets", icon: Tags },
+    { name: "Acquisitions", href: "/fixed-assets/acquisitions", permission: "view_assets", icon: ClipboardList },
     { name: "Valuation", href: "/fixed-assets/reports/valuation", permission: "view_assets", icon: PieChart },
   ],
 };

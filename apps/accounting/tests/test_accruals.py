@@ -5,6 +5,7 @@ from apps.accounting.models import Account, JournalEntry, Accrual
 from apps.accounting.services import AccountingService
 from apps.accounting.accruals import AccrualService
 from apps.accounts.models import User
+from apps.branches.models import Branch
 from apps.workorders.models import WorkOrder
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -12,6 +13,16 @@ from apps.vehicles.models import Vehicle
 class AccrualServiceTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser', password='password')
+        self.branch = Branch.objects.create(
+            name='Accrual Branch',
+            code='ACR',
+            phone='555-0200',
+            address='100 Accrual Way',
+            city='Testville',
+            state='TS',
+            zip_code='12345',
+            created_by=self.user,
+        )
         # Create necessary accounts
         self.ar_account = AccountingService.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
         self.revenue_account = AccountingService.get_or_create_account('4000', 'Sales Revenue', 'income', 'credit')
@@ -28,7 +39,8 @@ class AccrualServiceTests(TestCase):
             actual_parts_cost=Decimal('50.00'),
             estimated_total=Decimal('100.00'), # Fallback
             actual_total=Decimal('100.00'),
-            odometer_in=0
+            odometer_in=0,
+            branch=self.branch,
         )
 
         from apps.workorders.models import WorkOrderPart
@@ -61,7 +73,8 @@ class AccrualServiceTests(TestCase):
             accrual_type='revenue',
             date=timezone.now().date(),
             amount=candidate['amount'],
-            description=candidate['description']
+            description=candidate['description'],
+            branch=self.branch,
         )
         
         self.assertIsNotNone(accrual)
@@ -70,6 +83,8 @@ class AccrualServiceTests(TestCase):
         # Verify DR Accrued Revenue, CR Sales Revenue
         self.assertEqual(accrual.journal_entry.transactions.filter(account=self.accrued_revenue_account, transaction_type='debit').count(), 1)
         self.assertEqual(accrual.journal_entry.transactions.filter(account=self.revenue_account, transaction_type='credit').count(), 1)
+        self.assertEqual(accrual.branch, self.branch)
+        self.assertEqual(accrual.journal_entry.branch, self.branch)
 
     def test_reverse_accrual(self):
         # Create first
@@ -79,7 +94,8 @@ class AccrualServiceTests(TestCase):
             accrual_type='revenue',
             date=timezone.now().date(),
             amount=Decimal('100.00'),
-            description="Test Accrual"
+            description="Test Accrual",
+            branch=self.branch,
         )
         
         # Reverse
@@ -87,6 +103,7 @@ class AccrualServiceTests(TestCase):
         
         self.assertIsNotNone(je_reversal)
         self.assertTrue(accrual.is_reversed)
+        self.assertEqual(je_reversal.branch, self.branch)
         self.assertEqual(je_reversal.transactions.count(), 2)
         # Verify reversal: DR Sales Revenue, CR Accrued Revenue
         self.assertEqual(je_reversal.transactions.filter(account=self.revenue_account, transaction_type='debit').count(), 1)

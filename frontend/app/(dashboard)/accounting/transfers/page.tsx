@@ -12,6 +12,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Loader2, Check, X, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
 import apiClient from "@/lib/api/client";
+import { type Account, type ApiError, type FundTransfer } from "@/lib/api/accounting";
+
+type BadgeVariant = "default" | "secondary" | "danger" | "outline" | "success";
+
+interface TransferFormData {
+    from_account: string;
+    to_account: string;
+    amount: string;
+    transfer_date: string;
+    description: string;
+    reference: string;
+}
 
 export default function FundTransfersPage() {
     const queryClient = useQueryClient();
@@ -54,7 +66,7 @@ export default function FundTransfersPage() {
     // Create transfer mutation
     const createMutation = useMutation({
 
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: TransferFormData) => {
             const response = await apiClient.post("/accounting/fund-transfers/", data);
             return response.data;
         },
@@ -71,8 +83,28 @@ export default function FundTransfersPage() {
             });
         },
 
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
             console.error("Failed to create transfer:", error);
+        }
+    });
+
+    const submitMutation = useMutation({
+        mutationFn: async (id: number) => {
+            const response = await apiClient.post(`/accounting/fund-transfers/${id}/submit/`);
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["fund-transfers"] });
+        }
+    });
+
+    const approveMutation = useMutation({
+        mutationFn: async (id: number) => {
+            const response = await apiClient.post(`/accounting/fund-transfers/${id}/approve/`);
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["fund-transfers"] });
         }
     });
 
@@ -94,12 +126,12 @@ export default function FundTransfersPage() {
 
     const getStatusBadge = (status: string) => {
 
-        const variants: Record<string, any> = {
+        const variants: Record<string, BadgeVariant> = {
             draft: "outline",
             pending: "default",
             approved: "success",
             completed: "success",
-            cancelled: "destructive"
+            cancelled: "danger"
         };
         return <Badge variant={variants[status] || "outline"}>{status.toUpperCase()}</Badge>;
     };
@@ -138,7 +170,7 @@ export default function FundTransfersPage() {
                                     >
                                         <option value="">Select account...</option>
 
-                                        {accounts?.map((acc: any) => (
+                                        {accounts?.map((acc: Account) => (
                                             <option key={acc.id} value={acc.id}>
                                                 {acc.code} - {acc.name}
                                             </option>
@@ -156,7 +188,7 @@ export default function FundTransfersPage() {
                                     >
                                         <option value="">Select account...</option>
 
-                                        {accounts?.map((acc: any) => (
+                                        {accounts?.map((acc: Account) => (
                                             <option key={acc.id} value={acc.id}>
                                                 {acc.code} - {acc.name}
                                             </option>
@@ -241,7 +273,7 @@ export default function FundTransfersPage() {
                             </TableHeader>
                             <TableBody>
 
-                                {((Array.isArray(transfers) ? transfers : transfers?.results) || []).map((transfer: any) => (
+                                {((Array.isArray(transfers) ? transfers : transfers?.results) || []).map((transfer: FundTransfer & { journal_entry?: number | null }) => (
                                     <TableRow key={transfer.id}>
                                         <TableCell className="font-medium">{transfer.transfer_number}</TableCell>
                                         <TableCell>{format(new Date(transfer.transfer_date), "MMM d, yyyy")}</TableCell>
@@ -255,7 +287,25 @@ export default function FundTransfersPage() {
                                         <TableCell className="font-semibold">{formatCurrency(transfer.amount)}</TableCell>
                                         <TableCell>{getStatusBadge(transfer.status)}</TableCell>
                                         <TableCell>
-                                            {['draft', 'pending'].includes(transfer.status) && (
+                                            {transfer.status === 'draft' && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => submitMutation.mutate(transfer.id)}
+                                                    disabled={submitMutation.isPending}
+                                                >
+                                                    Submit
+                                                </Button>
+                                            )}
+                                            {transfer.status === 'pending' && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => approveMutation.mutate(transfer.id)}
+                                                    disabled={approveMutation.isPending}
+                                                >
+                                                    Approve
+                                                </Button>
+                                            )}
+                                            {transfer.status === 'approved' && (
                                                 <Button
                                                     size="sm"
                                                     onClick={() => completeMutation.mutate(transfer.id)}

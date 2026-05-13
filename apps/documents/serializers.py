@@ -129,7 +129,10 @@ class DocumentListSerializer(serializers.ModelSerializer):
             'uploaded_by_email',
             'uploaded_at',
             'access_count',
-            'last_accessed_at'
+            'last_accessed_at',
+            'asset_acquisition_request',
+            'fixed_asset',
+            'acquisition_document_kind',
         ]
         read_only_fields = [
             'document_number',
@@ -160,6 +163,11 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
     estimate_number = serializers.CharField(source='estimate.estimate_number', read_only=True)
     appointment_number = serializers.CharField(source='appointment.appointment_number', read_only=True)
+    acquisition_request_number = serializers.CharField(
+        source='asset_acquisition_request.request_number',
+        read_only=True,
+        allow_null=True,
+    )
     
     # Counts
     version_count = serializers.SerializerMethodField()
@@ -199,6 +207,10 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
             'invoice_number',
             'estimate',
             'estimate_number',
+            'asset_acquisition_request',
+            'acquisition_request_number',
+            'fixed_asset',
+            'acquisition_document_kind',
             'is_public',
             'access_count',
             'last_accessed_at',
@@ -261,6 +273,9 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
             'appointment',
             'invoice',
             'estimate',
+            'asset_acquisition_request',
+            'fixed_asset',
+            'acquisition_document_kind',
             'is_public'
         ]
     
@@ -294,6 +309,73 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
             )
         
         return value
+
+    def validate(self, data):
+        from apps.branches.utils import get_user_accessible_branches
+        from apps.fixed_assets.models import AssetAcquisitionRequest, FixedAsset
+
+        request = self.context['request']
+        user = request.user
+
+        req = data.get('asset_acquisition_request')
+        fixed_asset = data.get('fixed_asset')
+        kind = (data.get('acquisition_document_kind') or '').strip()
+
+        transactional = [
+            data.get('customer'),
+            data.get('vehicle'),
+            data.get('work_order'),
+            data.get('appointment'),
+            data.get('invoice'),
+            data.get('estimate'),
+        ]
+
+        if fixed_asset is not None and req is not None:
+            raise serializers.ValidationError(
+                'Use only one of fixed_asset or asset_acquisition_request for invoice/receipt uploads.'
+            )
+
+        if fixed_asset is not None or req is not None:
+            if kind not in ('invoice', 'receipt'):
+                raise serializers.ValidationError({
+                    'acquisition_document_kind': 'Must be invoice or receipt for fixed asset or acquisition uploads',
+                })
+            if any(t is not None for t in transactional):
+                raise serializers.ValidationError(
+                    'Invoice/receipt uploads for a fixed asset or acquisition cannot also be linked to '
+                    'customer, vehicle, work order, appointment, invoice, or estimate.'
+                )
+
+        if fixed_asset is not None:
+            fa_pk = getattr(fixed_asset, 'pk', fixed_asset)
+            asset = FixedAsset.objects.filter(pk=fa_pk).select_related('branch').first()
+            if not asset:
+                raise serializers.ValidationError({'fixed_asset': 'Invalid fixed asset'})
+            if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('super-admin', 'admin'):
+                pass
+            elif not get_user_accessible_branches(user).filter(id=asset.branch_id).exists():
+                raise serializers.ValidationError({
+                    'fixed_asset': 'You do not have access to upload documents for this asset branch',
+                })
+
+        if kind and fixed_asset is None and req is None:
+            raise serializers.ValidationError({
+                'acquisition_document_kind': 'Set only when fixed_asset or asset_acquisition_request is provided',
+            })
+
+        if req is not None:
+            pk = getattr(req, 'pk', req)
+            acquisition = AssetAcquisitionRequest.objects.filter(pk=pk).only('id', 'status').first()
+            if not acquisition:
+                raise serializers.ValidationError({
+                    'asset_acquisition_request': 'Invalid acquisition request',
+                })
+            if acquisition.status == 'rejected':
+                raise serializers.ValidationError({
+                    'asset_acquisition_request': 'Cannot attach invoice or receipt to a rejected acquisition request',
+                })
+
+        return data
     
     def create(self, validated_data):
         """Create document with uploaded_by from request user"""

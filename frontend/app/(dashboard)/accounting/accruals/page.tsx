@@ -1,24 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
-import {
-
-    Check,
-
-    X,
-    RefreshCw,
-
-    AlertCircle,
-
-    Search,
-
-    Filter,
-
-    ArrowUpDown,
-    ArrowRight
-} from "lucide-react"
+import { RefreshCw, ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,8 +30,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-
-    DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import {
@@ -57,22 +40,27 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/lib/hooks/useToast"
-import { accountingApi } from "@/lib/api/accounting"
+import {
+    accountingApi,
+    type Account,
+    type Accrual,
+    type AccrualCandidate,
+    type AccrualCreatePayload,
+    type ApiError,
+} from "@/lib/api/accounting"
 import { useCurrency } from "@/lib/hooks/useCurrency"
 
 export default function AccrualsPage() {
     const { formatCurrency } = useCurrency()
-    // * eslint-disable-next-line @typescript-eslint/no-unused-vars *
-    const { toast, success, error } = useToast()
+    const { success, error } = useToast()
     const queryClient = useQueryClient()
     const [selectedTab, setSelectedTab] = useState("active")
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [selectedCandidate, setSelectedCandidate] = useState<any>(null)
+    const [selectedCandidate, setSelectedCandidate] = useState<AccrualCandidate | null>(null)
 
     // -- Data Fetching --
 
-    const { data: accruals, isLoading: isLoadingAccruals } = useQuery({
+    const { data: accruals } = useQuery({
         queryKey: ["accruals", selectedTab],
         queryFn: () => accountingApi.getAccruals({ status: selectedTab === 'history' ? 'reversed' : 'active' }),
     })
@@ -85,7 +73,7 @@ export default function AccrualsPage() {
     // -- Mutations --
     const createAccrualMutation = useMutation({
 
-        mutationFn: (data: any) => accountingApi.createAccrual(data),
+        mutationFn: (data: AccrualCreatePayload) => accountingApi.createAccrual(data),
         onSuccess: () => {
             success("Accrual created successfully")
             setCreateDialogOpen(false)
@@ -94,7 +82,7 @@ export default function AccrualsPage() {
             queryClient.invalidateQueries({ queryKey: ["accrual-candidates"] })
         },
 
-        onError: (err: any) => {
+        onError: (err: ApiError) => {
             error("Failed to create accrual", err.response?.data?.error || err.message)
         }
     })
@@ -106,14 +94,14 @@ export default function AccrualsPage() {
             queryClient.invalidateQueries({ queryKey: ["accruals"] })
         },
 
-        onError: (err: any) => {
+        onError: (err: ApiError) => {
             error("Failed to reverse accrual", err.response?.data?.error || err.message)
         }
     })
 
     // -- Handlers --
 
-    const handleCreateFromCandidate = (candidate: any) => {
+    const handleCreateFromCandidate = (candidate: AccrualCandidate) => {
         setSelectedCandidate(candidate)
         setCreateDialogOpen(true)
     }
@@ -169,7 +157,7 @@ export default function AccrualsPage() {
                                         </TableRow>
                                     ) : (
 
-                                        accruals.map((accrual: any) => (
+                                        accruals.map((accrual: Accrual) => (
                                             <TableRow key={accrual.id}>
                                                 <TableCell>{format(new Date(accrual.accrual_date), 'MMM d, yyyy')}</TableCell>
                                                 <TableCell>
@@ -236,7 +224,7 @@ export default function AccrualsPage() {
                                         </TableRow>
                                     ) : (
 
-                                        candidates.map((item: any, idx: number) => (
+                                        candidates.map((item: AccrualCandidate, idx: number) => (
                                             <TableRow key={idx}>
                                                 <TableCell>{format(new Date(item.date), 'MMM d, yyyy')}</TableCell>
                                                 <TableCell>
@@ -290,7 +278,7 @@ export default function AccrualsPage() {
                                         </TableRow>
                                     ) : (
 
-                                        accruals.map((accrual: any) => (
+                                        accruals.map((accrual: Accrual) => (
                                             <TableRow key={accrual.id}>
                                                 <TableCell>{format(new Date(accrual.accrual_date), 'MMM d, yyyy')}</TableCell>
                                                 <TableCell>
@@ -310,18 +298,25 @@ export default function AccrualsPage() {
             </Tabs>
 
             <CreateAccrualDialog
+                key={`${createDialogOpen ? 'open' : 'closed'}-${selectedCandidate?.source_model || 'manual'}-${selectedCandidate?.source_id || ''}`}
                 open={createDialogOpen}
                 onOpenChange={setCreateDialogOpen}
                 candidate={selectedCandidate}
-
-                onSubmit={(data: any) => createAccrualMutation.mutate(data)}
+                onSubmit={(data: AccrualCreatePayload) => createAccrualMutation.mutate(data)}
             />
         </div>
     )
 }
 
 
-function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
+interface CreateAccrualDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    candidate: AccrualCandidate | null;
+    onSubmit: (data: AccrualCreatePayload) => void;
+}
+
+function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: CreateAccrualDialogProps) {
     const { toast } = useToast();
     const { data: accounts } = useQuery({
         queryKey: ["accounts"],
@@ -333,18 +328,10 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
     const accountFilter = isRevenue ? 'income' : 'expense';
 
 
-    const filteredAccounts = accounts?.filter((a: any) => a.account_type === accountFilter) || [];
+    const filteredAccounts = accounts?.filter((a: Account) => a.account_type === accountFilter) || [];
 
-    const [accrualType, setAccrualType] = useState<string>('expense')
+    const [accrualType, setAccrualType] = useState<'expense' | 'revenue'>(candidate?.type || 'expense')
     const [accountId, setAccountId] = useState<string>('')
-
-    // Sync state when dialog opens or candidate changes
-    useEffect(() => {
-        if (open) {
-            setAccrualType(candidate?.type || 'expense')
-            setAccountId('')
-        }
-    }, [open, candidate])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -381,7 +368,7 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
                             <Label>Accrual Type</Label>
                             <Select
                                 value={accrualType}
-                                onValueChange={setAccrualType}
+                                onValueChange={(value) => setAccrualType(value as 'expense' | 'revenue')}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select type" />
@@ -408,7 +395,7 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
                                 <SelectValue placeholder="Select account..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {filteredAccounts.map((acc: any) => (
+                                {filteredAccounts.map((acc: Account) => (
                                     <SelectItem key={acc.id} value={String(acc.id)}>
                                         {acc.code} - {acc.name}
                                     </SelectItem>

@@ -153,14 +153,18 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 Q(work_order__branch__in=branches) |
                 Q(appointment__branch__in=branches) |
                 Q(invoice__branch__in=branches) |
-                Q(estimate__branch__in=branches)
+                Q(estimate__branch__in=branches) |
+                Q(asset_acquisition_request__branch__in=branches) |
+                Q(fixed_asset__branch__in=branches)
             )
             
             has_transactional_entity = (
                 Q(work_order__isnull=False) |
                 Q(appointment__isnull=False) |
                 Q(invoice__isnull=False) |
-                Q(estimate__isnull=False)
+                Q(estimate__isnull=False) |
+                Q(asset_acquisition_request__isnull=False) |
+                Q(fixed_asset__isnull=False)
             )
             
             queryset = queryset.filter(branch_linked | ~has_transactional_entity).distinct()
@@ -182,7 +186,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
         'work_order',
         'appointment',
         'invoice',
-        'estimate'
+        'estimate',
+        'asset_acquisition_request',
+        'fixed_asset',
+        'acquisition_document_kind',
     ]
     
     def get_serializer_class(self):

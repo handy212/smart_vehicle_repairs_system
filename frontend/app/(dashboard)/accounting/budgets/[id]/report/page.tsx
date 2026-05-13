@@ -1,15 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { useParams } from "next/navigation";
+
+interface BudgetReportLine {
+    account_code: string;
+    account_name: string;
+    account_type: string;
+    period: string;
+    budget: number;
+    actual: number;
+    variance: number;
+    variance_percent: number;
+    status: string;
+}
 
 export default function BudgetReportPage() {
     const params = useParams();
@@ -113,7 +121,7 @@ export default function BudgetReportPage() {
                             </TableHeader>
                             <TableBody>
 
-                                {report?.lines?.map((line: any, idx: number) => (
+                                {report?.lines?.map((line: BudgetReportLine, idx: number) => (
                                     <TableRow key={idx}>
                                         <TableCell>
                                             <div className="font-medium">{line.account_code}</div>

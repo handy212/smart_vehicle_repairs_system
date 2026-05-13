@@ -15,6 +15,9 @@ export interface Document {
     customer?: number;
     vehicle?: number;
     work_order?: number;
+    asset_acquisition_request?: number | null;
+    fixed_asset?: number | null;
+    acquisition_document_kind?: "invoice" | "receipt" | "";
     access_count: number;
     tags?: string;
 }
@@ -24,6 +27,9 @@ export const documentsApi = {
         customer?: number;
         vehicle?: number;
         work_order?: number;
+        asset_acquisition_request?: number;
+        fixed_asset?: number;
+        acquisition_document_kind?: string;
         search?: string;
         page?: number;
     }): Promise<{ count: number; results: Document[] }> => {

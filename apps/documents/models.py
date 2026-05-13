@@ -166,6 +166,31 @@ class Document(models.Model):
         blank=True,
         related_name='uploaded_documents'
     )
+    asset_acquisition_request = models.ForeignKey(
+        'fixed_assets.AssetAcquisitionRequest',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='supporting_documents',
+        help_text='Fixed asset acquisition request this file supports (e.g. invoice/receipt at receipt time)',
+    )
+    fixed_asset = models.ForeignKey(
+        'fixed_assets.FixedAsset',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoice_receipt_documents',
+        help_text='Fixed asset this invoice/receipt belongs to (direct register uploads)',
+    )
+    acquisition_document_kind = models.CharField(
+        max_length=32,
+        blank=True,
+        choices=[
+            ('invoice', 'Invoice'),
+            ('receipt', 'Receipt'),
+        ],
+        help_text='Must be invoice or receipt when linked to an acquisition request or fixed asset',
+    )
     
     # Access tracking
     is_public = models.BooleanField(

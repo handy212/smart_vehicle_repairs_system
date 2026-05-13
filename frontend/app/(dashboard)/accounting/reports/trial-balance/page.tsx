@@ -2,14 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Download, Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
     Table,
@@ -25,11 +23,28 @@ import { exportToExcel } from "@/lib/utils/excel-export";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { COMPANY_NAME } from "@/lib/constants";
 
+interface TrialBalanceAccount {
+    code: string;
+    name: string;
+    type: string;
+    debit: number | string;
+    credit: number | string;
+}
+
+interface TrialBalanceReport {
+    accounts: TrialBalanceAccount[];
+    totals: {
+        debits: number | string;
+        credits: number | string;
+    };
+    is_balanced: boolean;
+}
+
 export default function TrialBalancePage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const { formatCurrency } = useCurrency();
 
-    const { data: report, isLoading, isError } = useQuery({
+    const { data: report, isLoading, isError } = useQuery<TrialBalanceReport>({
         queryKey: ["accounting", "trial-balance", date],
         queryFn: () => accountingApi.getTrialBalance(date),
     });
@@ -38,13 +53,13 @@ export default function TrialBalancePage() {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: Array<Array<string | number>> = [];
         rows.push(['Trial Balance']);
         rows.push([`As of: ${date}`]);
         rows.push([]);
 
 
-        report?.accounts.forEach((account: any) => {
+        report?.accounts.forEach((account: TrialBalanceAccount) => {
             rows.push([
                 account.code,
                 account.name,
@@ -64,14 +79,14 @@ export default function TrialBalancePage() {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: Array<Array<string | number>> = [];
 
         // Headers
         rows.push(['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
 
         // Data
 
-        report?.accounts.forEach((account: any) => {
+        report?.accounts.forEach((account: TrialBalanceAccount) => {
             rows.push([
                 account.code,
                 account.name,
@@ -165,7 +180,7 @@ export default function TrialBalancePage() {
                         </TableHeader>
                         <TableBody>
 
-                            {report?.accounts.map((account: any, index: number) => (
+                            {report?.accounts.map((account: TrialBalanceAccount, index: number) => (
                                 <TableRow key={index}>
                                     <TableCell className="font-medium">{account.code}</TableCell>
                                     <TableCell>{account.name}</TableCell>

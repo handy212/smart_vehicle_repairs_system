@@ -1,14 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { accountingApi } from "@/lib/api/accounting";
+import { accountingApi, type AccountBalance } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Download, Filter, ArrowLeft } from "lucide-react";
+import { Filter, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
 import {
@@ -38,7 +37,7 @@ export default function BalanceSheetPage() {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: Array<Array<string | number>> = [];
         rows.push(['Balance Sheet']);
         rows.push([`As of: ${date}`]);
         rows.push([]);
@@ -46,7 +45,7 @@ export default function BalanceSheetPage() {
         // Assets
         rows.push(['ASSETS']);
 
-        report?.assets.forEach((acc: any) => {
+        report?.assets.forEach((acc: AccountBalance) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
         rows.push(['', 'Total Assets', report?.totals.assets]);
@@ -55,7 +54,7 @@ export default function BalanceSheetPage() {
         // Liabilities
         rows.push(['LIABILITIES']);
 
-        report?.liabilities.forEach((acc: any) => {
+        report?.liabilities.forEach((acc: AccountBalance) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
         rows.push(['', 'Total Liabilities', report?.totals.liabilities]);
@@ -64,7 +63,7 @@ export default function BalanceSheetPage() {
         // Equity
         rows.push(['EQUITY']);
 
-        report?.equity.forEach((acc: any) => {
+        report?.equity.forEach((acc: AccountBalance) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
         rows.push(['', 'Total Equity', report?.totals.equity]);
@@ -79,7 +78,7 @@ export default function BalanceSheetPage() {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: Array<Array<string | number>> = [];
         rows.push(['Balance Sheet']);
         rows.push([`As of: ${date}`]);
         rows.push([]);
@@ -88,7 +87,7 @@ export default function BalanceSheetPage() {
         rows.push(['ASSETS', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report?.assets.forEach((acc: any) => {
+        report?.assets.forEach((acc: AccountBalance) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
         rows.push(['', 'Total Assets', report?.totals.assets]);
@@ -98,7 +97,7 @@ export default function BalanceSheetPage() {
         rows.push(['LIABILITIES', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report?.liabilities.forEach((acc: any) => {
+        report?.liabilities.forEach((acc: AccountBalance) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
         rows.push(['', 'Total Liabilities', report?.totals.liabilities]);
@@ -108,7 +107,7 @@ export default function BalanceSheetPage() {
         rows.push(['EQUITY', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report?.equity.forEach((acc: any) => {
+        report?.equity.forEach((acc: AccountBalance) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
         rows.push(['', 'Total Equity', report?.totals.equity]);

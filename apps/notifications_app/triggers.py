@@ -2904,6 +2904,91 @@ Please bring your identification and payment method when picking up your vehicle
         )
         self.service.send_notification(notification)
 
+    # ==================== FIXED ASSET ACQUISITIONS ====================
+
+    def asset_acquisition_approval_request(self, acquisition_request, recipient):
+        """Notify approvers that a fixed asset acquisition requires approval."""
+        if not recipient:
+            return
+
+        context = self._get_default_context()
+        context.update({
+            'acquisition_id': acquisition_request.id,
+            'request_number': acquisition_request.request_number,
+            'title': acquisition_request.title,
+            'expected_cost': str(acquisition_request.expected_acquisition_cost),
+            'requested_by': acquisition_request.requested_by.get_full_name()
+            if acquisition_request.requested_by
+            else 'Unknown',
+            'branch': acquisition_request.branch.name if acquisition_request.branch else '',
+        })
+
+        title = f'Approval Required: {acquisition_request.request_number}'
+        message = (
+            f'Acquisition request {acquisition_request.request_number}: {acquisition_request.title} '
+            f'requires your approval.\n\nExpected cost: {context["expected_cost"]}\n'
+            f'Requested by: {context["requested_by"]}'
+        )
+
+        template = self._get_template('asset_acquisition_approval', 'email')
+        if template:
+            if template.subject:
+                title = self.service._render_template(template.subject, context)
+            if template.body:
+                message = self.service._render_template(template.body, context)
+
+        notification = Notification.objects.create(
+            recipient=recipient,
+            notification_type='system',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='asset_acquisition_request',
+            related_object_id=acquisition_request.id,
+        )
+        self.service.send_notification(notification)
+
+        in_app = Notification.objects.create(
+            recipient=recipient,
+            notification_type='system',
+            channel='in_app',
+            priority='high',
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='asset_acquisition_request',
+            related_object_id=acquisition_request.id,
+        )
+        self.service.send_notification(in_app)
+
+    def asset_acquisition_notify_requester(self, acquisition_request, recipient, title, message):
+        """Notify requester of approval / rejection / receipt outcomes."""
+        if not recipient:
+            return
+
+        context = self._get_default_context()
+        context.update({
+            'acquisition_id': acquisition_request.id,
+            'request_number': acquisition_request.request_number,
+        })
+
+        for channel in ('email', 'in_app'):
+            note = Notification.objects.create(
+                recipient=recipient,
+                notification_type='system',
+                channel=channel,
+                priority='normal',
+                title=title[:200],
+                message=message,
+                data=context,
+                related_object_type='asset_acquisition_request',
+                related_object_id=acquisition_request.id,
+            )
+            self.service.send_notification(note)
+
 
 # Global instance for easy import
 notification_triggers = NotificationTriggers()

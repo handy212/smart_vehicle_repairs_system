@@ -9,7 +9,7 @@ from apps.inventory.models import PurchaseOrder
 
 class AccrualService:
     @staticmethod
-    def identify_accruals(cutoff_date=None):
+    def identify_accruals(cutoff_date=None, branch_id=None):
         """
         Identify unbilled revenue and expenses up to cutoff_date.
         Returns: Dict with 'revenue' and 'expense' lists of candidates.
@@ -21,8 +21,11 @@ class AccrualService:
             'revenue': [],
             'expense': []
         }
+        active_accruals = Accrual.objects.filter(source_id__isnull=False, status='active')
+        if branch_id is not None:
+            active_accruals = active_accruals.filter(branch_id=branch_id)
         active_sources = set(
-            Accrual.objects.filter(source_id__isnull=False).values_list(
+            active_accruals.values_list(
                 'accrual_type',
                 'source_model',
                 'source_id',
@@ -38,6 +41,8 @@ class AccrualService:
             status='completed',
             updated_at__date__lte=cutoff_date
         )
+        if branch_id is not None:
+            uninvoiced_wos = uninvoiced_wos.filter(branch_id=branch_id)
         
         for wo in uninvoiced_wos:
             if ('revenue', 'WorkOrder', wo.id) in active_sources:
@@ -87,6 +92,8 @@ class AccrualService:
             # Exclude POs that have Bills
             id__in=Bill.objects.values_list('purchase_order_id', flat=True)
         )
+        if branch_id is not None:
+            received_pos = received_pos.filter(branch_id=branch_id)
         
         for po in received_pos:
             if ('expense', 'PurchaseOrder', po.id) in active_sources:
@@ -108,9 +115,9 @@ class AccrualService:
         return candidates
 
     @staticmethod
-    def get_accrual_candidates(cutoff_date=None):
+    def get_accrual_candidates(cutoff_date=None, branch_id=None):
         """Alias for identify_accruals for test compatibility"""
-        return AccrualService.identify_accruals(cutoff_date)
+        return AccrualService.identify_accruals(cutoff_date, branch_id=branch_id)
 
     @staticmethod
     @transaction.atomic
@@ -125,6 +132,8 @@ class AccrualService:
         source_model='',
         source_id=None,
         source_reference='',
+        branch=None,
+        branch_id=None,
     ):
         """
         Create an Accrual record and post the Journal Entry.
@@ -132,6 +141,10 @@ class AccrualService:
         account_id: The P&L account (Expense or Income account)
         """
         account = Account.objects.get(id=account_id)
+        if branch is None and branch_id is not None:
+            from apps.branches.models import Branch
+
+            branch = Branch.objects.get(id=branch_id)
         
         # 1. Create Accrual Record
         accrual = Accrual.objects.create(
@@ -145,6 +158,7 @@ class AccrualService:
             source_model=source_model or '',
             source_id=source_id,
             source_reference=source_reference or '',
+            branch=branch,
             status='active'
         )
         
@@ -184,7 +198,8 @@ class AccrualService:
             date=date,
             description=f"Accrual: {description}",
             lines=lines,
-            posted=True
+            posted=True,
+            branch=branch,
         )
         
         accrual.accrual_je = je
@@ -226,7 +241,8 @@ class AccrualService:
             date=reversal_date,
             description=f"Reversal of Accrual #{accrual.id}: {accrual.description}",
             lines=lines,
-            posted=True
+            posted=True,
+            branch=accrual.branch,
         )
         
         accrual.reversal_je = je

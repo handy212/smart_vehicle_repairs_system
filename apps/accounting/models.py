@@ -502,6 +502,13 @@ class Accrual(models.Model):
     source_model = models.CharField(max_length=100, blank=True, help_text="Source document model, e.g. WorkOrder or PurchaseOrder")
     source_id = models.PositiveIntegerField(null=True, blank=True, help_text="Source document primary key")
     source_reference = models.CharField(max_length=100, blank=True, help_text="Human-readable source document number")
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='accruals',
+    )
     
     accrual_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='accrual_entries')
     reversal_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='reversal_entries')
@@ -515,11 +522,12 @@ class Accrual(models.Model):
         indexes = [
             models.Index(fields=['source_model', 'source_id']),
             models.Index(fields=['status', 'accrual_type']),
+            models.Index(fields=['branch', 'status']),
         ]
         constraints = [
             models.UniqueConstraint(
                 fields=['accrual_type', 'source_model', 'source_id'],
-                condition=Q(source_id__isnull=False),
+                condition=Q(source_id__isnull=False, status='active'),
                 name='unique_active_accrual_source',
             )
         ]

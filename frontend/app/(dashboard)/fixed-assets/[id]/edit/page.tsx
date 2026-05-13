@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, use } from "react";
+import { useEffect, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fixedAssetsApi, type FixedAssetCategory, type FixedAssetUpdateData } from "@/lib/api/fixed-assets";
+import { fixedAssetsApi, type FixedAsset, type FixedAssetCategory, type FixedAssetUpdateData } from "@/lib/api/fixed-assets";
+import { documentsApi } from "@/lib/api/documents";
 import { branchesApi } from "@/lib/api/branches";
 import { hrApi } from "@/lib/api/hr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,11 +23,13 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, FileText, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionButton } from "@/components/auth/PermissionButton";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 type BranchOption = {
     id: number;
@@ -71,8 +74,10 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
     const router = useRouter();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { hasPermission } = usePermissions();
     const { id } = use(params);
     const assetId = parseInt(id);
+    const [invoiceReceiptKind, setInvoiceReceiptKind] = useState<"invoice" | "receipt">("invoice");
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema) as Resolver<FormValues>,
@@ -160,13 +165,53 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                 title: "Success",
                 description: "Fixed asset updated successfully",
             });
-            router.push("/fixed-assets");
+            router.push(`/fixed-assets/${assetId}`);
         },
 
         onError: (error: unknown) => {
             toast({
                 title: "Error",
                 description: getApiErrorMessage(error, "Failed to update fixed asset"),
+                variant: "destructive",
+            });
+        },
+    });
+
+    const uploadDocMutation = useMutation({
+        mutationFn: async (file: File) => {
+            const fd = new FormData();
+            fd.append(
+                "title",
+                `${invoiceReceiptKind === "invoice" ? "Invoice" : "Receipt"} — ${asset?.asset_number ?? assetId}`,
+            );
+            fd.append("file", file);
+            fd.append("fixed_asset", String(assetId));
+            fd.append("acquisition_document_kind", invoiceReceiptKind);
+            return documentsApi.create(fd);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["fixed-asset", assetId] });
+            toast({ title: "File uploaded" });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Upload failed",
+                description: getApiErrorMessage(error, "Could not upload document"),
+                variant: "destructive",
+            });
+        },
+    });
+
+    const deleteDocMutation = useMutation({
+        mutationFn: (docId: number) => documentsApi.delete(docId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["fixed-asset", assetId] });
+            toast({ title: "Document removed" });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Delete failed",
+                description: getApiErrorMessage(error, "Could not delete document"),
                 variant: "destructive",
             });
         },
@@ -185,10 +230,16 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
         return <div className="text-sm text-muted-foreground">Loading asset details...</div>;
     }
 
+    if (!asset) {
+        return <div className="text-sm text-muted-foreground">Asset not found</div>;
+    }
+
+    const invoiceDocs = asset.invoice_receipt_documents ?? [];
+
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-3">
-                <Link href="/fixed-assets">
+                <Link href={`/fixed-assets/${assetId}`}>
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back
@@ -203,6 +254,95 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                     </p>
                 </div>
             </div>
+
+            <Card>
+                <CardHeader className="px-4 py-3">
+                    <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <FileText className="h-4 w-4" />
+                        Invoice & receipt
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-4">
+                    {asset.source_acquisition_request_id ? (
+                        <p className="text-xs text-muted-foreground">
+                            Includes files from{" "}
+                            <Link
+                                href={`/fixed-assets/acquisitions/${asset.source_acquisition_request_id}`}
+                                className="font-medium text-primary hover:underline"
+                            >
+                                acquisition {asset.source_acquisition_request_number}
+                            </Link>
+                            . You can add additional files linked to this asset below.
+                        </p>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                            Upload invoice or receipt files for this asset. Supported formats match document uploads
+                            (PDF, images, Word, Excel).
+                        </p>
+                    )}
+                    {invoiceDocs.length > 0 ? (
+                        <ul className="divide-y rounded-md border border-border">
+                            {invoiceDocs.map((d) => (
+                                <li
+                                    key={d.id}
+                                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                                >
+                                    <div className="min-w-0">
+                                        <span className="font-medium capitalize">{d.acquisition_document_kind}</span>
+                                        <span className="text-muted-foreground"> — </span>
+                                        <span className="truncate">{d.original_filename}</span>
+                                    </div>
+                                    <PermissionButton
+                                        permission="delete_documents"
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 text-destructive hover:text-destructive"
+                                        disabled={deleteDocMutation.isPending}
+                                        onClick={() => {
+                                            if (confirm(`Remove "${d.original_filename}"?`)) {
+                                                deleteDocMutation.mutate(d.id);
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </PermissionButton>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">No files yet.</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select
+                            value={invoiceReceiptKind}
+                            onChange={(e) => setInvoiceReceiptKind(e.target.value as "invoice" | "receipt")}
+                            className="h-9 rounded-md border border-border bg-background px-3 text-xs"
+                        >
+                            <option value="invoice">Invoice</option>
+                            <option value="receipt">Receipt</option>
+                        </select>
+                        {hasPermission("upload_documents") ? (
+                            <label className="inline-flex h-9 cursor-pointer items-center rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60">
+                                <input
+                                    type="file"
+                                    className="sr-only"
+                                    accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx"
+                                    disabled={uploadDocMutation.isPending}
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) uploadDocMutation.mutate(f);
+                                        e.target.value = "";
+                                    }}
+                                />
+                                {uploadDocMutation.isPending ? "Uploading…" : "Upload file"}
+                            </label>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">Upload requires document upload permission.</span>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader className="px-4 py-3">

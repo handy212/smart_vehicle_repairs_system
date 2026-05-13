@@ -40,7 +40,6 @@ export default function BudgetDetailEditPage() {
     const queryClient = useQueryClient();
 
 
-    const [isAddingLine, setIsAddingLine] = useState(false);
     const [newLine, setNewLine] = useState<Partial<BudgetLine>>({
         amount: 0,
         period: "annual",
@@ -75,12 +74,11 @@ export default function BudgetDetailEditPage() {
 
     const createLineMutation = useMutation({
 
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: Partial<BudgetLine>) => {
             return apiClient.post("/accounting/budget-lines/", { ...data, budget: budgetId });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["budget-lines", budgetId] });
-            setIsAddingLine(false);
             setNewLine({ amount: 0, period: "annual" });
             success("Budget line added successfully");
         },
@@ -218,7 +216,7 @@ export default function BudgetDetailEditPage() {
                                     </TableRow>
                                 ) : (
 
-                                    lines?.map((line: any) => (
+                                    lines?.map((line: BudgetLine) => (
                                         <TableRow key={line.id}>
                                             <TableCell className="font-mono text-xs">{line.account_code}</TableCell>
                                             <TableCell className="text-sm">{line.account_name}</TableCell>
@@ -231,7 +229,7 @@ export default function BudgetDetailEditPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => deleteLineMutation.mutate(line.id)}
+                                                    onClick={() => line.id && deleteLineMutation.mutate(line.id)}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>

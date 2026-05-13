@@ -261,6 +261,8 @@ class Command(BaseCommand):
                 'run_depreciation': ('fixed_assets', 'Run Depreciation', 'Run asset depreciation'),
                 'view_asset_maintenance': ('fixed_assets', 'View Asset Maintenance', 'View asset maintenance records'),
                 'create_asset_maintenance': ('fixed_assets', 'Create Maintenance', 'Record asset maintenance'),
+                'approve_asset_acquisitions': ('fixed_assets', 'Approve Asset Acquisitions', 'Approve or reject fixed asset acquisition requests'),
+                'receive_asset_acquisitions': ('fixed_assets', 'Receive Asset Acquisitions', 'Receive approved acquisitions and capitalize assets'),
 
                 # ==================== HR MANAGEMENT ====================
                 'view_hr': ('hr', 'View HR', 'View the HR dashboard'),

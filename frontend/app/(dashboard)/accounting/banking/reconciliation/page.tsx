@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { accountingApi } from "@/lib/api/accounting";
+import { accountingApi, type Account, type BankStatement } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export default function BankReconciliationPage() {
             const allAccounts = await accountingApi.getAccounts();
             // Filter only Asset accounts that look like banks
 
-            return allAccounts.filter((acc: any) =>
+            return allAccounts.filter((acc: Account) =>
                 acc.account_type === 'asset' &&
                 (acc.code.startsWith('10') ||
                     acc.name.toLowerCase().includes('bank') ||
@@ -137,7 +137,7 @@ export default function BankReconciliationPage() {
                                 </TableRow>
                             ) : (
 
-                                (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
+                                (statements || []).map((statement: BankStatement) => (
                                     <TableRow key={statement.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                         <TableCell className="px-4 py-2 text-sm text-foreground">
                                             <div className="flex items-center">
@@ -205,7 +205,7 @@ export default function BankReconciliationPage() {
                                 </SelectTrigger>
                                 <SelectContent>
 
-                                    {accounts?.map((acc: any) => (
+                                    {accounts?.map((acc: Account) => (
                                         <SelectItem key={acc.id} value={acc.id.toString()}>
                                             {acc.code} - {acc.name}
                                         </SelectItem>

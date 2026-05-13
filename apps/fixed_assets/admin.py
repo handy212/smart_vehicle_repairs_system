@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import AssetCategory, FixedAsset, DepreciationSchedule, AssetMaintenance
+from .models import (
+    AssetCategory,
+    FixedAsset,
+    DepreciationSchedule,
+    AssetMaintenance,
+    AssetAcquisitionRequest,
+    AssetAcquisitionApproval,
+)
 
 
 @admin.register(AssetCategory)
@@ -106,3 +113,34 @@ class AssetMaintenanceAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+class AssetAcquisitionApprovalInline(admin.TabularInline):
+    model = AssetAcquisitionApproval
+    extra = 0
+    readonly_fields = ['approver', 'status', 'approved_at', 'rejected_at', 'created_at']
+
+
+@admin.register(AssetAcquisitionRequest)
+class AssetAcquisitionRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        'request_number',
+        'status',
+        'title',
+        'proposed_asset_name',
+        'branch',
+        'expected_acquisition_cost',
+        'requested_by',
+        'created_at',
+    ]
+    list_filter = ['status', 'branch', 'category']
+    search_fields = ['request_number', 'title', 'proposed_asset_name']
+    readonly_fields = ['request_number', 'created_at', 'updated_at']
+    inlines = [AssetAcquisitionApprovalInline]
+    ordering = ['-created_at']
+
+
+@admin.register(AssetAcquisitionApproval)
+class AssetAcquisitionApprovalAdmin(admin.ModelAdmin):
+    list_display = ['acquisition_request', 'approver', 'status', 'created_at']
+    list_filter = ['status']

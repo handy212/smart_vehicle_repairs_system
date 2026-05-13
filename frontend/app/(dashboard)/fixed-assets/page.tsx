@@ -16,13 +16,23 @@ import {
     DollarSign,
     ArrowLeft,
     Building2,
-    User
+    User,
+    ClipboardList,
+    Tags,
+    MoreHorizontal,
 } from "lucide-react";
 import { useState } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { format } from "date-fns";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export default function FixedAssetsListPage() {
     return (
@@ -36,6 +46,7 @@ function FixedAssetsContent() {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("active");
     const [categoryFilter, setCategoryFilter] = useState("");
+    const { hasPermission } = usePermissions();
 
     const { formatCurrency } = useCurrency();
 
@@ -49,7 +60,7 @@ function FixedAssetsContent() {
     const { data: assetsData, isLoading } = useQuery({
         queryKey: ["fixed-assets", statusFilter, categoryFilter],
         queryFn: () => fixedAssetsApi.list({
-            status: statusFilter === "active" ? undefined : statusFilter,
+            status: statusFilter === "" ? undefined : statusFilter,
             category: categoryFilter ? Number(categoryFilter) : undefined
         }),
     });
@@ -206,6 +217,12 @@ function FixedAssetsContent() {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        <Link href="/fixed-assets/acquisitions">
+                            <Button variant="outline" size="sm" className="h-9 text-xs font-bold">
+                                <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                                Acquisitions
+                            </Button>
+                        </Link>
                         <Link href="/fixed-assets/reports/valuation">
                             <Button variant="outline" size="sm" className="h-9 text-xs font-bold">
                                 <TrendingDown className="mr-1.5 h-3.5 w-3.5" />
@@ -356,6 +373,29 @@ function FixedAssetsContent() {
                                         </option>
                                     ))}
                                 </select>
+                                {hasPermission("manage_assets") ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9 px-2.5"
+                                                aria-label="Category actions"
+                                            >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-48">
+                                            <DropdownMenuItem asChild>
+                                                <Link href="/fixed-assets/categories" className="flex items-center gap-2 cursor-pointer">
+                                                    <Tags className="h-3.5 w-3.5" />
+                                                    Manage categories
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : null}
                             </div>
                         </div>
                     </CardContent>

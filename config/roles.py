@@ -35,6 +35,8 @@ class Admin(AbstractUserRole):
         'run_depreciation': True,
         'view_asset_maintenance': True,
         'create_asset_maintenance': True,
+        'approve_asset_acquisitions': True,
+        'receive_asset_acquisitions': True,
         
         # Customer Management
         'view_customers': True,
@@ -276,6 +278,8 @@ class Manager(AbstractUserRole):
         'edit_assets': True,
         'view_asset_maintenance': True,
         'create_asset_maintenance': True,
+        'approve_asset_acquisitions': True,
+        'receive_asset_acquisitions': True,
         
         # Customer Management
         'view_customers': True,
@@ -722,6 +726,8 @@ class Accountant(AbstractUserRole):
         'view_assets': True,
         'run_depreciation': True,
         'view_asset_maintenance': True,
+        'approve_asset_acquisitions': True,
+        'receive_asset_acquisitions': True,
     }
 
 

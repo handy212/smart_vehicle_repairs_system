@@ -11,6 +11,16 @@ export interface FixedAssetCategory {
     updated_at: string;
 }
 
+export interface FixedAssetInvoiceReceiptDoc {
+    id: number;
+    document_number: string;
+    title: string;
+    acquisition_document_kind: "invoice" | "receipt";
+    original_filename: string;
+    file: string | null;
+    uploaded_at: string | null;
+}
+
 export interface FixedAsset {
     id: number;
     asset_number: string;
@@ -39,6 +49,9 @@ export interface FixedAsset {
     last_depreciation_date?: string;
     created_at: string;
     updated_at: string;
+    invoice_receipt_documents?: FixedAssetInvoiceReceiptDoc[];
+    source_acquisition_request_id?: number | null;
+    source_acquisition_request_number?: string | null;
 }
 
 export type FixedAssetCreateData = {
@@ -79,6 +92,82 @@ export interface FixedAssetStats {
     total_accumulated_depreciation: number;
     avg_depreciation_percent: number;
 }
+
+export type AssetAcquisitionStatus =
+    | "draft"
+    | "pending_approval"
+    | "approved"
+    | "rejected"
+    | "received";
+
+export interface AssetAcquisitionApprovalRow {
+    id: number;
+    approver: number;
+    approver_name?: string;
+    status: string;
+    approved_at?: string | null;
+    rejected_at?: string | null;
+    rejection_reason?: string;
+    created_at?: string;
+}
+
+export interface AssetAcquisitionRequest {
+    id: number;
+    request_number: string;
+    status: AssetAcquisitionStatus;
+    title: string;
+    description?: string;
+    proposed_asset_name: string;
+    category: number;
+    category_name?: string;
+    branch: number;
+    branch_name?: string;
+    supplier?: number | null;
+    supplier_name?: string | null;
+    expected_acquisition_cost: number | string;
+    salvage_value: number | string;
+    depreciation_method?: string | null;
+    useful_life_years?: number | null;
+    requested_by?: number | null;
+    requested_by_name?: string | null;
+    submitted_at?: string | null;
+    approved_by?: number | null;
+    approved_by_name?: string | null;
+    approved_at?: string | null;
+    rejected_by?: number | null;
+    rejected_by_name?: string | null;
+    rejected_at?: string | null;
+    rejection_reason?: string;
+    received_by?: number | null;
+    received_by_name?: string | null;
+    received_at?: string | null;
+    received_notes?: string;
+    created_asset_id?: number | null;
+    created_asset_number?: string | null;
+    approvals?: AssetAcquisitionApprovalRow[];
+    approval_summary?: {
+        total: number;
+        pending: number;
+        approved: number;
+        rejected: number;
+        cancelled: number;
+    };
+    created_at: string;
+    updated_at: string;
+}
+
+export type AssetAcquisitionCreatePayload = {
+    title: string;
+    description?: string;
+    proposed_asset_name: string;
+    category: number;
+    branch: number;
+    supplier?: number | null;
+    expected_acquisition_cost: number;
+    salvage_value?: number;
+    depreciation_method?: string | null;
+    useful_life_years?: number | null;
+};
 
 export const fixedAssetsApi = {
     // Assets
@@ -153,6 +242,74 @@ export const fixedAssetsApi = {
 
         delete: async (id: number) => {
             const response = await apiClient.delete(`/fixed-assets/categories/${id}/`);
+            return response.data;
+        },
+    },
+
+    acquisitions: {
+        list: async (params?: { status?: string; branch?: number; category?: number; search?: string }) => {
+            const response = await apiClient.get("/fixed-assets/acquisition-requests/", { params });
+            return response.data;
+        },
+
+        get: async (id: number): Promise<AssetAcquisitionRequest> => {
+            const response = await apiClient.get(`/fixed-assets/acquisition-requests/${id}/`);
+            return response.data;
+        },
+
+        create: async (data: AssetAcquisitionCreatePayload): Promise<AssetAcquisitionRequest> => {
+            const response = await apiClient.post("/fixed-assets/acquisition-requests/", data);
+            return response.data;
+        },
+
+        update: async (id: number, data: Partial<AssetAcquisitionCreatePayload>): Promise<AssetAcquisitionRequest> => {
+            const response = await apiClient.patch(`/fixed-assets/acquisition-requests/${id}/`, data);
+            return response.data;
+        },
+
+        delete: async (id: number) => {
+            await apiClient.delete(`/fixed-assets/acquisition-requests/${id}/`);
+        },
+
+        submitForApproval: async (id: number, approverIds: number[]) => {
+            const response = await apiClient.post(
+                `/fixed-assets/acquisition-requests/${id}/submit-for-approval/`,
+                { approver_ids: approverIds },
+            );
+            return response.data;
+        },
+
+        approve: async (id: number): Promise<AssetAcquisitionRequest> => {
+            const response = await apiClient.post(`/fixed-assets/acquisition-requests/${id}/approve/`);
+            return response.data;
+        },
+
+        reject: async (id: number, reason?: string): Promise<AssetAcquisitionRequest> => {
+            const response = await apiClient.post(`/fixed-assets/acquisition-requests/${id}/reject/`, {
+                reason: reason || "",
+            });
+            return response.data;
+        },
+
+        receive: async (
+            id: number,
+            data: {
+                acquisition_cost: number;
+                acquisition_date: string;
+                depreciation_start_date?: string | null;
+                asset_number?: string;
+                location?: string;
+                manufacturer?: string;
+                model_number?: string;
+                serial_number?: string;
+                supplier?: number | null;
+                total_units?: number | null;
+                declining_balance_rate?: number | null;
+                notes?: string;
+                received_notes?: string;
+            },
+        ): Promise<AssetAcquisitionRequest> => {
+            const response = await apiClient.post(`/fixed-assets/acquisition-requests/${id}/receive/`, data);
             return response.data;
         },
     },

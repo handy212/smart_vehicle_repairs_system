@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { accountingApi } from "@/lib/api/accounting";
+import { accountingApi, type TaxReport } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ export default function TaxReportPage() {
     const [startDate, setStartDate] = useState(format(startOfYear(new Date()), "yyyy-MM-dd"));
     const [endDate, setEndDate] = useState(format(endOfYear(new Date()), "yyyy-MM-dd"));
 
-    const { data: report, isLoading, refetch } = useQuery({
+    const { data: report, isLoading, refetch } = useQuery<TaxReport>({
         queryKey: ["accounting", "tax-report", startDate, endDate],
         queryFn: () => accountingApi.getTaxReport(startDate, endDate),
     });
