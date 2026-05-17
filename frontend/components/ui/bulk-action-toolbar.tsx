@@ -29,9 +29,9 @@ export function BulkActionToolbar({
 
   return (
     <div
-      className={`flex items-center justify-between rounded-lg border border-primary/15 bg-primary/5 p-4 animate-in slide-in-from-top-2 duration-200 ${className}`}
+      className={`flex flex-col gap-3 rounded-lg border border-primary/15 bg-primary/5 p-4 animate-in slide-in-from-top-2 duration-200 sm:flex-row sm:items-center sm:justify-between ${className}`}
     >
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="text-sm font-medium text-primary">
             {selectedCount} item{selectedCount !== 1 ? "s" : ""} selected
           </span>
@@ -45,7 +45,7 @@ export function BulkActionToolbar({
             Clear
           </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {showBulkSend && onBulkSend && (
             <Button
              variant="secondary"

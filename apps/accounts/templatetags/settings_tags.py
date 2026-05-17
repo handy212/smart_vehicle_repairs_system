@@ -2,6 +2,7 @@
 Template tags for system settings
 """
 from django import template
+from django.db import DatabaseError
 from apps.accounts.settings_utils import get_setting
 
 register = template.Library()
@@ -14,6 +15,18 @@ def get_setting_value(key, default=''):
     Usage: {% get_setting_value 'company_name' %}
     """
     return get_setting(key, default)
+
+
+@register.simple_tag
+def get_print_footer_branches():
+    try:
+        from apps.branches.models import Branch
+
+        return Branch.objects.filter(is_active=True).only(
+            'name',
+        ).order_by('name')
+    except DatabaseError:
+        return []
 
 
 @register.simple_tag

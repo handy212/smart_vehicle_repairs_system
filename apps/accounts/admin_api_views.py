@@ -66,14 +66,9 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         category = request.query_params.get('category')
         # Auto-initialize settings for the category if none exist
         if category:
-            from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+            from .settings_init import cleanup_deprecated_settings, initialize_category_settings
             cleanup_deprecated_settings(category)
-            settings_count = SystemSettings.objects.filter(
-                category=category,
-                key__in=supported_setting_keys(category),
-            ).count()
-            if settings_count == 0:
-                initialize_category_settings(category)
+            initialize_category_settings(category)
             # Also ensure tax settings if tax category
             if category == 'tax':
                 SystemSettings.ensure_tax_settings()
@@ -117,14 +112,9 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
 
         # Auto-initialize settings for the category if none exist
         if category:
-            from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+            from .settings_init import cleanup_deprecated_settings, initialize_category_settings
             cleanup_deprecated_settings(category)
-            settings_count = SystemSettings.objects.filter(
-                category=category,
-                key__in=supported_setting_keys(category),
-            ).count()
-            if settings_count == 0:
-                initialize_category_settings(category)
+            initialize_category_settings(category)
             # Also ensure tax settings if tax category
             if category == 'tax':
                 SystemSettings.ensure_tax_settings()
@@ -146,21 +136,23 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(settings, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/branding', throttle_classes=[])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[AllowAny],
+        authentication_classes=[],
+        url_path='public/branding',
+        throttle_classes=[],
+    )
     def public_branding(self, request):
         """
         Public endpoint to get branding settings for login page and public pages.
         Does not require authentication.
         """
         # Auto-initialize branding settings if none exist
-        from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+        from .settings_init import cleanup_deprecated_settings, initialize_category_settings
         cleanup_deprecated_settings('branding')
-        settings_count = SystemSettings.objects.filter(
-            category='branding',
-            key__in=supported_setting_keys('branding'),
-        ).count()
-        if settings_count == 0:
-            initialize_category_settings('branding')
+        initialize_category_settings('branding')
         
         # Only return active, non-secret branding and company settings
         settings = SystemSettings.objects.filter(
@@ -180,7 +172,14 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         
         return Response(data)
     
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/firebase', throttle_classes=[])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[AllowAny],
+        authentication_classes=[],
+        url_path='public/firebase',
+        throttle_classes=[],
+    )
     def public_firebase(self, request):
         """
         Public endpoint to get Firebase configuration for frontend.
@@ -222,7 +221,14 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             'appId': '',
         })
     
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/integrations', throttle_classes=[])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[AllowAny],
+        authentication_classes=[],
+        url_path='public/integrations',
+        throttle_classes=[],
+    )
     def public_integrations(self, request):
         """
         Public endpoint to get integration settings (Google Analytics, Facebook Pixel, etc.)

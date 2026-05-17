@@ -1,4 +1,5 @@
 from datetime import date, time, timedelta
+from decimal import Decimal
 
 from django.test import TestCase
 from django.utils import timezone
@@ -9,9 +10,11 @@ from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
 from apps.appointments.models import Appointment
 from apps.branches.models import Branch
+from apps.billing.models import Invoice
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.reporting.models import ReportExportLog, ReportSchedule, SavedReport
+from apps.workorders.models import WorkOrder, WorkOrderPart
 
 
 class ReportingEndpointTests(TestCase):
@@ -118,6 +121,51 @@ class ReportingEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['summary']['total_appointments'], 1)
+
+    def test_profit_margin_report_uses_work_order_part_costs(self):
+        today = date.today()
+        customer, vehicle = self._create_customer_vehicle(3)
+        work_order = WorkOrder.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=self.branch,
+            status='draft',
+            customer_concerns='Brake service',
+            odometer_in=10000,
+            created_by=self.user,
+        )
+        WorkOrderPart.objects.create(
+            work_order=work_order,
+            part_name='Brake pad set',
+            quantity=Decimal('1.00'),
+            unit_cost=Decimal('60.00'),
+            markup_percentage=Decimal('66.67'),
+        )
+        Invoice.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            work_order=work_order,
+            branch=self.branch,
+            status='paid',
+            invoice_date=today,
+            labor_subtotal=Decimal('0.00'),
+            parts_subtotal=Decimal('100.00'),
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            amount_paid=Decimal('100.00'),
+            created_by=self.user,
+        )
+
+        response = self.client.get('/api/reporting/profit-margin-report/', {
+            'start_date': (today - timedelta(days=1)).isoformat(),
+            'end_date': (today + timedelta(days=1)).isoformat(),
+            'branch': self.branch.id,
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['revenue']['parts'], 100.0)
+        self.assertEqual(response.data['costs']['parts'], 60.0)
+        self.assertEqual(response.data['profit']['gross_profit'], 40.0)
 
     def test_saved_report_api_creates_owned_report(self):
         response = self.client.post('/api/reporting/saved-reports/', {

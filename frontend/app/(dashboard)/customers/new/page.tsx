@@ -105,8 +105,8 @@ export default function NewCustomerPage() {
 
   return (
     <div className="max-w-[1700px] mx-auto p-4 md:p-6 space-y-8 pb-12">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href="/customers">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />

@@ -84,7 +84,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] sm:w-[500px] p-0 shadow-lg border-border" align="start">
+            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[500px] p-0 shadow-lg border-border" align="start">
                 <div className="flex items-center border-b px-3 bg-muted/30">
                     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-muted-foreground" />
                     <Input

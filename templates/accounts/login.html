@@ -11,6 +11,9 @@
             background: #f5f7fb;
             color: #1f2937;
         }
+        * {
+            box-sizing: border-box;
+        }
         .page {
             min-height: 100vh;
             display: flex;
@@ -51,6 +54,11 @@
             margin-bottom: 16px;
             font-size: 1rem;
         }
+        input:focus {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+            outline: none;
+        }
         button {
             width: 100%;
             border: 0;
@@ -61,6 +69,9 @@
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+        }
+        button:hover {
+            background: #1e40af;
         }
         .errorlist,
         .notice {
@@ -86,6 +97,16 @@
         .footer a {
             color: #1d4ed8;
             text-decoration: none;
+        }
+        @media (max-width: 480px) {
+            .page {
+                align-items: stretch;
+                padding: 12px;
+            }
+            .card {
+                max-width: none;
+                padding: 22px;
+            }
         }
     </style>
 </head>

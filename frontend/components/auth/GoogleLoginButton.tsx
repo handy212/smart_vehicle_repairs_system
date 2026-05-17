@@ -117,7 +117,7 @@ export default function GoogleLoginButton({
 
     const handleCodeResponse = async (code: string) => {
         try {
-            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/auth/google/login/`, {
+            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/login/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

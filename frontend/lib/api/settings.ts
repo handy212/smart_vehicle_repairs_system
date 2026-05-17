@@ -1,4 +1,10 @@
 import apiClient from "./client";
+import type { ApiRequestConfig } from "./client";
+
+const publicRequestConfig = {
+    skipAuth: true,
+    skipAuthRefresh: true,
+} as ApiRequestConfig;
 
 export interface BrandingSettings {
     site_name: string;
@@ -13,7 +19,7 @@ export interface BrandingSettings {
 
 export const settingsApi = {
     getPublicBranding: async (): Promise<BrandingSettings[]> => {
-        const response = await apiClient.get("/admin/settings/public/branding/");
+        const response = await apiClient.get("/admin/settings/public/branding/", publicRequestConfig);
         return response.data;
     },
 
@@ -22,7 +28,7 @@ export const settingsApi = {
         const settings = await settingsApi.getPublicBranding();
         const map: Record<string, string> = {};
 
-        settings.forEach((s: any) => {
+        settings.forEach((s) => {
             map[s.key] = s.value;
         });
         return map;

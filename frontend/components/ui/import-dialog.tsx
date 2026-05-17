@@ -196,15 +196,15 @@ export function ImportDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="border-b pb-4">
-          <div className="flex items-center justify-between pr-8">
-            <DialogTitle className="text-xl font-semibold text-foreground">{title}</DialogTitle>
+          <div className="flex items-center justify-between gap-3 pr-8">
+            <DialogTitle className="text-xl font-semibold text-foreground break-words">{title}</DialogTitle>
             <DialogClose onOpenChange={handleClose} />
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-1 py-4 space-y-4 sm:px-6">
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
@@ -292,7 +292,7 @@ export function ImportDialog({
 
           {showPreview && preview && (
             <div className="space-y-2 border border-border rounded-md p-3 bg-muted bg-background">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <h4 className="text-sm font-medium text-foreground">File Preview</h4>
                 <span className="text-xs text-muted-foreground">
                   Showing first {preview.rows.length} of {preview.totalRows} rows

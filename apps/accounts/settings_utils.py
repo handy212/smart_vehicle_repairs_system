@@ -159,11 +159,13 @@ def get_branding_settings():
         'success_color',
         'danger_color',
         'theme_mode',
+        'document_watermark_enabled',
     ]
     
     return get_settings(keys, {
         'theme_mode': 'perfex',
         'login_background_overlay': '0.85',  # Default 85% opacity
+        'document_watermark_enabled': 'true',
     })
 
 

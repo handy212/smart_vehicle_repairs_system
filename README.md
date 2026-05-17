@@ -1,238 +1,191 @@
-# 🚗 Smart Vehicle Repairs Management System
+# Smart Vehicle Repairs Management System
 
-A comprehensive Django-based vehicle repair and workshop management system with modern features for managing customers, vehicles, appointments, work orders, inventory, billing, inspections, and reporting.
+A full-stack vehicle repair and workshop ERP: **Django 5.2** API backend with **Next.js 16** staff dashboard, customer portal, mobile, and technician apps. Covers customers, vehicles, appointments, work orders, inventory, billing, inspections, accounting, HR, reporting, and integrations (Hubtel, Paystack, QuickBooks, Firebase, and more).
 
-## 📋 Features
+## Architecture
 
-### 🔐 Authentication & User Management
-- Custom user model with role-based permissions
-- JWT authentication for API
-- Social authentication support (Google, Facebook, etc.)
-- Role-based access control (Admin, Manager, Receptionist, Technician, Parts Manager, Customer)
+| Layer | Technology | Location |
+|-------|------------|----------|
+| API | Django 5.2 + DRF + JWT | [`config/`](config/), [`apps/`](apps/) |
+| Staff / portal UI | Next.js 16, React 19, TypeScript | [`frontend/`](frontend/) |
+| Legacy UI (deprecated) | Django templates | [`templates/`](templates/), see [docs/legacy-ui-deprecation.md](docs/legacy-ui-deprecation.md) |
+| Task queue | Celery + Redis | [`config/celery.py`](config/celery.py) |
+| Realtime | Django Channels | ASGI in [`config/`](config/) |
 
-### 🚘 Vehicle & Customer Management
-- Customer profiles with complete service history
-- Vehicle information (VIN, make, model, year, mileage, fuel type)
-- CarAPI integration for vehicle data lookup
-- Service history tracking
+**Design system:** [DESIGN.md](DESIGN.md) — “Precision Curator” UI spec for the Next.js app.
 
-### 📅 Appointments & Scheduling
-- Online booking system
-- Technician scheduling and availability
-- Visual calendar for job management
-- Service reminders and follow-ups
+## Prerequisites
 
-### 🛠️ Work Order Management
-- Job cards with task breakdown
-- Status tracking (In Progress, Waiting for Parts, Completed, etc.)
-- Time tracking and labor estimates
-- Task assignment to technicians
+- **Python 3.12+** (Docker and production use 3.12)
+- **Node.js 20+** (frontend)
+- **PostgreSQL** and **Redis** (recommended for local dev; SQLite fallback if `DATABASE_URL` is unset)
+- `pip`, `npm`
 
-### 📦 Inventory Management
-- Real-time stock levels
-- Supplier/vendor management
-- Automated reorder alerts
-- Parts request tracking
+## Quick start (recommended)
 
-### 💳 Billing & Invoicing
-- Estimate/quotation generation
-- Invoice creation and payment tracking
-- Multiple payment methods support
-- Integration-ready for accounting systems
+The dev script starts the API, Next.js, and Celery with consistent ports:
 
-### 🔍 Inspections
-- Digital inspection checklists
-- Photo attachments
-- Defect tracking
-- Pre-service inspections
-
-### 📊 Reporting & Analytics
-- Dashboard with key KPIs
-- Technician performance metrics
-- Financial reports
-- Work-in-progress reporting
-
-### 🔔 Notifications
-- Automated email/SMS notifications
-- Service reminders
-- Status update notifications
-- Customer portal for tracking
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.8+
-- PostgreSQL (or SQLite for development)
-- Redis (for caching and Celery)
-- pip and virtualenv
-
-### Installation
-
-1. **Clone the repository** (if from git)
 ```bash
-cd /path/smart_vehicle_repairs_system
+bash scripts/dev-server.sh
 ```
 
-2. **Create and activate virtual environment**
+| Service | URL |
+|---------|-----|
+| Django API | http://127.0.0.1:8001 |
+| Next.js app | http://127.0.0.1:3001 |
+| API docs (Swagger) | http://127.0.0.1:8001/api/docs/ |
+| Django admin | http://127.0.0.1:8001/admin/ |
+
+Stop all dev processes:
+
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Linux/Mac
-# or
-venv\Scripts\activate  # On Windows
+bash scripts/dev-stop.sh
 ```
 
-3. **Install dependencies**
+The script creates `venv-dev`, applies migrations, runs `init_permissions`, and writes `frontend/.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:8001/api`.
+
+Optional infrastructure only (Postgres on **5433**, Redis on **6379**):
+
 ```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+## Manual setup
+
+### Backend
+
+```bash
+python3 -m venv venv-dev
+source venv-dev/bin/activate
 pip install -r requirements.txt
-```
-
-4. **Set up environment variables**
-```bash
-cp .env.example .env
-# Edit .env file with your configuration
-```
-
-5. **Run migrations**
-```bash
-python manage.py makemigrations
+cp .env.example .env   # edit SECRET_KEY, DATABASE_URL, etc.
+export DJANGO_ENVIRONMENT=development
+python scripts/patch_django52_libs.py   # if prompted by dev-server
 python manage.py migrate
-```
-
-6. **Create superuser**
-```bash
+python manage.py init_permissions
 python manage.py createsuperuser
+python manage.py runserver 127.0.0.1:8001
 ```
 
-7. **Run development server**
+### Frontend
+
 ```bash
-python manage.py runserver
+cd frontend
+npm install
+# .env.local
+# NEXT_PUBLIC_API_URL=http://localhost:8001/api
+npm run dev
 ```
 
-8. **Access the application**
-- Admin Panel: http://localhost:8000/admin/
-- API Documentation: http://localhost:8000/api/docs/
-- API Schema: http://localhost:8000/api/schema/
+See [frontend/README.md](frontend/README.md) for structure, auth flow, and env vars.
 
-### Running Background Tasks (Optional)
+### Celery (optional)
 
-**Start Celery Worker:**
 ```bash
 celery -A config worker -l info
-```
-
-**Start Celery Beat (for scheduled tasks):**
-```bash
 celery -A config beat -l info
 ```
 
-## 📁 Project Structure
+## Testing
+
+### Backend (pytest)
+
+```bash
+source venv-dev/bin/activate
+export DJANGO_SETTINGS_MODULE=config.settings.testing
+pytest
+```
+
+Configuration: [`pytest.ini`](pytest.ini) — **80% coverage** fail-under on `apps/`, in-memory SQLite, eager Celery.
+
+### Frontend (Vitest)
+
+```bash
+cd frontend
+npm run test
+npm run test:coverage
+```
+
+### End-to-end (Playwright)
+
+Requires the dev stack running (API on 8001, UI on 3001):
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+See [frontend/e2e/README.md](frontend/e2e/README.md).
+
+## Production deployment
+
+- **Docker:** [deploy/DOCKER_PRODUCTION_RUNBOOK.md](deploy/DOCKER_PRODUCTION_RUNBOOK.md) — full stack (Postgres 15, Redis 7, nginx, Celery).
+- **Rsync / systemd:** [deploy/README.md](deploy/README.md).
+
+Production API is typically on port **8000** behind nginx; frontend on **3000**. Development intentionally uses **8001** / **3001** to avoid conflicts.
+
+## Project structure
 
 ```
 smart_vehicle_repairs_system/
-├── config/                  # Project configuration
-│   ├── settings.py         # Django settings
-│   ├── urls.py            # URL routing
-│   ├── celery.py          # Celery configuration
-│   └── roles.py           # Role permissions
-├── apps/                   # Django applications
-│   ├── accounts/          # User authentication & management
-│   ├── customers/         # Customer management
-│   ├── vehicles/          # Vehicle tracking
-│   ├── appointments/      # Scheduling & appointments
-│   ├── workorders/        # Work order management
-│   ├── inventory/         # Parts & inventory
-│   ├── billing/           # Invoicing & payments
-│   ├── inspections/       # Vehicle inspections
-│   ├── reporting/         # Analytics & reports
-│   └── notifications_app/ # Notifications system
-├── static/                # Static files (CSS, JS, images)
-├── media/                 # User uploaded files
-├── templates/             # HTML templates
-├── logs/                  # Application logs
-├── requirements.txt       # Python dependencies
-├── manage.py             # Django management script
-└── README.md             # This file
+├── apps/                    # Django domain apps (27 modules)
+│   ├── accounts/            # Users, JWT, RBAC, 2FA
+│   ├── workorders/          # Repair jobs, transitions
+│   ├── billing/             # Estimates, invoices, payments
+│   ├── inventory/           # Parts, POs, transfers
+│   └── …                    # customers, vehicles, hr, accounting, …
+├── config/                  # Settings, URLs, Celery
+├── frontend/                # Next.js App Router UI
+├── templates/               # Legacy Django templates
+├── deploy/                  # Production scripts and runbooks
+├── scripts/                 # dev-server.sh, DB helpers
+├── tests/                   # Cross-app pytest tests
+├── requirements.txt
+├── pytest.ini
+├── docker-compose.yml
+├── DESIGN.md
+└── docs/
 ```
 
-## 🔧 Configuration
+## API documentation
 
-### Database Setup (PostgreSQL)
-```bash
-# Create database
-createdb vehicle_repairs_db
+With the backend running:
 
-# Update .env file
-DATABASE_URL=postgresql://username:password@localhost:5432/vehicle_repairs_db
-```
+- **Swagger UI:** `/api/docs/`
+- **ReDoc:** `/api/redoc/`
+- **OpenAPI schema:** `/api/schema/`
 
-### Redis Setup
-```bash
-# Install Redis (Ubuntu/Debian)
-sudo apt-get install redis-server
+## Configuration
 
-# Start Redis
-redis-server
+Copy [`.env.example`](.env.example) to `.env`. Key variables:
 
-# Update .env file
-REDIS_URL=redis://localhost:6379/0
-```
+- `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`
+- `DATABASE_URL` — PostgreSQL connection string
+- `REDIS_URL` — cache and Celery broker
+- Payment/SMS/OAuth keys (Hubtel, Paystack, Google, Firebase) as needed
 
-### Email Configuration
-Update `.env` file with your SMTP settings:
-```
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
-```
+Environment-specific settings live under [`config/settings/`](config/settings/) (`development`, `production`, `staging`, `testing`).
 
-## 🧪 Running Tests
-```bash
-python manage.py test
-```
+## User roles
 
-## 📚 API Documentation
+Dynamic RBAC with roles such as Admin, Manager, Service Coordinator, Receptionist, Parts Manager, Accountant, Technician, and Customer. Permissions are seeded via `python manage.py init_permissions`.
 
-Once the server is running, visit:
-- **Swagger UI**: http://localhost:8000/api/docs/
-- **ReDoc**: http://localhost:8000/api/redoc/
+## Documentation index
 
-## 🔑 User Roles
+| Document | Purpose |
+|----------|---------|
+| [frontend/README.md](frontend/README.md) | Next.js app |
+| [deploy/DOCKER_PRODUCTION_RUNBOOK.md](deploy/DOCKER_PRODUCTION_RUNBOOK.md) | Docker production |
+| [DESIGN.md](DESIGN.md) | UI design system |
+| [docs/auth-hardening.md](docs/auth-hardening.md) | Auth roadmap (JWT, httpOnly, edge validation) |
+| [docs/legacy-ui-deprecation.md](docs/legacy-ui-deprecation.md) | Legacy Django UI → Next.js mapping |
 
-The system supports the following roles:
+## CI
 
-1. **Admin**: Full system access
-2. **Manager**: Workshop/branch management
-3. **Receptionist**: Front desk operations
-4. **Technician**: Workshop mechanics
-5. **Parts Manager**: Inventory management
-6. **Customer**: Customer portal access
+- **Backend:** `.github/workflows/backend-ci.yml` — pytest + coverage gate
+- **Frontend:** `.github/workflows/frontend-ci.yml` — lint, typecheck, tests, build
+- **E2E:** `.github/workflows/e2e.yml` — Playwright smoke tests
 
-## 🛣️ Roadmap
+## License
 
-- [ ] Complete model implementations for all apps
-- [ ] Build API endpoints with DRF
-- [ ] Add comprehensive test coverage
-- [ ] Implement frontend (React/Vue.js)
-- [ ] Mobile app integration
-- [ ] Payment gateway integration
-- [ ] Advanced reporting with charts
-- [ ] Multi-branch support
-- [ ] Warranty tracking
-- [ ] Predictive maintenance
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 📞 Support
-
-For support, email support@smartvehiclerepairs.com or open an issue in the repository.
-
----
-
-**Built with ❤️ using Django, DRF, and modern Python packages**
+MIT License.

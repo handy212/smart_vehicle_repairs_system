@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.legacy_integration
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient

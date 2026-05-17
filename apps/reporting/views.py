@@ -701,21 +701,23 @@ def profit_margin_report(request):
     # Cost of parts sold (from work orders)
     work_orders = _filter_branch_queryset(
         WorkOrder.objects.filter(
-        invoice__invoice_date__gte=start_date,
-        invoice__invoice_date__lte=end_date
+            invoice__invoice_date__gte=start_date,
+            invoice__invoice_date__lte=end_date,
+            invoice__status__in=['paid', 'partial']
         ),
         request
     )
-    
-    parts_cost = Decimal('0')
-    for wo in work_orders:
-        # This would ideally pull actual cost from inventory
-        # For now, using a simplified calculation
-        parts_cost += wo.parts_subtotal * Decimal('0.6')  # Assuming 40% markup
-    
+
     labor_revenue = total_revenue['labor'] or Decimal('0')
     parts_revenue = total_revenue['parts'] or Decimal('0')
     total_rev = total_revenue['total'] or Decimal('0')
+
+    parts_cost = work_orders.aggregate(total=Sum('parts__total_cost'))['total'] or Decimal('0')
+    if parts_cost == 0:
+        parts_cost = work_orders.aggregate(total=Sum('estimated_parts_cost'))['total'] or Decimal('0')
+    if parts_cost == 0:
+        # Fallback for older work orders without part cost rows.
+        parts_cost = parts_revenue * Decimal('0.6')
     
     gross_profit = total_rev - parts_cost
     profit_margin = (gross_profit / total_rev * 100) if total_rev > 0 else 0

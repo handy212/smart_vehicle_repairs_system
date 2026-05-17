@@ -718,7 +718,7 @@ export default function EditEstimatePage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-col gap-2 mb-4 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -746,7 +746,7 @@ export default function EditEstimatePage() {
                   </div>
                 )}
               </div>
-              <Link href="/inventory/new" target="_blank">
+              <Link href="/inventory/new" target="_blank" className="sm:self-start">
                 <Button type="button" variant="outline" size="icon" title="Add new part to inventory">
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -755,6 +755,7 @@ export default function EditEstimatePage() {
                 type="button"
                 onClick={() => addLineItem("labor")}
                 variant="default"
+                className="sm:self-start"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Item
@@ -872,7 +873,7 @@ export default function EditEstimatePage() {
 
         {/* Summary */}
         <div className="flex justify-end">
-          <div className="w-1/3 min-w-[300px] space-y-2">
+          <div className="w-full space-y-2 sm:max-w-sm">
             <div className="flex justify-between text-sm">
               <span className="font-medium">Sub Total :</span>
               <span>{formatCurrency(subtotal)}</span>

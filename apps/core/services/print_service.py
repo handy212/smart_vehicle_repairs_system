@@ -7,11 +7,67 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 from django.conf import settings
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
 from apps.accounts.settings_utils import get_company_info, get_branding_settings
+
+
+def _get_pdf_footer_logos() -> list[str]:
+    logo_dir = Path(settings.BASE_DIR) / 'static' / 'images' / 'logos'
+    return [
+        f'file://{logo_dir / filename}'
+        for filename in ('logo-1.jpeg', 'logo-2.jpeg', 'logo-3.jpeg')
+        if (logo_dir / filename).exists()
+    ]
+
+
+def _document_watermark_enabled() -> bool:
+    from apps.accounts.settings_utils import get_setting
+
+    value = get_setting('document_watermark_enabled', 'true')
+    return str(value).strip().lower() in {'true', '1', 'yes', 'on'}
+
+
+DOCUMENT_WATERMARKS = {
+    'work_order': 'WORK ORDER',
+    'inspection': 'INSPECTION',
+    'purchase_order': 'PURCHASE ORDER',
+    'receipt': 'RECEIPT',
+    'gate_pass': 'GATE PASS',
+    'bill': 'BILL',
+    'transfer_note': 'TRANSFER',
+    'inventory_count_sheet': 'COUNT SHEET',
+    'aging_report': 'AGING REPORT',
+    'revenue_summary': 'REVENUE REPORT',
+    'payslip': 'PAYSLIP',
+    'diagnosis_report': 'DIAGNOSIS',
+    'recommendations': 'RECOMMENDATIONS',
+}
+
+
+def _get_default_watermark(document_type: str, document: Any = None) -> Optional[Dict[str, str]]:
+    if not _document_watermark_enabled():
+        return None
+
+    status = getattr(document, 'status', None)
+    if status:
+        status_watermark = _get_watermark(str(status))
+        if status_watermark:
+            return status_watermark
+
+    text = DOCUMENT_WATERMARKS.get(document_type)
+    if not text:
+        return None
+    return {'text': text, 'color': '#6b7280'}
+
+
+def _get_document_watermark(document_type: str, document: Any = None, explicit: Optional[Dict[str, str]] = None) -> Optional[Dict[str, str]]:
+    if not _document_watermark_enabled():
+        return None
+    return explicit or _get_default_watermark(document_type, document)
 
 class DocumentPrinter:
     """Unified document printing service"""
@@ -93,8 +149,14 @@ class DocumentPrinter:
             context.update({
                 'document_type': self.document_type,
                 'settings': settings,
+                'print_footer_logos': _get_pdf_footer_logos(),
                 **system_settings, # Flatten settings into context (company_name, logo_path etc)
             })
+            context['watermark'] = _get_document_watermark(
+                self.document_type,
+                context.get('document'),
+                context.get('watermark'),
+            )
             
             # Render HTML
             html_string = render_to_string(self.template, context)
@@ -269,7 +331,7 @@ def generate_invoice_pdf(invoice, branch=None):
     context = {
         'document': invoice,
         'branch': branch or invoice.branch,
-        'watermark': _get_watermark(invoice.status),
+        'watermark': _get_document_watermark('invoice', invoice, _get_watermark(invoice.status)),
     }
     filename = f"invoice_{invoice.invoice_number}.pdf"
     return printer.generate_pdf(context, filename)
@@ -281,7 +343,7 @@ def generate_estimate_pdf(estimate, branch=None):
     context = {
         'document': estimate,
         'branch': branch or estimate.branch,
-        'watermark': _get_watermark(estimate.status),
+        'watermark': _get_document_watermark('estimate', estimate, _get_watermark(estimate.status)),
     }
     filename = f"estimate_{estimate.estimate_number}.pdf"
     return printer.generate_pdf(context, filename)
@@ -394,7 +456,7 @@ def render_invoice_print_html(invoice, branch=None, request=None):
     context = {
         'document': invoice,
         'branch': branch or invoice.branch,
-        'watermark': _get_watermark(invoice.status),
+        'watermark': _get_document_watermark('invoice', invoice, _get_watermark(invoice.status)),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -413,7 +475,7 @@ def render_estimate_print_html(estimate, branch=None, request=None):
     context = {
         'document': estimate,
         'branch': branch or estimate.branch,
-        'watermark': _get_watermark(estimate.status),
+        'watermark': _get_document_watermark('estimate', estimate, _get_watermark(estimate.status)),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -440,6 +502,7 @@ def render_receipt_print_html(payment, branch=None, request=None):
         'document': payment,
         'branch': branch or (payment.invoice.branch if payment.invoice else None),
         'previous_payments': previous_payments,
+        'watermark': _get_document_watermark('receipt', payment),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -458,6 +521,7 @@ def render_work_order_print_html(work_order, branch=None, request=None):
     context = {
         'document': work_order,
         'branch': branch or work_order.branch,
+        'watermark': _get_document_watermark('work_order', work_order),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -485,6 +549,7 @@ def render_inspection_print_html(inspection, branch=None, request=None):
         'document': inspection,
         'branch': branch or inspection.branch,
         'grouped_results': grouped_results,
+        'watermark': _get_document_watermark('inspection', inspection),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -514,6 +579,7 @@ def render_gate_pass_print_html(gate_pass, branch=None, request=None):
     context = {
         'document': gate_pass,
         'branch': branch or gate_pass.branch,
+        'watermark': _get_document_watermark('gate_pass', gate_pass),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -533,7 +599,7 @@ def render_credit_note_print_html(credit_note, branch=None, request=None):
         'document': credit_note,
         'branch': branch or credit_note.branch,
         'items': credit_note.line_items.all(),
-        'watermark': _get_watermark(credit_note.status),
+        'watermark': _get_document_watermark('credit_note', credit_note, _get_watermark(credit_note.status)),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -552,6 +618,7 @@ def render_purchase_order_print_html(purchase_order, branch=None, request=None):
     context = {
         'document': purchase_order,
         'branch': branch or purchase_order.branch,
+        'watermark': _get_document_watermark('purchase_order', purchase_order),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,
@@ -679,6 +746,7 @@ def render_diagnosis_report_print_html(diagnosis, base_context=None, request=Non
     context.update({
         'document': diagnosis,
         'branch': diagnosis.work_order.branch if diagnosis.work_order else None,
+        'watermark': _get_document_watermark('diagnosis_report', diagnosis),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
         **company_info,

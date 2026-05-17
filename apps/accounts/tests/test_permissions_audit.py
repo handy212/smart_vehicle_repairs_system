@@ -3,12 +3,17 @@ from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from django.core.management import call_command
+from django.test import RequestFactory
 from rolepermissions.roles import assign_role
+from rest_framework_simplejwt.tokens import RefreshToken
 from apps.inventory.models import PartCategory
 from apps.accounts.permission_models import Permission, Role, UserPermissionOverride
 from apps.accounts.admin_models import SystemBackup, SystemModule, SystemSettings
+from apps.accounts.settings_utils import clear_settings_cache
+from config.logging_filters import SkipMaintenanceMode503Filter
 import tempfile
 from pathlib import Path
+import logging
 
 User = get_user_model()
 
@@ -30,6 +35,173 @@ class SystemSettingsInitializationTests(TestCase):
         self.assertTrue(SystemSettings.objects.filter(key='paystack_public_key', category='payment', is_active=True).exists())
         self.assertTrue(SystemSettings.objects.filter(key='paystack_secret_key', category='payment', is_active=True).exists())
         self.assertFalse(SystemSettings.objects.filter(key='stripe_secret_key', is_active=True).exists())
+        self.assertTrue(SystemSettings.objects.filter(key='self_registration_enabled', category='branding', is_active=True).exists())
+        self.assertTrue(SystemSettings.objects.filter(key='document_watermark_enabled', category='branding', is_active=True).exists())
+
+
+class PublicSettingsEndpointTests(TestCase):
+    def test_public_integrations_ignores_invalid_authorization_header(self):
+        SystemSettings.objects.create(
+            category='integration',
+            key='recaptcha_enabled',
+            value='false',
+            is_active=True,
+            is_secret=False,
+        )
+        client = APIClient()
+
+        response = client.get(
+            '/api/accounts/admin/settings/public/integrations/',
+            HTTP_AUTHORIZATION='Bearer invalid-token',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['recaptcha_enabled'], 'false')
+
+    def test_public_branding_exposes_self_registration_toggle(self):
+        SystemSettings.objects.create(
+            category='branding',
+            key='self_registration_enabled',
+            value='false',
+            is_active=True,
+            is_secret=False,
+        )
+
+        response = APIClient().get('/api/accounts/admin/settings/public/branding/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        values = {item['key']: item['value'] for item in response.data}
+        self.assertEqual(values['self_registration_enabled'], 'false')
+
+    def test_public_branding_exposes_document_watermark_toggle(self):
+        SystemSettings.objects.create(
+            category='branding',
+            key='document_watermark_enabled',
+            value='false',
+            is_active=True,
+            is_secret=False,
+        )
+
+        response = APIClient().get('/api/accounts/admin/settings/public/branding/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        values = {item['key']: item['value'] for item in response.data}
+        self.assertEqual(values['document_watermark_enabled'], 'false')
+
+
+class SelfRegistrationSettingsTests(TestCase):
+    def test_manual_registration_initiate_respects_disabled_setting(self):
+        SystemSettings.objects.update_or_create(
+            key='self_registration_enabled',
+            defaults={
+                'category': 'branding',
+                'value': 'false',
+                'description': 'Allow customers to create their own account from the login page',
+                'is_active': True,
+            },
+        )
+
+        response = APIClient().post('/api/accounts/register/initiate/', {})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'], 'Self registration is currently disabled.')
+
+
+class MaintenanceModeMiddlewareTests(TestCase):
+    def setUp(self):
+        clear_settings_cache()
+        SystemSettings.objects.update_or_create(
+            key='maintenance_mode',
+            defaults={
+                'category': 'maintenance',
+                'value': 'true',
+                'description': 'Enable maintenance mode',
+                'is_active': True,
+            },
+        )
+        SystemSettings.objects.update_or_create(
+            key='maintenance_message',
+            defaults={
+                'category': 'maintenance',
+                'value': 'System is closed for maintenance.',
+                'description': 'Maintenance message',
+                'is_active': True,
+            },
+        )
+        clear_settings_cache()
+        self.staff_user = User.objects.create_user(
+            username='staff_maintenance',
+            email='staff_maintenance@example.com',
+            password='password123',
+            role='technician',
+        )
+        self.admin_user = User.objects.create_user(
+            username='admin_maintenance',
+            email='admin_maintenance@example.com',
+            password='password123',
+            role='admin',
+        )
+
+    def tearDown(self):
+        clear_settings_cache()
+
+    def _authenticated_client(self, user):
+        client = APIClient()
+        access_token = str(RefreshToken.for_user(user).access_token)
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        return client
+
+    def test_maintenance_mode_blocks_unauthenticated_api_requests(self):
+        response = APIClient().get('/api/vehicles/vehicles/')
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertTrue(response.json()['maintenance_mode'])
+        self.assertEqual(response.json()['detail'], 'System is closed for maintenance.')
+
+    def test_maintenance_mode_blocks_non_admin_jwt_requests(self):
+        response = self._authenticated_client(self.staff_user).get('/api/vehicles/vehicles/')
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertTrue(response.json()['maintenance_mode'])
+
+    def test_maintenance_mode_allows_admin_jwt_requests(self):
+        response = self._authenticated_client(self.admin_user).get('/api/accounts/users/me/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], self.admin_user.email)
+
+    def test_maintenance_mode_keeps_current_user_available(self):
+        response = self._authenticated_client(self.staff_user).get('/api/auth/users/me/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], self.staff_user.email)
+
+    def test_maintenance_mode_keeps_public_settings_available(self):
+        response = APIClient().get('/api/accounts/admin/settings/public/integrations/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class MaintenanceModeLoggingFilterTests(TestCase):
+    def test_filter_skips_marked_maintenance_503_records_only(self):
+        request = RequestFactory().get('/api/portal/dashboard/')
+        request._maintenance_mode_response = True
+        record = logging.LogRecord(
+            'django.request',
+            logging.ERROR,
+            __file__,
+            1,
+            'Service Unavailable',
+            args=(),
+            exc_info=None,
+        )
+        record.status_code = 503
+        record.request = request
+
+        self.assertFalse(SkipMaintenanceMode503Filter().filter(record))
+
+        record.status_code = 500
+        self.assertTrue(SkipMaintenanceMode503Filter().filter(record))
 
 
 class PermissionAuditTests(TestCase):

@@ -33,7 +33,7 @@ export const quickbooksApi = {
    * However, we can use it to hit the connect/disconnect endpoints if needed.)
    */
   connect: () => {
-    const configuredBaseUrl = apiClient.defaults.baseURL || "http://localhost:8001/api";
+    const configuredBaseUrl = apiClient.defaults.baseURL || "http://localhost:8000/api";
     const normalizedBaseUrl = configuredBaseUrl.replace(/\/$/, "");
     const connectUrl = new URL(`${normalizedBaseUrl}/quickbooks/connect/`);
 

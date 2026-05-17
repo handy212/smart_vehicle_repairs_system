@@ -4,8 +4,12 @@ Tests for branches app
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.template.loader import render_to_string
+from types import SimpleNamespace
 from rest_framework import status
 from rest_framework.test import APIClient
+from apps.accounts.admin_models import SystemSettings
+from apps.accounts.settings_utils import clear_settings_cache
 from apps.branches.models import Branch
 
 User = get_user_model()
@@ -174,3 +178,99 @@ class BranchApiPermissionTest(TestCase):
         self.technician.refresh_from_db()
         self.assertFalse(second_branch.is_active)
         self.assertEqual(self.technician.branch_id, second_branch.id)
+
+
+class PrintFooterTemplateTest(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email='footer_admin@test.com',
+            username='footer_admin',
+            password='testpass123',
+            role='admin',
+            is_staff=True,
+        )
+        Branch.objects.create(
+            name='Accra Branch',
+            code='ACC',
+            phone='555-1000',
+            address='1 Ring Road',
+            city='Accra',
+            state='Greater Accra',
+            zip_code='00233',
+            created_by=self.admin,
+        )
+        Branch.objects.create(
+            name='Archived Branch',
+            code='ARC',
+            phone='555-2000',
+            address='2 Old Road',
+            city='Tema',
+            state='Greater Accra',
+            zip_code='00234',
+            is_active=False,
+            created_by=self.admin,
+        )
+        Branch.objects.create(
+            name='Kumasi Branch',
+            code='KUM',
+            phone='555-3000',
+            address='3 Lake Road',
+            city='Kumasi',
+            state='Ashanti',
+            zip_code='00235',
+            created_by=self.admin,
+        )
+
+    def tearDown(self):
+        clear_settings_cache()
+
+    def test_print_footer_lists_active_branches_and_company_logos(self):
+        html = render_to_string(
+            'printing/base/components/footer.html',
+            {'company_name': 'Smart Vehicle Repairs'},
+        )
+
+        self.assertIn('Accra Branch', html)
+        self.assertIn('Kumasi Branch', html)
+        self.assertIn(' | ', html)
+        self.assertNotIn('Archived Branch', html)
+        self.assertNotIn('555-1000', html)
+        self.assertNotIn('555-3000', html)
+        self.assertNotIn('Greater Accra', html)
+        self.assertNotIn('Ashanti', html)
+        self.assertIn('images/logos/logo-1.jpeg', html)
+        self.assertIn('images/logos/logo-2.jpeg', html)
+        self.assertIn('images/logos/logo-3.jpeg', html)
+
+    def test_default_watermark_covers_non_invoice_templates(self):
+        from apps.core.services.print_service import _get_default_watermark
+
+        clear_settings_cache()
+        self.assertEqual(
+            _get_default_watermark('work_order', SimpleNamespace()).get('text'),
+            'WORK ORDER',
+        )
+        self.assertEqual(
+            _get_default_watermark('receipt', SimpleNamespace()).get('text'),
+            'RECEIPT',
+        )
+        self.assertEqual(
+            _get_default_watermark('invoice', SimpleNamespace(status='paid')).get('text'),
+            'PAID',
+        )
+
+    def test_document_watermark_can_be_disabled_from_settings(self):
+        from apps.core.services.print_service import _get_default_watermark
+
+        SystemSettings.objects.update_or_create(
+            key='document_watermark_enabled',
+            defaults={
+                'category': 'branding',
+                'value': 'false',
+                'description': 'Show watermarks on printed and downloaded documents',
+                'is_active': True,
+            },
+        )
+        clear_settings_cache()
+
+        self.assertIsNone(_get_default_watermark('work_order', SimpleNamespace()))

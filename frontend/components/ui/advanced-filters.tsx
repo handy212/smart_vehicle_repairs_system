@@ -108,15 +108,15 @@ export function AdvancedFilters({
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
-          <DialogHeader className="border-b px-6 py-4 bg-muted/50 bg-muted/50">
-            <div className="flex items-center justify-between">
+        <DialogContent className="max-w-2xl max-h-[calc(100vh-1.5rem)] sm:max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
+          <DialogHeader className="border-b px-4 py-4 sm:px-6 bg-muted/50 bg-muted/50">
+            <div className="flex items-center justify-between gap-3">
               <DialogTitle className="text-lg font-semibold tracking-tight">{title}</DialogTitle>
               {/* Close handled by Dialog primitives usually, but custom button here is fine */}
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+          <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
             <div className="space-y-8">
               {/* Quick Filters */}
               {quickFilters.length > 0 && (
@@ -269,8 +269,8 @@ export function AdvancedFilters({
           </div>
 
           <DialogFooter className="border-t p-4 bg-muted/50 bg-muted/50 mt-0">
-            <div className="flex justify-between w-full items-center">
-              <div className="flex gap-2">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" size="sm" onClick={handleReset} type="button" className="text-muted-foreground hover:text-foreground">
                   Reset
                 </Button>
@@ -289,4 +289,3 @@ export function AdvancedFilters({
     </>
   );
 }
-

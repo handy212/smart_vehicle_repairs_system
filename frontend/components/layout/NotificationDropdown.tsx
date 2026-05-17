@@ -215,8 +215,8 @@ export function NotificationDropdown() {
                 </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-96 max-h-[600px] overflow-hidden">
-                <DropdownMenuLabel className="flex items-center justify-between py-3 px-4">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-96 max-h-[calc(100vh-5rem)] overflow-hidden">
+                <DropdownMenuLabel className="flex flex-wrap items-center justify-between gap-2 py-3 px-4">
                     <span className="text-sm font-semibold text-foreground">
                         Notifications
                         {unreadCount > 0 && (

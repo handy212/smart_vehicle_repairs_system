@@ -182,9 +182,9 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
   };
 
   return (
-    <div className="space-y-6 bg-background min-h-screen p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+    <div className="space-y-6 bg-background min-h-screen p-4 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href={`/customers/${customerId}`}>
             <Button variant="secondary" className="border-border text-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />

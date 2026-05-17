@@ -344,7 +344,7 @@ export default function ProformaDetailPage() {
                     </Card>
 
                     <div className="flex justify-end">
-                        <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
+                        <div className="w-full space-y-2 px-4 sm:max-w-sm md:px-0">
                             <div className="flex justify-between text-sm">
                                 <span className="font-medium text-muted-foreground">Subtotal</span>
                                 <span className="text-foreground font-medium">
@@ -416,4 +416,3 @@ export default function ProformaDetailPage() {
         </div>
     );
 }
-

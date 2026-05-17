@@ -2,11 +2,19 @@
 Serializers for Google OAuth integration with JWT authentication.
 """
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from allauth.socialaccount.models import SocialAccount
 
 User = get_user_model()
+
+
+def self_registration_enabled():
+    from apps.accounts.admin_models import SystemSettings
+
+    value = SystemSettings.get_setting('self_registration_enabled', 'true')
+    return str(value).strip().lower() in {'true', '1', 'yes', 'on'}
 
 
 class GoogleAuthSerializer(serializers.Serializer):
@@ -117,6 +125,8 @@ class GoogleAuthSerializer(serializers.Serializer):
             is_new_social_user = created and not user.has_usable_password()
 
             if is_new_social_user and not user.phone:
+                if not self_registration_enabled():
+                    raise PermissionDenied("Self registration is currently disabled.")
                 OTPService.generate_otp(email, first_name=user.first_name)
                 return {
                     'registration_required': True,
@@ -139,6 +149,8 @@ class GoogleAuthSerializer(serializers.Serializer):
             }
         
         # User does NOT exist - trigger OTP and flag for registration
+        if not self_registration_enabled():
+            raise PermissionDenied("Self registration is currently disabled.")
         OTPService.generate_otp(email, first_name=idinfo.get('given_name'))
         return {
             'registration_required': True,
@@ -174,6 +186,9 @@ class GoogleRegistrationCompleteSerializer(serializers.Serializer):
         from django.db import transaction
         from apps.customers.models import Customer
         from apps.accounts.services import OTPService
+
+        if not self_registration_enabled():
+            raise PermissionDenied("Self registration is currently disabled.")
         
         email = validated_data['email']
         otp_code = validated_data['otp_code']

@@ -20,12 +20,12 @@ interface PageHeaderProps {
 export function PageHeader({ title, breadcrumbs, actions, className, children }: PageHeaderProps) {
     return (
         <div className={cn("space-y-4 mb-6", className)}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 space-y-1">
                     {breadcrumbs && breadcrumbs.length > 0 && (
-                        <nav className="flex items-center space-x-1 text-sm text-muted-foreground">
+                        <nav className="flex max-w-full items-center space-x-1 overflow-x-auto text-sm text-muted-foreground">
                             {breadcrumbs.map((item, index) => (
-                                <div key={index} className="flex items-center">
+                                <div key={index} className="flex shrink-0 items-center">
                                     {index > 0 && <ChevronRight className="w-4 h-4 mx-1" />}
                                     {item.href ? (
                                         <Link
@@ -43,11 +43,11 @@ export function PageHeader({ title, breadcrumbs, actions, className, children }:
                             ))}
                         </nav>
                     )}
-                    <h1 className="text-xl font-bold text-foreground tracking-tight">{title}</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight break-words">{title}</h1>
                 </div>
 
                 {actions && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         {actions}
                     </div>
                 )}

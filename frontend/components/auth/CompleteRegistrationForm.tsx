@@ -90,7 +90,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
     const handleResendOTP = async () => {
         if (resendTimer > 0) return;
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/auth/google/resend_otp/`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/resend_otp/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: userData.email })
@@ -124,7 +124,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
         }
 
         try {
-            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/auth/google/complete_registration/`, {
+            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/complete_registration/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-1.5">
                             <Label htmlFor="first_name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">First Name</Label>
                             <Input
@@ -256,7 +256,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
                                     {...register('company_name')}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="business_type" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Business Type</Label>
                                     <Input

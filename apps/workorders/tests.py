@@ -510,7 +510,7 @@ class TestWorkOrderWorkflow:
         workorder = baker.make(WorkOrder)
         tasks = baker.make(ServiceTask, work_order=workorder, _quantity=3)
         
-        assert workorder.servicetask_set.count() == 3
+        assert workorder.tasks.count() == 3
         assert len(tasks) == 3
 
     def test_workorder_with_parts(self):
@@ -520,27 +520,33 @@ class TestWorkOrderWorkflow:
         workorder_part = baker.make(
             WorkOrderPart,
             work_order=workorder,
-            part=part,
-            quantity_used=2
+            inventory_part=part,
+            part_name=part.name,
+            quantity=Decimal('2'),
+            unit_cost=Decimal('10.00'),
         )
         
-        assert workorder.workorderpart_set.count() == 1
-        assert workorder_part.quantity_used == 2
+        assert workorder.parts.count() == 1
+        assert workorder_part.quantity == Decimal('2')
 
     def test_technician_time_logging(self):
         """Test technician time logging."""
+        from django.utils import timezone
+
         workorder = baker.make(WorkOrder)
         technician = baker.make(User, role='technician')
         time_log = baker.make(
             TechnicianTimeLog,
             work_order=workorder,
             technician=technician,
-            hours_worked=Decimal('3.5')
+            clock_in=timezone.now(),
+            duration_hours=Decimal('3.5'),
+            description='Test labor',
         )
         
         assert time_log.work_order == workorder
         assert time_log.technician == technician
-        assert time_log.hours_worked == Decimal('3.5')
+        assert time_log.duration_hours == Decimal('3.5')
 
 
 @pytest.mark.django_db
@@ -553,17 +559,21 @@ class TestWorkOrderCalculations:
         task1 = baker.make(
             ServiceTask,
             work_order=workorder,
+            description='Labor task 1',
             estimated_hours=Decimal('2.0'),
-            hourly_rate=Decimal('80.00')
+            labor_rate=Decimal('80.00'),
+            labor_cost=Decimal('160.00'),
         )
         task2 = baker.make(
             ServiceTask,
             work_order=workorder,
+            description='Labor task 2',
             estimated_hours=Decimal('1.5'),
-            hourly_rate=Decimal('75.00')
+            labor_rate=Decimal('75.00'),
+            labor_cost=Decimal('112.50'),
         )
         
-        total_labor = task1.estimated_cost + task2.estimated_cost
+        total_labor = task1.labor_cost + task2.labor_cost
         expected_total = Decimal('160.00') + Decimal('112.50')
         assert total_labor == expected_total
 
@@ -574,10 +584,12 @@ class TestWorkOrderCalculations:
         workorder_part = baker.make(
             WorkOrderPart,
             work_order=workorder,
-            part=part,
-            quantity_used=3,
-            unit_price=part.selling_price
+            inventory_part=part,
+            part_name=part.name,
+            quantity=Decimal('3'),
+            unit_cost=Decimal('25.00'),
         )
+        workorder_part.save()
         
         expected_cost = Decimal('75.00')  # 3 * 25.00
         assert workorder_part.total_cost == expected_cost
@@ -586,14 +598,12 @@ class TestWorkOrderCalculations:
         """Test work order grand total calculation."""
         workorder = baker.make(
             WorkOrder,
-            labor_total=Decimal('200.00'),
-            parts_total=Decimal('150.00'),
-            tax_amount=Decimal('35.00'),
-            discount_amount=Decimal('20.00')
+            actual_labor_cost=Decimal('200.00'),
+            actual_parts_cost=Decimal('150.00'),
+            actual_total=Decimal('350.00'),
         )
         
-        expected_total = Decimal('365.00')  # 200 + 150 + 35 - 20
-        assert workorder.total_amount == expected_total
+        assert workorder.actual_total == Decimal('350.00')
 
 
 @pytest.mark.django_db

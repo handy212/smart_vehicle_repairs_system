@@ -92,6 +92,7 @@ export default function LoginPage() {
         logo_dark_path: null,
         login_background: null,
         primary_color: "#ff8040",
+        self_registration_enabled: true,
       };
     }
 
@@ -107,6 +108,7 @@ export default function LoginPage() {
       logo_dark_path: getSetting("logo_dark_path"),
       login_background: getSetting("login_background"),
       primary_color: getSetting("primary_color") || "#ff8040",
+      self_registration_enabled: getSetting("self_registration_enabled") !== "false",
     };
   }, [brandingSettings]);
 
@@ -477,17 +479,19 @@ export default function LoginPage() {
               </CardContent>
             </Card>
 
-            <p className="text-center text-sm lg:text-base text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <button
-                type="button"
-                onClick={() => router.push("/register")}
-                className="font-bold underline-offset-4 hover:underline"
-                style={{ color: branding.primary_color }}
-              >
-                Start for free
-              </button>
-            </p>
+            {branding.self_registration_enabled && (
+              <p className="text-center text-sm lg:text-base text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/register")}
+                  className="font-bold underline-offset-4 hover:underline"
+                  style={{ color: branding.primary_color }}
+                >
+                  Start for free
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

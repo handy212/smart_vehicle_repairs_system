@@ -307,10 +307,13 @@ class AuditLogSerializerTest(AuditLogAPISetup):
 
     def test_user_name_fallback_to_username(self):
         """If actor has no first/last name, user_name should fall back to username (Bug 4 fix)."""
-        # Admin user with no first/last name
-        self.admin_user.first_name = ""
-        self.admin_user.last_name = ""
-        self.admin_user.save()
+        # Use a non-super-admin actor; super-admin actors are serialized as "System".
+        actor = self.regular_user
+        actor.first_name = ""
+        actor.last_name = ""
+        actor.save()
+        self.log_create.actor = actor
+        self.log_create.save(update_fields=["actor"])
 
         response = self.admin_client.get(f"{AUDIT_LOGS_URL}{self.log_create.id}/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -318,9 +321,9 @@ class AuditLogSerializerTest(AuditLogAPISetup):
         # Should NOT be empty and should NOT be the email address
         self.assertIsNotNone(user_name)
         self.assertNotEqual(user_name, "")
-        self.assertNotEqual(user_name, self.admin_user.email, "user_name must not fall through to email")
+        self.assertNotEqual(user_name, actor.email, "user_name must not fall through to email")
         # Should be username when both first and last names are blank
-        self.assertEqual(user_name, self.admin_user.username)
+        self.assertEqual(user_name, actor.username)
 
     def test_system_actor_shows_system_name(self):
         """Logs without an actor should show 'System' as user_name."""

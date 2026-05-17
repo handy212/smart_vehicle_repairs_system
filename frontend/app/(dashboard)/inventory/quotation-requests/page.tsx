@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, ClipboardList, ExternalLink, Package, RefreshCw, Search } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, ClipboardList, ExternalLink, Grid2X2, List, Package, RefreshCw, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { diagnosisApi, QuotationQueueRecommendation } from "@/lib/api/diagnosis";
 import { workordersApi, WorkOrderPart } from "@/lib/api/workorders";
@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useAuthStore } from "@/store/authStore";
@@ -27,8 +28,20 @@ interface PartsRequestStats {
 }
 
 interface PaginatedPartsResponse {
+  next?: string | null;
   results?: WorkOrderPart[];
 }
+
+const fulfillmentStatusOptions = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Pending" },
+  { value: "po_created", label: "PO Created" },
+  { value: "awaiting_stock", label: "Awaiting Stock" },
+  { value: "received", label: "Received" },
+  { value: "ready", label: "Ready" },
+] as const;
+
+type FulfillmentView = "list" | "grid";
 
 const getErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error && "response" in error) {
@@ -48,6 +61,7 @@ export default function QuotationRequestsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [activeStatus, setActiveStatus] = useState("all");
+  const [fulfillmentView, setFulfillmentView] = useState<FulfillmentView>("list");
   const [selectedWoId, setSelectedWoId] = useState<number | null>(null);
   const { hasAnyPermission } = usePermissions();
   const { user } = useAuthStore();
@@ -77,12 +91,27 @@ export default function QuotationRequestsPage() {
   });
 
   const { data: parts = [], isLoading: partsLoading, refetch: refetchParts } = useQuery({
-    queryKey: ["stores-workbench", "parts-requests", activeStatus],
+    queryKey: ["stores-workbench", "parts-requests"],
     queryFn: async () => {
-      const response = await workordersApi.parts.list({
-        status: activeStatus === "all" ? undefined : activeStatus,
-      });
-      return Array.isArray(response) ? response : (response as PaginatedPartsResponse).results || [];
+      const collectedParts: WorkOrderPart[] = [];
+      let page = 1;
+
+      while (true) {
+        const response = await workordersApi.parts.list({ page } as unknown as { work_order?: number; status?: string });
+
+        if (Array.isArray(response)) {
+          return response;
+        }
+
+        const paginatedResponse = response as unknown as PaginatedPartsResponse;
+        collectedParts.push(...(paginatedResponse.results || []));
+
+        if (!paginatedResponse.next) {
+          return collectedParts;
+        }
+
+        page += 1;
+      }
     },
     enabled: canViewQuotationQueue,
   });
@@ -111,28 +140,49 @@ export default function QuotationRequestsPage() {
   const totalParts = recommendations.reduce((sum, recommendation) => {
     return sum + (recommendation.parts_needed?.reduce((partSum, part) => partSum + Number(part.quantity || 0), 0) || 0);
   }, 0);
-  const partRows = parts as WorkOrderPart[];
-  const groupedParts = partRows.reduce((acc: Record<number, WorkOrderPart[]>, part) => {
-    if (!acc[part.work_order]) {
-      acc[part.work_order] = [];
-    }
-    acc[part.work_order].push(part);
-    return acc;
-  }, {});
-  const filteredWorkOrderIds = Object.keys(groupedParts)
-    .map(Number)
-    .filter((workOrderId) => {
-      const firstPart = groupedParts[workOrderId]?.[0];
-      if (!firstPart) return false;
-      const query = search.trim().toLowerCase();
-      if (!query) return true;
-      return [
-        firstPart.work_order_number,
-        firstPart.customer_name,
-        firstPart.vehicle_info,
-        ...groupedParts[workOrderId].map((part) => `${part.part_name} ${part.part_number || ""}`),
-      ].some((value) => value?.toLowerCase().includes(query));
-    });
+  const partRows = useMemo(() => parts as WorkOrderPart[], [parts]);
+  const statusFilteredParts = useMemo(
+    () => partRows.filter((part) => activeStatus === "all" || part.status === activeStatus),
+    [activeStatus, partRows]
+  );
+  const groupedParts = useMemo(
+    () => statusFilteredParts.reduce((acc: Record<number, WorkOrderPart[]>, part) => {
+      if (!acc[part.work_order]) {
+        acc[part.work_order] = [];
+      }
+      acc[part.work_order].push(part);
+      return acc;
+    }, {}),
+    [statusFilteredParts]
+  );
+  const allGroupedParts = useMemo(
+    () => partRows.reduce((acc: Record<number, WorkOrderPart[]>, part) => {
+      if (!acc[part.work_order]) {
+        acc[part.work_order] = [];
+      }
+      acc[part.work_order].push(part);
+      return acc;
+    }, {}),
+    [partRows]
+  );
+  const filteredWorkOrderIds = useMemo(
+    () => Object.keys(groupedParts)
+      .map(Number)
+      .filter((workOrderId) => {
+        const workOrderParts = groupedParts[workOrderId] || [];
+        const firstPart = workOrderParts[0];
+        if (!firstPart) return false;
+        const query = search.trim().toLowerCase();
+        if (!query) return true;
+        return [
+          firstPart.work_order_number,
+          firstPart.customer_name,
+          firstPart.vehicle_info,
+          ...workOrderParts.map((part) => `${part.part_name} ${part.part_number || ""}`),
+        ].some((value) => value?.toLowerCase().includes(query));
+      }),
+    [groupedParts, search]
+  );
   const pendingFulfillmentCount = Number(partsStats?.pending_requests || 0)
     + Number(partsStats?.po_created_requests || 0)
     + Number(partsStats?.awaiting_stock_requests || 0)
@@ -393,23 +443,135 @@ export default function QuotationRequestsPage() {
         </TabsContent>
 
         <TabsContent value="fulfillment" className="space-y-3">
-          <div className="flex flex-wrap gap-1.5">
-            {["all", "pending", "po_created", "awaiting_stock", "received", "ready"].map((statusOption) => (
+          <div className="flex flex-col gap-2 rounded-md border bg-card p-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {fulfillmentStatusOptions.map((statusOption) => (
+                <Button
+                  key={statusOption.value}
+                  variant={activeStatus === statusOption.value ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setActiveStatus(statusOption.value)}
+                >
+                  {statusOption.label}
+                </Button>
+              ))}
+            </div>
+            <div className="flex shrink-0 items-center gap-1 rounded-md border bg-muted/30 p-0.5">
               <Button
-                key={statusOption}
-                variant={activeStatus === statusOption ? "default" : "outline"}
+                type="button"
+                variant={fulfillmentView === "list" ? "default" : "ghost"}
                 size="sm"
-                className="h-7 px-2 text-xs capitalize"
-                onClick={() => setActiveStatus(statusOption)}
+                className="h-7 w-7 px-0"
+                aria-label="List view"
+                title="List view"
+                onClick={() => setFulfillmentView("list")}
               >
-                {statusOption.replace("_", " ")}
+                <List className="h-3.5 w-3.5" />
               </Button>
-            ))}
+              <Button
+                type="button"
+                variant={fulfillmentView === "grid" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 w-7 px-0"
+                aria-label="Grid view"
+                title="Grid view"
+                onClick={() => setFulfillmentView("grid")}
+              >
+                <Grid2X2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
 
           {partsLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
+            </div>
+          ) : filteredWorkOrderIds.length > 0 && fulfillmentView === "list" ? (
+            <div className="overflow-hidden rounded-md border bg-card">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Work Order</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Customer</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Vehicle</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Parts</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Status</TableHead>
+                      <TableHead className="h-9 px-3 text-right text-[10px] font-semibold uppercase text-muted-foreground">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredWorkOrderIds.map((workOrderId) => {
+                      const workOrderParts = groupedParts[workOrderId] || [];
+                      const firstPart = workOrderParts[0];
+                      const statusCounts = workOrderParts.reduce((acc: Record<string, number>, part) => {
+                        acc[part.status] = (acc[part.status] || 0) + 1;
+                        return acc;
+                      }, {});
+                      const primaryStatus = Object.keys(statusCounts)[0] || activeStatus;
+
+                      return (
+                        <TableRow key={workOrderId} className="cursor-pointer" onClick={() => setSelectedWoId(workOrderId)}>
+                          <TableCell className="px-3 py-2">
+                            <p className="font-mono text-xs font-medium text-primary">
+                              {firstPart?.work_order_number || `WO #${workOrderId}`}
+                            </p>
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <p className="max-w-[220px] truncate text-xs font-medium text-foreground">
+                              {firstPart?.customer_name || "Unknown customer"}
+                            </p>
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <p className="max-w-[240px] truncate text-xs text-muted-foreground">
+                              {firstPart?.vehicle_info || "Unknown vehicle"}
+                            </p>
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <div className="max-w-[320px] space-y-1">
+                              <p className="truncate text-xs font-medium text-foreground">
+                                {workOrderParts[0]?.part_name || "No part name"}
+                                {workOrderParts.length > 1 ? ` +${workOrderParts.length - 1} more` : ""}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                Total qty {workOrderParts.reduce((sum, part) => sum + Number(part.quantity || 0), 0)}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <Badge variant={primaryStatus === "ready" ? "success" : "secondary"} className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
+                              {activeStatus === "all" && Object.keys(statusCounts).length > 1
+                                ? `${Object.keys(statusCounts).length} statuses`
+                                : primaryStatus.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right">
+                            <div className="flex justify-end gap-1.5">
+                              <Button
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedWoId(workOrderId);
+                                }}
+                              >
+                                <Package className="mr-1.5 h-3.5 w-3.5" />
+                                Manage
+                              </Button>
+                              <Link href={`/workorders/${workOrderId}`} className="inline-flex" onClick={(event) => event.stopPropagation()}>
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </Button>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : filteredWorkOrderIds.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -499,7 +661,7 @@ export default function QuotationRequestsPage() {
         open={!!selectedWoId}
         onOpenChange={(open) => !open && setSelectedWoId(null)}
         workOrderId={selectedWoId}
-        parts={selectedWoId ? (groupedParts[selectedWoId] || []) : []}
+        parts={selectedWoId ? (allGroupedParts[selectedWoId] || []) : []}
         onRefresh={refreshStoresWorkbench}
       />
     </div>

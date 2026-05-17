@@ -18,6 +18,7 @@ interface BrandingResult {
     logoPath: string | null;
     logoDarkPath: string | null;
     loginBackground: string | null;
+    selfRegistrationEnabled: boolean;
     /** The resolved logo URL (theme-aware) or null. */
     logoSrc: string | null;
     /** Helper to convert a relative media path to a full URL. */
@@ -86,6 +87,7 @@ export function useBranding(
         const logoPath = getSetting("logo_path");
         const logoDarkPath = getSetting("logo_dark_path");
         const loginBackground = getSetting("login_background");
+        const selfRegistrationEnabled = getSetting("self_registration_enabled") !== "false";
         const logoUpdatedAt = getUpdatedAt("logo_path");
         const logoDarkUpdatedAt = getUpdatedAt("logo_dark_path");
 
@@ -96,12 +98,12 @@ export function useBranding(
         if (isDark && logoDarkPath) {
             const ck = logoDarkUpdatedAt
                 ? new Date(logoDarkUpdatedAt).getTime()
-                : Date.now();
+                : undefined;
             logoSrc = getMediaUrl(logoDarkPath, ck);
         } else if (logoPath) {
             const ck = logoUpdatedAt
                 ? new Date(logoUpdatedAt).getTime()
-                : Date.now();
+                : undefined;
             logoSrc = getMediaUrl(logoPath, ck);
         }
 
@@ -112,6 +114,7 @@ export function useBranding(
             logoPath,
             logoDarkPath,
             loginBackground,
+            selfRegistrationEnabled,
             logoSrc,
             getMediaUrl,
         };

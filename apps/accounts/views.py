@@ -18,6 +18,13 @@ from .serializers import (
 User = get_user_model()
 
 
+def self_registration_enabled():
+    from apps.accounts.admin_models import SystemSettings
+
+    value = SystemSettings.get_setting('self_registration_enabled', 'true')
+    return str(value).strip().lower() in {'true', '1', 'yes', 'on'}
+
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing users
@@ -469,6 +476,12 @@ class ManualRegistrationView(viewsets.GenericViewSet):
         """
         Step 1: Validate input and send OTP.
         """
+        if not self_registration_enabled():
+            return Response(
+                {"detail": "Self registration is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         from apps.accounts.serializers import ManualRegistrationInitiateSerializer
         
         serializer = ManualRegistrationInitiateSerializer(data=request.data)
@@ -496,6 +509,12 @@ class ManualRegistrationView(viewsets.GenericViewSet):
         """
         Step 2: Verify OTP and create account.
         """
+        if not self_registration_enabled():
+            return Response(
+                {"detail": "Self registration is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         from apps.accounts.serializers import ManualRegistrationVerifySerializer
         
         serializer = ManualRegistrationVerifySerializer(data=request.data)

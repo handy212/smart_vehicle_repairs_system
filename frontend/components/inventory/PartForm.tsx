@@ -178,7 +178,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                     <Card>
                         <CardContent className="p-0">
                             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                                <div className="border-b px-6 pt-4">
+                                <div className="border-b px-4 pt-4 sm:px-6">
                                     <TabsList>
                                         <TabsTrigger value="basic">Basic Info</TabsTrigger>
                                         <TabsTrigger value="inventory">Inventory</TabsTrigger>
@@ -188,8 +188,8 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 </div>
 
                                 {/* Basic Info Tab */}
-                                <TabsContent value="basic" className="p-6 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                                <TabsContent value="basic" className="p-4 space-y-4 sm:p-6">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="part_number">Part Number <span className="text-destructive">*</span></Label>
                                             <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-destructive" : ""} placeholder="PART-001" />
@@ -205,7 +205,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <select
                                                 id="category"
@@ -233,7 +233,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                         <Label htmlFor="description">Description</Label>
                                         <Textarea id="description" {...register("description")} rows={2} />
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="branch">Branch</Label>
                                             <select
@@ -260,14 +260,14 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 </TabsContent>
 
                                 {/* Inventory Tab */}
-                                <TabsContent value="inventory" className="p-6 space-y-4">
+                                <TabsContent value="inventory" className="p-4 space-y-4 sm:p-6">
                                     <div className="bg-info/10 border border-info/20 rounded-md p-3 mb-4">
                                         <p className="text-sm text-info">
                                             <strong>Note:</strong> Stock quantities are managed per branch via Stock Items.
                                             Set initial stock after creating the part, or use purchase orders to receive inventory.
                                         </p>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="unit">Unit <span className="text-destructive">*</span></Label>
                                             <select
@@ -296,7 +296,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                             <Input type="number" id="maximum_stock" {...register("maximum_stock", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="Optional" />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="minimum_stock">Min Stock</Label>
                                             <Input type="number" id="minimum_stock" {...register("minimum_stock", { valueAsNumber: true })} />
@@ -310,7 +310,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                             <Input type="number" id="reorder_quantity" {...register("reorder_quantity", { valueAsNumber: true })} />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="bin_location">Bin Location</Label>
                                             <Input id="bin_location" {...register("bin_location")} />
@@ -323,8 +323,8 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 </TabsContent>
 
                                 {/* Pricing Tab */}
-                                <TabsContent value="pricing" className="p-6 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                                <TabsContent value="pricing" className="p-4 space-y-4 sm:p-6">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="cost_price">Cost Price</Label>
                                             <Input type="number" step="0.01" id="cost_price" {...register("cost_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
@@ -335,7 +335,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                             <Input type="number" step="0.1" id="markup_percentage" {...register("markup_percentage", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0" />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="selling_price">Selling Price</Label>
                                             <Input type="number" step="0.01" id="selling_price" {...register("selling_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
@@ -350,8 +350,8 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 </TabsContent>
 
                                 {/* Additional Tab */}
-                                <TabsContent value="additional" className="p-6 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                                <TabsContent value="additional" className="p-4 space-y-4 sm:p-6">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="weight">Weight (lbs)</Label>
                                             <Input type="number" step="0.01" id="weight" {...register("weight", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />

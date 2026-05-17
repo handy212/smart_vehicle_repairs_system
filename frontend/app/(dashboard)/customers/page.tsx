@@ -310,13 +310,24 @@ export default function CustomersPage() {
       <DynamicPageTitle title="Customers" />
 
       {/* Header Section */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tighter text-foreground">Customers</h1>
-        <div className="perfex:block hidden">
-          <Link href="/customers/contacts" className="text-xs text-primary hover:underline flex items-center gap-1">
-            Contacts <span className="text-[10px]">→</span>
-          </Link>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold tracking-tighter text-foreground">Customers</h1>
+          <div className="perfex:block hidden">
+            <Link href="/customers/contacts" className="text-xs text-primary hover:underline flex items-center gap-1">
+              Contacts <span className="text-[10px]">→</span>
+            </Link>
+          </div>
         </div>
+
+        <PermissionGuard permission="create_customers">
+          <Link href="/customers/new" className="self-start sm:self-auto">
+            <Button size="sm" className="h-9 shadow-sm hover:scale-[1.02] transition-all duration-300">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Customer
+            </Button>
+          </Link>
+        </PermissionGuard>
       </div>
 
       {/* KPI Stats Grid */}
@@ -327,9 +338,9 @@ export default function CustomersPage() {
       />
 
       {/* Table Controls Row */}
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 bg-muted/20 p-1 rounded-xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/20 p-1 rounded-xl">
         {/* Tabs */}
-        <div className="flex items-center p-1 bg-muted rounded-xl">
+        <div className="flex items-center p-1 bg-muted rounded-xl w-full overflow-x-auto md:w-auto">
           {["All", "Individuals", "Companies"].map((tab) => (
             <button
               key={tab}
@@ -353,8 +364,8 @@ export default function CustomersPage() {
         </div>
 
         {/* Search & Actions */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="relative min-w-0 flex-[1_1_100%] sm:flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Search..."
@@ -433,14 +444,6 @@ export default function CustomersPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <PermissionGuard permission="create_customers">
-            <Link href="/customers/new">
-              <Button className="h-9 text-[9px] font-black uppercase tracking-widest gap-2">
-                <Plus className="w-3.5 h-3.5" />
-                Add Customer
-              </Button>
-            </Link>
-          </PermissionGuard>
         </div>
       </div>
 

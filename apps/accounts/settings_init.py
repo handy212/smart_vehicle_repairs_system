@@ -30,6 +30,8 @@ DEFAULT_SETTINGS = {
         {'key': 'success_color', 'value': '#10b981', 'description': 'Success color'},
         {'key': 'danger_color', 'value': '#ef4444', 'description': 'Danger/error color'},
         {'key': 'theme_mode', 'value': 'perfex', 'description': 'Theme mode'},
+        {'key': 'self_registration_enabled', 'value': 'true', 'description': 'Allow customers to create their own account from the login page'},
+        {'key': 'document_watermark_enabled', 'value': 'true', 'description': 'Show watermarks on printed and downloaded documents'},
     ],
     'email': [
         {'key': 'email_enabled', 'value': 'false', 'description': 'Enable email notifications'},

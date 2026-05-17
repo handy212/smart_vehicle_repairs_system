@@ -1,7 +1,44 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
 import { useBranchStore } from "@/store/branchStore";
 import { queueRequest } from "@/lib/offline/queue";
 import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "@/lib/utils/token";
+
+export type ApiRequestConfig = AxiosRequestConfig & {
+  skipAuth?: boolean;
+  skipAuthRefresh?: boolean;
+  _retry?: boolean;
+};
+
+type InternalApiRequestConfig = InternalAxiosRequestConfig & ApiRequestConfig;
+
+type OfflineQueuedError = Error & {
+  isOffline: true;
+  queued: true;
+  config: InternalAxiosRequestConfig;
+  response?: {
+    status: number;
+    data: {
+      message: string;
+      queued: boolean;
+    };
+  };
+};
+
+type FailedQueueItem = {
+  resolve: (token: string | null) => void;
+  reject: (error: unknown) => void;
+};
+
+const isOfflineQueuedError = (error: unknown): error is OfflineQueuedError => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "isOffline" in error &&
+    "queued" in error &&
+    error.isOffline === true &&
+    error.queued === true
+  );
+};
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
@@ -13,6 +50,7 @@ const apiClient = axios.create({
 // Request interceptor for auth token and offline handling
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    const apiConfig = config as InternalApiRequestConfig;
     if (typeof window !== "undefined") {
       // Check if offline
       const isOnline = navigator.onLine;
@@ -33,7 +71,7 @@ apiClient.interceptors.request.use(
           message: "Request queued for offline sync",
           config,
 
-        } as any);
+        } as OfflineQueuedError);
       }
 
       // If sending FormData, remove Content-Type header to let browser set it with boundary
@@ -41,15 +79,15 @@ apiClient.interceptors.request.use(
         // Axios v1.x uses AxiosHeaders which requires .delete()
         // But we check for method existence to be safe
 
-        if (typeof (config.headers as any).delete === 'function') {
+        if (typeof config.headers.delete === 'function') {
 
-          (config.headers as any).delete('Content-Type');
+          config.headers.delete('Content-Type');
         } else {
           delete config.headers['Content-Type'];
         }
       }
 
-      const token = getAccessToken();
+      const token = apiConfig.skipAuth ? null : getAccessToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -82,10 +120,10 @@ apiClient.interceptors.request.use(
 let isRefreshing = false;
 // Queue of failed requests waiting for token refresh
 
-let failedQueue: any[] = [];
+let failedQueue: FailedQueueItem[] = [];
 
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -101,9 +139,9 @@ const processQueue = (error: any, token: string | null = null) => {
 apiClient.interceptors.response.use(
   (response) => response,
 
-  async (error: AxiosError | any) => {
+  async (error: unknown) => {
     // Handle offline queued requests
-    if (error?.isOffline && error?.queued) {
+    if (isOfflineQueuedError(error)) {
       return Promise.reject({
         ...error,
         response: {
@@ -112,21 +150,38 @@ apiClient.interceptors.response.use(
         },
       });
     }
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+
+    if (!axios.isAxiosError(error)) {
+      return Promise.reject(error);
+    }
+
+    const responseData = error.response?.data as { maintenance_mode?: boolean; detail?: string } | undefined;
+    if (error.response?.status === 503 && responseData?.maintenance_mode) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          "maintenance_message",
+          responseData.detail || "System is under maintenance. Please check back later."
+        );
+        if (window.location.pathname !== "/maintenance") {
+          window.location.href = "/maintenance";
+        }
+      }
+      return Promise.reject(error);
+    }
+
+    const originalRequest = error.config as InternalApiRequestConfig | undefined;
 
     // Skip token refresh for auth endpoints (login, register) —
     // a 401 there means bad credentials, not an expired token.
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/token');
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint && !originalRequest.skipAuthRefresh) {
       if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
+        return new Promise<string | null>(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            if (originalRequest.headers) {
+            if (token && originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${token}`;
             }
             return apiClient(originalRequest);
@@ -197,4 +252,3 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
-

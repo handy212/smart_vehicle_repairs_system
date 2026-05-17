@@ -113,6 +113,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'apps.accounts.middleware.AuditlogDRFMiddleware',
+    'apps.accounts.middleware.MaintenanceModeMiddleware',
     'auditlog.middleware.AuditlogMiddleware',
 ]
 
@@ -490,6 +491,11 @@ LOGGING = {
             'style': '{',
         },
     },
+    'filters': {
+        'skip_maintenance_mode_503': {
+            '()': 'config.logging_filters.SkipMaintenanceMode503Filter',
+        },
+    },
     'handlers': {
         'file': {
             'level': 'INFO',
@@ -522,6 +528,13 @@ LOGGING = {
         'django.request': {
             'handlers': ['error_file'],
             'level': 'ERROR',
+            'filters': ['skip_maintenance_mode_503'],
+            'propagate': True,
+        },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'filters': ['skip_maintenance_mode_503'],
             'propagate': True,
         },
         'apps.vehicles': {

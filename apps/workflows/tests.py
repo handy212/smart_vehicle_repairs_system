@@ -1,5 +1,10 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from unittest import SkipTest
+
+if 'apps.workflows' not in settings.INSTALLED_APPS:
+    raise SkipTest('Workflow app is disabled in this settings module.')
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle

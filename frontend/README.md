@@ -34,9 +34,14 @@ npm start
 Create a `.env.local` file in the root directory:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
+# Use :8001 when running scripts/dev-server.sh; :8000 for Docker or manual runserver
+NEXT_PUBLIC_API_URL=http://localhost:8001/api
 NEXT_PUBLIC_APP_NAME=Smart Vehicle Repairs
 ```
+
+## E2E tests
+
+See [e2e/README.md](e2e/README.md) for Playwright smoke tests (login, work orders, billing).
 
 ## 📁 Project Structure
 

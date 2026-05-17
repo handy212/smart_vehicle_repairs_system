@@ -224,7 +224,7 @@ export function PaymentAllocationModal({
 
                 <div className="space-y-6">
                     {/* Payment Summary */}
-                    <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div className="grid grid-cols-1 gap-4 p-4 bg-muted rounded-lg sm:grid-cols-3">
                         <div>
                             <Label className="text-xs text-muted-foreground">Payment Amount</Label>
                             <div className="text-lg font-bold text-foreground">

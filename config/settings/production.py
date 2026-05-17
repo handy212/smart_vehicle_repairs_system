@@ -114,6 +114,11 @@ LOGGING = {
             'style': '{',
         },
     },
+    'filters': {
+        'skip_maintenance_mode_503': {
+            '()': 'config.logging_filters.SkipMaintenanceMode503Filter',
+        },
+    },
     'handlers': {
         'file': {
             'level': 'INFO',
@@ -153,6 +158,13 @@ LOGGING = {
         'django.request': {
             'handlers': ['error_file'],
             'level': 'ERROR',
+            'filters': ['skip_maintenance_mode_503'],
+            'propagate': True,
+        },
+        'django.server': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'filters': ['skip_maintenance_mode_503'],
             'propagate': True,
         },
         'django.security': {

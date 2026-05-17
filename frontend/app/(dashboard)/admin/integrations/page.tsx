@@ -68,6 +68,7 @@ export default function IntegrationsPage() {
       adminApi.settings.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "settings", "integrations-multi"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "integrations", "public"] });
       toast({ title: "Success", description: "Integration updated" });
     },
     onError: (error: unknown) => {
@@ -83,6 +84,7 @@ export default function IntegrationsPage() {
     onSuccess: () => {
       setRowEdits({});
       queryClient.invalidateQueries({ queryKey: ["admin", "settings", "integrations-multi"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "integrations", "public"] });
       toast({ title: "Saved", description: "Integration settings updated" });
     },
     onError: (error: unknown) => {

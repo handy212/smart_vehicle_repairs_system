@@ -30,6 +30,8 @@
             padding: 8mm;
             background: #fff;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
         }
 
         @media print {
@@ -97,6 +99,10 @@
 
         .mt-8 {
             margin-top: 1rem;
+        }
+
+        .pt-2 {
+            padding-top: 0.35rem;
         }
 
         /* Font Sizes (Scaled down) */
@@ -477,6 +483,9 @@
             justify-content: space-between;
             align-items: flex-start;
             gap: 12px;
+            position: relative;
+            z-index: 2;
+            background: #fff;
         }
 
         .header-left {
@@ -528,10 +537,15 @@
             padding-left: 8px;
             padding-right: 8px;
             border-bottom: 1px solid #e5e7eb;
+            position: relative;
+            z-index: 2;
+            background: #fff;
         }
 
         .content-wrapper {
             padding: 0 8px 8px 8px;
+            position: relative;
+            z-index: 1;
         }
 
         /* Components */
@@ -644,22 +658,141 @@
         }
 
         .watermark {
-            position: fixed;
-            top: 50%;
+            position: absolute;
+            top: 34%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 70pt;
+            font-size: 68pt;
             font-weight: 900;
-            opacity: 0.1;
-            z-index: -1000;
+            opacity: 0.085;
+            z-index: 0;
             color: #9ca3af;
             text-transform: uppercase;
+            pointer-events: none;
+            white-space: nowrap;
+            line-height: 1;
+            text-align: center;
+        }
+
+        .print-footer {
+            width: 100%;
+            border-top: 1px solid #d1d5db;
+            border-collapse: collapse;
+            margin-top: 12px;
+            color: #4b5563;
+            font-size: 7pt;
+            line-height: 1.25;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            position: relative;
+            z-index: 3;
+            background: #fff;
+        }
+
+        .print-footer td {
+            border: 0;
+            padding: 7px 0 0;
+            vertical-align: top;
+            background: #fff;
+        }
+
+        .print-footer-branches {
+            width: auto;
+            text-align: left;
+        }
+
+        .print-footer-heading {
+            color: #111827;
+            font-weight: 700;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+
+        .print-footer-branch-list {
+            color: #111827;
+        }
+
+        .print-footer-separator {
+            color: #9ca3af;
+        }
+
+        .print-footer-branch-name {
+            color: #111827;
+        }
+
+        .print-footer-muted,
+        .print-footer-generated {
+            color: #6b7280;
+        }
+
+        .print-footer-generated {
+            margin-top: 4px;
+        }
+
+        .print-footer-logos {
+            width: 245px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .print-footer-logo {
+            max-height: 28px;
+            max-width: 78px;
+            margin-left: 8px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+
+        @media screen and (max-width: 800px) {
+            body {
+                background: #fff;
+            }
+
+            .a4-sheet {
+                width: 100%;
+                min-height: auto;
+                margin: 0;
+                padding: 10px;
+                box-shadow: none;
+            }
+
+            .header-container,
+            .doc-title-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-right,
+            .doc-title-bar .text-right {
+                max-width: none;
+                text-align: left;
+            }
+
+            .print-footer-logos {
+                text-align: left;
+                width: auto;
+                padding-top: 8px;
+            }
+
+            .print-footer,
+            .print-footer tbody,
+            .print-footer tr,
+            .print-footer td {
+                display: block;
+                width: 100%;
+            }
         }
 
         @media print {
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+
+            .watermark {
+                position: fixed;
+                top: 34%;
+                left: 50%;
             }
 
             .no-print {
@@ -777,9 +910,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="border-t mt-4 pt-2 text-center text-gray-500 text-xs" style="padding: 6px 8px;">
-        {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %} | Generated on {% now "F d, Y" %}
-    </div>
+    {% include 'printing/base/components/footer.html' %}
     </div>
 </body>
 

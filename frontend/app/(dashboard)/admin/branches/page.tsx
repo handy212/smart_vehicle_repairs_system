@@ -592,12 +592,12 @@ function BranchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{branch ? "Edit Branch" : "Create Branch"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="name" className="text-xs">
                 Name <span className="text-destructive">*</span>
@@ -628,7 +628,7 @@ function BranchDialog({
             <Label htmlFor="description" className="text-xs">Description</Label>
             <Textarea id="description" {...register("description")} rows={2} className="w-full text-sm mt-1 bg-muted border-border" />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label htmlFor="phone" className="text-xs">
                 Phone <span className="text-destructive">*</span>
@@ -656,7 +656,7 @@ function BranchDialog({
               <p className="text-destructive text-[10px] mt-0.5">{errors.address.message}</p>
             )}
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="city" className="text-xs">
                 City <span className="text-destructive">*</span>
@@ -689,7 +689,7 @@ function BranchDialog({
               <Input id="country" {...register("country")} className="w-full h-8 text-sm mt-1" />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <Label htmlFor="opening_time" className="text-xs">Opening Time</Label>
               <Input id="opening_time" type="time" {...register("opening_time")} className="w-full h-8 text-sm mt-1" />
@@ -703,7 +703,7 @@ function BranchDialog({
               <Input id="timezone" {...register("timezone")} className="w-full h-8 text-sm mt-1" />
             </div>
           </div>
-          <div className="flex items-center space-x-6 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:gap-6">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="is_active"

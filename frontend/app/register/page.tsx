@@ -75,7 +75,7 @@ export default function RegisterPage() {
     // reCAPTCHA state
     const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
-    const { siteName, tagline, primaryColor, loginBackground, logoSrc, getMediaUrl } = useBranding("public");
+    const { siteName, tagline, primaryColor, loginBackground, logoSrc, getMediaUrl, selfRegistrationEnabled } = useBranding("public");
 
     useEffect(() => {
         setIsMounted(true);
@@ -254,7 +254,33 @@ export default function RegisterPage() {
                 {/* Right side: Registration Form */}
                 <div className="flex items-start justify-center bg-background p-4 pt-10 lg:items-center lg:p-8">
                     <div className="w-full max-w-md space-y-4 lg:space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                        {regData ? (
+                        {!selfRegistrationEnabled ? (
+                            <>
+                                <button
+                                    onClick={() => router.push("/login")}
+                                    className="flex items-center text-xs lg:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-2 group"
+                                >
+                                    <MoveLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                                    Back to login
+                                </button>
+                                <Card className="border border-border shadow-sm bg-card rounded-lg overflow-hidden">
+                                    <CardContent className="p-6 lg:p-8 text-center">
+                                        <h2 className="text-xl lg:text-2xl font-bold text-foreground">Registration is closed</h2>
+                                        <p className="mt-3 text-sm text-muted-foreground">
+                                            Self registration is currently disabled. Please contact the service team for account access.
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            onClick={() => router.push("/login")}
+                                            className="mt-6 h-10 rounded-lg text-white font-bold"
+                                            style={{ backgroundColor: primaryColor }}
+                                        >
+                                            Back to login
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        ) : regData ? (
                             <CompleteRegistrationForm
                                 userData={regData.user_data}
                                 onSuccess={(authData) => {

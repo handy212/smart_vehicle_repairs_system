@@ -18,16 +18,16 @@ export function PortalPageHeader({
     className
 }: PortalPageHeaderProps) {
     return (
-        <div className={cn("flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border", className)}>
-            <div className="space-y-1">
-                <h1 className="text-xl font-bold text-foreground">{title}</h1>
+        <div className={cn("flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between border-b border-border", className)}>
+            <div className="min-w-0 space-y-1">
+                <h1 className="text-xl font-bold text-foreground break-words">{title}</h1>
                 {description && (
-                    <p className="text-sm text-muted-foreground">{description}</p>
+                    <p className="text-sm text-muted-foreground break-words">{description}</p>
                 )}
                 {children && <div className="pt-1">{children}</div>}
             </div>
             {action && (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     {action}
                 </div>
             )}

@@ -27,7 +27,7 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
       <div
         className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
@@ -44,7 +44,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div
         ref={ref}
         className={cn(
-          "pointer-events-auto relative bg-card rounded-lg shadow-lg w-full max-w-lg border border-border max-h-[90vh] overflow-hidden flex flex-col gap-4 p-6",
+          "pointer-events-auto relative bg-card rounded-lg shadow-lg w-full max-w-lg border border-border max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] overflow-y-auto flex flex-col gap-4 p-4 sm:p-6",
           className
         )}
         {...props}

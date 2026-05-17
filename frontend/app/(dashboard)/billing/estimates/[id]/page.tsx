@@ -763,7 +763,7 @@ export default function EstimateDetailPage() {
 
             {/* 3. Financial Summary - Bottom Right */}
             <div className="flex justify-end">
-              <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
+              <div className="w-full space-y-2 px-4 sm:max-w-sm md:px-0">
                 {estimate.labor_subtotal && (
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Labor Subtotal</span>

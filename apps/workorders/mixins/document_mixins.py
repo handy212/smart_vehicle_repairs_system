@@ -42,6 +42,7 @@ class WorkOrderDocumentMixin:
             
             # Get branch info
             branch = work_order.branch
+            from apps.core.services.print_service import _get_document_watermark, _get_pdf_footer_logos
             
             context = {
                 'work_order': work_order,
@@ -51,6 +52,12 @@ class WorkOrderDocumentMixin:
                 'diagnosis': diagnosis,
                 'print_generated_at': timezone.now(),
                 'print_branch': branch,
+                'print_footer_logos': _get_pdf_footer_logos(),
+                'watermark': _get_document_watermark(
+                    'recommendations',
+                    work_order,
+                    {'text': 'RECOMMENDATIONS', 'color': '#6b7280'},
+                ),
             }
             
             try:

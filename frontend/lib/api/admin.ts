@@ -1,4 +1,10 @@
 import apiClient from "./client";
+import type { ApiRequestConfig } from "./client";
+
+const publicRequestConfig = {
+  skipAuth: true,
+  skipAuthRefresh: true,
+} as ApiRequestConfig;
 
 export interface User {
   id: number;
@@ -380,7 +386,7 @@ export const adminApi = {
     },
     publicBranding: async (): Promise<SystemSetting[]> => {
       // Public endpoint that doesn't require authentication
-      const response = await apiClient.get("/accounts/admin/settings/public/branding/");
+      const response = await apiClient.get("/accounts/admin/settings/public/branding/", publicRequestConfig);
       return response.data;
     },
     publicFirebase: async (): Promise<{
@@ -391,7 +397,7 @@ export const adminApi = {
       appId: string;
     }> => {
       // Public endpoint that doesn't require authentication
-      const response = await apiClient.get("/accounts/admin/settings/public/firebase/");
+      const response = await apiClient.get("/accounts/admin/settings/public/firebase/", publicRequestConfig);
       return response.data;
     },
     publicIntegrations: async (): Promise<{
@@ -405,7 +411,7 @@ export const adminApi = {
       firebase_app_id?: string;
     }> => {
       // Public endpoint that doesn't require authentication
-      const response = await apiClient.get("/accounts/admin/settings/public/integrations/");
+      const response = await apiClient.get("/accounts/admin/settings/public/integrations/", publicRequestConfig);
       return response.data;
     },
 

@@ -16,7 +16,7 @@ export function getMediaUrl(path: string | null | undefined): string {
   }
   
   // Get API base URL from env
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
   
   // The API URL usually ends with /api, so we need the base backend URL
   const backendUrl = apiUrl.replace(/\/api\/?$/, "");

@@ -125,7 +125,7 @@ export function AIAssistDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg w-full p-0 gap-0 rounded-2xl overflow-hidden flex flex-col h-[620px]">
+            <DialogContent className="max-w-lg w-full p-0 gap-0 rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-1.5rem)] sm:h-[620px]">
                 <DialogHeader className="px-5 py-4 border-b bg-gradient-to-r from-primary/5 to-primary/10 flex-shrink-0">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="flex items-center gap-2 text-sm font-semibold">

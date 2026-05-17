@@ -1,6 +1,15 @@
 import pytest
 
 
+@pytest.fixture(scope='session', autouse=True)
+def seed_rbac(django_db_setup, django_db_blocker):
+    """Seed roles and permissions once per test session for consistent RBAC."""
+    with django_db_blocker.unblock():
+        from django.core.management import call_command
+
+        call_command('init_permissions', verbosity=0)
+
+
 @pytest.fixture
 def api_client():
     """Expose a DRF API client to app-level test modules."""
