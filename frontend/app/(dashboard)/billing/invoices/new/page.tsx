@@ -215,6 +215,12 @@ export default function NewInvoicePage() {
   }, [workOrder, woTasks, woParts, woTasksFetched, woPartsFetched, woNumericId, setValue]);
 
   useEffect(() => {
+    const existingInvoiceId = workOrder?.invoice_summary?.id;
+    if (!existingInvoiceId || !Number.isFinite(woNumericId)) return;
+    router.replace(`/billing/invoices/${existingInvoiceId}`);
+  }, [router, workOrder?.invoice_summary?.id, woNumericId]);
+
+  useEffect(() => {
     const c =
       typeof customer === "number" && Number.isFinite(customer) && customer >= 1
         ? Math.trunc(customer)
@@ -365,8 +371,9 @@ export default function NewInvoicePage() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       const woId =
-        data?.work_order ?? (workOrderId ? Number.parseInt(workOrderId, 10) : undefined);
-      if (woId && Number.isFinite(woId)) {
+        data?.work_order ??
+        (Number.isFinite(woNumericId) ? woNumericId : undefined);
+      if (Number.isFinite(woId)) {
         queryClient.invalidateQueries({ queryKey: ["workorder", String(woId)] });
         queryClient.invalidateQueries({ queryKey: ["workorder", woId] });
       }

@@ -171,6 +171,16 @@ export default function WorkflowActions({
   });
 
   const currentWorkOrder = workOrder || workOrderData;
+  const invoiceSummary = currentWorkOrder?.invoice_summary;
+  const existingInvoiceId = invoiceSummary?.id;
+
+  const openInvoice = () => {
+    if (existingInvoiceId) {
+      router.push(`/billing/invoices/${existingInvoiceId}`);
+      return;
+    }
+    router.push(`/billing/invoices/new?work_order=${workOrderId}`);
+  };
 
   // Fetch diagnosis to check completion status
   const { data: diagnosisData } = useQuery({
@@ -1134,53 +1144,62 @@ export default function WorkflowActions({
         break;
 
       case "completed":
-        if (!hasLinkedInvoice) {
-          actions.push({
-            label: "Create Invoice",
-            icon: DollarSign,
-            onClick: () => router.push(`/billing/invoices/new?work_order=${workOrderId}`),
-            description: "Create an invoice for this work order",
-          });
+        if (existingInvoiceId) {
+          actions.push(
+            {
+              label: "View invoice",
+              icon: DollarSign,
+              onClick: openInvoice,
+              description:
+                invoiceSummary?.status === "draft"
+                  ? `Draft ${invoiceSummary.invoice_number} - issue when ready, then mark work order as invoiced`
+                  : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`,
+            },
+            {
+              label: "Mark as invoiced",
+              icon: CheckCircle,
+              onClick: () => setShowMarkInvoicedDialog(true),
+              disabled: markInvoicedMutation.isPending,
+              variant: "outline",
+              description: "Record odometer out and move this work order to invoiced",
+            }
+          );
         } else {
           actions.push({
-            label: "View Invoice",
-            icon: FileText,
-            onClick: () => router.push(`/billing/invoices/${invoiceSummary.id}`),
-            description:
-              invoiceSummary.status === "draft"
-                ? `Draft ${invoiceSummary.invoice_number} — issue when ready, then mark work order as invoiced`
-                : `Open ${invoiceSummary.invoice_number}`,
+            label: "Create invoice",
+            icon: DollarSign,
+            onClick: openInvoice,
+            description: "Create an invoice from this work order",
           });
         }
-        actions.push({
-          label: "Mark as Invoiced",
-          icon: CheckCircle,
-          onClick: () => setShowMarkInvoicedDialog(true),
-          disabled: markInvoicedMutation.isPending || !hasLinkedInvoice,
-          variant: "outline",
-          description: hasLinkedInvoice
-            ? "Record odometer out and move this work order to Invoiced"
-            : "Create an invoice first",
-        });
         break;
 
       case "discontinued_pending_bill":
-        actions.push(
-          {
+        if (existingInvoiceId) {
+          actions.push(
+            {
+              label: "View invoice",
+              icon: DollarSign,
+              onClick: openInvoice,
+              description: `Open ${invoiceSummary?.invoice_number || "linked invoice"}`,
+            },
+            {
+              label: "Mark as invoiced",
+              icon: CheckCircle,
+              onClick: () => setShowMarkInvoicedDialog(true),
+              disabled: markInvoicedMutation.isPending,
+              variant: "outline",
+              description: "After odometer out is recorded",
+            }
+          );
+        } else {
+          actions.push({
             label: "Create invoice",
             icon: DollarSign,
-            onClick: () => router.push(`/billing/invoices/new?work_order=${workOrderId}`),
+            onClick: openInvoice,
             description: "Bill for labor on completed/skipped tasks and installed parts",
-          },
-          {
-            label: "Mark as invoiced",
-            icon: CheckCircle,
-            onClick: () => setShowMarkInvoicedDialog(true),
-            disabled: markInvoicedMutation.isPending,
-            variant: "outline",
-            description: "After invoice is issued (not draft), with odometer out recorded",
-          }
-        );
+          });
+        }
         break;
 
       // Phase 5: Vehicle Handover & Post-Service
@@ -1323,10 +1342,10 @@ export default function WorkflowActions({
             <div className="space-y-4">
               <Button asChild className="w-full">
                 <Link
-                  href={`/billing/invoices/new?work_order=${workOrderId}`}
+                  href={existingInvoiceId ? `/billing/invoices/${existingInvoiceId}` : `/billing/invoices/new?work_order=${workOrderId}`}
                   onClick={() => setShowDiscontinueDialog(false)}
                 >
-                  Open create invoice
+                  {existingInvoiceId ? "Open invoice" : "Open create invoice"}
                 </Link>
               </Button>
               <p className="text-xs text-muted-foreground">

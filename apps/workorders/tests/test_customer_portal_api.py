@@ -3,7 +3,8 @@ from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory, APITestCase
 
 from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
@@ -11,6 +12,7 @@ from apps.billing.models import Estimate, Invoice
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder, WorkOrderPart
+from apps.workorders.serializers import WorkOrderDetailSerializer
 
 
 class CustomerPortalWorkOrderAPITests(APITestCase):
@@ -123,6 +125,37 @@ class CustomerPortalWorkOrderAPITests(APITestCase):
         self.assertEqual(response.data["estimate_summary"]["id"], self.estimate.id)
         self.assertEqual(response.data["invoice_summary"]["id"], self.invoice.id)
         self.assertEqual(response.data["customer_concerns"], "Brake vibration")
+
+    def test_staff_work_order_summary_tracks_draft_invoice(self):
+        self.invoice.status = "draft"
+        self.invoice.amount_paid = Decimal("0.00")
+        self.invoice.save(update_fields=["status", "amount_paid", "updated_at"])
+        factory = APIRequestFactory()
+        drf_request = Request(factory.get("/api/workorders/work-orders/"))
+        drf_request.user = self.staff_user
+
+        data = WorkOrderDetailSerializer(
+            self.work_order,
+            context={"request": drf_request},
+        ).data
+
+        self.assertEqual(data["invoice_summary"]["id"], self.invoice.id)
+        self.assertEqual(data["invoice_summary"]["status"], "draft")
+
+    def test_customer_work_order_summary_hides_draft_invoice(self):
+        self.invoice.status = "draft"
+        self.invoice.amount_paid = Decimal("0.00")
+        self.invoice.save(update_fields=["status", "amount_paid", "updated_at"])
+        factory = APIRequestFactory()
+        drf_request = Request(factory.get("/api/workorders/work-orders/"))
+        drf_request.user = self.customer_user
+
+        data = WorkOrderDetailSerializer(
+            self.work_order,
+            context={"request": drf_request},
+        ).data
+
+        self.assertIsNone(data["invoice_summary"])
 
     def test_customer_cannot_probe_other_work_order_detail(self):
         self.client.force_authenticate(self.customer_user)

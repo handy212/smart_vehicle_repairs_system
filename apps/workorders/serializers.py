@@ -124,7 +124,14 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
 
     def _get_invoice(self, obj):
         invoice = getattr(obj, 'invoice', None)
-        if invoice and invoice.status not in ['draft', 'void']:
+        request = self.context.get('request')
+        hidden_statuses = ['proforma', 'void']
+        if getattr(getattr(request, 'user', None), 'role', None) == 'customer':
+            hidden_statuses.append('draft')
+
+        if invoice and invoice.status not in ['proforma', 'void']:
+            if invoice.status in hidden_statuses:
+                return None
             return invoice
 
         try:
@@ -132,7 +139,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
-        return Invoice.objects.filter(work_order=obj).exclude(status__in=['draft', 'void']).order_by('-created_at').first()
+        return Invoice.objects.filter(work_order=obj).exclude(status__in=hidden_statuses).order_by('-created_at').first()
 
     @extend_schema_field(serializers.DictField())
     def get_estimate_summary(self, obj):
@@ -277,7 +284,23 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         )
 
     def _get_invoice(self, obj):
-        return get_work_order_invoice_for_summary(obj)
+        request = self.context.get('request')
+        hidden_statuses = ['proforma', 'void']
+        if getattr(getattr(request, 'user', None), 'role', None) == 'customer':
+            hidden_statuses.append('draft')
+
+        invoice = getattr(obj, 'invoice', None)
+        if invoice:
+            if invoice.status in hidden_statuses:
+                return None
+            return invoice
+
+        try:
+            from apps.billing.models import Invoice
+        except Exception:
+            return None
+
+        return Invoice.objects.filter(work_order=obj).exclude(status__in=hidden_statuses).order_by('-created_at').first()
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
