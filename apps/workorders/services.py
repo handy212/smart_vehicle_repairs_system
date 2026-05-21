@@ -185,7 +185,7 @@ def handle_workflow_tasks(work_order, old_status, new_status, user=None):
         new_config = all_configs.get(new_status)
         
         # 1. Handle Side States (No direct sequence assigned)
-        if not new_config or new_status in ['paused', 'additional_work_found']:
+        if not new_config or new_status in ['paused', 'additional_work_found', 'discontinued_pending_bill']:
             # Pause all active workflow tasks
             active_tasks = work_order.tasks.filter(is_workflow_task=True, status='in_progress')
             for task in active_tasks:

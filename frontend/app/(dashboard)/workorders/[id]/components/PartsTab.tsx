@@ -127,17 +127,20 @@ export default function WorkOrderPartsTab({
             </div>
           )}
           {parts.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm font-medium text-foreground mb-1">
-                No parts added yet
+            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-10 text-center">
+              <Package className="mb-3 h-10 w-10 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">No parts added yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add parts and materials as they are used.
               </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add parts and materials as they are used in the repair work.
-              </p>
-              <Button onClick={() => setShowAddDialog(true)} variant="secondary" disabled={!canAddPart}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add First Part
+              <Button
+                onClick={() => setShowAddDialog(true)}
+                variant="secondary"
+                disabled={!canAddPart}
+                className="mt-4"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add part
               </Button>
             </div>
           ) : (

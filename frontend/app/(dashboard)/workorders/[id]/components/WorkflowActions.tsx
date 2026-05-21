@@ -5,12 +5,16 @@
 import { useState } from "react";
 import React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/useToast";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -53,6 +57,20 @@ interface WorkflowActionsProps {
   onStartRepairs?: () => void;
   inline?: boolean; // If true, render just the primary button inline (for progress indicator)
 }
+
+/** Customer may stop work after inspection or mid-repair; bill via invoice then close. */
+const DISCONTINUE_ELIGIBLE_STATUSES = new Set([
+  "inspection",
+  "intake",
+  "assigned",
+  "diagnosis",
+  "awaiting_approval",
+  "approved",
+  "in_progress",
+  "paused",
+  "additional_work_found",
+  "quality_check",
+]);
 
 const getWorkflowErrorMessage = (error: any) => {
   const data = error.response?.data;
@@ -140,6 +158,10 @@ export default function WorkflowActions({
   const [showStartDiagnosisDialog, setShowStartDiagnosisDialog] = useState(false);
   const [showAssignServiceCoordinatorDialog, setShowAssignServiceCoordinatorDialog] = useState(false);
   const [inspectionFieldErrors, setInspectionFieldErrors] = useState<Record<string, string>>({});
+  const [showDiscontinueDialog, setShowDiscontinueDialog] = useState(false);
+  const [discontinueStep, setDiscontinueStep] = useState<1 | 2>(1);
+  const [discontinueReason, setDiscontinueReason] = useState<string>("declined_estimate_or_work");
+  const [discontinueNotes, setDiscontinueNotes] = useState("");
 
   // Fetch work order data if not provided
   const { data: workOrderData } = useQuery({
@@ -828,6 +850,29 @@ export default function WorkflowActions({
     },
   });
 
+  const discontinueMutation = useMutation({
+    mutationFn: () =>
+      workordersApi.discontinueJob(workOrderId, {
+        reason_code: discontinueReason,
+        notes: discontinueNotes.trim() || undefined,
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Job discontinued",
+        description: "Create and issue an invoice for work performed, then mark invoiced and close.",
+      });
+      setDiscontinueStep(2);
+      refreshWorkOrder();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Could not discontinue",
+        description: extractApiErrorMessage(error, "Failed to discontinue job"),
+        variant: "destructive",
+      });
+    },
+  });
+
   // Determine which actions are available based on status
   const getAvailableActions = () => {
     const actions: Array<{
@@ -1119,6 +1164,25 @@ export default function WorkflowActions({
         });
         break;
 
+      case "discontinued_pending_bill":
+        actions.push(
+          {
+            label: "Create invoice",
+            icon: DollarSign,
+            onClick: () => router.push(`/billing/invoices/new?work_order=${workOrderId}`),
+            description: "Bill for labor on completed/skipped tasks and installed parts",
+          },
+          {
+            label: "Mark as invoiced",
+            icon: CheckCircle,
+            onClick: () => setShowMarkInvoicedDialog(true),
+            disabled: markInvoicedMutation.isPending,
+            variant: "outline",
+            description: "After invoice is issued (not draft), with odometer out recorded",
+          }
+        );
+        break;
+
       // Phase 5: Vehicle Handover & Post-Service
       case "invoiced":
         actions.push({
@@ -1140,6 +1204,21 @@ export default function WorkflowActions({
           description: "Create a linked warranty/rework order",
         });
         break;
+    }
+
+    if (DISCONTINUE_ELIGIBLE_STATUSES.has(status)) {
+      actions.push({
+        label: "Discontinue & bill…",
+        icon: AlertTriangle,
+        onClick: () => {
+          setDiscontinueStep(1);
+          setDiscontinueReason("declined_estimate_or_work");
+          setDiscontinueNotes("");
+          setShowDiscontinueDialog(true);
+        },
+        variant: "outline",
+        description: "Customer stopped work — invoice for time/parts, then close",
+      });
     }
 
     return actions;
@@ -1179,6 +1258,89 @@ export default function WorkflowActions({
   // Render dialogs (always needed, whether inline or not)
   const renderDialogs = () => (
     <>
+      {/* Discontinue job — invoice + close flow */}
+      <Dialog
+        open={showDiscontinueDialog}
+        onOpenChange={(open) => {
+          setShowDiscontinueDialog(open);
+          if (!open) setDiscontinueStep(1);
+        }}
+      >
+        <DialogContent className="bg-muted border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Discontinue job &amp; bill
+            </DialogTitle>
+            {/* <DialogDescription className="text-muted-foreground">
+              {discontinueStep === 1
+                ? "Recording why the customer stopped work. Remaining mechanical tasks will be skipped. Then create an invoice and close as usual."
+                : "Next steps: create the invoice, change it from draft to issued, record odometer out if needed, then Mark as invoiced — Close."}
+            </DialogDescription> */}
+          </DialogHeader>
+          {discontinueStep === 1 ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="discontinue-reason">Reason</Label>
+                <Select value={discontinueReason} onValueChange={setDiscontinueReason}>
+                  <SelectTrigger id="discontinue-reason">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="declined_estimate_or_work">
+                      Customer declined estimate / further work
+                    </SelectItem>
+                    <SelectItem value="stopped_mid_repair">Customer stopped work mid-repair</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discontinue-notes">Notes (optional)</Label>
+                <Textarea
+                  id="discontinue-notes"
+                  value={discontinueNotes}
+                  onChange={(e) => setDiscontinueNotes(e.target.value)}
+                  placeholder="Internal notes for the file…"
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={() => setShowDiscontinueDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={discontinueMutation.isPending}
+                  onClick={() => discontinueMutation.mutate()}
+                >
+                  {discontinueMutation.isPending ? "Saving…" : "Confirm discontinue"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Button asChild className="w-full">
+                <Link
+                  href={`/billing/invoices/new?work_order=${workOrderId}`}
+                  onClick={() => setShowDiscontinueDialog(false)}
+                >
+                  Open create invoice
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                After the invoice is <strong>issued</strong> (not draft), use <strong>Mark as invoiced</strong> on this work
+                order, then <strong>Close</strong> after pickup.
+              </p>
+              <Button variant="outline" className="w-full" type="button" onClick={() => setShowDiscontinueDialog(false)}>
+                Done
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
         <DialogContent className="bg-muted border-border">
@@ -1391,7 +1553,11 @@ export default function WorkflowActions({
   // Inline mode - for in_progress status, show secondary actions too
   if (inline) {
     // For active work statuses, show secondary actions even in inline mode
-    const showSecondaryInInline = status === 'in_progress' || status === 'additional_work_found';
+    const showSecondaryInInline =
+      status === "in_progress" ||
+      status === "additional_work_found" ||
+      status === "discontinued_pending_bill" ||
+      DISCONTINUE_ELIGIBLE_STATUSES.has(status);
 
     return (
       <>

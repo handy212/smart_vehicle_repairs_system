@@ -227,6 +227,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'is_overdue', 'days_in_shop', 'is_approved',
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
             'estimate_summary', 'invoice_summary', 'gate_pass_status',
+            'customer_discontinuation_reason', 'customer_discontinuation_notes',
+            'customer_discontinued_at', 'customer_discontinued_by',
         ]
 
     @extend_schema_field(OpenApiTypes.STR)

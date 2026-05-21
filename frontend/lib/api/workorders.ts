@@ -21,7 +21,14 @@ export interface WorkOrder {
   customer_concerns?: string;
   diagnosis_notes?: string;
   special_instructions?: string;
-  requires_approval?: boolean;
+  estimated_labor_hours?: number | string;
+  estimated_labor_cost?: string;
+  estimated_parts_cost?: string;
+  estimated_total?: string;
+  actual_labor_hours?: number | string;
+  actual_labor_cost?: string;
+  actual_parts_cost?: string;
+  actual_total?: string;
   approved_by_customer?: boolean;
   approved_at?: string;
   approval_method?: string;
@@ -34,10 +41,7 @@ export interface WorkOrder {
   assigned_technicians_detail?: Array<{ id: number; name: string; email?: string; role?: string }>;
   service_coordinator?: number | { id: number; first_name: string; last_name: string };
   service_coordinator_name?: string;
-  estimated_labor_cost?: string;
-  estimated_parts_cost?: string;
-  estimated_total?: string;
-  actual_total?: string;
+  requires_approval?: boolean;
   estimate_summary?: {
     id: number;
     estimate_number: string;
@@ -97,6 +101,11 @@ export interface WorkOrder {
   };
   maintenance_type?: 'general' | 'routine';
   service_type?: number | { id: number; name: string };
+  service_bundle?: number | { id: number; name: string };
+  customer_discontinuation_reason?: string;
+  customer_discontinuation_notes?: string;
+  customer_discontinued_at?: string | null;
+  customer_discontinued_by?: number | { id: number; first_name: string; last_name: string } | null;
 }
 
 export interface WorkOrderListResponse {
@@ -340,6 +349,14 @@ export const workordersApi = {
 
   close: async (id: number, data?: { payment_received?: boolean; closing_notes?: string }): Promise<WorkOrder> => {
     const response = await apiClient.post(`/workorders/work-orders/${id}/close/`, data || {});
+    return response.data;
+  },
+
+  discontinueJob: async (
+    id: number,
+    data: { reason_code: string; notes?: string }
+  ): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/discontinue_job/`, data);
     return response.data;
   },
 

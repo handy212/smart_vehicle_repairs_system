@@ -1,9 +1,28 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Car, Calendar, AlertCircle, Link as LinkIcon, FileText, Edit2, Save, X, Sparkles, TrendingUp, ShieldCheck, Microscope } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  User,
+  Car,
+  AlertCircle,
+  Link as LinkIcon,
+  FileText,
+  Edit2,
+  Save,
+  X,
+  Phone,
+  Gauge,
+} from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -11,60 +30,70 @@ import { Button } from "@/components/ui/button";
 import { workordersApi } from "@/lib/api/workorders";
 import { adminApi } from "@/lib/api/admin";
 import { useToast } from "@/lib/hooks/useToast";
-
 import { useCurrency } from "@/lib/hooks/useCurrency";
-interface OverviewTabProps {
+import { EstimatedNextServiceCallout } from "./EstimatedNextServiceCallout";
 
+interface OverviewTabProps {
   workOrder: any;
   onStatusChange?: () => void;
 }
 
+function SummaryItem({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-[120px] flex-1">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-0.5 text-sm text-foreground">{children}</div>
+    </div>
+  );
+}
+
 export default function WorkOrderOverviewTab({
-  workOrder, onStatusChange }: OverviewTabProps) {
+  workOrder,
+  onStatusChange,
+}: OverviewTabProps) {
   const { formatCurrency } = useCurrency();
-  const estimateSummary = (workOrder as any).estimate_summary;
-  const invoiceSummary = (workOrder as any).invoice_summary;
+  const estimateSummary = workOrder.estimate_summary;
+  const invoiceSummary = workOrder.invoice_summary;
   const displayedEstimatedTotal = parseFloat(
-    (workOrder as any).estimated_total || workOrder.total_cost || "0"
+    workOrder.estimated_total || workOrder.total_cost || "0"
   );
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
     const sc = workOrder?.service_coordinator;
     if (!sc || sc === null) return "";
-    if (typeof sc === "object" && "id" in sc) {
-      return String(sc.id);
-    }
-    if (typeof sc === "number") {
-      return String(sc);
-    }
+    if (typeof sc === "object" && "id" in sc) return String(sc.id);
+    if (typeof sc === "number") return String(sc);
     return "";
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
   const workOrderId = workOrder?.id;
 
-  // Fetch service coordinators
   const { data: serviceCoordinators } = useQuery({
     queryKey: ["service-coordinators"],
     queryFn: () => adminApi.users.serviceCoordinators(),
   });
 
-  // Fetch AI Service Prediction
-  const { data: prediction } = useQuery({
-    queryKey: ["workorder-prediction", workOrderId],
-    queryFn: () => workordersApi.predictService(workOrderId),
-    enabled: !!workOrderId && !!workOrder?.vehicle?.id,
-  });
-
   const serviceCoordinatorsList = serviceCoordinators || [];
 
-  // Update service coordinator mutation
+  const hasVehicle =
+    workOrder?.vehicle != null &&
+    workOrder?.vehicle !== "" &&
+    (typeof workOrder.vehicle === "object" ? !!workOrder.vehicle.id : true);
+
   const updateServiceCoordinatorMutation = useMutation({
     mutationFn: async (serviceCoordinatorId: number | null) => {
       if (!workOrderId) throw new Error("Work order ID is required");
       return workordersApi.update(workOrderId, {
-        service_coordinator: serviceCoordinatorId || undefined
+        service_coordinator: serviceCoordinatorId || undefined,
       });
     },
     onSuccess: () => {
@@ -77,11 +106,13 @@ export default function WorkOrderOverviewTab({
       });
       onStatusChange?.();
     },
-
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to assign Service Coordinator",
+        description:
+          error.response?.data?.error ||
+          error.response?.data?.detail ||
+          "Failed to assign Service Coordinator",
         variant: "destructive",
       });
     },
@@ -96,12 +127,8 @@ export default function WorkOrderOverviewTab({
     setSelectedServiceCoordinator(() => {
       const sc = workOrder?.service_coordinator;
       if (!sc || sc === null) return "";
-      if (typeof sc === "object" && "id" in sc) {
-        return String(sc.id);
-      }
-      if (typeof sc === "number") {
-        return String(sc);
-      }
+      if (typeof sc === "object" && "id" in sc) return String(sc.id);
+      if (typeof sc === "number") return String(sc);
       return "";
     });
     setIsEditingServiceCoordinator(false);
@@ -112,329 +139,312 @@ export default function WorkOrderOverviewTab({
     const sc = workOrder?.service_coordinator;
     if (!sc) return "Not assigned";
     if (typeof sc === "object" && sc !== null) {
-      // Try full_name first, then fallback to first_name + last_name
       if (sc.full_name) return sc.full_name;
       if (sc.first_name || sc.last_name) {
-        return `${sc.first_name || ''} ${sc.last_name || ''}`.trim() || "Not assigned";
+        return `${sc.first_name || ""} ${sc.last_name || ""}`.trim() || "Not assigned";
       }
       return "Not assigned";
     }
-    // If it's just an ID, try to find in the list
-
     const coordinator = serviceCoordinatorsList.find((c: any) => c.id === sc);
     if (coordinator) {
-      // Try full_name first, then fallback to first_name + last_name
       if (coordinator.full_name) return coordinator.full_name;
       if (coordinator.first_name || coordinator.last_name) {
-        return `${coordinator.first_name || ''} ${coordinator.last_name || ''}`.trim() || "Not assigned";
+        return `${coordinator.first_name || ""} ${coordinator.last_name || ""}`.trim() ||
+          "Not assigned";
       }
     }
     return "Not assigned";
   };
 
-  const canEditServiceCoordinator = workOrder?.status === "intake" || workOrder?.status === "draft" || workOrder?.status === "inspection";
+  const canEditServiceCoordinator =
+    workOrder?.status === "intake" ||
+    workOrder?.status === "draft" ||
+    workOrder?.status === "inspection";
+
+  const customerId =
+    typeof workOrder.customer === "object"
+      ? workOrder.customer?.id
+      : workOrder.customer;
+  const vehicleId =
+    typeof workOrder.vehicle === "object" ? workOrder.vehicle?.id : workOrder.vehicle;
+  const customerPhone =
+    typeof workOrder.customer === "object" ? workOrder.customer?.phone : null;
+  const vehiclePlate =
+    typeof workOrder.vehicle === "object" ? workOrder.vehicle?.license_plate : null;
+  const vehicleVin =
+    typeof workOrder.vehicle === "object" ? workOrder.vehicle?.vin : null;
+
+  const hasRelatedWork =
+    workOrder.is_warranty_rework ||
+    workOrder.related_work_order_detail ||
+    (workOrder.rework_work_orders && workOrder.rework_work_orders.length > 0);
+
+  const actualTotal = parseFloat(workOrder.actual_total || "0");
+  const variance =
+    actualTotal > 0 && displayedEstimatedTotal > 0
+      ? actualTotal - displayedEstimatedTotal
+      : null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Column - Work Order Info */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Customer & Vehicle */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer & Vehicle</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Customer */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <User className="w-5 h-5 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold text-card-foreground">Customer</h3>
-                </div>
-                {workOrder.customer ? (
-                  <>
-                    <div>
-                      {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
-                        <Link
-                          href={`/customers/${workOrder.customer.id}`}
-                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
-                        >
-                          {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/customers/${workOrder.customer}`}
-                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
-                        >
-                          {workOrder.customer_name || "View Customer"}
-                        </Link>
-                      )}
-                    </div>
-                    {typeof workOrder.customer === "object" && workOrder.customer !== null && (
-                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Customer Information
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          {workOrder.customer.phone && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>
-                              <span className="text-foreground">{workOrder.customer.phone}</span>
-                            </div>
-                          )}
-                          {workOrder.customer.email && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Email:</span>
-                              <span className="text-foreground break-words">{workOrder.customer.email}</span>
-                            </div>
-                          )}
-                          {workOrder.customer.customer_type && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Type:</span>
-                              <span className="text-foreground capitalize">
-                                {workOrder.customer.customer_type.replace('_', ' ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-foreground">{workOrder.customer_name || "-"}</p>
-                )}
-              </div>
-
-              {/* Vehicle */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Car className="w-5 h-5 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold text-card-foreground">Vehicle</h3>
-                </div>
-                {workOrder.vehicle ? (
-                  <>
-                    <div>
-                      {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
-                        <Link
-                          href={`/vehicles/${workOrder.vehicle.id}`}
-                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
-                        >
-                          {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/vehicles/${workOrder.vehicle}`}
-                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
-                        >
-                          {workOrder.vehicle_info || "View Vehicle"}
-                        </Link>
-                      )}
-                    </div>
-                    {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null && (
-                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Vehicle Info
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <span className="font-medium text-card-foreground w-24 flex-shrink-0">Make/Model:</span>
-                            <span className="text-foreground">
-                              {workOrder.vehicle.make} {workOrder.vehicle.model} {workOrder.vehicle.year}
-                            </span>
-                          </div>
-                          {workOrder.vehicle.license_plate && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">License:</span>
-                              <span className="text-foreground">{workOrder.vehicle.license_plate}</span>
-                            </div>
-                          )}
-                          {workOrder.vehicle.vin && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
-                              <span className="text-foreground font-mono text-xs break-all">{workOrder.vehicle.vin}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-foreground">{workOrder.vehicle_info || "-"}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Customer Concerns */}
-        {workOrder.customer_concerns && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer Concerns</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-foreground whitespace-pre-wrap">
-                {workOrder.customer_concerns}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Diagnosis Notes */}
-
-        {(workOrder as any).diagnosis_notes && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Diagnosis Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-foreground whitespace-pre-wrap">
-
-                {(workOrder as any).diagnosis_notes}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Special Instructions */}
-
-        {(workOrder as any).special_instructions && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Special Instructions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-foreground whitespace-pre-wrap">
-
-                {(workOrder as any).special_instructions}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Related Work Orders / Warranty Rework */}
-
-        {((workOrder as any).is_warranty_rework || (workOrder as any).related_work_order_detail || ((workOrder as any).rework_work_orders && (workOrder as any).rework_work_orders.length > 0)) && (
-          <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-primary" />
-                <span>Related Work Orders</span>
-
-                {(workOrder as any).is_warranty_rework && (
-                  <Badge variant="warning" className="ml-2">Warranty Rework</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Original Work Order (if this is a rework) */}
-
-              {(workOrder as any).related_work_order_detail && (
-                <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <LinkIcon className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium text-foreground">
-                        Original Work Order
-                      </span>
-                    </div>
-
-                    <Link href={`/workorders/${(workOrder as any).related_work_order_detail.id}`}>
-                      <Badge variant="secondary" className="cursor-pointer border border-primary/20 hover:bg-primary/10">
-                        View
-                      </Badge>
-                    </Link>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <p className="font-mono text-foreground">
-
-                      {(workOrder as any).related_work_order_detail.work_order_number}
-                    </p>
-
-                    {(workOrder as any).related_work_order_detail.completed_at && (
-                      <p className="text-xs text-muted-foreground">
-
-                        Completed: {format(new Date((workOrder as any).related_work_order_detail.completed_at), "MMM dd, yyyy")}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground capitalize">
-
-                      Status: {(workOrder as any).related_work_order_detail.status.replace(/_/g, " ")}
-                    </p>
-                  </div>
-
-                  {(workOrder as any).warranty_reason && (
-                    <div className="mt-2 border-t border-primary/15 pt-2">
-                      <p className="text-xs font-medium text-card-foreground mb-1">Warranty Reason:</p>
-                      <p className="text-xs text-muted-foreground">
-
-                        {(workOrder as any).warranty_reason}
-                      </p>
-                    </div>
-                  )}
-                </div>
+    <div className="space-y-4">
+      {/* Summary strip */}
+      <Card className="border-border shadow-sm">
+        <CardContent className="flex flex-wrap gap-4 px-4 py-3">
+          <SummaryItem label="Customer">
+            {customerId ? (
+              <Link href={`/customers/${customerId}`} className="font-medium text-primary hover:underline">
+                {workOrder.customer_name ||
+                  (typeof workOrder.customer === "object"
+                    ? workOrder.customer.full_name
+                    : "View customer")}
+              </Link>
+            ) : (
+              <span>{workOrder.customer_name || "—"}</span>
+            )}
+          </SummaryItem>
+          <SummaryItem label="Phone">
+            <span className="flex items-center gap-1">
+              {customerPhone ? (
+                <>
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  {customerPhone}
+                </>
+              ) : (
+                "—"
               )}
+            </span>
+          </SummaryItem>
+          <SummaryItem label="Vehicle">
+            {vehicleId ? (
+              <Link href={`/vehicles/${vehicleId}`} className="font-medium text-primary hover:underline">
+                {workOrder.vehicle_info ||
+                  (typeof workOrder.vehicle === "object"
+                    ? `${workOrder.vehicle.year} ${workOrder.vehicle.make} ${workOrder.vehicle.model}`
+                    : "View vehicle")}
+              </Link>
+            ) : (
+              <span>{workOrder.vehicle_info || "—"}</span>
+            )}
+          </SummaryItem>
+          <SummaryItem label="Plate / VIN">
+            <span className="font-mono text-xs">
+              {[vehiclePlate, vehicleVin].filter(Boolean).join(" · ") || "—"}
+            </span>
+          </SummaryItem>
+          <SummaryItem label="Odometer">
+            <span className="flex items-center gap-1">
+              <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
+              {workOrder.odometer_in != null ? `${Number(workOrder.odometer_in).toLocaleString()} in` : "—"}
+              {workOrder.odometer_out != null && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  / {Number(workOrder.odometer_out).toLocaleString()} out
+                </span>
+              )}
+            </span>
+          </SummaryItem>
+          <SummaryItem label="Coordinator">
+            <span className={!workOrder?.service_coordinator ? "text-destructive" : ""}>
+              {getServiceCoordinatorName()}
+            </span>
+          </SummaryItem>
+        </CardContent>
+      </Card>
 
-              {/* Rework Work Orders (if this work order has been reworked) */}
-
-              {(workOrder as any).rework_work_orders && (workOrder as any).rework_work_orders.length > 0 && (
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_18rem]">
+        <div className="space-y-4">
+          {/* Customer & vehicle — definition list */}
+          <Card>
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="text-sm font-semibold">Customer & vehicle</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <p className="text-sm font-medium text-card-foreground mb-2">
-
-                    Subsequent Rework(s) ({((workOrder as any).rework_work_orders as any[]).length}):
-                  </p>
-                  <div className="space-y-2">
-
-                    {((workOrder as any).rework_work_orders as any[]).map((rework: any) => (
-                      <div key={rework.id} className="p-2 bg-muted rounded-md border border-border">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Link
-                              href={`/workorders/${rework.id}`}
-                              className="font-mono text-sm text-primary hover:underline"
-                            >
-                              {rework.work_order_number}
-                            </Link>
-                            <p className="text-xs text-muted-foreground">
-                              Created: {format(new Date(rework.created_at), "MMM dd, yyyy")}
-                            </p>
-                          </div>
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {rework.status.replace(/_/g, " ")}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <dt className="text-xs text-muted-foreground">Customer</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {customerId ? (
+                      <Link href={`/customers/${customerId}`} className="text-primary hover:underline">
+                        {workOrder.customer_name || "View customer"}
+                      </Link>
+                    ) : (
+                      workOrder.customer_name || "—"
+                    )}
+                  </dd>
                 </div>
-              )}
+                {customerPhone && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Phone</dt>
+                    <dd className="mt-0.5">{customerPhone}</dd>
+                  </div>
+                )}
+                {typeof workOrder.customer === "object" && workOrder.customer?.email && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Email</dt>
+                    <dd className="mt-0.5 break-all">{workOrder.customer.email}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs text-muted-foreground">Vehicle</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {vehicleId ? (
+                      <Link href={`/vehicles/${vehicleId}`} className="text-primary hover:underline">
+                        {workOrder.vehicle_info || "View vehicle"}
+                      </Link>
+                    ) : (
+                      workOrder.vehicle_info || "—"
+                    )}
+                  </dd>
+                </div>
+                {vehiclePlate && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">License</dt>
+                    <dd className="mt-0.5">{vehiclePlate}</dd>
+                  </div>
+                )}
+                {vehicleVin && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">VIN</dt>
+                    <dd className="mt-0.5 font-mono text-xs break-all">{vehicleVin}</dd>
+                  </div>
+                )}
+              </dl>
             </CardContent>
           </Card>
-        )}
-      </div>
 
-      {/* Right Column - Summary & Actions */}
-      <div className="space-y-6">
-        {/* Financial Summary */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>Financial Summary</CardTitle>
-              <div className="flex items-center gap-2">
+          {/* Job details accordion */}
+          <Card>
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="text-sm font-semibold">Job details</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <Accordion type="multiple" defaultValue={["concerns"]} className="w-full">
+                <AccordionItem value="concerns" className="border-b-0">
+                  <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                    Customer concerns
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="whitespace-pre-wrap text-sm text-foreground">
+                      {workOrder.customer_concerns || "No concerns recorded."}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="diagnosis" className="border-b-0">
+                  <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                    Diagnosis notes
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="whitespace-pre-wrap text-sm text-foreground">
+                      {workOrder.diagnosis_notes || "No diagnosis notes yet."}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="instructions" className="border-b-0">
+                  <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                    Special instructions
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="whitespace-pre-wrap text-sm text-foreground">
+                      {workOrder.special_instructions || "None."}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+                {hasRelatedWork && (
+                  <AccordionItem value="related">
+                    <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                      Related / warranty rework
+                      {workOrder.is_warranty_rework && (
+                        <Badge variant="warning" className="ml-2 h-5 text-[10px]">
+                          Warranty
+                        </Badge>
+                      )}
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-3">
+                      {workOrder.related_work_order_detail && (
+                        <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              <LinkIcon className="h-4 w-4 text-primary" />
+                              Original work order
+                            </span>
+                            <Link href={`/workorders/${workOrder.related_work_order_detail.id}`}>
+                              <Badge variant="secondary" className="cursor-pointer text-xs">
+                                View
+                              </Badge>
+                            </Link>
+                          </div>
+                          <p className="font-mono text-sm">
+                            {workOrder.related_work_order_detail.work_order_number}
+                          </p>
+                          {workOrder.related_work_order_detail.completed_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Completed:{" "}
+                              {format(
+                                new Date(workOrder.related_work_order_detail.completed_at),
+                                "MMM dd, yyyy"
+                              )}
+                            </p>
+                          )}
+                          {workOrder.warranty_reason && (
+                            <p className="mt-2 border-t border-primary/15 pt-2 text-xs text-muted-foreground">
+                              {workOrder.warranty_reason}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {workOrder.rework_work_orders?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Subsequent rework ({workOrder.rework_work_orders.length})
+                          </p>
+                          {workOrder.rework_work_orders.map((rework: any) => (
+                            <div
+                              key={rework.id}
+                              className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2"
+                            >
+                              <div>
+                                <Link
+                                  href={`/workorders/${rework.id}`}
+                                  className="font-mono text-sm text-primary hover:underline"
+                                >
+                                  {rework.work_order_number}
+                                </Link>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(rework.created_at), "MMM dd, yyyy")}
+                                </p>
+                              </div>
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {rework.status.replace(/_/g, " ")}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+              </Accordion>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right rail */}
+        <div className="space-y-4 lg:w-72">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
+              <CardTitle className="text-sm font-semibold">Financial</CardTitle>
+              <div className="flex gap-1">
                 {estimateSummary?.id && (
                   <Link href={`/billing/estimates/${estimateSummary.id}`}>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs">
-                      <FileText className="w-3 h-3 mr-1" />
-                      Quote
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Quote">
+                      <FileText className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 )}
                 {invoiceSummary?.id ? (
                   <Link href={`/billing/invoices/${invoiceSummary.id}`}>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs">
-                      <FileText className="w-3 h-3 mr-1" />
-                      Invoice
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Invoice">
+                      <FileText className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 ) : workOrder.status === "completed" ? (
@@ -446,305 +456,135 @@ export default function WorkOrderOverviewTab({
                   </Link>
                 ) : null}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {estimateSummary && (
-              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Stores Quote</p>
-                    <p className="text-sm font-medium text-foreground">{estimateSummary.estimate_number}</p>
-                  </div>
-                  <Badge variant="outline" className="capitalize">
-                    {estimateSummary.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Quoted Total</span>
-                  <span className="font-semibold text-foreground">
-                    {formatCurrency(parseFloat(estimateSummary.total || "0"))}
-                  </span>
-                </div>
+            </CardHeader>
+            <CardContent className="space-y-2 px-4 pb-4 pt-0 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Estimated</span>
+                <span className="font-medium">{formatCurrency(displayedEstimatedTotal)}</span>
               </div>
-            )}
-
-            {invoiceSummary && (
-              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Invoice</p>
-                    <p className="text-sm font-medium text-foreground">{invoiceSummary.invoice_number}</p>
+              {actualTotal > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Actual</span>
+                    <span className="font-medium">{formatCurrency(actualTotal)}</span>
                   </div>
-                  <Badge variant={invoiceSummary.status === "paid" ? "success" : "outline"} className="capitalize">
-                    {invoiceSummary.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Total</span>
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(parseFloat(invoiceSummary.total || "0"))}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Paid</span>
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(parseFloat(invoiceSummary.amount_paid || "0"))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Estimated Labor</span>
-              <span className="text-sm font-medium text-foreground">
-
-                {formatCurrency(parseFloat((workOrder as any).estimated_labor_cost || "0"))}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Estimated Parts</span>
-              <span className="text-sm font-medium text-foreground">
-
-                {formatCurrency(parseFloat((workOrder as any).estimated_parts_cost || "0"))}
-              </span>
-            </div>
-            <div className="border-t border-border pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-card-foreground">Estimated Total</span>
-
-                <span className={`text-lg font-bold ${displayedEstimatedTotal > 0
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-                  }`}>
-
-                  {formatCurrency(displayedEstimatedTotal)}
-                </span>
-              </div>
-            </div>
-
-            {(workOrder as any).actual_total && parseFloat((workOrder as any).actual_total) > 0 && (
-              <>
-                <div className="border-t border-border pt-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-card-foreground">Actual Labor</span>
-                    <span className="text-sm font-medium text-foreground">
-
-                      {formatCurrency(parseFloat((workOrder as any).actual_labor_cost || "0"))}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-card-foreground">Actual Parts</span>
-                    <span className="text-sm font-medium text-foreground">
-
-                      {formatCurrency(parseFloat((workOrder as any).actual_parts_cost || "0"))}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <span className="text-sm font-semibold text-foreground">Actual Total</span>
-                    <span className="text-lg font-bold text-foreground">
-
-                      {formatCurrency(parseFloat((workOrder as any).actual_total))}
-                    </span>
-                  </div>
-                </div>
-
-                {displayedEstimatedTotal > 0 && (
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between text-xs">
+                  {variance !== null && (
+                    <div className="flex justify-between border-t border-border pt-2 text-xs">
                       <span className="text-muted-foreground">Variance</span>
-
-                      <span className={`font-medium ${parseFloat((workOrder as any).actual_total) > displayedEstimatedTotal
-                        ? "text-destructive dark:text-red-400"
-                        : "text-success"
-                        }`}>
-
-                        {parseFloat((workOrder as any).actual_total) > displayedEstimatedTotal ? "+" : ""}
-
-                        {formatCurrency(parseFloat((workOrder as any).actual_total) - displayedEstimatedTotal)}
+                      <span
+                        className={
+                          variance > 0 ? "font-medium text-destructive" : "font-medium text-success"
+                        }
+                      >
+                        {variance > 0 ? "+" : ""}
+                        {formatCurrency(variance)}
                       </span>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Work Order Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Work Order Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Work Order Number</p>
-              <p className="text-sm font-mono">{workOrder.work_order_number}</p>
-            </div>
-            {workOrder.created_at && (
-              <div>
-                <p className="text-xs text-muted-foreground">Created</p>
-                <p className="text-sm">
-                  {format(new Date(workOrder.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                </p>
-              </div>
-            )}
-
-            {(workOrder as any).estimated_completion && (
-              <div>
-                <p className="text-xs text-muted-foreground">Estimated Completion</p>
-                <p className="text-sm">
-
-                  {format(new Date((workOrder as any).estimated_completion), "MMM dd, yyyy 'at' h:mm a")}
-                </p>
-              </div>
-            )}
-
-            {(workOrder as any).primary_technician_name && (
-              <div>
-                <p className="text-xs text-muted-foreground">Primary Technician</p>
-
-                <p className="text-sm">{(workOrder as any).primary_technician_name}</p>
-              </div>
-            )}
-
-            {/* Service Coordinator */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
+                  )}
+                </>
+              )}
+              {estimateSummary && (
                 <p className="text-xs text-muted-foreground">
-                  Service Coordinator {!workOrder?.service_coordinator && <span className="text-destructive">*</span>}
-                </p>
-                {canEditServiceCoordinator && !isEditingServiceCoordinator && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingServiceCoordinator(true)}
-                    className="h-6 px-2 text-xs"
-                  >
-                    <Edit2 className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
-                )}
-              </div>
-
-              {isEditingServiceCoordinator ? (
-                <div className="space-y-2">
-                  <select
-                    value={selectedServiceCoordinator}
-                    onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border text-foreground"
-                  >
-                    <option value="">Select Service Coordinator</option>
-
-                    {serviceCoordinatorsList.map((coord: any) => (
-                      <option key={coord.id} value={String(coord.id)}>
-                        {coord.full_name || `${coord.first_name || ''} ${coord.last_name || ''}`.trim() || `User ${coord.id}`}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleSaveServiceCoordinator}
-                      disabled={updateServiceCoordinatorMutation.isPending}
-                      className="h-7 px-2 text-xs"
-                    >
-                      <Save className="w-3 h-3 mr-1" />
-                      Save
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleCancelEdit}
-                      disabled={updateServiceCoordinatorMutation.isPending}
-                      className="h-7 px-2 text-xs"
-                    >
-                      <X className="w-3 h-3 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className={`text-sm ${!workOrder?.service_coordinator ? "text-destructive font-medium" : ""}`}>
-                  {getServiceCoordinatorName()}
+                  Quote {estimateSummary.estimate_number} ·{" "}
+                  {formatCurrency(parseFloat(estimateSummary.total || "0"))}
                 </p>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* AI Predictive Maintenance Card */}
-        {prediction && !prediction.message && (
-          <Card className="border-purple-200 bg-purple-50/10 overflow-hidden">
-            <div className="bg-purple-600 h-1 w-full" />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center text-purple-900 group">
-                  <Sparkles className="w-4 h-4 mr-2 text-primary group-hover:animate-pulse" />
-                  Smart Health Prediction
-                </CardTitle>
-                <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200 text-[10px] uppercase font-bold tracking-wider">
-                  AI-Powered
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                  <div className="flex items-center text-xs text-primary mb-1">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Projected Date
-                  </div>
-                  <p className="text-sm font-bold text-gray-900">
-                    {prediction.predicted_date}
-                  </p>
-                </div>
-                <div className="p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                  <div className="flex items-center text-xs text-primary mb-1">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    Target Odometer
-                  </div>
-                  <p className="text-sm font-bold text-gray-900">
-                    {prediction.predicted_odometer.toLocaleString()} km
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 bg-white rounded-lg border border-purple-100 italic space-y-2">
-                <div className="flex items-start gap-2">
-                  <Microscope className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-purple-900 leading-relaxed">
-                    {prediction.recommendation}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-primary">
-                  <span>Prediction Confidence</span>
-                  <span>{Math.round(prediction.confidence_score * 100)}%</span>
-                </div>
-                <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-purple-600 transition-all duration-1000"
-                    style={{ width: `${prediction.confidence_score * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center pt-2">
-                <p className="text-[10px] text-muted-foreground flex items-center">
-                  <ShieldCheck className="w-3 h-3 mr-1 text-success" />
-                  Verified by Vehicle Repair History Analysis
-                </p>
-              </div>
             </CardContent>
           </Card>
-        )}
+
+          <Card>
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="text-sm font-semibold">Assignment</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-4 pb-4 pt-0 text-sm">
+              {workOrder.primary_technician_name && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Technician</p>
+                  <p>{workOrder.primary_technician_name}</p>
+                </div>
+              )}
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Coordinator {!workOrder?.service_coordinator && "*"}
+                  </p>
+                  {canEditServiceCoordinator && !isEditingServiceCoordinator && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingServiceCoordinator(true)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <Edit2 className="mr-1 h-3 w-3" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+                {isEditingServiceCoordinator ? (
+                  <div className="space-y-2">
+                    <select
+                      value={selectedServiceCoordinator}
+                      onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
+                      className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Select coordinator</option>
+                      {serviceCoordinatorsList.map((coord: any) => (
+                        <option key={coord.id} value={String(coord.id)}>
+                          {coord.full_name ||
+                            `${coord.first_name || ""} ${coord.last_name || ""}`.trim()}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={handleSaveServiceCoordinator}
+                        disabled={updateServiceCoordinatorMutation.isPending}
+                      >
+                        <Save className="mr-1 h-3 w-3" />
+                        Save
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={handleCancelEdit}
+                        disabled={updateServiceCoordinatorMutation.isPending}
+                      >
+                        <X className="mr-1 h-3 w-3" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className={!workOrder?.service_coordinator ? "font-medium text-destructive" : ""}>
+                    {getServiceCoordinatorName()}
+                  </p>
+                )}
+              </div>
+              {workOrder.created_at && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p>{format(new Date(workOrder.created_at), "MMM dd, yyyy")}</p>
+                </div>
+              )}
+              {workOrder.estimated_completion && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Est. completion</p>
+                  <p>
+                    {format(new Date(workOrder.estimated_completion), "MMM dd, yyyy")}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {workOrderId ? (
+            <EstimatedNextServiceCallout workOrderId={workOrderId} hasVehicle={hasVehicle} />
+          ) : null}
+        </div>
       </div>
-    </div >
+    </div>
   );
 }

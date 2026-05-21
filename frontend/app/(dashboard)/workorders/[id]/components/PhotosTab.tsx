@@ -198,7 +198,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <ImageIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground mb-1">
                 No photos uploaded yet
               </p>
@@ -330,25 +330,25 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                 <div className="pt-4 border-t border-border">
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-sm font-semibold flex items-center">
-                      <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                      <Sparkles className="w-4 h-4 mr-2 text-primary" />
                       AI Visual Triage
                     </h4>
                     {!analysisResult && !analyzeMutation.isPending && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-xs h-8 border-purple-200 hover:bg-purple-50"
+                        className="text-xs h-8 border-primary/20 hover:bg-primary/5"
                         onClick={() => analyzeMutation.mutate(selectedPhoto.id)}
                       >
-                        <Sparkles className="w-3 h-3 mr-1 text-purple-500" />
+                        <Sparkles className="w-3 h-3 mr-1 text-primary" />
                         Run Smart Scan
                       </Button>
                     )}
                   </div>
 
                   {analyzeMutation.isPending && (
-                    <div className="flex flex-col items-center justify-center py-8 bg-muted/30 rounded-lg border border-dashed">
-                      <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-2" />
+                    <div className="flex flex-col items-center justify-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
                       <p className="text-sm text-muted-foreground animate-pulse">
                         Analyzing photo for structural damage and wear...
                       </p>
@@ -357,15 +357,15 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
 
                   {analysisResult && (
                     <div className="space-y-4">
-                      <Alert className="bg-purple-50/50 border-purple-100 italic">
+                      <Alert className="border-primary/20 bg-primary/5 italic">
                         <Info className="h-4 w-4 text-primary" />
-                        <AlertDescription className="text-purple-900">
+                        <AlertDescription className="text-foreground">
                           {analysisResult.summary}
                         </AlertDescription>
                       </Alert>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card className="bg-white shadow-none border-dashed border-purple-100">
+                        <Card className="bg-card shadow-none border-dashed border-border">
                           <CardHeader className="p-3">
                             <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">
                               Detected Issues
@@ -375,7 +375,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                             <ul className="space-y-1">
                               {analysisResult.detected_issues.map((issue, i) => (
                                 <li key={i} className="text-sm flex items-start">
-                                  <span className="text-purple-500 mr-2">•</span>
+                                  <span className="text-primary mr-2">•</span>
                                   {issue}
                                 </li>
                               ))}
@@ -384,14 +384,14 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                         </Card>
 
                         <div className="space-y-4">
-                          <div className="p-3 rounded-lg border bg-white border-purple-50">
+                          <div className="p-3 rounded-lg border bg-card border-border">
                             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
                               AI Confidence
                             </p>
                             <div className="flex items-center space-x-2">
-                              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-purple-500 rounded-full"
+                                  className="h-full bg-primary rounded-full"
                                   style={{ width: `${analysisResult.confidence_score * 100}%` }}
                                 />
                               </div>

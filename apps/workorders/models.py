@@ -58,9 +58,21 @@ class WorkOrder(models.Model):
         ('additional_work_found', 'Additional Work Found'),
         ('paused', 'Paused'),
         ('quality_check', 'Quality Check'),
+        ('discontinued_pending_bill', 'Discontinued — Pending Invoice'),
         ('completed', 'Completed'),
         ('invoiced', 'Invoiced'),
         ('closed', 'Closed'),
+    ]
+
+    CUSTOMER_DISCONTINUATION_REASON_CHOICES = [
+        (
+            'declined_estimate_or_work',
+            'Customer declined estimate / further work',
+        ),
+        (
+            'stopped_mid_repair',
+            'Customer stopped work mid-repair',
+        ),
     ]
     
     PRIORITY_CHOICES = [
@@ -101,6 +113,23 @@ class WorkOrder(models.Model):
     # Status and Priority
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='draft', db_index=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+
+    # Customer discontinued job (bill for work performed, then invoice + close)
+    customer_discontinuation_reason = models.CharField(
+        max_length=50,
+        choices=CUSTOMER_DISCONTINUATION_REASON_CHOICES,
+        blank=True,
+        help_text='Why the customer discontinued; set when moving to Discontinued — Pending Invoice.',
+    )
+    customer_discontinuation_notes = models.TextField(blank=True)
+    customer_discontinued_at = models.DateTimeField(null=True, blank=True)
+    customer_discontinued_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='work_orders_discontinued',
+    )
     
     # Service Coordinator Assignment (Required before diagnosis)
     service_coordinator = models.ForeignKey(
@@ -416,16 +445,17 @@ class WorkOrder(models.Model):
     
     VALID_TRANSITIONS = {
         'draft': ['inspection'],
-        'inspection': ['intake', 'draft'],
-        'intake': ['assigned'],
-        'assigned': ['diagnosis', 'intake'],
-        'diagnosis': ['awaiting_approval'],
-        'awaiting_approval': ['approved', 'diagnosis'],
-        'approved': ['in_progress', 'additional_work_found'],
-        'in_progress': ['paused', 'quality_check', 'additional_work_found'],
-        'additional_work_found': ['awaiting_approval'],
-        'paused': ['in_progress', 'additional_work_found'],
-        'quality_check': ['completed', 'in_progress'],
+        'inspection': ['intake', 'draft', 'discontinued_pending_bill'],
+        'intake': ['assigned', 'discontinued_pending_bill'],
+        'assigned': ['diagnosis', 'intake', 'discontinued_pending_bill'],
+        'diagnosis': ['awaiting_approval', 'discontinued_pending_bill'],
+        'awaiting_approval': ['approved', 'diagnosis', 'discontinued_pending_bill'],
+        'approved': ['in_progress', 'additional_work_found', 'discontinued_pending_bill'],
+        'in_progress': ['paused', 'quality_check', 'additional_work_found', 'discontinued_pending_bill'],
+        'additional_work_found': ['awaiting_approval', 'discontinued_pending_bill'],
+        'paused': ['in_progress', 'additional_work_found', 'discontinued_pending_bill'],
+        'quality_check': ['completed', 'in_progress', 'discontinued_pending_bill'],
+        'discontinued_pending_bill': ['invoiced'],
         'completed': ['invoiced', 'closed'],
         'invoiced': ['closed'],
         'closed': [],
@@ -507,6 +537,13 @@ class WorkOrder(models.Model):
 
         if new_status not in valid_next_statuses:
             return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
+
+        # Discontinued — pending invoice (customer stops job; bill then close via invoiced → closed)
+        if new_status == 'discontinued_pending_bill':
+            if not getattr(self, 'customer_discontinuation_reason', None):
+                return False, 'Select a discontinuation reason before marking this job as discontinued.'
+            if self.customer_discontinuation_reason not in dict(self.CUSTOMER_DISCONTINUATION_REASON_CHOICES):
+                return False, 'Invalid discontinuation reason.'
         
         # Validate Service Coordinator is assigned before diagnosis
         if new_status == 'diagnosis' and not self.service_coordinator:
@@ -549,6 +586,19 @@ class WorkOrder(models.Model):
                 task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
                 suffix = f": {task_names}" if task_names else ""
                 return False, f"Complete or skip all mechanical tasks before requesting quality check{suffix}"
+
+        # Skip full repair-completion rules when invoicing after customer discontinuation
+        if self.status == 'discontinued_pending_bill' and new_status == 'invoiced':
+            if not self.odometer_out:
+                return False, "Odometer out is required before invoicing"
+            if django_apps.is_installed('apps.billing'):
+                Invoice = django_apps.get_model('billing', 'Invoice')
+                invoice = Invoice.objects.filter(work_order=self).exclude(status='proforma').first()
+                if not invoice:
+                    return False, "Create and link an invoice to this work order before marking as invoiced."
+                if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
+                    return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
+            return True, None
 
         if new_status == 'completed':
             if not self.tasks.filter(is_workflow_task=False).exists():
@@ -1544,6 +1594,7 @@ class ServiceTask(models.Model):
             ('completed', 'Completed'),
             ('invoiced', 'Invoiced'),
             ('closed', 'Closed'),
+            ('discontinued_pending_bill', 'Discontinued — Pending Invoice'),
         ],
         null=True,
         blank=True,

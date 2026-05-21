@@ -83,6 +83,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('create_workorders')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('edit_workorders')]
+        elif self.action == 'discontinue_job':
+            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('edit_workorders')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('delete_workorders')]
         return [IsAuthenticated(), IsModuleEnabled('workorders')]

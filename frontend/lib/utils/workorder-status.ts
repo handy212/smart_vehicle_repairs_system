@@ -10,6 +10,7 @@ export const WORK_ORDER_STATUSES = [
     { value: "additional_work_found", label: "Additional Work Found", color: "orange" },
     { value: "paused", label: "Paused", color: "orange" },
     { value: "quality_check", label: "Quality Check", color: "cyan" },
+    { value: "discontinued_pending_bill", label: "Discontinued — Pending Invoice", color: "orange" },
     { value: "completed", label: "Completed", color: "green" },
     { value: "invoiced", label: "Invoiced", color: "teal" },
     { value: "closed", label: "Closed", color: "gray" },
@@ -44,7 +45,7 @@ export function getStatusVariant(status: string): "default" | "secondary" | "des
         case "diagnosis":
             return "warning";
         case "paused":
-        case "additional_work_found":
+        case "discontinued_pending_bill":
             return "warning";
         case "cancelled":
         case "urgent":

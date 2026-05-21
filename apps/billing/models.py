@@ -826,17 +826,34 @@ class Invoice(models.Model):
         super().save(*args, **kwargs)
     
     def calculate_totals_from_work_order(self):
-        """Calculate invoice totals from work order"""
+        """Calculate invoice totals from work order.
+        For discontinued (pending invoice) work orders, bill only mechanical labor
+        on completed/skipped tasks and parts already installed (customer-facing).
+        """
         if not self.work_order:
             return
-        
-        # Get labor subtotal from service tasks
-        self.labor_subtotal = sum(
-            task.labor_cost for task in self.work_order.tasks.all()
-        ) or Decimal('0')
-        
-        # Get parts subtotal from work order
-        self.parts_subtotal = self.work_order.actual_parts_cost or Decimal('0')
+
+        from decimal import Decimal
+        from django.db.models import Sum
+
+        if self.work_order.status == 'discontinued_pending_bill':
+            mechanical = self.work_order.tasks.filter(
+                is_workflow_task=False,
+                status__in=['completed', 'skipped'],
+            )
+            self.labor_subtotal = sum(
+                (t.labor_cost or Decimal('0')) for t in mechanical
+            ) or Decimal('0')
+
+            installed_total = self.work_order.parts.filter(
+                status='installed',
+            ).aggregate(total=Sum('selling_price'))['total']
+            self.parts_subtotal = installed_total or Decimal('0')
+        else:
+            self.labor_subtotal = sum(
+                task.labor_cost for task in self.work_order.tasks.all()
+            ) or Decimal('0')
+            self.parts_subtotal = self.work_order.actual_parts_cost or Decimal('0')
         
         # Sublet would come from service tasks marked as sublet (if implemented)
         # For now, set to 0
@@ -882,6 +899,116 @@ class Invoice(models.Model):
         
         # Amount due
         self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+
+    def populate_line_items_from_work_order(self):
+        """Create InvoiceLineItem rows from billable work order tasks and parts.
+
+        Mirrors :meth:`calculate_totals_from_work_order` so stored line items match
+        how totals are derived (incl. discontinued + installed-parts rules).
+        """
+        if not self.work_order_id:
+            return
+
+        from decimal import Decimal
+
+        wo = self.work_order
+        order_idx = 0
+
+        def add_labor_from_task(task, discontinued=False):
+            nonlocal order_idx
+            cost = task.labor_cost or Decimal('0')
+            if cost <= 0:
+                return
+            wo_ref = wo.work_order_number
+            if discontinued:
+                desc = f"{task.description or 'Labor'} — WO {wo_ref} (customer discontinued; billable)"
+            else:
+                desc = f"{task.description or 'Labor'} — WO {wo_ref}"
+            desc = desc[:500]
+
+            hours = task.actual_hours or task.estimated_hours
+            rate = task.labor_rate or Decimal('0')
+            kwargs = {
+                'invoice': self,
+                'order': order_idx,
+                'item_type': 'labor',
+                'description': desc,
+                'is_taxable': True,
+                'discount_percentage': Decimal('0'),
+            }
+            if hours and hours > 0:
+                if rate > 0:
+                    product = (hours * rate).quantize(Decimal('0.01'))
+                    if product == cost.quantize(Decimal('0.01')):
+                        kwargs['labor_hours'] = hours
+                        kwargs['labor_rate'] = rate
+                    else:
+                        kwargs['labor_hours'] = hours
+                        kwargs['labor_rate'] = (cost / hours).quantize(Decimal('0.01'))
+                else:
+                    kwargs['labor_hours'] = hours
+                    kwargs['labor_rate'] = (cost / hours).quantize(Decimal('0.01'))
+            else:
+                kwargs['quantity'] = Decimal('1')
+                kwargs['unit_price'] = cost
+            InvoiceLineItem.objects.create(**kwargs)
+            order_idx += 1
+
+        if wo.status == 'discontinued_pending_bill':
+            tasks_qs = wo.tasks.filter(
+                is_workflow_task=False,
+                status__in=['completed', 'skipped'],
+            ).order_by('sequence_order', 'id')
+            for t in tasks_qs:
+                add_labor_from_task(t, discontinued=True)
+            for p in wo.parts.filter(status='installed').order_by('id'):
+                sp = p.selling_price or Decimal('0')
+                if sp <= 0:
+                    continue
+                qty = p.quantity or Decimal('1')
+                unit = (sp / qty).quantize(Decimal('0.01')) if qty > 0 else sp
+                desc = f"{p.part_name} — WO {wo.work_order_number} (installed)"[:500]
+                InvoiceLineItem.objects.create(
+                    invoice=self,
+                    order=order_idx,
+                    item_type='part',
+                    description=desc,
+                    part_id=p.inventory_part_id,
+                    part_number=p.part_number or '',
+                    quantity=qty,
+                    unit_price=unit,
+                    is_taxable=True,
+                    discount_percentage=Decimal('0'),
+                )
+                order_idx += 1
+        else:
+            for t in wo.tasks.all().order_by('sequence_order', 'id'):
+                add_labor_from_task(t, discontinued=False)
+            parts_sub = wo.actual_parts_cost or Decimal('0')
+            if parts_sub > 0:
+                InvoiceLineItem.objects.create(
+                    invoice=self,
+                    order=order_idx,
+                    item_type='part',
+                    description=f"Parts & materials — WO {wo.work_order_number}"[:500],
+                    quantity=Decimal('1'),
+                    unit_price=parts_sub,
+                    is_taxable=True,
+                    discount_percentage=Decimal('0'),
+                )
+                order_idx += 1
+
+        if order_idx == 0:
+            InvoiceLineItem.objects.create(
+                invoice=self,
+                order=0,
+                item_type='labor',
+                description=f"Labor / services — WO {wo.work_order_number}"[:500],
+                quantity=Decimal('1'),
+                unit_price=Decimal('0'),
+                is_taxable=True,
+                discount_percentage=Decimal('0'),
+            )
     
     @property
     def is_overdue(self):

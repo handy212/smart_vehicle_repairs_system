@@ -9,6 +9,8 @@ import { billingApi } from "@/lib/api/billing";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { workordersApi } from "@/lib/api/workorders";
+import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
+import { workOrderPartsApi } from "@/lib/api/workorder-parts";
 import { inventoryApi } from "@/lib/api/inventory";
 import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,13 +23,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, startTransition } from "react";
 import { AxiosError } from "axios";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
 import { Badge } from "@/components/ui/badge";
 import { useBranchStore } from "@/store/branchStore";
+import { buildInvoiceNotesFromWorkOrder, buildLineItemsFromWorkOrder, resolveWorkOrderCustomerId, resolveWorkOrderVehicleId, selectNumericFieldString } from "@/lib/billing/workOrderInvoicePrefill";
 
 const lineItemSchema = z.object({
   item_type: z.enum(["labor", "part", "fee", "discount", "sublet", "other"]),
@@ -62,6 +65,11 @@ const invoiceSchema = z.object({
 type InvoiceFormData = z.infer<typeof invoiceSchema>;
 type LineItemFormData = z.infer<typeof lineItemSchema>;
 
+function parsePositiveInt(val: string): number | undefined {
+  const n = Number.parseInt(val, 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 const PAYMENT_TERMS = [
   { value: "due_on_receipt", label: "Due on Receipt", days: 0 },
   { value: "net_15", label: "Net 15", days: 15 },
@@ -74,6 +82,7 @@ export default function NewInvoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workOrderId = searchParams.get("work_order");
+  const woNumericId = workOrderId ? Number.parseInt(workOrderId, 10) : NaN;
   const invoiceType = searchParams.get("type"); // 'proforma' or null
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -107,8 +116,20 @@ export default function NewInvoicePage() {
 
   const { data: workOrder } = useQuery({
     queryKey: ["workorder", workOrderId],
-    queryFn: () => workordersApi.get(parseInt(workOrderId!)),
-    enabled: !!workOrderId,
+    queryFn: () => workordersApi.get(woNumericId),
+    enabled: Number.isFinite(woNumericId),
+  });
+
+  const { data: woTasks = [], isFetched: woTasksFetched } = useQuery({
+    queryKey: ["workorder-tasks", workOrderId],
+    queryFn: () => workOrderTasksApi.list({ work_order: woNumericId }),
+    enabled: Number.isFinite(woNumericId),
+  });
+
+  const { data: woParts = [], isFetched: woPartsFetched } = useQuery({
+    queryKey: ["workorder-parts", workOrderId],
+    queryFn: () => workOrderPartsApi.list({ work_order: woNumericId }),
+    enabled: Number.isFinite(woNumericId),
   });
 
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(
@@ -141,7 +162,7 @@ export default function NewInvoicePage() {
       payment_terms: "net_30",
       customer: workOrder ? (typeof workOrder.customer === 'object' ? workOrder.customer.id : workOrder.customer) : undefined,
       vehicle: workOrder ? (typeof workOrder.vehicle === 'object' ? workOrder.vehicle.id : workOrder.vehicle) : undefined,
-      work_order: workOrderId ? parseInt(workOrderId) : undefined,
+      work_order: Number.isFinite(woNumericId) ? woNumericId : undefined,
       discount_percentage: 0,
       discount_reason: "",
       discount_type: "none",
@@ -151,10 +172,72 @@ export default function NewInvoicePage() {
   });
 
   const customer = watch("customer");
+  const vehicle = watch("vehicle");
+  const workOrderFk = watch("work_order");
+  const salesAgent = watch("sales_agent");
   const invoiceDate = watch("invoice_date");
   const paymentTerms = watch("payment_terms");
   const discountType = watch("discount_type");
   const discountPercentage = watch("discount_percentage");
+
+  const workOrderPrefillApplied = useRef<number | null>(null);
+  const prevCustomerIdRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    workOrderPrefillApplied.current = null;
+    prevCustomerIdRef.current = undefined;
+  }, [workOrderId]);
+
+  useEffect(() => {
+    if (!workOrder || !Number.isFinite(woNumericId)) return;
+    if (!woTasksFetched || !woPartsFetched) return;
+    if (workOrderPrefillApplied.current === workOrder.id) return;
+    workOrderPrefillApplied.current = workOrder.id;
+
+    const custId = resolveWorkOrderCustomerId(workOrder);
+    const vehId = resolveWorkOrderVehicleId(workOrder);
+    if (!custId) return;
+
+    setValue("customer", custId, { shouldValidate: true });
+    if (vehId !== undefined) {
+      setValue("vehicle", vehId, { shouldValidate: true });
+    }
+    setValue("work_order", woNumericId, { shouldValidate: true });
+    setValue("notes", buildInvoiceNotesFromWorkOrder(workOrder), { shouldValidate: true });
+
+    const built = buildLineItemsFromWorkOrder(workOrder, woTasks, woParts);
+    setLineItems(built);
+    setValue(
+      "line_items",
+      built.map((row) => ({ ...row, is_taxable: row.is_taxable ?? true })) as InvoiceFormData["line_items"],
+      { shouldValidate: true },
+    );
+  }, [workOrder, woTasks, woParts, woTasksFetched, woPartsFetched, woNumericId, setValue]);
+
+  useEffect(() => {
+    const c =
+      typeof customer === "number" && Number.isFinite(customer) && customer >= 1
+        ? Math.trunc(customer)
+        : undefined;
+    if (c === undefined) return;
+    if (prevCustomerIdRef.current !== undefined && prevCustomerIdRef.current !== c) {
+      setValue("vehicle", undefined, { shouldValidate: true });
+    }
+    prevCustomerIdRef.current = c;
+    setSelectedCustomer(c);
+  }, [customer, setValue]);
+
+  useEffect(() => {
+    if (typeof customer === "number" && (!Number.isFinite(customer) || customer < 1)) {
+      setValue("customer", undefined as unknown as InvoiceFormData["customer"], { shouldValidate: false });
+    }
+    if (typeof vehicle === "number" && !Number.isFinite(vehicle)) {
+      setValue("vehicle", undefined, { shouldValidate: false });
+    }
+    if (typeof workOrderFk === "number" && !Number.isFinite(workOrderFk)) {
+      setValue("work_order", undefined, { shouldValidate: false });
+    }
+  }, [customer, vehicle, workOrderFk, setValue]);
 
   // Auto-calculate due date based on payment terms
   useEffect(() => {
@@ -167,13 +250,6 @@ export default function NewInvoicePage() {
       }
     }
   }, [invoiceDate, paymentTerms, dueDateManual, setValue]);
-
-  // Update selected customer when form value changes
-  if (customer && customer !== selectedCustomer) {
-    setSelectedCustomer(customer);
-    setValue("vehicle", undefined);
-  }
-
 
   const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
     if (type === "part" && partData) {
@@ -314,11 +390,13 @@ export default function NewInvoicePage() {
     setServerError(null);
     createMutation.mutateAsync({ ...data, status })
       .then((res) => {
-        if (redirectMode === 'payment') {
-          router.push(`/billing/invoices/${res.id}?action=record_payment`);
-        } else {
-          router.push("/billing");
-        }
+        startTransition(() => {
+          if (redirectMode === "payment") {
+            router.push(`/billing/invoices/${res.id}?action=record_payment`);
+          } else {
+            router.push("/billing");
+          }
+        });
       })
 
       .catch((err) => {
@@ -336,6 +414,31 @@ export default function NewInvoicePage() {
         <h1 className="text-xl font-bold text-foreground tracking-tight">{pageTitle}</h1>
       </div>
 
+      {workOrder && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant="secondary">Work order</Badge>
+              <span className="font-medium">{workOrder.work_order_number}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground capitalize">{workOrder.status.replace(/_/g, " ")}</span>
+              <Link href={`/workorders/${workOrder.id}`} className="ml-auto text-primary hover:underline">
+                View work order
+              </Link>
+            </div>
+            {workOrder.status === "discontinued_pending_bill" ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Lines are suggested from billable mechanical tasks and installed parts. The saved invoice uses the amounts and descriptions you submit below.
+              </p>
+            ) : workOrder.status === "completed" ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Lines are suggested from work completed on this order. The saved invoice uses the amounts and descriptions you submit below.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
+
       {serverError && (
         <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="pt-6">
@@ -350,7 +453,7 @@ export default function NewInvoicePage() {
         </Card>
       )}
 
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+      <form key={workOrderId ?? "no-work-order"} onSubmit={(e) => e.preventDefault()} className="space-y-6">
 
         {/* Basic Information - Full Width */}
         <Card>
@@ -363,8 +466,12 @@ export default function NewInvoicePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Customer *</label>
                 <Select
-                  value={watch("customer")?.toString() || ""}
-                  onValueChange={(val) => setValue("customer", parseInt(val), { shouldValidate: true })}
+                  value={selectNumericFieldString(customer)}
+                  onValueChange={(val) => {
+                    const id = parsePositiveInt(val);
+                    if (!id) return;
+                    setValue("customer", id, { shouldValidate: true });
+                  }}
                 >
                   <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
                     <SelectValue placeholder="Select customer..." />
@@ -384,8 +491,12 @@ export default function NewInvoicePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Vehicle</label>
                 <Select
-                  value={watch("vehicle")?.toString() || ""}
-                  onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
+                  value={selectNumericFieldString(vehicle)}
+                  onValueChange={(val) => {
+                    const id = parsePositiveInt(val);
+                    if (!id) return;
+                    setValue("vehicle", id, { shouldValidate: true });
+                  }}
                   disabled={!selectedCustomer}
                 >
                   <SelectTrigger disabled={!selectedCustomer}>
@@ -405,8 +516,11 @@ export default function NewInvoicePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sales Agent</label>
                 <Select
-                  value={watch("sales_agent")?.toString() || ""}
-                  onValueChange={(val) => setValue("sales_agent", parseInt(val), { shouldValidate: true })}
+                  value={selectNumericFieldString(salesAgent)}
+                  onValueChange={(val) => {
+                    const id = parsePositiveInt(val);
+                    setValue("sales_agent", id, { shouldValidate: true });
+                  }}
                   disabled={!activeBranchId}
                 >
                   <SelectTrigger disabled={!activeBranchId}>

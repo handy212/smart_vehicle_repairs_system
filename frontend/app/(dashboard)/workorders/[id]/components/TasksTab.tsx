@@ -205,7 +205,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           ${isCurrentPhase ? "ring-2 ring-primary/20" : ""}
         `}
       >
-        <TableCell className="min-w-[280px] py-3">
+        <TableCell className="min-w-[280px] py-2">
           <div className="flex items-start gap-2">
             {isWorkflow && (
               <TaskIcon className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
@@ -351,7 +351,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Workflow Tasks Section */}
         {workflowTasks.length > 0 && (
           <Card>
@@ -408,17 +408,15 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {manualTasks.length === 0 ? (
-              <div className="text-center py-10">
-                <Wrench className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm font-medium text-foreground mb-1">
-                  No manual tasks yet
+              <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-10 text-center">
+                <Wrench className="mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">No manual tasks yet</p>
+                <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                  Add custom tasks for specific repair work.
                 </p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Add custom tasks for specific repair work that needs to be performed.
-                </p>
-                <Button onClick={() => setShowAddDialog(true)} variant="secondary">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add First Task
+                <Button onClick={() => setShowAddDialog(true)} variant="secondary" className="mt-4">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add task
                 </Button>
               </div>
             ) : (

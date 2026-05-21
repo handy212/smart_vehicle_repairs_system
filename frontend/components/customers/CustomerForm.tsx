@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AlertCircle, CheckCircle2, RefreshCw, Copy, Eye, EyeOff, Building2, User, Car, Phone, Mail, UserPlus, Briefcase, Calendar } from "lucide-react";
+import { CheckCircle2, RefreshCw, Copy, Eye, EyeOff, Building2, User, Briefcase } from "lucide-react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Badge } from "@/components/ui/badge";
@@ -49,14 +49,17 @@ export const customerSchema = z.object({
     service_zip_code: z.string().optional(),
     preferred_contact_method: z.enum(["email", "phone", "sms", "mail"]).optional(),
     notes: z.string().optional(),
-    
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-}).refine((data) => {
-    // If portal access is granted, password is required (or will be auto-generated)
-    return true; // We'll handle password generation in the UI
-}, {
-    message: "Password is required when granting portal access",
-    path: ["password"],
+}).superRefine((data, ctx) => {
+    if (
+        (data.customer_type === "business" || data.customer_type === "fleet") &&
+        !data.company_name?.trim()
+    ) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Company name is required",
+            path: ["company_name"],
+        });
+    }
 });
 
 export type CustomerFormData = z.infer<typeof customerSchema>;
@@ -99,6 +102,19 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
     const customerType = watch("customer_type");
     const grantPortalAccess = watch("grant_portal_access");
     const passwordValue = watch("password");
+    const isBusinessAccount = customerType === "business" || customerType === "fleet";
+
+    const handleCustomerTypeChange = (value: CustomerFormData["customer_type"]) => {
+        setValue("customer_type", value);
+        if (value === "individual") {
+            setValue("company_name", "");
+            setValue("contact_person_name", "");
+            setValue("company_email", "");
+            setValue("company_phone", "");
+            setValue("business_type", "");
+            setValue("tax_id", "");
+        }
+    };
 
     // Generate secure password
     const generatePassword = useCallback(() => {
@@ -145,198 +161,248 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Column */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Personal Info */}
-                    <Card>
-                        <CardHeader className="pb-3 border-b border-border">
-                            <CardTitle className="text-base font-medium flex items-center gap-2">
-                                <User className="w-4 h-4 text-primary" />
-                                Personal Information
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="first_name">First Name <span className="text-destructive">*</span></Label>
-                                <Input
-                                    id="first_name"
-                                    placeholder="John"
-                                    {...register("first_name")}
-                                    className={errors.first_name ? "border-destructive" : ""}
-                                />
-                                {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="last_name">Last Name <span className="text-destructive">*</span></Label>
-                                <Input
-                                    id="last_name"
-                                    placeholder="Doe"
-                                    {...register("last_name")}
-                                    className={errors.last_name ? "border-destructive" : ""}
-                                />
-                                {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="email@example.com"
-                                    {...register("email")}
-                                    className={errors.email ? "border-destructive" : ""}
-                                />
-                                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Primary Phone</Label>
-                                <Input
-                                    id="phone"
-                                    type="tel"
-                                    placeholder="(555) 123-4567"
-                                    {...register("phone")}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="alternative_phone">Alternative Phone</Label>
-                                <Input
-                                    id="alternative_phone"
-                                    type="tel"
-                                    placeholder="(555) 987-6543"
-                                    {...register("alternative_phone")}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="gender">Gender</Label>
+                    {/* Customer type — drives which fields appear below */}
+                    <Card className="border-primary/20 bg-muted/20">
+                        <CardContent className="pt-4 pb-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                <div className="space-y-1 flex-1 min-w-0">
+                                    <Label htmlFor="customer_type_main">Customer type</Label>
+                                    {/* <p className="text-xs text-muted-foreground">
+                                        {isBusinessAccount
+                                            ? "Business and fleet accounts use company and billing contact fields."
+                                            : "Individual accounts use personal profile fields."}
+                                    </p> */}
+                                </div>
                                 <Select
-                                    value={watch("gender")}
-                                    onValueChange={(val) => setValue("gender", val as any)}
+                                    value={customerType}
+                                    onValueChange={(val) => handleCustomerTypeChange(val as CustomerFormData["customer_type"])}
                                 >
-                                    <SelectTrigger id="gender">
-                                        <SelectValue placeholder="Select gender" />
+                                    <SelectTrigger id="customer_type_main" className="w-full sm:w-[220px]">
+                                        <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="male">Male</SelectItem>
-                                        <SelectItem value="female">Female</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                                        <SelectItem value="individual">Individual</SelectItem>
+                                        <SelectItem value="business">Business</SelectItem>
+                                        <SelectItem value="fleet">Fleet</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="date_of_birth">Date of Birth</Label>
-                                <Input
-                                    id="date_of_birth"
-                                    type="date"
-                                    {...register("date_of_birth")}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="occupation">Occupation</Label>
-                                <Input
-                                    id="occupation"
-                                    placeholder="e.g. Engineer"
-                                    {...register("occupation")}
-                                />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                                <Label htmlFor="service_address">Service Address</Label>
-                                <Input
-                                    id="service_address"
-                                    placeholder="123 Main St, Area"
-                                    {...register("service_address")}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="service_city">City</Label>
-                                <Input
-                                    id="service_city"
-                                    placeholder="Accra"
-                                    {...register("service_city")}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="service_state">State / Region</Label>
-                                <Input
-                                    id="service_state"
-                                    placeholder="Greater Accra"
-                                    {...register("service_state")}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="service_zip_code">Zip Code / Postcode</Label>
-                                <Input
-                                    id="service_zip_code"
-                                    placeholder="00233"
-                                    {...register("service_zip_code")}
-                                />
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Business Info (Conditional) */}
-                    {(customerType === "business" || customerType === "fleet") && (
-                        <Card className="border-l-4 border-l-primary">
+                    {!isBusinessAccount ? (
+                        <Card key="individual-profile">
                             <CardHeader className="pb-3 border-b border-border">
                                 <CardTitle className="text-base font-medium flex items-center gap-2">
-                                    <Building2 className="w-4 h-4 text-primary" />
-                                    Business Details
+                                    <User className="w-4 h-4 text-primary" />
+                                    Personal information
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
-                                <div className="space-y-2 sm:col-span-2">
-                                    <Label htmlFor="company_name">Company Name <span className="text-destructive">*</span></Label>
+                                <div className="space-y-2">
+                                    <Label htmlFor="first_name">First name <span className="text-destructive">*</span></Label>
                                     <Input
-                                        id="company_name"
-                                        placeholder="Acme Corp"
-                                        {...register("company_name")}
-                                        className={errors.company_name ? "border-destructive" : ""}
+                                        id="first_name"
+                                        placeholder="John"
+                                        {...register("first_name")}
+                                        className={errors.first_name ? "border-destructive" : ""}
                                     />
-                                    {errors.company_name && <p className="text-xs text-destructive">{errors.company_name.message}</p>}
+                                    {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="contact_person_name">Contact Person</Label>
+                                    <Label htmlFor="last_name">Last name <span className="text-destructive">*</span></Label>
                                     <Input
-                                        id="contact_person_name"
-                                        placeholder="Jane Smith"
-                                        {...register("contact_person_name")}
+                                        id="last_name"
+                                        placeholder="Doe"
+                                        {...register("last_name")}
+                                        className={errors.last_name ? "border-destructive" : ""}
                                     />
+                                    {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="business_type">Business Type</Label>
+                                    <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
                                     <Input
-                                        id="business_type"
-                                        placeholder="e.g. Construction"
-                                        {...register("business_type")}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="company_email">Company Email</Label>
-                                    <Input
-                                        id="company_email"
+                                        id="email"
                                         type="email"
-                                        placeholder="billing@acme.com"
-                                        {...register("company_email")}
+                                        placeholder="email@example.com"
+                                        {...register("email")}
+                                        className={errors.email ? "border-destructive" : ""}
                                     />
+                                    {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="company_phone">Company Phone</Label>
-                                    <Input
-                                        id="company_phone"
-                                        type="tel"
-                                        placeholder="(555) 000-1111"
-                                        {...register("company_phone")}
-                                    />
+                                    <Label htmlFor="phone">Primary phone</Label>
+                                    <Input id="phone" type="tel" placeholder="(555) 123-4567" {...register("phone")} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="alternative_phone">Alternative phone</Label>
+                                    <Input id="alternative_phone" type="tel" placeholder="(555) 987-6543" {...register("alternative_phone")} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="gender">Gender</Label>
+                                    <Select value={watch("gender")} onValueChange={(val) => setValue("gender", val as CustomerFormData["gender"])}>
+                                        <SelectTrigger id="gender">
+                                            <SelectValue placeholder="Select gender" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="male">Male</SelectItem>
+                                            <SelectItem value="female">Female</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
+                                            <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="date_of_birth">Date of birth</Label>
+                                    <Input id="date_of_birth" type="date" {...register("date_of_birth")} />
                                 </div>
                                 <div className="space-y-2 sm:col-span-2">
-                                    <Label htmlFor="tax_id">Tax ID / Registration Number</Label>
-                                    <Input
-                                        id="tax_id"
-                                        placeholder="XX-XXXXXXX"
-                                        {...register("tax_id")}
-                                    />
+                                    <Label htmlFor="occupation">Occupation</Label>
+                                    <Input id="occupation" placeholder="e.g. Engineer" {...register("occupation")} />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card key="business-profile" className="border-l-4 border-l-primary">
+                            <CardHeader className="pb-3 border-b border-border">
+                                <CardTitle className="text-base font-medium flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-primary" />
+                                    {customerType === "fleet" ? "Fleet account" : "Business account"}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-4 space-y-6">
+                                <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2 sm:col-span-2">
+                                        <Label htmlFor="company_name">
+                                            {customerType === "fleet" ? "Fleet / company name" : "Company name"}{" "}
+                                            <span className="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            id="company_name"
+                                            placeholder={customerType === "fleet" ? "Metro Fleet Services" : "Acme Corp"}
+                                            {...register("company_name")}
+                                            className={errors.company_name ? "border-destructive" : ""}
+                                        />
+                                        {errors.company_name && <p className="text-xs text-destructive">{errors.company_name.message}</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="business_type">Business type / industry</Label>
+                                        <Input id="business_type" placeholder="e.g. Construction, Logistics" {...register("business_type")} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="tax_id">Tax ID / registration number</Label>
+                                        <Input id="tax_id" placeholder="XX-XXXXXXX" {...register("tax_id")} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <Briefcase className="w-4 h-4 text-muted-foreground" />
+                                        Primary contact
+                                    </p>
+                                    <p className="text-xs text-muted-foreground -mt-2">
+                                        Account login and notifications use this person&apos;s details.
+                                    </p>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="first_name">Contact first name <span className="text-destructive">*</span></Label>
+                                            <Input
+                                                id="first_name"
+                                                placeholder="Jane"
+                                                {...register("first_name")}
+                                                className={errors.first_name ? "border-destructive" : ""}
+                                            />
+                                            {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="last_name">Contact last name <span className="text-destructive">*</span></Label>
+                                            <Input
+                                                id="last_name"
+                                                placeholder="Smith"
+                                                {...register("last_name")}
+                                                className={errors.last_name ? "border-destructive" : ""}
+                                            />
+                                            {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
+                                        </div>
+                                        <div className="space-y-2 sm:col-span-2">
+                                            <Label htmlFor="contact_person_name">Contact display name (optional)</Label>
+                                            <Input
+                                                id="contact_person_name"
+                                                placeholder="e.g. Jane Smith, Fleet Manager"
+                                                {...register("contact_person_name")}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email">Contact email <span className="text-destructive">*</span></Label>
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                placeholder="contact@acme.com"
+                                                {...register("email")}
+                                                className={errors.email ? "border-destructive" : ""}
+                                            />
+                                            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="phone">Contact phone</Label>
+                                            <Input id="phone" type="tel" placeholder="(555) 123-4567" {...register("phone")} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <p className="text-sm font-medium text-foreground">Company contact (optional)</p>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="company_email">Billing / company email</Label>
+                                            <Input
+                                                id="company_email"
+                                                type="email"
+                                                placeholder="billing@acme.com"
+                                                {...register("company_email")}
+                                                className={errors.company_email ? "border-destructive" : ""}
+                                            />
+                                            {errors.company_email && <p className="text-xs text-destructive">{errors.company_email.message}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="company_phone">Company phone</Label>
+                                            <Input id="company_phone" type="tel" placeholder="(555) 000-1111" {...register("company_phone")} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="alternative_phone">Alternative phone</Label>
+                                            <Input id="alternative_phone" type="tel" placeholder="(555) 987-6543" {...register("alternative_phone")} />
+                                        </div>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
                     )}
 
+                    <Card>
+                        <CardHeader className="pb-3 border-b border-border">
+                            <CardTitle className="text-base font-medium">
+                                {isBusinessAccount ? "Business / service location" : "Service address"}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="service_address">Street address</Label>
+                                <Input id="service_address" placeholder="123 Main St, Area" {...register("service_address")} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_city">City</Label>
+                                <Input id="service_city" placeholder="Accra" {...register("service_city")} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_state">State / region</Label>
+                                <Input id="service_state" placeholder="Greater Accra" {...register("service_state")} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_zip_code">Zip / postcode</Label>
+                                <Input id="service_zip_code" placeholder="00233" {...register("service_zip_code")} />
+                            </div>
+                        </CardContent>
+                    </Card>
                     <Card className="border-l-4 border-l-blue-500">
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Preferences & Notes</CardTitle>
@@ -446,22 +512,9 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                             <CardTitle className="text-base font-medium">Account Setup</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="customer_type">Customer Type</Label>
-                                <Select
-                                    value={watch("customer_type")}
-
-                                    onValueChange={(val) => setValue("customer_type", val as any)}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="individual">Individual</SelectItem>
-                                        <SelectItem value="business">Business</SelectItem>
-                                        <SelectItem value="fleet">Fleet</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                                <span className="text-muted-foreground">Type: </span>
+                                <span className="font-medium capitalize">{customerType}</span>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>

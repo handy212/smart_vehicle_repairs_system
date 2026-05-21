@@ -1,22 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
-import { gatepassApi } from "@/lib/api/gatepass";
-import { useRecentItems } from "@/lib/hooks/useRecentItems";
-import { useEffect } from "react";
 import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
 import { workOrderPartsApi } from "@/lib/api/workorder-parts";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
+import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, FileText, Wrench, Package, MessageSquare, Image, Search, Printer, ChevronDown, Clock, FileText as FileTextIcon, Plus, ExternalLink, AlertCircle, AlertTriangle, CheckCircle, Lock as LockIcon } from "lucide-react";
-import { PremiumIcons } from "@/components/ui/icons";
-import Link from "next/link";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ArrowLeft } from "lucide-react";
 import WorkOrderOverviewTab from "./components/OverviewTab";
 import WorkOrderTasksTab from "./components/TasksTab";
 import WorkOrderPartsTab from "./components/PartsTab";
@@ -24,255 +19,27 @@ import WorkOrderNotesTab from "./components/NotesTab";
 import PhotosTab from "./components/PhotosTab";
 import DocumentsTab from "./components/DocumentsTab";
 import DiagnosisTab from "./components/DiagnosisTab";
-import WorkflowActions from "./components/WorkflowActions";
-import { usePermissions } from "@/lib/hooks/usePermissions";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
-import { usePrint } from "@/lib/hooks/usePrint";
-import { getStatusVariant, getStatusLabel } from "@/lib/utils/workorder-status";
 import WorkOrderTimeline from "./components/WorkOrderTimeline";
 import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
+import { useRecentItems } from "@/lib/hooks/useRecentItems";
+import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { diagnosisApi } from "@/lib/api/diagnosis";
-import { useCurrency } from "@/lib/hooks/useCurrency";
+import { WorkOrderCommandBar } from "./components/WorkOrderCommandBar";
+import { WorkOrderProgress } from "./components/WorkOrderProgress";
+import { GatePassBanner } from "./components/GatePassBanner";
+import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
+import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 
-const INVOICE_ELIGIBLE_STATUSES = new Set(["completed", "invoiced", "closed"]);
-
-function InvoiceSection({
-  workOrderId,
-  status,
-  invoiceSummary,
-}: {
-  workOrderId: number;
-  status: string;
-  invoiceSummary?: {
-    id: number;
-    invoice_number: string;
-    status: string;
-    total?: string;
-  } | null;
-}) {
-  if (!INVOICE_ELIGIBLE_STATUSES.has(status)) {
-    return null;
-  }
-
-  const hasInvoice = Boolean(invoiceSummary?.id);
-
-  return (
-    <Card className="border border-border bg-card shadow-sm">
-      <CardContent className="py-4 px-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <PremiumIcons.Receipt className="w-5 h-5 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-semibold text-sm">Invoice</h3>
-              {hasInvoice ? (
-                <p className="text-xs text-muted-foreground truncate">
-                  {invoiceSummary!.invoice_number} ·{" "}
-                  <span className="capitalize">{invoiceSummary!.status.replace(/_/g, " ")}</span>
-                  {status === "completed" && invoiceSummary!.status === "draft" ? (
-                    <span className="text-warning"> — issue invoice, then mark work order as invoiced</span>
-                  ) : null}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">No invoice linked to this work order yet</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {hasInvoice ? (
-              <Link href={`/billing/invoices/${invoiceSummary!.id}`}>
-                <Button size="sm" variant="outline" className="h-8 text-xs">
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                  View Invoice
-                </Button>
-              </Link>
-            ) : status === "completed" ? (
-              <PermissionGuard permission="create_invoices">
-                <Link href={`/billing/invoices/new?work_order=${workOrderId}`}>
-                  <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Create Invoice
-                  </Button>
-                </Link>
-              </PermissionGuard>
-            ) : null}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Gate Pass Section Component
-function GatePassSection({ workOrderId }: { workOrderId: number }) {
-
-  const { data: gatePass, isLoading } = useQuery({
-    queryKey: ["gatepass", "workorder", workOrderId],
-    queryFn: () => gatepassApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId,
-  });
-
-  if (isLoading) {
-    return null;
-  }
-
-  return (
-    <Card className="border border-border bg-card shadow-sm">
-      <CardContent className="py-4 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FileTextIcon className="w-5 h-5 text-primary" />
-            <div>
-              <h3 className="font-semibold text-sm">Gate Pass</h3>
-              {gatePass ? (
-                <p className="text-xs text-muted-foreground">
-                  Gate Pass {gatePass.gate_pass_number} - {gatePass.status?.replace(/_/g, " ")}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">No gate pass created yet</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {gatePass ? (
-              <Link href={`/gatepass/${gatePass.id}`}>
-                <Button size="sm" variant="outline" className="h-8 text-xs">
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                  View Gate Pass
-                </Button>
-              </Link>
-            ) : (
-              <PermissionGuard permission="create_gatepass">
-                <Link href={`/gatepass/new?work_order=${workOrderId}`}>
-                  <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Create Gate Pass
-                  </Button>
-                </Link>
-              </PermissionGuard>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Workflow Progress Indicator Component
-function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusChange, onStartRepairs }: {
-  status: string;
-  workOrderId: number;
-
-  workOrder: any;
-  onStatusChange?: () => void;
-  onStartRepairs?: () => void;
-}) {
-  const workflowSteps = [
-    { key: 'draft', label: 'Draft', icon: '📝' },
-    { key: 'inspection', label: 'Inspection', icon: '🔍' },
-    { key: 'intake', label: 'Intake', icon: '📋' },
-    { key: 'assigned', label: 'Assigned', icon: '👤' },
-    { key: 'diagnosis', label: 'Diagnosis', icon: '🔧' },
-    { key: 'awaiting_approval', label: 'Awaiting Approval', icon: '⏳' },
-    { key: 'approved', label: 'Approved', icon: '✅' },
-    { key: 'in_progress', label: 'In Progress', icon: '⚙️' },
-    { key: 'quality_check', label: 'Quality Check', icon: '✓' },
-    { key: 'completed', label: 'Completed', icon: '🎉' },
-    { key: 'invoiced', label: 'Invoiced', icon: '💰' },
-    { key: 'closed', label: 'Closed', icon: '🔒' },
-  ];
-
-  const statusOrder: Record<string, number> = {
-    'draft': 0,
-    'inspection': 1,
-    'intake': 2,
-    'assigned': 3,
-    'diagnosis': 4,
-    'awaiting_approval': 5,
-    'approved': 6,
-    'in_progress': 7,
-    'additional_work_found': 7,
-    'paused': 7,
-    'quality_check': 8,
-    'completed': 9,
-    'invoiced': 10,
-    'closed': 11,
-  };
-
-  const currentStepIndex = statusOrder[status] ?? 0;
-
-  const getStepStatus = (index: number) => {
-    if (index < currentStepIndex) return 'completed';
-    if (index === currentStepIndex) return 'current';
-    return 'upcoming';
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">
-          Status: <span className="font-semibold capitalize text-foreground">{getStatusLabel(status)}</span>
-        </span>
-
-        <Badge variant={getStatusVariant(status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
-          {getStatusLabel(status)}
-        </Badge>
-      </div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 flex-1 min-w-0">
-          {workflowSteps.map((step, index) => {
-            const stepStatus = getStepStatus(index);
-            const isLast = index === workflowSteps.length - 1;
-
-            return (
-              <div key={step.key} className="flex items-center flex-shrink-0">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${stepStatus === 'completed'
-                      ? 'bg-success/100 text-white'
-                      : stepStatus === 'current'
-                        ? 'bg-primary text-white ring-2 ring-primary/20'
-                        : 'bg-border text-muted-foreground'
-                      }`}
-                  >
-                    {stepStatus === 'completed' ? '✓' : step.icon}
-                  </div>
-                  <span
-                    className={`text-xs mt-1 text-center whitespace-nowrap max-w-[70px] truncate ${stepStatus === 'current'
-                      ? 'font-semibold text-primary'
-                      : stepStatus === 'completed'
-                        ? 'text-muted-foreground'
-                        : 'text-muted-foreground'
-                      }`}
-                  >
-                    {step.label}
-                  </span>
-                </div>
-                {!isLast && (
-                  <div
-                    className={`h-0.5 w-6 mx-1 ${stepStatus === 'completed' ? 'bg-success/100' : 'bg-border'
-                      }`}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex-shrink-0">
-          <WorkflowActions
-            workOrderId={workOrderId}
-            status={status}
-            workOrder={workOrder}
-            onStatusChange={onStatusChange}
-            onStartRepairs={onStartRepairs}
-            inline={true}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+const VALID_TABS = new Set([
+  "overview",
+  "tasks",
+  "parts",
+  "notes",
+  "photos",
+  "documents",
+  "diagnosis",
+  "timeline",
+]);
 
 export default function WorkOrderDetailPage() {
   const params = useParams();
@@ -280,9 +47,12 @@ export default function WorkOrderDetailPage() {
   const searchParams = useSearchParams();
   const workOrderId = parseInt(params.id as string);
   const requestedTab = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState(requestedTab || "overview");
-  const [showPrintMenu, setShowPrintMenu] = useState(false);
-  const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
+  const initialTab =
+    requestedTab && VALID_TABS.has(requestedTab) ? requestedTab : "overview";
+
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] =
+    useState(false);
   const queryClient = useQueryClient();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const { addRecentItem } = useRecentItems();
@@ -304,6 +74,12 @@ export default function WorkOrderDetailPage() {
     }
   }, [workOrder, addRecentItem]);
 
+  useEffect(() => {
+    if (requestedTab && VALID_TABS.has(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
+
   const { data: tasks = [] } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
     queryFn: () => workOrderTasksApi.list({ work_order: workOrderId }),
@@ -316,24 +92,40 @@ export default function WorkOrderDetailPage() {
     enabled: !!workOrderId,
   });
 
-  // Fetch diagnosis to get unapproved count
   const { data: diagnosis } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
     enabled: !!workOrderId,
   });
 
-  const unapprovedRecommendations = diagnosis?.repair_recommendations?.filter(
-    (r: any) =>
-      ["pending_approval", "deferred"].includes(r.approval_status) &&
-      !r.converted_to_task_id
-  ) || [];
+  const unapprovedRecommendations =
+    diagnosis?.repair_recommendations?.filter(
+      (r) =>
+        r.approval_status &&
+        ["pending_approval", "deferred"].includes(r.approval_status) &&
+        !r.converted_to_task_id
+    ) || [];
 
   const { data: notes = [] } = useQuery({
     queryKey: ["workorder-notes", workOrderId],
     queryFn: () => workOrderNotesApi.list({ work_order: workOrderId }),
     enabled: !!workOrderId,
   });
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setActiveTab(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "overview") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`/workorders/${workOrderId}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [router, workOrderId, searchParams]
+  );
 
   if (isLoading) {
     return <WorkOrderDetailSkeleton />;
@@ -343,12 +135,12 @@ export default function WorkOrderDetailPage() {
     return (
       <div className="space-y-4">
         <Button variant="secondary" onClick={() => router.back()}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-destructive dark:text-red-400">Error loading work order. Please try again.</p>
+            <p className="text-destructive">Error loading work order. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -365,7 +157,6 @@ export default function WorkOrderDetailPage() {
 
   const handlePrintRecommendations = async () => {
     try {
-      // Download PDF
       const blob = await workordersApi.downloadRecommendationsPDF(workOrderId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -388,194 +179,59 @@ export default function WorkOrderDetailPage() {
     }
   };
 
-  // Check if work order is in a status that allows printing recommendations and has items to print
   const canPrintRecommendations =
-    workOrder &&
     ["completed", "invoiced", "closed"].includes(workOrder.status) &&
     unapprovedRecommendations.length > 0;
 
+  const tabsLocked =
+    !workOrder.has_completed_inspection &&
+    ["draft", "inspection"].includes(workOrder.status);
+
+  const showRecommendationsAction =
+    workOrder.status === "closed" && unapprovedRecommendations.length > 0;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div>
-            {/* Back Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.back()}
-              className="mb-1 -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground "
-            >
-              <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Button>
-            {/* Premium Header - Removed manual breadcrumbs and WO number for cleaner look */}
-            <h1 className="text-xl font-bold text-foreground tracking-tight">
-              {workOrder.customer_name || "Customer"} - {workOrder.vehicle_info || "Vehicle"}
-            </h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            {/* Work Order Number Badge */}
-            <div className="mr-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-mono text-sm font-bold text-primary shadow-sm">
-              #{workOrder.work_order_number}
-            </div>
+    <div className="space-y-4">
+      <WorkOrderCommandBar
+        workOrder={workOrder}
+        workOrderId={workOrderId}
+        onStatusChange={refreshData}
+        onStartRepairs={() => handleTabChange("tasks")}
+        onShowRecommendations={() => setShowUnapprovedRecommendationsDialog(true)}
+        showRecommendationsAction={showRecommendationsAction}
+        canPrintRecommendations={canPrintRecommendations}
+        onPrintWorkOrder={() =>
+          openPrintWindow({ documentType: "work_order", documentId: workOrderId })
+        }
+        onDownloadPdf={() =>
+          downloadPDF({
+            documentType: "work_order",
+            documentId: workOrderId,
+            documentNumber: workOrder.work_order_number,
+          })
+        }
+        onPrintRecommendations={handlePrintRecommendations}
+        isOpeningPrint={isOpeningPrint}
+        isDownloading={isDownloading}
+      />
 
-            {/* Print Dropdown */}
-            <div className="relative">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPrintMenu(!showPrintMenu)}
-                className="flex h-9 items-center border-border bg-card text-foreground"
-              >
-                <PremiumIcons.Receipt className="w-3.5 h-3.5 mr-2" />
-                Print
-                <ChevronDown className="w-3.5 h-3.5 ml-2" />
-              </Button>
-              {/* Open Recommendations Button - Header */}
-              {workOrder.status === "closed" && unapprovedRecommendations.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowUnapprovedRecommendationsDialog(true)}
-                  className="absolute right-full mr-2 min-w-max h-9 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5 mr-2" />
-                  Open Recommendations
-                </Button>
-              )}
-              {showPrintMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowPrintMenu(false)}
-                  />
-                  <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg">
-                    <div
-                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
-                      onClick={() => {
-                        setShowPrintMenu(false);
-                        openPrintWindow({ documentType: 'work_order', documentId: workOrderId });
-                      }}
-                    >
-                      <Printer className="w-4 h-4 inline mr-2" />
-                      {isOpeningPrint ? 'Opening...' : 'Print Work Order'}
-                    </div>
-                    <div
-                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
-                      onClick={() => {
-                        setShowPrintMenu(false);
-                        downloadPDF({
-                          documentType: 'work_order',
-                          documentId: workOrderId,
-                          documentNumber: workOrder.work_order_number
-                        });
-                      }}
-                    >
-                      <FileText className="w-4 h-4 inline mr-2" />
-                      {isDownloading ? 'Downloading...' : 'Download PDF'}
-                    </div>
-                    {canPrintRecommendations && (
-                      <>
-                        <div className="border-t border-border my-1" />
-                        <div
-                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
-                          onClick={() => {
-                            setShowPrintMenu(false);
-                            handlePrintRecommendations();
-                          }}
-                        >
-                          <AlertCircle className="w-4 h-4 inline mr-2" />
-                          Print Recommendations (PDF)
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push(`/chat?work_order_id=${workOrderId}`)}
-              className="h-9"
-            >
-              <PremiumIcons.MessageSquare className="w-3.5 h-3.5 mr-2" />
-              Chat
-            </Button>
-            <PermissionGuard permission="edit_workorders">
-              <Link href={`/workorders/${workOrderId}/edit`}>
-                <Button size="sm" className="h-9">
-                  <Edit className="w-3.5 h-3.5 mr-2" />
-                  Edit Order
-                </Button>
-              </Link>
-            </PermissionGuard>
-          </div>
-        </div>
-      </div>
+      <WorkOrderProgress status={workOrder.status} />
 
-      {/* Workflow Progress Indicator with Glass Effect */}
-      <Card className="border border-border bg-card shadow-sm">
-        <CardContent className="py-4 px-4">
-          <WorkflowProgressIndicator
-            status={workOrder.status}
-            workOrderId={workOrderId}
-            workOrder={workOrder}
-            onStatusChange={refreshData}
-            onStartRepairs={() => setActiveTab("tasks")}
-          />
-        </CardContent>
-      </Card>
+      {workOrder.status === "closed" && <GatePassBanner workOrderId={workOrderId} />}
 
-      {/* Gate Pass Section */}
-      {workOrder.status === "closed" && <GatePassSection workOrderId={workOrderId} />}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <WorkOrderTabsNav
+          tasksCount={tasks.length}
+          partsCount={parts.length}
+          notesCount={notes.length}
+          tabsLocked={tabsLocked}
+        />
 
-
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview" className="data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            <PremiumIcons.FileText className="w-4 h-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="data-[state=active]:bg-card data-[state=active]:shadow-sm" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <PremiumIcons.Wrench className="w-4 h-4 mr-2" />}
-            Tasks ({tasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="parts" className="data-[state=active]:bg-card data-[state=active]:shadow-sm" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <PremiumIcons.Package className="w-4 h-4 mr-2" />}
-            Parts ({parts.length})
-          </TabsTrigger>
-          <TabsTrigger value="notes" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <MessageSquare className="w-4 h-4 mr-2" />}
-            Notes ({notes.length})
-          </TabsTrigger>
-          <TabsTrigger value="photos" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <Image className="w-4 h-4 mr-2" />}
-            Photos
-          </TabsTrigger>
-          <TabsTrigger value="documents" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <FileText className="w-4 h-4 mr-2" />}
-            Documents
-          </TabsTrigger>
-          <TabsTrigger value="diagnosis" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <Search className="w-4 h-4 mr-2" />}
-            Diagnosis
-          </TabsTrigger>
-          <TabsTrigger value="timeline" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
-            {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <Clock className="w-4 h-4 mr-2" />}
-            Timeline
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="mt-4">
           <WorkOrderOverviewTab workOrder={workOrder} onStatusChange={refreshData} />
         </TabsContent>
 
-        <TabsContent value="tasks" className="mt-6">
+        <TabsContent value="tasks" className="mt-4">
           <WorkOrderTasksTab
             workOrderId={workOrderId}
             tasks={tasks}
@@ -584,7 +240,7 @@ export default function WorkOrderDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="parts" className="mt-6">
+        <TabsContent value="parts" className="mt-4">
           <WorkOrderPartsTab
             workOrderId={workOrderId}
             parts={parts}
@@ -593,165 +249,33 @@ export default function WorkOrderDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="notes" className="mt-6">
-          <WorkOrderNotesTab
-            workOrderId={workOrderId}
-            notes={notes}
-            onRefresh={refreshData}
-          />
+        <TabsContent value="notes" className="mt-4">
+          <WorkOrderNotesTab workOrderId={workOrderId} notes={notes} onRefresh={refreshData} />
         </TabsContent>
 
-        <TabsContent value="photos" className="mt-6">
+        <TabsContent value="photos" className="mt-4">
           <PhotosTab workOrderId={workOrderId} />
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-6">
+        <TabsContent value="documents" className="mt-4">
           <DocumentsTab workOrderId={workOrderId} />
         </TabsContent>
 
-        <TabsContent value="diagnosis" className="mt-6">
-          <DiagnosisTab
-            workOrderId={workOrderId}
-            workOrder={workOrder}
-            onRefresh={refreshData}
-          />
+        <TabsContent value="diagnosis" className="mt-4">
+          <DiagnosisTab workOrderId={workOrderId} workOrder={workOrder} onRefresh={refreshData} />
         </TabsContent>
 
-        <TabsContent value="timeline" className="mt-6">
+        <TabsContent value="timeline" className="mt-4">
           <WorkOrderTimeline workOrder={workOrder} notes={notes} />
         </TabsContent>
       </Tabs>
 
-      {/* Unapproved Recommendations Dialog */}
       <UnapprovedRecommendationsDialog
         open={showUnapprovedRecommendationsDialog}
         onOpenChange={setShowUnapprovedRecommendationsDialog}
         workOrderId={workOrderId}
-        workOrder={workOrder}
         onPrintRecommendations={handlePrintRecommendations}
       />
-    </div >
-  );
-}
-
-// Open Recommendations Dialog Component
-function UnapprovedRecommendationsDialog({
-  open,
-  onOpenChange,
-  workOrderId,
-  workOrder: _workOrder,
-  onPrintRecommendations,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  workOrderId: number;
-
-  workOrder: any;
-  onPrintRecommendations: () => void;
-}) {
-  const { formatCurrency } = useCurrency();
-
-  // Fetch diagnosis to get recommendations
-  const { data: diagnosis, isLoading } = useQuery({
-    queryKey: ["diagnosis", "workorder", workOrderId],
-    queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: open && !!workOrderId,
-  });
-
-  const unapprovedRecommendations = diagnosis?.repair_recommendations?.filter(
-    (r: any) =>
-      ["pending_approval", "deferred"].includes(r.approval_status) &&
-      !r.converted_to_task_id
-  ) || [];
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <AlertTriangle className="w-5 h-5 text-primary" />
-            Open Vehicle Recommendations
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            These items were not turned into completed workshop work and should follow the vehicle into future visits.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-2">
-          {isLoading ? (
-            <div className="text-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-            </div>
-          ) : unapprovedRecommendations.length === 0 ? (
-            <div className="text-center py-6">
-              <CheckCircle className="w-10 h-10 mx-auto text-success mb-2" />
-              <p className="font-medium text-foreground">
-                All Approved
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-
-              {unapprovedRecommendations.map((rec: any) => (
-              <div key={rec.id} className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                <div className="flex items-start justify-between mb-1.5">
-                  <div className="flex flex-col">
-                      <span className="font-medium text-sm text-foreground">
-                        {rec.description}
-                      </span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge
-                          variant="outline"
-                          className="h-5 px-1.5 py-0 text-[10px] border-primary/20 text-primary"
-                        >
-                          {rec.priority_display || rec.priority}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                          {rec.recommendation_type_display || rec.recommendation_type}
-                        </Badge>
-                        {rec.approval_status_display && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 capitalize">
-                            {rec.approval_status_display}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                      <span className="text-sm font-bold text-foreground font-mono">
-                        {formatCurrency(Number(rec.estimated_total_cost))}
-                      </span>
-                    )}
-                  </div>
-                  {Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Parts: {rec.parts_needed.map((part: any) => `${part.part_name} x${part.quantity}`).join(", ")}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {unapprovedRecommendations.length > 0 && (
-          <DialogFooter className="gap-2 sm:justify-between pt-2">
-            <div className="flex gap-2 w-full">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onPrintRecommendations();
-                  onOpenChange(false);
-                }}
-                className="flex-1"
-              >
-                <Printer className="w-3.5 h-3.5 mr-1.5" />
-                Print Follow-Up List
-              </Button>
-            </div>
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }

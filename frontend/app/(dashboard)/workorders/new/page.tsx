@@ -19,11 +19,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, User, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle } from "lucide-react";
+import { AlertCircle, User, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle, Plus } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { format } from "date-fns";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
+import { CustomerForm, CustomerFormData } from "@/components/customers/CustomerForm";
+import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm";
+import { useToast } from "@/lib/hooks/useToast";
+import { AxiosError } from "axios";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +37,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -94,8 +98,11 @@ export default function NewWorkOrderPage() {
   const relatedWorkOrderId = searchParams.get("related_work_order");
   const reworkFromUrl = searchParams.get("rework") === "true";
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // ... (state vars)
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false);
+  const [vehicleFieldErrors, setVehicleFieldErrors] = useState<Record<string, string>>({});
 
   // Fetch service types (for legacy or fallback)
   const { data: serviceTypesData } = useQuery({
@@ -126,12 +133,6 @@ export default function NewWorkOrderPage() {
     customer_number?: string;
   } | null>(null);
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>([]);
-
-  // Fetch customers
-  const { data: customersData } = useQuery({
-    queryKey: ["customers", "list"],
-    queryFn: () => customersApi.list({ page: 1 }),
-  });
 
   // Fetch vehicle if vehicleId is provided in URL
   const { data: vehicleFromUrl } = useQuery({
@@ -270,12 +271,130 @@ export default function NewWorkOrderPage() {
   const odometerIn = watch("odometer_in");
   const customerConcerns = watch("customer_concerns");
 
+  const { data: fetchedCustomer } = useQuery({
+    queryKey: ["customer", customer],
+    queryFn: () => customersApi.get(customer!),
+    enabled: !!customer,
+  });
+
+  const createCustomerMutation = useMutation({
+    mutationFn: (data: CustomerFormData) => customersApi.create(data),
+    onSuccess: (newCustomer) => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-search"] });
+      applyCustomerSelection(newCustomer);
+      setShowAddCustomerDialog(false);
+      toast({ title: "Customer created", description: "Customer has been added and selected." });
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof AxiosError
+          ? (error.response?.data as { detail?: string })?.detail || "Failed to create customer"
+          : "Failed to create customer";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    },
+  });
+
+  const createVehicleMutation = useMutation({
+    mutationFn: (data: VehicleFormData | FormData) => vehiclesApi.create(data as VehicleFormData),
+    onSuccess: (newVehicle) => {
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["vehicles", "customer", selectedCustomer] });
+      setValue("vehicle", newVehicle.id);
+      if (newVehicle.current_mileage) {
+        setValue("odometer_in", newVehicle.current_mileage);
+      }
+      setShowAddVehicleDialog(false);
+      setVehicleFieldErrors({});
+      toast({ title: "Vehicle created", description: "Vehicle has been added and selected." });
+    },
+    onError: (error: unknown) => {
+      setVehicleFieldErrors({});
+      if (error instanceof AxiosError && error.response?.data) {
+        const errorData = error.response.data as Record<string, string | string[]>;
+        const extracted: Record<string, string> = {};
+        Object.keys(errorData).forEach((field) => {
+          if (field !== "non_field_errors" && field !== "detail") {
+            const fieldError = Array.isArray(errorData[field])
+              ? errorData[field][0]
+              : errorData[field];
+            if (fieldError) extracted[field] = String(fieldError);
+          }
+        });
+        if (Object.keys(extracted).length > 0) {
+          setVehicleFieldErrors(extracted);
+          return;
+        }
+      }
+      toast({ title: "Error", description: "Failed to create vehicle", variant: "destructive" });
+    },
+  });
+
+  const applyCustomerSelection = (cust: {
+    id: number;
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    customer_type?: string;
+    customer_number?: string;
+  }) => {
+    skipCustomerEffectRef.current = true;
+    setValue("customer", cust.id);
+    setSelectedCustomer(cust.id);
+    setSelectedCustomerData({
+      id: cust.id,
+      full_name: cust.full_name,
+      email: cust.email,
+      phone: cust.phone,
+      customer_type: cust.customer_type,
+      customer_number: cust.customer_number,
+    });
+    if (!isInitialSyncRef.current) {
+      setValue("vehicle", undefined as any);
+      setValue("odometer_in", 0);
+    }
+  };
+
+  const handleCreateVehicle = async (data: VehicleFormData, imageFile: File | null) => {
+    let payload: VehicleFormData | FormData;
+    const vehicleData = { ...data, owner: selectedCustomer || data.owner };
+
+    if (imageFile) {
+      const formData = new FormData();
+      Object.keys(vehicleData).forEach((key) => {
+        const value = vehicleData[key as keyof VehicleFormData];
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      });
+      formData.append("image", imageFile);
+      payload = formData;
+    } else {
+      payload = vehicleData;
+    }
+
+    await createVehicleMutation.mutateAsync(payload);
+  };
+
   // Get selected vehicle details
   const selectedVehicle = vehicle && vehiclesData?.results
     ? vehiclesData.results.find((v) => v.id === vehicle) || null
     : null;
 
-  // 1. CONSOLIDATED: Update selected customer when form value changes
+  useEffect(() => {
+    if (fetchedCustomer) {
+      setSelectedCustomerData({
+        id: fetchedCustomer.id,
+        full_name: fetchedCustomer.full_name,
+        email: fetchedCustomer.email,
+        phone: fetchedCustomer.phone,
+        customer_type: fetchedCustomer.customer_type,
+        customer_number: fetchedCustomer.customer_number,
+      });
+    }
+  }, [fetchedCustomer]);
+
+  // Update selected customer when form value changes
   useEffect(() => {
     if (skipCustomerEffectRef.current) {
       skipCustomerEffectRef.current = false;
@@ -284,24 +403,7 @@ export default function NewWorkOrderPage() {
 
     if (customer && customer !== selectedCustomer) {
       setSelectedCustomer(customer);
-
-      // Find and store selected customer data
-      const customerData = customersData?.results?.find((c) => c.id === customer);
-      if (customerData) {
-        setSelectedCustomerData({
-          id: customerData.id,
-          full_name: customerData.full_name,
-          email: customerData.email,
-          phone: customerData.phone,
-          customer_type: customerData.customer_type,
-          customer_number: customerData.customer_number,
-        });
-      } else {
-        setSelectedCustomerData(null);
-      }
-
-      // Reset vehicle and odometer ONLY if not in initial sync
-      if (isInitialSyncRef.current) {
+      if (!isInitialSyncRef.current) {
         setValue("vehicle", undefined as any);
         setValue("odometer_in", 0);
       }
@@ -309,7 +411,7 @@ export default function NewWorkOrderPage() {
       setSelectedCustomerData(null);
       setSelectedCustomer(null);
     }
-  }, [customer, selectedCustomer, setValue, customersData]);
+  }, [customer, selectedCustomer, setValue]);
 
   // Pre-fill odometer from vehicle's current mileage when vehicle is selected
   useEffect(() => {
@@ -442,19 +544,6 @@ export default function NewWorkOrderPage() {
         skipCustomerEffectRef.current = true;
         setValue("customer", ownerId);
         setSelectedCustomer(ownerId);
-
-        // Find and set customer data
-        const customerData = customersData?.results?.find(c => c.id === ownerId);
-        if (customerData) {
-          setSelectedCustomerData({
-            id: customerData.id,
-            full_name: customerData.full_name,
-            email: customerData.email,
-            phone: customerData.phone,
-            customer_type: customerData.customer_type,
-            customer_number: customerData.customer_number,
-          });
-        }
       }
 
       setValue("vehicle", vehicleFromUrl.id);
@@ -464,7 +553,7 @@ export default function NewWorkOrderPage() {
 
       isInitialSyncRef.current = true;
     }
-  }, [vehicleFromUrl, vehicleId, setValue, customersData]);
+  }, [vehicleFromUrl, vehicleId, setValue]);
 
   // Check for repeat visits when vehicle and concerns are filled
   useEffect(() => {
@@ -605,24 +694,31 @@ export default function NewWorkOrderPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          {/* Premium Header - Removed manual breadcrumbs */}
-          <div className="flex flex-col gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.back()}
-              className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground "
-            >
-              <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
-              Back
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-1 min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground"
+          >
+            <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+          <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            <PremiumIcons.PlusCircle className="w-6 h-6 text-primary shrink-0" />
+            <span className="font-semibold text-lg">New Work Order</span>
+          </h1>
+        </div>
+        <div className="flex shrink-0 gap-2 sm:pt-7">
+          <Link href="/workorders">
+            <Button type="button" variant="outline" disabled={isSubmitting}>
+              Cancel
             </Button>
-            <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
-              <PremiumIcons.PlusCircle className="w-6 h-6 text-primary" />
-              <span className="font-semibold text-lg">New Work Order</span>
-            </h1>
-          </div>
+          </Link>
+          <Button type="submit" form="new-work-order-form" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create JobCard"}
+          </Button>
         </div>
       </div>
 
@@ -767,10 +863,8 @@ export default function NewWorkOrderPage() {
         </DialogContent>
       </Dialog>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-4">
+      <form id="new-work-order-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-4 w-full">
             {/* Customer & Vehicle */}
             <Card className="border-0 overflow-hidden">
               <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
@@ -795,40 +889,25 @@ export default function NewWorkOrderPage() {
                         Customer *
                       </label>
 
-                      <Select
-                        value={customer?.toString() || ""}
-                        onValueChange={(val) => {
-                          const customerId = parseInt(val);
-                          setValue("customer", customerId);
-                          setSelectedCustomer(customerId);
-
-                          // Update selected customer data
-                          const customerData = customersData?.results?.find((c) => c.id === customerId);
-                          if (customerData) {
-                            setSelectedCustomerData({
-                              id: customerData.id,
-                              full_name: customerData.full_name,
-                              email: customerData.email,
-                              phone: customerData.phone,
-                              customer_type: customerData.customer_type,
-                              customer_number: customerData.customer_number,
-                            });
-                          } else {
-                            setSelectedCustomerData(null);
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-destructive" : ""}`}>
-                          <SelectValue placeholder="Select a customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customersData?.results?.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <div className={`flex-1 min-w-0 ${errors.customer ? "[&_button]:border-destructive" : ""}`}>
+                          <CustomerSelector
+                            selectedCustomerId={customer}
+                            placeholder="Search by name, phone, or customer number..."
+                            onSelect={(cust) => applyCustomerSelection(cust)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 h-11 w-11"
+                          title="Add new customer"
+                          onClick={() => setShowAddCustomerDialog(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
 
                       {errors.customer && (
                         <p className="mt-1 text-sm text-destructive dark:text-red-400">
@@ -857,28 +936,43 @@ export default function NewWorkOrderPage() {
                         Vehicle *
                       </label>
 
-                      <Select
-                        value={vehicle?.toString() || ""}
-                        onValueChange={(val) => setValue("vehicle", parseInt(val))}
-                        disabled={!selectedCustomer || !vehiclesData?.results?.length}
-                      >
-                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-destructive" : ""}`}>
-                          <SelectValue placeholder={
-                            !selectedCustomer
-                              ? "Select a customer first"
-                              : !vehiclesData?.results?.length
-                                ? "No vehicles found"
-                                : "Select a vehicle"
-                          } />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehiclesData?.results?.map((vehicle) => (
-                            <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                              {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <div className="flex-1 min-w-0">
+                        <Select
+                          value={vehicle?.toString() || ""}
+                          onValueChange={(val) => setValue("vehicle", parseInt(val))}
+                          disabled={!selectedCustomer}
+                        >
+                          <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-destructive" : ""}`}>
+                            <SelectValue placeholder={
+                              !selectedCustomer
+                                ? "Select a customer first"
+                                : !vehiclesData?.results?.length
+                                  ? "No vehicles — add one with +"
+                                  : "Select a vehicle"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehiclesData?.results?.map((v) => (
+                              <SelectItem key={v.id} value={v.id.toString()}>
+                                {v.make} {v.model} {v.year} — {v.vin}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0 h-10 w-10"
+                          title="Add new vehicle"
+                          disabled={!selectedCustomer}
+                          onClick={() => setShowAddVehicleDialog(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
 
                       {errors.vehicle && (
                         <p className="mt-1 text-sm text-destructive dark:text-red-400">
@@ -1169,167 +1263,162 @@ export default function NewWorkOrderPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Sidebar Actions */}
-          <div className="space-y-6">
-            <div className="sticky top-6 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors duration-200">
-              <h3 className="font-semibold text-xs tracking-wide uppercase text-muted-foreground">Actions</h3>
-              <div className="space-y-3">
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create JobCard"}
-                </Button>
-                <Link href="/workorders" className="block w-full">
-                  <Button type="button" variant="secondary" className="w-full">
-                    Cancel
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Return/Rework Section (Compact) */}
-            <div className={`overflow-hidden rounded-2xl border bg-card transition-colors duration-200 ${isWarrantyRework ? 'border-primary/30 shadow-sm' : 'border-border hover:border-border/80 hover:shadow-sm'}`}>
-              <div className="p-0">
-                {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${isWarrantyRework ? 'bg-primary/5' : 'bg-transparent hover:bg-muted/50'}`}
-                  onClick={() => {
-                    const newState = !isWarrantyRework;
-                    setIsWarrantyRework(newState);
-                    if (!newState) {
-                      setSelectedRelatedWorkOrder(null);
-                      setSelectedRelatedWorkOrderDetail(null);
-                      setWarrantyReason("");
-                    }
-                  }}>
-                  <div className="flex items-center gap-3">
-                    <div className={`rounded-full p-2 ${isWarrantyRework ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                      <AlertCircle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className={`text-base font-semibold ${isWarrantyRework ? 'text-primary' : 'text-card-foreground'}`}>
-                        Return / Rework Job?
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {isWarrantyRework ? 'Link to previous work order' : 'Click to mark this as a return or rework job'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
-                    <div className="w-11 h-6 rounded-full border border-border bg-muted peer bg-muted peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border after:bg-card after:content-[''] after:transition-all"></div>
-                  </div>
+            {/* Return / Rework — optional, full-width */}
+            <Card className={`border overflow-hidden transition-colors ${isWarrantyRework ? "border-primary/30" : "border-border"}`}>
+              <button
+                type="button"
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${isWarrantyRework ? "bg-primary/5" : "hover:bg-muted/40"}`}
+                onClick={() => {
+                  const newState = !isWarrantyRework;
+                  setIsWarrantyRework(newState);
+                  if (!newState) {
+                    setSelectedRelatedWorkOrder(null);
+                    setSelectedRelatedWorkOrderDetail(null);
+                    setWarrantyReason("");
+                  }
+                }}
+              >
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isWarrantyRework ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  <AlertCircle className="h-4 w-4" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-medium ${isWarrantyRework ? "text-primary" : "text-foreground"}`}>
+                    Return / rework job
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isWarrantyRework
+                      ? "Link this job to a previous work order"
+                      : "Optional — for warranty or repeat visits"}
+                  </p>
+                </div>
+                <span
+                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors ${isWarrantyRework ? "border-primary bg-primary" : "border-border bg-muted"}`}
+                  aria-hidden
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full border border-border bg-card shadow-sm transition-transform mt-0.5 ${isWarrantyRework ? "translate-x-5" : "translate-x-0.5"}`}
+                  />
+                </span>
+              </button>
 
-                {isWarrantyRework && (
-                  <div className="p-4 space-y-6 animate-in slide-in-from-top-2 duration-200">
-                    <Separator className="bg-primary/15" />
-
-                    {/* Recent Work Orders List */}
-                    {vehicle && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium text-card-foreground">
-                            Select Previous Job
-                          </label>
-                          {selectedRelatedWorkOrder && (
-                            <button type="button" onClick={() => setShowWorkOrderSearch(!showWorkOrderSearch)} className="text-xs text-primary hover:text-primary font-medium">
-                              Search manually
-                            </button>
-                          )}
-                        </div>
-
-                        {isLoadingRecentWorkOrders ? (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 justify-center bg-muted rounded-lg">
-                            <PremiumIcons.Spinner className="w-4 h-4 animate-spin" />
-                            Loading history...
-                          </div>
-                        ) : recentWorkOrders.length > 0 ? (
-                          <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto pr-1">
-                            {recentWorkOrders.map((wo) => (
-                              <div
-                                key={wo.id}
-                                onClick={() => {
-                                  setSelectedRelatedWorkOrder(wo.id);
-                                  setSelectedRelatedWorkOrderDetail(wo);
-                                  setShowWorkOrderSearch(false);
-                                }}
-                                className={`p-3 rounded-lg border text-left cursor-pointer transition-all hover:shadow-md ${selectedRelatedWorkOrder === wo.id
-                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                  : "border-border bg-card hover:border-primary/20"
-                                  }`}
-                              >
-                                <div className="flex justify-between items-start mb-1">
-                                  <span className="font-bold text-sm text-foreground">{wo.work_order_number}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium uppercase tracking-wide">
-                                    {wo.days_ago !== null ? `${wo.days_ago} DAYS AGO` : 'N/A'}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2.5em]">
-                                  {wo.customer_concerns || "No description provided"}
-                                </p>
-                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                  <User className="w-3 h-3" /> {wo.technician_name.split(' ')[0]}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6 bg-muted/20 rounded-lg border border-dashed border-border">
-                            <p className="text-sm text-muted-foreground mt-1">No recent history found.</p>
-                            <Button type="button" variant="link" size="sm" onClick={() => setShowWorkOrderSearch(true)} className="text-primary">
-                              Search by ID instead
-                            </Button>
-                          </div>
+              {isWarrantyRework && (
+                <CardContent className="space-y-4 border-t border-border/60 pt-4 pb-4">
+                  {!vehicle ? (
+                    <p className="text-sm text-muted-foreground rounded-md bg-muted/50 px-3 py-2">
+                      Select a vehicle above to see recent jobs.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <label className="text-sm font-medium text-foreground">Previous job</label>
+                        {selectedRelatedWorkOrder && (
+                          <button
+                            type="button"
+                            onClick={() => setShowWorkOrderSearch(!showWorkOrderSearch)}
+                            className="text-xs font-medium text-primary hover:underline w-fit"
+                          >
+                            Search by ID
+                          </button>
                         )}
                       </div>
-                    )}
 
-                    {/* Manual Search (Conditional) */}
-                    {(showWorkOrderSearch || (!recentWorkOrders.length && !isLoadingRecentWorkOrders)) && (
-                      <div className="space-y-2 bg-muted p-3 rounded-lg border border-border">
-                        <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
-                          Search by ID
-                        </label>
-                        <div className="relative">
+                      {isLoadingRecentWorkOrders ? (
+                        <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 py-6 text-sm text-muted-foreground">
+                          <PremiumIcons.Spinner className="h-4 w-4 animate-spin" />
+                          Loading history…
+                        </div>
+                      ) : recentWorkOrders.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-52 overflow-y-auto">
+                          {recentWorkOrders.map((wo) => (
+                            <button
+                              key={wo.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedRelatedWorkOrder(wo.id);
+                                setSelectedRelatedWorkOrderDetail(wo);
+                                setShowWorkOrderSearch(false);
+                              }}
+                              className={`rounded-lg border p-3 text-left transition-all hover:shadow-sm ${selectedRelatedWorkOrder === wo.id
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border bg-card hover:border-primary/30"
+                                }`}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <span className="font-semibold text-sm text-foreground">{wo.work_order_number}</span>
+                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+                                  {wo.days_ago !== null ? `${wo.days_ago}d` : "—"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {wo.customer_concerns || "No description"}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-dashed border-border py-5 text-center">
+                          <p className="text-sm text-muted-foreground">No recent jobs for this vehicle.</p>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="mt-1 h-auto p-0"
+                            onClick={() => setShowWorkOrderSearch(true)}
+                          >
+                            Search by work order ID
+                          </Button>
+                        </div>
+                      )}
+
+                      {(showWorkOrderSearch || (!recentWorkOrders.length && !isLoadingRecentWorkOrders)) && (
+                        <div className="flex gap-2 max-w-md">
                           <Input
                             type="text"
-                            placeholder="HQ-WO..."
+                            placeholder="Work order number…"
                             value={workOrderSearchQuery}
                             onChange={(e) => {
                               setWorkOrderSearchQuery(e.target.value);
                               setShowWorkOrderSearch(e.target.value.length > 0);
                             }}
-                            className="bg-card"
                           />
-                          <Button size="sm" variant="ghost" className="absolute right-1 top-1 h-7 w-7 p-0" onClick={() => setShowWorkOrderSearch(false)}>
-                            <XCircle className="w-4 h-4 text-muted-foreground" />
-                          </Button>
+                          {showWorkOrderSearch && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0"
+                              onClick={() => {
+                                setShowWorkOrderSearch(false);
+                                setWorkOrderSearchQuery("");
+                              }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Warranty Reason */}
-                    {selectedRelatedWorkOrder && (
-                      <div className="space-y-2 animate-in fade-in duration-300">
-                        <label htmlFor="warranty_reason" className="text-sm font-medium text-card-foreground flex items-center justify-between">
-                          <span>Reason for Rework <span className="text-destructive">*</span></span>
-                        </label>
-                        <Textarea
-                          id="warranty_reason"
-                          value={warrantyReason}
-                          onChange={(e) => setWarrantyReason(e.target.value)}
-                          placeholder="Why is the vehicle returning? (e.g., Issue persisted, Part failure)"
-                          rows={2}
-                          className={`resize-none ${selectedRelatedWorkOrder && !warrantyReason.trim() ? "border-primary focus-visible:ring-primary" : ""}`}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                      {selectedRelatedWorkOrder && (
+                        <div className="space-y-1.5 max-w-2xl">
+                          <label htmlFor="warranty_reason" className="text-sm font-medium text-foreground">
+                            Reason for rework <span className="text-destructive">*</span>
+                          </label>
+                          <Textarea
+                            id="warranty_reason"
+                            value={warrantyReason}
+                            onChange={(e) => setWarrantyReason(e.target.value)}
+                            placeholder="e.g. Issue persisted, part failure"
+                            rows={2}
+                            className={`resize-none ${!warrantyReason.trim() ? "border-primary/50 focus-visible:ring-primary/30" : ""}`}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              )}
+            </Card>
         </div>
       </form>
 
@@ -1464,6 +1553,47 @@ export default function NewWorkOrderPage() {
               </div>
             </DialogFooter>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Customer Dialog */}
+      <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogDescription>
+              Create a customer without leaving this page. They will be selected automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <CustomerForm
+            mode="create"
+            hidePortalAccess
+            isSubmitting={createCustomerMutation.isPending}
+            onCancel={() => setShowAddCustomerDialog(false)}
+            onSubmit={async (data) => {
+              await createCustomerMutation.mutateAsync(data);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Vehicle Dialog */}
+      <Dialog open={showAddVehicleDialog} onOpenChange={setShowAddVehicleDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Vehicle</DialogTitle>
+            <DialogDescription>
+              Register a vehicle for the selected customer. It will be selected automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <VehicleForm
+            mode="create"
+            customerId={selectedCustomer?.toString() ?? null}
+            isSubmitting={createVehicleMutation.isPending}
+            serverFieldErrors={vehicleFieldErrors}
+            onCancel={() => setShowAddVehicleDialog(false)}
+            onSubmit={handleCreateVehicle}
+          />
         </DialogContent>
       </Dialog>
     </div>

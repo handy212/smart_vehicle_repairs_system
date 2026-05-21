@@ -133,6 +133,53 @@ class WorkOrderStateTransitionMixin:
                 {'error': error_msg},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=True, methods=['post'])
+    def discontinue_job(self, request, pk=None):
+        """Customer discontinued repairs: set status to pending invoice, skip open mechanical tasks."""
+        work_order = self.get_object()
+        reason_code = request.data.get('reason_code')
+        notes = (request.data.get('notes') or '').strip()
+        valid = dict(WorkOrder.CUSTOMER_DISCONTINUATION_REASON_CHOICES)
+        if reason_code not in valid:
+            return Response(
+                {
+                    'error': f'reason_code is required and must be one of: {", ".join(sorted(valid.keys()))}',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        for task in work_order.tasks.filter(
+            is_workflow_task=False,
+            status__in=['pending', 'in_progress'],
+        ):
+            task.status = 'skipped'
+            task.save(update_fields=['status'])
+
+        work_order.customer_discontinuation_reason = reason_code
+        work_order.customer_discontinuation_notes = notes
+        work_order.customer_discontinued_at = timezone.now()
+        work_order.customer_discontinued_by = request.user
+
+        try:
+            work_order.transition_to('discontinued_pending_bill', user=request.user)
+        except ValidationError as e:
+            return self._transition_error_response(work_order, 'discontinued_pending_bill', e)
+
+        label = valid.get(reason_code, reason_code)
+        detail = f"Customer discontinued — {label}."
+        if notes:
+            detail += f"\n{notes}"
+        WorkOrderNote.objects.create(
+            work_order=work_order,
+            created_by=request.user,
+            note_type='internal',
+            is_important=True,
+            note=detail,
+        )
+
+        serializer = self.get_serializer(work_order)
+        return Response(serializer.data)
     
     # ========== DATA RETRIEVAL ACTIONS ==========
 

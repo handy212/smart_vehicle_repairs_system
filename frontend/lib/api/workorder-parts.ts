@@ -12,6 +12,7 @@ export interface WorkOrderPart {
   unit_cost: string;
   markup_percentage?: number;
   total_cost: string;
+  selling_price?: string;
   status: string;
   warranty_months?: number;
   warranty_notes?: string;

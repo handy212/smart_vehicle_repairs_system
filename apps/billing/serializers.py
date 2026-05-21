@@ -32,12 +32,27 @@ from apps.inventory.models import Part, PurchaseOrder
 
 
 def calculate_discounted_line_total(item):
-    """Return the saved line total after any inline item discount."""
+    """Return line amount after inline discount; mirrors InvoiceLineItem.save() gross rules."""
     item_type = item.get('item_type', '')
-    if item_type == 'labor' and item.get('labor_hours') is not None and item.get('labor_rate') is not None:
-        gross_total = Decimal(str(item.get('labor_hours') or 0)) * Decimal(str(item.get('labor_rate') or 0))
-    else:
-        gross_total = Decimal(str(item.get('quantity', 0) or 0)) * Decimal(str(item.get('unit_price', 0) or 0))
+
+    def dec(v):
+        if v is None or v == '':
+            return None
+        d = Decimal(str(v))
+        return d
+
+    labor_hours = dec(item.get('labor_hours'))
+    labor_rate = dec(item.get('labor_rate'))
+    quantity = dec(item.get('quantity'))
+    unit_price = dec(item.get('unit_price'))
+
+    gross_total = Decimal('0')
+    if item_type == 'labor' and labor_hours and labor_rate:
+        gross_total = labor_hours * labor_rate
+    elif quantity and unit_price:
+        gross_total = quantity * unit_price
+    elif unit_price:
+        gross_total = unit_price
 
     discount_percentage = Decimal(str(item.get('discount_percentage', 0) or 0))
     discount_amount = Decimal('0')
@@ -45,6 +60,72 @@ def calculate_discounted_line_total(item):
         discount_amount = (gross_total * discount_percentage / Decimal('100')).quantize(Decimal('0.01'))
 
     return max(gross_total - discount_amount, Decimal('0')).quantize(Decimal('0.01'))
+
+
+def finalize_invoice_from_line_items(invoice, line_items_data):
+    """Set invoice totals from line payloads and persist InvoiceLineItem rows (shared create path)."""
+    labor_subtotal = Decimal('0')
+    parts_subtotal = Decimal('0')
+    sublet_subtotal = Decimal('0')
+    taxable_before_discount = Decimal('0')
+
+    for item in line_items_data:
+        item_total = calculate_discounted_line_total(item)
+        item_type = item.get('item_type', '')
+        if item_type == 'labor':
+            labor_subtotal += item_total
+        elif item_type == 'part':
+            parts_subtotal += item_total
+        elif item_type == 'sublet':
+            sublet_subtotal += item_total
+        if item.get('is_taxable', True):
+            taxable_before_discount += item_total
+
+    invoice.labor_subtotal = labor_subtotal
+    invoice.parts_subtotal = parts_subtotal
+    invoice.sublet_subtotal = sublet_subtotal
+    invoice.subtotal = labor_subtotal + parts_subtotal + sublet_subtotal
+
+    discount_percentage = invoice.discount_percentage or Decimal('0')
+    if discount_percentage > 0:
+        invoice.discount_amount = (invoice.subtotal * discount_percentage / Decimal('100')).quantize(Decimal('0.01'))
+    else:
+        invoice.discount_amount = Decimal('0')
+
+    discount_ratio = Decimal('0')
+    if invoice.subtotal > 0 and invoice.discount_amount > 0:
+        discount_ratio = invoice.discount_amount / invoice.subtotal
+    taxable_discount = (taxable_before_discount * discount_ratio).quantize(Decimal('0.01')) if discount_ratio > 0 else Decimal('0')
+    taxable_after_discount = max(taxable_before_discount - taxable_discount, Decimal('0'))
+
+    from apps.billing.tax_service import TaxService
+    breakdown = TaxService.calculate_breakdown(taxable_after_discount)
+    invoice.taxable_subtotal = breakdown.taxable_subtotal
+    invoice.tax_nhil_amount = breakdown.nhil_amount
+    invoice.tax_getfund_amount = breakdown.getfund_amount
+    invoice.tax_hrl_amount = Decimal('0')
+    invoice.tax_vat_amount = breakdown.vat_amount
+    invoice.tax_amount = breakdown.total_tax
+    invoice.tax_regime = breakdown.regime
+
+    invoice.total = (
+        (invoice.subtotal - invoice.discount_amount)
+        + invoice.tax_amount
+        + invoice.shop_supplies_fee
+        + invoice.environmental_fee
+    ).quantize(Decimal('0.01'))
+    invoice.amount_due = invoice.total
+    invoice.save()
+
+    for order, item in enumerate(line_items_data):
+        item_data = item.copy()
+        item_data.pop('total', None)
+        item_data.pop('order', None)
+        InvoiceLineItem.objects.create(
+            invoice=invoice,
+            order=order,
+            **item_data
+        )
 
 
 # ============================================================================
@@ -681,6 +762,29 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
         return mapping.error_message if mapping else ''
 
 
+def _default_invoice_notes_from_work_order(work_order):
+    """Human-readable notes when creating an invoice from a work order (API defaults)."""
+    lines = [f"Work order {work_order.work_order_number}"]
+    vehicle = work_order.vehicle
+    if vehicle:
+        plate = vehicle.license_plate or "no plate"
+        lines.append(f"Vehicle: {vehicle.year} {vehicle.make} {vehicle.model} — {plate}")
+    if work_order.customer_concerns:
+        lines.append(f"Customer concern: {work_order.customer_concerns}")
+    if work_order.status == "discontinued_pending_bill":
+        reason = (work_order.customer_discontinuation_reason or "").strip()
+        if reason:
+            try:
+                label = work_order.get_customer_discontinuation_reason_display()
+            except Exception:
+                label = reason
+            lines.append(f"Customer discontinued: {label}")
+        disc_notes = (work_order.customer_discontinuation_notes or "").strip()
+        if disc_notes:
+            lines.append(f"Discontinuation notes: {disc_notes}")
+    return "\n".join(lines)
+
+
 class InvoiceLineItemCreateSerializer(serializers.Serializer):
     """Serializer for invoice line items (used for standalone invoices)"""
     item_type = serializers.ChoiceField(choices=['labor', 'part', 'fee', 'discount', 'sublet', 'other'])
@@ -729,9 +833,14 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         
         # If work_order is provided, validate it
         if work_order:
-            # Ensure work order is completed
-            if work_order.status != 'completed':
-                raise serializers.ValidationError({"work_order": "Work order must be completed before creating invoice"})
+            allowed_statuses = ('completed', 'discontinued_pending_bill')
+            if work_order.status not in allowed_statuses:
+                raise serializers.ValidationError({
+                    "work_order": (
+                        "Work order must be completed or marked "
+                        "'Discontinued — Pending Invoice' before creating an invoice."
+                    )
+                })
             
             # Check if invoice already exists for this work order
             if Invoice.objects.filter(work_order=work_order).exists():
@@ -768,6 +877,13 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             # CRITICAL: Set branch from work_order for Django Ledger integration
             if not validated_data.get('branch') and work_order.branch:
                 validated_data['branch'] = work_order.branch
+
+            validated_data.setdefault(
+                'description',
+                f"Invoice for work order {work_order.work_order_number}",
+            )
+            if not (validated_data.get('notes') or '').strip():
+                validated_data['notes'] = _default_invoice_notes_from_work_order(work_order)
         else:
             # For standalone invoices, resolve branch from request
             if not validated_data.get('branch'):
@@ -790,87 +906,16 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         
         # Create invoice
         invoice = Invoice.objects.create(**validated_data)
-        
-        # Calculate totals
-        if work_order:
-            # Calculate totals from work order
+
+        if work_order and line_items_data:
+            # Form / API submitted lines take precedence (staff may adjust amounts vs raw WO tasks).
+            finalize_invoice_from_line_items(invoice, line_items_data)
+        elif work_order:
             invoice.calculate_totals_from_work_order()
             invoice.save()
+            invoice.populate_line_items_from_work_order()
         elif line_items_data:
-            # Calculate totals from line items
-            from decimal import Decimal
-            labor_subtotal = Decimal('0')
-            parts_subtotal = Decimal('0')
-            sublet_subtotal = Decimal('0')
-            
-            taxable_before_discount = Decimal('0')
-            
-            for item in line_items_data:
-                item_total = calculate_discounted_line_total(item)
-                
-                item_type = item.get('item_type', '')
-                
-                if item_type == 'labor':
-                    labor_subtotal += item_total
-                elif item_type == 'part':
-                    parts_subtotal += item_total
-                elif item_type == 'sublet':
-                    sublet_subtotal += item_total
-                
-                if item.get('is_taxable', True):
-                    taxable_before_discount += item_total
-            
-            invoice.labor_subtotal = labor_subtotal
-            invoice.parts_subtotal = parts_subtotal
-            invoice.sublet_subtotal = sublet_subtotal
-            invoice.subtotal = labor_subtotal + parts_subtotal + sublet_subtotal
-            
-            # Apply discount
-            discount_percentage = validated_data.get('discount_percentage', Decimal('0'))
-            if discount_percentage > 0:
-                invoice.discount_amount = (invoice.subtotal * discount_percentage / 100).quantize(Decimal('0.01'))
-            else:
-                # Explicitly reset discount_amount to 0 when discount_percentage is 0
-                invoice.discount_amount = Decimal('0')
-            
-            subtotal_after_discount = invoice.subtotal - invoice.discount_amount
-            
-            discount_ratio = Decimal('0')
-            if invoice.subtotal > 0 and invoice.discount_amount > 0:
-                discount_ratio = invoice.discount_amount / invoice.subtotal
-            taxable_discount = (taxable_before_discount * discount_ratio).quantize(Decimal('0.01')) if discount_ratio > 0 else Decimal('0')
-            taxable_after_discount = max(taxable_before_discount - taxable_discount, Decimal('0'))
-            
-            from apps.billing.tax_service import TaxService
-            breakdown = TaxService.calculate_breakdown(taxable_after_discount)
-            invoice.taxable_subtotal = breakdown.taxable_subtotal
-            invoice.tax_nhil_amount = breakdown.nhil_amount
-            invoice.tax_getfund_amount = breakdown.getfund_amount
-            invoice.tax_hrl_amount = Decimal('0') # breakdown.hrl_amount removed
-            invoice.tax_vat_amount = breakdown.vat_amount
-            invoice.tax_amount = breakdown.total_tax
-            invoice.tax_regime = breakdown.regime
-            
-            # Calculate total
-            invoice.total = (
-                subtotal_after_discount + 
-                invoice.tax_amount + 
-                invoice.shop_supplies_fee + 
-                invoice.environmental_fee
-            ).quantize(Decimal('0.01'))
-            
-            invoice.amount_due = invoice.total
-            invoice.save()
-            
-            # Persist invoice line items
-            for order, item in enumerate(line_items_data):
-                item_data = item.copy()
-                item_data.pop('total', None)
-                InvoiceLineItem.objects.create(
-                    invoice=invoice,
-                    order=order,
-                    **item_data
-                )
+            finalize_invoice_from_line_items(invoice, line_items_data)
         
         # The post_save signal will create the DL invoice automatically
         # But we need to ensure the invoice is saved again to trigger the signal
