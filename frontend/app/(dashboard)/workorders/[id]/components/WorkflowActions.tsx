@@ -1089,13 +1089,33 @@ export default function WorkflowActions({
         break;
 
       case "completed":
+        if (!hasLinkedInvoice) {
+          actions.push({
+            label: "Create Invoice",
+            icon: DollarSign,
+            onClick: () => router.push(`/billing/invoices/new?work_order=${workOrderId}`),
+            description: "Create an invoice for this work order",
+          });
+        } else {
+          actions.push({
+            label: "View Invoice",
+            icon: FileText,
+            onClick: () => router.push(`/billing/invoices/${invoiceSummary.id}`),
+            description:
+              invoiceSummary.status === "draft"
+                ? `Draft ${invoiceSummary.invoice_number} — issue when ready, then mark work order as invoiced`
+                : `Open ${invoiceSummary.invoice_number}`,
+          });
+        }
         actions.push({
           label: "Mark as Invoiced",
-          icon: DollarSign,
+          icon: CheckCircle,
           onClick: () => setShowMarkInvoicedDialog(true),
-          disabled: markInvoicedMutation.isPending,
+          disabled: markInvoicedMutation.isPending || !hasLinkedInvoice,
           variant: "outline",
-          description: "Mark invoice as generated",
+          description: hasLinkedInvoice
+            ? "Record odometer out and move this work order to Invoiced"
+            : "Create an invoice first",
         });
         break;
 

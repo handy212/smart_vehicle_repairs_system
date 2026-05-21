@@ -275,16 +275,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         )
 
     def _get_invoice(self, obj):
-        invoice = getattr(obj, 'invoice', None)
-        if invoice and invoice.status not in ['draft', 'void']:
-            return invoice
-
-        try:
-            from apps.billing.models import Invoice
-        except Exception:
-            return None
-
-        return Invoice.objects.filter(work_order=obj).exclude(status__in=['draft', 'void']).order_by('-created_at').first()
+        return get_work_order_invoice_for_summary(obj)
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):

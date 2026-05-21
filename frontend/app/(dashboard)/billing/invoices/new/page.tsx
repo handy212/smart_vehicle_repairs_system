@@ -288,6 +288,12 @@ export default function NewInvoicePage() {
 
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      const woId =
+        data?.work_order ?? (workOrderId ? Number.parseInt(workOrderId, 10) : undefined);
+      if (woId && Number.isFinite(woId)) {
+        queryClient.invalidateQueries({ queryKey: ["workorder", String(woId)] });
+        queryClient.invalidateQueries({ queryKey: ["workorder", woId] });
+      }
     },
 
     onError: (error: AxiosError<any>) => {

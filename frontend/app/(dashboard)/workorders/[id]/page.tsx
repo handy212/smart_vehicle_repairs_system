@@ -36,6 +36,74 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
+const INVOICE_ELIGIBLE_STATUSES = new Set(["completed", "invoiced", "closed"]);
+
+function InvoiceSection({
+  workOrderId,
+  status,
+  invoiceSummary,
+}: {
+  workOrderId: number;
+  status: string;
+  invoiceSummary?: {
+    id: number;
+    invoice_number: string;
+    status: string;
+    total?: string;
+  } | null;
+}) {
+  if (!INVOICE_ELIGIBLE_STATUSES.has(status)) {
+    return null;
+  }
+
+  const hasInvoice = Boolean(invoiceSummary?.id);
+
+  return (
+    <Card className="border border-border bg-card shadow-sm">
+      <CardContent className="py-4 px-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <PremiumIcons.Receipt className="w-5 h-5 text-primary shrink-0" />
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm">Invoice</h3>
+              {hasInvoice ? (
+                <p className="text-xs text-muted-foreground truncate">
+                  {invoiceSummary!.invoice_number} ·{" "}
+                  <span className="capitalize">{invoiceSummary!.status.replace(/_/g, " ")}</span>
+                  {status === "completed" && invoiceSummary!.status === "draft" ? (
+                    <span className="text-warning"> — issue invoice, then mark work order as invoiced</span>
+                  ) : null}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">No invoice linked to this work order yet</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {hasInvoice ? (
+              <Link href={`/billing/invoices/${invoiceSummary!.id}`}>
+                <Button size="sm" variant="outline" className="h-8 text-xs">
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                  View Invoice
+                </Button>
+              </Link>
+            ) : status === "completed" ? (
+              <PermissionGuard permission="create_invoices">
+                <Link href={`/billing/invoices/new?work_order=${workOrderId}`}>
+                  <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    Create Invoice
+                  </Button>
+                </Link>
+              </PermissionGuard>
+            ) : null}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Gate Pass Section Component
 function GatePassSection({ workOrderId }: { workOrderId: number }) {
 

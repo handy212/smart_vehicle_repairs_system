@@ -186,6 +186,39 @@ class WorkOrderModelTest(TestCase):
         self.assertEqual(serializer.data['invoice_summary']['invoice_number'], 'HQ-INV000099')
         self.assertEqual(serializer.data['invoice_summary']['amount_paid'], '120.00')
 
+    def test_workorder_detail_serializer_includes_draft_invoice_summary(self):
+        from apps.billing.models import Invoice
+
+        accountant = User.objects.create_user(
+            email='draftinv@test.com',
+            username='draftinv_user',
+            password='test123',
+            first_name='Draft',
+            last_name='Inv',
+            role='accountant',
+        )
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='completed',
+        )
+        baker.make(
+            Invoice,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=workorder,
+            invoice_number='HQ-INV-DRAFT',
+            status='draft',
+            total=Decimal('99.00'),
+            created_by=accountant,
+        )
+
+        serializer = WorkOrderDetailSerializer(workorder)
+        self.assertIsNotNone(serializer.data['invoice_summary'])
+        self.assertEqual(serializer.data['invoice_summary']['invoice_number'], 'HQ-INV-DRAFT')
+        self.assertEqual(serializer.data['invoice_summary']['status'], 'draft')
+
     def test_workorder_detail_serializer_reflects_paid_invoice_and_quote_approval_dates(self):
         from apps.billing.models import Estimate, Invoice, Payment
 

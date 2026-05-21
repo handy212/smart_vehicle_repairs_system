@@ -430,14 +430,21 @@ export default function WorkOrderOverviewTab({
                     </Button>
                   </Link>
                 )}
-                {invoiceSummary?.id && (
+                {invoiceSummary?.id ? (
                   <Link href={`/billing/invoices/${invoiceSummary.id}`}>
                     <Button variant="ghost" size="sm" className="h-7 text-xs">
                       <FileText className="w-3 h-3 mr-1" />
                       Invoice
                     </Button>
                   </Link>
-                )}
+                ) : workOrder.status === "completed" ? (
+                  <Link href={`/billing/invoices/new?work_order=${workOrderId}`}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-primary">
+                      <FileText className="w-3 h-3 mr-1" />
+                      Create Invoice
+                    </Button>
+                  </Link>
+                ) : null}
               </div>
             </div>
           </CardHeader>
