@@ -136,12 +136,12 @@ export default function InventoryPage() {
   });
 
   // Fetch Branches for filter
-  const { data: branchesData } = useQuery<{ results: Branch[] } | Branch[]>({
+  const { data: branchesData } = useQuery<Branch[]>({
     queryKey: ["branches-active"],
-    queryFn: () => branchesApi.list({ is_active: true }) as any,
+    queryFn: () => branchesApi.list({ is_active: true }),
   });
 
-  const branches = Array.isArray(branchesData) ? branchesData : (branchesData?.results || []);
+  const branches = branchesData ?? [];
 
   const parts = useMemo(() => {
     return data?.pages.flatMap((page) => page.results || []) || [];

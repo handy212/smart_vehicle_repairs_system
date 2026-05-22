@@ -174,12 +174,9 @@ export const PERMISSIONS = {
   ASSIGN_WORKORDERS: "assign_workorders",
 
   // Reports (extended)
-  VIEW_ALL_REPORTS: "view_all_reports",
   VIEW_FINANCIAL_REPORTS: "view_financial_reports",
-  GENERATE_REPORTS: "generate_reports",
   APPROVE_PURCHASE_ORDERS: "approve_purchase_orders",
   APPROVE_ESTIMATES: "approve_estimates",
-  PROCESS_PAYMENTS: "process_payments",
   REFUND_PAYMENTS: "refund_payments",
   MANAGE_BILLING: "manage_billing",
 } as const;

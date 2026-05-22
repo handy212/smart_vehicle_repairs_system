@@ -109,8 +109,7 @@ export function FeedbackForm() {
     useEffect(() => {
         async function loadBranches() {
             try {
-                const data = await branchesApi.list();
-                const branchList = Array.isArray(data) ? data : data.results;
+                const branchList = await branchesApi.list();
                 setBranches(branchList);
 
                 if (branchCode) {

@@ -32,7 +32,7 @@ export default function NewTransferPage() {
         queryFn: () => branchesApi.list({ is_active: true }),
     });
 
-    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+    const branches = branchesData ?? [];
 
     const branchOptions = branches.map(b => ({
         value: String(b.id),

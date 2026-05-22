@@ -97,7 +97,7 @@ export default function EditBillPage() {
     });
 
     const suppliers = Array.isArray(suppliersResponse) ? suppliersResponse : suppliersResponse?.results || [];
-    const branches = Array.isArray(branchesResponse) ? branchesResponse : branchesResponse?.results || [];
+    const branches = branchesResponse ?? [];
 
     useEffect(() => {
         if (!bill) return;

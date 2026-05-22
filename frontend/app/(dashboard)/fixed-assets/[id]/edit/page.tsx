@@ -124,9 +124,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
     });
 
 
-    const branches = Array.isArray(branchesResponse)
-        ? branchesResponse
-        : branchesResponse?.results || [];
+    const branches = branchesResponse ?? [];
 
     const staffMembers = Array.isArray(staffResponse)
         ? staffResponse

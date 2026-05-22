@@ -170,7 +170,7 @@ export default function NewRoadsideRequestDashboardPage() {
         enabled: serviceType === 'towing',
         staleTime: 5 * 60 * 1000,
     });
-    const branches: Branch[] = Array.isArray(branchesData) ? branchesData : (branchesData as { results: Branch[] })?.results ?? [];
+    const branches: Branch[] = branchesData ?? [];
 
     const activeSubscription = activeSubscriptionData?.results?.find((subscription) => subscription.is_active_status) || null;
     const pendingActivationSubscription = activeSubscriptionData?.results?.find((subscription) => !subscription.is_active_status) || null;

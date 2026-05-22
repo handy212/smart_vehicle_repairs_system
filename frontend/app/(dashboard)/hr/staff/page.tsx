@@ -58,7 +58,7 @@ function StaffContent() {
         queryKey: ["branches", "active"],
         queryFn: () => branchesApi.list({ is_active: true }),
     });
-    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+    const branches = branchesData ?? [];
 
     const { data, isLoading } = useQuery({
         queryKey: ["hr", "staff", searchQuery, statusFilter, branchFilter],

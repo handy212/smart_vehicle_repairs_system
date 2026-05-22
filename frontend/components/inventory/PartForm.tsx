@@ -92,7 +92,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
         queryFn: () => branchesApi.list(),
     });
 
-    const branches = Array.isArray(branchesResponse) ? branchesResponse : branchesResponse?.results || [];
+    const branches = branchesResponse ?? [];
 
     const {
         register,

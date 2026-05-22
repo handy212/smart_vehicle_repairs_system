@@ -27,7 +27,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { workordersApi } from "@/lib/api/workorders";
+import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
 import { adminApi } from "@/lib/api/admin";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -76,7 +76,7 @@ export default function WorkOrderOverviewTab({
   const estimateSummary = wo.estimate_summary;
   const invoiceSummary = wo.invoice_summary;
   const canCreateInvoice = canCreateWorkOrderInvoice(wo);
-  const relatedInvoices = wo.related_invoices ?? [];
+  const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
   const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, wo.status);
   const displayedEstimatedTotal = parseFloat(wo.estimated_total || "0");
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);

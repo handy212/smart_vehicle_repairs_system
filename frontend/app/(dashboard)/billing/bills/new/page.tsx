@@ -152,9 +152,7 @@ export default function NewBillPage() {
         queryFn: () => branchesApi.list({ is_active: true }),
     });
 
-    const branches = Array.isArray(branchesResponse)
-        ? branchesResponse
-        : branchesResponse?.results || [];
+    const branches = branchesResponse ?? [];
 
     const { data: purchaseOrdersResponse } = useQuery({
         queryKey: ["purchase-orders", "billable", selectedVendor],

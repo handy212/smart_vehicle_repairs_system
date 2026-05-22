@@ -138,7 +138,7 @@ export default function NewUserPage() {
     queryFn: () => branchesApi.list({ is_active: true }),
   });
 
-  const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+  const branches = branchesData ?? [];
 
   // Fetch existing users to generate next employee ID
   const { data: existingUsersData } = useQuery({

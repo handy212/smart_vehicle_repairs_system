@@ -70,7 +70,7 @@ export default function AdminFeedbackPage() {
         queryFn: () => branchesApi.list({ is_active: true }),
     });
 
-    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+    const branches = branchesData ?? [];
     const feedback = Array.isArray(feedbackData) ? feedbackData : feedbackData?.results || [];
 
     const getCategoryIcon = (category: string) => {

@@ -230,6 +230,23 @@ export interface Branch {
   updated_at: string;
 }
 
+interface BranchListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Branch[];
+}
+
+function normalizeBranchList(data: unknown): Branch[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && typeof data === "object" && Array.isArray((data as BranchListResponse).results)) {
+    return (data as BranchListResponse).results;
+  }
+  return [];
+}
+
 export interface BranchCreate {
   name: string;
   code: string;
@@ -606,9 +623,9 @@ export const branchesApi = {
   list: async (params?: {
     page?: number;
     is_active?: boolean;
-  }): Promise<{ count: number; next: string | null; previous: string | null; results: Branch[] }> => {
+  }): Promise<Branch[]> => {
     const response = await apiClient.get("/branches/", { params });
-    return response.data;
+    return normalizeBranchList(response.data);
   },
 
   get: async (id: number): Promise<Branch> => {

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api/admin";
-import { auditLogsApi, AuditLog } from "@/lib/api/audit-logs";
+import { auditLogsApi, type AuditLog, type AuditLogStats } from "@/lib/api/audit-logs";
 import { useToast } from "@/lib/hooks/useToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -126,7 +126,7 @@ export default function AuditLogPage() {
     queryFn: () => adminApi.auditLogs.list(listParams),
   });
 
-  const { data: statsData } = useQuery({
+  const { data: statsData } = useQuery<AuditLogStats>({
     queryKey: [
       "admin",
       "audit-logs",
@@ -215,7 +215,7 @@ export default function AuditLogPage() {
 
   const topUser = statsData?.top_users?.[0];
   const topModel = statsData?.top_models?.[0];
-  const actionCounts = statsData?.by_action ?? [];
+  const actionCounts: AuditLogStats["by_action"] = statsData?.by_action ?? [];
 
   return (
     <PermissionGuard permission="view_audit_logs">

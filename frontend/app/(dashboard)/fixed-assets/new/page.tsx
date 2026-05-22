@@ -108,9 +108,7 @@ function NewFixedAssetContent() {
         queryFn: async () => (await hrApi.staff.list({ employment_status: "active" })).data,
     });
 
-    const branches = Array.isArray(branchesResponse)
-        ? branchesResponse
-        : branchesResponse?.results || [];
+    const branches = branchesResponse ?? [];
 
     const staffMembers = Array.isArray(staffResponse)
         ? staffResponse

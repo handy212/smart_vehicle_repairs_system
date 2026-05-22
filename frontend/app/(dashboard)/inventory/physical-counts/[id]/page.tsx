@@ -69,7 +69,7 @@ export default function PhysicalCountDetailPage() {
     enabled: !!s?.branch && s.status === "in_progress",
   });
 
-  const stockRows: StockRow[] = (stockData as { results?: StockRow[] })?.results ?? (stockData as StockRow[]) ?? [];
+  const stockRows: StockRow[] = stockData?.results ?? [];
 
   const startMutation = useMutation({
     mutationFn: () => inventoryApi.startPhysicalCount(id),

@@ -107,7 +107,7 @@ export default function UserDetailPage() {
     queryFn: () => branchesApi.list({ is_active: true }),
   });
 
-  const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+  const branches = branchesData ?? [];
 
   const queryClient = useQueryClient();
 

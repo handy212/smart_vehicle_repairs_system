@@ -106,9 +106,7 @@ export default function BranchesPage() {
       }),
   });
 
-  const branches = Array.isArray(branchesData)
-    ? branchesData
-    : branchesData?.results || [];
+  const branches = branchesData ?? [];
 
   const filteredBranches = branches.filter((branch) => {
     if (statusFilter === "all") return true;

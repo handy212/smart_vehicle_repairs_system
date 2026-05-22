@@ -63,9 +63,7 @@ function NewAcquisitionContent() {
         queryFn: () => inventoryApi.listSuppliers({ is_active: true }),
     });
 
-    const branches = Array.isArray(branchesResponse)
-        ? branchesResponse
-        : branchesResponse?.results || [];
+    const branches = branchesResponse ?? [];
     const suppliers = Array.isArray(suppliersResponse)
         ? suppliersResponse
         : suppliersResponse?.results || [];
