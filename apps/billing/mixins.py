@@ -104,15 +104,13 @@ class BillingCommunicationMixin:
         obj.sent_at = timezone.now()
         obj.save()
         
-        # Trigger notification
-        try:
-            from apps.notifications_app.triggers import notification_triggers
-            if obj.__class__.__name__ == 'Invoice':
-                notification_triggers.invoice_sent(obj)
-            elif obj.__class__.__name__ == 'Estimate':
+        # Invoice/estimate notifications are sent from model save hooks (invoice) or here (estimate)
+        if obj.__class__.__name__ == 'Estimate':
+            try:
+                from apps.notifications_app.triggers import notification_triggers
                 notification_triggers.estimate_sent(obj)
-        except Exception as e:
-            logger.warning("Failed to send notification: %s", e, exc_info=True)
+            except Exception as e:
+                logger.warning("Failed to send notification: %s", e, exc_info=True)
             
         return Response({"message": f"{obj.__class__.__name__} sent successfully", "data": self.get_serializer(obj).data})
 
@@ -206,14 +204,12 @@ class BillingCommunicationMixin:
                     record.sent_by = request.user
                 record.save()
                 
-                try:
-                    from apps.notifications_app.triggers import notification_triggers
-                    if model_name == 'Invoice':
-                        notification_triggers.invoice_sent(record)
-                    elif model_name == 'Estimate':
+                if model_name == 'Estimate':
+                    try:
+                        from apps.notifications_app.triggers import notification_triggers
                         notification_triggers.estimate_sent(record)
-                except Exception as e:
-                    logger.warning(f"Notification failed for {model_name} {record.id}: {e}")
+                    except Exception as e:
+                        logger.warning(f"Notification failed for {model_name} {record.id}: {e}")
                 
                 processed_count += 1
             except Exception as e:

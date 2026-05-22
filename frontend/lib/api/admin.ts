@@ -106,6 +106,7 @@ export interface AuditLog {
   user_name?: string;
   action: string;
   model_name: string;
+  model_label?: string;
   object_id: string;
   object_repr: string;
 
@@ -456,15 +457,19 @@ export const adminApi = {
     },
 
     stats: async (params?: {
+      action?: string;
+      model_name?: string;
+      user?: number;
+      search?: string;
       date_from?: string;
       date_to?: string;
-    }): Promise<{
-      total: number;
-      by_action: Array<{ action: string; count: number }>;
-      top_users: Array<{ user__email: string; user__username: string; count: number }>;
-      top_models: Array<{ model_name: string; count: number }>;
-    }> => {
+    }) => {
       const response = await apiClient.get("/accounts/admin/audit-logs/stats/", { params });
+      return response.data;
+    },
+
+    filterOptions: async () => {
+      const response = await apiClient.get("/accounts/admin/audit-logs/filter_options/");
       return response.data;
     },
 
@@ -487,38 +492,47 @@ export const adminApi = {
       date_to?: string;
     }): Promise<Blob> => {
       const format = params?.format || 'xlsx';
-      // Map format to file_format for backend to avoid DRF content negotiation issues
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { format: _, ...rest } = params || {};
+      const { format: _fmt, ...rest } = params || {};
       const queryParams = { ...rest, file_format: format };
+
       try {
+        if (format === 'json') {
+          const response = await apiClient.get("/accounts/admin/audit-logs/download/", {
+            params: queryParams,
+            responseType: 'json',
+          });
+          const payload = response.data;
+          if (payload && typeof payload === 'object' && 'error' in payload && !Array.isArray(payload)) {
+            throw new Error(String((payload as { error?: string }).error || 'Failed to download logs'));
+          }
+          return new Blob([JSON.stringify(payload, null, 2)], {
+            type: 'application/json;charset=utf-8',
+          });
+        }
+
         const response = await apiClient.get("/accounts/admin/audit-logs/download/", {
           params: queryParams,
           responseType: 'blob',
         });
 
-        // Check if the response is actually an error (JSON error in blob format)
         if (response.data.type === 'application/json') {
           const text = await response.data.text();
-          const errorData = JSON.parse(text);
+          const errorData = JSON.parse(text) as { error?: string; detail?: string };
           throw new Error(errorData.error || errorData.detail || 'Failed to download logs');
         }
 
         return response.data;
-
       } catch (error: unknown) {
-        // If it's already an Error, rethrow it
         if (error instanceof Error) {
           throw error;
         }
-        // If it's an axios error with blob response, try to parse it
         const axiosLikeError = error as { response?: { data?: unknown } };
         if (axiosLikeError.response?.data instanceof Blob && axiosLikeError.response.data.type === 'application/json') {
           const text = await axiosLikeError.response.data.text();
-          const errorData = JSON.parse(text);
+          const errorData = JSON.parse(text) as { error?: string; detail?: string };
           throw new Error(errorData.error || errorData.detail || 'Failed to download logs');
         }
-        // Otherwise, throw the original error
         throw error;
       }
     },

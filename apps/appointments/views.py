@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.permission_utils import action_permission_instances
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -85,8 +86,17 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('delete_appointments')]
         elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
             return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('edit_appointments')]
-        return [IsAuthenticated(), IsModuleEnabled('appointments')]
-    
+        return action_permission_instances(
+            'appointments',
+            self.action,
+            view_code='view_appointments',
+            create_code='create_appointments',
+            edit_code='edit_appointments',
+            delete_code='delete_appointments',
+            customer_actions=frozenset({'list', 'retrieve', 'create'}),
+            request=self.request,
+        )
+
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'status', 'service_type', 'priority', 'appointment_date',

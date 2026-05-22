@@ -12,6 +12,7 @@ from .firebase import send_push_notification, is_firebase_available
 from .hubtel_sms import is_hubtel_available
 from .whatsapp_service import get_whatsapp_service
 from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings, get_whatsapp_settings
+from .currency import enrich_money_context, format_money
 
 try:
     from pywebpush import webpush, WebPushException
@@ -137,11 +138,12 @@ class NotificationService:
             
             # Use template if available
             if notification.template and notification.template.subject:
-                subject = self._render_template(notification.template.subject, notification.data)
-                body = self._render_template(notification.template.body, notification.data)
+                render_context = enrich_money_context(notification.data or {})
+                subject = self._render_template(notification.template.subject, render_context)
+                body = self._render_template(notification.template.body, render_context)
                 html_body = None
                 if notification.template.html_body:
-                    html_body = self._render_template(notification.template.html_body, notification.data)
+                    html_body = self._render_template(notification.template.html_body, render_context)
             else:
                 subject = notification.title
                 body = notification.message
@@ -218,7 +220,8 @@ class NotificationService:
             
             # Use template if available
             if notification.template and notification.template.sms_body:
-                message = self._render_template(notification.template.sms_body, notification.data)
+                sms_context = enrich_money_context(notification.data or {})
+                message = self._render_template(notification.template.sms_body, sms_context)
             else:
                 message = notification.message[:1000]  # Hubtel supports up to 1000 chars
             
@@ -983,7 +986,7 @@ class NotificationHelper:
             channel='email',
             priority='normal',
             title=f'Invoice {invoice.invoice_number} Generated',
-            message=f'Your invoice {invoice.invoice_number} for ${invoice.total} is ready.',
+            message=f'Your invoice {invoice.invoice_number} for {format_money(invoice.total)} is ready.',
             data={
                 'invoice_id': invoice.id,
                 'invoice_number': invoice.invoice_number,

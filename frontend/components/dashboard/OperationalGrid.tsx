@@ -27,7 +27,7 @@ interface OperationalGridProps {
     topJobs: TopJob[];
 }
 
-export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
+export function OperationalGrid({ insights = [], topJobs = [] }: OperationalGridProps) {
     const { formatCurrency } = useCurrency();
 
     return (
@@ -78,9 +78,19 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
+                    {topJobs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
+                            <FileText className="w-8 h-8 mb-2 opacity-40" />
+                            No profitable jobs in this period.
+                        </div>
+                    ) : (
                     <div className="space-y-3">
                         {topJobs.map((job) => (
-                            <div key={job.work_order_id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                            <Link
+                                key={job.work_order_id}
+                                href={`/workorders/${job.work_order_id}`}
+                                className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0 hover:bg-muted/30 -mx-1 px-1 rounded transition-colors"
+                            >
                                 <div>
                                     <p className="font-medium text-sm">{job.customer}</p>
                                     <p className="text-xs text-muted-foreground">{job.vehicle}</p>
@@ -90,12 +100,13 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                                         {formatCurrency(job.gross_profit)}
                                     </p>
                                     <Badge variant="outline" className="text-[10px] h-4">
-                                        {Math.round(job.margin_percent)}% Margin
+                                        {Math.round(job.margin_percent ?? 0)}% Margin
                                     </Badge>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
+                    )}
                     <div className="mt-4 pt-2 border-t">
                         <Link href="/accounting/reports/job-profitability">
                             <Button variant="ghost" size="sm" className="w-full text-xs">View All Jobs</Button>

@@ -61,7 +61,18 @@ export default function WorkOrderDetailPage() {
   const { data: workOrder, isLoading, error } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(workOrderId),
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && workOrderId) {
+        queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [workOrderId, queryClient]);
 
   useEffect(() => {
     if (workOrder) {

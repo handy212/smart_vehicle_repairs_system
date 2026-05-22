@@ -2,7 +2,20 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.permissions import (
+    HasAnyPermission,
+    HasPermission,
+    IsModuleEnabled,
+    filter_workorders_for_user,
+    user_has_permission,
+)
+from apps.workorders.permission_utils import (
+    WorkOrderRelatedPermissionMixin,
+    workorder_edit_permissions,
+    workorder_module_permissions,
+    workorder_read_permissions,
+    workorder_status_change_permissions,
+)
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.http import Http404
@@ -16,6 +29,7 @@ from decimal import Decimal, InvalidOperation
 from apps.notifications_app.triggers import notification_triggers
 
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
+from apps.billing.models import Invoice
 
 from .models import (
     WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart,
@@ -48,7 +62,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     queryset = WorkOrder.objects.all().select_related(
         'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by',
         'branch', 'service_coordinator', 'diagnosis_by', 'quality_check_by', 'related_work_order',
-        'service_type', 'service_bundle', 'estimate', 'invoice'
+        'service_type', 'service_bundle', 'estimate',
     ).prefetch_related(
         'assigned_technicians',
         'gate_passes',
@@ -56,7 +70,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         Prefetch('notes', queryset=WorkOrderNote.objects.select_related('created_by')),
         Prefetch('parts', queryset=WorkOrderPart.objects.select_related(
             'purchase_order_item__purchase_order__supplier', 'inventory_part__preferred_supplier'
-        ))
+        )),
+        Prefetch('invoices', queryset=Invoice.objects.order_by('-created_at')),
     )
     permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -70,24 +85,58 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     ]
     ordering_fields = [
         'created_at', 'estimated_completion', 'priority', 'status',
-        'estimated_total', 'actual_total', 'work_order_number',
+        'estimated_total', 'actual_total', 'invoice_total', 'work_order_number',
         'customer__user__last_name', 'customer__user__first_name'
     ]
     ordering = ['-created_at']
 
+    def _annotate_invoice_total(self, queryset):
+        from django.db.models import DecimalField, OuterRef, Subquery
+        from apps.billing.models import Invoice
+
+        invoice_total_subquery = (
+            Invoice.objects.filter(work_order_id=OuterRef('pk'))
+            .exclude(status='void')
+            .order_by('-created_at')
+            .values('total')[:1]
+        )
+        return queryset.annotate(
+            invoice_total=Subquery(
+                invoice_total_subquery,
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )
+
+    WORKORDER_READ_ACTIONS = frozenset({
+        'list', 'retrieve', 'dashboard_stats', 'check_unapproved_recommendations',
+        'get_recent_work_orders', 'active', 'overdue', 'awaiting_approval',
+        'customer_waiting', 'by_technician', 'status_summary', 'technician_workload',
+        'workflow_metrics', 'predict_service', 'suggest_observations', 'suggest_qc_notes',
+    })
+
     def get_permissions(self):
-        """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve', 'dashboard_stats']:
-            return [IsAuthenticated(), IsModuleEnabled('workorders')]
-        elif self.action == 'create':
-            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('create_workorders')]
-        elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('edit_workorders')]
-        elif self.action == 'discontinue_job':
-            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('edit_workorders')]
-        elif self.action == 'destroy':
-            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('delete_workorders')]
-        return [IsAuthenticated(), IsModuleEnabled('workorders')]
+        """Return appropriate permissions based on action and HTTP method."""
+        if self.action in self.WORKORDER_READ_ACTIONS:
+            return workorder_read_permissions()
+        if self.action == 'create':
+            return workorder_module_permissions() + [HasPermission('create_workorders')()]
+        if self.action in ('update', 'partial_update', 'discontinue_job'):
+            return workorder_edit_permissions()
+        if self.action == 'destroy':
+            return workorder_module_permissions() + [HasPermission('delete_workorders')()]
+        if self.action == 'check_repeat_visit':
+            return workorder_module_permissions() + [HasPermission('create_workorders')()]
+        if self.action == 'check_overdue':
+            return workorder_module_permissions() + [HasPermission('manage_workorders')()]
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return workorder_read_permissions()
+        if self.request.method in ('PUT', 'PATCH'):
+            return workorder_edit_permissions()
+        if self.request.method == 'DELETE':
+            return workorder_module_permissions() + [HasPermission('delete_workorders')()]
+        if self.request.method == 'POST':
+            return workorder_status_change_permissions()
+        return workorder_read_permissions()
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """
@@ -122,7 +171,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     
     def get_queryset(self):
         """Filter work orders by active branch and customer profile"""
-        queryset = super().get_queryset()
+        queryset = self._annotate_invoice_total(super().get_queryset())
         user = self.request.user
 
         # For customers, filter by their customer profile
@@ -138,6 +187,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             request=self.request, 
             use_active_branch=not show_all
         )
+        queryset = filter_workorders_for_user(queryset, user)
         
         # Date range filtering for work orders
         if self.action == 'list':
@@ -250,7 +300,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             logger.error(traceback.format_exc())
             raise
     
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'])
     def check_unapproved_recommendations(self, request):
         """
         Check for pending or deferred recommendations for a vehicle from previous work orders.
@@ -598,7 +648,13 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         summary = self.get_queryset().values('status').annotate(
             count=Count('id'),
             total_estimated=Sum('estimated_total'),
-            total_actual=Sum('actual_total')
+            total_actual=Sum('actual_total'),
+            total_invoiced=Sum(
+                'invoices__total',
+                filter=Q(
+                    invoices__status__in=['sent', 'viewed', 'partial', 'paid', 'overdue'],
+                ),
+            ),
         ).order_by('status')
         
         serializer = WorkOrderStatusSummarySerializer(summary, many=True)
@@ -614,9 +670,17 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         
         technicians = User.objects.filter(role='technician')
         workload = []
-        
+        wo_base = filter_workorders_for_user(
+            filter_queryset_for_user_branches(
+                WorkOrder.objects.all(),
+                request.user,
+                request=request,
+            ),
+            request.user,
+        )
+
         for tech in technicians:
-            active_wos = WorkOrder.objects.filter(
+            active_wos = wo_base.filter(
                 Q(primary_technician=tech) | Q(assigned_technicians=tech),
                 status__in=['in_progress', 'paused', 'quality_check']
             ).distinct()
@@ -784,7 +848,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         notes = AIService.suggest_qc_notes(work_order)
         return Response({'notes': notes})
     
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, HasPermission('manage_workorders')])
+    @action(detail=False, methods=['post'])
     def check_overdue(self, request):
         """Check for overdue work orders and send notifications"""
         from apps.notifications_app.triggers import notification_triggers
@@ -861,8 +925,16 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         total_cost = Decimal('0')
         total_profit = Decimal('0')
         
-        for wo in queryset.select_related('customer', 'customer__user', 'primary_technician', 'branch'):
-            revenue = wo.actual_total or Decimal('0')
+        from apps.billing.work_order_invoices import get_primary_invoice
+
+        for wo in queryset.select_related('customer', 'customer__user', 'primary_technician', 'branch').prefetch_related(
+            'invoices',
+        ):
+            primary_inv = get_primary_invoice(wo)
+            if primary_inv and primary_inv.status in ('sent', 'viewed', 'partial', 'paid', 'overdue'):
+                revenue = primary_inv.total or Decimal('0')
+            else:
+                revenue = Decimal('0')
             labor_cost = wo.actual_labor_cost or Decimal('0')
             parts_cost = wo.actual_parts_cost or Decimal('0')
             cost = labor_cost + parts_cost
@@ -927,10 +999,9 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
 
 
 
-class ServiceTaskViewSet(viewsets.ModelViewSet):
+class ServiceTaskViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Service Task management"""
     queryset = ServiceTask.objects.all().select_related('work_order', 'assigned_to').prefetch_related('time_logs')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['work_order', 'status', 'task_type', 'assigned_to']
     ordering_fields = ['sequence_order', 'created_at']
@@ -1081,21 +1152,19 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data)
 
-class ServiceTaskTypeViewSet(viewsets.ModelViewSet):
+class ServiceTaskTypeViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """CRUD for service task types."""
     queryset = ServiceTaskType.objects.all().order_by('sort_order', 'name')
     serializer_class = ServiceTaskTypeSerializer
-    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_billable']
     search_fields = ['code', 'name', 'description']
     ordering_fields = ['sort_order', 'name', 'created_at']
 
 
-class WorkOrderPartViewSet(viewsets.ModelViewSet):
+class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Part management"""
     queryset = WorkOrderPart.objects.all().select_related('work_order', 'task', 'installed_by')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['work_order', 'status']
     search_fields = ['part_number', 'part_name', 'description']
@@ -1772,10 +1841,14 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
+class TechnicianTimeLogViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Technician Time Log management"""
     queryset = TechnicianTimeLog.objects.all().select_related('work_order', 'task', 'technician')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return workorder_read_permissions()
+        return workorder_module_permissions() + [HasPermission('clock_work_time')()]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = TechnicianTimeLogFilter
     ordering_fields = ['clock_in', 'created_at']
@@ -1836,10 +1909,16 @@ class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
         return Response(TechnicianTimeLogSerializer(time_log).data)
 
 
-class WorkOrderNoteViewSet(viewsets.ModelViewSet):
+class WorkOrderNoteViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Note management"""
     queryset = WorkOrderNote.objects.all().select_related('work_order', 'created_by')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return workorder_read_permissions()
+        return workorder_module_permissions() + [
+            HasAnyPermission(['add_workorder_notes', 'edit_workorder_notes', 'edit_workorders'])(),
+        ]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['work_order', 'note_type', 'is_important', 'is_customer_visible']
     
@@ -1849,10 +1928,9 @@ class WorkOrderNoteViewSet(viewsets.ModelViewSet):
         return WorkOrderNoteSerializer
 
 
-class WorkOrderPhotoViewSet(viewsets.ModelViewSet):
+class WorkOrderPhotoViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Photo management"""
     queryset = WorkOrderPhoto.objects.all().select_related('work_order', 'taken_by')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['work_order', 'photo_type']
     

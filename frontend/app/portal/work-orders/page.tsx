@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 
 export default function MyWorkOrdersPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -149,14 +150,26 @@ export default function MyWorkOrdersPage() {
                                                         <Car className="w-4 h-4 mr-2 opacity-70" />
                                                         <span>{wo.vehicle_display || wo.vehicle_info || "Unknown Vehicle"}</span>
                                                     </div>
-                                                    {(wo.total_cost || wo.estimated_total) && (
-                                                        <div className="flex items-center sm:col-span-2">
-                                                            <DollarSign className="w-4 h-4 mr-2 opacity-70" />
-                                                            <span className="font-medium text-foreground">
-                                                                {formatCurrency(wo.total_cost || wo.estimated_total)}
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                                    {(() => {
+                                                        const billing = getWorkOrderListBillingDisplay(wo, {
+                                                            audience: "customer",
+                                                            formatDue: formatCurrency,
+                                                        });
+                                                        if (!billing) return null;
+                                                        return (
+                                                            <div className="flex items-center sm:col-span-2">
+                                                                <DollarSign className="w-4 h-4 mr-2 opacity-70" />
+                                                                <span className="font-medium text-foreground">
+                                                                    {billing.label}: {formatCurrency(billing.amount)}
+                                                                    {billing.statusLine ? (
+                                                                        <span className="ml-2 text-xs text-muted-foreground capitalize">
+                                                                            ({billing.statusLine})
+                                                                        </span>
+                                                                    ) : null}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                     {wo.estimate_summary && (
                                                         <Link
                                                             href={`/portal/estimates/${wo.estimate_summary.id}`}

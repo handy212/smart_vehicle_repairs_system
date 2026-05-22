@@ -8,7 +8,12 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
-from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled
+from apps.accounts.permissions import (
+    HasAnyPermission,
+    HasPermission,
+    IsModuleEnabled,
+    user_has_permission,
+)
 import logging
 from datetime import timedelta
 
@@ -23,6 +28,12 @@ from .serializers import (
     WebPushSubscriptionSerializer
 )
 from .services import NotificationService
+from .preview_context import build_sample_context
+from .currency import enrich_money_context
+from .template_variables import (
+    get_variable_hints as get_template_variable_hints,
+    find_unresolved_placeholders,
+)
 from .hubtel_sms import send_sms, send_bulk_sms, is_hubtel_available
 
 
@@ -46,11 +57,11 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve', 'by_type']:
-            return [IsAuthenticated(), HasAnyPermission(['view_notifications', 'manage_notification_templates', 'send_notifications'])]
+        if self.action in ['list', 'retrieve', 'by_type', 'preview', 'variable_hints']:
+            return [IsAuthenticated(), HasAnyPermission(['view_notifications', 'manage_notification_templates', 'manage_email_templates', 'send_notifications'])]
         elif self.action in ['create', 'update', 'partial_update', 'destroy', 'test_send']:
-            return [IsAuthenticated(), HasPermission('manage_notification_templates')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), HasAnyPermission(['manage_notification_templates', 'manage_email_templates'])]
+        return [IsAuthenticated(), HasAnyPermission(['view_notifications', 'manage_notification_templates', 'send_notifications'])()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['template_type', 'channel', 'is_active']
     search_fields = ['name', 'subject', 'body']
@@ -102,6 +113,46 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
             'result': result,
             'status': notification.status
         })
+
+    @action(detail=False, methods=['get'])
+    def variable_hints(self, request):
+        """Return {variable} placeholders for a template type."""
+        template_type = request.query_params.get('template_type', 'custom')
+        return Response({
+            'template_type': template_type,
+            'variables': get_template_variable_hints(template_type),
+        })
+
+    @action(detail=True, methods=['post'])
+    def preview(self, request, pk=None):
+        """Render template with sample context (includes system currency)."""
+        template = self.get_object()
+        context = build_sample_context(template.template_type)
+        custom = request.data.get('context') or {}
+        if isinstance(custom, dict):
+            context.update(custom)
+            context = enrich_money_context(context)
+
+        service = NotificationService()
+        subject_src = request.data.get('subject', template.subject) or ''
+        body_src = request.data.get('body', template.body) or ''
+        html_src = request.data.get('html_body', template.html_body) or ''
+
+        subject = service._render_template(subject_src, context)
+        body = service._render_template(body_src, context)
+        html_body = service._render_template(html_src, context) if html_src else ''
+
+        unresolved = find_unresolved_placeholders(
+            subject_src + body_src + html_src, context
+        )
+
+        return Response({
+            'subject': subject,
+            'body': body,
+            'html_body': html_body,
+            'context': context,
+            'unresolved_variables': unresolved,
+        })
     
     @action(detail=False, methods=['get'])
     def by_type(self, request):
@@ -128,14 +179,16 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'my_notifications', 'stats', 'unread_count', 'mark_read', 'mark_all_read', 'clear_read']:
-            return [IsAuthenticated(), HasPermission('view_notifications')]
+            return [IsAuthenticated(), HasPermission('view_notifications')()]
         if self.action == 'admin_stats':
-            return [IsAuthenticated(), HasPermission('manage_notifications')]
+            return [IsAuthenticated(), HasPermission('manage_notifications')()]
         if self.action in ['create', 'bulk_send']:
-            return [IsAuthenticated(), HasPermission('send_notifications')]
+            return [IsAuthenticated(), HasPermission('send_notifications')()]
         elif self.action in ['update', 'partial_update', 'destroy', 'resend']:
-            return [IsAuthenticated(), HasPermission('manage_notifications')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), HasPermission('manage_notifications')()]
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return [IsAuthenticated(), HasPermission('view_notifications')()]
+        return [IsAuthenticated(), HasPermission('manage_notifications')()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['notification_type', 'channel', 'status', 'priority', 'is_read', 'related_object_type', 'related_object_id']
     search_fields = ['title', 'message']
@@ -159,7 +212,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         queryset = self.queryset
         
         # Admins and managers can see all IF explicitly requested
-        if user.role in ['admin', 'manager'] and self.request.query_params.get('all', 'false') == 'true':
+        from apps.accounts.permissions import user_can_view_all_notifications
+
+        if user_can_view_all_notifications(user) and self.request.query_params.get('all', 'false') == 'true':
             return queryset
         
         # Default: See only their own
@@ -197,7 +252,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notification = self.get_object()
         
         # Check if user owns this notification
-        if notification.recipient != request.user and request.user.role not in ['admin', 'manager']:
+        from apps.accounts.permissions import user_can_view_all_notifications
+
+        if notification.recipient != request.user and not user_can_view_all_notifications(request.user):
             return Response(
                 {'error': 'You do not have permission to mark this notification'},
                 status=status.HTTP_403_FORBIDDEN
@@ -427,16 +484,27 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     queryset = NotificationPreference.objects.all()
     serializer_class = NotificationPreferenceSerializer
     permission_classes = [IsAuthenticated]
-    
+
+    def get_permissions(self):
+        if (
+            self.action == 'list'
+            and self.request.query_params.get('all', 'false') == 'true'
+        ):
+            return [IsAuthenticated(), HasPermission('manage_notifications')()]
+        return [IsAuthenticated()]
+
     def get_queryset(self):
         """
         Users can only see their own preferences
         """
         user = self.request.user
-        
-        if user.role in ['admin', 'manager'] and self.request.query_params.get('all', 'false') == 'true':
+
+        if (
+            user_has_permission(user, 'manage_notifications')
+            and self.request.query_params.get('all', 'false') == 'true'
+        ):
             return self.queryset
-        
+
         return self.queryset.filter(user=user)
     
     @action(detail=False, methods=['get'])
@@ -505,7 +573,7 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'by_notification']:
             return [IsAuthenticated(), HasPermission('view_notifications')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('manage_notifications')()]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['notification', 'action']
     ordering_fields = ['timestamp']
@@ -516,10 +584,13 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
         Filter logs based on user permissions
         """
         user = self.request.user
-        
-        if user.role in ['admin', 'manager'] and self.request.query_params.get('all', 'false') == 'true':
+
+        if (
+            user_has_permission(user, 'manage_notifications')
+            and self.request.query_params.get('all', 'false') == 'true'
+        ):
             return self.queryset
-        
+
         # Users can only see logs for their own notifications
         return self.queryset.filter(notification__recipient=user)
     
@@ -1025,7 +1096,7 @@ class TemplateRenderView(APIView):
     """
     Render a notification template for manual sending (e.g. WhatsApp)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasAnyPermission(['send_notifications', 'manage_notifications'])]
     
     def post(self, request):
         template_type = request.data.get('template_type')

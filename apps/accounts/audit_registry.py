@@ -3,7 +3,7 @@ from apps.accounts.models import (
     User
 )
 from apps.accounts.admin_models import (
-    SystemSettings, 
+    SystemSettings,
     SystemBackup, EmailTemplate, SMSTemplate
 )
 from apps.accounts.permission_models import (
@@ -15,24 +15,39 @@ from apps.workorders.models import WorkOrder
 from apps.appointments.models import Appointment
 from apps.inspections.models import VehicleInspection
 from apps.roadside.models import RoadsideRequest
-from apps.inventory.models import Part
-from apps.billing.models import Invoice, Payment
+from apps.inventory.models import (
+    Part,
+    Supplier,
+    Transfer,
+    PurchaseOrder,
+    InventoryTransaction,
+    PhysicalCountSession,
+)
+from apps.billing.models import (
+    Invoice,
+    Payment,
+    Estimate,
+    CreditNote,
+    Bill,
+    BillPayment,
+    Refund,
+)
 from apps.subscriptions.models import Subscription, Package
 from apps.branches.models import Branch
 from apps.documents.models import Document
 from apps.diagnosis.models import Diagnosis, RepairRecommendation
 from apps.fixed_assets.models import FixedAsset, AssetMaintenance
 from apps.notifications_app.models import NotificationTemplate
+from apps.gatepass.models import GatePass
+from apps.hr.models import Department, EmployeeProfile, LeaveRequest, PayrollPeriod
 
 
 # Register models for audit logging
 # Admin/System Models
 auditlog.register(User)
 # TODO: Re-enable SystemSettings after database encoding is migrated from SQL_ASCII to UTF8.
-# The auditlog JSON field causes encoding errors on the current database. Wrapped in
-# try/except so it auto-enables once the DB issue is resolved.
 try:
-    auditlog.register(SystemSettings)
+    auditlog.register(SystemSettings, exclude_fields=['value'])
 except Exception:  # noqa: BLE001
     pass
 auditlog.register(Role)
@@ -52,11 +67,22 @@ auditlog.register(WorkOrder)
 auditlog.register(Appointment)
 auditlog.register(VehicleInspection)
 auditlog.register(RoadsideRequest)
+auditlog.register(GatePass)
 
 # Inventory & Finance
 auditlog.register(Part)
+auditlog.register(Supplier)
+auditlog.register(Transfer)
+auditlog.register(PurchaseOrder)
+auditlog.register(InventoryTransaction)
+auditlog.register(PhysicalCountSession)
 auditlog.register(Invoice)
 auditlog.register(Payment)
+auditlog.register(Estimate)
+auditlog.register(CreditNote)
+auditlog.register(Bill)
+auditlog.register(BillPayment)
+auditlog.register(Refund)
 
 # Subscriptions
 auditlog.register(Subscription)
@@ -72,3 +98,9 @@ auditlog.register(AssetMaintenance)
 
 # Notifications
 auditlog.register(NotificationTemplate)
+
+# HR
+auditlog.register(Department)
+auditlog.register(EmployeeProfile)
+auditlog.register(LeaveRequest)
+auditlog.register(PayrollPeriod)

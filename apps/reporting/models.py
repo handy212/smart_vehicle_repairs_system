@@ -22,6 +22,14 @@ class ReportSchedule(models.Model):
         ('controls', 'Controls & Overrides'),
         ('overdue_invoices', 'Overdue Invoices'),
         ('low_stock', 'Low Stock Alert'),
+        ('dashboard_overview', 'Dashboard Overview'),
+        ('roadside_revenue', 'Roadside Revenue'),
+        ('exception_log', 'Exception Log'),
+        ('system_usage', 'System Usage'),
+        ('traceability', 'Traceability'),
+        ('capacity_planning', 'Capacity Planning'),
+        ('cost_control_return_jobs', 'Cost Control Return Jobs'),
+        ('ap_cycle_time', 'AP Cycle Time'),
     ]
     
     FREQUENCY_CHOICES = [
@@ -75,6 +83,14 @@ class SavedReport(models.Model):
         ('appointments', 'Appointments Report'),
         ('controls', 'Controls & Overrides'),
         ('custom', 'Custom Report'),
+        ('dashboard_overview', 'Dashboard Overview'),
+        ('roadside_revenue', 'Roadside Revenue'),
+        ('exception_log', 'Exception Log'),
+        ('system_usage', 'System Usage'),
+        ('traceability', 'Traceability'),
+        ('capacity_planning', 'Capacity Planning'),
+        ('cost_control_return_jobs', 'Cost Control Return Jobs'),
+        ('ap_cycle_time', 'AP Cycle Time'),
     ]
     
     name = models.CharField(max_length=200)

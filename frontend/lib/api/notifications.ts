@@ -231,6 +231,27 @@ export const notificationsApi = {
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/notifications/templates/${id}/`);
     },
+
+    preview: async (
+      id: number,
+      draft?: { subject?: string; body?: string; html_body?: string }
+    ): Promise<{
+      subject: string;
+      body: string;
+      html_body: string;
+      context: Record<string, string>;
+      unresolved_variables?: string[];
+    }> => {
+      const response = await apiClient.post(`/notifications/templates/${id}/preview/`, draft ?? {});
+      return response.data;
+    },
+
+    variableHints: async (templateType: string): Promise<{ variables: string[] }> => {
+      const response = await apiClient.get("/notifications/templates/variable_hints/", {
+        params: { template_type: templateType || "custom" },
+      });
+      return response.data;
+    },
   },
 
   renderTemplate: async (data: {

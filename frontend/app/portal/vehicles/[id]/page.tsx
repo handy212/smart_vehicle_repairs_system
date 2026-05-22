@@ -16,6 +16,7 @@ import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -294,11 +295,23 @@ export default function VehicleDetailPage() {
                             {wo.customer_concerns}
                           </p>
                         )}
-                        {wo.estimated_total && (
-                          <p className="text-sm font-medium text-foreground mt-2">
-                            Total: {formatCurrency(wo.estimated_total || 0)}
-                          </p>
-                        )}
+                        {(() => {
+                          const billing = getWorkOrderListBillingDisplay(wo, {
+                            audience: "customer",
+                            formatDue: formatCurrency,
+                          });
+                          if (!billing) return null;
+                          return (
+                            <p className="text-sm font-medium text-foreground mt-2">
+                              {billing.label}: {formatCurrency(billing.amount)}
+                              {billing.statusLine ? (
+                                <span className="ml-1 text-xs text-muted-foreground capitalize">
+                                  ({billing.statusLine})
+                                </span>
+                              ) : null}
+                            </p>
+                          );
+                        })()}
                       </div>
                     </div>
                     <Badge variant="secondary">{wo.status.replace(/_/g, " ")}</Badge>

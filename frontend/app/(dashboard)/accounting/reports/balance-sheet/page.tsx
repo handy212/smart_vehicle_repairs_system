@@ -24,7 +24,7 @@ import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { COMPANY_NAME } from "@/lib/constants";
 
 export default function BalanceSheetPage() {
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currencySymbol } = useCurrency();
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [showFilters, setShowFilters] = useState(false);
 
@@ -124,7 +124,8 @@ export default function BalanceSheetPage() {
             colorRows: [{ row: 0, color: '3B82F6' }],
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
-            companyName: COMPANY_NAME
+            companyName: COMPANY_NAME,
+            currencySymbol,
         });
     };
 

@@ -204,7 +204,10 @@ class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
 
     def get_user_name(self, obj):
-        return obj.user.get_full_name() if obj.user else "System"
+        if not obj.user:
+            return "System"
+        full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return full_name or getattr(obj.user, "username", None) or "System"
 
     class Meta:
         model = AuditLog
@@ -303,8 +306,13 @@ class BudgetLineSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get('request')
         budget = attrs.get('budget', getattr(self.instance, 'budget', None))
-        if request and budget and budget.branch and not _user_can_use_branch(request.user, budget.branch):
-            raise serializers.ValidationError({'budget': 'You do not have access to this budget branch.'})
+        if request and budget:
+            from apps.accounting.models import Budget
+            from apps.accounting.views import scope_budgets
+            if not scope_budgets(Budget.objects.filter(pk=budget.pk), request).exists():
+                raise serializers.ValidationError({'budget': 'Budget not found or not accessible.'})
+            if budget.branch and not _user_can_use_branch(request.user, budget.branch):
+                raise serializers.ValidationError({'budget': 'You do not have access to this budget branch.'})
         return attrs
 
 

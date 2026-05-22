@@ -10,8 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 
 export default function MobileWorkOrdersPage() {
+  const { formatCurrency } = useCurrency();
   const searchParams = useSearchParams();
   const { isOnline } = useOfflineStore();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -189,11 +192,25 @@ export default function MobileWorkOrdersPage() {
                   >
                     {wo.status?.replace("_", " ").toUpperCase()}
                   </span>
-                  {wo.total_cost && (
-                    <span className="text-sm font-medium text-foreground">
-                      {wo.total_cost}
-                    </span>
-                  )}
+                  {(() => {
+                    const billing = getWorkOrderListBillingDisplay(wo, {
+                      audience: "staff",
+                      formatDue: formatCurrency,
+                    });
+                    if (!billing) return null;
+                    return (
+                      <div className="text-right">
+                        <span className="text-sm font-medium text-foreground">
+                          {formatCurrency(billing.amount)}
+                        </span>
+                        {billing.statusLine && (
+                          <span className="block text-[10px] text-muted-foreground capitalize">
+                            {billing.statusLine}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </Link>

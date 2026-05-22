@@ -102,9 +102,10 @@ class UserViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasAnyPermission(['view_technicians', 'assign_workorders', 'manage_workorders'])]
         elif self.action == 'service_coordinators':
             return [IsAuthenticated(), HasAnyPermission(['view_users', 'assign_workorders', 'manage_workorders'])]
-        
-        # Default to authenticated for custom actions
-        return [IsAuthenticated()]
+        elif self.action in ('me', 'permissions', 'change_password'):
+            return [IsAuthenticated()]
+
+        return [IsAuthenticated(), HasPermission('view_users')()]
 
     def create(self, request, *args, **kwargs):
         """

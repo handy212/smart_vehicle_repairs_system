@@ -78,8 +78,11 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     
     @extend_schema_field(OpenApiTypes.DECIMAL)
     def get_total_cost(self, obj):
-        """Get total cost (use actual_total if available, otherwise estimated_total)"""
-        return obj.actual_total if obj.actual_total else obj.estimated_total
+        """Customer-facing billing total: linked invoice total (what they pay), not shop estimate."""
+        invoice = self._get_invoice(obj)
+        if invoice is not None:
+            return invoice.total
+        return None
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_primary_technician_name(self, obj):
@@ -123,23 +126,11 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         )
 
     def _get_invoice(self, obj):
-        invoice = getattr(obj, 'invoice', None)
+        from apps.billing.work_order_invoices import get_primary_invoice
+
         request = self.context.get('request')
-        hidden_statuses = ['proforma', 'void']
-        if getattr(getattr(request, 'user', None), 'role', None) == 'customer':
-            hidden_statuses.append('draft')
-
-        if invoice and invoice.status not in ['proforma', 'void']:
-            if invoice.status in hidden_statuses:
-                return None
-            return invoice
-
-        try:
-            from apps.billing.models import Invoice
-        except Exception:
-            return None
-
-        return Invoice.objects.filter(work_order=obj).exclude(status__in=hidden_statuses).order_by('-created_at').first()
+        for_customer = getattr(getattr(request, 'user', None), 'role', None) == 'customer'
+        return get_primary_invoice(obj, for_customer=for_customer)
 
     @extend_schema_field(serializers.DictField())
     def get_estimate_summary(self, obj):
@@ -160,21 +151,12 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_invoice_summary(self, obj):
+        from apps.billing.work_order_invoices import invoice_summary_payload
+
         invoice = self._get_invoice(obj)
         if not invoice:
             return None
-
-        return {
-            'id': invoice.id,
-            'invoice_number': invoice.invoice_number,
-            'status': invoice.status,
-            'total': str(invoice.total),
-            'amount_paid': str(invoice.amount_paid),
-            'amount_due': str(invoice.amount_due),
-            'invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
-            'paid_at': invoice.paid_at.isoformat() if invoice.paid_at else None,
-            'created_at': invoice.created_at.isoformat() if invoice.created_at else None,
-        }
+        return invoice_summary_payload(invoice)
 
 
 class WorkOrderDetailSerializer(serializers.ModelSerializer):
@@ -206,6 +188,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     estimate_summary = serializers.SerializerMethodField()
     invoice_summary = serializers.SerializerMethodField()
+    related_invoices = serializers.SerializerMethodField()
     gate_pass_status = serializers.SerializerMethodField()
     
     class Meta:
@@ -233,7 +216,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'maintenance_type', 'service_type', 'service_bundle',
             'is_overdue', 'days_in_shop', 'is_approved',
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
-            'estimate_summary', 'invoice_summary', 'gate_pass_status',
+            'estimate_summary', 'invoice_summary', 'related_invoices', 'gate_pass_status',
             'customer_discontinuation_reason', 'customer_discontinuation_notes',
             'customer_discontinued_at', 'customer_discontinued_by',
         ]
@@ -284,23 +267,11 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         )
 
     def _get_invoice(self, obj):
+        from apps.billing.work_order_invoices import get_primary_invoice
+
         request = self.context.get('request')
-        hidden_statuses = ['proforma', 'void']
-        if getattr(getattr(request, 'user', None), 'role', None) == 'customer':
-            hidden_statuses.append('draft')
-
-        invoice = getattr(obj, 'invoice', None)
-        if invoice:
-            if invoice.status in hidden_statuses:
-                return None
-            return invoice
-
-        try:
-            from apps.billing.models import Invoice
-        except Exception:
-            return None
-
-        return Invoice.objects.filter(work_order=obj).exclude(status__in=hidden_statuses).order_by('-created_at').first()
+        for_customer = getattr(getattr(request, 'user', None), 'role', None) == 'customer'
+        return get_primary_invoice(obj, for_customer=for_customer)
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
@@ -327,21 +298,21 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_invoice_summary(self, obj):
+        from apps.billing.work_order_invoices import get_primary_invoice, invoice_summary_payload
+
         invoice = self._get_invoice(obj)
         if not invoice:
             return None
+        return invoice_summary_payload(invoice)
 
-        return {
-            'id': invoice.id,
-            'invoice_number': invoice.invoice_number,
-            'status': invoice.status,
-            'total': str(invoice.total),
-            'amount_paid': str(invoice.amount_paid),
-            'amount_due': str(invoice.amount_due),
-            'invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
-            'paid_at': invoice.paid_at.isoformat() if invoice.paid_at else None,
-            'created_at': invoice.created_at.isoformat() if invoice.created_at else None,
-        }
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_related_invoices(self, obj):
+        from apps.billing.work_order_invoices import related_invoices_payload
+
+        request = self.context.get('request')
+        for_customer = getattr(getattr(request, 'user', None), 'role', None) == 'customer'
+        rows = related_invoices_payload(obj, for_customer=for_customer)
+        return rows if len(rows) > 1 else []
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_primary_technician_name(self, obj):
@@ -1150,8 +1121,11 @@ class WorkOrderStatusSummarySerializer(serializers.Serializer):
     """Work order status summary"""
     status = serializers.CharField()
     count = serializers.IntegerField()
-    total_estimated = serializers.DecimalField(max_digits=12, decimal_places=2)
-    total_actual = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_estimated = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
+    total_actual = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
+    total_invoiced = serializers.DecimalField(
+        max_digits=12, decimal_places=2, allow_null=True, required=False
+    )
 
 
 # ============= Public Portal Serializers =============
@@ -1211,8 +1185,11 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
         return {}
     
     def get_total_cost(self, obj):
-        """Get total cost (use actual_total if available, otherwise estimated_total)"""
-        return obj.actual_total if obj.actual_total else obj.estimated_total
+        """Billing total from linked invoice when present."""
+        invoice = self._get_invoice(obj)
+        if invoice is not None:
+            return invoice.total
+        return None
 
     def _get_estimate(self, obj):
         estimate = getattr(obj, 'estimate', None)
@@ -1221,10 +1198,9 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
         return None
 
     def _get_invoice(self, obj):
-        invoice = getattr(obj, 'invoice', None)
-        if invoice and invoice.status not in ['draft', 'void']:
-            return invoice
-        return None
+        from apps.billing.work_order_invoices import get_primary_invoice
+
+        return get_primary_invoice(obj, for_customer=True)
 
     @extend_schema_field(serializers.DictField())
     def get_estimate_summary(self, obj):
@@ -1242,19 +1218,12 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_invoice_summary(self, obj):
+        from apps.billing.work_order_invoices import invoice_summary_payload
+
         invoice = self._get_invoice(obj)
         if not invoice:
             return None
-        return {
-            'id': invoice.id,
-            'invoice_number': invoice.invoice_number,
-            'status': invoice.status,
-            'total': str(invoice.total),
-            'amount_paid': str(invoice.amount_paid),
-            'amount_due': str(invoice.amount_due),
-            'invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
-            'paid_at': invoice.paid_at.isoformat() if invoice.paid_at else None,
-        }
+        return invoice_summary_payload(invoice, include_internal=False)
 
     def get_recommendations(self, obj):
 

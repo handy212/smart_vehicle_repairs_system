@@ -66,17 +66,18 @@ export default function QuotationRequestsPage() {
   const { hasAnyPermission } = usePermissions();
   const { user } = useAuthStore();
 
-  const isAdminUser =
-    user?.role === "admin" ||
-    user?.role === "super-admin" ||
-    Boolean((user as { is_superuser?: boolean } | null)?.is_superuser);
-  const canViewQuotationQueue =
-    isAdminUser || hasAnyPermission(["view_inventory", "edit_estimates", "manage_inventory", "view_billing"]);
-  const canCompleteQuotes =
-    isAdminUser ||
-    user?.role === "parts_manager" ||
-    user?.role === "manager" ||
-    hasAnyPermission(["edit_estimates", "manage_inventory", "approve_estimates"]);
+  const canViewQuotationQueue = hasAnyPermission([
+    "view_inventory",
+    "edit_estimates",
+    "manage_inventory",
+    "view_billing",
+  ]);
+  const canCompleteQuotes = hasAnyPermission([
+    "edit_estimates",
+    "manage_inventory",
+    "approve_estimates",
+    "manage_diagnosis",
+  ]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["diagnosis", "quotation-queue", search],

@@ -115,16 +115,15 @@ export default function InvoiceDetailPage() {
     enabled: isValidId,
   });
 
-  const isAdminUser =
-    user?.role === "admin" ||
-    user?.role === "super-admin" ||
-    Boolean((user as { is_superuser?: boolean } | null)?.is_superuser);
-  const canEditInvoice = isAdminUser || hasPermission("edit_invoices");
-  const canSendInvoice = isAdminUser || hasAnyPermission(["edit_invoices", "send_notifications"]);
-  const canConvertProforma = isAdminUser || hasPermission("create_invoices");
-  const canRecordPayment = isAdminUser || hasAnyPermission(["create_payments", "process_payments", "manage_billing"]);
-  const canManagePaymentAdjustments =
-    isAdminUser || hasAnyPermission(["process_payments", "refund_payments", "manage_billing"]);
+  const canEditInvoice = hasPermission("edit_invoices");
+  const canSendInvoice = hasAnyPermission(["edit_invoices", "send_notifications"]);
+  const canConvertProforma = hasPermission("create_invoices");
+  const canRecordPayment = hasAnyPermission(["create_payments", "process_payments", "manage_billing"]);
+  const canManagePaymentAdjustments = hasAnyPermission([
+    "process_payments",
+    "refund_payments",
+    "manage_billing",
+  ]);
   const currentStatus = invoice?.status ?? null;
   const balanceDue = getInvoiceBalanceDue(invoice);
   const canAcceptPayment = canRecordPayment && currentStatus !== 'paid' && currentStatus !== 'void' && balanceDue > 0;

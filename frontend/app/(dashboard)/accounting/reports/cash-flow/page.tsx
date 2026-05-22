@@ -69,7 +69,7 @@ function ActivitySection({
 export default function CashFlowPage() {
     const [startDate, setStartDate] = useState(format(startOfYear(new Date()), "yyyy-MM-dd"));
     const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currencySymbol } = useCurrency();
 
     const { data: report, isLoading, isError } = useQuery({
         queryKey: ["accounting", "cash-flow", startDate, endDate],
@@ -163,7 +163,8 @@ export default function CashFlowPage() {
             ],
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
-            companyName: COMPANY_NAME
+            companyName: COMPANY_NAME,
+            currencySymbol,
         });
     };
 

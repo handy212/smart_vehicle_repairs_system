@@ -164,7 +164,9 @@ def post_inventory_transaction_to_ledger(sender, instance, created, **kwargs):
     """
     Auto-post GL entry for inventory adjustments (damage, count, adjustment)
     """
-    if created and instance.transaction_type in ['adjustment', 'damage', 'count']:
+    if created and instance.transaction_type in [
+        'adjustment', 'damage', 'count', 'correction', 'loss',
+    ]:
         AccountingService.post_inventory_adjustment(instance)
 
 @receiver(post_save, sender=CreditNote)

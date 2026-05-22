@@ -84,7 +84,7 @@ class GatePassViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('change_gatepass')]
         elif self.action in ['from_workorder', 'pdf', 'print']:
             return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('view_gatepass')]
-        return [IsAuthenticated(), IsModuleEnabled('gatepass')]
+        return [IsAuthenticated(), IsModuleEnabled('gatepass')(), HasPermission('view_gatepass')()]
 
     def get_queryset(self):
         """Filter gate passes by active branch from session"""

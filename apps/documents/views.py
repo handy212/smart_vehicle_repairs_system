@@ -84,7 +84,7 @@ class DocumentCategoryViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_documents')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('manage_document_categories')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('view_documents')()]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     search_fields = ['name', 'slug', 'description']
     ordering_fields = ['name', 'display_order', 'created_at']
@@ -132,7 +132,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('edit_documents')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('delete_documents')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('view_documents')()]
     
     def get_queryset(self):
         """Filter queryset based on permissions and branch context"""
@@ -758,7 +758,7 @@ class DocumentShareViewSet(viewsets.ModelViewSet):
         """Allow public access for retrieve by token"""
         if self.action in ['retrieve_by_token', 'verify_code']:
             return [AllowAny()]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('view_documents')()]
     
     @action(detail=False, methods=['get'], url_path='(?P<token>[^/.]+)', permission_classes=[AllowAny])
     def retrieve_by_token(self, request, token=None):
@@ -861,7 +861,7 @@ class DocumentAccessViewSet(viewsets.ReadOnlyModelViewSet):
     
     queryset = DocumentAccess.objects.select_related('document', 'user', 'share_link').all()
     serializer_class = DocumentAccessSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_documents')]
     filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['accessed_at']
     ordering = ['-accessed_at']
@@ -882,7 +882,7 @@ class DocumentSignatureViewSet(viewsets.ModelViewSet):
         """Allow public access for signature submission"""
         if self.action in ['retrieve_by_token', 'sign', 'decline']:
             return [AllowAny()]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('view_documents')()]
     
     @action(detail=False, methods=['get'], url_path='(?P<token>[^/.]+)', permission_classes=[AllowAny])
     def retrieve_by_token(self, request, token=None):

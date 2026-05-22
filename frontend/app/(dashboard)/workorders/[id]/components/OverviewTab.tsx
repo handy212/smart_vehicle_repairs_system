@@ -32,6 +32,10 @@ import { adminApi } from "@/lib/api/admin";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { EstimatedNextServiceCallout } from "./EstimatedNextServiceCallout";
+import {
+  canCreateWorkOrderInvoice,
+  getInvoicePaymentDisplay,
+} from "@/lib/workorders/invoiceSummaryDisplay";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -60,11 +64,21 @@ export default function WorkOrderOverviewTab({
   onStatusChange,
 }: OverviewTabProps) {
   const { formatCurrency } = useCurrency();
-  const estimateSummary = workOrder.estimate_summary;
-  const invoiceSummary = workOrder.invoice_summary;
-  const displayedEstimatedTotal = parseFloat(
-    workOrder.estimated_total || workOrder.total_cost || "0"
-  );
+  const workOrderId = workOrder?.id;
+  const { data: workOrderFresh } = useQuery({
+    queryKey: ["workorder", workOrderId],
+    queryFn: () => workordersApi.get(workOrderId!),
+    enabled: !!workOrderId,
+    initialData: workOrder,
+    refetchOnWindowFocus: true,
+  });
+  const wo = workOrderFresh ?? workOrder;
+  const estimateSummary = wo.estimate_summary;
+  const invoiceSummary = wo.invoice_summary;
+  const canCreateInvoice = canCreateWorkOrderInvoice(wo);
+  const relatedInvoices = wo.related_invoices ?? [];
+  const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, wo.status);
+  const displayedEstimatedTotal = parseFloat(wo.estimated_total || "0");
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
     const sc = workOrder?.service_coordinator;
@@ -75,7 +89,6 @@ export default function WorkOrderOverviewTab({
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const workOrderId = workOrder?.id;
 
   const { data: serviceCoordinators } = useQuery({
     queryKey: ["service-coordinators"],
@@ -447,7 +460,7 @@ export default function WorkOrderOverviewTab({
                       <FileText className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
-                ) : workOrder.status === "completed" ? (
+                ) : canCreateInvoice ? (
                   <Link href={`/billing/invoices/new?work_order=${workOrderId}`}>
                     <Button variant="ghost" size="sm" className="h-7 text-xs text-primary">
                       <FileText className="w-3 h-3 mr-1" />
@@ -488,6 +501,70 @@ export default function WorkOrderOverviewTab({
                   Quote {estimateSummary.estimate_number} ·{" "}
                   {formatCurrency(parseFloat(estimateSummary.total || "0"))}
                 </p>
+              )}
+              {invoiceSummary?.id && (
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p>
+                    Invoice{" "}
+                    <Link
+                      href={`/billing/invoices/${invoiceSummary.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {invoiceSummary.invoice_number}
+                    </Link>
+                    {" · "}
+                    {formatCurrency(parseFloat(invoiceSummary.total || "0"))}
+                  </p>
+                  {invoicePayment ? (
+                    <p>
+                      <Badge variant={invoicePayment.badgeVariant} className="mr-1 text-[10px]">
+                        {invoicePayment.paymentLabel}
+                      </Badge>
+                      <span className="capitalize">Document: {invoicePayment.documentStatus}</span>
+                    </p>
+                  ) : null}
+                  {invoiceSummary.amount_paid != null && parseFloat(invoiceSummary.amount_paid) > 0 ? (
+                    <p>
+                      Paid {formatCurrency(parseFloat(invoiceSummary.amount_paid))}
+                      {invoiceSummary.amount_due != null &&
+                      parseFloat(invoiceSummary.amount_due) > 0.01 ? (
+                        <> · Due {formatCurrency(parseFloat(invoiceSummary.amount_due))}</>
+                      ) : null}
+                    </p>
+                  ) : null}
+                  {wo.status !== "invoiced" && wo.status !== "closed" ? (
+                    <p>
+                      Work order is still <span className="capitalize">{wo.status.replace(/_/g, " ")}</span>
+                      {invoicePayment?.paymentLabel.startsWith("Paid")
+                        ? " — when payment is complete, status should move to Invoiced automatically."
+                        : invoicePayment?.canMarkWorkOrderInvoiced
+                          ? " — paying in full auto-marks Invoiced, or use Mark work order invoiced after issuing."
+                          : invoicePayment?.markBlockedReason
+                            ? ` — ${invoicePayment.markBlockedReason}`
+                            : null}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+              {relatedInvoices.length > 0 && (
+                <div className="border-t border-border pt-2 space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Invoice history
+                  </p>
+                  {relatedInvoices.map((inv) => (
+                    <p key={inv.id} className="text-xs text-muted-foreground">
+                      <Link
+                        href={`/billing/invoices/${inv.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {inv.invoice_number}
+                      </Link>
+                      {" · "}
+                      {formatCurrency(parseFloat(inv.total || "0"))}
+                      <span className="ml-1 capitalize">({inv.status.replace(/_/g, " ")})</span>
+                    </p>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>

@@ -182,6 +182,15 @@ export default function NewInvoicePage() {
 
   const workOrderPrefillApplied = useRef<number | null>(null);
   const prevCustomerIdRef = useRef<number | undefined>(undefined);
+  const invoiceRedirectDone = useRef(false);
+
+  useEffect(() => {
+    if (invoiceRedirectDone.current || !workOrder?.invoice_summary?.id) return;
+    invoiceRedirectDone.current = true;
+    startTransition(() => {
+      router.replace(`/billing/invoices/${workOrder.invoice_summary!.id}`);
+    });
+  }, [workOrder, router]);
 
   useEffect(() => {
     workOrderPrefillApplied.current = null;
@@ -370,12 +379,19 @@ export default function NewInvoicePage() {
 
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      const rawWo = data?.work_order;
       const woId =
-        data?.work_order ??
-        (Number.isFinite(woNumericId) ? woNumericId : undefined);
+        typeof rawWo === "number"
+          ? rawWo
+          : typeof rawWo === "object" && rawWo?.id != null
+            ? Number(rawWo.id)
+            : Number.isFinite(woNumericId)
+              ? woNumericId
+              : undefined;
+      queryClient.invalidateQueries({ queryKey: ["workorder"] });
       if (Number.isFinite(woId)) {
-        queryClient.invalidateQueries({ queryKey: ["workorder", String(woId)] });
         queryClient.invalidateQueries({ queryKey: ["workorder", woId] });
+        queryClient.invalidateQueries({ queryKey: ["workorder", String(woId)] });
       }
     },
 

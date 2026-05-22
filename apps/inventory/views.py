@@ -2,7 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import (
+    HasPermission,
+    IsModuleEnabled,
+    user_can_access_all_branches,
+    user_can_approve_purchase_orders,
+    user_has_permission,
+)
+from apps.accounts.permission_utils import action_permission_instances
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, Count, F, Q, Avg
@@ -34,11 +41,13 @@ from .serializers import (
     ServicePackageCreateSerializer, StockItemSerializer,
     TransferSerializer, TransferCreateSerializer,
     StockAlertSerializer, StockAlertUpdateSerializer,
-    PhysicalCountSessionSerializer, PhysicalCountSessionCreateSerializer,
+    PhysicalCountSessionSerializer,
+    PhysicalCountSessionCreateSerializer,
     PhysicalCountItemSerializer, PhysicalCountItemCreateSerializer,
     ServiceBundleSerializer, ServiceBundleCreateUpdateSerializer
 )
 from .services import InventoryService
+from .filters import StockItemFilter
 
 
 class PartCategoryViewSet(viewsets.ModelViewSet):
@@ -1328,7 +1337,10 @@ class ServicePackageViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_inventory')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return [IsAuthenticated()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            manage_code='manage_inventory', request=self.request,
+        )
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'description']
@@ -1409,15 +1421,20 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def _can_approve_purchase_order(user, po):
-        if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in {'admin', 'super-admin'}:
-            return True
+        if user_can_approve_purchase_orders(user) and (
+            not po.approvals.exists() or po.approvals.filter(status='pending').exists()
+        ):
+            if po.approvals.filter(approver=user, status='pending').exists():
+                return True
+            if user_has_permission(user, 'manage_inventory'):
+                return True
         if po.approvals.exists():
             return po.approvals.filter(approver=user, status='pending').exists()
         return po.assigned_approver_id == getattr(user, 'id', None)
 
     @staticmethod
-    def _is_admin_approver(user):
-        return getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in {'admin', 'super-admin'}
+    def _is_privileged_approver(user):
+        return user_can_approve_purchase_orders(user)
 
     @staticmethod
     def _requested_approver_ids(request):
@@ -1593,7 +1610,8 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 
         invalid_approvers = [
             approver for approver in approvers
-            if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'}
+            if not user_has_permission(approver, 'approve_purchase_orders')
+            and not user_has_permission(approver, 'manage_inventory')
         ]
         if invalid_approvers:
             return Response(
@@ -1647,7 +1665,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        if po.submitted_by_id == request.user.id and getattr(request.user, 'role', None) not in {'admin', 'super-admin'}:
+        if po.submitted_by_id == request.user.id and not user_can_approve_purchase_orders(request.user):
             return Response(
                 {'error': 'Purchase orders cannot be approved by the same user who submitted them.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1662,7 +1680,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 user_approval.status = 'approved'
                 user_approval.approved_at = now
                 user_approval.save(update_fields=['status', 'approved_at', 'updated_at'])
-            elif self._is_admin_approver(request.user):
+            elif self._is_privileged_approver(request.user):
                 approvals.filter(status='pending').update(status='approved', approved_at=now, updated_at=now)
             else:
                 return Response(
@@ -1721,7 +1739,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 user_approval.rejected_at = now
                 user_approval.rejection_reason = reason
                 user_approval.save(update_fields=['status', 'rejected_at', 'rejection_reason', 'updated_at'])
-            elif self._is_admin_approver(request.user):
+            elif self._is_privileged_approver(request.user):
                 approvals.filter(status='pending').update(
                     status='rejected',
                     rejected_at=now,
@@ -2107,7 +2125,13 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def recent(self, request):
         """Get recent transactions (last 100)"""
-        transactions = self.queryset.all()[:100]
+        qs = filter_queryset_for_user_branches(
+            self.get_queryset(),
+            request.user,
+            request,
+            branch_lookup='branch',
+        )
+        transactions = qs[:100]
         serializer = self.get_serializer(transactions, many=True)
         return Response(serializer.data)
 
@@ -2146,9 +2170,12 @@ class StockItemViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_inventory')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return [IsAuthenticated()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            manage_code='manage_inventory', request=self.request,
+        )
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['branch', 'is_low_stock', 'is_out_of_stock']
+    filterset_class = StockItemFilter
     search_fields = ['part__part_number', 'part__name', 'bin_location']
     ordering_fields = ['quantity_in_stock', 'total_value']
     
@@ -2160,20 +2187,12 @@ class StockItemViewSet(viewsets.ModelViewSet):
         # Assuming we want users to only see stock for their accessible branches
         # Or all branches if they have permission?
         # For now, let's filter by user branches utility
-        try:
-             # Need to implement filtering based on StockItem.branch, not StockItem directly
-             queryset = filter_queryset_for_user_branches(
-            queryset, 
-            user, 
+        return filter_queryset_for_user_branches(
+            queryset,
+            user,
             self.request,
-                branch_field='branch'
+            branch_lookup='branch',
         )
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Error filtering stock items by branch: {e}")
-            return queryset.none()
-            
-        return queryset
 
 
 class TransferViewSet(viewsets.ModelViewSet):
@@ -2193,7 +2212,11 @@ class TransferViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_inventory')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive', 'submit_for_approval', 'reject']:
             return [IsAuthenticated(), HasPermission('transfer_inventory')]
-        return [IsAuthenticated()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            edit_code='transfer_inventory', manage_code='manage_inventory',
+            request=self.request,
+        )
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'source_branch', 'destination_branch']
     ordering = ['-created_at']
@@ -2210,7 +2233,7 @@ class TransferViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return queryset.none()
             
-        if getattr(user, 'is_superuser', False) or user.role in {'admin', 'super-admin'}:
+        if user_can_access_all_branches(user):
             return queryset
             
         # For transfers, we want to see items where source OR destination is in our accessible branches
@@ -2386,7 +2409,10 @@ class StockAlertViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_inventory')]
         elif self.action in ['update', 'partial_update', 'acknowledge', 'resolve', 'dismiss']:
             return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return [IsAuthenticated()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            manage_code='manage_inventory', request=self.request,
+        )
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'alert_type', 'severity', 'branch', 'part']
@@ -2409,7 +2435,7 @@ class StockAlertViewSet(viewsets.ModelViewSet):
         from apps.branches.utils import get_user_accessible_branches
         accessible_branches = get_user_accessible_branches(user)
         
-        if user.role == 'admin':
+        if user_has_permission(user, 'manage_inventory'):
             return queryset
 
         return queryset.filter(branch__in=accessible_branches)
@@ -2527,7 +2553,10 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_inventory')]
         elif self.action in ['create', 'update', 'partial_update', 'start', 'complete', 'cancel']:
             return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return [IsAuthenticated()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            manage_code='manage_inventory', request=self.request,
+        )
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'branch', 'count_date']
@@ -2550,7 +2579,7 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
         from apps.branches.utils import get_user_accessible_branches
         accessible_branches = get_user_accessible_branches(user)
         
-        if user.role == 'admin':
+        if user_has_permission(user, 'manage_inventory'):
             return queryset
             
         return queryset.filter(branch__in=accessible_branches)
@@ -2558,6 +2587,18 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create a new physical count session"""
         serializer.save(created_by=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        """Return full session payload (including id) after create."""
+        create_serializer = self.get_serializer(data=request.data)
+        create_serializer.is_valid(raise_exception=True)
+        self.perform_create(create_serializer)
+        session = create_serializer.instance
+        output = PhysicalCountSessionSerializer(
+            session, context=self.get_serializer_context()
+        )
+        headers = self.get_success_headers(output.data)
+        return Response(output.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
@@ -2646,7 +2687,7 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
         
         # Get system quantity
         system_quantity = stock_item.quantity_in_stock
-        physical_quantity = serializer.validated_data['physical_quantity']
+        physical_quantity = int(serializer.validated_data['physical_quantity'])
         
         # Create or update count item
         count_item, created = PhysicalCountItem.objects.update_or_create(
@@ -2692,7 +2733,10 @@ class PhysicalCountItemViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_inventory')]
         elif self.action in ['update', 'partial_update', 'reconcile']:
             return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return [IsAuthenticated()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            manage_code='manage_inventory', request=self.request,
+        )
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['session', 'part', 'reconciled']
@@ -2715,7 +2759,7 @@ class PhysicalCountItemViewSet(viewsets.ModelViewSet):
         from apps.branches.utils import get_user_accessible_branches
         accessible_branches = get_user_accessible_branches(user)
         
-        if user.role == 'admin':
+        if user_has_permission(user, 'manage_inventory'):
             return queryset
         
         return queryset.filter(session__branch__in=accessible_branches)
@@ -2791,5 +2835,8 @@ class ServiceBundleViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('inventory.manage_bundles')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('inventory')(), HasPermission('manage_inventory')()]
+        return action_permission_instances(
+            'inventory', self.action, view_code='view_inventory',
+            manage_code='manage_inventory', request=self.request,
+        )

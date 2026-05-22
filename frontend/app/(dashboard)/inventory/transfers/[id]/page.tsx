@@ -26,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export default function TransferDetailPage() {
     const params = useParams();
@@ -52,15 +53,18 @@ export default function TransferDetailPage() {
 
     const { activeBranchId } = useBranchStore();
     const isSubmitter = currentUser?.id === transfer?.created_by;
-    const isAdminApprover = currentUser?.role === "admin" || currentUser?.role === "super-admin";
+    const { hasPermission } = usePermissions();
+    const isPrivilegedApprover = hasPermission("transfer_inventory") || hasPermission("manage_inventory");
     const currentUserPendingApproval = transfer?.approvals?.some(
         (approval) => approval.approver === currentUser?.id && approval.status === "pending"
     );
     const isLegacyApprover = currentUser?.id === transfer?.assigned_approver;
-    const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isAdminApprover);
-    const canApprove = isApprover && (!isSubmitter || isAdminApprover);
-    const isSourceBranch = !activeBranchId || activeBranchId === transfer?.source_branch || isAdminApprover;
-    const isDestinationBranch = !activeBranchId || activeBranchId === transfer?.destination_branch || isAdminApprover;
+    const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isPrivilegedApprover);
+    const canApprove = isApprover && (!isSubmitter || isPrivilegedApprover);
+    const isSourceBranch =
+        !activeBranchId || activeBranchId === transfer?.source_branch || isPrivilegedApprover;
+    const isDestinationBranch =
+        !activeBranchId || activeBranchId === transfer?.destination_branch || isPrivilegedApprover;
 
     const { data: usersResponse } = useQuery({
         queryKey: ["users", "approvers", transfer?.source_branch, transfer?.destination_branch],

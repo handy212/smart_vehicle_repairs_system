@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from . import management_report_views as mgmt_views
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -24,6 +25,14 @@ urlpatterns = [
     path('reports/expense-breakdown/', views.ExpenseBreakdownView.as_view(), name='expense-breakdown'),
     path('reports/budget-vs-actual/', views.BudgetVsActualView.as_view(), name='budget-vs-actual'),
     path('reports/management-dashboard/', views.ManagementDashboardView.as_view(), name='management-dashboard'),
+    path('reports/profit-loss-comparative/', mgmt_views.ProfitLossComparativeView.as_view(), name='profit-loss-comparative'),
+    path('reports/consolidated-profit-loss/', mgmt_views.ConsolidatedProfitLossView.as_view(), name='consolidated-profit-loss'),
+    path('reports/branch-pl-scorecard/', mgmt_views.BranchPLScorecardView.as_view(), name='branch-pl-scorecard'),
+    path('reports/supplier-ap-aging/', mgmt_views.SupplierAPAgingView.as_view(), name='supplier-ap-aging'),
+    path('reports/cash-collection/', mgmt_views.CashCollectionReportView.as_view(), name='cash-collection'),
+    path('reports/revenue-mix/', mgmt_views.RevenueMixReportView.as_view(), name='revenue-mix'),
+    path('reports/opex-variance/', mgmt_views.OpexVarianceView.as_view(), name='opex-variance'),
+    path('reports/cost-control/', mgmt_views.CostControlReportView.as_view(), name='cost-control'),
     path('analytics/dashboard/', views.AnalyticsDashboardView.as_view(), name='analytics-dashboard'),
     
     # Journal Entries

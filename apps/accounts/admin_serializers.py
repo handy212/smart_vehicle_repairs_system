@@ -10,6 +10,68 @@ import json
 
 User = get_user_model()
 
+AUDIT_MODEL_LABELS = {
+    'user': 'User',
+    'systemsettings': 'System Setting',
+    'role': 'Role',
+    'permission': 'Permission',
+    'systembackup': 'System Backup',
+    'emailtemplate': 'Email Template',
+    'smstemplate': 'SMS Template',
+    'branch': 'Branch',
+    'document': 'Document',
+    'customer': 'Customer',
+    'vehicle': 'Vehicle',
+    'workorder': 'Work Order',
+    'appointment': 'Appointment',
+    'vehicleinspection': 'Vehicle Inspection',
+    'roadsiderequest': 'Roadside Request',
+    'gatepass': 'Gate Pass',
+    'part': 'Part',
+    'supplier': 'Supplier',
+    'transfer': 'Stock Transfer',
+    'purchaseorder': 'Purchase Order',
+    'inventorytransaction': 'Inventory Transaction',
+    'physicalcountsession': 'Physical Count',
+    'invoice': 'Invoice',
+    'payment': 'Payment',
+    'estimate': 'Estimate',
+    'creditnote': 'Credit Note',
+    'bill': 'Bill',
+    'billpayment': 'Bill Payment',
+    'refund': 'Refund',
+    'subscription': 'Subscription',
+    'package': 'Package',
+    'diagnosis': 'Diagnosis',
+    'repairrecommendation': 'Repair Recommendation',
+    'fixedasset': 'Fixed Asset',
+    'assetmaintenance': 'Asset Maintenance',
+    'notificationtemplate': 'Notification Template',
+    'department': 'Department',
+    'employeeprofile': 'Employee',
+    'leaverequest': 'Leave Request',
+    'payrollperiod': 'Payroll Period',
+}
+
+
+def audit_model_label(model_name: str) -> str:
+    if not model_name:
+        return 'Unknown'
+    key = model_name.lower().replace(' ', '')
+    if key in AUDIT_MODEL_LABELS:
+        return AUDIT_MODEL_LABELS[key]
+    return model_name.replace('_', ' ').title()
+
+
+def audit_actor_initial(user_name: str | None, user_email: str | None = None) -> str:
+    name = (user_name or '').strip()
+    if name and name.lower() != 'system':
+        return name[0].upper()
+    email = (user_email or '').strip()
+    if email and email != 'system@system.local':
+        return email[0].upper()
+    return 'S'
+
 
 class SystemSettingsSerializer(serializers.ModelSerializer):
     """Serializer for SystemSettings"""
@@ -52,6 +114,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     action = serializers.SerializerMethodField()
     model_name = serializers.SerializerMethodField()
+    model_label = serializers.SerializerMethodField()
     object_id = serializers.CharField(source='object_pk')
     object_repr = serializers.CharField()
     changes = serializers.JSONField()
@@ -63,7 +126,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = LogEntry
         fields = [
-            'id', 'user', 'user_email', 'user_name', 'action', 'model_name',
+            'id', 'user', 'user_email', 'user_name', 'action', 'model_name', 'model_label',
             'object_id', 'object_repr', 'changes', 'changes_display',
             'ip_address', 'user_agent', 'timestamp'
         ]
@@ -103,6 +166,9 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
     def get_model_name(self, obj):
         return obj.content_type.model
+
+    def get_model_label(self, obj):
+        return audit_model_label(obj.content_type.model)
 
     def get_ip_address(self, obj):
         return obj.remote_addr

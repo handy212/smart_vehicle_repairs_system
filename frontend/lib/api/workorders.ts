@@ -12,7 +12,8 @@ export interface WorkOrder {
   vehicle_display?: string;
   status: string;
   priority: string;
-  total_cost?: string;
+  /** Linked invoice total (billing); null when no invoice yet. */
+  total_cost?: string | null;
   created_at: string;
   created_by?: number | { id: number; first_name: string; last_name: string } | string;
   completed_at?: string;
@@ -59,10 +60,27 @@ export interface WorkOrder {
     total: string;
     amount_paid?: string;
     amount_due?: string;
+    is_paid?: boolean;
+    is_void?: boolean;
     invoice_date?: string | null;
     paid_at?: string | null;
     created_at?: string | null;
   } | null;
+  /** Prior revisions when a voided invoice was re-issued (detail API). */
+  related_invoices?: Array<{
+    id: number;
+    invoice_number: string;
+    status: string;
+    total: string;
+    amount_paid?: string;
+    amount_due?: string;
+    is_paid?: boolean;
+    is_void?: boolean;
+    is_primary?: boolean;
+    invoice_date?: string | null;
+    paid_at?: string | null;
+    created_at?: string | null;
+  }>;
   gate_pass_status?: string;
   quality_check_required?: boolean;
   quality_check_completed?: boolean;

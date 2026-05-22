@@ -55,6 +55,7 @@ sudo -u svr /var/www/svr/venv/bin/python manage.py seed_aa_membership
 sudo -u svr /var/www/svr/venv/bin/python manage.py seed_leave_types
 sudo -u svr /var/www/svr/venv/bin/python manage.py populate_comprehensive_code_library
 sudo -u svr /var/www/svr/venv/bin/python manage.py sync_code_library --limit 50
+# Non-destructive: only creates missing templates (see migration 0020 for default content refresh)
 sudo -u svr /var/www/svr/venv/bin/python manage.py create_all_email_templates
 sudo -u svr /var/www/svr/venv/bin/python manage.py setup_invoice_email_templates
 sudo -u svr /var/www/svr/venv/bin/python manage.py create_inspection_templates

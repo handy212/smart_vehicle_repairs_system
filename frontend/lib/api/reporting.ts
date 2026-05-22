@@ -240,6 +240,41 @@ export const reportingApi = {
     },
   },
 
+  getRoadsideRevenue: async (params?: DateRangeParams) => {
+    const response = await apiClient.get('/reporting/roadside-revenue/', { params });
+    return response.data;
+  },
+
+  getExceptionLog: async () => {
+    const response = await apiClient.get('/reporting/exception-log/');
+    return response.data;
+  },
+
+  getSystemUsage: async (params?: DateRangeParams) => {
+    const response = await apiClient.get('/reporting/system-usage/', { params });
+    return response.data;
+  },
+
+  getApCycleTime: async (params?: DateRangeParams) => {
+    const response = await apiClient.get('/reporting/ap-cycle-time/', { params });
+    return response.data;
+  },
+
+  getCapacityPlanning: async (params?: DateRangeParams) => {
+    const response = await apiClient.get('/reporting/capacity-planning/', { params });
+    return response.data;
+  },
+
+  getTraceability: async (params: { work_order_id?: number; part_id?: number }) => {
+    const response = await apiClient.get('/reporting/traceability/', { params });
+    return response.data;
+  },
+
+  getCostControlReturnJobs: async (params?: DateRangeParams) => {
+    const response = await apiClient.get('/reporting/cost-control-return-jobs/', { params });
+    return response.data;
+  },
+
   exportLogs: {
     list: async (params?: { report_type?: string; status?: string }): Promise<Paginated<ReportExportLog>> => {
       const response = await apiClient.get('/reporting/export-logs/', { params });

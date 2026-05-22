@@ -121,6 +121,15 @@ export default function RecordPaymentDialog({
       queryClient.invalidateQueries({ queryKey: ["invoice", invoice.id] });
       queryClient.invalidateQueries({ queryKey: ["payments", invoice.id] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      const woId =
+        typeof invoice.work_order === "number"
+          ? invoice.work_order
+          : invoice.work_order?.id;
+      if (woId) {
+        queryClient.invalidateQueries({ queryKey: ["workorder", woId] });
+        queryClient.invalidateQueries({ queryKey: ["workorder", String(woId)] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["workorder"] });
       toast({
         title: "Success",
         description: "Payment recorded successfully",

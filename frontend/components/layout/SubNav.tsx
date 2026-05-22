@@ -321,6 +321,9 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_inventory", icon: FileText },
     { name: "Service Bundles", href: "/inventory/bundles", permission: "view_inventory", icon: Boxes },
     { name: "Transfers", href: "/inventory/transfers", permission: "view_inventory", icon: ArrowLeftRight },
+    { name: "Compliance Reports", href: "/inventory/reports/compliance", permission: "view_inventory", icon: BarChart3 },
+    { name: "Physical Counts", href: "/inventory/physical-counts", permission: "view_inventory", icon: ClipboardList },
+    { name: "Inventory GL Report", href: "/inventory/reports/accounting", permission: "view_inventory", icon: PieChart },
   ],
   billing: [
     { name: "Invoices", href: "/billing/invoices", permission: "view_billing", icon: Receipt },
@@ -340,7 +343,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
     { name: "Settings", href: "/admin/settings", permission: "view_settings", icon: Settings },
     { name: "Modules", href: "/admin/modules", permission: "view_modules", icon: Puzzle },
-    { name: "Email Templates", href: "/admin/settings/email-templates", permission: "manage_email_templates", icon: Mail },
+    { name: "Email Templates", href: "/admin/settings/email-templates", permission: "manage_notification_templates", icon: Mail },
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_logs", icon: History },
     { name: "Import History", href: "/admin/import-history", permission: "view_audit_logs", icon: Inbox },
     { name: "Integrations", href: "/admin/integrations", permission: "manage_settings", icon: Puzzle },
@@ -349,10 +352,15 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   accounting: [
     { name: "Overview", href: "/accounting", permission: "view_accounting", icon: BarChart3 },
     { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries", icon: BookOpen },
+    { name: "General Ledger", href: "/accounting/reports/general-ledger", permission: "view_financial_reports", icon: BookOpen },
     { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounting", icon: Hash },
     { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_bank_statements", icon: Landmark },
     { name: "Balance Sheet", href: "/accounting/reports/balance-sheet", permission: "view_financial_reports", icon: Scale },
     { name: "Profit & Loss", href: "/accounting/reports/profit-loss", permission: "view_financial_reports", icon: PieChart },
+    { name: "Management Reports", href: "/accounting/reports/management", permission: "view_financial_reports", icon: BarChart3 },
+    { name: "Margin Analysis", href: "/accounting/reports/margin-analysis", permission: "view_financial_reports", icon: Target },
+    { name: "Cost Control", href: "/accounting/reports/cost-control", permission: "view_financial_reports", icon: BarChart3 },
+    { name: "OPEX Variance", href: "/accounting/reports/opex-variance", permission: "view_budgets", icon: Wallet },
     { name: "Trial Balance", href: "/accounting/reports/trial-balance", permission: "view_financial_reports", icon: Library },
     { name: "Aging Report", href: "/accounting/reports/aging", permission: "view_financial_reports", icon: Clock },
     { name: "Cash Flow", href: "/accounting/reports/cash-flow", permission: "view_financial_reports", icon: Activity },
@@ -388,6 +396,12 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Assets", href: "/fixed-assets", permission: "view_assets", icon: Landmark },
     { name: "Acquisitions", href: "/fixed-assets/acquisitions", permission: "view_assets", icon: ClipboardList },
     { name: "Valuation", href: "/fixed-assets/reports/valuation", permission: "view_assets", icon: PieChart },
+  ],
+  reports: [
+    { name: "Reports Hub", href: "/reports", permission: "view_reports", icon: LayoutDashboard },
+    { name: "Operations Intelligence", href: "/reports/operations", permission: "view_reports", icon: Activity },
+    { name: "Technician Efficiency", href: "/reports/efficiency", permission: "view_technician_reports", icon: Target },
+    { name: "Service Bundles", href: "/reports/bundles", permission: "view_reports", icon: Boxes },
   ],
 };
 
@@ -456,6 +470,14 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
       items: subNavConfig.fixedAssets,
       title: "Fixed Assets",
       module: "fixed-assets",
+    };
+  }
+
+  if (pathname.startsWith("/reports")) {
+    return {
+      items: subNavConfig.reports,
+      title: "Reports",
+      module: "reports",
     };
   }
 

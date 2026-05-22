@@ -693,8 +693,10 @@ class AccountingService:
         """
         from apps.inventory.models import InventoryTransaction
 
-        # Only process adjustment types
-        if inventory_transaction.transaction_type not in ['adjustment', 'damage', 'count']:
+        # Shrinkage, damage, counts, and physical-count corrections
+        if inventory_transaction.transaction_type not in [
+            'adjustment', 'damage', 'count', 'correction', 'loss',
+        ]:
             return
 
         adj_ref = f"INVADJ-{inventory_transaction.pk}"
@@ -2161,14 +2163,15 @@ class ReportingService:
 
 class DashboardService:
     @staticmethod
-    def get_management_metrics(start_date, end_date):
+    def get_management_metrics(start_date, end_date, branch_id=None):
         """
         Consolidated metrics for management reporting.
+        When branch_id is set, KPIs and job profitability are scoped to that branch.
         """
         from apps.accounting.models import Account
         
         # P&L Summary
-        pl = ReportingService.get_profit_loss(start_date, end_date)
+        pl = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_id)
         
         # Cash on Hand (Bank + Cash accounts)
         cash_accounts = Account.objects.filter(
@@ -2177,18 +2180,19 @@ class DashboardService:
             is_active=True
         )
         cash_balance = sum(
-            ReportingService.get_account_balance(acc, date=end_date)
+            ReportingService.get_account_balance(acc, date=end_date, branch_id=branch_id)
             for acc in cash_accounts
         )
         
         # AR/AP Summary
-        ar_aging = ReportingService.get_aging_report('ar', date=end_date)
-        ap_aging = ReportingService.get_aging_report('ap', date=end_date)
+        ar_aging = ReportingService.get_aging_report('ar', date=end_date, branch_id=branch_id)
+        ap_aging = ReportingService.get_aging_report('ap', date=end_date, branch_id=branch_id)
         
         # Job Profitability (Top 5 by Margin)
         job_profit = ReportingService.get_job_profitability(
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            branch_id=branch_id,
         )
         top_jobs = job_profit['jobs'][:5]
         
@@ -2211,7 +2215,7 @@ class DashboardService:
         # If Net is positive, Burn is 0.
         
         # Get Cash Flow for the period
-        cf = ReportingService.get_cash_flow_statement(start_date, end_date)
+        cf = ReportingService.get_cash_flow_statement(start_date, end_date, branch_id=branch_id)
         net_operating_cash = cf['operating_activities']['net']
         
         # Burn Rate (Monthly average for the selected period)
@@ -2226,24 +2230,23 @@ class DashboardService:
             
         runway_months = (float(cash_balance) / monthly_burn) if monthly_burn > 0 else 0
         
-        # Branch Performance
-        # Group revenue/profit by branch.
-        # This requires iterating branches and running P&L.
-        # Optimization: Could potential do singular aggregation query if performance is issue.
+        # Branch Performance (omit when already viewing a single branch)
         from apps.branches.models import Branch
         branch_performance = []
-        for branch in Branch.objects.filter(is_active=True):
-            b_pl = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch.id)
-            branch_performance.append({
-                'id': branch.id,
-                'name': branch.name,
-                'revenue': float(b_pl['totals']['income']),
-                'net_income': float(b_pl['totals']['net_income']),
-                'margin': float(b_pl['totals']['net_income'] / b_pl['totals']['income'] * 100) if b_pl['totals']['income'] > 0 else 0
-            })
+        if branch_id is None:
+            for branch in Branch.objects.filter(is_active=True):
+                b_pl = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch.id)
+                branch_performance.append({
+                    'id': branch.id,
+                    'name': branch.name,
+                    'revenue': float(b_pl['totals']['income']),
+                    'net_income': float(b_pl['totals']['net_income']),
+                    'margin': float(b_pl['totals']['net_income'] / b_pl['totals']['income'] * 100) if b_pl['totals']['income'] > 0 else 0
+                })
 
         return {
             'period': {'start': start_date, 'end': end_date},
+            'branch_id': branch_id,
             'kpis': {
                 'revenue': float(pl['totals']['income']),
                 'expenses': float(pl['totals']['expenses']),
@@ -2262,7 +2265,7 @@ class DashboardService:
 
 class ExportService:
     @staticmethod
-    def generate_board_pack(start_date, end_date):
+    def generate_board_pack(start_date, end_date, branch_id=None):
         """
         Generates a PDF Board Pack containing key financial reports and metrics.
         Returns: BytesIO object containing the PDF
@@ -2312,7 +2315,7 @@ class ExportService:
         story.append(PageBreak())
         
         # --- EXECUTIVE SUMMARY (KPIs) ---
-        metrics = DashboardService.get_management_metrics(start_date, end_date)
+        metrics = DashboardService.get_management_metrics(start_date, end_date, branch_id=branch_id)
         
         story.append(Paragraph("Executive Summary", styles['Heading1']))
         story.append(Spacer(1, 0.1*inch))
@@ -2365,7 +2368,48 @@ class ExportService:
         pl_style.add('BACKGROUND', (0, -1), (1, -1), colors.HexColor('#dcfce7'))
         pl_table.setStyle(pl_style)
         story.append(pl_table)
-        
+        story.append(PageBreak())
+
+        # --- MoM / YoY COMPARISON ---
+        from .management_reports import ManagementReportingService
+
+        story.append(Paragraph("Period Comparison (MoM & YoY)", styles['Heading1']))
+        story.append(Spacer(1, 0.1*inch))
+        for label, comparison in (('Month over Month', 'mom'), ('Year over Year', 'yoy')):
+            comp = ManagementReportingService.get_profit_loss_comparative(
+                start_date, end_date, branch_id=None, comparison=comparison
+            )
+            v = comp['variance']
+            comp_data = [
+                ['Metric', 'Current', 'Prior', 'Change', 'Change %'],
+                [
+                    'Revenue',
+                    f"{v['income']['current']:,.2f}",
+                    f"{v['income']['prior']:,.2f}",
+                    f"{v['income']['change']:,.2f}",
+                    f"{v['income']['change_percent']:.1f}%",
+                ],
+                [
+                    'Expenses',
+                    f"{v['expenses']['current']:,.2f}",
+                    f"{v['expenses']['prior']:,.2f}",
+                    f"{v['expenses']['change']:,.2f}",
+                    f"{v['expenses']['change_percent']:.1f}%",
+                ],
+                [
+                    'Net Income',
+                    f"{v['net_income']['current']:,.2f}",
+                    f"{v['net_income']['prior']:,.2f}",
+                    f"{v['net_income']['change']:,.2f}",
+                    f"{v['net_income']['change_percent']:.1f}%",
+                ],
+            ]
+            story.append(Paragraph(label, styles['Heading2']))
+            comp_table = Table(comp_data, colWidths=[1.4*inch, 1.1*inch, 1.1*inch, 1.1*inch, 0.9*inch], repeatRows=1)
+            comp_table.setStyle(get_compact_table_style())
+            story.append(comp_table)
+            story.append(Spacer(1, 0.15*inch))
+
         doc.build(story)
         buffer.seek(0)
         return buffer

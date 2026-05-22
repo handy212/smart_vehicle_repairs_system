@@ -9,6 +9,8 @@ import { Loader2, Package, Wrench, BarChart3, DollarSign } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { useBranchStore } from "@/store/branchStore";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import type { TableExportPayload } from "@/lib/utils/report-export";
 
 function ProgressBar({ value, color }: { value: number; color: string }) {
     return (
@@ -73,11 +75,31 @@ export default function ExpenseBreakdownPage() {
 
     return (
         <div className="space-y-4">
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Expense Breakdown</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Business expenses categorized by parts, labor, and overhead
                 </p>
+                </div>
+                <ReportExportMenu
+                    getPayload={() => {
+                        if (!report) return null;
+                        return {
+                            reportTitle: "Expense Breakdown",
+                            filename: `expense-breakdown_${filters.start_date}_${filters.end_date}`,
+                            dateInfo: `${filters.start_date} to ${filters.end_date}`,
+                            headers: ["Category", "Amount", "% of Total"],
+                            rows: categoryConfig.map((c) => {
+                                const amount = categories[c.key] ?? 0;
+                                const pct = total > 0 ? (amount / total) * 100 : 0;
+                                return [c.label, amount, pct];
+                            }),
+                            currencyColumnIndexes: [1],
+                        };
+                    }}
+                    disabled={!report}
+                />
             </div>
 
             {/* Filters */}

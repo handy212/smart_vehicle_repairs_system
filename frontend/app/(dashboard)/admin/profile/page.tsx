@@ -37,7 +37,7 @@ export default function ProfilePage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const isAdmin = user?.role === "admin" || user?.role === "super-admin";
+  const canEditProfile = Boolean(user);
   const [profileImage, setProfileImage] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -201,7 +201,7 @@ export default function ProfilePage() {
                       id="first_name"
                       {...register("first_name")}
                       placeholder="John"
-                      disabled={!isAdmin}
+                      disabled={!canEditProfile}
                       className={`h-8 text-sm ${errors.first_name ? "border-destructive" : ""}`}
                     />
                     {errors.first_name && (
@@ -215,7 +215,7 @@ export default function ProfilePage() {
                       id="last_name"
                       {...register("last_name")}
                       placeholder="Doe"
-                      disabled={!isAdmin}
+                      disabled={!canEditProfile}
                       className={`h-8 text-sm ${errors.last_name ? "border-destructive" : ""}`}
                     />
                     {errors.last_name && (
@@ -234,7 +234,7 @@ export default function ProfilePage() {
                     type="email"
                     {...register("email")}
                     placeholder="john.doe@example.com"
-                    disabled={!isAdmin}
+                    disabled={!canEditProfile}
                     className={`h-8 text-sm ${errors.email ? "border-destructive" : ""}`}
                   />
                   {errors.email && (
@@ -252,7 +252,7 @@ export default function ProfilePage() {
                     type="tel"
                     {...register("phone")}
                     placeholder="+1 (555) 123-4567"
-                    disabled={!isAdmin}
+                    disabled={!canEditProfile}
                     className={`h-8 text-sm ${errors.phone ? "border-destructive" : ""}`}
                   />
                   {errors.phone && (
@@ -266,7 +266,7 @@ export default function ProfilePage() {
                     id="date_of_birth"
                     type="date"
                     {...register("date_of_birth")}
-                    disabled={!isAdmin}
+                    disabled={!canEditProfile}
                     className="h-8 text-sm"
                   />
                 </div>
@@ -277,7 +277,7 @@ export default function ProfilePage() {
                     id="address"
                     {...register("address")}
                     placeholder="123 Main Street"
-                    disabled={!isAdmin}
+                    disabled={!canEditProfile}
                     className="h-8 text-sm"
                   />
                 </div>
@@ -289,7 +289,7 @@ export default function ProfilePage() {
                       id="city"
                       {...register("city")}
                       placeholder="New York"
-                      disabled={!isAdmin}
+                      disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -300,7 +300,7 @@ export default function ProfilePage() {
                       id="state"
                       {...register("state")}
                       placeholder="NY"
-                      disabled={!isAdmin}
+                      disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -313,7 +313,7 @@ export default function ProfilePage() {
                       id="zip_code"
                       {...register("zip_code")}
                       placeholder="10001"
-                      disabled={!isAdmin}
+                      disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -324,13 +324,13 @@ export default function ProfilePage() {
                       id="country"
                       {...register("country")}
                       placeholder="USA"
-                      disabled={!isAdmin}
+                      disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />
                   </div>
                 </div>
 
-                {isAdmin && (
+                {canEditProfile && (
                   <div className="pt-2">
                     <Button type="submit" disabled={isSubmitting} size="sm" className="bg-primary hover:bg-primary/90 text-white h-8 text-xs px-4">
                       {isSubmitting ? (
@@ -379,7 +379,7 @@ export default function ProfilePage() {
                     {user?.first_name?.[0] || user?.email?.[0] || "U"}
                   </div>
                 )}
-                {isAdmin && (
+                {canEditProfile && (
                   <>
                     <input
                       ref={fileInputRef}

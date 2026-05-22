@@ -158,4 +158,33 @@ export const PERMISSIONS = {
   // Settings
   VIEW_SETTINGS: "view_settings",
   MANAGE_SETTINGS: "manage_settings",
+  MANAGE_ROLES: "manage_roles",
+  MANAGE_PERMISSIONS: "manage_permissions",
+  VIEW_AUDIT_LOGS: "view_audit_logs",
+  MANAGE_BACKUPS: "manage_backups",
+
+  // Gate pass
+  VIEW_GATEPASS: "view_gatepass",
+  CREATE_GATEPASS: "create_gatepass",
+  ISSUE_GATEPASS: "issue_gatepass",
+
+  // Work orders (extended)
+  VIEW_OWN_WORKORDERS: "view_own_workorders",
+  UPDATE_WORKORDER_STATUS: "update_workorder_status",
+  ASSIGN_WORKORDERS: "assign_workorders",
+
+  // Reports (extended)
+  VIEW_ALL_REPORTS: "view_all_reports",
+  VIEW_FINANCIAL_REPORTS: "view_financial_reports",
+  GENERATE_REPORTS: "generate_reports",
+  APPROVE_PURCHASE_ORDERS: "approve_purchase_orders",
+  APPROVE_ESTIMATES: "approve_estimates",
+  PROCESS_PAYMENTS: "process_payments",
+  REFUND_PAYMENTS: "refund_payments",
+  MANAGE_BILLING: "manage_billing",
 } as const;
+
+/** Super-admin role still used only for module bypass; capabilities come from permissions list. */
+export function isSuperAdminRole(role?: string | null): boolean {
+  return role === "super-admin";
+}

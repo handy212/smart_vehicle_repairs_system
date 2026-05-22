@@ -29,20 +29,5 @@ export function CardSkeleton() {
   );
 }
 
-export function DashboardSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-10 w-64" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="pt-6">
-              <Skeleton className="h-20 w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
+export { DashboardSkeleton } from "./skeleton";
 

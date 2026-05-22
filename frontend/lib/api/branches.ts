@@ -32,6 +32,17 @@ export interface BranchListResponse {
   results: Branch[];
 }
 
+/** Normalize paginated or plain array branch list responses from the API. */
+export function normalizeBranchList(data: unknown): Branch[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && typeof data === "object" && Array.isArray((data as BranchListResponse).results)) {
+    return (data as BranchListResponse).results;
+  }
+  return [];
+}
+
 export interface BranchStats {
   branch_id: number;
   branch_name: string;
@@ -68,9 +79,9 @@ export const branchesApi = {
     is_active?: boolean;
     is_headquarters?: boolean;
     search?: string;
-  }): Promise<BranchListResponse | Branch[]> => {
+  }): Promise<Branch[]> => {
     const response = await apiClient.get("/branches/", { params });
-    return response.data;
+    return normalizeBranchList(response.data);
   },
 
   get: async (id: number): Promise<Branch> => {
@@ -137,8 +148,7 @@ export const branchesApi = {
       const response = await apiClient.get("/branches/", {
         params: { is_headquarters: true, is_active: true },
       });
-      const data = response.data;
-      const branches = Array.isArray(data) ? data : data?.results || [];
+      const branches = normalizeBranchList(response.data);
       if (branches.length > 0) {
         return branches[0];
       }
@@ -147,8 +157,7 @@ export const branchesApi = {
       const activeResponse = await apiClient.get("/branches/", {
         params: { is_active: true },
       });
-      const activeData = activeResponse.data;
-      const activeBranches = Array.isArray(activeData) ? activeData : activeData?.results || [];
+      const activeBranches = normalizeBranchList(activeResponse.data);
       if (activeBranches.length > 0) {
         return activeBranches[0];
       }

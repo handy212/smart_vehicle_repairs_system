@@ -213,18 +213,9 @@ function CreateDepartmentDialog({ open, onOpenChange, onCreated }: { open: boole
     const [desc, setDesc] = useState("");
     const [branchId, setBranchId] = useState("");
 
-    const { data: branches } = useQuery({
-        queryKey: ["branches", "list"],
-        queryFn: async () => {
-            const res = await branchesApi.list({ is_active: true });
-            if (Array.isArray(res)) {
-                return res;
-            }
-            if (res && Array.isArray(res.results)) {
-                return res.results;
-            }
-            return [];
-        }
+    const { data: branches = [] } = useQuery({
+        queryKey: ["branches", "list", { is_active: true }],
+        queryFn: () => branchesApi.list({ is_active: true }),
     });
 
     const mut = useMutation({
@@ -260,7 +251,7 @@ function CreateDepartmentDialog({ open, onOpenChange, onCreated }: { open: boole
                                 <SelectValue placeholder="Select Branch" />
                             </SelectTrigger>
                             <SelectContent>
-                                {branches?.map(b => (
+                                {branches.map(b => (
                                     <SelectItem key={b.id} value={b.id.toString()}>
                                         {b.name}
                                     </SelectItem>

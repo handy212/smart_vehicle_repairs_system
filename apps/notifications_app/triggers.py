@@ -6,6 +6,7 @@ from django.utils import timezone
 from .services import NotificationService, NotificationHelper
 from .models import Notification, NotificationTemplate
 from apps.accounts.settings_utils import get_setting, get_company_info, get_whatsapp_settings
+from .currency import format_money, enrich_money_context, get_currency_symbol
 
 
 class NotificationTriggers:
@@ -65,7 +66,14 @@ class NotificationTriggers:
             'company_phone': company_info.get('company_phone', ''),
             'company_address': company_info.get('company_address', ''),
             'site_url': get_setting('site_url', 'http://localhost:3000'),
+            'currency_symbol': get_currency_symbol(),
         }
+
+    def _with_money_context(self, context):
+        """Merge default context and add formatted money display fields."""
+        base = self._get_default_context()
+        base.update(context)
+        return enrich_money_context(base)
     
     # ==================== APPOINTMENT NOTIFICATIONS ====================
     
@@ -440,9 +448,7 @@ You can now start work.'''
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
         
-        # Build context
-        context = self._get_default_context()
-        context.update({
+        context = self._with_money_context({
             'work_order_id': work_order.id,
             'work_order_number': work_order.work_order_number,
             'wo_number': work_order.work_order_number,
@@ -451,6 +457,7 @@ You can now start work.'''
             'vehicle_display': vehicle_display,
             'completion_date': work_order.completed_at.strftime("%Y-%m-%d %H:%M") if work_order.completed_at else timezone.now().strftime("%Y-%m-%d %H:%M"),
             'total_amount': str(work_order.actual_total or work_order.estimated_total or 0),
+            'estimate_amount': str(work_order.estimated_total or 0),
         })
         
         title = f'Work Order {work_order.work_order_number} Completed'
@@ -503,7 +510,7 @@ You can now start work.'''
 Vehicle: {vehicle_display}
 Diagnosis: {work_order.diagnosis_notes or "See work order for details"}
 
-Estimated Cost: ${work_order.estimated_total or "TBD"}
+Estimated Cost: {format_money(work_order.estimated_total) if work_order.estimated_total else "TBD"}
 
 Please review and approve to proceed with repairs.'''
         
@@ -624,18 +631,18 @@ Please review and make necessary corrections.''',
         template = self._get_template('invoice_generated', 'email')
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
-        total_amount = str(work_order.actual_total or work_order.estimated_total or 0)
+        from apps.billing.work_order_invoices import get_primary_invoice
+
+        invoice = get_primary_invoice(work_order)
+        total_amount = str(invoice.total if invoice else (work_order.estimated_total or 0))
         
-        # Prepare context data
-        context = self._get_default_context()
+        base = self._get_base_url()
         
-        # Get invoice from work order if linked
-        invoice = getattr(work_order, 'invoice', None)
         invoice_number = invoice.invoice_number if invoice else work_order.work_order_number
         invoice_date = invoice.invoice_date if invoice else work_order.completed_at.date() if hasattr(work_order, 'completed_at') and work_order.completed_at else timezone.now().date()
         due_date = invoice.due_date if invoice else invoice_date
         
-        context.update({
+        context = self._with_money_context({
             'work_order_id': work_order.id,
             'work_order_number': work_order.work_order_number,
             'customer_name': customer_name,
@@ -646,10 +653,11 @@ Please review and make necessary corrections.''',
             'invoice_number': invoice_number,
             'invoice_date': str(invoice_date),
             'due_date': str(due_date),
-            'balance_due': total_amount,
+            'balance_due': str(invoice.amount_due if invoice else total_amount),
             'vehicle_info': vehicle_display,
-            'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}' if invoice else f'{self._get_base_url()}/workorders/{work_order.id}',
-            'invoice_pdf_url': f'{self._get_base_url()}/api/billing/invoices/{invoice.id}/pdf/' if invoice else None,
+            'invoice_link': f'{base}/portal/invoices/{invoice.id}' if invoice else f'{base}/portal/work-orders/{work_order.id}',
+            'payment_link': f'{base}/portal/payment/{invoice.id}' if invoice else None,
+            'invoice_pdf_url': f'{base}/api/billing/invoices/{invoice.id}/pdf/' if invoice else None,
             'filename': f'Invoice_{invoice_number}.pdf' if invoice else None,
         })
         
@@ -657,7 +665,7 @@ Please review and make necessary corrections.''',
         message = f'''Your invoice is ready for work order {work_order.work_order_number}.
 
 Vehicle: {vehicle_display}
-Total: ${total_amount}
+Total: {context.get("total_display", format_money(total_amount))}
 
 Please review and make payment when ready.'''
         
@@ -1010,9 +1018,7 @@ Please review the parts required and provide an estimate.
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         
-        # Build context
-        context = self._get_default_context()
-        context.update({
+        context = self._with_money_context({
              'invoice_id': invoice.id,
              'invoice_number': invoice.invoice_number,
              'total': str(invoice.total),
@@ -1024,10 +1030,11 @@ Please review the parts required and provide an estimate.
              'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
              'invoice_date': str(invoice.invoice_date),
              'amount_paid': str(invoice.amount_paid),
-             'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}',
+             'invoice_link': f'{self._get_base_url()}/portal/invoices/{invoice.id}',
+             'payment_link': f'{self._get_base_url()}/portal/payment/{invoice.id}',
         })
         
-        title = f'Invoice {invoice.invoice_number} - ${invoice.total}'
+        title = f'Invoice {invoice.invoice_number} - {context["total_display"]}'
         if template and template.subject:
             title = self.service._render_template(template.subject, context)
         
@@ -1044,7 +1051,7 @@ Due Date: {invoice.due_date}
 Work Order: {invoice.work_order.work_order_number if invoice.work_order else "N/A"}
 Vehicle: {vehicle_info}
 
-AMOUNT DUE: ${invoice.total}
+AMOUNT DUE: {context["total_display"]}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1080,11 +1087,12 @@ Thank you for your business!'''
             or getattr(invoice.customer.user, 'phone', None)
         )
         if sms_enabled and customer_phone:
+            portal_pay = f"{self._get_base_url()}/portal/payment/{invoice.id}"
             sms_body = (
                 f"Invoice {invoice.invoice_number} ready. "
-                f"Amount: {invoice.total}. "
+                f"Amount due: {format_money(invoice.amount_due or invoice.total)}. "
                 f"Due: {invoice.due_date}. "
-                f"Thank you!"
+                f"Pay: {portal_pay}"
             )
             sms_notification = Notification.objects.create(
                 recipient=invoice.customer.user,
@@ -1114,9 +1122,7 @@ Thank you for your business!'''
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         
-        # Build context
-        context = self._get_default_context()
-        context.update({
+        context = self._with_money_context({
             'invoice_id': invoice.id,
             'invoice_number': invoice.invoice_number,
             'days_until_due': str(days_until_due),
@@ -1127,6 +1133,8 @@ Thank you for your business!'''
             'vehicle_info': vehicle_info,
             'total': str(invoice.total),
             'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
+            'invoice_link': f'{self._get_base_url()}/portal/invoices/{invoice.id}',
+            'payment_link': f'{self._get_base_url()}/portal/payment/{invoice.id}',
         })
         
         title = f'Invoice Due in {days_until_due} Days - {invoice.invoice_number}'
@@ -1136,7 +1144,7 @@ Thank you for your business!'''
         message = f'''Reminder: Your invoice is due soon.
 
 Invoice Number: {invoice.invoice_number}
-Amount Due: ${invoice.balance_due}
+Amount Due: {context["balance_due_display"]}
 Due Date: {invoice.due_date} ({days_until_due} days)
 
 Please remit payment to avoid late fees.'''
@@ -1167,9 +1175,7 @@ Please remit payment to avoid late fees.'''
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         days_overdue = (timezone.now().date() - invoice.due_date).days
         
-        # Build context
-        context = self._get_default_context()
-        context.update({
+        context = self._with_money_context({
             'invoice_id': invoice.id,
             'invoice_number': invoice.invoice_number,
             'days_overdue': str(days_overdue),
@@ -1180,16 +1186,18 @@ Please remit payment to avoid late fees.'''
             'vehicle_info': vehicle_info,
             'total': str(invoice.total),
             'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
+            'invoice_link': f'{self._get_base_url()}/portal/invoices/{invoice.id}',
+            'payment_link': f'{self._get_base_url()}/portal/payment/{invoice.id}',
         })
         
-        title = f'OVERDUE: Invoice {invoice.invoice_number} - ${invoice.balance_due}'
+        title = f'OVERDUE: Invoice {invoice.invoice_number} - {context["balance_due_display"]}'
         if template and template.subject:
             title = self.service._render_template(template.subject, context)
         
         message = f'''Your invoice is now overdue.
 
 Invoice Number: {invoice.invoice_number}
-Amount Due: ${invoice.balance_due}
+Amount Due: {context["balance_due_display"]}
 Due Date: {invoice.due_date} ({days_overdue} days overdue)
 
 Late fees may apply. Please contact us to arrange payment.'''
@@ -1223,23 +1231,25 @@ Late fees may apply. Please contact us to arrange payment.'''
         # Get payment method display name
         payment_method_display = dict(payment.PAYMENT_METHOD_CHOICES).get(payment.payment_method, payment.payment_method) if hasattr(payment, 'PAYMENT_METHOD_CHOICES') else str(payment.payment_method)
         
-        # Build context
-        context = self._get_default_context()
         payment_date_str = payment.payment_date.strftime("%B %d, %Y") if hasattr(payment.payment_date, 'strftime') else str(payment.payment_date)
-        context.update({
+        inv = payment.invoice
+        base = self._get_base_url()
+        context = self._with_money_context({
             'payment_id': payment.id,
-            'invoice_id': payment.invoice.id,
+            'invoice_id': inv.id,
             'amount': str(payment.amount),
-            'balance_due': str(payment.invoice.amount_due),
-            'balance_remaining': str(payment.invoice.amount_due),
+            'balance_due': str(inv.amount_due),
+            'balance_remaining': str(inv.amount_due),
             'customer_name': customer_name,
             'payment_number': payment.payment_number if hasattr(payment, 'payment_number') else str(payment.id),
             'payment_method': payment_method_display,
-            'invoice_number': payment.invoice.invoice_number,
+            'invoice_number': inv.invoice_number,
             'payment_date': payment_date_str,
+            'invoice_link': f'{base}/portal/invoices/{inv.id}',
+            'payment_link': f'{base}/portal/payment/{inv.id}',
         })
         
-        title = f'Payment Received - ${payment.amount}'
+        title = f'Payment Received - {context["amount_display"]}'
         if template and template.subject:
             title = self.service._render_template(template.subject, context)
         
@@ -1252,10 +1262,10 @@ PAYMENT RECEIPT:
 Payment Number: {payment.payment_number if hasattr(payment, 'payment_number') else payment.id}
 Payment Date: {payment_date_str}
 Payment Method: {payment_method_display}
-Amount: ${payment.amount}
+Amount: {context["amount_display"]}
 
 Invoice: {payment.invoice.invoice_number}
-Balance Remaining: ${payment.invoice.amount_due}
+Balance Remaining: {context["balance_remaining_display"]}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1281,6 +1291,36 @@ Thank you for your business!'''
             related_object_id=payment.id
         )
         self.service.send_notification(notification)
+
+        prefs = getattr(payment.invoice.customer.user, 'notification_preferences', None)
+        sms_enabled = not prefs or (prefs.sms_enabled and getattr(prefs, 'payment_notifications', True))
+        customer_phone = (
+            (prefs.phone_number if prefs else None)
+            or getattr(payment.invoice.customer, 'phone', None)
+            or getattr(payment.invoice.customer.user, 'phone', None)
+        )
+        if sms_enabled and customer_phone:
+            paid_msg = (
+                f"Payment received: {payment.amount} for invoice {inv.invoice_number}. "
+                f"Balance: {inv.amount_due}."
+            )
+            if inv.amount_due <= 0:
+                paid_msg = (
+                    f"Thank you! {payment.amount} received for invoice {inv.invoice_number}. "
+                    "Paid in full."
+                )
+            sms_notification = Notification.objects.create(
+                recipient=payment.invoice.customer.user,
+                notification_type='payment',
+                channel='sms',
+                priority='normal',
+                title=f'Payment received — {inv.invoice_number}',
+                message=paid_msg,
+                data=context,
+                related_object_type='payment',
+                related_object_id=payment.id,
+            )
+            self.service.send_notification(sms_notification)
     
     # ==================== INVENTORY NOTIFICATIONS ====================
     
@@ -1361,9 +1401,7 @@ Parts are now available for use.''',
         if not recipient:
             return
 
-        # Build context
-        context = self._get_default_context()
-        context.update({
+        context = self._with_money_context({
             'po_id': purchase_order.id,
             'po_number': purchase_order.po_number,
             'supplier': purchase_order.supplier.name,
@@ -1374,7 +1412,7 @@ Parts are now available for use.''',
         title = f'Approval Required: PO {purchase_order.po_number}'
         message = f'''Purchase Order {purchase_order.po_number} from {purchase_order.supplier.name} requires your approval.
 
-Total: ${context['total']}
+Total: {context["total_display"]}
 Requested By: {context['requested_by']}
 
 Please review and approve.'''
@@ -1420,8 +1458,7 @@ Please review and approve.'''
         if not recipient:
             return
 
-        context = self._get_default_context()
-        context.update({
+        context = self._with_money_context({
             'bill_id': bill.id,
             'bill_number': bill.bill_number,
             'vendor': bill.vendor.name,
@@ -1433,7 +1470,7 @@ Please review and approve.'''
         title = f'Approval Required: Bill {bill.bill_number}'
         message = f'''Vendor Bill {bill.bill_number} from {bill.vendor.name} requires your approval.
 
-Total: {context['total']}
+Total: {context["total_display"]}
 Requested By: {context['requested_by']}
 
 Please review and approve.'''
@@ -2036,7 +2073,7 @@ Thank you for using our roadside assistance service.'''
 
 Thank you! - {self._get_company_name()}'''
                 else:
-                    charge = f"GHS {roadside_request.charge_amount}" if roadside_request.charge_amount else "See invoice"
+                    charge = format_money(roadside_request.charge_amount) if roadside_request.charge_amount else "See invoice"
                     sms_message = f'''Service completed - {roadside_request.request_number}
 
 {roadside_request.get_service_type_display()} - {charge}
@@ -2312,17 +2349,23 @@ Best regards,
         customer_name = self._build_customer_name(estimate.customer)
         vehicle_display = self._build_vehicle_display(estimate.vehicle) if estimate.vehicle else "N/A"
         
-        title = f'New Estimate #{estimate.estimate_number} - ${estimate.total}'
+        estimate_ctx = self._with_money_context({
+            'customer_name': customer_name,
+            'estimate_number': estimate.estimate_number,
+            'total': str(estimate.total),
+            'valid_until': str(estimate.valid_until),
+            'vehicle_display': vehicle_display,
+            'description': estimate.description or "See estimate for details",
+            'estimate_link': f'{self._get_base_url()}/portal/estimates/{estimate.id}',
+        })
+        title = f'New Estimate #{estimate.estimate_number} - {estimate_ctx["total_display"]}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'estimate_number': estimate.estimate_number,
-                'total': str(estimate.total),
-            })
+            title = self.service._render_template(template.subject, estimate_ctx)
         
         message = f'''A new estimate has been prepared for your review.
 
 Estimate Number: {estimate.estimate_number}
-Amount: ${estimate.total}
+Amount: {estimate_ctx["total_display"]}
 Valid Until: {estimate.valid_until}
 Vehicle: {vehicle_display}
 
@@ -2330,15 +2373,7 @@ Description: {estimate.description or "See estimate for details"}
 
 Please review and approve or decline this estimate to proceed.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'estimate_number': estimate.estimate_number,
-                'total': str(estimate.total),
-                'valid_until': str(estimate.valid_until),
-                'vehicle_display': vehicle_display,
-                'description': estimate.description or "See estimate for details",
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, estimate_ctx)
         
         # Determine enabled channels
         channels = ['email']
@@ -2363,15 +2398,7 @@ Please review and approve or decline this estimate to proceed.'''
                 template=self._get_template('estimate_sent', channel),
                 title=title,
                 message=message,
-                data={
-                    'estimate_id': estimate.id,
-                    'estimate_number': estimate.estimate_number,
-                    'total': str(estimate.total),
-                    'valid_until': str(estimate.valid_until),
-                    'customer_name': customer_name,
-                    'vehicle_display': vehicle_display,
-                    'description': estimate.description or "See estimate for details",
-                },
+                data=estimate_ctx,
                 related_object_type='estimate',
                 related_object_id=estimate.id
             )
@@ -2386,32 +2413,31 @@ Please review and approve or decline this estimate to proceed.'''
         customer_name = self._build_customer_name(estimate.customer)
         vehicle_display = self._build_vehicle_display(estimate.vehicle) if estimate.vehicle else "N/A"
         
+        estimate_ctx = self._with_money_context({
+            'estimate_id': estimate.id,
+            'customer_name': customer_name,
+            'estimate_number': estimate.estimate_number,
+            'total': str(estimate.total),
+            'valid_until': str(estimate.valid_until),
+            'days_until_expiration': str(days_until_expiration),
+            'vehicle_display': vehicle_display,
+            'estimate_link': f'{self._get_base_url()}/portal/estimates/{estimate.id}',
+        })
         title = f'Estimate #{estimate.estimate_number} Expires in {days_until_expiration} Days'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'estimate_number': estimate.estimate_number,
-                'days_until_expiration': str(days_until_expiration),
-            })
+            title = self.service._render_template(template.subject, estimate_ctx)
         
         message = f'''Your estimate is expiring soon.
 
 Estimate Number: {estimate.estimate_number}
-Amount: ${estimate.total}
+Amount: {estimate_ctx["total_display"]}
 Expires: {estimate.valid_until} ({days_until_expiration} days)
 
 Please review and approve or decline this estimate before it expires.
 
 Vehicle: {vehicle_display}'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'estimate_number': estimate.estimate_number,
-                'total': str(estimate.total),
-                'valid_until': str(estimate.valid_until),
-                'days_until_expiration': str(days_until_expiration),
-                'vehicle_display': vehicle_display,
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, estimate_ctx)
         
         notification = Notification.objects.create(
             recipient=estimate.customer.user,
@@ -2421,15 +2447,7 @@ Vehicle: {vehicle_display}'''
             template=template,
             title=title,
             message=message,
-            data={
-                'estimate_id': estimate.id,
-                'estimate_number': estimate.estimate_number,
-                'days_until_expiration': str(days_until_expiration),
-                'valid_until': str(estimate.valid_until),
-                'total': str(estimate.total),
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-            },
+            data=estimate_ctx,
             related_object_type='estimate',
             related_object_id=estimate.id
         )
@@ -2449,24 +2467,25 @@ Vehicle: {vehicle_display}'''
                     'estimate_number': estimate.estimate_number,
                 })
             
+            estimate_ctx = self._with_money_context({
+                'estimate_id': estimate.id,
+                'customer_name': customer_name,
+                'estimate_number': estimate.estimate_number,
+                'total': str(estimate.total),
+                'valid_until': str(estimate.valid_until),
+                'vehicle_display': vehicle_display,
+            })
             message = f'''Your estimate has expired.
 
 Estimate Number: {estimate.estimate_number}
-Amount: ${estimate.total}
+Amount: {estimate_ctx["total_display"]}
 Expired: {estimate.valid_until}
 
 Please contact us to request a new estimate or update this one.
 
 Vehicle: {vehicle_display}'''
             if template and template.body:
-                message = self.service._render_template(template.body, {
-                    'customer_name': customer_name,
-                    'estimate_number': estimate.estimate_number,
-                    'total': str(estimate.total),
-                    'valid_until': str(estimate.valid_until),
-                    'vehicle_display': vehicle_display,
-                    'company_name': self._get_company_name(),
-                })
+                message = self.service._render_template(template.body, estimate_ctx)
             
             notification = Notification.objects.create(
                 recipient=estimate.customer.user,
@@ -2476,14 +2495,7 @@ Vehicle: {vehicle_display}'''
                 template=template,
                 title=title,
                 message=message,
-                data={
-                    'estimate_id': estimate.id,
-                    'estimate_number': estimate.estimate_number,
-                    'valid_until': str(estimate.valid_until),
-                    'total': str(estimate.total),
-                    'customer_name': customer_name,
-                    'vehicle_display': vehicle_display,
-                },
+                data=estimate_ctx,
                 related_object_type='estimate',
                 related_object_id=estimate.id
             )
@@ -2501,7 +2513,7 @@ Vehicle: {vehicle_display}'''
                 title=f'Estimate #{estimate.estimate_number} Has Expired',
                 message=f'''Estimate {estimate.estimate_number} for {customer_name} has expired.
 
-Amount: ${estimate.total}
+Amount: {format_money(estimate.total)}
 Expired: {estimate.valid_until}
 
 Please contact the customer to update or create a new estimate.''',
@@ -2527,7 +2539,7 @@ Please contact the customer to update or create a new estimate.''',
             message = f'''Customer has approved estimate {estimate.estimate_number}.
 
 Customer: {customer_name}
-Amount: ${estimate.total}
+Amount: {format_money(estimate.total)}
 Vehicle: {vehicle_display}
 
 You can now proceed to convert it to a work order or invoice.'''
@@ -2572,7 +2584,7 @@ You can now proceed to convert it to a work order or invoice.'''
             message = f'''Customer has declined estimate {estimate.estimate_number}.
 
 Customer: {customer_name}
-Amount: ${estimate.total}
+Amount: {format_money(estimate.total)}
 Vehicle: {vehicle_display}
 
 Please contact the customer to discuss alternatives.'''

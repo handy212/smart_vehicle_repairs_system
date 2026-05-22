@@ -33,6 +33,15 @@ function getErrorDetail(error: unknown, fallback: string) {
   return data?.detail || fallback;
 }
 
+function getUserInitial(user: Pick<User, "first_name" | "last_name" | "email" | "username">): string {
+  const char =
+    user.first_name?.[0] ||
+    user.last_name?.[0] ||
+    user.email?.[0] ||
+    user.username?.[0];
+  return char ? char.toUpperCase() : "?";
+}
+
 export default function UsersManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -299,13 +308,13 @@ export default function UsersManagementPage() {
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-xs flex-shrink-0 border border-border bg-muted text-muted-foreground border-border">
-                            {user.first_name?.[0] || user.email[0].toUpperCase()}
+                            {getUserInitial(user)}
                           </div>
                           <div className="ml-3">
                             <div className="text-sm font-medium text-foreground">
                               {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
                             </div>
-                            <div className="text-xs text-muted-foreground">{user.email}</div>
+                            <div className="text-xs text-muted-foreground">{user.email || user.username || "—"}</div>
                           </div>
                         </div>
                       </TableCell>

@@ -81,7 +81,7 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('view_inspection_templates')]
         elif self.action == 'create' or self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy' or self.action == 'set_default' or self.action == 'duplicate':
             return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('manage_inspection_templates')]
-        return [IsAuthenticated(), IsModuleEnabled('inspections')]
+        return [IsAuthenticated(), IsModuleEnabled('inspections')(), HasPermission('view_inspection_templates')()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_default']
     search_fields = ['name', 'description']

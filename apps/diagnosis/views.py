@@ -3,7 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
+from apps.diagnosis.permission_utils import (
+    DiagnosisCodeLibraryPermissionMixin,
+    DiagnosisPermissionMixin,
+)
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from django.utils import timezone
@@ -71,8 +75,8 @@ def filter_diagnosis_queryset_for_branches(queryset, user, request, branch_looku
     show_all = request.query_params.get('all_branches', 'false').lower() == 'true' if request else False
     use_active_branch = not show_all
     
-    # Admins can see all branches unless use_active_branch is True and active branch is set
-    if getattr(user, "role", None) == "admin":
+    # Cross-branch visibility for users with full diagnosis/branch access
+    if user_has_permission(user, 'manage_branches') or user_has_permission(user, 'manage_diagnosis'):
         if use_active_branch and request:
             active_branch = resolve_branch(request)
             if active_branch:
@@ -148,7 +152,7 @@ class DiagnosisMutationLockMixin:
         return super().destroy(request, *args, **kwargs)
 
 
-class DiagnosisViewSet(viewsets.ModelViewSet):
+class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet for Diagnosis records.
     
@@ -175,7 +179,6 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         'findings',
         'photos',
     )
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_completed', 'technician', 'work_order']
     search_fields = [
@@ -197,11 +200,15 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def _user_has_quote_submission_role(user):
-        return getattr(user, 'role', None) in {'service_coordinator', 'parts_manager', 'manager', 'admin', 'super-admin'}
+        return user_has_permission(user, 'manage_diagnosis') or user_has_permission(user, 'edit_diagnosis')
 
     @staticmethod
     def _user_has_quote_completion_role(user):
-        return getattr(user, 'role', None) in {'parts_manager', 'manager', 'admin', 'super-admin'}
+        return (
+            user_has_permission(user, 'manage_diagnosis')
+            or user_has_permission(user, 'manage_inventory')
+            or user_has_permission(user, 'approve_part_requests')
+        )
 
     def _build_or_refresh_quote_estimate(self, diagnosis, recommendations, user):
         """
@@ -1415,7 +1422,9 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             return HttpResponse(html_content, content_type='text/html')
 
 
-class RepairRecommendationViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
+class RepairRecommendationViewSet(
+    DiagnosisPermissionMixin, DiagnosisMutationLockMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for Repair Recommendations.
     
@@ -1435,7 +1444,6 @@ class RepairRecommendationViewSet(DiagnosisMutationLockMixin, viewsets.ModelView
         'findings',
         'findings__diagnostic_codes',
     )
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'diagnosis', 'recommendation_type', 'priority',
@@ -1561,12 +1569,13 @@ class RepairRecommendationViewSet(DiagnosisMutationLockMixin, viewsets.ModelView
 # Phase 2: Structured Data ViewSets
 # ============================================================================
 
-class DiagnosticCodeViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
+class DiagnosticCodeViewSet(
+    DiagnosisPermissionMixin, DiagnosisMutationLockMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for Diagnostic Codes (DTCs).
     """
     queryset = DiagnosticCode.objects.all().select_related('diagnosis', 'diagnosis__work_order')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'code_type', 'severity', 'status']
     search_fields = ['code_number', 'description']
@@ -1666,14 +1675,15 @@ class DiagnosticCodeViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
         })
 
 
-class DiagnosticTestViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
+class DiagnosticTestViewSet(
+    DiagnosisPermissionMixin, DiagnosisMutationLockMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for Diagnostic Tests.
     """
     queryset = DiagnosticTest.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order', 'performed_by'
     )
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'category', 'status', 'performed_by']
     search_fields = ['test_name', 'test_procedure']
@@ -1704,14 +1714,15 @@ class DiagnosticTestViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
             serializer.save()
 
 
-class DiagnosisFindingViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
+class DiagnosisFindingViewSet(
+    DiagnosisPermissionMixin, DiagnosisMutationLockMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for Diagnosis Findings.
     """
     queryset = DiagnosisFinding.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order'
     ).prefetch_related('diagnostic_codes', 'diagnostic_tests', 'photos')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'category', 'severity', 'status']
     search_fields = ['finding_title', 'description', 'root_cause']
@@ -1744,14 +1755,15 @@ class DiagnosisFindingViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class DiagnosisPhotoViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
+class DiagnosisPhotoViewSet(
+    DiagnosisPermissionMixin, DiagnosisMutationLockMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for Diagnosis Photos.
     """
     queryset = DiagnosisPhoto.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order', 'finding', 'taken_by'
     )
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'finding', 'photo_type', 'taken_by']
     search_fields = ['caption']
@@ -1804,12 +1816,11 @@ class DiagnosisPhotoViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
 # Phase 3: Advanced Features ViewSets
 # ============================================================================
 
-class TestProcedureLibraryViewSet(viewsets.ModelViewSet):
+class TestProcedureLibraryViewSet(DiagnosisCodeLibraryPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet for Test Procedure Library.
     """
     queryset = TestProcedureLibrary.objects.all().select_related('created_by')
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'description', 'test_procedure']
@@ -1840,12 +1851,11 @@ class TestProcedureLibraryViewSet(viewsets.ModelViewSet):
         })
 
 
-class DiagnosticCodeLibraryViewSet(viewsets.ModelViewSet):
+class DiagnosticCodeLibraryViewSet(DiagnosisCodeLibraryPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet for Diagnostic Code Library (Code Lookup).
     """
     queryset = DiagnosticCodeLibrary.objects.all()
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['code_type', 'severity', 'is_active']
     search_fields = ['code_number', 'title', 'description']
@@ -1939,12 +1949,11 @@ class DiagnosticCodeLibraryViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class DiagnosisHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+class DiagnosisHistoryViewSet(DiagnosisPermissionMixin, viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for Diagnosis History/Analytics (Read-only).
     """
     queryset = DiagnosisHistory.objects.all()
-    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['vehicle_make', 'vehicle_model', 'vehicle_year']
     search_fields = ['vehicle_make', 'vehicle_model']

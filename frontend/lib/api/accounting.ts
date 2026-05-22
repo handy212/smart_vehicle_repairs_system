@@ -419,6 +419,16 @@ export const accountingApi = {
         return response.data;
     },
 
+    getGeneralLedger: async (params?: {
+        start_date?: string;
+        end_date?: string;
+        account_id?: number;
+        page?: number;
+    }) => {
+        const response = await apiClient.get("/accounting/reports/general-ledger/", { params });
+        return response.data;
+    },
+
     exportBoardPack: async (startDate: string, endDate: string): Promise<Blob> => {
         const response = await apiClient.post("/accounting/reports/management-dashboard/", {
             action: 'export_pdf',
@@ -462,5 +472,87 @@ export const accountingApi = {
         const queryParams = new URLSearchParams(params).toString();
         const response = await apiClient.get(`/accounting/analytics/dashboard/?${queryParams}`);
         return response.data;
-    }
+    },
+
+    getProfitLossComparative: async (
+        startDate: string,
+        endDate: string,
+        comparison: 'mom' | 'yoy' = 'mom',
+        branchId?: number
+    ): Promise<unknown> => {
+        const params: QueryParams = { start_date: startDate, end_date: endDate, comparison };
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/profit-loss-comparative/", { params });
+        return response.data;
+    },
+
+    getConsolidatedProfitLoss: async (startDate: string, endDate: string): Promise<unknown> => {
+        const response = await apiClient.get("/accounting/reports/consolidated-profit-loss/", {
+            params: { start_date: startDate, end_date: endDate },
+        });
+        return response.data;
+    },
+
+    getBranchPLScorecard: async (startDate: string, endDate: string): Promise<unknown> => {
+        const response = await apiClient.get("/accounting/reports/branch-pl-scorecard/", {
+            params: { start_date: startDate, end_date: endDate },
+        });
+        return response.data;
+    },
+
+    getSupplierAPAging: async (date?: string, branchId?: number): Promise<unknown> => {
+        const params: QueryParams = {};
+        if (date) params.date = date;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/supplier-ap-aging/", { params });
+        return response.data;
+    },
+
+    getCashCollectionReport: async (
+        startDate: string,
+        endDate: string,
+        branchId?: number
+    ): Promise<unknown> => {
+        const params: QueryParams = { start_date: startDate, end_date: endDate };
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/cash-collection/", { params });
+        return response.data;
+    },
+
+    getRevenueMix: async (startDate: string, endDate: string, branchId?: number): Promise<unknown> => {
+        const params: QueryParams = { start_date: startDate, end_date: endDate };
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/revenue-mix/", { params });
+        return response.data;
+    },
+
+    getExpenseBreakdown: async (startDate: string, endDate: string, branchId?: number): Promise<unknown> => {
+        const params: QueryParams = { start_date: startDate, end_date: endDate };
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/expense-breakdown/", { params });
+        return response.data;
+    },
+
+    getCostControlReport: async (
+        startDate: string,
+        endDate: string,
+        branchId?: number
+    ): Promise<unknown> => {
+        const params: QueryParams = { start_date: startDate, end_date: endDate };
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/cost-control/", { params });
+        return response.data;
+    },
+
+    getOpexVariance: async (
+        budgetId: number,
+        startDate?: string,
+        endDate?: string
+    ): Promise<unknown> => {
+        const params: QueryParams = { budget_id: budgetId };
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        const response = await apiClient.get("/accounting/reports/opex-variance/", { params });
+        return response.data;
+    },
 };

@@ -25,7 +25,18 @@ from apps.branches.utils import (
     get_user_accessible_branches,
     resolve_branch,
 )
-from apps.accounts.permissions import IsModuleEnabled
+from apps.accounts.permissions import (
+    HasAnyPermission,
+    IsModuleEnabled,
+    REPORTS_VIEW_PERMISSIONS,
+    user_has_permission,
+)
+
+REPORTS_PERMISSION_CLASSES = [
+    IsAuthenticated,
+    IsModuleEnabled('reports'),
+    HasAnyPermission(list(REPORTS_VIEW_PERMISSIONS)),
+]
 from .models import ReportExportLog, ReportSchedule, SavedReport
 from .serializers import ReportExportLogSerializer, ReportScheduleSerializer, SavedReportSerializer
 
@@ -92,13 +103,35 @@ def _branch_vehicle_ids(request):
 
     work_order_vehicles = WorkOrder.objects.filter(branch_id__in=branch_ids).values_list('vehicle_id', flat=True)
     appointment_vehicles = Appointment.objects.filter(branch_id__in=branch_ids).values_list('vehicle_id', flat=True)
-    invoice_vehicles = WorkOrder.objects.filter(invoice__branch_id__in=branch_ids).values_list('vehicle_id', flat=True)
+    invoice_vehicles = WorkOrder.objects.filter(
+        invoices__branch_id__in=branch_ids
+    ).values_list('vehicle_id', flat=True).distinct()
 
     return set(work_order_vehicles) | set(appointment_vehicles) | set(invoice_vehicles)
 
 
+def _work_order_primary_invoice_paid(wo):
+    """Paid amount from the work order's primary (latest) billable invoice."""
+    from apps.billing.work_order_invoices import get_primary_invoice
+
+    inv = get_primary_invoice(wo)
+    if inv and inv.status in ('paid', 'partial'):
+        return inv.amount_paid or Decimal('0')
+    return Decimal('0')
+
+
+def _work_orders_with_paid_invoices_in_period(start_date, end_date, request):
+    """Work orders that have at least one paid/partial invoice in the date range."""
+    qs = WorkOrder.objects.filter(
+        invoices__invoice_date__gte=start_date,
+        invoices__invoice_date__lte=end_date,
+        invoices__status__in=['paid', 'partial'],
+    ).distinct()
+    return _filter_branch_queryset(qs, request)
+
+
 REPORT_CATALOG = [
-    {'key': 'revenue', 'name': 'Revenue Report', 'category': 'financial', 'endpoint': 'revenue-report', 'exports': ['pdf'], 'drill_down': True},
+    {'key': 'revenue', 'name': 'Revenue Performance Report', 'category': 'financial', 'endpoint': 'revenue-report', 'exports': ['pdf'], 'drill_down': True},
     {'key': 'profit_margin', 'name': 'Profit Margin', 'category': 'financial', 'endpoint': 'profit-margin-report', 'exports': [], 'drill_down': False},
     {'key': 'work_orders', 'name': 'Work Order Statistics', 'category': 'operations', 'endpoint': 'work-order-statistics', 'exports': [], 'drill_down': True},
     {'key': 'technician_performance', 'name': 'Technician Performance', 'category': 'operations', 'endpoint': 'technician-performance', 'exports': [], 'drill_down': True},
@@ -112,12 +145,20 @@ REPORT_CATALOG = [
     {'key': 'subscriptions', 'name': 'Subscription Analytics', 'category': 'subscriptions', 'endpoint': 'subscription-analytics', 'exports': [], 'drill_down': True},
     {'key': 'service_bundles', 'name': 'Service Bundle Popularity', 'category': 'operations', 'endpoint': 'service-bundle-popularity', 'exports': [], 'drill_down': True},
     {'key': 'controls', 'name': 'Controls & Overrides', 'category': 'governance', 'endpoint': 'frontend-controls', 'exports': [], 'drill_down': True},
+    {'key': 'roadside_revenue', 'name': 'Roadside Revenue', 'category': 'operations', 'endpoint': 'roadside-revenue', 'exports': [], 'drill_down': True},
+    {'key': 'exception_log', 'name': 'Exception Log', 'category': 'operations', 'endpoint': 'exception-log', 'exports': [], 'drill_down': True},
+    {'key': 'system_usage', 'name': 'System Usage', 'category': 'operations', 'endpoint': 'system-usage', 'exports': [], 'drill_down': False},
+    {'key': 'traceability', 'name': 'Traceability', 'category': 'inventory', 'endpoint': 'traceability', 'exports': [], 'drill_down': True},
+    {'key': 'capacity_planning', 'name': 'Capacity Planning', 'category': 'operations', 'endpoint': 'capacity-planning', 'exports': [], 'drill_down': False},
+    {'key': 'dashboard_overview', 'name': 'Dashboard Overview', 'category': 'financial', 'endpoint': 'dashboard-overview', 'exports': [], 'drill_down': False},
+    {'key': 'cost_control_return_jobs', 'name': 'Cost Control Return Jobs', 'category': 'operations', 'endpoint': 'cost-control-return-jobs', 'exports': [], 'drill_down': True},
+    {'key': 'ap_cycle_time', 'name': 'AP Cycle Time', 'category': 'operations', 'endpoint': 'ap-cycle-time', 'exports': [], 'drill_down': False},
 ]
 
 
 class SavedReportViewSet(viewsets.ModelViewSet):
     serializer_class = SavedReportSerializer
-    permission_classes = [IsAuthenticated, IsModuleEnabled('reports')]
+    permission_classes = REPORTS_PERMISSION_CLASSES
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'description', 'report_type']
     filterset_fields = ['report_type', 'is_public']
@@ -130,14 +171,17 @@ class SavedReportViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
-        if serializer.instance.created_by_id != self.request.user.id and getattr(self.request.user, 'role', None) != 'admin':
+        if (
+            serializer.instance.created_by_id != self.request.user.id
+            and not user_has_permission(self.request.user, 'view_all_reports')
+        ):
             raise PermissionDenied('You can only update reports you created')
         serializer.save()
 
 
 class ReportScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = ReportScheduleSerializer
-    permission_classes = [IsAuthenticated, IsModuleEnabled('reports')]
+    permission_classes = REPORTS_PERMISSION_CLASSES
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'report_type', 'email_recipients']
     filterset_fields = ['report_type', 'frequency', 'is_active']
@@ -145,7 +189,7 @@ class ReportScheduleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = ReportSchedule.objects.select_related('created_by')
-        if getattr(user, 'role', None) == 'admin':
+        if user_has_permission(user, 'view_all_reports'):
             return queryset
         return queryset.filter(created_by=user)
 
@@ -155,7 +199,7 @@ class ReportScheduleViewSet(viewsets.ModelViewSet):
 
 class ReportExportLogViewSet(viewsets.ModelViewSet):
     serializer_class = ReportExportLogSerializer
-    permission_classes = [IsAuthenticated, IsModuleEnabled('reports')]
+    permission_classes = REPORTS_PERMISSION_CLASSES
     http_method_names = ['get', 'post', 'head', 'options']
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['report_type', 'report_name', 'file_name']
@@ -164,7 +208,7 @@ class ReportExportLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = ReportExportLog.objects.select_related('created_by')
-        if getattr(user, 'role', None) == 'admin':
+        if user_has_permission(user, 'view_all_reports'):
             return queryset
         return queryset.filter(created_by=user)
 
@@ -178,11 +222,11 @@ class ReportExportLogViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def report_catalog(request):
     """Return available enterprise report definitions and enabled controls."""
     saved_count = SavedReport.objects.filter(Q(created_by=request.user) | Q(is_public=True)).count()
-    if getattr(request.user, 'role', None) == 'admin':
+    if user_has_permission(request.user, 'view_all_reports'):
         schedule_count = ReportSchedule.objects.count()
     else:
         schedule_count = ReportSchedule.objects.filter(created_by=request.user).count()
@@ -205,7 +249,7 @@ def report_catalog(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def dashboard_overview(request):
     """
     Get comprehensive dashboard overview with key metrics
@@ -489,7 +533,7 @@ def dashboard_overview(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def revenue_report(request):
     """
     Detailed revenue report with breakdown by period, service type, and technician
@@ -585,11 +629,9 @@ def revenue_report(request):
         ).order_by('-total')
         
         # Revenue by technician (from work orders)
-        work_orders = _filter_branch_queryset(WorkOrder.objects.all(), request).filter(
-            invoice__invoice_date__gte=start_date,
-            invoice__invoice_date__lte=end_date,
-            invoice__status__in=['paid', 'partial']
-        ).select_related('primary_technician', 'invoice').prefetch_related('assigned_technicians')
+        work_orders = _work_orders_with_paid_invoices_in_period(
+            start_date, end_date, request
+        ).select_related('primary_technician').prefetch_related('assigned_technicians', 'invoices')
         
         revenue_by_tech = {}
         for wo in work_orders:
@@ -602,13 +644,7 @@ def revenue_report(request):
                 if tech:
                     tech_name = f"{tech.first_name} {tech.last_name}".strip() or tech.username
                     
-                    # Try to get invoice revenue
-                    revenue = Decimal('0')
-                    try:
-                        if hasattr(wo, 'invoice') and wo.invoice:
-                            revenue = wo.invoice.amount_paid or Decimal('0')
-                    except Exception:
-                        pass
+                    revenue = _work_order_primary_invoice_paid(wo)
                     
                     if tech_name not in revenue_by_tech:
                         revenue_by_tech[tech_name] = {
@@ -672,7 +708,7 @@ def revenue_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def profit_margin_report(request):
     """
     Calculate profit margins by analyzing revenue vs costs
@@ -699,14 +735,7 @@ def profit_margin_report(request):
     )
     
     # Cost of parts sold (from work orders)
-    work_orders = _filter_branch_queryset(
-        WorkOrder.objects.filter(
-            invoice__invoice_date__gte=start_date,
-            invoice__invoice_date__lte=end_date,
-            invoice__status__in=['paid', 'partial']
-        ),
-        request
-    )
+    work_orders = _work_orders_with_paid_invoices_in_period(start_date, end_date, request)
 
     labor_revenue = total_revenue['labor'] or Decimal('0')
     parts_revenue = total_revenue['parts'] or Decimal('0')
@@ -747,7 +776,7 @@ def profit_margin_report(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def work_order_statistics(request):
     """
     Comprehensive work order statistics
@@ -814,17 +843,46 @@ def work_order_statistics(request):
             avg_completion_time = total_time / count
             avg_completion_time = avg_completion_time.total_seconds() / 3600  # hours
     
-    # Top services
-    branch_ids = _get_branch_ids(request)
-    top_services = ServiceTask.objects.filter(
+    # Top services (same branch scope as work_orders)
+    top_services_qs = ServiceTask.objects.filter(
         work_order__created_at__date__gte=start_date,
         work_order__created_at__date__lte=end_date,
-        work_order__branch_id__in=branch_ids
-    ).values('description').annotate(
+        work_order__in=work_orders,
+    )
+    top_services = top_services_qs.values('description').annotate(
         count=Count('id')
     ).order_by('-count')[:10]
     
     total_work_orders = work_orders.count()
+
+    from apps.billing.models import Invoice as BillingInvoice
+    from apps.billing.models import Payment
+
+    period_invoices = BillingInvoice.objects.filter(
+        work_order__in=work_orders,
+        status__in=['sent', 'viewed', 'partial', 'paid', 'overdue'],
+    )
+    period_invoiced_total = period_invoices.aggregate(
+        total=Sum('total'),
+        outstanding=Sum('amount_due'),
+    )
+    branch_ids = _get_branch_ids(request)
+    payments_period = Payment.objects.filter(
+        status='completed',
+        payment_date__date__gte=start_date,
+        payment_date__date__lte=end_date,
+        invoice__work_order__in=work_orders,
+    )
+    if branch_ids:
+        payments_period = payments_period.filter(invoice__branch_id__in=branch_ids)
+    payments_received_total = payments_period.aggregate(
+        total=Sum(
+            ExpressionWrapper(
+                F('amount') - F('refund_amount'),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )
+    )['total'] or Decimal('0')
     
     return Response({
         'period': {
@@ -833,6 +891,9 @@ def work_order_statistics(request):
         },
         'summary': {
             'total_work_orders': total_work_orders,
+            'period_invoiced_total': float(period_invoiced_total['total'] or 0),
+            'period_outstanding_invoice_due': float(period_invoiced_total['outstanding'] or 0),
+            'period_payments_received': float(payments_received_total),
             'completed': completed.count() + work_orders.filter(
                 status='closed',
                 gate_passes__status='completed'
@@ -858,7 +919,7 @@ def work_order_statistics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def technician_performance(request):
     """
     Technician performance metrics including efficiency
@@ -895,8 +956,7 @@ def technician_performance(request):
         total_actual_hours = Decimal('0')
         
         for wo in completed:
-            if hasattr(wo, 'invoice') and wo.invoice.status in ['paid', 'partial']:
-                revenue += wo.invoice.amount_paid
+            revenue += _work_order_primary_invoice_paid(wo)
             
             # Sum hours for efficiency
             total_estimated_hours += wo.estimated_labor_hours or Decimal('0')
@@ -961,7 +1021,7 @@ def technician_performance(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def appointment_statistics(request):
     """
     Appointment statistics including no-show rate
@@ -1017,7 +1077,7 @@ def appointment_statistics(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def inventory_valuation(request):
     """
     Calculate total inventory value
@@ -1069,7 +1129,7 @@ def inventory_valuation(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def inventory_turnover(request):
     """
     Calculate inventory turnover rates
@@ -1139,7 +1199,7 @@ def inventory_turnover(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def low_stock_report(request):
     """
     Get low stock items that need reordering
@@ -1188,7 +1248,7 @@ def low_stock_report(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def customer_statistics(request):
     """
     Customer statistics and retention metrics
@@ -1299,7 +1359,7 @@ def customer_statistics(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def vehicle_statistics(request):
     """
     Vehicle statistics by make, model, year
@@ -1411,7 +1471,7 @@ def vehicle_statistics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def subscription_analytics(request):
     """
     Comprehensive subscription analytics and metrics
@@ -1556,7 +1616,7 @@ def subscription_analytics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def service_due_report(request):
     """
     Vehicles due for service based on time/mileage
@@ -1645,7 +1705,7 @@ def service_due_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+@permission_classes(REPORTS_PERMISSION_CLASSES)
 def service_bundle_popularity(request):
     """
     Detailed report on service bundle popularity and revenue
@@ -1690,9 +1750,7 @@ def service_bundle_popularity(request):
         completed_wos = wo_qs.filter(status='completed')
         
         for wo in completed_wos:
-            if hasattr(wo, 'invoice') and wo.invoice:
-                 # Use amount_paid to be conservative and match other reports
-                 revenue += wo.invoice.amount_paid
+            revenue += _work_order_primary_invoice_paid(wo)
         
         if appt_count > 0 or wo_count > 0:
             report_data.append({

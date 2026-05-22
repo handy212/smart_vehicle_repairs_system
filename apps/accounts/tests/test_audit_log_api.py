@@ -11,6 +11,7 @@ from auditlog.models import LogEntry
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from datetime import timedelta
+from apps.accounts.permission_models import Permission, UserPermissionOverride
 
 User = get_user_model()
 
@@ -87,8 +88,33 @@ class AuditLogPermissionsTest(AuditLogAPISetup):
         self.assertIn("results", response.data)
 
     def test_non_admin_cannot_list_audit_logs(self):
-        """Non-admin users should be forbidden from listing audit logs (403)."""
+        """Users without view_audit_logs should be forbidden (403)."""
         response = self.regular_client.get(AUDIT_LOGS_URL)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_user_with_view_audit_logs_can_list(self):
+        """Non-admin user granted view_audit_logs can list audit logs."""
+        perm = Permission.objects.get(code='view_audit_logs')
+        UserPermissionOverride.objects.create(
+            user=self.regular_user,
+            permission=perm,
+            granted=True,
+            granted_by=self.admin_user,
+        )
+        response = self.regular_client.get(AUDIT_LOGS_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+
+    def test_view_audit_logs_user_cannot_archive(self):
+        """view_audit_logs alone does not allow purging old logs."""
+        perm = Permission.objects.get(code='view_audit_logs')
+        UserPermissionOverride.objects.create(
+            user=self.regular_user,
+            permission=perm,
+            granted=True,
+            granted_by=self.admin_user,
+        )
+        response = self.regular_client.post(f"{AUDIT_LOGS_URL}archive/", {"days": 30})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_cannot_list_audit_logs(self):
@@ -205,9 +231,25 @@ class AuditLogStatsTest(AuditLogAPISetup):
             self.assertIn(item["action"], valid_actions)
 
     def test_non_admin_cannot_access_stats(self):
-        """Non-admin users should be forbidden from the stats endpoint."""
+        """Users without view_audit_logs should be forbidden from stats."""
         response = self.regular_client.get(f"{AUDIT_LOGS_URL}stats/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_stats_top_models_use_model_name_key(self):
+        """top_models entries should expose model_name and model_label."""
+        response = self.admin_client.get(f"{AUDIT_LOGS_URL}stats/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for item in response.data['top_models']:
+            self.assertIn('model_name', item)
+            self.assertIn('model_label', item)
+            self.assertIn('count', item)
+            self.assertNotIn('content_type__model', item)
+
+    def test_filter_options_endpoint(self):
+        response = self.admin_client.get(f"{AUDIT_LOGS_URL}filter_options/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('models', response.data)
+        self.assertIn('users', response.data)
 
 
 class AuditLogArchiveTest(AuditLogAPISetup):
@@ -324,6 +366,11 @@ class AuditLogSerializerTest(AuditLogAPISetup):
         self.assertNotEqual(user_name, actor.email, "user_name must not fall through to email")
         # Should be username when both first and last names are blank
         self.assertEqual(user_name, actor.username)
+
+    def test_serializer_includes_model_label(self):
+        response = self.admin_client.get(f"{AUDIT_LOGS_URL}{self.log_create.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('model_label'), 'User')
 
     def test_system_actor_shows_system_name(self):
         """Logs without an actor should show 'System' as user_name."""

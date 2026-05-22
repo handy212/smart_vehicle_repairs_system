@@ -24,7 +24,21 @@ from .serializers import (
 )
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from apps.accounts.permissions import HasPermission, HasAnyPermission, IsModuleEnabled
+from apps.accounts.permissions import (
+    HasPermission,
+    HasAnyPermission,
+    IsModuleEnabled,
+    user_can_manage_subscriptions,
+    user_has_permission,
+)
+
+
+def user_can_access_subscription(user, subscription):
+    if user_can_manage_subscriptions(user):
+        return True
+    if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+        return subscription.customer_id == user.customer_profile.id
+    return False
 from apps.customers.models import Customer
 
 
@@ -38,10 +52,10 @@ class PackageViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'available', 'stats']:
-            return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('view_subscriptions')()]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('manage_subscriptions')]
-        return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+        return [IsAuthenticated(), IsModuleEnabled('subscriptions')(), HasPermission('view_subscriptions')()]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -102,7 +116,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'my_subscriptions']:
-            return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('view_subscriptions')()]
         elif self.action == 'create':
             # Allow customers to create their own subscriptions without extra perms
             if getattr(self.request.user, "role", None) == "customer":
@@ -111,8 +127,10 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update', 'cancel', 'renew', 'destroy', 'change_plan']:
             return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['manage_subscriptions', 'cancel_subscriptions'])]
         elif self.action in ['usage', 'remaining']:
-            return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
-        return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('view_subscriptions')()]
+        return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('view_subscriptions')()]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -133,7 +151,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         
         queryset = Subscription.objects.select_related('customer', 'package', 'vehicle')
 
-        if user.role in ['admin', 'manager', 'super-admin'] or getattr(user, 'is_superuser', False):
+        if user_can_manage_subscriptions(user):
             return queryset
         elif user.role == 'customer' and hasattr(user, 'customer_profile'):
             customer = user.customer_profile
@@ -218,19 +236,12 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription = self.get_object()
         
         # Check permissions
-        if request.user.role not in ['admin', 'manager']:
-            if request.user.role == 'customer':
-                if not hasattr(request.user, 'customer_profile') or subscription.customer != request.user.customer_profile:
-                    return Response(
-                        {'detail': 'You do not have permission to view this subscription'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            else:
-                return Response(
-                    {'detail': 'You do not have permission to view subscriptions'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
+        if not user_can_access_subscription(request.user, subscription):
+            return Response(
+                {'detail': 'You do not have permission to view this subscription'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         usage_records = subscription.usage_records.all()
         serializer = SubscriptionUsageSerializer(usage_records, many=True)
         return Response(serializer.data)
@@ -241,19 +252,12 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription = self.get_object()
         
         # Check permissions
-        if request.user.role not in ['admin', 'manager']:
-            if request.user.role == 'customer':
-                if not hasattr(request.user, 'customer_profile') or subscription.customer != request.user.customer_profile:
-                    return Response(
-                        {'detail': 'You do not have permission to view this subscription'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            else:
-                return Response(
-                    {'detail': 'You do not have permission to view subscriptions'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
+        if not user_can_access_subscription(request.user, subscription):
+            return Response(
+                {'detail': 'You do not have permission to view this subscription'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         allowances = subscription.get_all_remaining_allowances()
         initial_allowances = subscription.package.features
         
@@ -315,19 +319,12 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription = self.get_object()
         
         # Check permissions
-        if request.user.role not in ['admin', 'manager']:
-            if request.user.role == 'customer':
-                if not hasattr(request.user, 'customer_profile') or subscription.customer != request.user.customer_profile:
-                    return Response(
-                        {'detail': 'You do not have permission to renew this subscription'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            else:
-                return Response(
-                    {'detail': 'You do not have permission to renew subscriptions'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
+        if not user_can_access_subscription(request.user, subscription):
+            return Response(
+                {'detail': 'You do not have permission to renew this subscription'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         months = request.data.get('months', None)
         if months:
             try:
@@ -365,19 +362,12 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription = self.get_object()
         
         # Check permissions
-        if request.user.role not in ['admin', 'manager']:
-            if request.user.role == 'customer':
-                if not hasattr(request.user, 'customer_profile') or subscription.customer != request.user.customer_profile:
-                    return Response(
-                        {'detail': 'You do not have permission to cancel this subscription'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            else:
-                return Response(
-                    {'detail': 'You do not have permission to cancel subscriptions'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
+        if not user_can_access_subscription(request.user, subscription):
+            return Response(
+                {'detail': 'You do not have permission to cancel this subscription'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         reason = request.data.get('reason', '')
         subscription.cancel(reason=reason)
         serializer = SubscriptionSerializer(subscription)
@@ -389,10 +379,10 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription = self.get_object()
         
         # Check permissions (same as cancel/renew)
-        if request.user.role not in ['admin', 'manager']:
+        if not user_can_manage_subscriptions(request.user):
             return Response(
                 {'detail': 'You do not have permission to change the plan'},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
         
         package_id = request.data.get('package_id')
@@ -494,7 +484,7 @@ class SubscriptionUsageViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         
-        if user.role in ['admin', 'manager']:
+        if user_can_manage_subscriptions(user):
             return SubscriptionUsage.objects.all()
         elif user.role == 'customer' and hasattr(user, 'customer_profile'):
             customer = user.customer_profile

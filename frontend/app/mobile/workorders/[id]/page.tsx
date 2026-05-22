@@ -38,8 +38,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import {
+  getWorkOrderListBillingDisplay,
+  parseWorkOrderMoney,
+  resolveWorkOrderInvoiceAmount,
+} from "@/lib/workorders/workOrderBillingDisplay";
 
 export default function MobileWorkOrderDetailPage() {
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
@@ -473,16 +480,42 @@ export default function MobileWorkOrderDetailPage() {
             </div>
           )}
 
-          {(workOrder.estimated_total || workOrder.total_cost) && (
-            <div className="pt-2 border-t border-border">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Estimated Total</span>
-                <span className="font-semibold text-foreground">
-                  ${workOrder.estimated_total || workOrder.total_cost}
-                </span>
+          {(() => {
+            const billing = getWorkOrderListBillingDisplay(workOrder, {
+              audience: "staff",
+              formatDue: formatCurrency,
+            });
+            const invoiceAmount = resolveWorkOrderInvoiceAmount(workOrder);
+            const estimated = parseWorkOrderMoney(workOrder.estimated_total);
+            if (!billing && estimated <= 0) return null;
+            return (
+              <div className="pt-2 border-t border-border space-y-2">
+                {billing && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Invoice Total</span>
+                    <div className="text-right">
+                      <span className="font-semibold text-foreground">
+                        {formatCurrency(billing.amount)}
+                      </span>
+                      {billing.statusLine && (
+                        <span className="block text-[10px] text-muted-foreground capitalize">
+                          {billing.statusLine}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!invoiceAmount && estimated > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Estimated (shop)</span>
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(estimated)}
+                    </span>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Quick Link to Photos */}
           <div className="pt-3 border-t border-border">

@@ -47,6 +47,10 @@ import { PauseForm } from "./forms/PauseForm";
 import { StartDiagnosisForm } from "./forms/StartDiagnosisForm";
 import { AssignServiceCoordinatorForm } from "./forms/AssignServiceCoordinatorForm";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
+import {
+  canCreateWorkOrderInvoice,
+  getInvoicePaymentDisplay,
+} from "@/lib/workorders/invoiceSummaryDisplay";
 
 interface WorkflowActionsProps {
   workOrderId: number;
@@ -163,20 +167,33 @@ export default function WorkflowActions({
   const [discontinueReason, setDiscontinueReason] = useState<string>("declined_estimate_or_work");
   const [discontinueNotes, setDiscontinueNotes] = useState("");
 
-  // Fetch work order data if not provided
+  // Always subscribe to the shared work-order query so invoice_summary updates after billing.
   const { data: workOrderData } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(workOrderId),
-    enabled: !workOrder,
+    enabled: !!workOrderId && !isNaN(workOrderId),
+    initialData: workOrder,
+    refetchOnWindowFocus: true,
   });
 
-  const currentWorkOrder = workOrder || workOrderData;
+  const currentWorkOrder = workOrderData ?? workOrder;
   const invoiceSummary = currentWorkOrder?.invoice_summary;
   const existingInvoiceId = invoiceSummary?.id;
+  const hasActiveInvoice =
+    !!existingInvoiceId && invoiceSummary?.status !== "void";
+  const canCreateNewInvoice = currentWorkOrder
+    ? canCreateWorkOrderInvoice(currentWorkOrder)
+    : false;
+  const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, status);
 
-  const openInvoice = () => {
-    if (existingInvoiceId) {
-      router.push(`/billing/invoices/${existingInvoiceId}`);
+  const openInvoice = async () => {
+    const fresh = await queryClient.fetchQuery({
+      queryKey: ["workorder", workOrderId],
+      queryFn: () => workordersApi.get(workOrderId),
+    });
+    const linkedId = fresh?.invoice_summary?.id ?? existingInvoiceId;
+    if (linkedId) {
+      router.push(`/billing/invoices/${linkedId}`);
       return;
     }
     router.push(`/billing/invoices/new?work_order=${workOrderId}`);
@@ -1144,60 +1161,75 @@ export default function WorkflowActions({
         break;
 
       case "completed":
-        if (existingInvoiceId) {
-          actions.push(
-            {
-              label: "View invoice",
-              icon: DollarSign,
-              onClick: openInvoice,
-              description:
-                invoiceSummary?.status === "draft"
-                  ? `Draft ${invoiceSummary.invoice_number} - issue when ready, then mark work order as invoiced`
-                  : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`,
-            },
-            {
-              label: "Mark as invoiced",
+        if (hasActiveInvoice) {
+          const viewDescription = invoicePayment
+            ? `${invoiceSummary?.invoice_number} · ${invoicePayment.paymentLabel}${
+                invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
+              }`
+            : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`;
+          actions.push({
+            label: "View invoice",
+            icon: DollarSign,
+            onClick: openInvoice,
+            description: viewDescription,
+          });
+          if (!invoicePayment || invoicePayment.canMarkWorkOrderInvoiced) {
+            actions.push({
+              label: "Mark work order invoiced",
               icon: CheckCircle,
               onClick: () => setShowMarkInvoicedDialog(true),
               disabled: markInvoicedMutation.isPending,
               variant: "outline",
-              description: "Record odometer out and move this work order to invoiced",
-            }
-          );
-        } else {
+              description: invoicePayment?.paymentLabel.startsWith("Paid")
+                ? "Paid in full — work order should be Invoiced now (automatic). Use this if it did not update."
+                : "Paying in full auto-marks Invoiced, or use this after the invoice is issued",
+            });
+          }
+        } else if (canCreateNewInvoice) {
           actions.push({
             label: "Create invoice",
             icon: DollarSign,
             onClick: openInvoice,
-            description: "Create an invoice from this work order",
+            description: invoiceSummary?.status === "void"
+              ? "Issue a new invoice (previous invoice was voided)"
+              : "Create an invoice from this work order",
           });
         }
         break;
 
       case "discontinued_pending_bill":
-        if (existingInvoiceId) {
-          actions.push(
-            {
-              label: "View invoice",
-              icon: DollarSign,
-              onClick: openInvoice,
-              description: `Open ${invoiceSummary?.invoice_number || "linked invoice"}`,
-            },
-            {
-              label: "Mark as invoiced",
+        if (hasActiveInvoice) {
+          const viewDescriptionDisc = invoicePayment
+            ? `${invoiceSummary?.invoice_number} · ${invoicePayment.paymentLabel}${
+                invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
+              }`
+            : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`;
+          actions.push({
+            label: "View invoice",
+            icon: DollarSign,
+            onClick: openInvoice,
+            description: viewDescriptionDisc,
+          });
+          if (!invoicePayment || invoicePayment.canMarkWorkOrderInvoiced) {
+            actions.push({
+              label: "Mark work order invoiced",
               icon: CheckCircle,
               onClick: () => setShowMarkInvoicedDialog(true),
               disabled: markInvoicedMutation.isPending,
               variant: "outline",
-              description: "After odometer out is recorded",
-            }
-          );
-        } else {
+              description: invoicePayment?.paymentLabel.startsWith("Paid")
+                ? "Paid in full — work order should be Invoiced now (automatic). Use this if it did not update."
+                : "Paying in full auto-marks Invoiced, or use this after the invoice is issued",
+            });
+          }
+        } else if (canCreateNewInvoice) {
           actions.push({
             label: "Create invoice",
             icon: DollarSign,
             onClick: openInvoice,
-            description: "Bill for labor on completed/skipped tasks and installed parts",
+            description: invoiceSummary?.status === "void"
+              ? "Issue a new invoice (previous invoice was voided)"
+              : "Bill for labor on completed/skipped tasks and installed parts",
           });
         }
         break;

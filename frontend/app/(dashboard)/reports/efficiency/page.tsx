@@ -18,8 +18,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useState } from "react";
 import { format, subDays } from "date-fns";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import type { TableExportPayload } from "@/lib/utils/report-export";
 
 export default function TechnicianEfficiencyPage() {
+    const { formatCurrency } = useCurrency();
     const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
         from: subDays(new Date(), 30),
         to: new Date()
@@ -40,6 +44,7 @@ export default function TechnicianEfficiencyPage() {
                     <h1 className="text-2xl font-bold tracking-tight">Technician Efficiency</h1>
                     <p className="text-muted-foreground text-sm">Monitor technician performance and labor efficiency.</p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
                 <DateRangePicker
                     startDate={format(dateRange.from, "yyyy-MM-dd")}
                     endDate={format(dateRange.to, "yyyy-MM-dd")}
@@ -52,6 +57,38 @@ export default function TechnicianEfficiencyPage() {
                         if (!isNaN(d.getTime())) setDateRange(prev => ({ ...prev, to: d }));
                     }}
                 />
+                <ReportExportMenu
+                    getPayload={() => {
+                        const techs = data?.technicians ?? [];
+                        if (!techs.length) return null;
+                        return {
+                            reportTitle: "Technician Efficiency",
+                            filename: `technician-efficiency_${format(dateRange.from, "yyyy-MM-dd")}_${format(dateRange.to, "yyyy-MM-dd")}`,
+                            dateInfo: `${format(dateRange.from, "yyyy-MM-dd")} to ${format(dateRange.to, "yyyy-MM-dd")}`,
+                            headers: [
+                                "Technician",
+                                "Completed WOs",
+                                "Avg Completion (hrs)",
+                                "Est. Hours",
+                                "Actual Hours",
+                                "Efficiency %",
+                                "Revenue",
+                            ],
+                            rows: techs.map((item: { technician: { name: string }; metrics: Record<string, number> }) => [
+                                item.technician.name,
+                                item.metrics.completed ?? 0,
+                                item.metrics.average_completion_hours ?? 0,
+                                item.metrics.total_estimated_hours ?? item.metrics.estimated_hours ?? 0,
+                                item.metrics.total_actual_hours ?? item.metrics.actual_hours ?? 0,
+                                item.metrics.efficiency_percentage ?? 0,
+                                item.metrics.revenue ?? 0,
+                            ]),
+                            currencyColumnIndexes: [6],
+                        };
+                    }}
+                    disabled={!data?.technicians?.length}
+                />
+                </div>
             </div>
 
             {isLoading ? (
@@ -118,7 +155,7 @@ export default function TechnicianEfficiencyPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right font-mono">
-                                                ${item.metrics.revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                {formatCurrency(item.metrics.revenue ?? 0)}
                                             </TableCell>
                                         </TableRow>
                                     );

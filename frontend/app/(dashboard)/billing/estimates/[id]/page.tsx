@@ -60,16 +60,14 @@ export default function EstimateDetailPage() {
     enabled: isValidId,
   });
 
-  const isAdminUser =
-    currentUser?.role === "admin" ||
-    currentUser?.role === "super-admin" ||
-    Boolean((currentUser as { is_superuser?: boolean } | null)?.is_superuser);
-  const canEditEstimate = isAdminUser || hasPermission("edit_estimates");
-  const canApproveEstimate = isAdminUser || hasAnyPermission(["approve_estimates", "edit_estimates"]);
-  const canSendEstimate = isAdminUser || hasAnyPermission(["edit_estimates", "send_notifications"]);
-  const canConvertEstimateToInvoice =
-    isAdminUser || hasAnyPermission(["convert_estimate_to_invoice", "create_invoices"]);
-  const canConvertEstimateToWorkOrder = isAdminUser || hasPermission("create_workorders");
+  const canEditEstimate = hasPermission("edit_estimates");
+  const canApproveEstimate = hasAnyPermission(["approve_estimates", "edit_estimates"]);
+  const canSendEstimate = hasAnyPermission(["edit_estimates", "send_notifications"]);
+  const canConvertEstimateToInvoice = hasAnyPermission([
+    "convert_estimate_to_invoice",
+    "create_invoices",
+  ]);
+  const canConvertEstimateToWorkOrder = hasPermission("create_workorders");
   const currentStatus = estimate?.status ?? null;
   const getApiErrorMessage = (error: unknown, fallback: string) => {
     if (typeof error === "object" && error && "response" in error) {

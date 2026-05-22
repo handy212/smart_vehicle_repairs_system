@@ -630,12 +630,12 @@ class Invoice(models.Model):
     # References
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='invoices', null=True, blank=True)
-    work_order = models.OneToOneField(
-        WorkOrder, 
+    work_order = models.ForeignKey(
+        WorkOrder,
         on_delete=models.PROTECT,
-        related_name='invoice',
+        related_name='invoices',
         null=True,
-        blank=True
+        blank=True,
     )
     estimate = models.ForeignKey(
         Estimate,
@@ -799,6 +799,18 @@ class Invoice(models.Model):
                         # First invoice without branch
                         self.invoice_number = "INV000001"
         
+        was_fully_paid_before = False
+        previous_status = None
+        had_sent_at = bool(self.sent_at)
+        if self.pk:
+            try:
+                previous = Invoice.objects.get(pk=self.pk)
+                was_fully_paid_before = previous.is_paid
+                previous_status = previous.status
+                had_sent_at = bool(previous.sent_at)
+            except Invoice.DoesNotExist:
+                pass
+
         # Calculate amount due
         self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
         
@@ -824,6 +836,19 @@ class Invoice(models.Model):
                 self.status = 'overdue'
         
         super().save(*args, **kwargs)
+
+        from apps.billing.work_order_invoices import notify_invoice_ready_if_needed
+
+        notify_invoice_ready_if_needed(
+            self,
+            previous_status=previous_status,
+            had_sent_at=had_sent_at,
+        )
+
+        if self.is_paid and not was_fully_paid_before and self.work_order_id:
+            from apps.billing.work_order_invoice_sync import try_auto_mark_work_order_invoiced
+            status_user = getattr(self, '_status_change_user', None)
+            try_auto_mark_work_order_invoiced(self, user=status_user)
     
     def calculate_totals_from_work_order(self):
         """Calculate invoice totals from work order.
@@ -1312,6 +1337,8 @@ class Payment(models.Model):
     
     def update_invoice_payment(self):
         """Update the invoice's amount_paid"""
+        if self.processed_by_id:
+            self.invoice._status_change_user = self.processed_by
         self.invoice.recalculate_amount_paid_from_collections()
     
     @property
@@ -1723,13 +1750,6 @@ class Refund(models.Model):
         
         super().save(*args, **kwargs)
 
-# Audit Log Registration
-from auditlog.registry import auditlog
-auditlog.register(Invoice)
-auditlog.register(Payment)
-auditlog.register(Estimate)
-
-
 class CreditNote(models.Model):
     credit_note_number = models.CharField(max_length=20, unique=True, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='credit_notes')
@@ -1851,9 +1871,6 @@ class CreditNoteApplication(models.Model):
 
     def __str__(self):
         return f"{self.credit_note_id} → Inv {self.invoice_id}: {self.amount}"
-
-
-auditlog.register(CreditNote)
 
 
 class Bill(models.Model):

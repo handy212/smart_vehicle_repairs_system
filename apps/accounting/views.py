@@ -78,7 +78,7 @@ def scope_accruals(queryset, request):
     branch_id = get_accounting_branch_id(request)
     if branch_id is None:
         return queryset
-    return queryset.filter(branch_id=branch_id)
+    return queryset.filter(Q(branch_id=branch_id) | Q(branch__isnull=True))
 
 
 def get_report_branch_id(request):
@@ -295,6 +295,17 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     """ViewSet for bank statements"""
     queryset = BankStatement.objects.all()
     serializer_class = BankStatementSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        branch_id = get_accounting_branch_id(self.request)
+        if branch_id is not None:
+            qs = qs.filter(
+                Q(lines__matched_transaction__journal_entry__branch_id=branch_id)
+                | Q(created_by__branch_id=branch_id)
+            ).distinct()
+        return qs
+
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
@@ -552,6 +563,16 @@ class FundTransferViewSet(viewsets.ModelViewSet):
     """ViewSet for fund transfers"""
     queryset = FundTransfer.objects.all()
     serializer_class = FundTransferSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        branch_id = get_accounting_branch_id(self.request)
+        if branch_id is not None:
+            qs = qs.filter(
+                Q(journal_entry__branch_id=branch_id) | Q(journal_entry__isnull=True)
+            )
+        return qs
+
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
@@ -659,7 +680,7 @@ class BudgetViewSet(viewsets.ModelViewSet):
     filterset_fields = ['fiscal_year', 'status', 'branch']
 
     def get_queryset(self):
-        return scope_budget_lines(super().get_queryset(), self.request)
+        return scope_budgets(super().get_queryset(), self.request)
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -707,7 +728,7 @@ class BudgetLineViewSet(viewsets.ModelViewSet):
     filterset_fields = ['budget', 'account', 'period']
 
     def get_queryset(self):
-        return scope_budgets(super().get_queryset(), self.request)
+        return scope_budget_lines(super().get_queryset(), self.request)
 
 
 class BudgetVsActualView(APIView):
@@ -962,7 +983,8 @@ class ManagementDashboardView(APIView):
         end_date = parse_date(end_date_str) if end_date_str else timezone.now().date()
         start_date = parse_date(start_date_str) if start_date_str else end_date.replace(day=1)
         
-        report = DashboardService.get_management_metrics(start_date, end_date)
+        branch_id = get_report_branch_id(request)
+        report = DashboardService.get_management_metrics(start_date, end_date, branch_id=branch_id)
         return Response(report)
 
     def post(self, request):
@@ -975,8 +997,9 @@ class ManagementDashboardView(APIView):
             # Default to current month-to-date
             end_date = parse_date(end_date_str) if end_date_str else timezone.now().date()
             start_date = parse_date(start_date_str) if start_date_str else end_date.replace(day=1)
+            branch_id = get_report_branch_id(request)
             
-            pdf_buffer = ExportService.generate_board_pack(start_date, end_date)
+            pdf_buffer = ExportService.generate_board_pack(start_date, end_date, branch_id=branch_id)
             
             response = HttpResponse(pdf_buffer, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="board_pack_{end_date}.pdf"'
@@ -1118,17 +1141,20 @@ class AnalyticsDashboardView(APIView):
         end_date_str = request.query_params.get('end_date')
         branch_id = get_report_branch_id(request)
         
-        # Default to current month if dates not provided
         today = timezone.now().date()
         if not start_date_str:
             start_date = today.replace(day=1)
         else:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            start_date = parse_date(start_date_str)
+            if not start_date:
+                return Response({'detail': 'Invalid start_date'}, status=status.HTTP_400_BAD_REQUEST)
             
         if not end_date_str:
             end_date = today
         else:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            end_date = parse_date(end_date_str)
+            if not end_date:
+                return Response({'detail': 'Invalid end_date'}, status=status.HTTP_400_BAD_REQUEST)
             
         from .analytics import AnalyticsService
         data = AnalyticsService.get_dashboard_snapshot(start_date, end_date, branch_id)

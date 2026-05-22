@@ -71,9 +71,12 @@ interface RecentInvoice {
   due_date?: string; invoice_date?: string;
 }
 
+type WorkOrderStatusCount = { status: string; count: number };
+
 export interface PerfexDashboardProps {
   stats: Stats;
   workOrderSummary?: WorkOrderSummary;
+  workOrderByStatus?: WorkOrderStatusCount[];
   recentWorkOrders?: RecentWorkOrder[];
   todayAppointments?: TodayAppointment[];
   lowStockItems?: LowStockItem[];
@@ -83,6 +86,7 @@ export interface PerfexDashboardProps {
   invoiceStats?: InvoiceStats;
   recentInvoices?: RecentInvoice[];
   isLoading?: boolean;
+  queryErrors?: string[];
   onRefresh?: () => void;
   todayLabel: string;
   formatCurrency: (val: number) => string;
@@ -277,11 +281,11 @@ export function PerfexSkeleton() {
 ═══════════════════════════════════════════════════════════════════ */
 
 export function PerfexDashboard({
-  stats, workOrderSummary,
+  stats, workOrderSummary, workOrderByStatus = [],
   recentWorkOrders = [], todayAppointments = [], lowStockItems = [],
   serviceDueVehicles = [], technicianData = [], revenueChartData = [],
   invoiceStats, recentInvoices = [],
-  isLoading = false, onRefresh, todayLabel, formatCurrency,
+  isLoading = false, queryErrors = [], onRefresh, todayLabel, formatCurrency,
 }: PerfexDashboardProps) {
 
   const router = useRouter();
@@ -450,6 +454,23 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
     <div className="space-y-4 p-4 pb-8 max-w-[1700px] mx-auto">
       <DynamicPageTitle title="Dashboard" />
 
+      {queryErrors.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3">
+          <div className="flex items-start gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>
+              Some data could not be loaded: {queryErrors.join(", ")}. Metrics may be incomplete.
+            </span>
+          </div>
+          {onRefresh && (
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              Retry
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* ── Page Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 print:mb-4">
         <div>
@@ -499,7 +520,30 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
         ))}
       </div>
 
-
+      {workOrderByStatus.length > 0 && (
+        <div className="rounded-md border border-border bg-card px-4 py-3 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Work orders by status (30 days)
+            </h2>
+            <Link href="/reports/operations" className="text-[11px] text-primary hover:underline">
+              Operations report
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {workOrderByStatus.map((row) => (
+              <Link
+                key={row.status}
+                href={`/workorders?status=${encodeURIComponent(row.status)}`}
+                className="inline-flex items-center gap-2 rounded-md border border-border/80 bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/30 hover:bg-muted/60"
+              >
+                <StatusPill status={row.status} map={WO_STATUS_COLORS} />
+                <span className="font-semibold tabular-nums text-foreground">{row.count}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Main Grid: Work Orders/Invoices + Appointments ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -876,7 +920,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               </span>
             </h2>
             <div className="flex items-center gap-2">
-              <Link href="/reports" onClick={(e) => e.stopPropagation()}
+              <Link href="/reports/efficiency" onClick={(e) => e.stopPropagation()}
                 className="text-xs text-primary hover:underline">Full report</Link>
               {techExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </div>
@@ -966,7 +1010,15 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                   const critical = item.quantity === 0;
                   return (
                     <tr key={item.id ?? `stock-${idx}`} className="border-b border-border/50 transition-colors hover:bg-muted/40">
-                      <td className="px-4 py-2.5 text-xs font-medium text-foreground">{item.name}</td>
+                      <td className="px-4 py-2.5 text-xs font-medium text-foreground">
+                        {item.id ? (
+                          <Link href={`/inventory/parts/${item.id}`} className="text-primary hover:underline">
+                            {item.name}
+                          </Link>
+                        ) : (
+                          item.name
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{item.part_number || "—"}</td>
                       <td className="px-4 py-2.5 text-xs font-semibold text-foreground">{item.quantity}</td>
                       <td className="px-4 py-2.5 text-xs text-muted-foreground">{item.reorder_point}</td>

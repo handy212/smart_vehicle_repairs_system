@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from django.core.management import call_command
 from django.test import RequestFactory
-from rolepermissions.roles import assign_role
 from rest_framework_simplejwt.tokens import RefreshToken
 from apps.inventory.models import PartCategory
 from apps.accounts.permission_models import Permission, Role, UserPermissionOverride
@@ -213,17 +212,21 @@ class PermissionAuditTests(TestCase):
         self.technician_user = User.objects.create_user(
             username='tech_audit', email='tech_audit@example.com', password='password123', role='technician'
         )
-        assign_role(self.technician_user, 'technician')
 
         self.accountant_user = User.objects.create_user(
             username='acct_audit', email='acct_audit@example.com', password='password123', role='accountant'
         )
-        assign_role(self.accountant_user, 'accountant')
         
         self.manager_user = User.objects.create_user(
             username='manager_audit', email='manager_audit@example.com', password='password123', role='manager'
         )
-        assign_role(self.manager_user, 'manager')
+
+        self.receptionist_user = User.objects.create_user(
+            username='reception_audit',
+            email='reception_audit@example.com',
+            password='password123',
+            role='receptionist',
+        )
 
         # Setup Clients
         self.tech_client = APIClient()
@@ -234,6 +237,9 @@ class PermissionAuditTests(TestCase):
         
         self.manager_client = APIClient()
         self.manager_client.force_authenticate(user=self.manager_user)
+
+        self.receptionist_client = APIClient()
+        self.receptionist_client.force_authenticate(user=self.receptionist_user)
 
     def test_technician_restrictions(self):
         """
@@ -270,6 +276,18 @@ class PermissionAuditTests(TestCase):
         response = self.tech_client.get('/api/technicians/technicians/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+        # 4. List work orders without any WO view permission -> Should Fail (403)
+        for code in ('view_workorders', 'view_own_workorders'):
+            UserPermissionOverride.objects.create(
+                user=self.technician_user,
+                permission=Permission.objects.get(code=code),
+                granted=False,
+                reason='Audit test revoke WO view',
+                granted_by=self.manager_user,
+            )
+        response = self.tech_client.get('/api/workorders/work-orders/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_accountant_access(self):
         """
         Verify Accountant:
@@ -285,6 +303,10 @@ class PermissionAuditTests(TestCase):
         response = self.acct_client.get('/api/billing/tax-rates/')
         print(f"Accountant view tax rates response: {response.status_code}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 3. Reports without view_reports -> Should Fail (403)
+        response = self.receptionist_client.get('/api/reporting/catalog/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         
     def test_manager_access(self):
         """
@@ -317,6 +339,18 @@ class PermissionAuditTests(TestCase):
         if response.status_code != 201:
              print(f"Manager create vehicle failed: {response.data}")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # 2. Reports with view_reports -> Should Pass
+        response = self.manager_client.get('/api/reporting/catalog/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_receptionist_cannot_list_diagnosis(self):
+        response = self.receptionist_client.get('/api/diagnosis/diagnoses/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_technician_can_list_diagnosis(self):
+        response = self.tech_client.get('/api/diagnosis/diagnoses/')
+        self.assertIn(response.status_code, [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND])
 
 
 class UserAndRolePermissionBoundaryTests(TestCase):
@@ -510,6 +544,13 @@ class BackupPermissionAndDownloadTests(TestCase):
         self.admin_client.force_authenticate(self.admin_user)
         self.tech_client = APIClient()
         self.tech_client.force_authenticate(self.technician_user)
+
+    def test_settings_endpoints_require_manage_settings(self):
+        response = self.tech_client.get('/api/accounts/admin/settings/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.admin_client.get('/api/accounts/admin/settings/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_backup_endpoints_require_manage_backups(self):
         response = self.tech_client.get('/api/accounts/admin/backups/')

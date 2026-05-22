@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import apiClient from "@/lib/api/client";
+import { BranchReportChip } from "@/components/reporting/BranchReportChip";
+import { useBranchStore } from "@/store/branchStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +18,18 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Download, Calendar, Package, TrendingUp, DollarSign, Clock } from "lucide-react";
+import { Calendar, Package, TrendingUp, DollarSign, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { exportSheetsToExcel, type TableExportPayload } from "@/lib/utils/report-export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Download, ChevronDown } from "lucide-react";
+import { useToast } from "@/lib/hooks/useToast";
 
 interface InventoryAccountingData {
     period: {
@@ -64,20 +76,113 @@ export default function InventoryAccountingPage() {
     const [dateFrom, setDateFrom] = useState(firstDay.toISOString().split('T')[0]);
     const [dateTo, setDateTo] = useState(now.toISOString().split('T')[0]);
 
+    const { activeBranchId } = useBranchStore();
+
     const { data, isLoading, refetch } = useQuery<InventoryAccountingData>({
-        queryKey: ['inventory-accounting', dateFrom, dateTo],
+        queryKey: ['inventory-accounting', dateFrom, dateTo, activeBranchId],
         queryFn: async () => {
-            const response = await axios.get(
-                `/api/inventory/parts/inventory_accounting_report/?date_from=${dateFrom}&date_to=${dateTo}`
+            const response = await apiClient.get(
+                '/inventory/parts/inventory_accounting_report/',
+                { params: { date_from: dateFrom, date_to: dateTo } }
             );
             return response.data;
         },
     });
 
     const { formatCurrency } = useCurrency();
+    const { toast } = useToast();
 
     const formatNumber = (num: number) => {
         return new Intl.NumberFormat('en-US').format(num);
+    };
+
+    const buildCategoryExport = (): TableExportPayload | null => {
+        if (!data?.by_category?.length) return null;
+        return {
+            filename: `inventory-accounting_${dateFrom}_${dateTo}`,
+            reportTitle: "Inventory Accounting — By category",
+            dateInfo: `${dateFrom} to ${dateTo}`,
+            headers: ["Category", "Parts", "Quantity", "Cost value", "Selling value", "Profit", "Margin %"],
+            rows: data.by_category.map((c) => [
+                c.category_name,
+                c.parts_count,
+                c.total_quantity,
+                c.cost_value,
+                c.selling_value,
+                c.potential_profit,
+                c.margin_percent.toFixed(2),
+            ]),
+            currencyColumnIndexes: [3, 4, 5],
+        };
+    };
+
+    const exportFullWorkbook = () => {
+        if (!data) {
+            toast({ title: "Nothing to export", description: "Load the report first." });
+            return;
+        }
+        const s = data.inventory_summary;
+        const cogs = data.cogs_analysis;
+        exportSheetsToExcel(
+            [
+                {
+                    name: "Summary",
+                    headers: [
+                        { key: "metric", label: "Metric" },
+                        { key: "value", label: "Value" },
+                    ],
+                    rows: [
+                        { metric: "Total cost value", value: s.total_cost_value },
+                        { metric: "Total selling value", value: s.total_selling_value },
+                        { metric: "Potential profit", value: s.potential_profit },
+                        { metric: "Margin %", value: s.potential_margin_percent },
+                        { metric: "COGS (period)", value: cogs.cogs },
+                        { metric: "Units sold", value: cogs.units_sold },
+                        { metric: "Turnover ratio", value: cogs.inventory_turnover_ratio },
+                        { metric: "Days inventory", value: cogs.days_inventory_outstanding },
+                    ],
+                    currencyKeys: ["value"],
+                },
+                {
+                    name: "By category",
+                    headers: [
+                        { key: "category", label: "Category" },
+                        { key: "parts", label: "Parts" },
+                        { key: "qty", label: "Quantity" },
+                        { key: "cost", label: "Cost value" },
+                        { key: "selling", label: "Selling value" },
+                        { key: "profit", label: "Profit" },
+                        { key: "margin", label: "Margin %" },
+                    ],
+                    rows: data.by_category.map((cat) => ({
+                        category: cat.category_name,
+                        parts: cat.parts_count,
+                        qty: cat.total_quantity,
+                        cost: cat.cost_value,
+                        selling: cat.selling_value,
+                        profit: cat.potential_profit,
+                        margin: cat.margin_percent,
+                    })),
+                    currencyKeys: ["cost", "selling", "profit"],
+                },
+                {
+                    name: "Stock aging",
+                    headers: [
+                        { key: "range", label: "Age range" },
+                        { key: "parts", label: "Parts" },
+                        { key: "value", label: "Value" },
+                    ],
+                    rows: data.stock_aging.map((a) => ({
+                        range: a.age_range,
+                        parts: a.parts_count,
+                        value: a.value,
+                    })),
+                    currencyKeys: ["value"],
+                },
+            ],
+            `inventory-accounting_${dateFrom}_${dateTo}`
+        );
+        toast({ title: "Export started", description: "Downloading Excel workbook." });
     };
 
     if (isLoading) {
@@ -99,10 +204,23 @@ export default function InventoryAccountingPage() {
                         Comprehensive inventory valuation, COGS analysis, and turnover metrics
                     </p>
                 </div>
-                <Button variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Excel
-                </Button>
+                <div className="flex gap-2">
+                    <ReportExportMenu getPayload={buildCategoryExport} disabled={!data} />
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" type="button" disabled={!data}>
+                                <Download className="mr-2 h-4 w-4" />
+                                More
+                                <ChevronDown className="ml-1 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={exportFullWorkbook}>
+                                Export full workbook (.xlsx)
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
 
             {/* Date Range Filter */}

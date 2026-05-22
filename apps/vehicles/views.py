@@ -1021,7 +1021,7 @@ class ServiceTypeViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('edit_vehicles')]
         elif self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('edit_vehicles')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), IsModuleEnabled('vehicles')(), HasPermission('view_vehicles')()]
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -1089,7 +1089,7 @@ class VehicleServiceScheduleViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('edit_vehicles')]
         elif self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('edit_vehicles')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), IsModuleEnabled('vehicles')(), HasPermission('view_vehicles')()]
     
     @action(detail=False, methods=['get'])
     def services_due(self, request):

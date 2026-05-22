@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import apiClient from "@/lib/api/client";
 import Link from "next/link";
 import { useBranchStore } from "@/store/branchStore";
+import { BranchReportChip } from "@/components/reporting/BranchReportChip";
 
 interface BranchOption {
     id: number;
@@ -53,8 +54,8 @@ export default function BudgetsPage() {
     });
 
     // Fetch budgets
-    const { data: budgets, isLoading } = useQuery({
-        queryKey: ["budgets"],
+    const { data: budgets, isLoading, isError, refetch } = useQuery({
+        queryKey: ["budgets", activeBranchId],
         queryFn: async () => {
             const response = await apiClient.get("/accounting/budgets/");
             return response.data.results || response.data;
@@ -86,7 +87,7 @@ export default function BudgetsPage() {
                 start_date: `${new Date().getFullYear()}-01-01`,
                 end_date: `${new Date().getFullYear()}-12-31`,
                 description: "",
-                branch: ""
+                branch: activeBranchId || ""
             });
         }
     });
@@ -131,12 +132,15 @@ export default function BudgetsPage() {
     return (
         <div className="space-y-4">
             {/* Compact Header */}
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex justify-between items-center pt-2 flex-wrap gap-3">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Budgets</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Manage fiscal year budgets and track variance
                     </p>
+                    <div className="mt-2">
+                        <BranchReportChip />
+                    </div>
                 </div>
                 <Button onClick={() => setShowCreateForm(!showCreateForm)} size="sm" className="h-9">
                     {showCreateForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
@@ -248,6 +252,13 @@ export default function BudgetsPage() {
                     {isLoading ? (
                         <div className="flex justify-center p-8">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : isError ? (
+                        <div className="text-center py-12 text-sm text-destructive">
+                            Failed to load budgets.{" "}
+                            <button type="button" className="underline" onClick={() => refetch()}>
+                                Retry
+                            </button>
                         </div>
                     ) : budgets?.length > 0 ? (
                         <div className="overflow-x-auto">

@@ -26,13 +26,13 @@ from .serializers import UserSerializer
 User = get_user_model()
 
 
-from .permissions import HasPermission, IsAdmin, IsModuleEnabled
+from .permissions import HasAnyPermission, HasPermission, IsModuleEnabled, user_has_permission
 
 def is_admin_user(user):
-    """Check if user is admin or super-admin (utility for this file)"""
+    """Users with full system settings access (respects permission overrides)."""
     if not user or not user.is_authenticated:
         return False
-    return user.role in ('admin', 'super-admin')
+    return user_has_permission(user, 'manage_settings')
 
 
 
@@ -40,7 +40,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing system settings
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('manage_settings')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['key', 'description']
@@ -59,8 +59,8 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         if self.action in ['public_branding', 'public_firebase', 'public_integrations']:
             return [AllowAny()]
         if self.action == 'by_category':
-            return [IsAuthenticated()]
-        return [IsAdmin()] # Default to admin only
+            return [IsAuthenticated(), HasAnyPermission(['view_settings', 'manage_settings'])()]
+        return [IsAuthenticated(), HasPermission('manage_settings')()]
 
     def list(self, request, *args, **kwargs):
         category = request.query_params.get('category')
@@ -383,14 +383,18 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for viewing audit logs (read-only)
     """
-    permission_classes = [IsAdmin]
     pagination_class = AuditLogPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = []
     search_fields = ['object_repr', 'actor__email', 'actor__username', 'remote_addr']
     ordering_fields = ['timestamp', 'action']
     ordering = ['-timestamp']
-    
+
+    def get_permissions(self):
+        if self.action == 'archive':
+            return [IsAuthenticated(), HasPermission('manage_settings')()]
+        return [IsAuthenticated(), HasPermission('view_audit_logs')()]
+
     def get_queryset(self):
         # Use LogEntry from django-auditlog
         queryset = LogEntry.objects.select_related('actor', 'content_type').all()
@@ -450,29 +454,85 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """Get audit log statistics"""
-        logs = self.get_queryset()
-        
+        """Get audit log statistics (respects same filters as list)."""
+        logs = self.filter_queryset(self.get_queryset())
+
         total = logs.count()
         by_action = logs.values('action').annotate(count=Count('id')).order_by('-count')
         by_user = logs.values('actor__email', 'actor__username').annotate(count=Count('id')).order_by('-count')[:10]
         by_model = logs.values('content_type__model').annotate(count=Count('id')).order_by('-count')[:10]
-        
-        # Map actions to readable strings for the stats
+
         action_map = {0: 'create', 1: 'update', 2: 'delete'}
         formatted_actions = []
         for item in by_action:
-             formatted_actions.append({
-                 'action': action_map.get(item['action'], str(item['action'])),
-                 'count': item['count']
-             })
+            formatted_actions.append({
+                'action': action_map.get(item['action'], str(item['action'])),
+                'count': item['count'],
+            })
+
+        from .admin_serializers import audit_model_label
+
+        formatted_models = []
+        for item in by_model:
+            model_name = item['content_type__model']
+            formatted_models.append({
+                'model_name': model_name,
+                'model_label': audit_model_label(model_name),
+                'count': item['count'],
+            })
+
+        formatted_users = []
+        for item in by_user:
+            email = item.get('actor__email') or ''
+            username = item.get('actor__username') or ''
+            formatted_users.append({
+                'user_email': email,
+                'user_username': username,
+                'user_name': (email.split('@')[0] if email else username) or 'System',
+                'count': item['count'],
+            })
 
         return Response({
             'total': total,
             'by_action': formatted_actions,
-            'top_users': list(by_user),
-            'top_models': list(by_model),
+            'top_users': formatted_users,
+            'top_models': formatted_models,
         })
+
+    @action(detail=False, methods=['get'], url_path='filter_options')
+    def filter_options(self, request):
+        """Distinct models and recent actors for filter dropdowns."""
+        from .admin_serializers import audit_model_label
+
+        logs = self.get_queryset()
+        model_names = (
+            logs.values_list('content_type__model', flat=True)
+            .distinct()
+            .order_by('content_type__model')
+        )
+        models = [
+            {'value': name, 'label': audit_model_label(name)}
+            for name in model_names
+            if name
+        ]
+
+        actor_rows = (
+            logs.exclude(actor_id__isnull=True)
+            .values('actor_id', 'actor__email', 'actor__username', 'actor__first_name', 'actor__last_name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:50]
+        )
+        users = []
+        for row in actor_rows:
+            full_name = f"{row.get('actor__first_name') or ''} {row.get('actor__last_name') or ''}".strip()
+            display = full_name or row.get('actor__username') or row.get('actor__email') or 'Unknown'
+            users.append({
+                'id': row['actor_id'],
+                'label': display,
+                'email': row.get('actor__email') or '',
+            })
+
+        return Response({'models': models, 'users': users})
     
     @action(detail=False, methods=['get'])
     def import_history(self, request):
@@ -705,7 +765,7 @@ class EmailTemplateViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing email templates
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('manage_notifications')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['template_type', 'is_active']
     search_fields = ['name', 'subject']
@@ -733,7 +793,7 @@ class SMSTemplateViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing SMS templates
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('manage_notifications')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['template_type', 'is_active']
     search_fields = ['name', 'message']
@@ -758,7 +818,7 @@ class SMSTemplateViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdmin])
+@permission_classes([IsAuthenticated, HasPermission('manage_settings')])
 def admin_dashboard_stats(request):
     """Get admin dashboard statistics"""
     visible_users = User.objects.exclude(role='super-admin')

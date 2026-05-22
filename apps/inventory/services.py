@@ -95,7 +95,25 @@ class InventoryService:
         
         if not branch:
             raise ValueError("Branch is required for inventory transactions")
-            
+
+        if transaction_type == 'sale':
+            work_order = kwargs.get('work_order')
+            if work_order is None:
+                raise ValueError(
+                    "Inventory sale/issue requires a linked approved work order."
+                )
+            approved_statuses = {
+                'approved', 'in_progress', 'paused', 'completed',
+                'ready_for_pickup', 'delivered', 'invoiced', 'closed',
+            }
+            if work_order.status not in approved_statuses and not getattr(
+                work_order, 'is_approved', False
+            ):
+                raise ValueError(
+                    f"Cannot issue stock while work order is {work_order.status}. "
+                    "Customer approval is required first."
+                )
+
         quantity = int(quantity)
         if transaction_type in ['reserve', 'release', 'purchase', 'receive', 'transfer_in', 'transfer_out', 'sale', 'damage', 'loss', 'return', 'found'] and quantity <= 0:
             raise ValueError("Quantity must be greater than 0")
@@ -226,7 +244,9 @@ class InventoryService:
             raise ValueError("Select an approver before submitting this transfer")
         if any(selected_approver.id == user.id for selected_approver in selected_approvers):
             raise ValueError("Transfers must be approved by someone other than the submitter")
-        if any(getattr(selected_approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'} for selected_approver in selected_approvers):
+        from apps.accounts.permissions import user_can_approve_transfers
+
+        if any(not user_can_approve_transfers(selected_approver) for selected_approver in selected_approvers):
             raise ValueError("Selected approver must be a manager, admin, or parts manager")
 
         transfer.status = 'pending_approval'
@@ -247,7 +267,8 @@ class InventoryService:
 
         if transfer.status != 'pending_approval':
             raise ValueError("Only transfers pending approval can be approved")
-        is_admin_approver = getattr(user, 'role', None) in {'admin', 'super-admin'} or getattr(user, 'is_superuser', False)
+        from apps.accounts.permissions import user_can_approve_transfers
+        is_admin_approver = user_can_approve_transfers(user)
         approvals = transfer.approvals.select_related('approver')
         if approvals.exists():
             user_approval = approvals.filter(approver=user, status='pending').first()
@@ -294,7 +315,8 @@ class InventoryService:
         """Reject transfer"""
         if transfer.status != 'pending_approval':
             raise ValueError("Only transfers pending approval can be rejected")
-        is_admin_approver = getattr(user, 'role', None) in {'admin', 'super-admin'} or getattr(user, 'is_superuser', False)
+        from apps.accounts.permissions import user_can_approve_transfers
+        is_admin_approver = user_can_approve_transfers(user)
         approvals = transfer.approvals.select_related('approver')
         if approvals.exists():
             user_approval = approvals.filter(approver=user, status='pending').first()

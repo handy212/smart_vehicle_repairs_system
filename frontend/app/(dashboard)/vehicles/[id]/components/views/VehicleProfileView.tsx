@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { sumWorkOrderInvoiceAmounts } from "@/lib/workorders/workOrderBillingDisplay";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +38,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
     // Calculate stats
     const totalServices = vehicleWorkOrders.length;
-    const totalSpent = vehicleWorkOrders.reduce((sum, wo) => {
-        const cost = wo.total_cost ? parseFloat(wo.total_cost.toString()) : 0;
-        return sum + cost;
-    }, 0);
+    const totalSpent = sumWorkOrderInvoiceAmounts(vehicleWorkOrders);
 
     const completedWorkOrders = vehicleWorkOrders.filter((wo) => wo.status === "completed");
     const lastServiceDate = completedWorkOrders.length > 0
@@ -292,7 +290,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                         <CardContent className="px-0 py-2">
                             <div className="divide-y text-sm">
                                 <div className="px-4 py-3 flex justify-between items-center">
-                                    <span className="text-muted-foreground">Total Spent</span>
+                                    <span className="text-muted-foreground">Total Invoiced</span>
                                     <span className="font-semibold">{formatCurrency(totalSpent)}</span>
                                 </div>
                                 <div className="px-4 py-3 flex justify-between items-center">

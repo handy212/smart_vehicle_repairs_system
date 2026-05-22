@@ -1,6 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from . import views
+from . import operations_views
 
 # app_name = 'reporting'  # Commented out to avoid conflict with frontend namespace
 
@@ -42,4 +43,13 @@ urlpatterns = [
     
     # Service Bundle Reports
     path('service-bundle-popularity/', views.service_bundle_popularity, name='service_bundle_popularity'),
+
+    # Operations intelligence (Part B Phase 3)
+    path('roadside-revenue/', operations_views.roadside_revenue_report, name='roadside_revenue'),
+    path('cost-control-return-jobs/', operations_views.cost_control_return_jobs, name='cost_control_return_jobs'),
+    path('ap-cycle-time/', operations_views.ap_cycle_time_dashboard, name='ap_cycle_time'),
+    path('exception-log/', operations_views.exception_log_report, name='exception_log'),
+    path('traceability/', operations_views.traceability_dashboard, name='traceability'),
+    path('capacity-planning/', operations_views.capacity_planning_report, name='capacity_planning'),
+    path('system-usage/', operations_views.system_usage_report, name='system_usage'),
 ]

@@ -9,7 +9,6 @@ import {
   ShieldCheck, 
   MessageSquare, 
   Calculator,
-  Search,
   Save
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,7 +18,6 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { QuickBooksOnlineCard } from "@/components/integrations/QuickBooksOnlineCard";
 import { IntegrationField } from "@/components/integrations/IntegrationField";
 import { cn } from "@/lib/utils/cn";
-import { Input } from "@/components/ui/input";
 
 const CATEGORIES = [
   { id: "accounting", label: "Accounting", icon: Calculator },
@@ -41,7 +39,6 @@ export default function IntegrationsPage() {
   const canManage = hasPermission("manage_settings");
 
   const activeCategory = searchParams.get("category") || "accounting";
-  const [searchQuery, setSearchQuery] = useState("");
   const [showSecret, setShowSecret] = useState<Record<number, boolean>>({});
 
   const handleCategoryChange = (catId: string) => {
@@ -112,17 +109,8 @@ export default function IntegrationsPage() {
       return s.category === activeCategory;
     });
 
-    // Filter by search
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      base = base.filter(s => 
-        (s.display_name || s.key).toLowerCase().includes(q) || 
-        s.description?.toLowerCase().includes(q)
-      );
-    }
-
     return base;
-  }, [settings, activeCategory, searchQuery]);
+  }, [settings, activeCategory]);
 
   const [rowEdits, setRowEdits] = useState<Record<number, string>>({});
 
@@ -194,15 +182,6 @@ export default function IntegrationsPage() {
             </div>
             
             <div className="flex items-center gap-2">
-              <div className="relative w-full md:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                    placeholder="Search integrations..." 
-                    className="pl-9 h-8 bg-muted/50 border-border focus:bg-card transition-all text-xs"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
               <Button
                 size="sm"
                 className="h-8"
@@ -242,7 +221,7 @@ export default function IntegrationsPage() {
         {/* Content Area */}
         <main className="space-y-4">
           {/* Featured/Special Cards */}
-          {activeCategory === "accounting" && !searchQuery && (
+          {activeCategory === "accounting" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <QuickBooksOnlineCard />
@@ -293,7 +272,7 @@ export default function IntegrationsPage() {
           ) : (activeCategory !== "accounting") && (
             <div className="flex flex-col items-center justify-center py-16 bg-muted/10 rounded-md border border-dashed border-border">
                 <p className="text-muted-foreground font-bold text-sm">No connected services found in this category.</p>
-                <p className="text-muted-foreground/60 text-xs mt-1">Try adjusting your filters or search query.</p>
+                <p className="text-muted-foreground/60 text-xs mt-1">Try another category tab above.</p>
             </div>
           )}
         </main>

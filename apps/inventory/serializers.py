@@ -660,11 +660,13 @@ class ServicePackageCreateSerializer(serializers.ModelSerializer):
 class StockItemSerializer(serializers.ModelSerializer):
     branch_name = serializers.ReadOnlyField(source='branch.name')
     branch_code = serializers.ReadOnlyField(source='branch.code')
-    
+    part_number = serializers.ReadOnlyField(source='part.part_number')
+    part_name = serializers.ReadOnlyField(source='part.name')
+
     class Meta:
         model = StockItem
         fields = [
-            'id', 'part', 'branch', 'branch_name', 'branch_code',
+            'id', 'part', 'part_number', 'part_name', 'branch', 'branch_name', 'branch_code',
             'quantity_in_stock', 'quantity_reserved', 'quantity_on_order',
             'available_quantity', 'reorder_point', 'reorder_quantity',
             'minimum_stock', 'maximum_stock', 'bin_location', 'shelf',
@@ -862,13 +864,11 @@ class PhysicalCountItemSerializer(serializers.ModelSerializer):
 
 
 class PhysicalCountItemCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating PhysicalCountItem"""
+    """Serializer for creating PhysicalCountItem (system qty set server-side)."""
     class Meta:
         from .models import PhysicalCountItem
         model = PhysicalCountItem
-        fields = [
-            'part', 'stock_item', 'system_quantity', 'physical_quantity', 'notes'
-        ]
+        fields = ['part', 'stock_item', 'physical_quantity', 'notes']
 
 
 class PhysicalCountSessionSerializer(serializers.ModelSerializer):
@@ -876,7 +876,7 @@ class PhysicalCountSessionSerializer(serializers.ModelSerializer):
     branch_name = serializers.CharField(source='branch.name', read_only=True)
     created_by_name = serializers.SerializerMethodField()
     completed_by_name = serializers.SerializerMethodField()
-    items = PhysicalCountItemSerializer(many=True, read_only=True)
+    items = PhysicalCountItemSerializer(many=True, read_only=True, source='count_items')
     unreconciled_count = serializers.SerializerMethodField()
     
     class Meta:

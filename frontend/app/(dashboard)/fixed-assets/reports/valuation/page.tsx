@@ -9,6 +9,8 @@ import { DataTable } from "@/components/shared/DataTable";
 import { ArrowLeft, Printer, TrendingDown, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import type { TableExportPayload } from "@/lib/utils/report-export";
 
 export default function AssetValuationReportPage() {
     const { formatCurrency } = useCurrency();
@@ -113,10 +115,35 @@ export default function AssetValuationReportPage() {
                         </p>
                     </div>
                 </div>
-                <Button onClick={handlePrint} variant="outline">
-                    <Printer className="w-4 h-4 mr-2" />
-                    Print Report
-                </Button>
+                <div className="flex gap-2">
+                    <ReportExportMenu
+                        getPayload={() => {
+                            const list = Array.isArray(assets) ? assets : [];
+                            if (!list.length) return null;
+                            return {
+                                reportTitle: "Asset Valuation Report",
+                                filename: `asset-valuation_${format(new Date(), "yyyy-MM-dd")}`,
+                                dateInfo: format(new Date(), "PPP"),
+                                headers: ["Asset #", "Name", "Category", "Acquisition", "Cost", "Depreciation", "NBV"],
+                                rows: list.map((a: FixedAsset) => [
+                                    a.asset_number,
+                                    a.name,
+                                    a.category_name ?? "",
+                                    format(new Date(a.acquisition_date), "yyyy-MM-dd"),
+                                    a.acquisition_cost,
+                                    a.accumulated_depreciation,
+                                    a.net_book_value,
+                                ]),
+                                currencyColumnIndexes: [4, 5, 6],
+                            };
+                        }}
+                        disabled={!assets?.length}
+                    />
+                    <Button onClick={handlePrint} variant="outline">
+                        <Printer className="w-4 h-4 mr-2" />
+                        Print
+                    </Button>
+                </div>
             </div>
 
             {/* Print Header */}

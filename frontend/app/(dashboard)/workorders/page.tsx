@@ -42,6 +42,7 @@ import {
 import { getStatusVariant, getStatusLabel } from "@/lib/utils/workorder-status";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 import { usePrint } from "@/lib/hooks/usePrint";
 
 const DASHBOARD_GROUP_STATUS_MAP: Record<string, string[]> = {
@@ -278,7 +279,7 @@ export default function WorkOrdersPage() {
         { key: "vehicle_info", label: "Vehicle" },
         { key: "status", label: "Status" },
         { key: "priority", label: "Priority" },
-        { key: "total_cost", label: "Total Cost" },
+        { key: "total_cost", label: "Invoice Total" },
         { key: "created_at", label: "Created Date" },
       ]
     );
@@ -564,12 +565,12 @@ export default function WorkOrdersPage() {
                       Priority
                     </SortableHeader>
                     <SortableHeader
-                      field="estimated_total"
+                      field="invoice_total"
                       sortConfig={sortConfig}
                       onSort={handleSort}
                       className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
-                      Cost
+                      Invoice
                     </SortableHeader>
                     <SortableHeader
                       field="created_at"
@@ -620,8 +621,28 @@ export default function WorkOrdersPage() {
                           {workorder.priority || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 font-mono text-xs font-medium text-foreground">
-                        {workorder.total_cost ? `${formatCurrency(parseFloat(workorder.total_cost))}` : "-"}
+                      <TableCell className="px-3 py-1.5">
+                        {(() => {
+                          const billing = getWorkOrderListBillingDisplay(workorder, {
+                            audience: "staff",
+                            formatDue: formatCurrency,
+                          });
+                          if (!billing) {
+                            return <span className="text-xs text-muted-foreground">—</span>;
+                          }
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-mono text-xs font-medium text-foreground">
+                                {formatCurrency(billing.amount)}
+                              </span>
+                              {billing.statusLine && (
+                                <span className="text-[10px] text-muted-foreground capitalize">
+                                  {billing.statusLine}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-[11px] text-muted-foreground">
                         {workorder.created_at

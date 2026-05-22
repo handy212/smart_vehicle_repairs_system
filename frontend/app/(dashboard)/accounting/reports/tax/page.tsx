@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, FileText, TrendingUp, TrendingDown } from "lucide-react";
 import { format, startOfYear, endOfYear } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 
 export default function TaxReportPage() {
     const { formatCurrency } = useCurrency();
@@ -30,10 +31,34 @@ export default function TaxReportPage() {
                         Sales Tax Collected vs Input Tax Paid
                     </p>
                 </div>
-                <Button size="sm" className="h-9" onClick={() => window.print()}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Print Report
-                </Button>
+                <div className="flex gap-2">
+                    <ReportExportMenu
+                        getPayload={() => {
+                            if (!report) return null;
+                            return {
+                                reportTitle: "Tax Report",
+                                filename: `tax-report_${startDate}_${endDate}`,
+                                dateInfo: `${startDate} to ${endDate}`,
+                                headers: ["Category", "Amount"],
+                                rows: [
+                                    ["VAT Collected", report.tax_collected.vat],
+                                    ["NHIL Collected", report.tax_collected.nhil],
+                                    ["GETFund Collected", report.tax_collected.getfund],
+                                    ["HRL Collected", report.tax_collected.hrl],
+                                    ["Total Collected", report.tax_collected.total],
+                                    ["Total Paid", report.tax_paid.total],
+                                    ["Net Tax Liability", report.net_tax_liability],
+                                ],
+                                currencyColumnIndexes: [1],
+                            };
+                        }}
+                        disabled={!report}
+                    />
+                    <Button size="sm" variant="outline" className="h-9" onClick={() => window.print()}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Print
+                    </Button>
+                </div>
             </div>
 
             <Card>

@@ -22,9 +22,11 @@ interface MetricCardProps {
     data?: Array<Record<string, number | string>>;
     dataKey?: string;
     onClick?: () => void;
+    /** When set, shows this string instead of formatting value as currency */
+    displayValue?: string;
 }
 
-export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick }: MetricCardProps) {
+export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick, displayValue }: MetricCardProps) {
     const { formatCurrency } = useCurrency();
     const { theme } = useTheme();
     const isPerfex = theme.startsWith("perfex");
@@ -76,7 +78,7 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
                     {getIcon()}
                 </div>
                 <div className="min-w-0">
-                    <p className="text-lg font-bold text-foreground leading-tight">{formatCurrency(value)}</p>
+                    <p className="text-lg font-bold text-foreground leading-tight">{displayValue ?? formatCurrency(value)}</p>
                     <p className="text-[11px] text-muted-foreground leading-tight">{title}</p>
                     {trend && (
                         <p className={`text-[11px] font-medium mt-0.5 ${trend.isPositive ? "text-success" : "text-destructive"}`}>
@@ -102,7 +104,7 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
                         </div>
                     </div>
                     <div className="space-y-1.5">
-                        <h3 className="text-xl font-semibold tracking-tight text-foreground">{formatCurrency(value)}</h3>
+                        <h3 className="text-xl font-semibold tracking-tight text-foreground">{displayValue ?? formatCurrency(value)}</h3>
                         {trend && (
                             <div className="flex items-center text-xs">
                                 <span className={`flex items-center font-medium ${trend.isPositive ? "text-success" : "text-destructive"}`}>

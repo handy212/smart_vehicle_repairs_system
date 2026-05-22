@@ -44,7 +44,9 @@ def filter_queryset_for_user_branches(queryset, user, branch_field='branch'):
     Filter queryset based on user's accessible branches.
     Mirrors the pattern used in technicians/views.py.
     """
-    if user.role in ['admin', 'super-admin']:
+    from apps.accounts.permissions import user_can_access_all_branches
+
+    if user_can_access_all_branches(user):
         return queryset
     accessible_branches = user.get_accessible_branches()
     return queryset.filter(**{f'{branch_field}__in': accessible_branches})
@@ -100,7 +102,8 @@ def resolve_branch_for_user(request, specified_branch=None):
         return request.user.managed_branches.first()
     
     # Final fallback for admins - use first available active branch
-    if request.user.role == 'admin':
+    from apps.accounts.permissions import user_has_permission
+    if user_has_permission(request.user, 'manage_branches'):
         from apps.branches.models import Branch
         return Branch.objects.filter(is_active=True).first()
     
@@ -205,7 +208,9 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
             user__role__in=STAFF_PROFILE_ROLES,
         )
         user = self.request.user
-        if user.role not in ['admin', 'super-admin']:
+        from apps.accounts.permissions import user_can_access_all_branches
+
+        if not user_can_access_all_branches(user):
             accessible_branches = user.get_accessible_branches()
             qs = qs.filter(
                 Q(user__branch__in=accessible_branches) |
@@ -891,7 +896,9 @@ class PayrollAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         qs = PayrollAuditLog.objects.select_related(
             'employee__user', 'payroll_period__branch', 'payslip', 'performed_by',
         )
-        if self.request.user.role in ['admin', 'super-admin']:
+        from apps.accounts.permissions import user_can_access_all_branches
+
+        if user_can_access_all_branches(self.request.user):
             return qs
         accessible_branches = self.request.user.get_accessible_branches()
         return qs.filter(
@@ -979,7 +986,11 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
                 {'detail': 'Only processing periods can be approved.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if period.created_by_id == request.user.id and request.user.role not in ['admin', 'super-admin']:
+        from apps.accounts.permissions import user_has_permission
+
+        if period.created_by_id == request.user.id and not user_has_permission(
+            request.user, 'manage_payroll'
+        ):
             return Response(
                 {'detail': 'Payroll must be approved by a different authorized user.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1471,7 +1482,9 @@ class TrainingProgramViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = TrainingProgram.objects.select_related('department', 'department__branch')
-        if self.request.user.role in ['admin', 'super-admin']:
+        from apps.accounts.permissions import user_can_access_all_branches
+
+        if user_can_access_all_branches(self.request.user):
             return qs
         accessible_branches = self.request.user.get_accessible_branches()
         return qs.filter(Q(department__branch__in=accessible_branches) | Q(department__isnull=True))
@@ -1488,7 +1501,12 @@ class TrainingProgramViewSet(viewsets.ModelViewSet):
                 {'detail': 'Staff member not found with the provided ID.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if request.user.role not in ['admin', 'super-admin'] and employee.user.branch not in request.user.get_accessible_branches():
+        from apps.accounts.permissions import user_can_access_all_branches
+
+        if (
+            not user_can_access_all_branches(request.user)
+            and employee.user.branch not in request.user.get_accessible_branches()
+        ):
             return Response(
                 {'detail': 'You cannot enroll staff outside your accessible branches.'},
                 status=status.HTTP_403_FORBIDDEN,

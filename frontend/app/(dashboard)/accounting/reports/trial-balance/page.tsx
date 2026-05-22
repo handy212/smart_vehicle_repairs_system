@@ -42,7 +42,7 @@ interface TrialBalanceReport {
 
 export default function TrialBalancePage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currencySymbol } = useCurrency();
 
     const { data: report, isLoading, isError } = useQuery<TrialBalanceReport>({
         queryKey: ["accounting", "trial-balance", date],
@@ -108,7 +108,8 @@ export default function TrialBalancePage() {
             currencyColumns: [3, 4],
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
-            companyName: COMPANY_NAME
+            companyName: COMPANY_NAME,
+            currencySymbol,
         });
     };
 

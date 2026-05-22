@@ -42,7 +42,7 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('view_branches')()]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -64,7 +64,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         if user.is_anonymous:
             return Branch.objects.filter(is_active=True)
             
-        if user.role == 'admin' or user.role == 'super-admin' or user.is_superuser:
+        if user.role == 'super-admin' or user_has_permission(user, 'manage_branches'):
             return Branch.objects.all()
         elif user.role == 'manager':
             return user.managed_branches.all()

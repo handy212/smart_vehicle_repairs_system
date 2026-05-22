@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Download, Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -40,23 +47,49 @@ type ProfitLossReport = {
 type ExportCell = string | number;
 
 export default function ProfitLossPage() {
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currencySymbol } = useCurrency();
     const { activeBranchId } = useBranchStore();
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
     const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const [comparison, setComparison] = useState<"none" | "mom" | "yoy">("none");
 
     const { data: report, isLoading } = useQuery({
         queryKey: ["accounting", "profit-loss", startDate, endDate, activeBranchId],
         queryFn: () => accountingApi.getProfitLoss(startDate, endDate, activeBranchId || undefined) as Promise<ProfitLossReport>,
+        enabled: comparison === "none",
     });
 
+    const { data: comparative, isLoading: loadingComparative } = useQuery({
+        queryKey: ["accounting", "profit-loss-comparative", startDate, endDate, activeBranchId, comparison],
+        queryFn: () =>
+            accountingApi.getProfitLossComparative(
+                startDate,
+                endDate,
+                comparison as "mom" | "yoy",
+                activeBranchId || undefined
+            ),
+        enabled: comparison !== "none",
+    });
 
-    const totalIncome = report?.income?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
-    const totalExpenses = report?.expenses?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
+    const displayReport =
+        comparison === "none"
+            ? report
+            : (comparative as { current?: ProfitLossReport })?.current;
+    const variance = (comparative as {
+        variance?: {
+            net_income?: { change_percent?: number; change?: number };
+            income?: { change_percent?: number };
+        };
+    })?.variance;
+    const isLoadingReport = comparison === "none" ? isLoading : loadingComparative;
+
+
+    const totalIncome = displayReport?.income?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
+    const totalExpenses = displayReport?.expenses?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
     const netIncome = totalIncome - totalExpenses;
 
     const handleExportCSV = () => {
-        if (!report) return;
+        if (!displayReport) return;
 
 
         const rows: ExportCell[][] = [];
@@ -69,7 +102,7 @@ export default function ProfitLossPage() {
         // Income section
         rows.push(['INCOME']);
 
-        report?.income?.forEach((item) => {
+        displayReport?.income?.forEach((item) => {
             rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Income', totalIncome]);
@@ -78,7 +111,7 @@ export default function ProfitLossPage() {
         // Expenses section
         rows.push(['EXPENSES']);
 
-        report?.expenses?.forEach((item) => {
+        displayReport?.expenses?.forEach((item) => {
             rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Expenses', totalExpenses]);
@@ -92,7 +125,7 @@ export default function ProfitLossPage() {
     };
 
     const handleExportExcel = () => {
-        if (!report) return;
+        if (!displayReport) return;
 
 
         const rows: ExportCell[][] = [];
@@ -106,7 +139,7 @@ export default function ProfitLossPage() {
         rows.push(['INCOME', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report?.income?.forEach((item) => {
+        displayReport?.income?.forEach((item) => {
             rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Income', totalIncome]);
@@ -116,7 +149,7 @@ export default function ProfitLossPage() {
         rows.push(['EXPENSES', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report?.expenses?.forEach((item) => {
+        displayReport?.expenses?.forEach((item) => {
             rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Expenses', totalExpenses]);
@@ -128,7 +161,7 @@ export default function ProfitLossPage() {
         const filename = generateFilenameWithTimestamp('profit-loss', 'xlsx');
 
         // Bold rows: title, headers, totals
-        const incomeLength = report?.income?.length || 0;
+        const incomeLength = displayReport?.income?.length || 0;
         const boldRows = [0, 4, 3 + incomeLength + 2, 3 + incomeLength + 2 + 1, rows.length - 1];
 
         exportToExcel(rows, filename, {
@@ -140,10 +173,11 @@ export default function ProfitLossPage() {
             colorRows: [
                 { row: 0, color: '3B82F6' },  // Blue for title
                 { row: 3, color: '10B981' },  // Green for income header
-                { row: 3 + (report?.income?.length || 0) + 2, color: 'EF4444' }, // Red for expenses header
+                { row: 3 + (displayReport?.income?.length || 0) + 2, color: 'EF4444' }, // Red for expenses header
             ],
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
+            currencySymbol,
             companyName: COMPANY_NAME
         });
     };
@@ -160,13 +194,13 @@ export default function ProfitLossPage() {
                 <ExportDropdown
                     onExportCSV={handleExportCSV}
                     onExportExcel={handleExportExcel}
-                    disabled={!report}
+                    disabled={!displayReport}
                 />
             </div>
 
             <Card>
                 <CardContent className="p-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div>
                             <Label htmlFor="start_date" className="text-xs">Start Date</Label>
                             <Input
@@ -187,15 +221,47 @@ export default function ProfitLossPage() {
                                 className="h-9 text-sm"
                             />
                         </div>
+                        <div>
+                            <Label className="text-xs">Compare</Label>
+                            <Select
+                                value={comparison}
+                                onValueChange={(v) => setComparison(v as "none" | "mom" | "yoy")}
+                            >
+                                <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No comparison</SelectItem>
+                                    <SelectItem value="mom">Month over month</SelectItem>
+                                    <SelectItem value="yoy">Year over year</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
+                    {comparison !== "none" && variance?.net_income && (
+                        <p className="text-xs text-muted-foreground mt-3">
+                            Net income vs prior period:{" "}
+                            <span
+                                className={
+                                    (variance.net_income.change ?? 0) >= 0
+                                        ? "text-success font-medium"
+                                        : "text-destructive font-medium"
+                                }
+                            >
+                                {(variance.net_income.change_percent ?? 0) > 0 ? "+" : ""}
+                                {variance.net_income.change_percent}%
+                            </span>{" "}
+                            ({formatCurrency(variance.net_income.change ?? 0)})
+                        </p>
+                    )}
                 </CardContent>
             </Card>
 
-            {isLoading ? (
+            {isLoadingReport ? (
                 <div className="flex justify-center p-12">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-            ) : !report ? (
+            ) : !displayReport ? (
                 <div className="flex justify-center p-12 text-destructive">
                     Report data not available
                 </div>
@@ -215,7 +281,7 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
 
-                                    {report?.income?.map((item) => (
+                                    {displayReport?.income?.map((item) => (
                                         <TableRow key={item.code} className="border-b border-border hover:bg-muted/20">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
@@ -252,7 +318,7 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
 
-                                    {report?.expenses?.map((item) => (
+                                    {displayReport?.expenses?.map((item) => (
                                         <TableRow key={item.code} className="border-b border-border hover:bg-muted/20">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}

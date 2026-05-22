@@ -105,16 +105,20 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         """Return appropriate permissions based on action"""
         action = getattr(self, 'action', None)
         permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
-        if action in ['list', 'retrieve', 'my_requests']:
+        if action in ['list', 'retrieve', 'dashboard_stats']:
+            permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
-        elif action == 'create':
-            # Allow customers to create their own requests
-            if getattr(self.request.user, "role", None) == "customer":
+        elif action in ('create', 'cancel', 'my_requests', 'rate_service'):
+            # Customer portal actions on own requests
+            if getattr(self.request.user, 'role', None) == 'customer':
                 return [p() for p in permission_classes]
-            permission_classes.append(HasAnyPermission(['manage_roadside', 'create_roadside_requests']))
+            if action == 'create':
+                permission_classes.append(HasAnyPermission(['manage_roadside', 'create_roadside']))
+            elif action == 'cancel':
+                permission_classes.append(HasAnyPermission(['edit_roadside', 'manage_roadside']))
+            elif action == 'my_requests':
+                permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
-        elif action == 'cancel':
-             return [p() for p in permission_classes]
         elif action == 'assign_dispatch':
             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
             return [p() for p in permission_classes]
@@ -137,6 +141,10 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         elif action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
              permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
              return [p() for p in permission_classes]
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            permission_classes.append(HasPermission('view_roadside'))
+        else:
+            permission_classes.append(HasAnyPermission(['edit_roadside', 'manage_roadside']))
         return [p() for p in permission_classes]
     
     def get_serializer_class(self):

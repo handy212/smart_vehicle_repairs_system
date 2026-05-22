@@ -52,8 +52,18 @@ function TrendTooltip({ active, payload, label, formatCurrency }: TrendTooltipPr
 }
 
 export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProps) {
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currencySymbol } = useCurrency();
     const [activeTab, setActiveTab] = useState("profitability");
+    const chartData = data?.length ? data : [];
+
+    const formatAxisValue = (val: number) => {
+        if (!Number.isFinite(val)) return `${currencySymbol}0`;
+        const abs = Math.abs(val);
+        if (abs >= 1000) {
+            return `${currencySymbol}${(val / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`;
+        }
+        return formatCurrency(val, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    };
 
     return (
         <Card className="col-span-full lg:col-span-2">
@@ -68,10 +78,15 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                 </Tabs>
             </CardHeader>
             <CardContent className="pt-4">
+                {chartData.length === 0 ? (
+                    <p className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+                        No trend data for this period.
+                    </p>
+                ) : (
                 <div style={{ height: "340px", width: "100%", minWidth: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         {activeTab === "profitability" ? (
-                            <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
@@ -90,7 +105,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     axisLine={false}
                                 />
                                 <YAxis
-                                    tickFormatter={(val) => `$${val / 1000}k`}
+                                    tickFormatter={formatAxisValue}
                                     tick={{ fontSize: 12 }}
                                     tickLine={false}
                                     axisLine={false}
@@ -117,7 +132,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                 />
                             </AreaChart>
                         ) : activeTab === "cashflow" ? (
-                            <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
@@ -132,7 +147,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     axisLine={false}
                                 />
                                 <YAxis
-                                    tickFormatter={(val) => `$${val / 1000}k`}
+                                    tickFormatter={formatAxisValue}
                                     tick={{ fontSize: 12 }}
                                     tickLine={false}
                                     axisLine={false}
@@ -151,7 +166,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                 />
                             </AreaChart>
                         ) : (
-                            <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRevOnly" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
@@ -166,7 +181,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     axisLine={false}
                                 />
                                 <YAxis
-                                    tickFormatter={(val) => `$${val / 1000}k`}
+                                    tickFormatter={formatAxisValue}
                                     tick={{ fontSize: 12 }}
                                     tickLine={false}
                                     axisLine={false}
@@ -187,6 +202,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                         {/* ... (chart content remains) ... */}
                     </ResponsiveContainer>
                 </div>
+                )}
             </CardContent>
         </Card>
     );

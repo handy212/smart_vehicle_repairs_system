@@ -1,6 +1,10 @@
 "use client";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import {
+    resolveWorkOrderInvoiceAmount,
+    sumWorkOrderInvoiceAmounts,
+} from "@/lib/workorders/workOrderBillingDisplay";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -26,7 +30,7 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
     const router = useRouter();
 
     // Calculate Summary Stats
-    const totalSpent = workOrders.reduce((sum, wo) => sum + parseFloat(wo.total_cost || "0"), 0);
+    const totalSpent = sumWorkOrderInvoiceAmounts(workOrders);
     const totalServices = workOrders.length;
     const sortedWorkOrders = [...workOrders].sort((a, b) =>
         new Date(b.completed_at || b.created_at).getTime() - new Date(a.completed_at || a.created_at).getTime()
@@ -55,7 +59,7 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Spent</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Invoiced</span>
                         <div className="flex items-end justify-between">
                             <span className="text-2xl font-bold text-foreground">{formatCurrency(totalSpent)}</span>
                             <DollarSign className="w-5 h-5 text-muted-foreground mb-1" />
@@ -104,7 +108,7 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                 <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
                                 <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
                                 <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Concerns</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">Amount</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">Invoice</TableHead>
                                 <TableHead className="w-[50px] px-4 h-10"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -154,7 +158,10 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right font-medium text-sm text-foreground">
-                                                {formatCurrency(parseFloat(wo.total_cost || "0"))}
+                                                {(() => {
+                                                    const amt = resolveWorkOrderInvoiceAmount(wo);
+                                                    return amt != null ? formatCurrency(amt) : "—";
+                                                })()}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
                                                 <Tooltip>

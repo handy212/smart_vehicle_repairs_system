@@ -8,9 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Wrench, Package, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
+import Link from "next/link";
 import apiClient from "@/lib/api/client";
 import { useBranchStore } from "@/store/branchStore";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import type { TableExportPayload } from "@/lib/utils/report-export";
 
 function MarginBadge({ value }: { value: number }) {
     const color =
@@ -74,13 +77,46 @@ export default function JobProfitabilityPage() {
     const totals = typedReport?.totals ?? {};
     const jobs = typedReport?.jobs ?? [];
 
+    const getExportPayload = (): TableExportPayload | null => {
+        if (!jobs.length) return null;
+        return {
+            reportTitle: "Job Profitability",
+            filename: `job-profitability_${filters.start_date}_${filters.end_date}`,
+            dateInfo: `${filters.start_date} to ${filters.end_date}`,
+            headers: [
+                "WO #",
+                "Customer",
+                "Date",
+                "Revenue",
+                "Labor Cost",
+                "Parts Cost",
+                "Gross Profit",
+                "Margin %",
+            ],
+            rows: jobs.map((job) => [
+                job.work_order_number,
+                job.customer,
+                job.created_at ? format(new Date(job.created_at), "yyyy-MM-dd") : "",
+                job.revenue ?? 0,
+                job.labor_cost ?? 0,
+                job.parts_cost ?? 0,
+                job.gross_profit ?? 0,
+                job.margin_percent ?? 0,
+            ]),
+            currencyColumnIndexes: [3, 4, 5, 6],
+        };
+    };
+
     return (
         <div className="space-y-4">
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Job Profitability</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Revenue vs. actual costs per work order — broken down by labor, parts, and other
                 </p>
+                </div>
+                <ReportExportMenu getPayload={getExportPayload} disabled={!jobs.length} />
             </div>
 
             {/* Filters */}
@@ -205,7 +241,13 @@ export default function JobProfitabilityPage() {
                                                 onClick={() => setExpandedJob(expandedJob === job.work_order_id ? null : job.work_order_id)}
                                             >
                                                 <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
-                                                    {job.work_order_number}
+                                                    <Link
+                                                        href={`/workorders/${job.work_order_id}`}
+                                                        className="text-primary hover:underline"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        {job.work_order_number}
+                                                    </Link>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                     {job.customer}

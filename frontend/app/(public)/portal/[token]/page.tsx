@@ -153,12 +153,22 @@ export default function PortalPage() {
                         <span>{vehicle_info}</span>
                     </div>
                 </div>
-                <div className="flex flex-col items-end">
-                    <div className="text-sm text-muted-foreground mb-1">Estimated Total</div>
+                <div className="flex flex-col items-end max-w-xs text-right">
+                    <div className="text-sm text-muted-foreground mb-1">Estimate for approval</div>
                     <div className="text-3xl font-bold text-foreground">
                         {formatCurrency(parseFloat(estimated_total))}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2 leading-snug">
+                        This is not your final bill. After work is completed, you will receive an
+                        invoice for the actual amount due, which may differ from this estimate.
+                    </p>
                 </div>
+            </div>
+
+            <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+                <strong>Important:</strong> approving this estimate authorizes the described work
+                only. Parts, labor, and taxes on your final invoice may change based on what is
+                actually performed.
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

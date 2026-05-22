@@ -63,15 +63,36 @@ const bucketCardStyles = {
     critical: "border-destructive/20 bg-destructive/15 text-destructive",
 };
 
+type SupplierAgingRow = {
+    supplier_name: string;
+    payment_terms: string;
+    amount_due: number;
+    expected_payment_date: string | null;
+    bill_count: number;
+};
+
 export default function AgingReportPage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-    const [activeTab, setActiveTab] = useState("ar"); // 'ar' or 'ap'
-    const { formatCurrency } = useCurrency();
+    const [activeTab, setActiveTab] = useState("ar");
+    const [apView, setApView] = useState<"bills" | "suppliers">("bills");
+    const { formatCurrency, currencySymbol } = useCurrency();
 
     const { data: report, isLoading, isError } = useQuery({
-        queryKey: ["accounting", "aging", activeTab, date],
+        queryKey: ["accounting", "aging", activeTab, date, apView],
         queryFn: () => accountingApi.getAgingReport(activeTab as "ar" | "ap", date) as Promise<AgingReport>,
+        enabled: activeTab === "ar" || apView === "bills",
     });
+
+    const { data: supplierAp, isLoading: loadingSuppliers } = useQuery({
+        queryKey: ["accounting", "supplier-ap-aging", date],
+        queryFn: () => accountingApi.getSupplierAPAging(date),
+        enabled: activeTab === "ap" && apView === "suppliers",
+    });
+
+    const supplierRows = (supplierAp as { suppliers?: SupplierAgingRow[] })?.suppliers ?? [];
+    const supplierSummary = (supplierAp as { summary?: AgingSummary })?.summary;
+    const showSupplierAp = activeTab === "ap" && apView === "suppliers";
+    const loading = showSupplierAp ? loadingSuppliers : isLoading;
 
     const handleExportCSV = () => {
         if (!report) return;
@@ -141,7 +162,8 @@ export default function AgingReportPage() {
             ],
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
-            companyName: COMPANY_NAME
+            companyName: COMPANY_NAME,
+            currencySymbol,
         });
     };
 
@@ -176,17 +198,72 @@ export default function AgingReportPage() {
                 </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <Tabs
+                value={activeTab}
+                onValueChange={(v) => {
+                    setActiveTab(v);
+                    if (v === "ar") setApView("bills");
+                }}
+                className="space-y-4"
+            >
                 <TabsList>
                     <TabsTrigger value="ar">Accounts Receivable (Invoices)</TabsTrigger>
-                    <TabsTrigger value="ap">Accounts Payable (Bills)</TabsTrigger>
+                    <TabsTrigger value="ap">Accounts Payable</TabsTrigger>
                 </TabsList>
 
+                {activeTab === "ap" && (
+                    <Tabs value={apView} onValueChange={(v) => setApView(v as "bills" | "suppliers")}>
+                        <TabsList>
+                            <TabsTrigger value="bills">By bill</TabsTrigger>
+                            <TabsTrigger value="suppliers">By supplier (terms & expected pay)</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                )}
+
                 <TabsContent value={activeTab} className="space-y-4">
-                    {isLoading ? (
+                    {loading ? (
                         <div className="flex items-center justify-center h-64">
                             <Loader2 className="w-8 h-8 animate-spin" />
                         </div>
+                    ) : showSupplierAp ? (
+                        supplierRows.length === 0 ? (
+                            <div className="p-4 text-muted-foreground">No open supplier balances.</div>
+                        ) : (
+                            <Card>
+                                <CardHeader className="border-b bg-muted/10">
+                                    <CardTitle className="text-base">Suppliers — amount due & expected payment</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-4">
+                                    {supplierSummary && (
+                                        <p className="text-sm mb-4">
+                                            Total due: <strong>{formatCurrency(supplierSummary.total)}</strong>
+                                        </p>
+                                    )}
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Supplier</TableHead>
+                                                <TableHead>Payment terms</TableHead>
+                                                <TableHead>Expected pay date</TableHead>
+                                                <TableHead className="text-right">Amount due</TableHead>
+                                                <TableHead className="text-right">Bills</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {supplierRows.map((s) => (
+                                                <TableRow key={s.supplier_name}>
+                                                    <TableCell className="font-medium">{s.supplier_name}</TableCell>
+                                                    <TableCell>{s.payment_terms || "—"}</TableCell>
+                                                    <TableCell>{s.expected_payment_date || "—"}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(s.amount_due)}</TableCell>
+                                                    <TableCell className="text-right">{s.bill_count}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        )
                     ) : isError || !report ? (
                         <div className="p-4 text-destructive">Error loading report</div>
                     ) : (
@@ -269,7 +346,18 @@ export default function AgingReportPage() {
 
                                                 report?.details.map((item) => (
                                                     <TableRow key={item.id}>
-                                                        <TableCell className="font-medium">{item.number}</TableCell>
+                                                        <TableCell className="font-medium">
+                                                            {activeTab === "ar" ? (
+                                                                <Link
+                                                                    href={`/billing/invoices/${item.id}`}
+                                                                    className="text-primary hover:underline"
+                                                                >
+                                                                    {item.number}
+                                                                </Link>
+                                                            ) : (
+                                                                item.number
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell>{item.entity}</TableCell>
                                                         <TableCell>{item.date}</TableCell>
                                                         <TableCell>{item.due_date || 'N/A'}</TableCell>

@@ -2,12 +2,18 @@
 Custom permission classes for Django REST Framework
 Integrates with the role-based permission system
 """
-from rest_framework import permissions
-from rest_framework.permissions import BasePermission
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from rest_framework import permissions
+from rest_framework.permissions import BasePermission
 
 User = get_user_model()
+
+# Permission code groups used across viewsets
+WORKORDER_VIEW_PERMISSIONS = ('view_workorders', 'view_own_workorders')
+WORKORDER_STATUS_PERMISSIONS = ('update_workorder_status', 'edit_workorders', 'manage_workorders')
+REPORTS_VIEW_PERMISSIONS = ('view_reports', 'view_all_reports')
 
 
 class HasPermission(BasePermission):
@@ -78,21 +84,31 @@ class HasAllPermissions(BasePermission):
 
 
 class IsAdmin(permissions.BasePermission):
-    """Permission check for admin users"""
+    """Staff with full user-management or settings access (respects overrides)."""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        # Role-based check
-        return request.user.role in ('admin', 'super-admin')
+        if request.user.role == 'super-admin':
+            return True
+        return (
+            user_has_permission(request.user, 'manage_users')
+            or user_has_permission(request.user, 'manage_settings')
+        )
 
 
 class IsManager(permissions.BasePermission):
-    """Permission check for manager users (also grants access to admins)"""
+    """Managers and above with branch operations access."""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        # Role-based check
-        return request.user.role in ('manager', 'admin', 'super-admin')
+        if request.user.role == 'super-admin':
+            return True
+        return (
+            user_has_permission(request.user, 'manage_branch_staff')
+            or user_has_permission(request.user, 'manage_users')
+            or user_has_permission(request.user, 'manage_settings')
+            or request.user.role in ('manager', 'admin')
+        )
 
 
 class IsStaff(permissions.BasePermission):
@@ -264,6 +280,68 @@ def get_user_permissions(user):
         return permissions
     except AttributeError:
         return []
+
+
+def user_can_approve_purchase_orders(user):
+    return user_has_permission(user, 'approve_purchase_orders') or user_has_permission(
+        user, 'manage_inventory'
+    )
+
+
+def user_can_approve_transfers(user):
+    return user_has_permission(user, 'transfer_inventory') or user_has_permission(
+        user, 'manage_inventory'
+    )
+
+
+def user_can_manage_inventory(user):
+    return user_has_permission(user, 'manage_inventory')
+
+
+def user_can_approve_bills(user):
+    return user_has_permission(user, 'edit_bills') or user_has_permission(user, 'manage_billing')
+
+
+def user_can_manage_subscriptions(user):
+    return user_has_permission(user, 'manage_subscriptions') or user_has_permission(
+        user, 'view_subscriptions'
+    )
+
+
+def user_can_view_all_notifications(user):
+    return user_has_permission(user, 'manage_notifications')
+
+
+def user_can_access_all_branches(user):
+    return user_has_permission(user, 'manage_branches') or user.role == 'super-admin' or getattr(
+        user, 'is_superuser', False
+    )
+
+
+def user_can_manage_hr(user):
+    return user_has_permission(user, 'manage_hr') or user_has_permission(user, 'view_hr')
+
+
+def filter_workorders_for_user(queryset, user):
+    """
+    Scope work-order querysets: full branch access vs assigned-only.
+    Call after branch filtering for staff users.
+    """
+    if not user or not user.is_authenticated:
+        return queryset.none()
+
+    if user_has_permission(user, 'view_workorders'):
+        return queryset
+
+    if user_has_permission(user, 'view_own_workorders'):
+        return queryset.filter(
+            Q(primary_technician=user)
+            | Q(assigned_technicians=user)
+            | Q(service_coordinator=user)
+            | Q(created_by=user)
+        ).distinct()
+
+    return queryset.none()
 
 
 def check_object_permission(user, permission_code, obj):

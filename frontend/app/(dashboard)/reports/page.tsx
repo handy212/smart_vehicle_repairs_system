@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { reportingApi } from "@/lib/api/reporting";
+import { reportingApi, type SavedReport } from "@/lib/api/reporting";
+import { ReportCatalogDirectory } from "./components/ReportCatalogDirectory";
 import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ import { TechnicianProductivityHeatmap } from "@/components/reporting/Technician
 import { InventoryTurnoverChart } from "@/components/reporting/InventoryTurnoverChart";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { downloadCsv } from "@/lib/utils/csvExport";
+import { BranchReportChip } from "@/components/reporting/BranchReportChip";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
@@ -50,6 +53,17 @@ const REPORT_TYPE_BY_TAB: Record<string, string> = {
   customers: "customers",
   vehicles: "vehicles",
   controls: "controls",
+  subscriptions: "subscriptions",
+};
+
+const TAB_BY_REPORT_TYPE: Record<string, string> = {
+  revenue: "financial",
+  work_orders: "operational",
+  inventory: "inventory",
+  customers: "customers",
+  vehicles: "vehicles",
+  controls: "controls",
+  subscriptions: "subscriptions",
 };
 
 export default function ReportsPage() {
@@ -187,6 +201,13 @@ export default function ReportsPage() {
   });
 
   // Vehicle Reports
+  const { data: subscriptionStats } = useQuery({
+    queryKey: ["reporting", "subscriptions", startDate, endDate],
+    queryFn: () => reportingApi.subscriptionAnalytics({ start_date: startDate, end_date: endDate }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "subscriptions",
+  });
+
   const { data: vehicleStats } = useQuery({
     queryKey: ["reporting", "vehicles"],
     queryFn: () => reportingApi.vehicleStatistics(),
@@ -280,6 +301,28 @@ export default function ReportsPage() {
     setShowFilters(false);
   };
 
+  const applySavedReportView = (report: SavedReport) => {
+    const params = report.parameters || {};
+    const tab =
+      (typeof params.tab === "string" ? params.tab : null) ||
+      TAB_BY_REPORT_TYPE[report.report_type] ||
+      "financial";
+    setActiveTab(tab);
+    if (typeof params.start_date === "string") setStartDate(params.start_date);
+    if (typeof params.end_date === "string") setEndDate(params.end_date);
+    if (
+      params.period === "daily" ||
+      params.period === "weekly" ||
+      params.period === "monthly"
+    ) {
+      setPeriod(params.period);
+    }
+    toast({
+      title: "View loaded",
+      description: `Applied saved view "${report.name}".`,
+    });
+  };
+
   const handleExport = async () => {
     try {
       if (activeTab === "financial") {
@@ -316,12 +359,19 @@ export default function ReportsPage() {
           queryClient.invalidateQueries({ queryKey: ["reporting", "export-logs"] });
           queryClient.invalidateQueries({ queryKey: ["reporting", "catalog"] });
         });
+      } else if (activeTab === "operational" && workOrderStats) {
+        const stats = workOrderStats as { by_status?: Array<{ status: string; count: number }> };
+        downloadCsv(
+          `work_orders_${startDate}_${endDate}.csv`,
+          ["Status", "Count"],
+          (stats.by_status ?? []).map((r) => [r.status, r.count])
+        );
+        toast({ title: "CSV downloaded", variant: "success" });
       } else {
         toast({
-          title: "Export Started",
-          description: "Preparing report for download...",
+          title: "Export not available",
+          description: "Use the Financial tab for PDF revenue export or CSV on Financial/Operational tabs.",
         });
-        // TODO: Implement other exports
       }
     } catch (error) {
       console.error("Failed to download report:", error);
@@ -351,6 +401,9 @@ export default function ReportsPage() {
           <h1 className={`${isPerfex ? "text-base font-semibold" : "text-2xl sm:text-3xl font-bold"} text-foreground`}>
             Reports & Analytics
           </h1>
+          <div className="mt-2">
+            <BranchReportChip />
+          </div>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
             Comprehensive business intelligence and reporting
           </p>
@@ -561,8 +614,10 @@ export default function ReportsPage() {
               { value: "operational", label: "Operational" },
               { value: "inventory", label: "Inventory" },
               { value: "customers", label: "Customers" },
+              { value: "subscriptions", label: "Subscriptions" },
               { value: "vehicles", label: "Vehicles" },
               { value: "controls", label: "Controls" },
+              { value: "directory", label: "Directory" },
             ].map((tab) => (
               <button
                 key={tab.value}
@@ -591,11 +646,17 @@ export default function ReportsPage() {
             <TabsTrigger value="customers" className="text-xs sm:text-sm">
               Customers
             </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="text-xs sm:text-sm">
+              Subscriptions
+            </TabsTrigger>
             <TabsTrigger value="vehicles" className="text-xs sm:text-sm">
               Vehicles
             </TabsTrigger>
             <TabsTrigger value="controls" className="text-xs sm:text-sm">
               Controls
+            </TabsTrigger>
+            <TabsTrigger value="directory" className="text-xs sm:text-sm">
+              Directory
             </TabsTrigger>
           </TabsList>
         )}
@@ -704,7 +765,7 @@ export default function ReportsPage() {
                 <Card className={pCard}>
                   <CardHeader className={pCardHeader}>
                     <div className="flex items-center justify-between">
-                      <CardTitle className={pCardTitle}>Revenue Analysis</CardTitle>
+                      <CardTitle className={pCardTitle}>Revenue Performance</CardTitle>
                       <Button
                         variant={showForecast ? "default" : "outline"}
                         size="sm"
@@ -965,6 +1026,26 @@ export default function ReportsPage() {
                       </p>
                     </div>
                   )}
+                  {workOrderStats.summary?.period_invoiced_total != null && (
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Invoiced (period)
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-foreground">
+                        {formatCurrency(workOrderStats.summary.period_invoiced_total)}
+                      </p>
+                    </div>
+                  )}
+                  {workOrderStats.summary?.period_payments_received != null && (
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Payments received (period)
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-success">
+                        {formatCurrency(workOrderStats.summary.period_payments_received)}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1001,7 +1082,7 @@ export default function ReportsPage() {
                             {tech.metrics.completed || 0}
                           </TableCell>
                           <TableCell className={pTD}>
-                            ${tech.metrics.revenue?.toFixed(2) || "0.00"}
+                            {formatCurrency(tech.metrics.revenue ?? 0)}
                           </TableCell>
                           <TableCell className={pTD}>
                             {tech.metrics.average_completion_hours?.toFixed(1) || "N/A"}
@@ -1279,7 +1360,7 @@ export default function ReportsPage() {
                                 {customer.name}
                               </TableCell>
                               <TableCell className={pTD}>
-                                ${customer.revenue?.toFixed(2) || "0.00"}
+                                {formatCurrency(customer.revenue ?? 0)}
                               </TableCell>
                               <TableCell className={pTD}>
                                 {customer.work_orders || 0}
@@ -1302,6 +1383,46 @@ export default function ReportsPage() {
                 </Card>
               )}
             </>
+          )}
+        </TabsContent>
+        )}
+
+        {/* Subscription Analytics */}
+        {(!isPerfex || activeTab === "subscriptions") && (
+        <TabsContent value="subscriptions" className="space-y-4 sm:space-y-6">
+          {subscriptionStats && (() => {
+            const s = (subscriptionStats as { summary?: { mrr?: number; arr?: number; new_subscriptions?: number; churned?: number } }).summary;
+            return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}><CardTitle className={pCardTitle}>MRR</CardTitle></CardHeader>
+                <CardContent className={pCardContent}>
+                  <p className="text-lg font-semibold">{formatCurrency(s?.mrr ?? 0)}</p>
+                </CardContent>
+              </Card>
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}><CardTitle className={pCardTitle}>ARR</CardTitle></CardHeader>
+                <CardContent className={pCardContent}>
+                  <p className="text-lg font-semibold">{formatCurrency(s?.arr ?? 0)}</p>
+                </CardContent>
+              </Card>
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}><CardTitle className={pCardTitle}>New (period)</CardTitle></CardHeader>
+                <CardContent className={pCardContent}>
+                  <p className="text-lg font-semibold">{s?.new_subscriptions ?? 0}</p>
+                </CardContent>
+              </Card>
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}><CardTitle className={pCardTitle}>Churned (period)</CardTitle></CardHeader>
+                <CardContent className={pCardContent}>
+                  <p className="text-lg font-semibold">{s?.churned ?? 0}</p>
+                </CardContent>
+              </Card>
+            </div>
+            );
+          })()}
+          {!subscriptionStats && activeTab === "subscriptions" && (
+            <p className="text-sm text-muted-foreground">Loading subscription analytics…</p>
           )}
         </TabsContent>
         )}
@@ -1404,6 +1525,20 @@ export default function ReportsPage() {
         </TabsContent>
         )}
 
+        {(!isPerfex || activeTab === "directory") && (
+        <TabsContent value="directory" className="space-y-4 sm:space-y-6">
+          {reportCatalog?.reports && reportCatalog.reports.length > 0 ? (
+            <ReportCatalogDirectory
+              reports={reportCatalog.reports}
+              isPerfex={isPerfex}
+              onOpenHubTab={setActiveTab}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground py-8 text-center">Loading report catalog…</p>
+          )}
+        </TabsContent>
+        )}
+
         {(!isPerfex || activeTab === "controls") && (
         <TabsContent value="controls" className="space-y-4 sm:space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1449,7 +1584,11 @@ export default function ReportsPage() {
                   </TableHeader>
                   <TableBody>
                     {(savedReportsData?.results || []).slice(0, 5).map((report) => (
-                      <TableRow key={report.id}>
+                      <TableRow
+                        key={report.id}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => applySavedReportView(report)}
+                      >
                         <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{report.name}</TableCell>
                         <TableCell className={pTD}>{report.report_type.replace(/_/g, " ")}</TableCell>
                         <TableCell className={pTD}>{format(new Date(report.updated_at), "MMM dd, yyyy")}</TableCell>

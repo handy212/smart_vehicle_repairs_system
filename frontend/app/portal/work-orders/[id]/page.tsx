@@ -20,6 +20,10 @@ import { Label } from "@/components/ui/label";
 import { useState, useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import {
+    parseWorkOrderMoney,
+    resolveWorkOrderInvoiceAmount,
+} from "@/lib/workorders/workOrderBillingDisplay";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 
@@ -519,8 +523,17 @@ export default function WorkOrderDetailPage() {
                                 </div>
                             )}
                             <div className="border-t pt-3 flex justify-between font-bold text-lg">
-                                <span>Total Est.</span>
-                                <span className="text-primary">{formatCurrency(workOrder.estimated_total || workOrder.total_cost || "0")}</span>
+                                <span>
+                                    {workOrder.invoice_summary
+                                        ? "Invoice Total"
+                                        : "Estimated Total"}
+                                </span>
+                                <span className="text-primary">
+                                    {formatCurrency(
+                                        resolveWorkOrderInvoiceAmount(workOrder) ??
+                                            parseWorkOrderMoney(workOrder.estimated_total)
+                                    )}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>

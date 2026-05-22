@@ -11,7 +11,8 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, RefreshCw, FileText, CheckCircle2, AlertOctagon, XCircle } from "lucide-react";
+import { Search, Download, RefreshCw, FileText, CheckCircle2, AlertOctagon, XCircle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { exportToCSV } from "@/lib/utils/export";
 import { useToast } from "@/lib/hooks/useToast";
@@ -19,13 +20,6 @@ import { Label } from "@/components/ui/label";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
-
-const modelOptions = [
-  { value: "all", label: "All Models" },
-  { value: "customer", label: "Customers" },
-  { value: "vehicle", label: "Vehicles" },
-  { value: "part", label: "Parts" },
-];
 
 function asNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -42,6 +36,11 @@ export default function ImportHistoryPage() {
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const { toast } = useToast();
+
+  const { data: filterOptions } = useQuery({
+    queryKey: ["admin", "audit-logs", "filter_options"],
+    queryFn: () => auditLogsApi.filterOptions(),
+  });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["import-history", modelFilter, search, startDate, endDate, page],
@@ -71,7 +70,7 @@ export default function ImportHistoryPage() {
       return {
         timestamp: log.timestamp,
         user_name: log.user_name || log.user_email || "Unknown",
-        model_name: log.model_name || "N/A",
+        model_name: log.model_label || log.model_name || "N/A",
         filename: asString(changes.filename, "Unknown"),
         status: changes.error ? "Failed" : asNumber(changes.imported) > 0 ? "Success" : "No imports",
         imported: asNumber(changes.imported),
@@ -135,10 +134,18 @@ export default function ImportHistoryPage() {
   return (
     <PermissionGuard permission="view_audit_logs">
       <div className="space-y-4 bg-background min-h-screen">
-        <div className="flex items-center justify-between px-4 pt-4">
-          <div>
-            <h1 className="text-xl font-bold text-foreground tracking-tight">Import History</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Track bulk data import operations</p>
+        <div className="flex items-center justify-between px-4 pt-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/admin/audit-log">
+              <Button variant="secondary" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Audit log
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Import History</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">Bulk Excel/CSV import operations from inventory and related modules</p>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
@@ -184,7 +191,8 @@ export default function ImportHistoryPage() {
                     <SelectValue placeholder="All Models" />
                   </SelectTrigger>
                   <SelectContent>
-                    {modelOptions.map((option) => (
+                    <SelectItem value="all">All types</SelectItem>
+                    {(filterOptions?.models ?? []).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -291,7 +299,7 @@ export default function ImportHistoryPage() {
                               <TableCell className="px-4 py-2.5">
 
                                 <Badge variant={getModelBadgeVariant(log.model_name)} className="text-[10px] h-5 px-2 font-medium border-border">
-                                  {log.model_name || "N/A"}
+                                  {log.model_label || log.model_name || "N/A"}
                                 </Badge>
                               </TableCell>
                               <TableCell className="px-4 py-2.5">

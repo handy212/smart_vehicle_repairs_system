@@ -86,7 +86,7 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('delete_assets')]
         if self.action == 'run_depreciation':
             return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('run_depreciation')]
-        return [IsAuthenticated(), IsModuleEnabled('fixed-assets')]
+        return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('view_assets')()]
     
     def get_queryset(self):
         """Filter assets by user's accessible branches"""

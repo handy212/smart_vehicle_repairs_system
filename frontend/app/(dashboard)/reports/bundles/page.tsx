@@ -17,8 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useState } from "react";
 import { format, subDays } from "date-fns";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import type { TableExportPayload } from "@/lib/utils/report-export";
 
 export default function ServiceBundleReportPage() {
+    const { formatCurrency } = useCurrency();
     const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
         from: subDays(new Date(), 30),
         to: new Date()
@@ -39,6 +43,7 @@ export default function ServiceBundleReportPage() {
                     <h1 className="text-2xl font-bold tracking-tight">Service Bundle Popularity</h1>
                     <p className="text-muted-foreground text-sm">Analyze service bundle usage, conversion, and revenue.</p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
                 <DateRangePicker
                     startDate={format(dateRange.from, "yyyy-MM-dd")}
                     endDate={format(dateRange.to, "yyyy-MM-dd")}
@@ -51,6 +56,29 @@ export default function ServiceBundleReportPage() {
                         if (!isNaN(d.getTime())) setDateRange(prev => ({ ...prev, to: d }));
                     }}
                 />
+                <ReportExportMenu
+                    getPayload={() => {
+                        const bundles = data?.bundles ?? [];
+                        if (!bundles.length) return null;
+                        return {
+                            reportTitle: "Service Bundle Popularity",
+                            filename: `service-bundles_${format(dateRange.from, "yyyy-MM-dd")}_${format(dateRange.to, "yyyy-MM-dd")}`,
+                            dateInfo: `${format(dateRange.from, "yyyy-MM-dd")} to ${format(dateRange.to, "yyyy-MM-dd")}`,
+                            headers: ["Bundle", "Price", "Appointments", "Work Orders", "Conversion %", "Revenue"],
+                            rows: bundles.map((item: { name: string; price: number; appointment_count: number; work_order_count: number; conversion_rate: number; total_revenue: number }) => [
+                                item.name,
+                                item.price,
+                                item.appointment_count,
+                                item.work_order_count,
+                                item.conversion_rate,
+                                item.total_revenue,
+                            ]),
+                            currencyColumnIndexes: [1, 5],
+                        };
+                    }}
+                    disabled={!data?.bundles?.length}
+                />
+                </div>
             </div>
 
             {isLoading ? (
@@ -91,7 +119,7 @@ export default function ServiceBundleReportPage() {
                                             <div className="text-xs text-muted-foreground truncate max-w-[200px]">{item.description}</div>
                                         </TableCell>
                                         <TableCell className="text-right font-mono">
-                                            ${item.price.toFixed(2)}
+                                            {formatCurrency(item.price)}
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <Badge variant="outline">{item.appointment_count}</Badge>
@@ -103,7 +131,7 @@ export default function ServiceBundleReportPage() {
                                             {item.conversion_rate.toFixed(1)}%
                                         </TableCell>
                                         <TableCell className="text-right font-bold font-mono text-success">
-                                            ${item.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {formatCurrency(item.total_revenue)}
                                         </TableCell>
                                     </TableRow>
                                 ))}

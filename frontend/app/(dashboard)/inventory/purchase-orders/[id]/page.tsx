@@ -21,6 +21,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 import ReceiveItemsDialog from "../components/ReceiveItemsDialog";
 import PurchaseOrderItemsManager from "../components/PurchaseOrderItemsManager";
 import { useState } from "react";
@@ -65,10 +66,11 @@ export default function PurchaseOrderDetailPage() {
   const currentUserPendingApproval = purchaseOrder?.approvals?.some(
     (approval) => approval.approver === currentUser?.id && approval.status === "pending"
   );
-  const isAdminApprover = currentUser?.role === "admin" || currentUser?.role === "super-admin";
+  const { hasPermission } = usePermissions();
+  const isPrivilegedApprover = hasPermission("approve_purchase_orders");
   const isLegacyApprover = currentUser?.id === purchaseOrder?.assigned_approver;
-  const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isAdminApprover);
-  const canApprove = isApprover && (!isSubmitter || isAdminApprover);
+  const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isPrivilegedApprover);
+  const canApprove = isApprover && (!isSubmitter || isPrivilegedApprover);
   const purchaseOrderBranchId = typeof purchaseOrder?.branch === "object" ? purchaseOrder.branch?.id : purchaseOrder?.branch;
   const isBranchUser = activeBranchId === purchaseOrderBranchId;
 

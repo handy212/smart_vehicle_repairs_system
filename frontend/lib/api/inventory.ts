@@ -744,4 +744,77 @@ export const inventoryApi = {
   deleteBundle: async (id: number): Promise<void> => {
     await apiClient.delete(`/inventory/service-bundles/${id}/`);
   },
+
+  getAvailabilityTop100: async (params?: { limit?: number }) => {
+    const response = await apiClient.get("/inventory/reports/availability-top-100/", { params });
+    return response.data;
+  },
+
+  getInventoryAccuracy: async () => {
+    const response = await apiClient.get("/inventory/reports/inventory-accuracy/");
+    return response.data;
+  },
+
+  getShrinkageReport: async (params: { start_date: string; end_date: string }) => {
+    const response = await apiClient.get("/inventory/reports/shrinkage/", { params });
+    return response.data;
+  },
+
+  getObsolescenceReport: async (params?: { days_unused?: number }) => {
+    const response = await apiClient.get("/inventory/reports/obsolescence/", { params });
+    return response.data;
+  },
+
+  getP2PCompliance: async (params: { start_date: string; end_date: string }) => {
+    const response = await apiClient.get("/inventory/reports/p2p-compliance/", { params });
+    return response.data;
+  },
+
+  getOrphanSupply: async (params: { start_date: string; end_date: string }) => {
+    const response = await apiClient.get("/inventory/reports/orphan-supply/", { params });
+    return response.data;
+  },
+
+  getUnbilledDelivered: async (params?: { start_date?: string; end_date?: string }) => {
+    const response = await apiClient.get("/inventory/reports/unbilled-delivered/", { params });
+    return response.data;
+  },
+
+  getInventoryControl: async (params: { start_date: string; end_date: string }) => {
+    const response = await apiClient.get("/inventory/reports/inventory-control/", { params });
+    return response.data;
+  },
+
+  listPhysicalCounts: async (params?: { status?: string; branch?: number }) => {
+    const response = await apiClient.get("/inventory/physical-counts/", { params });
+    return response.data;
+  },
+
+  getPhysicalCount: async (id: number) => {
+    const response = await apiClient.get(`/inventory/physical-counts/${id}/`);
+    return response.data;
+  },
+
+  createPhysicalCount: async (data: { branch: number; count_date: string; notes?: string }) => {
+    const response = await apiClient.post("/inventory/physical-counts/", data);
+    return response.data;
+  },
+
+  startPhysicalCount: async (id: number) => {
+    const response = await apiClient.post(`/inventory/physical-counts/${id}/start/`);
+    return response.data;
+  },
+
+  completePhysicalCount: async (id: number) => {
+    const response = await apiClient.post(`/inventory/physical-counts/${id}/complete/`);
+    return response.data;
+  },
+
+  addPhysicalCountItem: async (
+    id: number,
+    data: { part: number; stock_item: number; physical_quantity: number }
+  ) => {
+    const response = await apiClient.post(`/inventory/physical-counts/${id}/add_item/`, data);
+    return response.data;
+  },
 };

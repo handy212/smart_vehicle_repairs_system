@@ -358,6 +358,13 @@ class WorkOrder(models.Model):
     
     def __str__(self):
         return f"{self.work_order_number} - {self.customer} - {self.vehicle}"
+
+    @property
+    def invoice(self):
+        """Latest non-void invoice for this work order (billing source of truth)."""
+        from apps.billing.work_order_invoices import get_primary_invoice
+
+        return get_primary_invoice(self)
     
     def save(self, *args, **kwargs):
         # Track if this is a new work order

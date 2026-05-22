@@ -842,9 +842,15 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                     )
                 })
             
-            # Check if invoice already exists for this work order
-            if Invoice.objects.filter(work_order=work_order).exists():
-                raise serializers.ValidationError({"work_order": "Invoice already exists for this work order"})
+            from apps.billing.work_order_invoices import active_invoice_exists_for_work_order
+
+            if active_invoice_exists_for_work_order(work_order):
+                raise serializers.ValidationError({
+                    "work_order": (
+                        "An active invoice already exists for this work order. "
+                        "Void the current invoice before creating a revision."
+                    ),
+                })
         else:
             # For standalone invoices, customer and vehicle are required
             if not customer:
@@ -929,7 +935,7 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             AccountingService.create_dl_invoice(invoice)
         except Exception:
             pass
-        
+
         return invoice
 
 

@@ -93,8 +93,11 @@ class AnalyticsService:
         cash_txs = Transaction.objects.filter(
             journal_entry__date__range=[start_date, end_date],
             journal_entry__posted=True,
-            account__code__startswith='10' # Cash/Bank
-        ).values('journal_entry__date', 'transaction_type').annotate(total=Sum('amount'))
+            account__code__startswith='10'  # Cash/Bank
+        )
+        if branch_id:
+            cash_txs = cash_txs.filter(journal_entry__branch_id=branch_id)
+        cash_txs = cash_txs.values('journal_entry__date', 'transaction_type').annotate(total=Sum('amount'))
         
         # Apply cash flow to daily data
         for entry in cash_txs:
@@ -122,7 +125,7 @@ class AnalyticsService:
             })
             
         # Alert: High Unpaid invoices (AR)
-        ar_aging = ReportingService.get_aging_report('ar', end_date)
+        ar_aging = ReportingService.get_aging_report('ar', end_date, branch_id=branch_id)
         overdue_90 = ar_aging['summary']['90+']
         if overdue_90 > 1000:
              insights.append({
@@ -138,7 +141,9 @@ class AnalyticsService:
         # 4. Top Operations
         # ------------------------------------------------------------------
         # Top 5 Profitable Jobs (from Job Profitability service)
-        jp = ReportingService.get_job_profitability(start_date=start_date, end_date=end_date)
+        jp = ReportingService.get_job_profitability(
+            start_date=start_date, end_date=end_date, branch_id=branch_id
+        )
         top_jobs = sorted(jp['jobs'], key=lambda x: x['gross_profit'], reverse=True)[:5]
 
         return {

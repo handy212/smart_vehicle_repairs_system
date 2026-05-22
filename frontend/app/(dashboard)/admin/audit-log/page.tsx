@@ -1,14 +1,13 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api/admin";
-import { AuditLog } from "@/lib/api/audit-logs";  // Bug 10 fix: import from canonical source
+import { auditLogsApi, AuditLog } from "@/lib/api/audit-logs";
 import { useToast } from "@/lib/hooks/useToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Search, Filter, Eye, RotateCcw, Download, Archive, Settings } from "lucide-react";
+import { ArrowLeft, Search, Eye, RotateCcw, Download } from "lucide-react";
 import Link from "next/link";
 import { useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
@@ -24,11 +23,16 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 const ACTION_CHOICES = [
@@ -37,22 +41,56 @@ const ACTION_CHOICES = [
   { value: "delete", label: "Delete" },
 ];
 
+function getActorInitial(userName?: string, userEmail?: string): string {
+  const name = (userName || "").trim();
+  if (name && name.toLowerCase() !== "system") {
+    return name[0].toUpperCase();
+  }
+  const email = (userEmail || "").trim();
+  if (email && email !== "system@system.local") {
+    return email[0].toUpperCase();
+  }
+  return "S";
+}
+
+function entityLabel(log: AuditLog): string {
+  return log.model_label || log.model_name || "Record";
+}
+
 export default function AuditLogPage() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
   const [actionFilter, setActionFilter] = useState<string>("all");
+  const [modelFilter, setModelFilter] = useState<string>("all");
+  const [userFilter, setUserFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");  // Enhancement 3: debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
-  const [archiveDays, setArchiveDays] = useState(90);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Enhancement 3: debounce the search input to avoid firing on every keystroke
+  const listParams = {
+    page,
+    action: actionFilter !== "all" ? actionFilter : undefined,
+    model_name: modelFilter !== "all" ? modelFilter : undefined,
+    user: userFilter !== "all" ? Number(userFilter) : undefined,
+    search: debouncedSearch || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  };
+
+  const statsParams = {
+    action: listParams.action,
+    model_name: listParams.model_name,
+    user: listParams.user,
+    search: listParams.search,
+    date_from: listParams.date_from,
+    date_to: listParams.date_to,
+  };
+
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -62,33 +100,57 @@ export default function AuditLogPage() {
     }, 300);
   }, []);
 
-  const { data: logsData, isLoading } = useQuery({
-    queryKey: ["admin", "audit-logs", actionFilter, debouncedSearch, dateFrom, dateTo, page],  // Enhancement 3: use debounced value
-    queryFn: () =>
-      adminApi.auditLogs.list({
-        page,
-        action: actionFilter !== "all" ? actionFilter : undefined,
-        search: debouncedSearch || undefined,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
-      }),
+  const { data: filterOptions } = useQuery({
+    queryKey: ["admin", "audit-logs", "filter_options"],
+    queryFn: () => auditLogsApi.filterOptions(),
+  });
+
+  const {
+    data: logsData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "admin",
+      "audit-logs",
+      actionFilter,
+      modelFilter,
+      userFilter,
+      debouncedSearch,
+      dateFrom,
+      dateTo,
+      page,
+    ],
+    queryFn: () => adminApi.auditLogs.list(listParams),
   });
 
   const { data: statsData } = useQuery({
-    queryKey: ["admin", "audit-logs", "stats", dateFrom, dateTo],
-    queryFn: () =>
-      adminApi.auditLogs.stats({
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
-      }),
+    queryKey: [
+      "admin",
+      "audit-logs",
+      "stats",
+      actionFilter,
+      modelFilter,
+      userFilter,
+      debouncedSearch,
+      dateFrom,
+      dateTo,
+    ],
+    queryFn: () => adminApi.auditLogs.stats(statsParams),
   });
 
   const getActionVariant = (action: string) => {
     switch (action) {
-      case "create": return "success";
-      case "update": return "info";
-      case "delete": return "danger";
-      default: return "default";
+      case "create":
+        return "success";
+      case "update":
+        return "info";
+      case "delete":
+        return "danger";
+      default:
+        return "default";
     }
   };
 
@@ -96,6 +158,8 @@ export default function AuditLogPage() {
 
   const handleClearFilters = () => {
     setActionFilter("all");
+    setModelFilter("all");
+    setUserFilter("all");
     setSearchTerm("");
     setDebouncedSearch("");
     setDateFrom("");
@@ -103,47 +167,27 @@ export default function AuditLogPage() {
     setPage(1);
   };
 
-  const archiveMutation = useMutation({
-    mutationFn: (days: number) => adminApi.auditLogs.archive(days),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      toast({
-        title: "Success",
-        description: data.message,
-      });
-      setShowArchiveDialog(false);
-    },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to archive logs",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleDownload = async (format: 'xlsx' | 'pdf' | 'json') => {
+  const handleExport = async (fileFormat: "xlsx" | "json") => {
     setIsDownloading(true);
     try {
       const blob = await adminApi.auditLogs.download({
-        format,
-        action: actionFilter !== "all" ? actionFilter : undefined,
-        search: searchTerm || undefined,
+        format: fileFormat,
+        action: listParams.action,
+        model_name: listParams.model_name,
+        user: listParams.user,
+        search: debouncedSearch || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
       });
 
-      // Verify blob is valid
       if (!blob || blob.size === 0) {
         throw new Error("Received empty file");
       }
 
-      // Create download link
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.${format}`;
+      a.download = `audit_logs_${new Date().toISOString().split("T")[0]}.${fileFormat === "xlsx" ? "xlsx" : "json"}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -151,171 +195,176 @@ export default function AuditLogPage() {
 
       toast({
         title: "Success",
-        description: `Audit logs downloaded as ${format.toUpperCase()}`,
+        description: `Audit logs exported as ${fileFormat === "xlsx" ? "Excel" : "JSON"}`,
       });
-
-    } catch (error: any) {
-      const errorMessage = error?.message || error?.response?.data?.error || error?.response?.data?.detail || "Failed to download logs";
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as Error)?.message ||
+        (err as { response?: { data?: { error?: string; detail?: string } } })?.response?.data?.error ||
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        "Failed to download logs";
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      console.error("Download error:", error);
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const handleArchive = () => {
-    if (archiveDays < 1) {
-      toast({
-        title: "Error",
-        description: "Days must be at least 1",
-        variant: "destructive",
-      });
-      return;
-    }
-    archiveMutation.mutate(archiveDays);
-  };
+  const topUser = statsData?.top_users?.[0];
+  const topModel = statsData?.top_models?.[0];
+  const actionCounts = statsData?.by_action ?? [];
 
   return (
     <PermissionGuard permission="view_audit_logs">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href="/admin">
-              <Button variant="secondary">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
-            </div>
+        <div className="flex items-center space-x-4">
+          <Link href="/admin">
+            <Button variant="secondary">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Application-wide change history (users, inventory, billing, HR, and more).
+              Accounting journal controls are logged separately under{" "}
+              <Link href="/accounting/controls" className="text-primary hover:underline">
+                Accounting → Controls
+              </Link>
+              .
+            </p>
           </div>
         </div>
 
-
-        {/* Statistics */}
         {statsData && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
                 <div className="text-xl font-bold">{statsData.total}</div>
-                <p className="text-xs text-muted-foreground">Total Logs</p>
+                <p className="text-xs text-muted-foreground">Events (filtered)</p>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 flex flex-col justify-center">
-                {/* Bug 8 fix: show actual count per action, not just number of action types */}
-                <div className="text-xl font-bold">
-                  {statsData.by_action.reduce((sum, a) => sum + a.count, 0)}
+              <CardContent className="p-4 flex flex-col justify-center gap-2">
+                <p className="text-xs text-muted-foreground">By action</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {actionCounts.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    actionCounts.map((item) => (
+                      <Badge key={item.action} variant={getActionVariant(item.action)} className="text-[10px]">
+                        {item.action} {item.count}
+                      </Badge>
+                    ))
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">Total Actions (period)</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
-                {/* Bug 8 fix: label makes clear this is top-10, not all-time unique users */}
-                <div className="text-xl font-bold">{statsData.top_users.length}</div>
-                <p className="text-xs text-muted-foreground">Top Active Users</p>
+                <div className="text-xl font-bold truncate" title={topUser?.user_name}>
+                  {topUser ? topUser.count : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground truncate" title={topUser?.user_email}>
+                  {topUser ? `Top user: ${topUser.user_name}` : "Top user"}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
-                {/* Bug 8 fix: label clarifies this is top-10 models */}
-                <div className="text-xl font-bold">{statsData.top_models.length}</div>
-                <p className="text-xs text-muted-foreground">Top Models Tracked</p>
+                <div className="text-xl font-bold">{topModel ? topModel.count : "—"}</div>
+                <p className="text-xs text-muted-foreground truncate" title={topModel?.model_label}>
+                  {topModel ? `Top type: ${topModel.model_label}` : "Top entity type"}
+                </p>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Actions Bar */}
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownload('xlsx')}
-                  disabled={isDownloading}
-                  className="h-8 text-xs"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />
-                  Download Excel
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownload('pdf')}
-                  disabled={isDownloading}
-                  className="h-8 text-xs"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />
-                  Download PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownload('json')}
-                  disabled={isDownloading}
-                  className="h-8 text-xs"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />
-                  Download JSON
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowArchiveDialog(true)}
-                  className="h-8 text-xs"
-                >
-                  <Archive className="w-3.5 h-3.5 mr-1.5" />
-                  Archive Logs
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-              <div>
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+              <div className="sm:col-span-2 lg:col-span-2">
                 <label className="block text-xs font-medium text-foreground mb-1">Search</label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                   <Input
-                    placeholder="Search logs..."
+                    placeholder="User, entity, IP..."
                     value={searchTerm}
-                    onChange={(e) => {
-                      handleSearchChange(e.target.value);  // Enhancement 3: debounced
-                    }}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-8 h-8 text-sm"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Action</label>
-                <select
+                <Select
                   value={actionFilter}
-                  onChange={(e) => {
-                    setActionFilter(e.target.value);
+                  onValueChange={(v) => {
+                    setActionFilter(v);
                     setPage(1);
                   }}
-                  className="w-full px-2 py-1 h-8 text-sm border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background border-border"
                 >
-                  <option value="all">All</option>
-                  {ACTION_CHOICES.map((action) => (
-                    <option key={action.value} value={action.value}>
-                      {action.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="All actions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {ACTION_CHOICES.map((action) => (
+                      <SelectItem key={action.value} value={action.value}>
+                        {action.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">Entity type</label>
+                <Select
+                  value={modelFilter}
+                  onValueChange={(v) => {
+                    setModelFilter(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    {(filterOptions?.models ?? []).map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">User</label>
+                <Select
+                  value={userFilter}
+                  onValueChange={(v) => {
+                    setUserFilter(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="All users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All users</SelectItem>
+                    {(filterOptions?.users ?? []).map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        {u.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">From</label>
@@ -341,22 +390,39 @@ export default function AuditLogPage() {
                   className="h-8 text-sm"
                 />
               </div>
-              <div>
-                <Button variant="outline" onClick={handleClearFilters} className="w-full h-8 text-xs">
-                  <RotateCcw className="w-3 h-3 mr-2" />
-                  Reset
-                </Button>
-              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport("xlsx")}
+                disabled={isDownloading}
+                className="h-8 text-xs"
+              >
+                <Download className="w-3 h-3 mr-1.5" />
+                Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport("json")}
+                disabled={isDownloading}
+                className="h-8 text-xs"
+              >
+                <Download className="w-3 h-3 mr-1.5" />
+                JSON
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClearFilters} className="h-8 text-xs">
+                <RotateCcw className="w-3 h-3 mr-1.5" />
+                Reset
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Audit Logs Table */}
         <Card>
           <CardHeader className="py-3 px-4">
-            <CardTitle className="text-base">
-              Audit Logs ({logsData?.count || 0})
-            </CardTitle>
+            <CardTitle className="text-base">Audit Logs ({logsData?.count ?? 0})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -375,49 +441,64 @@ export default function AuditLogPage() {
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
                       </div>
+                    </TableCell>
+                  </TableRow>
+                ) : isError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <p className="text-sm text-destructive mb-2">
+                        {(error as Error)?.message || "Failed to load audit logs"}
+                      </p>
+                      <Button variant="outline" size="sm" onClick={() => refetch()}>
+                        Retry
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ) : logs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm">
-                      No logs found.
+                      No logs match your filters.
                     </TableCell>
                   </TableRow>
                 ) : (
                   logs.map((log) => (
                     <TableRow key={log.id} className="hover:bg-muted/50">
                       <TableCell className="whitespace-nowrap py-2 text-xs text-muted-foreground">
-                        {/* Enhancement 4 fix: include year so old logs are unambiguous */}
                         {format(new Date(log.timestamp), "MMM dd yyyy, HH:mm")}
                       </TableCell>
                       <TableCell className="py-2">
-                        <div className="flex items-center space-x-2 max-w-[200px]">
+                        <div className="flex flex-col max-w-[200px]">
                           <span className="font-medium text-sm truncate" title={log.user_name || "Unknown"}>
                             {log.user_name || "Unknown"}
                           </span>
                           {log.user_email && log.user_email !== "system@system.local" && (
-                            <span className="text-xs text-muted-foreground truncate hidden lg:inline" title={log.user_email}>
-                              &lt;{log.user_email}&gt;
+                            <span className="text-xs text-muted-foreground truncate" title={log.user_email}>
+                              {log.user_email}
                             </span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="py-2">
-                        <Badge variant={getActionVariant(log.action)} className="px-1.5 py-0 text-[10px] uppercase tracking-wide">
+                        <Badge
+                          variant={getActionVariant(log.action)}
+                          className="px-1.5 py-0 text-[10px] uppercase tracking-wide"
+                        >
                           {log.action}
                         </Badge>
                       </TableCell>
                       <TableCell className="py-2">
-                        <div className="flex items-center text-xs max-w-[250px]">
-                          <span className="font-medium capitalize mr-1">{log.model_name}:</span>
+                        <div className="flex flex-col text-xs max-w-[250px]">
+                          <span className="font-medium">{entityLabel(log)}</span>
                           <span className="text-muted-foreground truncate" title={log.object_repr}>
                             {log.object_repr || log.object_id}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs py-2 text-muted-foreground">{log.ip_address || "-"}</TableCell>
+                      <TableCell className="font-mono text-xs py-2 text-muted-foreground">
+                        {log.ip_address || "-"}
+                      </TableCell>
                       <TableCell className="text-right py-2">
                         <Button
                           variant="ghost"
@@ -434,11 +515,11 @@ export default function AuditLogPage() {
               </TableBody>
             </Table>
 
-            {/* Pagination */}
             {logsData && (logsData.next || logsData.previous || logsData.count > 0) && (
               <div className="flex items-center justify-between p-4 border-t border-border">
                 <div className="text-sm text-foreground">
-                  Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, logsData.count)} of {logsData.count} logs
+                  Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, logsData.count)} of {logsData.count}{" "}
+                  logs
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -464,26 +545,27 @@ export default function AuditLogPage() {
           </CardContent>
         </Card>
 
-        {/* Log Details Dialog */}
         <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
           <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
             <DialogHeader className="p-6 pb-4 border-b">
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-xl">Audit Log Details</DialogTitle>
-                <Badge variant="secondary" className="font-mono">#{selectedLog?.id}</Badge>
+                <Badge variant="secondary" className="font-mono">
+                  #{selectedLog?.id}
+                </Badge>
               </div>
-
             </DialogHeader>
 
             {selectedLog && (
               <div className="flex-1 overflow-y-auto">
-              {/* // Top Meta Section */}
                 <div className="grid grid-cols-2 gap-px bg-muted border-b">
-                  <div className="bg-card bg-background p-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User / Actor</h4>
+                  <div className="bg-card p-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      User / Actor
+                    </h4>
                     <div className="flex items-center space-x-3">
                       <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-lg">
-                        {selectedLog.user_name?.charAt(0).toUpperCase() || "S"}
+                        {getActorInitial(selectedLog.user_name, selectedLog.user_email)}
                       </div>
                       <div>
                         <div className="font-medium text-foreground">{selectedLog.user_name || "System"}</div>
@@ -491,42 +573,43 @@ export default function AuditLogPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-card bg-background p-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Action Info</h4>
+                  <div className="bg-card p-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Action Info
+                    </h4>
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant={getActionVariant(selectedLog.action)} className="px-3 py-1 capitalize">
                         {selectedLog.action}
                       </Badge>
                       <span className="text-sm text-muted-foreground font-mono">
-                        {/* Enhancement 4: include year in detail dialog too */}
                         {format(new Date(selectedLog.timestamp), "MMM dd yyyy, HH:mm:ss")}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-2">
-                      IP: <span className="font-mono text-foreground">{selectedLog.ip_address || "N/A"}</span>
+                      IP:{" "}
+                      <span className="font-mono text-foreground">{selectedLog.ip_address || "N/A"}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-6">
-                {/* // Entity Info */}
                   <div className="mb-8">
                     <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
-                      <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
+                      <span className="w-1 h-4 bg-primary rounded-full mr-2" />
                       Affected Entity
                     </h4>
-                    <div className="bg-muted bg-background rounded-lg p-4 border border-border">
+                    <div className="bg-muted rounded-lg p-4 border border-border">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <span className="text-xs text-muted-foreground block">Model</span>
-                          <span className="font-medium capitalize">{selectedLog.model_name}</span>
+                          <span className="text-xs text-muted-foreground block">Type</span>
+                          <span className="font-medium">{entityLabel(selectedLog)}</span>
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground block">Object ID</span>
                           <span className="font-mono text-sm">{selectedLog.object_id}</span>
                         </div>
                         <div>
-                          <span className="text-xs text-muted-foreground block">Representation</span>
+                          <span className="text-xs text-muted-foreground block">Description</span>
                           <span className="font-medium truncate block" title={selectedLog.object_repr}>
                             {selectedLog.object_repr}
                           </span>
@@ -535,52 +618,58 @@ export default function AuditLogPage() {
                     </div>
                   </div>
 
-                {/* // Changes Table */}
                   <div>
                     <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
-                      <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
-                      Changes Log
+                      <span className="w-1 h-4 bg-primary rounded-full mr-2" />
+                      Field Changes
                     </h4>
                     {selectedLog.changes && Object.keys(selectedLog.changes).length > 0 ? (
                       <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-muted bg-background">
-                              <TableHead className="w-[25%]">Field Changed</TableHead>
-                              <TableHead className="w-[37.5%] text-destructive/80">From (Old Value)</TableHead>
-                              <TableHead className="w-[37.5%] text-success/80">To (New Value)</TableHead>
+                            <TableRow className="bg-muted">
+                              <TableHead className="w-[25%]">Field</TableHead>
+                              <TableHead className="w-[37.5%]">Previous</TableHead>
+                              <TableHead className="w-[37.5%]">New</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {Object.entries(selectedLog.changes).map(([key, value]) => {
+                              const castVal = value as unknown;
+                              const oldValue =
+                                Array.isArray(castVal) && castVal.length === 2 ? castVal[0] : "-";
+                              const newValue =
+                                Array.isArray(castVal) && castVal.length === 2 ? castVal[1] : value;
 
-                              const castVal = value as any;
-                              const oldValue = Array.isArray(castVal) && castVal.length === 2 ? castVal[0] : '-';
-                              const newValue = Array.isArray(castVal) && castVal.length === 2 ? castVal[1] : value;
-
-                              // Format values for better readability
-
-                              const formatValue = (val: any) => {
-                                if (val === null) return <span className="text-muted-foreground italic">null</span>;
-                                if (val === "") return <span className="text-muted-foreground italic">empty</span>;
-                                if (typeof val === 'boolean') return <span className={val ? "text-success font-bold" : "text-destructive font-bold"}>{String(val)}</span>;
-                                if (typeof val === 'object') return <pre className="text-[10px] whitespace-pre-wrap">{JSON.stringify(val, null, 2)}</pre>;
+                              const formatValue = (val: unknown) => {
+                                if (val === null)
+                                  return <span className="text-muted-foreground italic">null</span>;
+                                if (val === "")
+                                  return <span className="text-muted-foreground italic">empty</span>;
+                                if (typeof val === "boolean")
+                                  return (
+                                    <span className={val ? "text-success font-bold" : "text-destructive font-bold"}>
+                                      {String(val)}
+                                    </span>
+                                  );
+                                if (typeof val === "object")
+                                  return (
+                                    <pre className="text-[10px] whitespace-pre-wrap">
+                                      {JSON.stringify(val, null, 2)}
+                                    </pre>
+                                  );
                                 return String(val);
-                              }
+                              };
 
                               return (
                                 <TableRow key={key}>
-                                  <TableCell className="font-medium font-mono text-xs bg-muted/50 bg-background/30">
+                                  <TableCell className="font-medium font-mono text-xs bg-muted/50">
                                     {key.replace(/_/g, " ")}
                                   </TableCell>
-                                  <TableCell className="font-mono text-xs break-all bg-destructive/10/30 dark:bg-red-900/10">
-                                    {formatValue(oldValue)}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs break-all bg-success/10/30 dark:bg-green-900/10">
-                                    {formatValue(newValue)}
-                                  </TableCell>
+                                  <TableCell className="font-mono text-xs break-all">{formatValue(oldValue)}</TableCell>
+                                  <TableCell className="font-mono text-xs break-all">{formatValue(newValue)}</TableCell>
                                 </TableRow>
-                              )
+                              );
                             })}
                           </TableBody>
                         </Table>
@@ -597,68 +686,7 @@ export default function AuditLogPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Archive Dialog */}
-        <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Archive className="w-5 h-5 text-primary" />
-                Delete Old Audit Logs
-              </DialogTitle>
-              {/* Bug 5 fix: UX clarification — this is a permanent delete, not a file archive */}
-              <DialogDescription className="pt-2">
-                Permanently delete audit logs older than the specified number of days.
-                Consider downloading a backup first.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Archive logs older than (days)
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={archiveDays}
-                  onChange={(e) => setArchiveDays(parseInt(e.target.value) || 90)}
-                  className="h-9"
-                  placeholder="90"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Logs older than {archiveDays} days will be permanently deleted.
-                </p>
-              </div>
-              <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                  <strong>Warning:</strong> This action cannot be undone. Make sure to download logs before archiving if you need to keep a record.
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowArchiveDialog(false)}
-                disabled={archiveMutation.isPending}
-                className="h-8 text-xs"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleArchive}
-                disabled={archiveMutation.isPending}
-                className="h-8 text-xs bg-primary hover:bg-orange-700"
-              >
-                {/* Bug 5 fix: label says Delete, not Archive */}
-                {archiveMutation.isPending ? "Deleting..." : "Delete Old Logs"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </PermissionGuard>
-
   );
 }

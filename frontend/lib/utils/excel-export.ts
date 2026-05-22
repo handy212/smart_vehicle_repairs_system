@@ -8,6 +8,8 @@ export interface ExcelExportOptions {
     headers?: string[];
     boldRows?: number[];
     currencyColumns?: number[];
+    /** Symbol from system payment settings (e.g. $, ₵, €) */
+    currencySymbol?: string;
     colorRows?: { row: number; color: string }[];
     freezePane?: { row: number; col: number }; // Freeze rows/columns for scrolling
     companyName?: string;
@@ -30,11 +32,14 @@ export function exportToExcel(
             sheetName = 'Sheet1',
             boldRows = [],
             currencyColumns = [],
+            currencySymbol = '$',
             colorRows = [],
             freezePane,
             companyName,  // No default - let caller provide it
             showTimestamp = true
         } = options;
+
+        const currencyNumberFormat = `"${currencySymbol.replace(/"/g, '""')}"#,##0.00;[Red]"${currencySymbol.replace(/"/g, '""')}"-#,##0.00`;
 
         // Create workbook and worksheet
         const wb = XLSX.utils.book_new();
@@ -151,7 +156,7 @@ export function exportToExcel(
                             const isNegative = value < 0;
 
                             ws[cellAddress].t = 'n';
-                            ws[cellAddress].z = '$#,##0.00;[Red]-$#,##0.00';
+                            ws[cellAddress].z = currencyNumberFormat;
 
                             // Conditional formatting: negative = red, positive = green (subtle)
                             if (isNegative) {
