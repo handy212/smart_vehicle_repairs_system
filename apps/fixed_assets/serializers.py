@@ -469,6 +469,7 @@ class AssetAcquisitionRequestWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssetAcquisitionRequest
         fields = [
+            'id',
             'title',
             'description',
             'proposed_asset_name',
@@ -480,6 +481,7 @@ class AssetAcquisitionRequestWriteSerializer(serializers.ModelSerializer):
             'depreciation_method',
             'useful_life_years',
         ]
+        read_only_fields = ['id']
 
     def validate(self, data):
         salvage = data.get('salvage_value', getattr(self.instance, 'salvage_value', Decimal('0')))

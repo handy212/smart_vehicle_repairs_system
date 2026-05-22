@@ -19,15 +19,20 @@ class SMSConsoleViewSetTest(TestCase):
             slug='sms',
             defaults={'name': 'SMS', 'is_enabled': True}
         )
-        send_notifications = Permission.objects.create(
+        send_notifications, _ = Permission.objects.update_or_create(
             code='send_notifications',
-            name='Send Notifications',
-            category='notifications',
+            defaults={
+                'name': 'Send Notifications',
+                'category': 'notifications',
+                'is_active': True,
+            },
         )
-        manager_role = Role.objects.create(
+        manager_role, _ = Role.objects.update_or_create(
             code='manager',
-            name='Manager',
-            is_active=True,
+            defaults={
+                'name': 'Manager',
+                'is_active': True,
+            },
         )
         manager_role.permissions.add(send_notifications)
         self.user = User.objects.create_user(

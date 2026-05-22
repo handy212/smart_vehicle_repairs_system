@@ -766,7 +766,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action == 'create':
-            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_payments')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('process_payments')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_payments')]
         elif self.action in ['destroy', 'refund']:
@@ -1207,7 +1207,7 @@ class TillViewSet(viewsets.ModelViewSet):
         """Open/close tills require payment privileges; read uses view_billing."""
         base = [IsAuthenticated(), IsModuleEnabled('billing')]
         if self.action in ('open', 'close', 'record_movement'):
-            return base + [HasPermission('create_payments')]
+            return base + [HasPermission('process_payments')]
         if self.action in ('list', 'retrieve', 'current', 'movements'):
             return base + [HasPermission('view_billing')]
         return base + [HasPermission('manage_billing')]

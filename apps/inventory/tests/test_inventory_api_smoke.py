@@ -9,6 +9,9 @@ from apps.inventory.models import Supplier
 from apps.inventory.services import InventoryService
 from apps.accounts.models import User
 from apps.branches.models import Branch
+from apps.customers.models import Customer
+from apps.vehicles.models import Vehicle
+from apps.workorders.models import WorkOrder
 
 @pytest.fixture
 def api_client():
@@ -142,6 +145,30 @@ class TestInventoryAPI:
 
     def test_outbound_transaction_is_logged_as_negative(self, user, setup_data, branch):
         category, part, stock_item = setup_data
+        customer_user = User.objects.create_user(
+            username="inventory_customer",
+            email="inventory-customer@example.com",
+            password="password",
+            role="customer",
+        )
+        customer = Customer.objects.create(user=customer_user)
+        vehicle = Vehicle.objects.create(
+            owner=customer,
+            year=2021,
+            make="Toyota",
+            model="Corolla",
+            license_plate="INV-001",
+            current_mileage=10000,
+        )
+        work_order = WorkOrder.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=branch,
+            status="approved",
+            odometer_in=10000,
+            customer_concerns="Issue stock",
+            created_by=user,
+        )
 
         transaction = InventoryService.record_transaction(
             part=part,
@@ -149,6 +176,7 @@ class TestInventoryAPI:
             transaction_type='sale',
             user=user,
             branch=branch,
+            work_order=work_order,
             reason='Issued to work order',
         )
 

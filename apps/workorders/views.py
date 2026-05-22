@@ -1168,6 +1168,24 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['work_order', 'status']
     search_fields = ['part_number', 'part_name', 'description']
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return workorder_read_permissions()
+        if self.action == 'create':
+            return workorder_module_permissions() + [
+                HasAnyPermission(['request_parts', 'edit_workorders'])(),
+            ]
+        if self.action in ('order', 'allocate'):
+            return workorder_module_permissions() + [
+                HasAnyPermission([
+                    'request_parts',
+                    'edit_workorders',
+                    'manage_inventory',
+                    'approve_part_requests',
+                ])(),
+            ]
+        return workorder_edit_permissions()
     
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
@@ -1966,8 +1984,11 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """Allow access to any work order with a defined access token"""
         return WorkOrder.objects.filter(access_token__isnull=False).select_related(
-            'customer', 'customer__user', 'vehicle', 'estimate', 'invoice'
-        ).prefetch_related('tasks')
+            'customer', 'customer__user', 'vehicle', 'estimate'
+        ).prefetch_related(
+            'tasks',
+            Prefetch('invoices', queryset=Invoice.objects.order_by('-created_at')),
+        )
 
     @action(detail=True, methods=['post'])
     def approve(self, request, access_token=None):

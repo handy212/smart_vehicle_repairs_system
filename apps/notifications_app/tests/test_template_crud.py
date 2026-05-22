@@ -15,17 +15,26 @@ User = get_user_model()
 class NotificationTemplateCRUDTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        manage_perm = Permission.objects.create(
+        manage_perm, _ = Permission.objects.update_or_create(
             code='manage_notification_templates',
-            name='Manage Templates',
-            category='notifications',
+            defaults={
+                'name': 'Manage Templates',
+                'category': 'notifications',
+                'is_active': True,
+            },
         )
-        view_perm = Permission.objects.create(
+        view_perm, _ = Permission.objects.update_or_create(
             code='view_notifications',
-            name='View Notifications',
-            category='notifications',
+            defaults={
+                'name': 'View Notifications',
+                'category': 'notifications',
+                'is_active': True,
+            },
         )
-        admin_role = Role.objects.create(code='template_admin', name='Template Admin', is_active=True)
+        admin_role, _ = Role.objects.update_or_create(
+            code='template_admin',
+            defaults={'name': 'Template Admin', 'is_active': True},
+        )
         admin_role.permissions.add(manage_perm, view_perm)
 
         self.user = User.objects.create_user(

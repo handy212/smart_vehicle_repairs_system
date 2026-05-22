@@ -81,7 +81,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         """Customer-facing billing total: linked invoice total (what they pay), not shop estimate."""
         invoice = self._get_invoice(obj)
         if invoice is not None:
-            return invoice.total
+            return str(invoice.total)
         return None
     
     @extend_schema_field(OpenApiTypes.STR)
@@ -1188,7 +1188,7 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
         """Billing total from linked invoice when present."""
         invoice = self._get_invoice(obj)
         if invoice is not None:
-            return invoice.total
+            return str(invoice.total)
         return None
 
     def _get_estimate(self, obj):

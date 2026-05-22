@@ -23,21 +23,30 @@ class MobileAPITestCase(TestCase):
         self.client = APIClient()
         
         # Create permissions
-        self.view_wo_perm = Permission.objects.create(
+        self.view_wo_perm, _ = Permission.objects.update_or_create(
             code='view_workorders',
-            name='View Work Orders',
-            category='workorders'
+            defaults={
+                'name': 'View Work Orders',
+                'category': 'workorders',
+                'is_active': True,
+            },
         )
-        self.edit_wo_perm = Permission.objects.create(
+        self.edit_wo_perm, _ = Permission.objects.update_or_create(
             code='edit_workorders',
-            name='Edit Work Orders',
-            category='workorders'
+            defaults={
+                'name': 'Edit Work Orders',
+                'category': 'workorders',
+                'is_active': True,
+            },
         )
         
         # Create technician role
-        self.tech_role = Role.objects.create(
+        self.tech_role, _ = Role.objects.update_or_create(
             code='technician',
-            name='Technician'
+            defaults={
+                'name': 'Technician',
+                'is_active': True,
+            },
         )
         self.tech_role.permissions.add(self.view_wo_perm, self.edit_wo_perm)
         

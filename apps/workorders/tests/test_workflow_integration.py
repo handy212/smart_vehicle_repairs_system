@@ -339,19 +339,40 @@ class WorkOrderWorkflowTests(TestCase):
 
     def setup_permissions(self):
         # Create Permissions
-        create_wo = Permission.objects.create(code='create_workorders', name='Create WO', category='workorders')
-        view_wo = Permission.objects.create(code='view_workorders', name='View WO', category='workorders')
-        edit_wo = Permission.objects.create(code='edit_workorders', name='Edit WO', category='workorders')
-        delete_wo = Permission.objects.create(code='delete_workorders', name='Delete WO', category='workorders')
+        create_wo, _ = Permission.objects.update_or_create(
+            code='create_workorders',
+            defaults={'name': 'Create WO', 'category': 'workorders', 'is_active': True},
+        )
+        view_wo, _ = Permission.objects.update_or_create(
+            code='view_workorders',
+            defaults={'name': 'View WO', 'category': 'workorders', 'is_active': True},
+        )
+        edit_wo, _ = Permission.objects.update_or_create(
+            code='edit_workorders',
+            defaults={'name': 'Edit WO', 'category': 'workorders', 'is_active': True},
+        )
+        delete_wo, _ = Permission.objects.update_or_create(
+            code='delete_workorders',
+            defaults={'name': 'Delete WO', 'category': 'workorders', 'is_active': True},
+        )
         
         # Create Roles
-        sc_role = Role.objects.create(code='service_coordinator', name='Service Coordinator')
+        sc_role, _ = Role.objects.update_or_create(
+            code='service_coordinator',
+            defaults={'name': 'Service Coordinator', 'is_active': True},
+        )
         sc_role.permissions.add(create_wo, view_wo, edit_wo)
         
-        tech_role = Role.objects.create(code='technician', name='Technician')
+        tech_role, _ = Role.objects.update_or_create(
+            code='technician',
+            defaults={'name': 'Technician', 'is_active': True},
+        )
         tech_role.permissions.add(view_wo, edit_wo)
         
-        manager_role = Role.objects.create(code='manager', name='Manager')
+        manager_role, _ = Role.objects.update_or_create(
+            code='manager',
+            defaults={'name': 'Manager', 'is_active': True},
+        )
         manager_role.permissions.add(create_wo, view_wo, edit_wo, delete_wo)
 
     def test_full_happy_path_workflow(self):
