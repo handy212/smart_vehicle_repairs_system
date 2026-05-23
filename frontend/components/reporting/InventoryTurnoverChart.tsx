@@ -65,7 +65,10 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
-                            formatter={(value: number) => [value.toFixed(2), "Turnover Rate"]}
+                            formatter={(value) => [
+                                typeof value === "number" ? value.toFixed(2) : "",
+                                "Turnover Rate",
+                            ]}
                         />
                         <Bar dataKey="rate" radius={[0, 4, 4, 0]} barSize={20}>
                             {chartData.map((entry, index) => (

@@ -68,6 +68,8 @@ const TAB_BY_REPORT_TYPE: Record<string, string> = {
 
 export default function ReportsPage() {
   const { formatCurrency } = useCurrency();
+  const formatCurrencyTooltip = (value: unknown) =>
+    formatCurrency(typeof value === "number" || typeof value === "string" ? value : undefined);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
@@ -817,7 +819,7 @@ export default function ReportsPage() {
                             />
                             <YAxis style={{ fontSize: "12px" }} />
                             <Tooltip
-                              formatter={(value: number) => `${formatCurrency(value)}`}
+                              formatter={formatCurrencyTooltip}
                               labelFormatter={(value) => format(new Date(value), "MMM dd, yyyy")}
                             />
                             <Legend />
@@ -863,7 +865,7 @@ export default function ReportsPage() {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
+                          <Tooltip formatter={formatCurrencyTooltip} />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
@@ -892,7 +894,7 @@ export default function ReportsPage() {
                           style={{ fontSize: "12px" }}
                         />
                         <YAxis style={{ fontSize: "12px" }} />
-                        <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
+                        <Tooltip formatter={formatCurrencyTooltip} />
                         <Legend />
                         <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
                       </BarChart>
@@ -944,7 +946,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" style={{ fontSize: "12px" }} />
                       <YAxis style={{ fontSize: "12px" }} />
-                      <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
+                      <Tooltip formatter={formatCurrencyTooltip} />
                       <Bar dataKey="value" fill="#3B82F6" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1191,7 +1193,7 @@ export default function ReportsPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="category" style={{ fontSize: "12px" }} />
                         <YAxis style={{ fontSize: "12px" }} />
-                        <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
+                        <Tooltip formatter={formatCurrencyTooltip} />
                         <Legend />
                         <Bar dataKey="value" fill="#8B5CF6" name="Value" />
                       </BarChart>

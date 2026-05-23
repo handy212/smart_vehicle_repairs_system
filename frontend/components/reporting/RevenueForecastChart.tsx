@@ -88,7 +88,10 @@ export function RevenueForecastChart({ data, forecastDays = 30 }: RevenueForecas
                     />
                     <Tooltip
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        formatter={(value: number) => [formatCurrency(value), ""]}
+                        formatter={(value) => [
+                            formatCurrency(typeof value === "number" || typeof value === "string" ? value : undefined),
+                            "",
+                        ]}
                         labelFormatter={(label) => format(parseISO(label), "MMMM d, yyyy")}
                     />
                     <Legend verticalAlign="top" height={36} />
