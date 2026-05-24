@@ -87,6 +87,8 @@ Thumbs.db
 .coverage
 .pytest_cache/
 htmlcov/
+frontend/test-results/
+frontend/playwright-report/
 
 # Temporary files
 *.tmp

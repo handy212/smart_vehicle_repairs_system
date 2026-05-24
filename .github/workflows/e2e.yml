@@ -33,7 +33,7 @@ jobs:
       DEBUG: 'True'
       ALLOWED_HOSTS: localhost,127.0.0.1
       DATABASE_URL: postgresql://ci:ci@localhost:5432/vehicle_repairs_e2e
-      E2E_USERNAME: e2e_admin
+      E2E_EMAIL: e2e_admin@example.com
       E2E_PASSWORD: e2e_test_pass_123
       E2E_BASE_URL: http://127.0.0.1:3000
       E2E_API_URL: http://127.0.0.1:8000/api
