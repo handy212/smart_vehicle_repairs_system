@@ -415,7 +415,7 @@ class DiagnosticCodeLibraryModelTest(TestCase):
     def test_create_code_library_entry(self):
         """Test creating a code library entry."""
         code = DiagnosticCodeLibrary.objects.create(
-            code_number='P0301',
+            code_number='ZTEST0301',
             code_type='obd_ii',
             title='Cylinder 1 Misfire',
             description='Misfire detected in cylinder 1',
@@ -423,13 +423,13 @@ class DiagnosticCodeLibraryModelTest(TestCase):
             common_causes=['Faulty spark plug', 'Bad ignition coil'],
             common_fixes=['Replace spark plug', 'Test ignition system']
         )
-        self.assertEqual(code.code_number, 'P0301')
+        self.assertEqual(code.code_number, 'ZTEST0301')
         self.assertEqual(len(code.common_causes), 2)
 
     def test_increment_use_count(self):
         """Test incrementing use count."""
         code = DiagnosticCodeLibrary.objects.create(
-            code_number='P0420',
+            code_number='ZTEST0420',
             code_type='obd_ii',
             title='Catalyst System Efficiency Below Threshold',
             description='Catalyst efficiency low',
