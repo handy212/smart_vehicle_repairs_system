@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, mixins, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -1971,10 +1971,10 @@ class WorkOrderPhotoViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewS
 
 # ============= Public Portal Views =============
 
-class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
+class PublicWorkOrderViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
     Public access for customers via unique access_token.
-    Allows viewing status/details and approving/declining work.
+    Retrieve-only: no list endpoint (prevents unauthenticated PII enumeration).
     """
     queryset = WorkOrder.objects.all()
     serializer_class = PublicWorkOrderSerializer

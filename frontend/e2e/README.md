@@ -35,7 +35,7 @@ npm run test:e2e
 |----------|---------|-------------|
 | `E2E_BASE_URL` | `http://127.0.0.1:3001` | Next.js origin |
 | `E2E_API_URL` | `http://127.0.0.1:8001/api` | Django API base |
-| `E2E_USERNAME` | `e2e_admin` | Staff user for JWT login |
+| `E2E_EMAIL` | `e2e_admin@example.com` | Staff user email for JWT login |
 | `E2E_PASSWORD` | `e2e_test_pass_123` | Password |
 
 ## CI

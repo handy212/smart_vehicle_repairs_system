@@ -37,7 +37,7 @@ class WorkOrderAutoInvoicedOnPaymentTests(TestCase):
         )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
-            vin="AUTOINVOICETEST1234",
+            vin="1HGBH41JXMN109186",
             year=2022,
             make="Honda",
             model="Civic",

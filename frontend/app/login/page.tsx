@@ -334,7 +334,11 @@ export default function LoginPage() {
                 ) : twoFactorData ? (
                   <form onSubmit={onTwoFactorSubmit} className="space-y-4 lg:space-y-5">
                     {error && (
-                      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
+                      <div
+                        role="alert"
+                        aria-live="polite"
+                        className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300"
+                      >
                         {error}
                       </div>
                     )}
@@ -389,7 +393,11 @@ export default function LoginPage() {
                 ) : (
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 lg:space-y-5">
                     {error && (
-                      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
+                      <div
+                        role="alert"
+                        aria-live="polite"
+                        className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300"
+                      >
                         {error}
                       </div>
                     )}

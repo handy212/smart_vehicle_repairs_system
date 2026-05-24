@@ -164,6 +164,14 @@ class CustomerPortalWorkOrderAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_public_work_order_list_is_not_allowed(self):
+        response = self.client.get("/api/workorders/public/")
+
+        self.assertIn(
+            response.status_code,
+            [status.HTTP_404_NOT_FOUND, status.HTTP_405_METHOD_NOT_ALLOWED],
+        )
+
     def test_public_token_cannot_approve_completed_work_order(self):
         self.work_order.status = "completed"
         self.work_order.save(update_fields=["status"])
