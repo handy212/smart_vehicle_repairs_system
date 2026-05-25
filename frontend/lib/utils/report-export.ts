@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { exportToExcel } from "@/lib/utils/excel-export";
+import { exportToCSV } from "@/lib/utils/export-utils";
 import { exportMultiSheetXlsx } from "@/lib/utils/export";
 
 export type TableExportPayload = {
@@ -227,7 +228,19 @@ export function exportSheetsToExcel(sections: SheetExportSection[], filename: st
   );
 }
 
-export function runTableExport(payload: TableExportPayload, format: "xlsx" | "pdf") {
+export function runTableExport(
+  payload: TableExportPayload,
+  format: "xlsx" | "pdf" | "csv"
+) {
+  if (format === "csv") {
+    const rows = [payload.headers, ...payload.rows];
+    exportToCSV(
+      rows,
+      ensureExtension(payload.filename, ".csv"),
+      payload.headers
+    );
+    return;
+  }
   if (format === "xlsx") {
     exportTableToExcel(payload);
   } else {

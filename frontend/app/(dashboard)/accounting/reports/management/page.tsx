@@ -19,7 +19,8 @@ import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import Link from "next/link";
 
@@ -179,7 +180,8 @@ export default function ManagementReportsPage() {
     };
 
     return (
-        <div className="space-y-6 p-4 md:p-6">
+        <div className="space-y-6">
+            <div className="no-print space-y-6 p-4 md:p-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Management Reports</h1>
                 <p className="text-muted-foreground text-sm mt-1">
@@ -210,11 +212,18 @@ export default function ManagementReportsPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <ReportExportMenu getPayload={buildExportPayload} />
+                    <AccountingReportToolbar getExportPayload={buildExportPayload} />
                     <BranchReportChip />
                 </div>
             </div>
+            </div>
 
+            <AccountingReportPrintHeader
+                title="Management Reports"
+                dateInfo={`${startDate} to ${endDate}`}
+            />
+
+            <div className="p-4 md:p-6 print-container">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MgmtTab)}>
                 <TabsList className="flex flex-wrap h-auto">
                     <TabsTrigger value="executive">Executive KPIs</TabsTrigger>
@@ -506,6 +515,7 @@ export default function ManagementReportsPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            </div>
         </div>
     );
 }

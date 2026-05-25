@@ -13,7 +13,7 @@ import {
   runTableExport,
   type TableExportPayload,
 } from "@/lib/utils/report-export";
-import { ChevronDown, Download, FileDown } from "lucide-react";
+import { ChevronDown, Download, FileDown, FileSpreadsheet } from "lucide-react";
 
 type ReportExportMenuProps = {
   getPayload: () => TableExportPayload | null;
@@ -37,7 +37,7 @@ export function ReportExportMenu({
     currencySymbol,
   });
 
-  const exportFormat = (format: "xlsx" | "pdf") => {
+  const exportFormat = (format: "xlsx" | "pdf" | "csv") => {
     const base = getPayload();
     if (!base || base.rows.length === 0) {
       toast({
@@ -71,6 +71,10 @@ export function ReportExportMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => exportFormat("csv")}>
+          <FileSpreadsheet className="h-4 w-4 mr-2" />
+          Export CSV
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => exportFormat("xlsx")}>
           <Download className="h-4 w-4 mr-2" />
           Export Excel (.xlsx)

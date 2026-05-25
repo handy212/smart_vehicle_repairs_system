@@ -12,7 +12,8 @@ import { useState } from "react";
 import { Package, Wrench, BarChart3 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 
 type ExpenseCategory = { amount?: number; percent?: number; label?: string };
@@ -64,19 +65,25 @@ export default function CostControlReportPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="no-print flex flex-wrap items-start justify-between gap-4">
         <div>
         <h1 className="text-2xl font-bold">Cost Control Report</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Operating costs by category plus warranty and return/rework jobs.
         </p>
         </div>
-        <ReportExportMenu getPayload={buildExportPayload} disabled={isLoading} />
+        <AccountingReportToolbar
+          getExportPayload={buildExportPayload}
+          disabled={isLoading}
+          isLoading={isLoading}
+        />
       </div>
-      <div className="flex gap-4">
+      <AccountingReportPrintHeader title="Cost Control" dateInfo={`${startDate} to ${endDate}`} />
+      <div className="no-print flex gap-4">
         <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
+      <div className="print-container">
       {isLoading ? (
         <AccountingReportSkeleton compact rows={4} />
       ) : (
@@ -133,6 +140,7 @@ export default function CostControlReportPage() {
           </Card>
         </>
       )}
+      </div>
     </div>
   );
 }

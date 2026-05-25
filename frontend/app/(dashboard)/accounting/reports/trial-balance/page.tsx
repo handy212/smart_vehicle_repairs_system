@@ -19,10 +19,9 @@ import {
     TableHeader,
     TableRow} from "@/components/ui/table";
 import Link from "next/link";
-import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
-import { exportToExcel } from "@/lib/utils/excel-export";
-import { ExportDropdown } from "@/components/ui/export-dropdown";
-import { COMPANY_NAME } from "@/lib/constants";
+import { buildTrialBalanceExportPayload } from "@/lib/utils/accounting-report-export";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 
 interface TrialBalanceAccount {
     code: string;
@@ -49,68 +48,8 @@ export default function TrialBalancePage() {
         queryKey: ["accounting", "trial-balance", date],
         queryFn: () => accountingApi.getTrialBalance(date)});
 
-    const handleExportCSV = () => {
-        if (!report) return;
-
-
-        const rows: Array<Array<string | number>> = [];
-        rows.push(['Trial Balance']);
-        rows.push([`As of: ${date}`]);
-        rows.push([]);
-
-
-        report?.accounts.forEach((account: TrialBalanceAccount) => {
-            rows.push([
-                account.code,
-                account.name,
-                account.type,
-                Number(account.debit) > 0 ? account.debit : 0,
-                Number(account.credit) > 0 ? account.credit : 0
-            ]);
-        });
-
-        rows.push(['', '', 'Totals', report?.totals.debits, report?.totals.credits]);
-
-        const filename = generateFilenameWithTimestamp('trial-balance', 'csv');
-        exportToCSV(rows, filename, ['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
-    };
-
-    const handleExportExcel = () => {
-        if (!report) return;
-
-
-        const rows: Array<Array<string | number>> = [];
-
-        // Headers
-        rows.push(['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
-
-        // Data
-
-        report?.accounts.forEach((account: TrialBalanceAccount) => {
-            rows.push([
-                account.code,
-                account.name,
-                account.type,
-                Number(account.debit) > 0 ? account.debit : 0,
-                Number(account.credit) > 0 ? account.credit : 0
-            ]);
-        });
-
-        // Totals
-        rows.push(['', '', 'TOTALS', report?.totals.debits, report?.totals.credits]);
-
-        const filename = generateFilenameWithTimestamp('trial-balance', 'xlsx');
-        exportToExcel(rows, filename, {
-            sheetName: 'Trial Balance',
-            reportTitle: 'Trial Balance',
-            dateInfo: `As of: ${format(new Date(date), 'MMMM d, yyyy')}`,
-            boldRows: [0, rows.length - 1],
-            currencyColumns: [3, 4],
-            freezePane: { row: 1, col: 0 },
-            showTimestamp: true,
-            companyName: COMPANY_NAME,
-            currencySymbol});
-    };
+    const getExportPayload = () =>
+        report ? buildTrialBalanceExportPayload(report, date) : null;
 
     if (isLoading) {
         return <AccountingReportSkeleton />;
@@ -121,8 +60,8 @@ export default function TrialBalancePage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 p-4 sm:p-6">
+            <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Link href="/accounting">
                         <Button variant="ghost" size="icon">
@@ -136,22 +75,22 @@ export default function TrialBalancePage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <AccountingReportToolbar
+                    getExportPayload={getExportPayload}
+                    disabled={!report}
+                >
                     <Input
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        className="w-40"
+                        className="w-40 h-9 text-sm"
                     />
-                    <ExportDropdown
-                        onExportCSV={handleExportCSV}
-                        onExportExcel={handleExportExcel}
-                        disabled={!report}
-                    />
-                </div>
+                </AccountingReportToolbar>
             </div>
 
-            <Card>
+            <AccountingReportPrintHeader title="Trial Balance" dateInfo={`As of ${date}`} />
+
+            <Card className="print-container">
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle>Accounts</CardTitle>

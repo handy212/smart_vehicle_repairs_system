@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 
 type LedgerLine = {
@@ -60,21 +61,25 @@ export default function GeneralLedgerPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="no-print flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">General Ledger</h1>
           <p className="text-sm text-muted-foreground mt-1">Posted journal lines for the selected period.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <ReportExportMenu getPayload={buildExportPayload} disabled={isLoading} />
+        <div className="flex flex-wrap items-center gap-3">
+          <AccountingReportToolbar
+            getExportPayload={buildExportPayload}
+            disabled={isLoading || results.length === 0}
+            isLoading={isLoading}
+          >
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40 h-9 text-sm" />
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40 h-9 text-sm" />
+          </AccountingReportToolbar>
           <BranchReportChip />
         </div>
       </div>
-      <div className="flex gap-4">
-        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
-        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
-      </div>
-      <Card>
+      <AccountingReportPrintHeader title="General Ledger" dateInfo={`${startDate} to ${endDate}`} />
+      <Card className="print-container">
         <CardHeader>
           <CardTitle className="text-base">Transactions</CardTitle>
         </CardHeader>

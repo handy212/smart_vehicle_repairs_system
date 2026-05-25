@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useBranchStore } from '@/store/branchStore';
+import { isAxiosError } from 'axios';
+import apiClient from '@/lib/api/client';
 import { getAccessToken } from '@/lib/utils/token';
+import { useBranchStore } from '@/store/branchStore';
 
 interface PrintOptions {
     documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt' | 'gate_pass' | 'credit_note' | 'bill';
@@ -15,17 +17,6 @@ export function usePrint() {
 
     const printWindow = () => {
         window.print();
-    };
-
-    const readErrorMessage = async (response: Response) => {
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-            const errData = await response.json().catch(() => null);
-            return errData?.error || errData?.detail || `Failed to load print view (${response.status})`;
-        }
-
-        const text = await response.text().catch(() => '');
-        return text.trim() || `Failed to load print view (${response.status})`;
     };
 
     /**
@@ -54,24 +45,12 @@ export function usePrint() {
         setError(null);
 
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-            const url = `${baseUrl}${endpoint}`;
-
-            const token = getAccessToken();
-            const branchId = useBranchStore.getState().activeBranchId;
-
-            const response = await fetch(url, {
-                headers: {
-                    ...(token && { Authorization: `Bearer ${token}` }),
-                    ...(branchId && { 'X-Branch-ID': branchId.toString() }),
-                },
+            const response = await apiClient.get<string>(endpoint, {
+                responseType: 'text',
+                headers: { Accept: 'text/html' },
             });
 
-            if (!response.ok) {
-                throw new Error(await readErrorMessage(response));
-            }
-
-            const html = await response.text();
+            const html = response.data;
             const win = window.open('', '_blank');
             if (win) {
                 win.document.write(html);
@@ -80,9 +59,22 @@ export function usePrint() {
                 throw new Error('Pop-up blocked. Please allow pop-ups for this site.');
             }
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Failed to open print view';
+            let msg = 'Failed to open print view';
+            if (isAxiosError(err) && err.response) {
+                const data = err.response.data;
+                if (typeof data === 'string' && data.trim()) {
+                    msg = data.trim();
+                } else if (data && typeof data === 'object') {
+                    const body = data as { error?: string; detail?: string };
+                    msg = body.error || body.detail || msg;
+                } else {
+                    msg = err.message || msg;
+                }
+            } else if (err instanceof Error) {
+                msg = err.message;
+            }
             setError(msg);
-            throw err;
+            throw new Error(msg);
         } finally {
             setIsOpeningPrint(false);
         }
@@ -130,7 +122,7 @@ export function usePrint() {
                 headers.Authorization = `Bearer ${token}`;
             }
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`,
+                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${endpoint}`,
                 {
                     credentials: 'include',
                     headers,

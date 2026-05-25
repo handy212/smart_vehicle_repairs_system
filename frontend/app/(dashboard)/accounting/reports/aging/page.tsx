@@ -24,10 +24,9 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
-import { exportToExcel } from "@/lib/utils/excel-export";
-import { ExportDropdown } from "@/components/ui/export-dropdown";
-import { COMPANY_NAME } from "@/lib/constants";
+import { buildAgingExportPayload } from "@/lib/utils/accounting-report-export";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 
 type AgingBucket = "current" | "1-30" | "31-60" | "61-90" | "90+";
 
@@ -96,82 +95,14 @@ export default function AgingReportPage() {
     const showSupplierAp = activeTab === "ap" && apView === "suppliers";
     const loading = showSupplierAp ? loadingSuppliers : isLoading;
 
-    const handleExportCSV = () => {
-        if (!report) return;
-
-
-        const rows: ExportCell[][] = [];
-        rows.push([`${activeTab.toUpperCase()} Aging Report`]);
-        rows.push([`As of: ${date}`]);
-        rows.push([]);
-
-        // Summary
-        rows.push(['Summary']);
-        rows.push(['Current', report?.summary.current]);
-        rows.push(['1-30 Days', report?.summary['1-30']]);
-        rows.push(['31-60 Days', report?.summary['31-60']]);
-        rows.push(['61-90 Days', report?.summary['61-90']]);
-        rows.push(['90+ Days', report?.summary['90+']]);
-        rows.push(['Total', report?.summary.total]);
-        rows.push([]);
-
-        // Details
-        rows.push(['Details']);
-
-        report?.details.forEach((item) => {
-            rows.push([item.number, item.entity, item.date, item.due_date || "N/A", item.bucket, item.amount]);
-        });
-
-        const filename = generateFilenameWithTimestamp(`aging-${activeTab}`, 'csv');
-        exportToCSV(rows, filename, ['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
-    };
-
-    const handleExportExcel = () => {
-        if (!report) return;
-
-
-        const rows: ExportCell[][] = [];
-
-        // Summary section
-        rows.push(['SUMMARY', '', '', '', '', '']);
-        rows.push(['Aging Bucket', 'Amount', '', '', '', '']);
-        rows.push(['Current', report?.summary.current, '', '', '', '']);
-        rows.push(['1-30 Days', report?.summary['1-30'], '', '', '', '']);
-        rows.push(['31-60 Days', report?.summary['31-60'], '', '', '', '']);
-        rows.push(['61-90 Days', report?.summary['61-90'], '', '', '', '']);
-        rows.push(['90+ Days', report?.summary['90+'], '', '', '', '']);
-        rows.push(['Total', report?.summary.total, '', '', '', '']);
-        rows.push([]);
-
-        // Details section
-        rows.push(['DETAILS', '', '', '', '', '']);
-        rows.push(['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
-
-        report?.details.forEach((item) => {
-            rows.push([item.number, item.entity, item.date, item.due_date || "N/A", item.bucket, item.amount]);
-        });
-
-        const filename = generateFilenameWithTimestamp(`aging-${activeTab}`, 'xlsx');
-        exportToExcel(rows, filename, {
-            sheetName: `${activeTab.toUpperCase()} Aging`,
-            reportTitle: `${activeTab.toUpperCase()} Aging Report`,
-            dateInfo: `As of: ${format(new Date(date), 'MMMM d, yyyy')}`,
-            boldRows: [0, 1, 9, 10],
-            currencyColumns: [1, 5],
-            colorRows: [
-                { row: 0, color: '6366F1' },
-                { row: 9, color: '6366F1' }
-            ],
-            freezePane: { row: 1, col: 0 },
-            showTimestamp: true,
-            companyName: COMPANY_NAME,
-            currencySymbol,
-        });
+    const getExportPayload = () => {
+        if (showSupplierAp || !report) return null;
+        return buildAgingExportPayload(report, activeTab, date);
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+        <div className="space-y-4 p-4 sm:p-6">
+            <div className="no-print flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div className="flex items-center gap-3">
                     <Link href="/accounting">
                         <Button variant="ghost" size="icon">
@@ -185,20 +116,24 @@ export default function AgingReportPage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <AccountingReportToolbar
+                    getExportPayload={getExportPayload}
+                    disabled={!report || showSupplierAp}
+                    isLoading={loading}
+                >
                     <Input
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        className="w-full sm:w-40"
+                        className="w-full sm:w-40 h-9 text-sm"
                     />
-                    <ExportDropdown
-                        onExportCSV={handleExportCSV}
-                        onExportExcel={handleExportExcel}
-                        disabled={!report}
-                    />
-                </div>
+                </AccountingReportToolbar>
             </div>
+
+            <AccountingReportPrintHeader
+                title={`${activeTab.toUpperCase()} Aging Report`}
+                dateInfo={`As of ${date}`}
+            />
 
             <Tabs
                 value={activeTab}
@@ -206,7 +141,7 @@ export default function AgingReportPage() {
                     setActiveTab(v);
                     if (v === "ar") setApView("bills");
                 }}
-                className="space-y-4"
+                className="no-print space-y-4"
             >
                 <TabsList>
                     <TabsTrigger value="ar">Accounts Receivable (Invoices)</TabsTrigger>
@@ -222,7 +157,7 @@ export default function AgingReportPage() {
                     </Tabs>
                 )}
 
-                <TabsContent value={activeTab} className="space-y-4">
+                <TabsContent value={activeTab} className="space-y-4 print-container">
                     {loading ? (
                         <AccountingReportSkeleton />
                     ) : showSupplierAp ? (

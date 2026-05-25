@@ -1,32 +1,71 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Car } from "lucide-react";
 import { HelpCenter } from "@/components/help/HelpCenter";
-import type { HelpModule } from "@/lib/help-data";
+import type { HelpGuide } from "@/lib/help/types";
 
-const content: Record<string, HelpModule> = {
-    vehicles: {
-        id: "vehicles",
-        title: "Vehicles",
-        description: "Manage customer vehicles.",
-        icon: Car,
-        keywords: ["vin"],
-        topics: [
+vi.mock("@/lib/help", () => {
+    const mockGuides: HelpGuide[] = [
+        {
+            id: "overview-test",
+            title: "Test Overview",
+            description: "Test documentation home.",
+            icon: Car,
+            section: "overview",
+            topics: [
+                {
+                    title: "Welcome topic",
+                    blocks: [{ type: "paragraph", text: "Welcome to the help center." }],
+                },
+            ],
+        },
+        {
+            id: "vehicles-test",
+            title: "Vehicles",
+            description: "Manage customer vehicles.",
+            icon: Car,
+            section: "modules",
+            keywords: ["vin"],
+            topics: [
+                {
+                    title: "Adding vehicles",
+                    blocks: [
+                        {
+                            type: "steps",
+                            items: ["Open **Vehicles** and select New Vehicle.", "Save the profile."],
+                        },
+                    ],
+                    actionLink: "/vehicles/new",
+                    actionLabel: "Add Vehicle",
+                },
+            ],
+        },
+    ];
+
+    return {
+        allGuides: mockGuides,
+        helpSections: [
             {
-                title: "Adding vehicles",
-                steps: ["Open **Vehicles** and select New Vehicle.", "Save the profile."],
-                actionLink: "/vehicles/new",
-                actionLabel: "Add Vehicle",
+                id: "overview",
+                title: "Documentation Home",
+                description: "Welcome",
+                icon: Car,
+            },
+            {
+                id: "modules",
+                title: "Module Reference",
+                description: "Modules",
+                icon: Car,
             },
         ],
-    },
-};
+        countTopics: (guides: HelpGuide[]) => guides.reduce((n, g) => n + g.topics.length, 0),
+    };
+});
 
 describe("HelpCenter", () => {
-    it("renders help modules and topics", () => {
+    it("renders documentation header and guide cards", () => {
         render(
             <HelpCenter
-                content={content}
                 title="Help Center"
                 subtitle="Guides for staff"
                 supportHref="mailto:support@example.com"
@@ -34,20 +73,30 @@ describe("HelpCenter", () => {
         );
 
         expect(screen.getByText("Help Center")).toBeInTheDocument();
-        expect(screen.getAllByText("Vehicles").length).toBeGreaterThan(0);
-
-        fireEvent.click(screen.getByText("View Guide"));
-        fireEvent.click(screen.getByRole("button", { name: /adding vehicles/i }));
-
-        expect(screen.getAllByText("Vehicles").length).toBeGreaterThan(0);
-        expect(screen.getByText("Open")).toBeInTheDocument();
-        expect(screen.getByText("Vehicles", { selector: "strong" })).toBeInTheDocument();
+        expect(screen.getByText("Test Overview")).toBeInTheDocument();
     });
 
-    it("filters modules using topic text and can clear empty searches", () => {
+    it("opens a guide and renders formatted steps", () => {
         render(
             <HelpCenter
-                content={content}
+                title="Help Center"
+                subtitle="Guides for staff"
+                supportHref="mailto:support@example.com"
+            />
+        );
+
+        const moduleButtons = screen.getAllByRole("button", { name: /module reference/i });
+        fireEvent.click(moduleButtons[0]);
+        fireEvent.click(screen.getByText("Open Guide"));
+        fireEvent.click(screen.getByRole("button", { name: /adding vehicles/i }));
+
+        expect(screen.getByText("Vehicles", { selector: "strong" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /add vehicle/i })).toBeInTheDocument();
+    });
+
+    it("filters guides and can clear empty searches", () => {
+        render(
+            <HelpCenter
                 title="Help Center"
                 subtitle="Guides for staff"
                 supportHref="mailto:support@example.com"
@@ -55,16 +104,16 @@ describe("HelpCenter", () => {
         );
 
         fireEvent.change(screen.getByLabelText("Search help topics"), {
-            target: { value: "missing topic" },
+            target: { value: "missing topic xyz" },
         });
-        expect(screen.getByText("No matching help topics")).toBeInTheDocument();
+        expect(screen.getByText("No matching guides")).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: /clear search/i }));
-        expect(screen.getAllByText("Vehicles").length).toBeGreaterThan(0);
+        expect(screen.getByText("Test Overview")).toBeInTheDocument();
 
         fireEvent.change(screen.getByLabelText("Search help topics"), {
             target: { value: "profile" },
         });
-        expect(screen.getAllByText("Vehicles").length).toBeGreaterThan(0);
+        expect(screen.getByText("Vehicles")).toBeInTheDocument();
     });
 });

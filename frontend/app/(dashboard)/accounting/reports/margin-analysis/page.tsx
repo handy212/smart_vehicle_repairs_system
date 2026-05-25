@@ -11,7 +11,8 @@ import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import apiClient from "@/lib/api/client";
 
@@ -61,19 +62,25 @@ export default function MarginAnalysisPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="no-print flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Margin Analysis</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Combined gross margin from invoicing and per-job profitability.
           </p>
         </div>
-        <ReportExportMenu getPayload={buildExportPayload} disabled={loadingJobs} />
+        <AccountingReportToolbar
+          getExportPayload={buildExportPayload}
+          disabled={loadingJobs}
+          isLoading={loadingJobs}
+        />
       </div>
-      <div className="flex gap-4">
+      <AccountingReportPrintHeader title="Margin Analysis" dateInfo={`${startDate} to ${endDate}`} />
+      <div className="no-print flex gap-4">
         <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
+      <div className="print-container">
       {loadingJobs ? (
         <AccountingReportSkeleton compact rows={4} />
       ) : totals ? (
@@ -130,6 +137,7 @@ export default function MarginAnalysisPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -15,10 +15,9 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
-import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
-import { exportToExcel } from "@/lib/utils/excel-export";
-import { ExportDropdown } from "@/components/ui/export-dropdown";
-import { COMPANY_NAME } from "@/lib/constants";
+import { buildCashFlowExportPayload } from "@/lib/utils/accounting-report-export";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 
 type CashFlowActivity = {
     inflows: number;
@@ -76,100 +75,12 @@ export default function CashFlowPage() {
         queryKey: ["accounting", "cash-flow", startDate, endDate],
         queryFn: () => accountingApi.getCashFlowStatement(startDate, endDate) as Promise<CashFlowReport>});
 
-    const handleExportCSV = () => {
-        if (!report) return;
-
-
-        const rows: ExportCell[][] = [];
-        rows.push(['Cash Flow Statement']);
-        rows.push([`Period: ${startDate} to ${endDate}`]);
-        rows.push([]);
-        rows.push(['Opening Balance', report?.opening_balance]);
-        rows.push([]);
-
-        // Operating Activities
-        rows.push(['Operating Activities']);
-        rows.push(['Cash Inflows', report?.operating_activities.inflows]);
-        rows.push(['Cash Outflows', report?.operating_activities.outflows]);
-        rows.push(['Net Cash from Operating', report?.operating_activities.net]);
-        rows.push([]);
-
-        // Investing Activities
-        rows.push(['Investing Activities']);
-        rows.push(['Cash Inflows', report?.investing_activities.inflows]);
-        rows.push(['Cash Outflows', report?.investing_activities.outflows]);
-        rows.push(['Net Cash from Investing', report?.investing_activities.net]);
-        rows.push([]);
-
-        // Financing Activities
-        rows.push(['Financing Activities']);
-        rows.push(['Cash Inflows', report?.financing_activities.inflows]);
-        rows.push(['Cash Outflows', report?.financing_activities.outflows]);
-        rows.push(['Net Cash from Financing', report?.financing_activities.net]);
-        rows.push([]);
-
-        rows.push(['Net Increase/Decrease in Cash', report?.net_increase_decrease]);
-        rows.push(['Closing Balance', report?.closing_balance]);
-
-        const filename = generateFilenameWithTimestamp('cash-flow', 'csv');
-        exportToCSV(rows, filename, ['Item', 'Amount']);
-    };
-
-    const handleExportExcel = () => {
-        if (!report) return;
-
-
-        const rows: ExportCell[][] = [];
-
-        // Summary
-        rows.push(['Opening Balance', report?.opening_balance]);
-        rows.push([]);
-
-        // Operating Activities
-        rows.push(['OPERATING ACTIVITIES', '']);
-        rows.push(['Cash Inflows', report?.operating_activities.inflows]);
-        rows.push(['Cash Outflows', report?.operating_activities.outflows]);
-        rows.push(['Net Cash from Operating', report?.operating_activities.net]);
-        rows.push([]);
-
-        // Investing Activities
-        rows.push(['INVESTING ACTIVITIES', '']);
-        rows.push(['Cash Inflows', report?.investing_activities.inflows]);
-        rows.push(['Cash Outflows', report?.investing_activities.outflows]);
-        rows.push(['Net Cash from Investing', report?.investing_activities.net]);
-        rows.push([]);
-
-        // Financing Activities
-        rows.push(['FINANCING ACTIVITIES', '']);
-        rows.push(['Cash Inflows', report?.financing_activities.inflows]);
-        rows.push(['Cash Outflows', report?.financing_activities.outflows]);
-        rows.push(['Net Cash from Financing', report?.financing_activities.net]);
-        rows.push([]);
-
-        rows.push(['Net Increase/Decrease in Cash', report?.net_increase_decrease]);
-        rows.push(['Closing Balance', report?.closing_balance]);
-
-        const filename = generateFilenameWithTimestamp('cash-flow', 'xlsx');
-        exportToExcel(rows, filename, {
-            sheetName: 'Cash Flow',
-            reportTitle: 'Statement of Cash Flows',
-            dateInfo: `Period: ${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`,
-            boldRows: [0, 2, 7, 12, rows.length - 2, rows.length - 1],
-            currencyColumns: [1],
-            colorRows: [
-                { row: 2, color: '3B82F6' },
-                { row: 7, color: '10B981' },
-                { row: 12, color: 'F59E0B' }
-            ],
-            freezePane: { row: 1, col: 0 },
-            showTimestamp: true,
-            companyName: COMPANY_NAME,
-            currencySymbol});
-    };
+    const getExportPayload = () =>
+        report ? buildCashFlowExportPayload(report, startDate, endDate) : null;
 
     return (
         <div className="mx-auto max-w-4xl space-y-4">
-            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+            <div className="no-print flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div className="flex items-center gap-3">
                     <Link href="/accounting">
                         <Button variant="ghost" size="icon">
@@ -183,34 +94,38 @@ export default function CashFlowPage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <AccountingReportToolbar
+                    getExportPayload={getExportPayload}
+                    disabled={!report}
+                    isLoading={isLoading}
+                >
                     <Input
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full sm:w-40"
+                        className="w-full sm:w-40 h-9 text-sm"
                     />
                     <span className="text-muted-foreground">-</span>
                     <Input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full sm:w-40"
+                        className="w-full sm:w-40 h-9 text-sm"
                     />
-                    <ExportDropdown
-                        onExportCSV={handleExportCSV}
-                        onExportExcel={handleExportExcel}
-                        disabled={!report}
-                    />
-                </div>
+                </AccountingReportToolbar>
             </div>
+
+            <AccountingReportPrintHeader
+                title="Statement of Cash Flows"
+                dateInfo={`${startDate} to ${endDate}`}
+            />
 
             {isLoading ? (
                 <AccountingReportSkeleton />
       ) : isError || !report ? (
                 <div className="p-4 text-destructive">Error loading report</div>
             ) : (
-                <Card>
+                <Card className="print-container">
                     <CardHeader className="border-b bg-muted/10">
                         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <CardTitle className="text-base">Cash Flow Summary</CardTitle>

@@ -18,7 +18,8 @@ import Link from "next/link";
 import apiClient from "@/lib/api/client";
 import { useBranchStore } from "@/store/branchStore";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 
 function MarginBadge({ value }: { value: number }) {
@@ -115,18 +116,27 @@ export default function JobProfitabilityPage() {
 
     return (
         <div className="space-y-4">
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="no-print pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Job Profitability</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Revenue vs. actual costs per work order — broken down by labor, parts, and other
                 </p>
                 </div>
-                <ReportExportMenu getPayload={getExportPayload} disabled={!jobs.length} />
+                <AccountingReportToolbar
+                    getExportPayload={getExportPayload}
+                    disabled={jobs.length === 0 && !isLoading}
+                    isLoading={isLoading}
+                />
             </div>
 
+            <AccountingReportPrintHeader
+                title="Job Profitability"
+                dateInfo={`${filters.start_date} to ${filters.end_date}`}
+            />
+
             {/* Filters */}
-            <Card className="border shadow-sm">
+            <Card className="no-print border shadow-sm">
                 <CardContent className="p-4">
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -153,6 +163,7 @@ export default function JobProfitabilityPage() {
                 </CardContent>
             </Card>
 
+            <div className="print-container space-y-4">
             {/* Summary Cards */}
             {report && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -335,6 +346,7 @@ export default function JobProfitabilityPage() {
                     )}
                 </CardContent>
             </Card>
+            </div>
         </div>
     );
 }

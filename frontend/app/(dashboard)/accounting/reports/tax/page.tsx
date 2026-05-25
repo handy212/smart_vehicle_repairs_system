@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { FileText, TrendingUp, TrendingDown } from "lucide-react";
 import { format, startOfYear, endOfYear } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 
 export default function TaxReportPage() {
     const { formatCurrency } = useCurrency();
@@ -24,44 +25,46 @@ export default function TaxReportPage() {
         queryFn: () => accountingApi.getTaxReport(startDate, endDate),
     });
 
+    const getExportPayload = () => {
+        if (!report) return null;
+        return {
+            reportTitle: "Tax Report",
+            filename: `tax-report_${startDate}_${endDate}`,
+            dateInfo: `${startDate} to ${endDate}`,
+            headers: ["Category", "Amount"],
+            rows: [
+                ["VAT Collected", report.tax_collected.vat],
+                ["NHIL Collected", report.tax_collected.nhil],
+                ["GETFund Collected", report.tax_collected.getfund],
+                ["HRL Collected", report.tax_collected.hrl],
+                ["Total Collected", report.tax_collected.total],
+                ["Total Paid", report.tax_paid.total],
+                ["Net Tax Liability", report.net_tax_liability],
+            ],
+            currencyColumnIndexes: [1],
+        };
+    };
+
     return (
         <div className="mx-auto max-w-5xl space-y-4">
-            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+            <div className="no-print flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">Tax Report</h1>
                     <p className="text-sm text-muted-foreground">
                         Sales Tax Collected vs Input Tax Paid
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <ReportExportMenu
-                        getPayload={() => {
-                            if (!report) return null;
-                            return {
-                                reportTitle: "Tax Report",
-                                filename: `tax-report_${startDate}_${endDate}`,
-                                dateInfo: `${startDate} to ${endDate}`,
-                                headers: ["Category", "Amount"],
-                                rows: [
-                                    ["VAT Collected", report.tax_collected.vat],
-                                    ["NHIL Collected", report.tax_collected.nhil],
-                                    ["GETFund Collected", report.tax_collected.getfund],
-                                    ["HRL Collected", report.tax_collected.hrl],
-                                    ["Total Collected", report.tax_collected.total],
-                                    ["Total Paid", report.tax_paid.total],
-                                    ["Net Tax Liability", report.net_tax_liability],
-                                ],
-                                currencyColumnIndexes: [1],
-                            };
-                        }}
-                        disabled={!report}
-                    />
-                    <Button size="sm" variant="outline" className="h-9" onClick={() => window.print()}>
-                        <FileText className="w-4 h-4 mr-2" />
-                        Print
-                    </Button>
-                </div>
+                <AccountingReportToolbar
+                    getExportPayload={getExportPayload}
+                    disabled={!report}
+                    isLoading={isLoading}
+                />
             </div>
+
+            <AccountingReportPrintHeader
+                title="Tax Report"
+                dateInfo={`${startDate} to ${endDate}`}
+            />
 
             <Card>
                 <CardHeader className="border-b bg-muted/10">
@@ -101,7 +104,7 @@ export default function TaxReportPage() {
             {isLoading ? (
                 <AccountingReportSkeleton />
             ) : report ? (
-                <div className="space-y-4">
+                <div className="print-container space-y-4">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <Card>
                             <CardContent className="pt-5">

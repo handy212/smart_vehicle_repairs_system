@@ -17,7 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import apiClient from "@/lib/api/client";
 
@@ -69,16 +70,21 @@ export default function OpexVariancePage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="no-print flex flex-wrap items-start justify-between gap-4">
         <div>
         <h1 className="text-2xl font-bold">OPEX Variance vs Budget</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Operating expense accounts (excludes parts and direct labor GL ranges).
         </p>
         </div>
-        <ReportExportMenu getPayload={buildExportPayload} disabled={!budgetId || isLoading} />
+        <AccountingReportToolbar
+          getExportPayload={buildExportPayload}
+          disabled={!budgetId || isLoading}
+          isLoading={isLoading}
+        />
       </div>
-      <div className="flex flex-wrap gap-4 items-end">
+      <AccountingReportPrintHeader title="OPEX Variance" />
+      <div className="no-print flex flex-wrap gap-4 items-end">
         <div>
           <Label className="text-xs">Budget</Label>
           <Select value={budgetId} onValueChange={setBudgetId}>
@@ -97,6 +103,7 @@ export default function OpexVariancePage() {
         <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
+      <div className="print-container">
       {!budgetId ? (
         <p className="text-sm text-muted-foreground">Select a budget to view OPEX variance.</p>
       ) : isLoading ? (
@@ -151,6 +158,7 @@ export default function OpexVariancePage() {
           </Card>
         </>
       )}
+      </div>
     </div>
   );
 }

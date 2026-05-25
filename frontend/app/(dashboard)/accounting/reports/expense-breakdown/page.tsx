@@ -11,8 +11,8 @@ import { Package, Wrench, BarChart3, DollarSign } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { useBranchStore } from "@/store/branchStore";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
-import type { TableExportPayload } from "@/lib/utils/report-export";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 
 function ProgressBar({ value, color }: { value: number; color: string }) {
     return (
@@ -70,32 +70,31 @@ export default function ExpenseBreakdownPage() {
             textColor: "text-purple-600 dark:text-purple-400"},
     ];
 
+    const getExportPayload = () => {
+        if (!report) return null;
+        return {
+            reportTitle: "Expense Breakdown",
+            filename: `expense-breakdown_${filters.start_date}_${filters.end_date}`,
+            dateInfo: `${filters.start_date} to ${filters.end_date}`,
+            headers: ["Category", "Amount", "% of Total"],
+            rows: categoryConfig.map((c) => {
+                const amount = categories[c.key] ?? 0;
+                const pct = total > 0 ? (amount / total) * 100 : 0;
+                return [c.label, amount, pct];
+            }),
+            currencyColumnIndexes: [1],
+        };
+    };
+
     return (
         <div className="space-y-4">
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="no-print pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Expense Breakdown</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Business expenses categorized by parts, labor, and overhead
                 </p>
                 </div>
-                <ReportExportMenu
-                    getPayload={() => {
-                        if (!report) return null;
-                        return {
-                            reportTitle: "Expense Breakdown",
-                            filename: `expense-breakdown_${filters.start_date}_${filters.end_date}`,
-                            dateInfo: `${filters.start_date} to ${filters.end_date}`,
-                            headers: ["Category", "Amount", "% of Total"],
-                            rows: categoryConfig.map((c) => {
-                                const amount = categories[c.key] ?? 0;
-                                const pct = total > 0 ? (amount / total) * 100 : 0;
-                                return [c.label, amount, pct];
-                            }),
-                            currencyColumnIndexes: [1]};
-                    }}
-                    disabled={!report}
-                />
             </div>
 
             {/* Filters */}
@@ -126,10 +125,21 @@ export default function ExpenseBreakdownPage() {
                 </CardContent>
             </Card>
 
+            <AccountingReportToolbar
+                getExportPayload={getExportPayload}
+                disabled={!report}
+                isLoading={isLoading}
+            />
+
+            <AccountingReportPrintHeader
+                title="Expense Breakdown"
+                dateInfo={`${filters.start_date} to ${filters.end_date}`}
+            />
+
             {isLoading ? (
                 <AccountingReportSkeleton />
-      ) : report ? (
-                <>
+            ) : report ? (
+                <div className="print-container space-y-4">
                     {/* Total banner */}
                     <Card className="shadow-sm border bg-muted/30">
                         <CardContent className="p-4 flex items-center gap-4">
@@ -191,7 +201,7 @@ export default function ExpenseBreakdownPage() {
                             </CardContent>
                         </Card>
                     )}
-                </>
+                </div>
             ) : (
                 <div className="text-center text-muted-foreground py-12 text-sm">
                     No expense data for the selected period.

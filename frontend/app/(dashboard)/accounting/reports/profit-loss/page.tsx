@@ -32,10 +32,9 @@ import {
     TableHead,
     TableHeader,
     TableRow} from "@/components/ui/table";
-import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
-import { exportToExcel } from "@/lib/utils/excel-export";
-import { ExportDropdown } from "@/components/ui/export-dropdown";
-import { COMPANY_NAME } from "@/lib/constants";
+import { buildProfitLossExportPayload } from "@/lib/utils/accounting-report-export";
+import { AccountingReportToolbar } from "../../components/AccountingReportToolbar";
+import { AccountingReportPrintHeader } from "../../components/AccountingReportPrintHeader";
 
 type ProfitLossLine = {
     code: string;
@@ -90,119 +89,30 @@ export default function ProfitLossPage() {
     const totalExpenses = displayReport?.expenses?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
     const netIncome = totalIncome - totalExpenses;
 
-    const handleExportCSV = () => {
-        if (!displayReport) return;
-
-
-        const rows: ExportCell[][] = [];
-
-        // Add header info
-        rows.push(['Profit & Loss Statement']);
-        rows.push([`Period: ${startDate} to ${endDate}`]);
-        rows.push([]);
-
-        // Income section
-        rows.push(['INCOME']);
-
-        displayReport?.income?.forEach((item) => {
-            rows.push([item.code, item.name, Number(item.balance || 0)]);
-        });
-        rows.push(['', 'Total Income', totalIncome]);
-        rows.push([]);
-
-        // Expenses section
-        rows.push(['EXPENSES']);
-
-        displayReport?.expenses?.forEach((item) => {
-            rows.push([item.code, item.name, Number(item.balance || 0)]);
-        });
-        rows.push(['', 'Total Expenses', totalExpenses]);
-        rows.push([]);
-
-        // Net income
-        rows.push(['', 'NET INCOME', netIncome]);
-
-        const filename = generateFilenameWithTimestamp('profit-loss', 'csv');
-        exportToCSV(rows, filename, ['Account Code', 'Account Name', 'Amount']);
-    };
-
-    const handleExportExcel = () => {
-        if (!displayReport) return;
-
-
-        const rows: ExportCell[][] = [];
-
-        // Title and date
-        rows.push(['Profit & Loss Statement']);
-        rows.push([`Period: ${startDate} to ${endDate}`]);
-        rows.push([]);
-
-        // Income section
-        rows.push(['INCOME', '', '']);
-        rows.push(['Account Code', 'Account Name', 'Amount']);
-
-        displayReport?.income?.forEach((item) => {
-            rows.push([item.code, item.name, Number(item.balance || 0)]);
-        });
-        rows.push(['', 'Total Income', totalIncome]);
-        rows.push([]);
-
-        // Expenses section
-        rows.push(['EXPENSES', '', '']);
-        rows.push(['Account Code', 'Account Name', 'Amount']);
-
-        displayReport?.expenses?.forEach((item) => {
-            rows.push([item.code, item.name, Number(item.balance || 0)]);
-        });
-        rows.push(['', 'Total Expenses', totalExpenses]);
-        rows.push([]);
-
-        // Net income
-        rows.push(['', 'NET INCOME', netIncome]);
-
-        const filename = generateFilenameWithTimestamp('profit-loss', 'xlsx');
-
-        // Bold rows: title, headers, totals
-        const incomeLength = displayReport?.income?.length || 0;
-        const boldRows = [0, 4, 3 + incomeLength + 2, 3 + incomeLength + 2 + 1, rows.length - 1];
-
-        exportToExcel(rows, filename, {
-            sheetName: 'Profit & Loss',
-            reportTitle: 'Profit & Loss Statement',
-            dateInfo: `Period: ${startDate} to ${endDate}`,
-            boldRows,
-            currencyColumns: [2],
-            colorRows: [
-                { row: 0, color: '3B82F6' },  // Blue for title
-                { row: 3, color: '10B981' },  // Green for income header
-                { row: 3 + (displayReport?.income?.length || 0) + 2, color: 'EF4444' }, // Red for expenses header
-            ],
-            freezePane: { row: 1, col: 0 },
-            showTimestamp: true,
-            currencySymbol,
-            companyName: COMPANY_NAME
-        });
-    };
+    const getExportPayload = () =>
+        displayReport
+            ? buildProfitLossExportPayload(displayReport, startDate, endDate, {
+                  totalIncome,
+                  totalExpenses,
+                  netIncome,
+              })
+            : null;
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center pt-2">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Profit & Loss</h1>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        Income statement for the selected period
-                    </p>
+            <div className="no-print space-y-4">
+                <div className="flex justify-between items-center pt-2">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Profit & Loss</h1>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Income statement for the selected period
+                        </p>
+                    </div>
                 </div>
-                <ExportDropdown
-                    onExportCSV={handleExportCSV}
-                    onExportExcel={handleExportExcel}
-                    disabled={!displayReport}
-                />
-            </div>
 
-            <Card>
-                <CardContent className="p-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <Card>
+                    <CardContent className="p-4 space-y-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div>
                             <Label htmlFor="start_date" className="text-xs">Start Date</Label>
                             <Input
@@ -259,6 +169,18 @@ export default function ProfitLossPage() {
                 </CardContent>
             </Card>
 
+                <AccountingReportToolbar
+                    getExportPayload={getExportPayload}
+                    disabled={!displayReport}
+                    isLoading={isLoadingReport}
+                />
+            </div>
+
+            <AccountingReportPrintHeader
+                title="Profit & Loss Statement"
+                dateInfo={`${startDate} to ${endDate}`}
+            />
+
             {isLoadingReport ? (
                 <AccountingReportSkeleton />
       ) : !displayReport ? (
@@ -266,7 +188,7 @@ export default function ProfitLossPage() {
                     Report data not available
                 </div>
             ) : (
-                <>
+                <div className="print-container space-y-4">
                     <Card className="overflow-hidden">
                         <CardHeader className="border-b border-border bg-success/10 pb-3">
                             <CardTitle className="text-base text-success">Income</CardTitle>
@@ -353,7 +275,7 @@ export default function ProfitLossPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </>
+                </div>
             )}
         </div>
     );

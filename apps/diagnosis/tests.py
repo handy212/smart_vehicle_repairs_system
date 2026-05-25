@@ -19,7 +19,7 @@ from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
     DiagnosticCode, DiagnosticTest,
     DiagnosisFinding, DiagnosisPhoto,
-    TestProcedureLibrary, DiagnosticCodeLibrary,
+    TestProcedureLibrary as ProcedureLibrary, DiagnosticCodeLibrary,
     DiagnosisHistory
 )
 from apps.inventory.models import Part, PartCategory
@@ -373,7 +373,7 @@ class TestProcedureLibraryModelTest(TestCase):
 
     def test_create_test_procedure(self):
         """Test creating a test procedure."""
-        procedure = TestProcedureLibrary.objects.create(
+        procedure = ProcedureLibrary.objects.create(
             name='Compression Test',
             category='mechanical',
             description='Test engine compression',
@@ -387,7 +387,7 @@ class TestProcedureLibraryModelTest(TestCase):
 
     def test_increment_use_count(self):
         """Test incrementing use count."""
-        procedure = TestProcedureLibrary.objects.create(
+        procedure = ProcedureLibrary.objects.create(
             name='Voltage Test',
             category='electrical',
             description='Test battery voltage',
@@ -401,12 +401,12 @@ class TestProcedureLibraryModelTest(TestCase):
         first_result = seed_baseline_test_procedures(created_by=self.technician_user)
         self.assertEqual(first_result['created'], len(BASELINE_TEST_PROCEDURES))
         self.assertEqual(first_result['existing'], 0)
-        self.assertEqual(TestProcedureLibrary.objects.count(), len(BASELINE_TEST_PROCEDURES))
+        self.assertEqual(ProcedureLibrary.objects.count(), len(BASELINE_TEST_PROCEDURES))
 
         second_result = seed_baseline_test_procedures(created_by=self.technician_user)
         self.assertEqual(second_result['created'], 0)
         self.assertEqual(second_result['existing'], len(BASELINE_TEST_PROCEDURES))
-        self.assertEqual(TestProcedureLibrary.objects.count(), len(BASELINE_TEST_PROCEDURES))
+        self.assertEqual(ProcedureLibrary.objects.count(), len(BASELINE_TEST_PROCEDURES))
 
 
 class DiagnosticCodeLibraryModelTest(TestCase):
@@ -1360,7 +1360,7 @@ class TestDiagnosisAPI:
 
     def test_test_procedure_search_auto_seeds_baseline_library(self, api_client, admin_user):
         """Searching the procedure library should bootstrap baseline templates when empty."""
-        TestProcedureLibrary.objects.all().delete()
+        ProcedureLibrary.objects.all().delete()
         api_client.force_authenticate(user=admin_user)
 
         response = api_client.get(
@@ -1371,4 +1371,4 @@ class TestDiagnosisAPI:
         assert response.status_code == status.HTTP_200_OK
         results = response.data.get('results', response.data)
         assert any(item['name'] == 'Battery Voltage Test' for item in results)
-        assert TestProcedureLibrary.objects.filter(name='Battery Voltage Test').exists()
+        assert ProcedureLibrary.objects.filter(name='Battery Voltage Test').exists()
