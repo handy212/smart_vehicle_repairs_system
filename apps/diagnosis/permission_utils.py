@@ -13,8 +13,15 @@ def diagnosis_module_permissions():
     return [IsAuthenticated(), IsModuleEnabled('diagnosis')]
 
 
-def diagnosis_read_permissions():
-    """Staff use view_diagnosis; customer portal uses view_own_workorders (own WO diagnoses)."""
+def diagnosis_staff_read_permissions():
+    """Staff list/detail requires view_diagnosis (not general work-order view)."""
+    return diagnosis_module_permissions() + [
+        HasPermission('view_diagnosis')(),
+    ]
+
+
+def diagnosis_customer_read_permissions():
+    """Customer portal: own work orders via view_own_workorders (or view_diagnosis)."""
     return diagnosis_module_permissions() + [
         HasAnyPermission(['view_diagnosis', *WORKORDER_VIEW_PERMISSIONS])(),
     ]
@@ -76,11 +83,11 @@ class DiagnosisPermissionMixin:
             if action in self.CUSTOMER_PORTAL_WRITE_ACTIONS:
                 return diagnosis_customer_portal_permissions()
             if action in self.CUSTOMER_PORTAL_READ_ACTIONS or self.request.method in SAFE_METHODS:
-                return diagnosis_read_permissions()
+                return diagnosis_customer_read_permissions()
             return diagnosis_customer_deny_permissions()
 
         if self.request.method in SAFE_METHODS:
-            return diagnosis_read_permissions()
+            return diagnosis_staff_read_permissions()
         if self.request.method == 'POST':
             if getattr(self, 'action', None) == 'approve_recommendations':
                 return diagnosis_write_permissions()

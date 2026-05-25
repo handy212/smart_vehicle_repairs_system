@@ -39,7 +39,7 @@ class AccountingReportPrintAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('text/html', response['Content-Type'])
         self.assertIn(b'Balance Sheet', response.content)
-        self.assertIn(b'ASSETS', response.content)
+        self.assertIn(b'Assets', response.content)
 
     def test_print_unknown_slug_returns_404(self):
         response = self.client.get('/api/accounting/reports/not-a-report/print/')
