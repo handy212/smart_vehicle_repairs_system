@@ -202,6 +202,10 @@ Dynamic RBAC with roles such as Admin, Manager, Service Coordinator, Receptionis
 - **E2E:** `.github/workflows/e2e.yml` — Playwright smoke tests
 - **Docker images:** `.github/workflows/docker-build.yml` — on version tags `v*`
 - **Production deploy:** `.github/workflows/deploy-production.yml` — manual with optional SSH
+- **Staging deploy:** `.github/workflows/deploy-staging.yml` — validate on `develop`, optional SSH
+- **E2E on `main`:** `.github/workflows/e2e.yml` — also runs on push to `main`
+
+Staging environment: [deploy/STAGING.md](deploy/STAGING.md)
 
 ## License
 

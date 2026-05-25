@@ -15,6 +15,11 @@ export async function register() {
   }
 }
 
-export const onRequestError = sentryEnabled
-  ? Sentry.captureRequestError
-  : undefined;
+export async function onRequestError(
+  ...args: Parameters<typeof Sentry.captureRequestError>
+) {
+  if (!sentryEnabled) {
+    return;
+  }
+  return Sentry.captureRequestError(...args);
+}
