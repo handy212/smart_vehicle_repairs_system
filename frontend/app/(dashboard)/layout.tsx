@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { authApi } from "@/lib/api/auth";
+import { ensureApiSession } from "@/lib/auth/session";
 import { useModules } from "@/lib/hooks/useModules";
 
 export default function DashboardLayoutWrapper({
@@ -29,6 +30,7 @@ export default function DashboardLayoutWrapper({
     const checkAuth = async () => {
       if (!user) {
         try {
+          await ensureApiSession();
           const currentUser = await authApi.getCurrentUser();
           if (isMounted) setUser(currentUser);
 

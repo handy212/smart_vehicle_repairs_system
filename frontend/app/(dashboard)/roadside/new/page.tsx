@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,9 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { RoadsideBranchSelect } from "@/components/roadside/RoadsideBranchSelect";
+import { useBranchStore } from "@/store/branchStore";
+import { captureCurrentPosition, getGeolocationErrorMessage } from "@/lib/utils/geolocation";
 
 const serviceTypeValues = [
     'towing',
@@ -71,6 +74,7 @@ const optionalNumber = (message: string) =>
 const roadsideRequestSchema = z.object({
     customer: requiredId("Customer"),
     vehicle: requiredId("Vehicle"),
+    branch: requiredId("Branch"),
     service_type: z.enum(serviceTypeValues, { error: "Service type is required" }),
     breakdown_location: z.string().min(1, "Breakdown location is required"),
     latitude: optionalNumber("Latitude must be a valid number"),
@@ -113,6 +117,7 @@ export default function NewRoadsideRequestDashboardPage() {
 
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { activeBranchId } = useBranchStore();
 
     const [serverError, setServerError] = useState<string | null>(null);
     const [payAsYouGoDraft, setPayAsYouGoDraft] = useState<RoadsideRequestSubmissionData | null>(null);
@@ -131,6 +136,7 @@ export default function NewRoadsideRequestDashboardPage() {
         resolver: zodResolver(roadsideRequestSchema),
         defaultValues: {
             customer: initialCustomerId ? parseInt(initialCustomerId) : undefined,
+            branch: activeBranchId ?? undefined,
             service_type: undefined,
         },
     });
@@ -198,38 +204,30 @@ export default function NewRoadsideRequestDashboardPage() {
         },
     });
 
-    const getCurrentLocation = () => {
-        if (!navigator.geolocation) {
-            toast({
-                title: "Not Supported",
-                description: "Geolocation is not supported by your browser",
-                variant: "destructive"
-            });
-            return;
-        }
-
+    const getCurrentLocation = async () => {
         setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = parseFloat(position.coords.latitude.toFixed(6));
-                const lng = parseFloat(position.coords.longitude.toFixed(6));
-                setValue("latitude", lat);
-                setValue("longitude", lng);
-                setIsLocating(false);
-                toast({
-                    title: "Location Updated",
-                    description: `Coordinates: ${lat}, ${lng}`
-                });
-            },
-            () => {
-                setIsLocating(false);
-                toast({
-                    title: "Error",
-                    description: "Could not get your current location",
-                    variant: "destructive"
-                });
-            }
-        );
+        try {
+            const { latitude, longitude, label } = await captureCurrentPosition();
+            setValue("latitude", latitude);
+            setValue("longitude", longitude);
+            setValue("breakdown_location", label, { shouldValidate: true });
+            toast({
+                title: "Location updated",
+                description: "Breakdown location has been filled in.",
+            });
+        } catch (error) {
+            toast({
+                title: "Location unavailable",
+                description: getGeolocationErrorMessage(
+                    error instanceof GeolocationPositionError || error instanceof Error
+                        ? error
+                        : new Error("Could not get location")
+                ),
+                variant: "destructive",
+            });
+        } finally {
+            setIsLocating(false);
+        }
     };
 
     // React to initialCustomerId or changes in customer query
@@ -241,6 +239,12 @@ export default function NewRoadsideRequestDashboardPage() {
             }
         }
     }, [initialCustomerId, setValue]);
+
+    useEffect(() => {
+        if (activeBranchId) {
+            setValue("branch", activeBranchId, { shouldValidate: true });
+        }
+    }, [activeBranchId, setValue]);
 
     const buildSubmissionData = (data: RoadsideRequestFormData, payAsYouGo = false): RoadsideRequestSubmissionData => ({
         ...data,
@@ -436,42 +440,63 @@ export default function NewRoadsideRequestDashboardPage() {
                         {/* Location Details */}
                         <Card>
                             <CardHeader className="py-3 px-4 border-b">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    <MapIcon className="w-4 h-4 text-primary" />
-                                    Location Information
-                                </CardTitle>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                        <MapIcon className="w-4 h-4 text-primary" />
+                                        Location
+                                    </CardTitle>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        type="button"
+                                        onClick={getCurrentLocation}
+                                        disabled={isLocating}
+                                        className="h-8 text-xs gap-2"
+                                    >
+                                        {isLocating ? (
+                                            <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" />
+                                        ) : (
+                                            <Navigation className="w-3 h-3" />
+                                        )}
+                                        Get current location
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent className="p-4 space-y-4">
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="breakdown_location" className="font-semibold">Breakdown Location *</Label>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            type="button"
-                                            onClick={getCurrentLocation}
-                                            disabled={isLocating}
-                                            className="h-8 text-xs gap-2"
-                                        >
-                                            {isLocating ? <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" /> : <Navigation className="w-3 h-3" />}
-                                            Get Current Location
-                                        </Button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Controller
+                                        control={control}
+                                        name="branch"
+                                        render={({ field }) => (
+                                            <RoadsideBranchSelect
+                                                variant="inline"
+                                                id="dashboard-roadside-branch"
+                                                value={field.value}
+                                                onChange={(id) => field.onChange(id)}
+                                                error={errors.branch?.message}
+                                            />
+                                        )}
+                                    />
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="breakdown_location" className="font-semibold text-sm">
+                                            Breakdown location *
+                                        </Label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="breakdown_location"
+                                                {...register("breakdown_location")}
+                                                placeholder="Street, landmark, or coordinates"
+                                                className={cn("pl-9 h-10", errors.breakdown_location && "border-destructive")}
+                                            />
+                                        </div>
+                                        {errors.breakdown_location && (
+                                            <p className="text-xs text-destructive font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                {errors.breakdown_location.message}
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="relative">
-                                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Textarea
-                                            id="breakdown_location"
-                                            {...register("breakdown_location")}
-                                            placeholder="Street name, landmark, City or GPS location..."
-                                            className="pl-9 min-h-[80px]"
-                                        />
-                                    </div>
-                                    {errors.breakdown_location && (
-                                        <p className="text-xs text-destructive font-medium flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            {errors.breakdown_location.message}
-                                        </p>
-                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">

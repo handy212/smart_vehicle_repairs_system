@@ -6,9 +6,23 @@ from decimal import Decimal
 from .models import RoadsideRequest, RoadsideDispatch
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
+from apps.branches.models import Branch
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class BranchBriefSerializer(serializers.ModelSerializer):
+    """Branch summary for roadside detail views."""
+
+    full_address = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Branch
+        fields = [
+            'id', 'name', 'code', 'phone', 'email',
+            'address', 'city', 'state', 'full_address', 'is_headquarters',
+        ]
 
 
 class DispatchedTechnicianSerializer(serializers.ModelSerializer):
@@ -37,6 +51,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     can_be_cancelled = serializers.SerializerMethodField()
     subscription_number = serializers.SerializerMethodField()
     invoice_number = serializers.SerializerMethodField()
+    branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
     dispatched_technicians = DispatchedTechnicianSerializer(source='dispatches', many=True, read_only=True)
     
@@ -94,7 +109,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
         model = RoadsideRequest
         fields = [
             'id', 'request_number', 'customer', 'customer_name', 'customer_email',
-            'vehicle', 'vehicle_display', 'branch',
+            'vehicle', 'vehicle_display', 'branch', 'branch_name',
             'service_type', 'service_type_display',
             'status', 'status_display',
             'breakdown_location', 'latitude', 'longitude',
@@ -117,14 +132,112 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
         ]
 
 
+class RoadsideRequestDetailSerializer(RoadsideRequestSerializer):
+    """Expanded payload for staff/customer detail screens."""
+
+    branch_detail = BranchBriefSerializer(source='branch', read_only=True)
+    vehicle_license_plate = serializers.CharField(source='vehicle.license_plate', read_only=True, default=None)
+    vehicle_vin = serializers.CharField(source='vehicle.vin', read_only=True, default=None)
+    customer_number = serializers.CharField(source='customer.customer_number', read_only=True, default=None)
+    created_by_name = serializers.SerializerMethodField()
+    timeline = serializers.SerializerMethodField()
+    available_actions = serializers.SerializerMethodField()
+
+    class Meta(RoadsideRequestSerializer.Meta):
+        fields = RoadsideRequestSerializer.Meta.fields + [
+            'branch_detail',
+            'vehicle_license_plate',
+            'vehicle_vin',
+            'customer_number',
+            'created_by_name',
+            'timeline',
+            'available_actions',
+        ]
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None
+
+    def get_timeline(self, obj):
+        entries = []
+        if obj.requested_at:
+            entries.append({
+                'key': 'requested',
+                'label': 'Request created',
+                'at': obj.requested_at.isoformat(),
+            })
+        if obj.dispatched_at:
+            entry = {
+                'key': 'dispatched',
+                'label': 'Technician dispatched',
+                'at': obj.dispatched_at.isoformat(),
+            }
+            if obj.assigned_technician:
+                entry['meta'] = obj.assigned_technician.get_full_name() or obj.assigned_technician.username
+            entries.append(entry)
+        if obj.arrived_at:
+            entries.append({
+                'key': 'arrived',
+                'label': 'Technician on site',
+                'at': obj.arrived_at.isoformat(),
+            })
+        if obj.completed_at:
+            entry = {
+                'key': 'completed',
+                'label': 'Service completed',
+                'at': obj.completed_at.isoformat(),
+            }
+            if obj.invoice_id:
+                entry['invoice_id'] = obj.invoice_id
+                entry['invoice_number'] = getattr(obj.invoice, 'invoice_number', None)
+            entries.append(entry)
+        if obj.status == 'cancelled':
+            entries.append({
+                'key': 'cancelled',
+                'label': 'Request cancelled',
+                'at': (obj.updated_at or obj.requested_at).isoformat(),
+            })
+        return entries
+
+    def get_available_actions(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+        if user and getattr(user, 'role', None) == 'customer':
+            actions = []
+            if obj.can_be_cancelled():
+                actions.append('cancel')
+            return actions
+
+        actions = ['message']
+        if obj.can_be_cancelled():
+            actions.append('cancel')
+        if obj.status not in ('completed', 'cancelled', 'failed'):
+            actions.append('edit')
+        status_actions = {
+            'requested': ['dispatch'],
+            'dispatched': ['en_route', 'add_technician'],
+            'en_route': ['arrive'],
+            'on_site': ['in_progress'],
+            'in_progress': ['complete'],
+        }
+        actions.extend(status_actions.get(obj.status, []))
+        return actions
+
+
 class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating roadside requests"""
     pay_as_you_go = serializers.BooleanField(required=False, write_only=True, default=False)
+    branch = serializers.PrimaryKeyRelatedField(
+        queryset=Branch.objects.filter(is_active=True),
+        required=True,
+        error_messages={'required': 'Please select a service branch.'},
+    )
     
     class Meta:
         model = RoadsideRequest
         fields = [
-            'id', 'request_number', 'customer', 'vehicle', 'service_type',
+            'id', 'request_number', 'customer', 'vehicle', 'branch', 'service_type',
             'breakdown_location', 'latitude', 'longitude',
             'description', 'customer_phone',
             'tow_distance_km', 'destination',
@@ -204,6 +317,13 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"breakdown_location": "Breakdown location is required"}
             )
+
+        branch = data.get('branch')
+        if branch and user and getattr(user, 'role', None) != 'customer':
+            if not user.has_branch_access(branch):
+                raise serializers.ValidationError(
+                    {'branch': 'You do not have access to the selected branch.'}
+                )
 
         if pay_as_you_go and (charge_amount is None or charge_amount <= 0):
             raise serializers.ValidationError(
@@ -298,11 +418,16 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
 
 class RoadsideRequestUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating roadside requests"""
+
+    branch = serializers.PrimaryKeyRelatedField(
+        queryset=Branch.objects.filter(is_active=True),
+        required=False,
+    )
     
     class Meta:
         model = RoadsideRequest
         fields = [
-            'status', 'assigned_technician',
+            'status', 'assigned_technician', 'branch',
             'breakdown_location', 'latitude', 'longitude',
             'description', 'tow_distance_km', 'destination',
             'notes', 'customer_feedback',
@@ -324,5 +449,14 @@ class RoadsideRequestUpdateSerializer(serializers.ModelSerializer):
             tow_distance = data.get('tow_distance_km', getattr(self.instance, 'tow_distance_km', None))
             if not tow_distance or tow_distance <= 0:
                 raise serializers.ValidationError({'tow_distance_km': 'Tow distance is required and must be greater than 0 for towing service'})
+
+        branch = data.get('branch')
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+        if branch and user and getattr(user, 'role', None) != 'customer':
+            if not user.has_branch_access(branch):
+                raise serializers.ValidationError(
+                    {'branch': 'You do not have access to the selected branch.'}
+                )
 
         return data

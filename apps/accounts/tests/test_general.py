@@ -112,6 +112,16 @@ class UserAuthenticationAPITest(APITestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_me_endpoint_accepts_access_token_cookie(self):
+        """SPA requests without Authorization header can authenticate via HttpOnly cookie."""
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        access = str(RefreshToken.for_user(self.user).access_token)
+        self.client.cookies['access_token'] = access
+        response = self.client.get('/api/auth/users/me/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], self.user.email)
+
     def test_token_refresh(self):
         """Test token refresh functionality."""
         # Get initial tokens

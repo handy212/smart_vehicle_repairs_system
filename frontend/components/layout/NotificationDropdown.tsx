@@ -21,6 +21,7 @@ import { useNotificationSound } from "@/lib/hooks/useNotificationSound";
 
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
+import { ensureApiSession } from "@/lib/auth/session";
 
 export function NotificationDropdown() {
     const router = useRouter();
@@ -28,18 +29,24 @@ export function NotificationDropdown() {
 
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-    const { data: user } = useQuery({
+    const { data: user, isSuccess: hasUser } = useQuery({
         queryKey: ["user"],
-        queryFn: () => authApi.getCurrentUser(),
+        queryFn: async () => {
+            await ensureApiSession();
+            return authApi.getCurrentUser();
+        },
         staleTime: 1000 * 60 * 5,
         enabled: isAuthenticated,
+        retry: false,
     });
+
+    const canFetchNotifications = isAuthenticated && hasUser && !!user;
 
     // Fetch recent notifications (take first 10 from results)
     const { data: notificationsData } = useQuery({
         queryKey: ["notifications", "recent"],
         queryFn: () => notificationsApi.list({}),
-        enabled: isAuthenticated,
+        enabled: canFetchNotifications,
         refetchInterval: 30_000, // 30s — balances responsiveness and server load
         refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
     });
@@ -47,7 +54,7 @@ export function NotificationDropdown() {
     const { data: unreadCountData } = useQuery({
         queryKey: ["notifications", "unread-count"],
         queryFn: () => notificationsApi.unreadCount(),
-        enabled: isAuthenticated,
+        enabled: canFetchNotifications,
         refetchInterval: 30_000,
         refetchIntervalInBackground: false,
     });
@@ -55,7 +62,7 @@ export function NotificationDropdown() {
     const { data: preferences } = useQuery({
         queryKey: ["notification-preferences"],
         queryFn: () => notificationsApi.getPreferences(),
-        enabled: isAuthenticated,
+        enabled: canFetchNotifications,
         staleTime: 1000 * 60 * 5,
     });
 
@@ -80,7 +87,7 @@ export function NotificationDropdown() {
 
     // Enable notification sounds
     useNotificationSound({
-        enabled: isAuthenticated && (preferences?.sound_enabled ?? true),
+        enabled: canFetchNotifications && (preferences?.sound_enabled ?? true),
         unreadCount,
     });
 

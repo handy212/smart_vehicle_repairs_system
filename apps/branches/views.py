@@ -46,7 +46,8 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'list':
-            if self.request.user.is_anonymous:
+            user = self.request.user
+            if user.is_anonymous or getattr(user, 'role', None) == 'customer':
                 return PublicBranchSerializer
             return BranchListSerializer
         elif self.action in ['create', 'update', 'partial_update']:
@@ -61,9 +62,9 @@ class BranchViewSet(viewsets.ModelViewSet):
         - Other staff: only their assigned branch
         """
         user = self.request.user
-        if user.is_anonymous:
+        if user.is_anonymous or getattr(user, 'role', None) == 'customer':
             return Branch.objects.filter(is_active=True)
-            
+
         if user.role == 'super-admin' or user_has_permission(user, 'manage_branches'):
             return Branch.objects.all()
         elif user.role == 'manager':

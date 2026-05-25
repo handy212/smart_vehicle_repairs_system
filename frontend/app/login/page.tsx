@@ -9,7 +9,7 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
-import { setTokens } from "@/lib/utils/token";
+import { applyLoginTokens } from "@/lib/auth/session";
 import { adminApi } from "@/lib/api/admin";
 import { useBranding } from "@/lib/hooks/useBranding";
 import { Button } from "@/components/ui/button";
@@ -129,10 +129,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Store tokens (localStorage + cookie for middleware)
-      setTokens(authData.access!);
+      await applyLoginTokens(authData.access);
 
-      // Update global state
       const user = await authApi.getCurrentUser();
       setUser(user);
 
@@ -174,9 +172,8 @@ export default function LoginPage() {
       const authData = await authApi.verify2FALogin(twoFactorData.temp_token, twoFactorCode);
 
       // Store tokens
-      setTokens(authData.access!);
+      await applyLoginTokens(authData.access);
 
-      // Update global state
       setUser(authData.user || await authApi.getCurrentUser());
 
       // Redirect based on role

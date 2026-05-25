@@ -1725,26 +1725,31 @@ Help is on the way! - {self._get_company_name()}'''
                 self.service.send_notification(sms_notification)
 
         # ------------------------------------------------------------------
-        # 2. ADMIN NOTIFICATIONS (In-App)
+        # 2. BRANCH STAFF NOTIFICATIONS (In-App)
         # ------------------------------------------------------------------
-        from apps.accounts.models import User
-        # Notify admins and managers
-        admins = User.objects.filter(role__in=['admin', 'manager'], is_active=True)
-        
-        for admin in admins:
-            # Check if admin wants system notifications (usually yes, but good to check)
-            admin_prefs = getattr(admin, 'notification_preferences', None)
-            if admin_prefs and not admin_prefs.system_notifications:
+        from apps.roadside.branch_utils import get_roadside_branch_notification_recipients
+
+        branch_name = (
+            roadside_request.branch.name
+            if roadside_request.branch_id and roadside_request.branch
+            else 'Unassigned'
+        )
+        staff_recipients = get_roadside_branch_notification_recipients(roadside_request.branch)
+
+        for staff_user in staff_recipients:
+            staff_prefs = getattr(staff_user, 'notification_preferences', None)
+            if staff_prefs and not staff_prefs.system_notifications:
                 continue
-                
-            admin_notification = Notification.objects.create(
-                recipient=admin,
+
+            staff_notification = Notification.objects.create(
+                recipient=staff_user,
                 notification_type='roadside',
                 channel='in_app',
                 priority='high',
                 title=f'New Roadside Request - {roadside_request.request_number}',
                 message=f'''New roadside assistance request received.
 
+Branch: {branch_name}
 Customer: {customer_name}
 Service: {roadside_request.get_service_type_display()}
 Location: {roadside_request.breakdown_location}
@@ -1754,11 +1759,13 @@ Requires dispatch assignment.''',
                     'request_id': roadside_request.id,
                     'request_number': roadside_request.request_number,
                     'customer_name': customer_name,
+                    'branch_id': roadside_request.branch_id,
+                    'branch_name': branch_name,
                 },
                 related_object_type='roadside',
-                related_object_id=roadside_request.id
+                related_object_id=roadside_request.id,
             )
-            self.service.send_notification(admin_notification)
+            self.service.send_notification(staff_notification)
     
     def roadside_dispatched(self, roadside_request):
         """Notify customer when service provider is dispatched - Enhanced with Technician alerts"""

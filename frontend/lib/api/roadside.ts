@@ -41,25 +41,47 @@ export interface DispatchedTechnician {
     notes?: string;
 }
 
+export interface RoadsideBranchDetail {
+    id: number;
+    name: string;
+    code: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    full_address?: string;
+    is_headquarters?: boolean;
+}
+
+export interface RoadsideTimelineEntry {
+    key: string;
+    label: string;
+    at: string;
+    meta?: string;
+    invoice_id?: number;
+    invoice_number?: string;
+}
+
 export interface RoadsideRequest {
     id: number;
     request_number: string;
     status: 'requested' | 'dispatched' | 'en_route' | 'on_site' | 'in_progress' | 'completed' | 'cancelled' | 'failed';
     service_type: string;
-    customer: {
+    customer: number | {
         id: number;
         company_name?: string;
         first_name?: string;
         last_name?: string;
         phone?: string;
-        user: {
+        user?: {
             first_name: string;
             last_name: string;
             phone: string;
             email: string;
-        }
+        };
     };
-    vehicle: {
+    vehicle: number | {
         id: number;
         make: string;
         model: string;
@@ -100,12 +122,23 @@ export interface RoadsideRequest {
     subscription_used?: number;
     assigned_technician?: number;
     branch?: number;
+    branch_name?: string;
+    branch_detail?: RoadsideBranchDetail;
+    vehicle_license_plate?: string;
+    vehicle_vin?: string;
+    customer_number?: string;
+    created_by_name?: string;
+    timeline?: RoadsideTimelineEntry[];
+    available_actions?: string[];
     rating?: number | null;
 }
+
+export type RoadsideRequestDetail = RoadsideRequest;
 
 export interface RoadsideRequestCreate {
     customer?: number;
     vehicle: number;
+    branch: number;
     service_type: string;
     breakdown_location: string;
     latitude?: number;
@@ -192,7 +225,7 @@ export const roadsideApi = {
      * Alias for getRequest to match Portal usage
      */
     get: async (id: number | string) => {
-        const response = await apiClient.get<RoadsideRequest>(`/roadside/requests/${id}/`);
+        const response = await apiClient.get<RoadsideRequestDetail>(`/roadside/requests/${id}/`);
         return response.data;
     },
 

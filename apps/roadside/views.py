@@ -14,12 +14,13 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import RoadsideRequest, RoadsideDispatch
 from .serializers import (
     RoadsideRequestSerializer,
+    RoadsideRequestDetailSerializer,
     RoadsideRequestCreateSerializer,
     RoadsideRequestUpdateSerializer,
 )
 from apps.accounts.permissions import HasPermission, HasAnyPermission, IsModuleEnabled
-from apps.branches.utils import resolve_branch
-from apps.branches.utils import filter_queryset_for_user_branches
+from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
+from .branch_utils import resolve_roadside_branch
 from apps.core.services.ai_service import AIService
 
 
@@ -42,8 +43,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         action = getattr(self, 'action', None)
         
         queryset = RoadsideRequest.objects.select_related(
-            'customer', 'vehicle', 'branch', 'assigned_technician', 
-            'subscription_used', 'created_by'
+            'customer', 'customer__user', 'vehicle', 'branch', 'assigned_technician',
+            'subscription_used', 'subscription_used__package', 'created_by', 'invoice',
         ).prefetch_related('dispatches__technician')
         
         # For my_requests action, let the action handle filtering
@@ -163,6 +164,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             return RoadsideRequestCreateSerializer
         elif action in ['update', 'partial_update']:
             return RoadsideRequestUpdateSerializer
+        elif action == 'retrieve':
+            return RoadsideRequestDetailSerializer
         return RoadsideRequestSerializer
 
     def perform_destroy(self, instance):
@@ -191,21 +194,17 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import ValidationError
         
         request = self.request
-        # Determine branch
-        branch_id = request.data.get('branch') or request.data.get('branch_id')
-        branch = resolve_branch(request, branch_id=branch_id)
-        
+        branch = serializer.validated_data.get('branch')
         if branch is None:
-            logger.error(f"Branch resolution failed for roadside request. User: {request.user}, branch_id: {branch_id}, request_data: {request.data}")
-            raise ValidationError({'branch': 'A valid branch assignment is required.'})
-            
+            branch_id = request.data.get('branch') or request.data.get('branch_id')
+            branch = resolve_roadside_branch(request, branch_id=branch_id)
+
         try:
             # 1. Start atomic transaction for the entire request creation
             with transaction.atomic():
-                # Create the request first
                 roadside_request = serializer.save(
                     branch=branch,
-                    created_by=request.user
+                    created_by=request.user,
                 )
                 
                 # 2. Check and consume subscription allowance

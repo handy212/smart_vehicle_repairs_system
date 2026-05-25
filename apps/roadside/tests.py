@@ -11,6 +11,7 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.branches.models import Branch
 from apps.roadside.models import RoadsideRequest
+from apps.notifications_app.models import Notification
 from apps.subscriptions.models import Package, Subscription, SubscriptionUsage
 from apps.accounts.admin_models import SystemModule
 
@@ -154,7 +155,8 @@ class RoadsideRequestTests(TestCase):
             'vehicle': self.vehicle.id,
             'service_type': 'battery_boost',
             'breakdown_location': '123 Main St',
-            'customer_phone': '1234567890'
+            'customer_phone': '1234567890',
+            'branch': self.branch.id,
         }
         
         response = self.client.post(self.url, data)
@@ -225,7 +227,8 @@ class RoadsideRequestTests(TestCase):
             'vehicle': self.vehicle.id,
             'service_type': 'battery_boost',
             'breakdown_location': '123 Main St',
-            'customer_phone': '1234567890'
+            'customer_phone': '1234567890',
+            'branch': self.branch.id,
         }
 
         response = self.client.post(self.url, data)
@@ -251,7 +254,8 @@ class RoadsideRequestTests(TestCase):
             'vehicle': self.vehicle.id,
             'service_type': 'emergency_fuel',
             'breakdown_location': '123 Main St',
-            'customer_phone': '1234567890'
+            'customer_phone': '1234567890',
+            'branch': self.branch.id,
         }
 
         response = self.client.post(self.url, data)
@@ -275,7 +279,8 @@ class RoadsideRequestTests(TestCase):
             'vehicle': self.vehicle.id,
             'service_type': 'emergency_fuel',
             'breakdown_location': '123 Main St',
-            'customer_phone': '1234567890'
+            'customer_phone': '1234567890',
+            'branch': self.branch.id,
         }
 
         response = self.client.post(self.url, data)
@@ -294,7 +299,7 @@ class RoadsideRequestTests(TestCase):
             'service_type': 'towing',
             'breakdown_location': 'Highway 1',
             'customer_phone': '1234567890',
-            # Missing tow_distance_km
+            'branch': self.branch.id,
         }
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -600,3 +605,80 @@ class RoadsideRequestTests(TestCase):
         self.assertEqual(response.data['total_requests'], 2)
         self.assertEqual(response.data['active_requests'], 1) # One requested
         self.assertEqual(response.data['completed_requests'], 1)
+
+    def test_customer_requires_branch_on_create(self):
+        """Customers must choose a branch; HQ fallback is not applied silently."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.url, {
+            'vehicle': self.vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890',
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('branch', response.data)
+
+    def test_branch_staff_receive_in_app_notification(self):
+        """Branch coordinators and admins are notified when a request is created."""
+        coordinator = User.objects.create_user(
+            username='coord',
+            password='password',
+            email='coord@example.com',
+            role='service_coordinator',
+            branch=self.branch,
+        )
+        other_branch = Branch.objects.create(name='Other', code='OTH1', created_by=self.manager)
+        other_coord = User.objects.create_user(
+            username='coord2',
+            password='password',
+            email='coord2@example.com',
+            role='service_coordinator',
+            branch=other_branch,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self.url, {
+                'vehicle': self.vehicle.id,
+                'service_type': 'battery_boost',
+                'breakdown_location': '123 Main St',
+                'customer_phone': '1234567890',
+                'branch': self.branch.id,
+            })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        request_id = response.data['id']
+        staff_notifications = Notification.objects.filter(
+            notification_type='roadside',
+            channel='in_app',
+            related_object_type='roadside',
+            related_object_id=request_id,
+        )
+        recipient_ids = set(staff_notifications.values_list('recipient_id', flat=True))
+        self.assertIn(coordinator.id, recipient_ids)
+        self.assertIn(self.manager.id, recipient_ids)
+        self.assertNotIn(other_coord.id, recipient_ids)
+        coord_message = staff_notifications.filter(recipient=coordinator).first().message
+        self.assertIn(self.branch.name, coord_message)
+
+    def test_retrieve_includes_detail_fields(self):
+        """Detail endpoint exposes branch, timeline, and dispatch metadata."""
+        req = RoadsideRequest.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            service_type='battery_boost',
+            breakdown_location='Highway 9',
+            customer_phone='1234567890',
+            branch=self.branch,
+            status='requested',
+            created_by=self.manager,
+            request_number='REQ-DETAIL-01',
+        )
+        self.client.force_authenticate(user=self.manager)
+        response = self.client.get(f'{self.url}{req.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['branch_detail']['name'], self.branch.name)
+        self.assertEqual(response.data['customer_number'], self.customer.customer_number)
+        self.assertIn('timeline', response.data)
+        self.assertTrue(any(e['key'] == 'requested' for e in response.data['timeline']))
+        self.assertIn('dispatch', response.data['available_actions'])

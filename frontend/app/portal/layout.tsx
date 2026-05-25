@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
+import { useAuthStore } from "@/store/authStore";
+import { ensureApiSession } from "@/lib/auth/session";
 import { ErrorBoundary } from "@/components/error-boundary";
 import dynamic from "next/dynamic";
 import { PortalMobileActionsBar } from "./components/PortalMobileActionsBar";
@@ -28,9 +30,19 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
+  const setUser = useAuthStore((s) => s.setUser);
+
   const { data: user, isLoading } = useQuery({
     queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
+    queryFn: async () => {
+      const ok = await ensureApiSession();
+      if (!ok) {
+        throw new Error("Not authenticated");
+      }
+      const currentUser = await authApi.getCurrentUser();
+      setUser(currentUser);
+      return currentUser;
+    },
     retry: false,
   });
 

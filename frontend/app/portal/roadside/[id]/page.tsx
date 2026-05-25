@@ -239,6 +239,15 @@ export default function RoadsideRequestDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                {(req.branch_detail?.name || req.branch_name) && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Service branch</p>
+                    <p className="text-foreground">{req.branch_detail?.name || req.branch_name}</p>
+                    {req.branch_detail?.phone && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{req.branch_detail.phone}</p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Service Type</p>
                   <p className="text-foreground">{getServiceTypeDisplay(req.service_type)}</p>

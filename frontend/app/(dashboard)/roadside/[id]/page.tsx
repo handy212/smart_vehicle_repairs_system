@@ -12,7 +12,7 @@ import {
     MapPin, CheckCircle, XCircle,
     Wrench, Navigation,
     ExternalLink, MessageSquare, ShieldCheck,
-    Mail, Sparkles
+    Mail, Sparkles, Building2
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -28,7 +28,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const RoadsideMap = dynamic(() => import("@/components/roadside/RoadsideMap"), {
@@ -41,8 +41,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { cn } from "@/lib/utils/cn";
+import { RoadsideBranchSelect } from "@/components/roadside/RoadsideBranchSelect";
+function resolveEntityId(value: number | { id: number } | undefined): number | undefined {
+    if (typeof value === "number") return value;
+    if (value && typeof value === "object" && "id" in value) return value.id;
+    return undefined;
+}
 
 const editRequestSchema = z.object({
+    branch: z.number().min(1).optional(),
     breakdown_location: z.string().min(1, "Location is required"),
     customer_phone: z.string().min(1, "Phone is required"),
     description: z.string().optional(),
@@ -88,6 +96,7 @@ export default function RoadsideDetailPage() {
         register,
         handleSubmit,
         reset,
+        control,
         formState: { errors: editErrors }
     } = useForm<EditRequestFormData>({
         resolver: zodResolver(editRequestSchema),
@@ -96,13 +105,14 @@ export default function RoadsideDetailPage() {
     const handleOpenEdit = () => {
         if (request) {
             reset({
+                branch: request.branch,
                 breakdown_location: request.breakdown_location,
                 customer_phone: request.customer_phone,
                 description: request.description || "",
                 tow_distance_km: typeof request.tow_distance_km === 'string' ? parseFloat(request.tow_distance_km) : request.tow_distance_km,
                 destination: request.destination || "",
                 notes: request.notes || "",
-                charge_amount: request.charge_amount ? parseFloat(request.charge_amount) : 0,
+                charge_amount: request.charge_amount ? parseFloat(String(request.charge_amount)) : 0,
             });
             setIsEditDialogOpen(true);
         }
@@ -326,45 +336,58 @@ export default function RoadsideDetailPage() {
         );
     }
 
-    return (
-        <div className="space-y-6 pb-12">
-            {/* Header */}
-            <div className="flex flex-col space-y-4">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
-                            <span>/</span>
-                            <Link href="/roadside" className="hover:text-primary transition-colors">Roadside</Link>
-                            <span>/</span>
-                            <span className="text-foreground font-medium">{request.request_number}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                                {request.service_type_display}
-                            </h1>
+    const customerId = resolveEntityId(request.customer);
+    const vehicleId = resolveEntityId(request.vehicle);
+    const branch = request.branch_detail;
+    const mapsUrl =
+        request.latitude && request.longitude
+            ? `https://www.google.com/maps?q=${request.latitude},${request.longitude}`
+            : request.breakdown_location
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(request.breakdown_location)}`
+                : null;
 
-                            <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold">
-                                {request.status_display}
+    return (
+        <div className="space-y-5 pb-12 max-w-6xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-border pb-4">
+                <div className="min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Link href="/roadside" className="hover:text-primary">Roadside</Link>
+                        <span>/</span>
+                        <span className="font-mono text-foreground">{request.request_number}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h1 className="text-xl font-bold text-foreground">{request.service_type_display}</h1>
+                        <Badge variant={getStatusVariant(request.status)} className="text-[10px] uppercase font-bold">
+                            {request.status_display}
+                        </Badge>
+                        {branch && (
+                            <Badge variant="outline" className="gap-1 text-xs font-normal">
+                                <Building2 className="h-3 w-3" />
+                                {branch.name}
                             </Badge>
-                            {request.is_covered_by_subscription && (
-                                <Badge variant="success" className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold flex items-center gap-1">
-                                    <ShieldCheck className="h-3 w-3" /> AA Member
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {!['completed', 'cancelled', 'failed'].includes(request.status) && (
-                            <Button variant="outline" size="sm" className="h-9" onClick={handleOpenEdit}>
-                                <Wrench className="w-4 h-4 mr-2" />
-                                Edit Request
-                            </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-9">
-                            <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                        </Button>
+                        {request.is_covered_by_subscription && (
+                            <Badge variant="success" className="text-[10px] gap-1">
+                                <ShieldCheck className="h-3 w-3" /> Covered
+                            </Badge>
+                        )}
                     </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>Requested {format(new Date(request.requested_at), "MMM d, yyyy · h:mm a")}</span>
+                        {request.created_by_name && <span>Created by {request.created_by_name}</span>}
+                        {request.customer_number && <span>Customer #{request.customer_number}</span>}
+                    </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                    {!['completed', 'cancelled', 'failed'].includes(request.status) && (
+                        <Button variant="outline" size="sm" onClick={handleOpenEdit}>
+                            <Wrench className="w-4 h-4 mr-2" />
+                            Edit
+                        </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => router.push("/roadside")}>
+                        <ArrowLeft className="w-4 h-4 mr-2" /> List
+                    </Button>
                 </div>
             </div>
 
@@ -372,71 +395,96 @@ export default function RoadsideDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Left Column */}
                 <div className="lg:col-span-2 space-y-4">
-                    {/* Location & Customer Info - 2 column grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Location Card */}
-                        <Card>
-                            <CardHeader className="py-3 px-4 border-b">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-primary" />
-                                    Location Details
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 space-y-4">
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Breakdown Location</p>
-                                    <p className="text-sm text-foreground">{request.breakdown_location}</p>
-                                    {request.latitude && request.longitude && (
-                                        <a
-                                            href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline"
-                                        >
-                                            Open in Maps <ExternalLink className="h-3 w-3" />
-                                        </a>
-                                    )}
-                                </div>
-                                {request.destination && (
-                                    <div className="pt-3 border-t">
-                                        <p className="text-xs text-muted-foreground mb-1">Destination</p>
-                                        <p className="text-sm text-foreground">{request.destination}</p>
-                                        {request.tow_distance_km && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                {request.tow_distance_km} km
-                                            </p>
+                    <Card>
+                        <CardHeader className="py-3 px-4 border-b">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                <UserIcon className="h-4 w-4 text-primary" />
+                                Customer & vehicle
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">Customer</p>
+                                <p className="text-sm font-medium">{request.customer_name}</p>
+                                <a href={`tel:${request.customer_phone}`} className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline">
+                                    <Phone className="h-3 w-3" /> {request.customer_phone}
+                                </a>
+                                {customerId && (
+                                    <Link href={`/customers/${customerId}`} className="text-xs text-primary hover:underline block mt-2">
+                                        View customer profile
+                                    </Link>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">Vehicle</p>
+                                <p className="text-sm">{request.vehicle_display}</p>
+                                {(request.vehicle_license_plate || request.vehicle_vin) && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {[request.vehicle_license_plate, request.vehicle_vin].filter(Boolean).join(" · ")}
+                                    </p>
+                                )}
+                                {vehicleId && (
+                                    <Link href={`/vehicles/${vehicleId}`} className="text-xs text-primary hover:underline block mt-2">
+                                        View vehicle
+                                    </Link>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="py-3 px-4 border-b">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-primary" />
+                                Location & branch
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                                            <Building2 className="h-3 w-3" /> Service branch
+                                        </p>
+                                        <p className="text-sm font-medium">{branch?.name || request.branch_name || "—"}</p>
+                                        {branch?.full_address && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">{branch.full_address}</p>
+                                        )}
+                                        {branch?.phone && (
+                                            <a href={`tel:${branch.phone}`} className="text-xs text-primary hover:underline flex items-center gap-1 mt-1">
+                                                <Phone className="h-3 w-3" /> {branch.phone}
+                                            </a>
                                         )}
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Customer & Vehicle Card */}
-                        <Card>
-                            <CardHeader className="py-3 px-4 border-b">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    <UserIcon className="h-4 w-4 text-primary" />
-                                    Customer & Vehicle
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 space-y-4">
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Customer</p>
-                                    <p className="text-sm font-medium text-foreground">{request.customer_name}</p>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                        <Phone className="h-3 w-3" /> {request.customer_phone}
-                                    </p>
                                 </div>
-                                <div className="pt-3 border-t">
-                                    <p className="text-xs text-muted-foreground mb-1">Vehicle</p>
-                                    <p className="text-sm text-foreground">{request.vehicle_display}</p>
-                                    <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-primary hover:underline">
-                                        View Details
-                                    </Link>
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Breakdown location</p>
+                                        <p className="text-sm text-foreground">{request.breakdown_location}</p>
+                                        {mapsUrl && (
+                                            <a
+                                                href={mapsUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-primary inline-flex items-center gap-1 mt-1 hover:underline"
+                                            >
+                                                Open in Maps <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                        )}
+                                    </div>
+                                    {request.destination && (
+                                        <div className="pt-2 border-t">
+                                            <p className="text-xs text-muted-foreground mb-1">Destination</p>
+                                            <p className="text-sm">{request.destination}</p>
+                                            {request.tow_distance_km != null && (
+                                                <p className="text-xs text-muted-foreground">{request.tow_distance_km} km tow</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                     {/* Description & Notes */}
                     {(request.description || request.notes) && (
@@ -481,71 +529,42 @@ export default function RoadsideDetailPage() {
                         </Card>
                     )}
 
-                    {/* Service Timeline */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Service History</CardTitle>
+                        <CardHeader className="py-3">
+                            <CardTitle className="text-sm">Service timeline</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
-                                <div className="relative pl-8">
-                                    <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-primary"></div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-semibold">Request Created</span>
-                                        <span className="text-xs text-muted-foreground">{format(new Date(request.requested_at), "h:mm a")}</span>
-                                    </div>
-                                </div>
-
-                                {request.dispatched_at && (
-                                    <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-indigo-600"></div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-semibold">Technician Dispatched</span>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(request.dispatched_at), "h:mm a")}</span>
+                            <div className="relative space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
+                                {(request.timeline?.length ? request.timeline : [
+                                    { key: 'requested', label: 'Request created', at: request.requested_at },
+                                ]).map((entry, index) => (
+                                    <div key={`${entry.key}-${index}`} className="relative pl-8">
+                                        <div className={cn(
+                                            "absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card",
+                                            entry.key === 'completed' ? "bg-success" :
+                                            entry.key === 'cancelled' ? "bg-destructive" :
+                                            entry.key === 'dispatched' ? "bg-indigo-600" :
+                                            "bg-primary"
+                                        )} />
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-sm font-semibold">{entry.label}</span>
+                                            <span className="text-xs text-muted-foreground shrink-0">
+                                                {format(new Date(entry.at), "MMM d · h:mm a")}
+                                            </span>
                                         </div>
-                                        {request.assigned_technician_name && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">Assigned to: {request.assigned_technician_name}</p>
+                                        {'meta' in entry && entry.meta && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">{entry.meta}</p>
+                                        )}
+                                        {'invoice_number' in entry && entry.invoice_number && entry.invoice_id && (
+                                            <Link
+                                                href={`/billing/invoices/${entry.invoice_id}`}
+                                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1"
+                                            >
+                                                Invoice {entry.invoice_number} <ExternalLink className="h-3 w-3" />
+                                            </Link>
                                         )}
                                     </div>
-                                )}
-
-                                {request.arrived_at && (
-                                    <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-emerald-600"></div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-semibold">Technician Arrived</span>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(request.arrived_at), "h:mm a")}</span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {request.completed_at && (
-                                    <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-success"></div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-semibold">Service Completed</span>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(request.completed_at), "h:mm a")}</span>
-                                        </div>
-                                        {request.invoice_number && (
-                                            <div className="text-xs mt-1 flex items-center gap-2">
-                                                <span className="text-muted-foreground">Invoice:</span>
-                                                <Link
-                                                    href={`/billing/invoices/${request.invoice}`}
-                                                    className="font-semibold text-primary hover:underline flex items-center gap-1"
-                                                >
-                                                    {request.invoice_number} <ExternalLink className="h-3 w-3" />
-                                                </Link>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {request.status === 'cancelled' && (
-                                    <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-red-600"></div>
-                                        <span className="text-sm font-semibold">Request Cancelled</span>
-                                    </div>
-                                )}
+                                ))}
                             </div>
                         </CardContent>
                     </Card>
@@ -559,41 +578,43 @@ export default function RoadsideDetailPage() {
                             <CardTitle className="text-sm">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
-                            {request.status === 'requested' && (
+                            {(request.available_actions?.includes("dispatch") ?? request.status === "requested") && (
                                 <Button size="sm" className="w-full" onClick={openInitialDispatchDialog}>
                                     <Truck className="h-3 w-3 mr-1.5" /> Dispatch
                                 </Button>
                             )}
 
-                            {request.status === 'dispatched' && (
+                            {(request.available_actions?.includes("en_route") ?? request.status === "dispatched") && (
                                 <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('en_route')}>
                                     <Navigation className="h-3 w-3 mr-1.5" /> En Route
                                 </Button>
                             )}
 
-                            {request.status === 'en_route' && (
+                            {(request.available_actions?.includes("arrive") ?? request.status === "en_route") && (
                                 <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('arrive')}>
                                     <MapPin className="h-3 w-3 mr-1.5" /> Arrived
                                 </Button>
                             )}
 
-                            {['on_site', 'arrived'].includes(request.status) && (
+                            {(request.available_actions?.includes("in_progress") ?? ["on_site", "arrived"].includes(request.status)) && (
                                 <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('in_progress')}>
                                     <Wrench className="h-3 w-3 mr-1.5" /> Start
                                 </Button>
                             )}
 
-                            {request.status === 'in_progress' && (
+                            {(request.available_actions?.includes("complete") ?? request.status === "in_progress") && (
                                 <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('complete')}>
                                     <CheckCircle className="h-3 w-3 mr-1.5" /> Complete
                                 </Button>
                             )}
 
-                            <Button variant="secondary" size="sm" className="w-full" onClick={() => setIsSmsDialogOpen(true)}>
-                                <MessageSquare className="h-3 w-3 mr-1.5" /> Message
-                            </Button>
+                            {(request.available_actions?.includes("message") ?? true) && (
+                                <Button variant="secondary" size="sm" className="w-full" onClick={() => setIsSmsDialogOpen(true)}>
+                                    <MessageSquare className="h-3 w-3 mr-1.5" /> Message
+                                </Button>
+                            )}
 
-                            {request.can_be_cancelled && (
+                            {(request.available_actions?.includes("cancel") ?? request.can_be_cancelled) && (
                                 <Button
                                     variant="secondary"
                                     size="sm"
@@ -871,21 +892,35 @@ export default function RoadsideDetailPage() {
                     </DialogHeader>
                     <form onSubmit={handleSubmit((data) => updateRequestMutation.mutate(data))} className="py-4 space-y-4">
                         <div className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Controller
+                                    control={control}
+                                    name="branch"
+                                    render={({ field }) => (
+                                        <RoadsideBranchSelect
+                                            variant="inline"
+                                            id="edit-roadside-branch"
+                                            value={field.value}
+                                            onChange={(id) => field.onChange(id)}
+                                            error={editErrors.branch?.message}
+                                        />
+                                    )}
+                                />
+                                <div className="space-y-2">
+                                    <Label htmlFor="breakdown_location">Breakdown location *</Label>
+                                    <Input id="breakdown_location" {...register("breakdown_location")} />
+                                    {editErrors.breakdown_location && (
+                                        <p className="text-xs text-destructive">{editErrors.breakdown_location.message}</p>
+                                    )}
+                                </div>
+                            </div>
                             <div className="space-y-2">
-                                <Label htmlFor="customer_phone">Customer Phone *</Label>
+                                <Label htmlFor="customer_phone">Customer phone *</Label>
                                 <Input
                                     id="customer_phone"
                                     {...register("customer_phone")}
                                 />
                                 {editErrors.customer_phone && <p className="text-xs text-destructive">{editErrors.customer_phone.message}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="breakdown_location">Breakdown Location *</Label>
-                                <Input
-                                    id="breakdown_location"
-                                    {...register("breakdown_location")}
-                                />
-                                {editErrors.breakdown_location && <p className="text-xs text-destructive">{editErrors.breakdown_location.message}</p>}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">

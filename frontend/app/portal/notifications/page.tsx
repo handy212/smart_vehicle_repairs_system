@@ -25,6 +25,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/store/authStore";
+import { ensureApiSession } from "@/lib/auth/session";
+import { authApi } from "@/lib/api/auth";
 
 export default function NotificationsPage() {
   const { toast } = useToast();
@@ -34,6 +36,18 @@ export default function NotificationsPage() {
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
+  const { isSuccess: sessionReady } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      await ensureApiSession();
+      return authApi.getCurrentUser();
+    },
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
+  const canFetch = isAuthenticated && sessionReady;
+
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ["portal", "notifications", filter, typeFilter],
     queryFn: () =>
@@ -41,13 +55,13 @@ export default function NotificationsPage() {
         is_read: filter === "unread" ? false : undefined,
         notification_type: typeFilter !== "all" ? typeFilter : undefined,
       }),
-    enabled: isAuthenticated,
+    enabled: canFetch,
   });
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["portal", "notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
-    enabled: isAuthenticated,
+    enabled: canFetch,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 

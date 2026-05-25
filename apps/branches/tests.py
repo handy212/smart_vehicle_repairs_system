@@ -274,3 +274,43 @@ class PrintFooterTemplateTest(TestCase):
         clear_settings_cache()
 
         self.assertIsNone(_get_default_watermark('work_order', SimpleNamespace()))
+
+
+class BranchListApiTest(TestCase):
+    """API list behaviour for portal and public branch pickers."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_user(
+            email='admin-branches@test.com',
+            username='admin-branches',
+            password='testpass123',
+            role='admin',
+            is_staff=True,
+        )
+        self.customer_user = User.objects.create_user(
+            email='customer-branches@test.com',
+            username='customer-branches',
+            password='testpass123',
+            role='customer',
+        )
+        self.branch = Branch.objects.create(
+            name='Portal Branch',
+            code='PORT',
+            phone='555-0199',
+            address='1 Portal Rd',
+            city='Accra',
+            state='GA',
+            zip_code='00000',
+            is_active=True,
+            created_by=self.admin,
+        )
+
+    def test_customer_list_returns_active_branches(self):
+        self.client.force_authenticate(user=self.customer_user)
+        response = self.client.get('/api/branches/', {'is_active': True})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        self.assertGreaterEqual(len(results), 1)
+        self.assertEqual(results[0]['id'], self.branch.id)
+        self.assertEqual(results[0]['name'], 'Portal Branch')

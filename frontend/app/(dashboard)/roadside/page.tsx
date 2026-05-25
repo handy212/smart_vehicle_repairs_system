@@ -366,13 +366,14 @@ export default function RoadsidePage() {
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="p-4">
-                            <TableSkeleton rows={8} columns={7} />
+                            <TableSkeleton rows={8} columns={8} />
                         </div>
                     ) : requests && requests.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
                                         <SortableHeader
                                             field="request_number"
                                             sortConfig={sortConfig}
@@ -417,6 +418,9 @@ export default function RoadsidePage() {
                                             className="group hover:bg-muted/80 transition-colors border-b border-border cursor-pointer"
                                             onDoubleClick={() => router.push(`/roadside/${request.id}`)}
                                         >
+                                            <TableCell className="px-4 py-2">
+                                                <span className="text-xs text-foreground">{request.branch_name || "—"}</span>
+                                            </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-mono text-xs font-medium text-primary">{request.request_number}</span>

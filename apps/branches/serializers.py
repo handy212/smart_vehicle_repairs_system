@@ -117,7 +117,8 @@ class BranchCreateUpdateSerializer(serializers.ModelSerializer):
         return data
 
 class PublicBranchSerializer(serializers.ModelSerializer):
-    """Serializer for branches exposed to unauthenticated users"""
+    """Serializer for branches exposed to unauthenticated users and customer portal pickers."""
+
     class Meta:
         model = Branch
-        fields = ['id', 'name', 'code']
+        fields = ['id', 'name', 'code', 'address', 'city', 'state', 'phone', 'is_headquarters']
