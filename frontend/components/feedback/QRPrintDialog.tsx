@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -13,8 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Printer, Download } from 'lucide-react';
 import { Branch } from '@/lib/api/branches';
-import { useQuery } from '@tanstack/react-query';
-import { adminApi, SystemSetting } from '@/lib/api/admin';
+import { useBranding } from '@/lib/hooks/useBranding';
 
 interface QRPrintDialogProps {
     branch: Branch | null;
@@ -25,30 +24,7 @@ interface QRPrintDialogProps {
 export function QRPrintDialog({ branch, open, onOpenChange }: QRPrintDialogProps) {
     const printRef = useRef<HTMLDivElement>(null);
 
-    const { data: brandingSettings } = useQuery<SystemSetting[]>({
-        queryKey: ["settings", "branding", "public"],
-        queryFn: () => adminApi.settings.publicBranding(),
-        staleTime: 5 * 60 * 1000,
-    });
-
-    const branding = useMemo(() => {
-        if (!brandingSettings) {
-            return {
-                site_name: "Smart Repairs",
-                company_name: "Smart Vehicle Repairs",
-            };
-        }
-
-        const getSetting = (key: string): string | null => {
-            const setting = brandingSettings.find((s) => s.key === key);
-            return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-        };
-
-        return {
-            site_name: getSetting("site_name") || "Smart Repairs",
-            company_name: getSetting("company_name") || "Smart Vehicle Repairs",
-        };
-    }, [brandingSettings]);
+    const { siteName, companyName } = useBranding("public");
 
     if (!branch) return null;
 
@@ -109,7 +85,7 @@ export function QRPrintDialog({ branch, open, onOpenChange }: QRPrintDialogProps
             </div>
             <p class="instructions">Scan the QR code to share your suggestions, compliments, or complaints.</p>
             <div class="footer">
-              <p>${branding.site_name}</p>
+              <p>${siteName}</p>
             </div>
           </div>
           <script>
@@ -157,7 +133,7 @@ export function QRPrintDialog({ branch, open, onOpenChange }: QRPrintDialogProps
                         </p>
 
                         <div className="pt-3 border-t border-slate-100 w-full">
-                            <p className="text-[10px] text-slate-400">{branding.site_name}</p>
+                            <p className="text-[10px] text-slate-400">{siteName}</p>
                         </div>
                     </div>
                 </div>

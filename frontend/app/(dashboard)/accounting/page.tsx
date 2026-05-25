@@ -228,6 +228,13 @@ export default function AccountingDashboardPage() {
                     <p className={`mt-1 ${isPerfex ? "text-xs" : "text-sm"} text-muted-foreground`}>
                         Analytics for {format(dateRange.from!, "MMM d")} - {format(dateRange.to!, "MMM d, yyyy")}
                     </p>
+                    <p className={`mt-1 ${isPerfex ? "text-[10px]" : "text-xs"} text-muted-foreground`}>
+                        Per-report Print and PDF use branded templates under{" "}
+                        <Link href="/accounting/reports" className="text-primary underline">
+                            Financial Reports
+                        </Link>
+                        . Board pack below is a combined executive summary.
+                    </p>
                     <div className="mt-2">
                         <BranchReportChip />
                     </div>
@@ -248,7 +255,7 @@ export default function AccountingDashboardPage() {
                     </Button>
                     <Button size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={() => handleExport()}>
                         <Download className="w-4 h-4 mr-2" />
-                        Export Report
+                        Board pack PDF
                     </Button>
                 </div>
             </div>

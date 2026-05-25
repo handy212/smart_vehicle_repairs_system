@@ -15,9 +15,7 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { adminApi, SystemSetting } from "@/lib/api/admin";
-import { useMemo } from "react";
+import { useBranding } from "@/lib/hooks/useBranding";
 
 // Define type for navigation items
 interface NavigationItem {
@@ -71,29 +69,8 @@ interface PortalSidebarProps {
 export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: PortalSidebarProps) {
   const pathname = usePathname();
 
-  const { data: brandingSettings } = useQuery<SystemSetting[]>({
-    queryKey: ["settings", "branding", "public"],
-    queryFn: () => adminApi.settings.publicBranding(),
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-  });
-
-  const branding = useMemo(() => {
-    if (!brandingSettings) {
-      return {
-        primary_color: "#ff8040", // Default orange
-      };
-    }
-
-    const getSetting = (key: string): string | null => {
-      const setting = brandingSettings.find((s) => s.key === key);
-      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-    };
-
-    return {
-      primary_color: getSetting("primary_color") || "#ff8040",
-    };
-  }, [brandingSettings]);
+  const { primaryColor } = useBranding("public");
+  const branding = { primary_color: primaryColor };
 
   return (
     <>

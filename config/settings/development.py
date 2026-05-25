@@ -99,6 +99,10 @@ if not _redis_url:
 if not _redis_url:
     SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
+# Relaxed throttles for local dev (HMR, Strict Mode, multiple layout hooks)
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['public_settings'] = '1000/hour'
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['anon'] = '5000/hour'
+
 # Development logging
 LOGGING['root']['level'] = 'DEBUG'
 LOGGING['loggers']['django']['level'] = 'DEBUG'

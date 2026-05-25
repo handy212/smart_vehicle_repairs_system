@@ -173,6 +173,11 @@ export default function ProfitLossPage() {
                     getExportPayload={getExportPayload}
                     disabled={!displayReport}
                     isLoading={isLoadingReport}
+                    reportPrint={{
+                        slug: "profit-loss",
+                        getQueryParams: () => ({ start_date: startDate, end_date: endDate }),
+                        pdfFilename: `profit-loss_${startDate}_${endDate}`,
+                    }}
                 />
             </div>
 

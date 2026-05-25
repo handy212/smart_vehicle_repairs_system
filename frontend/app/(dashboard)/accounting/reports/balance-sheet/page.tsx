@@ -52,6 +52,11 @@ export default function BalanceSheetPage() {
           getExportPayload={getExportPayload}
           disabled={!report}
           isLoading={isLoading}
+          reportPrint={{
+            slug: "balance-sheet",
+            getQueryParams: () => ({ date }),
+            pdfFilename: `balance-sheet_${date}`,
+          }}
         >
           <Button
             variant="secondary"

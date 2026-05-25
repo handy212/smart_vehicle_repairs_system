@@ -57,7 +57,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         return SystemSettingsSerializer
     
     def get_permissions(self):
-        if self.action in ['public_branding', 'public_firebase', 'public_integrations']:
+        if self.action in ['public_branding', 'public_firebase', 'public_integrations', 'public_display']:
             return [AllowAny()]
         if self.action == 'by_category':
             return [IsAuthenticated(), HasAnyPermission(['view_settings', 'manage_settings'])()]
@@ -79,17 +79,32 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         instance = serializer.save(updated_by=self.request.user)
-        # Clear cache for this setting
-        from .settings_utils import clear_setting_cache
+        from .settings_utils import (
+            clear_public_branding_cache,
+            clear_public_display_cache,
+            clear_setting_cache,
+        )
         clear_setting_cache(instance.key)
+        if instance.category in ('branding', 'company'):
+            clear_public_branding_cache()
+        if instance.category == 'payment' or instance.key in ('currency', 'currency_symbol'):
+            clear_public_display_cache()
     
     def perform_update(self, serializer):
         # old_value = serializer.instance.value # Auditlog handles this
         updated_instance = serializer.save(updated_by=self.request.user)
         
         # Clear cache handled by save but good to ensure
-        from .settings_utils import clear_setting_cache
+        from .settings_utils import (
+            clear_public_branding_cache,
+            clear_public_display_cache,
+            clear_setting_cache,
+        )
         clear_setting_cache(updated_instance.key)
+        if updated_instance.category in ('branding', 'company'):
+            clear_public_branding_cache()
+        if updated_instance.category == 'payment' or updated_instance.key in ('currency', 'currency_symbol'):
+            clear_public_display_cache()
             
     def perform_destroy(self, instance):
         key = instance.key
@@ -150,18 +165,26 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         Public endpoint to get branding settings for login page and public pages.
         Does not require authentication.
         """
-        # Auto-initialize branding settings if none exist
+        from django.core.cache import cache
+
+        from .settings_utils import PUBLIC_BRANDING_CACHE_KEY
+
+        cached = cache.get(PUBLIC_BRANDING_CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+
+        # Auto-initialize branding settings if none exist (not on every cached hit)
         from .settings_init import cleanup_deprecated_settings, initialize_category_settings
         cleanup_deprecated_settings('branding')
         initialize_category_settings('branding')
-        
+
         # Only return active, non-secret branding and company settings
         settings = SystemSettings.objects.filter(
             category__in=['branding', 'company'],
             is_active=True,
             is_secret=False  # Never expose secret settings publicly
         ).order_by('key')
-        
+
         # Serialize only safe fields (key, value, no sensitive info)
         data = []
         for setting in settings:
@@ -170,7 +193,41 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                 'value': setting.value,
                 'updated_at': setting.updated_at.isoformat() if setting.updated_at else None,
             })
-        
+
+        cache.set(PUBLIC_BRANDING_CACHE_KEY, data, timeout=300)
+        return Response(data)
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[AllowAny],
+        authentication_classes=[],
+        url_path='public/display',
+        throttle_classes=[PublicSettingsRateThrottle],
+    )
+    def public_display(self, request):
+        """
+        Public endpoint for display settings (currency) used by portal and shared UI.
+        Does not require authentication or staff settings permissions.
+        """
+        from django.core.cache import cache
+
+        from .settings_init import cleanup_deprecated_settings, initialize_category_settings
+        from .settings_utils import PUBLIC_DISPLAY_CACHE_KEY, get_payment_settings
+
+        cached = cache.get(PUBLIC_DISPLAY_CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+
+        cleanup_deprecated_settings('payment')
+        initialize_category_settings('payment')
+
+        payment = get_payment_settings()
+        data = [
+            {'key': 'currency', 'value': payment.get('currency', 'USD')},
+            {'key': 'currency_symbol', 'value': payment.get('currency_symbol', '$')},
+        ]
+        cache.set(PUBLIC_DISPLAY_CACHE_KEY, data, timeout=300)
         return Response(data)
     
     @action(
@@ -270,7 +327,11 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             setting_id = setting_data.get('id')
             if setting_id:
                 try:
-                    from .settings_utils import clear_setting_cache
+                    from .settings_utils import (
+                        clear_public_branding_cache,
+                        clear_public_display_cache,
+                        clear_setting_cache,
+                    )
                     setting = SystemSettings.objects.get(id=setting_id)
                     
                     # old_value = setting.value
@@ -281,6 +342,10 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                     setting.updated_by = request.user
                     setting.save()
                     clear_setting_cache(setting.key)
+                    if setting.category in ('branding', 'company'):
+                        clear_public_branding_cache()
+                    if setting.category == 'payment' or setting.key in ('currency', 'currency_symbol'):
+                        clear_public_display_cache()
                     updated.append(setting.id)
                     
                 except SystemSettings.DoesNotExist:
@@ -359,8 +424,9 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         setting.save()
         
         # Clear cache
-        from .settings_utils import clear_setting_cache
+        from .settings_utils import clear_public_branding_cache, clear_setting_cache
         clear_setting_cache(setting.key)
+        clear_public_branding_cache()
         
         # Return updated setting with full URL
         full_url = f"{settings.MEDIA_URL}{relative_path}"

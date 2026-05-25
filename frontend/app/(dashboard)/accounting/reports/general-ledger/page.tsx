@@ -71,6 +71,14 @@ export default function GeneralLedgerPage() {
             getExportPayload={buildExportPayload}
             disabled={isLoading || results.length === 0}
             isLoading={isLoading}
+            reportPrint={{
+              slug: "general-ledger",
+              getQueryParams: () => ({
+                start_date: startDate,
+                end_date: endDate,
+              }),
+              pdfFilename: `general-ledger_${startDate}_${endDate}`,
+            }}
           >
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40 h-9 text-sm" />
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40 h-9 text-sm" />

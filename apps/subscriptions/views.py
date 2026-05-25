@@ -51,11 +51,26 @@ class PackageViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        is_customer = getattr(self.request.user, 'role', None) == 'customer'
+        if is_customer:
+            if self.action in ['list', 'retrieve', 'available']:
+                return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            return [
+                IsAuthenticated(),
+                IsModuleEnabled('subscriptions'),
+                HasPermission('manage_subscriptions')(),
+            ]
         if self.action in ['list', 'retrieve', 'available', 'stats']:
             return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('view_subscriptions')()]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('manage_subscriptions')]
         return [IsAuthenticated(), IsModuleEnabled('subscriptions')(), HasPermission('view_subscriptions')()]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if getattr(self.request.user, 'role', None) == 'customer':
+            return queryset.filter(is_active=True)
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'list':

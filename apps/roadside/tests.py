@@ -502,6 +502,46 @@ class RoadsideRequestTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
+    def test_customer_can_retrieve_own_request(self):
+        """Customer portal detail page uses GET /requests/{id}/"""
+        request = RoadsideRequest.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            service_type='battery_boost',
+            breakdown_location='Test Loc',
+            customer_phone='123',
+            branch=self.branch,
+            request_number='TEST-RETRIEVE',
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"{self.url}{request.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], request.id)
+
+    def test_customer_cannot_retrieve_other_customers_request(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        other_user = User.objects.create_user(
+            username='other_retrieve',
+            password='password',
+            email='other_retrieve@example.com',
+            role='customer',
+        )
+        other_customer = Customer.objects.create(user=other_user, customer_number='CUST-OTHER-R')
+        other_request = RoadsideRequest.objects.create(
+            customer=other_customer,
+            vehicle=self.vehicle,
+            service_type='battery_boost',
+            breakdown_location='Elsewhere',
+            customer_phone='999',
+            branch=self.branch,
+            request_number='TEST-OTHER',
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"{self.url}{other_request.id}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_cancellation_refunds_allowance(self):
         """Test that cancelling a request refunds the subscription allowance"""
         # Create request covered by subscription

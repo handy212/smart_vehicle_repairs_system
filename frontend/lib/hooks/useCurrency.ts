@@ -3,8 +3,8 @@ import { adminApi } from '@/lib/api/admin';
 
 export const useCurrency = () => {
     const { data: settings, isLoading } = useQuery({
-        queryKey: ['settings', 'payment'],
-        queryFn: () => adminApi.settings.byCategory('payment'),
+        queryKey: ['settings', 'public-display'],
+        queryFn: () => adminApi.settings.publicDisplay(),
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: false,
     });

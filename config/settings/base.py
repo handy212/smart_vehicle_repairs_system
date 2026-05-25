@@ -235,7 +235,8 @@ REST_FRAMEWORK = {
         'login': '10/minute',  # Tight limit for auth endpoints — prevents brute-force
         '2fa_verify': '5/minute',
         'refresh': '30/minute',
-        'public_settings': '60/hour',
+        # Login/layout may fetch branding from several client hooks; SSR adds more.
+        'public_settings': '120/minute',
         'share_access_code': '10/minute',
     },
 }

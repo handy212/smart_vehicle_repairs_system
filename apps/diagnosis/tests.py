@@ -8,8 +8,11 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from decimal import Decimal
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 from model_bakery import baker
+
+from apps.accounts.admin_models import SystemModule
+from apps.accounts.permission_models import Permission, Role
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -437,6 +440,117 @@ class DiagnosticCodeLibraryModelTest(TestCase):
         )
         code.increment_use_count()
         self.assertEqual(code.use_count, 1)
+
+
+class CustomerPortalDiagnosisAPITest(APITestCase):
+    """Customer portal work-order page loads diagnosis via list filter."""
+
+    def setUp(self):
+        SystemModule.objects.get_or_create(
+            slug='diagnosis',
+            defaults={'name': 'Diagnosis', 'is_enabled': True},
+        )
+        self.customer_user = User.objects.create_user(
+            email='portal_customer@test.com',
+            username='portal_customer',
+            password='test123',
+            role='customer',
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        role, _ = Role.objects.get_or_create(
+            code='customer',
+            defaults={'name': 'Customer', 'is_active': True, 'is_system': True},
+        )
+        perm, _ = Permission.objects.get_or_create(
+            code='view_own_workorders',
+            defaults={
+                'name': 'View Own Work Orders',
+                'category': 'workorders',
+                'is_active': True,
+                'is_system': True,
+            },
+        )
+        role.permissions.add(perm)
+
+        self.other_user = User.objects.create_user(
+            email='other_portal@test.com',
+            username='other_portal',
+            password='test123',
+            role='customer',
+        )
+        self.other_customer = Customer.objects.create(user=self.other_user)
+
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='Camry',
+            year=2020,
+            vin='1HGBH41JXMN109187',
+            license_plate='ABC124',
+            current_mileage=50000,
+        )
+        self.work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            customer_concerns='Noise from engine',
+            odometer_in=50000,
+            status='diagnosis',
+        )
+        self.diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            customer_complaint='Noise from engine',
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.customer_user)
+
+    def test_customer_can_list_diagnosis_by_work_order(self):
+        response = self.client.get(
+            '/api/diagnosis/diagnoses/',
+            {'work_order': self.work_order.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['id'], self.diagnosis.id)
+
+    def test_customer_cannot_list_other_customers_diagnosis(self):
+        other_vehicle = Vehicle.objects.create(
+            owner=self.other_customer,
+            make='Honda',
+            model='Civic',
+            year=2019,
+            vin='1HGBH41JXMN109188',
+            license_plate='XYZ999',
+            current_mileage=40000,
+        )
+        other_work_order = WorkOrder.objects.create(
+            customer=self.other_customer,
+            vehicle=other_vehicle,
+            customer_concerns='Other issue',
+            odometer_in=40000,
+        )
+        other_diagnosis = Diagnosis.objects.create(
+            work_order=other_work_order,
+            customer_complaint='Other issue',
+        )
+        response = self.client.get(
+            '/api/diagnosis/diagnoses/',
+            {'work_order': other_work_order.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 0)
+        self.assertNotIn(other_diagnosis.id, [row['id'] for row in results])
+
+    def test_customer_cannot_create_diagnosis(self):
+        response = self.client.post(
+            '/api/diagnosis/diagnoses/',
+            {
+                'work_order': self.work_order.id,
+                'customer_complaint': 'New complaint',
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class DiagnosisHistoryModelTest(TestCase):

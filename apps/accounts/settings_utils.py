@@ -122,6 +122,26 @@ def clear_setting_cache(key):
         pass
 
 
+PUBLIC_BRANDING_CACHE_KEY = 'accounts:public_branding:v1'
+PUBLIC_DISPLAY_CACHE_KEY = 'accounts:public_display:v1'
+
+
+def clear_public_branding_cache():
+    """Invalidate cached public branding API payload."""
+    try:
+        cache.delete(PUBLIC_BRANDING_CACHE_KEY)
+    except Exception:
+        pass
+
+
+def clear_public_display_cache():
+    """Invalidate cached public display settings (currency) API payload."""
+    try:
+        cache.delete(PUBLIC_DISPLAY_CACHE_KEY)
+    except Exception:
+        pass
+
+
 def get_company_info():
     """Get all company information settings"""
     keys = [

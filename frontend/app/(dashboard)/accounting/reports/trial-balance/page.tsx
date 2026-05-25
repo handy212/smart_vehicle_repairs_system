@@ -78,6 +78,11 @@ export default function TrialBalancePage() {
                 <AccountingReportToolbar
                     getExportPayload={getExportPayload}
                     disabled={!report}
+                    reportPrint={{
+                        slug: "trial-balance",
+                        getQueryParams: () => ({ date }),
+                        pdfFilename: `trial-balance_${date}`,
+                    }}
                 >
                     <Input
                         type="date"

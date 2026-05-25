@@ -20,6 +20,9 @@ type ReportExportMenuProps = {
   disabled?: boolean;
   size?: "default" | "sm" | "lg";
   variant?: "default" | "outline" | "ghost";
+  /** When set, PDF uses server template (WeasyPrint) instead of client jsPDF */
+  onServerPdf?: () => void | Promise<void>;
+  serverPdfLoading?: boolean;
 };
 
 export function ReportExportMenu({
@@ -27,6 +30,8 @@ export function ReportExportMenu({
   disabled = false,
   size = "sm",
   variant = "outline",
+  onServerPdf,
+  serverPdfLoading = false,
 }: ReportExportMenuProps) {
   const { formatCurrency, currencySymbol } = useCurrency();
   const { toast } = useToast();
@@ -37,7 +42,24 @@ export function ReportExportMenu({
     currencySymbol,
   });
 
-  const exportFormat = (format: "xlsx" | "pdf" | "csv") => {
+  const exportFormat = async (format: "xlsx" | "pdf" | "csv") => {
+    if (format === "pdf" && onServerPdf) {
+      try {
+        await onServerPdf();
+        toast({
+          title: "Export started",
+          description: "Downloading PDF from server.",
+        });
+      } catch {
+        toast({
+          title: "Export failed",
+          description: "Could not generate the PDF.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     const base = getPayload();
     if (!base || base.rows.length === 0) {
       toast({
@@ -50,7 +72,7 @@ export function ReportExportMenu({
       runTableExport(enrich(base), format);
       toast({
         title: "Export started",
-        description: `Downloading ${format === "xlsx" ? "Excel" : "PDF"} file.`,
+        description: `Downloading ${format === "xlsx" ? "Excel" : format === "csv" ? "CSV" : "PDF"} file.`,
       });
     } catch {
       toast({
@@ -64,7 +86,12 @@ export function ReportExportMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} disabled={disabled} type="button">
+        <Button
+          variant={variant}
+          size={size}
+          disabled={disabled || serverPdfLoading}
+          type="button"
+        >
           <Download className="h-4 w-4 mr-1" />
           Export
           <ChevronDown className="h-4 w-4 ml-1 opacity-60" />

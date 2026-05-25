@@ -3,7 +3,10 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 from dateutil.relativedelta import relativedelta
+from rest_framework import status
+from rest_framework.test import APIClient
 
+from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -279,3 +282,59 @@ class SubscriptionTests(TestCase):
         self.assertEqual(sub_one.payment_status, 'paid')
         self.assertEqual(sub_two.status, 'pending')
         self.assertEqual(sub_two.payment_status, 'pending')
+
+
+class CustomerPortalPackageAPITest(TestCase):
+    """Portal subscriptions page lists active packages for purchase."""
+
+    def setUp(self):
+        SystemModule.objects.get_or_create(
+            slug='subscriptions',
+            defaults={'name': 'Subscriptions', 'is_enabled': True},
+        )
+        self.admin = User.objects.create_user(
+            username='pkg_admin',
+            password='password',
+            email='pkg_admin@example.com',
+            role='admin',
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.customer_user = User.objects.create_user(
+            username='pkg_customer',
+            password='password',
+            email='pkg_customer@example.com',
+            role='customer',
+        )
+        Customer.objects.create(user=self.customer_user, customer_number='PKG-CUST')
+        self.active_package = Package.objects.create(
+            name='Active Plan',
+            code='ACTIVE-01',
+            price=Decimal('50.00'),
+            created_by=self.admin,
+            is_active=True,
+        )
+        Package.objects.create(
+            name='Inactive Plan',
+            code='INACTIVE-01',
+            price=Decimal('25.00'),
+            created_by=self.admin,
+            is_active=False,
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.customer_user)
+
+    def test_customer_can_list_active_packages(self):
+        response = self.client.get('/api/subscriptions/packages/', {'is_active': 'true'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results', response.data)
+        ids = [row['id'] for row in results]
+        self.assertIn(self.active_package.id, ids)
+        self.assertEqual(len(ids), 1)
+
+    def test_customer_cannot_create_packages(self):
+        response = self.client.post(
+            '/api/subscriptions/packages/',
+            {'name': 'Hacker Plan', 'code': 'HACK', 'price': '1.00'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

@@ -129,6 +129,14 @@ export default function ExpenseBreakdownPage() {
                 getExportPayload={getExportPayload}
                 disabled={!report}
                 isLoading={isLoading}
+                reportPrint={{
+                    slug: "expense-breakdown",
+                    getQueryParams: () => ({
+                        start_date: filters.start_date,
+                        end_date: filters.end_date,
+                    }),
+                    pdfFilename: `expense-breakdown_${filters.start_date}_${filters.end_date}`,
+                }}
             />
 
             <AccountingReportPrintHeader

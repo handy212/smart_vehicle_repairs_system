@@ -73,6 +73,14 @@ export default function MarginAnalysisPage() {
           getExportPayload={buildExportPayload}
           disabled={loadingJobs}
           isLoading={loadingJobs}
+          reportPrint={{
+            slug: "margin-analysis",
+            getQueryParams: () => ({
+              start_date: startDate,
+              end_date: endDate,
+            }),
+            pdfFilename: `margin-analysis_${startDate}_${endDate}`,
+          }}
         />
       </div>
       <AccountingReportPrintHeader title="Margin Analysis" dateInfo={`${startDate} to ${endDate}`} />

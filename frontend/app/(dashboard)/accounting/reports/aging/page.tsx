@@ -120,6 +120,16 @@ export default function AgingReportPage() {
                     getExportPayload={getExportPayload}
                     disabled={!report || showSupplierAp}
                     isLoading={loading}
+                    reportPrint={{
+                        slug: showSupplierAp ? "supplier-ap-aging" : "aging",
+                        getQueryParams: () =>
+                            showSupplierAp
+                                ? { date }
+                                : { type: activeTab, date },
+                        pdfFilename: showSupplierAp
+                            ? `supplier-ap-aging_${date}`
+                            : `aging-${activeTab}_${date}`,
+                    }}
                 >
                     <Input
                         type="date"

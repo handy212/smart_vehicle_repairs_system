@@ -193,7 +193,7 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'login': os.getenv('DRF_THROTTLE_LOGIN', '10/minute'),
     '2fa_verify': os.getenv('DRF_THROTTLE_2FA', '5/minute'),
     'refresh': os.getenv('DRF_THROTTLE_REFRESH', '30/minute'),
-    'public_settings': os.getenv('DRF_THROTTLE_PUBLIC_SETTINGS', '60/hour'),
+    'public_settings': os.getenv('DRF_THROTTLE_PUBLIC_SETTINGS', '120/minute'),
 }
 
 REQUIRE_WEBHOOK_SIGNATURES = True

@@ -1,7 +1,12 @@
 """Shared permission helpers for diagnosis API viewsets."""
-from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
 
-from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled
+from apps.accounts.permissions import (
+    HasAnyPermission,
+    HasPermission,
+    IsModuleEnabled,
+    WORKORDER_VIEW_PERMISSIONS,
+)
 
 
 def diagnosis_module_permissions():
@@ -9,7 +14,24 @@ def diagnosis_module_permissions():
 
 
 def diagnosis_read_permissions():
-    return diagnosis_module_permissions() + [HasPermission('view_diagnosis')()]
+    """Staff use view_diagnosis; customer portal uses view_own_workorders (own WO diagnoses)."""
+    return diagnosis_module_permissions() + [
+        HasAnyPermission(['view_diagnosis', *WORKORDER_VIEW_PERMISSIONS])(),
+    ]
+
+
+def diagnosis_customer_portal_permissions():
+    """Customer portal: module enabled only; queryset scopes to own work orders."""
+    return diagnosis_module_permissions()
+
+
+class _DenyAll(BasePermission):
+    def has_permission(self, request, view):
+        return False
+
+
+def diagnosis_customer_deny_permissions():
+    return diagnosis_module_permissions() + [_DenyAll()]
 
 
 def diagnosis_write_permissions():
@@ -45,10 +67,23 @@ def diagnosis_code_manage_permissions():
 class DiagnosisPermissionMixin:
     """Standard CRUD permission mapping for diagnosis records."""
 
+    CUSTOMER_PORTAL_READ_ACTIONS = frozenset({'list', 'retrieve', 'recommendations'})
+    CUSTOMER_PORTAL_WRITE_ACTIONS = frozenset({'approve_recommendations'})
+
     def get_permissions(self):
+        if getattr(self.request.user, 'role', None) == 'customer':
+            action = getattr(self, 'action', None)
+            if action in self.CUSTOMER_PORTAL_WRITE_ACTIONS:
+                return diagnosis_customer_portal_permissions()
+            if action in self.CUSTOMER_PORTAL_READ_ACTIONS or self.request.method in SAFE_METHODS:
+                return diagnosis_read_permissions()
+            return diagnosis_customer_deny_permissions()
+
         if self.request.method in SAFE_METHODS:
             return diagnosis_read_permissions()
         if self.request.method == 'POST':
+            if getattr(self, 'action', None) == 'approve_recommendations':
+                return diagnosis_write_permissions()
             return diagnosis_create_permissions()
         if self.request.method == 'DELETE':
             return diagnosis_delete_permissions()

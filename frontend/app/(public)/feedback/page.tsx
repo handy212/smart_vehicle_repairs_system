@@ -1,25 +1,31 @@
 import { Suspense } from 'react';
+import { unstable_cache } from 'next/cache';
 import { FeedbackForm } from '@/components/feedback/FeedbackForm';
 import { Loader2 } from 'lucide-react';
-import { adminApi, SystemSetting } from '@/lib/api/admin';
+import { adminApi, type SystemSetting } from '@/lib/api/admin';
+
+const getCachedPublicBranding = unstable_cache(
+    async () => {
+        try {
+            return await adminApi.settings.publicBranding();
+        } catch {
+            return [] as SystemSetting[];
+        }
+    },
+    ['public-feedback-branding'],
+    { revalidate: 300 }
+);
 
 async function getBranding() {
-    try {
-        const settings = await adminApi.settings.publicBranding();
-        const getSetting = (key: string): string | null => {
-            const setting = settings.find((s: SystemSetting) => s.key === key);
-            return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-        };
-        return {
-            site_name: getSetting("site_name") || "Smart Repairs",
-            company_name: getSetting("company_name") || "Smart Vehicle Repairs",
-        };
-    } catch (_err) {
-        return {
-            site_name: "Smart Repairs",
-            company_name: "Smart Vehicle Repairs",
-        };
-    }
+    const settings = await getCachedPublicBranding();
+    const getSetting = (key: string): string | null => {
+        const setting = settings.find((s) => s.key === key);
+        return setting?.value && setting.value.trim() !== "" ? setting.value : null;
+    };
+    return {
+        site_name: getSetting("site_name") || "Smart Repairs",
+        company_name: getSetting("company_name") || "Smart Vehicle Repairs",
+    };
 }
 
 export async function generateMetadata() {

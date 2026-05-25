@@ -52,8 +52,14 @@ def filter_diagnosis_queryset_for_branches(queryset, user, request, branch_looku
         return queryset.none()
     
     # Customer ownership check - HIGHEST PRIORITY for security
-    if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-        customer = user.customer_profile
+    if getattr(user, 'role', None) == 'customer':
+        customer = getattr(user, 'customer_profile', None)
+        if customer is None:
+            from apps.customers.models import Customer
+            try:
+                customer = Customer.objects.get(user=user)
+            except Customer.DoesNotExist:
+                return queryset.none()
         # Determine the customer lookup path based on the branch_lookup
         # If branch_lookup is 'work_order__branch', customer lookup is 'work_order__customer'
         # If branch_lookup is 'diagnosis__work_order__branch', customer lookup is 'diagnosis__work_order__customer'

@@ -2,8 +2,10 @@
 
 import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { adminApi, type SystemSetting } from "@/lib/api/admin";
 import { useTheme } from "@/lib/hooks/useTheme";
+import { getAccessToken } from "@/lib/utils/token";
 
 /** Shared media-URL builder derived from the API base URL. */
 function getMediaBaseUrl() {
@@ -13,12 +15,15 @@ function getMediaBaseUrl() {
 
 interface BrandingResult {
     siteName: string;
+    companyName: string;
     tagline: string;
     primaryColor: string;
+    secondaryColor: string | null;
     logoPath: string | null;
     logoDarkPath: string | null;
     loginBackground: string | null;
     selfRegistrationEnabled: boolean;
+    faviconPath: string | null;
     /** The resolved logo URL (theme-aware) or null. */
     logoSrc: string | null;
     /** Helper to convert a relative media path to a full URL. */
@@ -50,7 +55,13 @@ export function useBranding(
                 ? adminApi.settings.byCategory("branding")
                 : adminApi.settings.publicBranding(),
         staleTime: 5 * 60 * 1000,
-        retry: 2,
+        gcTime: 10 * 60 * 1000,
+        retry: (failureCount, error) => {
+            if (isAxiosError(error) && error.response?.status === 429) {
+                return false;
+            }
+            return failureCount < 2;
+        },
     });
 
     const mediaBaseUrl = useMemo(() => getMediaBaseUrl(), []);
@@ -82,11 +93,15 @@ export function useBranding(
         };
 
         const siteName = getSetting("site_name") || "Smart Vehicle Repairs";
+        const companyName =
+            getSetting("company_name") || siteName;
         const tagline = getSetting("company_tagline") || "Management System";
         const primaryColor = getSetting("primary_color") || "#ff8040";
+        const secondaryColor = getSetting("secondary_color");
         const logoPath = getSetting("logo_path");
         const logoDarkPath = getSetting("logo_dark_path");
         const loginBackground = getSetting("login_background");
+        const faviconPath = getSetting("favicon_path");
         const selfRegistrationEnabled = getSetting("self_registration_enabled") !== "false";
         const logoUpdatedAt = getUpdatedAt("logo_path");
         const logoDarkUpdatedAt = getUpdatedAt("logo_dark_path");
@@ -109,11 +124,14 @@ export function useBranding(
 
         return {
             siteName,
+            companyName,
             tagline,
             primaryColor,
+            secondaryColor,
             logoPath,
             logoDarkPath,
             loginBackground,
+            faviconPath,
             selfRegistrationEnabled,
             logoSrc,
             getMediaUrl,

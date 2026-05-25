@@ -323,7 +323,7 @@ export function NotificationDropdown() {
 
                 <DropdownMenuItem asChild>
                     <Link
-                        href="/notifications"
+                        href={user?.role === "customer" ? "/portal/notifications" : "/notifications"}
                         className="w-full cursor-pointer py-2.5 text-center text-sm font-medium text-primary hover:bg-primary/10"
                     >
                         View all notifications →

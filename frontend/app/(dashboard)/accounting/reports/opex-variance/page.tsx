@@ -81,6 +81,15 @@ export default function OpexVariancePage() {
           getExportPayload={buildExportPayload}
           disabled={!budgetId || isLoading}
           isLoading={isLoading}
+          reportPrint={{
+            slug: "opex-variance",
+            getQueryParams: () => ({
+              budget_id: budgetId,
+              start_date: startDate,
+              end_date: endDate,
+            }),
+            pdfFilename: `opex-variance_${budgetId}_${startDate}_${endDate}`,
+          }}
         />
       </div>
       <AccountingReportPrintHeader title="OPEX Variance" />

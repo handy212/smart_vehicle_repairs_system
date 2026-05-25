@@ -58,9 +58,7 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
-import { useQuery } from "@tanstack/react-query";
-import { adminApi, SystemSetting } from "@/lib/api/admin";
-import { useMemo } from "react";
+import { useBranding } from "@/lib/hooks/useBranding";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
 import { useModules } from "@/lib/hooks/useModules";
@@ -92,29 +90,8 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
 
 
 
-  const { data: brandingSettings } = useQuery<SystemSetting[]>({
-    queryKey: ["settings", "branding", "public"],
-    queryFn: () => adminApi.settings.publicBranding(),
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-  });
-
-  const branding = useMemo(() => {
-    if (!brandingSettings) {
-      return {
-        primary_color: "#ff8040", // Default orange
-      };
-    }
-
-    const getSetting = (key: string): string | null => {
-      const setting = brandingSettings.find((s) => s.key === key);
-      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-    };
-
-    return {
-      primary_color: getSetting("primary_color") || "#ff8040",
-    };
-  }, [brandingSettings]);
+  const { primaryColor } = useBranding("authenticated");
+  const branding = { primary_color: primaryColor };
 
   const handleToggle = () => {
     const newState = !isCollapsed;

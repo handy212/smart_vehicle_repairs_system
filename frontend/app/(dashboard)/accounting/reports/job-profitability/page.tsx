@@ -127,6 +127,14 @@ export default function JobProfitabilityPage() {
                     getExportPayload={getExportPayload}
                     disabled={jobs.length === 0 && !isLoading}
                     isLoading={isLoading}
+                    reportPrint={{
+                        slug: "job-profitability",
+                        getQueryParams: () => ({
+                            start_date: filters.start_date,
+                            end_date: filters.end_date,
+                        }),
+                        pdfFilename: `job-profitability_${filters.start_date}_${filters.end_date}`,
+                    }}
                 />
             </div>
 

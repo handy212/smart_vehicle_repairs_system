@@ -101,17 +101,27 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             'covered_by_subscription': covered_by_subscription
         })
     
+    def _customer_portal_permissions(self):
+        """Authenticated customer portal access (queryset limits to own records)."""
+        return [p() for p in [IsAuthenticated, IsModuleEnabled('roadside')]]
+
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         action = getattr(self, 'action', None)
         permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
-        if action in ['list', 'retrieve', 'dashboard_stats']:
+        is_customer = getattr(self.request.user, 'role', None) == 'customer'
+        if action in ['list', 'retrieve']:
+            if is_customer:
+                return self._customer_portal_permissions()
+            permission_classes.append(HasPermission('view_roadside'))
+            return [p() for p in permission_classes]
+        if action == 'dashboard_stats':
             permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
         elif action in ('create', 'cancel', 'my_requests', 'rate_service'):
             # Customer portal actions on own requests
-            if getattr(self.request.user, 'role', None) == 'customer':
-                return [p() for p in permission_classes]
+            if is_customer:
+                return self._customer_portal_permissions()
             if action == 'create':
                 permission_classes.append(HasAnyPermission(['manage_roadside', 'create_roadside']))
             elif action == 'cancel':

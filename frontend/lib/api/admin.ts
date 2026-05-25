@@ -407,6 +407,10 @@ export const adminApi = {
       const response = await apiClient.get("/accounts/admin/settings/public/branding/", publicRequestConfig);
       return response.data;
     },
+    publicDisplay: async (): Promise<SystemSetting[]> => {
+      const response = await apiClient.get("/accounts/admin/settings/public/display/", publicRequestConfig);
+      return response.data;
+    },
     publicFirebase: async (): Promise<{
       enabled: boolean;
       apiKey: string;

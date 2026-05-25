@@ -98,6 +98,14 @@ export default function CashFlowPage() {
                     getExportPayload={getExportPayload}
                     disabled={!report}
                     isLoading={isLoading}
+                    reportPrint={{
+                        slug: "cash-flow",
+                        getQueryParams: () => ({
+                            start_date: startDate,
+                            end_date: endDate,
+                        }),
+                        pdfFilename: `cash-flow_${startDate}_${endDate}`,
+                    }}
                 >
                     <Input
                         type="date"

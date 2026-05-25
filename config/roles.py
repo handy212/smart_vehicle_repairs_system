@@ -757,6 +757,9 @@ class Customer(AbstractUserRole):
         # Documents (own documents)
         'view_own_documents': True,
         'download_documents': True,
+
+        # Notifications (own notifications only; queryset scoped to recipient)
+        'view_notifications': True,
     }
 
 

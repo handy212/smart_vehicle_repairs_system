@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import management_report_views as mgmt_views
+from . import report_print_views
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -33,6 +34,8 @@ urlpatterns = [
     path('reports/revenue-mix/', mgmt_views.RevenueMixReportView.as_view(), name='revenue-mix'),
     path('reports/opex-variance/', mgmt_views.OpexVarianceView.as_view(), name='opex-variance'),
     path('reports/cost-control/', mgmt_views.CostControlReportView.as_view(), name='cost-control'),
+    path('reports/<slug:report_slug>/print/', report_print_views.AccountingReportPrintView.as_view(), name='accounting-report-print'),
+    path('reports/<slug:report_slug>/pdf/', report_print_views.AccountingReportPdfView.as_view(), name='accounting-report-pdf'),
     path('analytics/dashboard/', views.AnalyticsDashboardView.as_view(), name='analytics-dashboard'),
     
     # Journal Entries

@@ -212,7 +212,18 @@ export default function ManagementReportsPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <AccountingReportToolbar getExportPayload={buildExportPayload} />
+                    <AccountingReportToolbar
+                        getExportPayload={buildExportPayload}
+                        reportPrint={{
+                            slug: "management",
+                            getQueryParams: () => ({
+                                start_date: startDate,
+                                end_date: endDate,
+                                tab: activeTab,
+                            }),
+                            pdfFilename: `management-${activeTab}_${startDate}_${endDate}`,
+                        }}
+                    />
                     <BranchReportChip />
                 </div>
             </div>

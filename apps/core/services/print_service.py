@@ -45,6 +45,7 @@ DOCUMENT_WATERMARKS = {
     'payslip': 'PAYSLIP',
     'diagnosis_report': 'DIAGNOSIS',
     'recommendations': 'RECOMMENDATIONS',
+    'financial_report': 'FINANCIAL REPORT',
 }
 
 
@@ -88,6 +89,7 @@ class DocumentPrinter:
         'revenue_summary': 'printing/reports/revenue_summary.html',
         'payslip': 'printing/documents/payslip.html',
         'diagnosis_report': 'diagnosis/customer_report.html',
+        'financial_report': 'printing/reports/financial_report.html',
     }
     
     def __init__(self, document_type: str):
@@ -697,6 +699,41 @@ def generate_aging_report_pdf(data):
     }
     filename = f"aging_report_{context['generated_at'].strftime('%Y%m%d')}.pdf"
     return printer.generate_pdf(context, filename)
+
+
+def _accounting_report_base_context(context: Dict[str, Any], request=None) -> Dict[str, Any]:
+    """Merge company branding into accounting report print context."""
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    merged = {
+        'document_type': 'financial_report',
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        'watermark': _get_document_watermark('financial_report', None),
+        **company_info,
+        **branding,
+    }
+    merged.update(context)
+    return merged
+
+
+def render_accounting_report_html(context: Dict[str, Any], request=None) -> str:
+    """Render accounting financial report HTML (browser print)."""
+    return render_to_string(
+        'printing/reports/financial_report.html',
+        _accounting_report_base_context(context, request),
+    )
+
+
+def generate_accounting_report_pdf(context: Dict[str, Any], filename: Optional[str] = None, request=None):
+    """Generate PDF for an accounting financial report."""
+    printer = DocumentPrinter('financial_report')
+    merged = _accounting_report_base_context(context, request)
+    merged['document'] = None
+    safe_name = (filename or f"report_{merged.get('slug', 'export')}.pdf").replace('/', '-')
+    return printer.generate_pdf(merged, safe_name)
 
 
 def generate_revenue_summary_pdf(data):

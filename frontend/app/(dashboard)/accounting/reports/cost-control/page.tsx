@@ -76,6 +76,14 @@ export default function CostControlReportPage() {
           getExportPayload={buildExportPayload}
           disabled={isLoading}
           isLoading={isLoading}
+          reportPrint={{
+            slug: "cost-control",
+            getQueryParams: () => ({
+              start_date: startDate,
+              end_date: endDate,
+            }),
+            pdfFilename: `cost-control_${startDate}_${endDate}`,
+          }}
         />
       </div>
       <AccountingReportPrintHeader title="Cost Control" dateInfo={`${startDate} to ${endDate}`} />

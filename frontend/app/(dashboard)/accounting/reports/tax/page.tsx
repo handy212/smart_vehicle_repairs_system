@@ -58,6 +58,14 @@ export default function TaxReportPage() {
                     getExportPayload={getExportPayload}
                     disabled={!report}
                     isLoading={isLoading}
+                    reportPrint={{
+                        slug: "tax",
+                        getQueryParams: () => ({
+                            start_date: startDate,
+                            end_date: endDate,
+                        }),
+                        pdfFilename: `tax-report_${startDate}_${endDate}`,
+                    }}
                 />
             </div>
 

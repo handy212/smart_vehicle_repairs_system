@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Branding images are admin-configured and may come from arbitrary external URLs. */
 
-import { useState, useMemo, useEffect, type ComponentProps } from "react";
+import { useState, useEffect, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
 import { setTokens } from "@/lib/utils/token";
-import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { adminApi } from "@/lib/api/admin";
+import { useBranding } from "@/lib/hooks/useBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,12 +63,16 @@ export default function LoginPage() {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  const { data: brandingSettings } = useQuery<SystemSetting[]>({
-    queryKey: ["settings", "branding", "public"],
-    queryFn: () => adminApi.settings.publicBranding(),
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-  });
+  const {
+    siteName,
+    tagline,
+    primaryColor,
+    logoPath,
+    logoDarkPath,
+    loginBackground,
+    selfRegistrationEnabled,
+    getMediaUrl,
+  } = useBranding("public");
 
   const { data: integrations } = useQuery<{
     recaptcha_site_key?: string;
@@ -83,35 +88,6 @@ export default function LoginPage() {
   const recaptchaRequired =
     integrations?.recaptcha_enabled === "true" &&
     !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
-
-  const branding = useMemo(() => {
-    if (!brandingSettings) {
-      return {
-        site_name: "American Autoparts Ltd",
-        tagline: "Professional Auto Care",
-        logo_path: null,
-        logo_dark_path: null,
-        login_background: null,
-        primary_color: "#ff8040",
-        self_registration_enabled: true,
-      };
-    }
-
-    const getSetting = (key: string): string | null => {
-      const setting = brandingSettings.find((s) => s.key === key);
-      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-    };
-
-    return {
-      site_name: getSetting("site_name") || "American Autoparts Ltd",
-      tagline: getSetting("company_tagline") || "Professional Auto Care",
-      logo_path: getSetting("logo_path"),
-      logo_dark_path: getSetting("logo_dark_path"),
-      login_background: getSetting("login_background"),
-      primary_color: getSetting("primary_color") || "#ff8040",
-      self_registration_enabled: getSetting("self_registration_enabled") !== "false",
-    };
-  }, [brandingSettings]);
 
   const {
     register,
@@ -222,31 +198,11 @@ export default function LoginPage() {
     }
   };
 
-  // Resolve image paths (handle relative/absolute URLs from backend)
-  const getImageUrl = (path: string | undefined, defaultPath: string) => {
-    if (!path) return defaultPath;
-    if (path.startsWith('http')) return path;
-
-    // Get base URL by removing /api suffix
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-
-    // Ensure path starts with /
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-
-    // If path already includes /media, don't add it again
-    if (cleanPath.startsWith('/media/')) {
-      return `${baseUrl}${cleanPath}`;
-    }
-
-    return `${baseUrl}/media${cleanPath}`;
-  };
-
-  const heroImage = branding.login_background
-    ? getImageUrl(branding.login_background, DEFAULT_HERO_IMAGE)
+  const heroImage = loginBackground
+    ? getMediaUrl(loginBackground)
     : DEFAULT_HERO_IMAGE;
 
-  const heroLogo = branding.logo_dark_path || branding.logo_path;
+  const heroLogo = logoDarkPath || logoPath;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -260,7 +216,7 @@ export default function LoginPage() {
         {/* Left side: Hero Image & Branding */}
         <div
           className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
-          style={{ backgroundColor: branding.primary_color }}
+          style={{ backgroundColor: primaryColor }}
         >
           {isMounted && (
             <img
@@ -272,7 +228,7 @@ export default function LoginPage() {
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(to top, ${branding.primary_color} 0%, ${branding.primary_color}40 40%, transparent 100%)`
+              background: `linear-gradient(to top, ${primaryColor} 0%, ${primaryColor}40 40%, transparent 100%)`
             }}
           />
 
@@ -280,14 +236,14 @@ export default function LoginPage() {
             {heroLogo ? (
               <div className="p-3 bg-card rounded-xl shadow-lg">
                 <img
-                  src={getImageUrl(heroLogo, "")}
-                  alt={branding.site_name}
+                  src={getMediaUrl(heroLogo)}
+                  alt={siteName}
                   className="h-10 w-auto object-contain"
                 />
               </div>
             ) : (
               <div className="p-3 bg-card rounded-xl shadow-lg">
-                <Car className="w-8 h-8" style={{ color: branding.primary_color }} />
+                <Car className="w-8 h-8" style={{ color: primaryColor }} />
               </div>
             )}
           </div>
@@ -298,7 +254,7 @@ export default function LoginPage() {
               <span style={{ color: '#bfdbfe' }}>Automotive Care</span>
             </h1>
             <p className="text-xl text-white/90 max-w-md">
-              {branding.tagline}
+              {tagline}
             </p>
           </div>
         </div>
@@ -307,7 +263,7 @@ export default function LoginPage() {
         <div className="flex items-start justify-center bg-background p-4 pt-10 lg:items-center lg:p-8">
           <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center lg:text-left">
-              <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{branding.site_name}</h2>
+              <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{siteName}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Welcome back! Please enter your details.
               </p>
@@ -338,7 +294,7 @@ export default function LoginPage() {
 
                     <div className="space-y-2 text-center pb-2">
                       <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: branding.primary_color }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: primaryColor }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
                       </div>
                       <h3 className="text-xl font-semibold">Two-Factor Authentication</h3>
                       <p className="text-sm text-muted-foreground">
@@ -353,7 +309,7 @@ export default function LoginPage() {
                         onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
                         placeholder="000000"
                         className="h-12 w-48 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all font-bold"
-                        style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                        style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                         disabled={isLoading}
                         autoFocus
                       />
@@ -376,7 +332,7 @@ export default function LoginPage() {
                       <Button
                         type="submit"
                         className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90 active:scale-95"
-                        style={{ backgroundColor: branding.primary_color }}
+                        style={{ backgroundColor: primaryColor }}
                         disabled={isLoading || twoFactorCode.length !== 6}
                       >
                         {isLoading ? "Verifying..." : "Verify Code"}
@@ -402,7 +358,7 @@ export default function LoginPage() {
                         {...register("email")}
                         placeholder="name@company.com"
                         className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
-                        style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                        style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                         disabled={isLoading}
                       />
                       {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>}
@@ -415,7 +371,7 @@ export default function LoginPage() {
                           type="button"
                           onClick={() => router.push("/login/forgot-password")}
                           className="text-xs font-semibold hover:underline"
-                          style={{ color: branding.primary_color }}
+                          style={{ color: primaryColor }}
                         >
                           Forgot password?
                         </button>
@@ -426,7 +382,7 @@ export default function LoginPage() {
                           {...register("password")}
                           placeholder="••••••••"
                           className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
-                          style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                          style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                           disabled={isLoading}
                         />
                         <button
@@ -456,7 +412,7 @@ export default function LoginPage() {
                     <Button
                       type="submit"
                       className="w-full h-10 lg:h-11 rounded-xl text-white font-bold text-base lg:text-lg shadow-lg transition-all hover:opacity-90 active:scale-95"
-                      style={{ backgroundColor: branding.primary_color }}
+                      style={{ backgroundColor: primaryColor }}
                       disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                     >
                       {isLoading ? "Signing in..." : "Sign in"}
@@ -480,14 +436,14 @@ export default function LoginPage() {
               </CardContent>
             </Card>
 
-            {branding.self_registration_enabled && (
+            {selfRegistrationEnabled && (
               <p className="text-center text-sm lg:text-base text-muted-foreground">
                 Don&apos;t have an account?{" "}
                 <button
                   type="button"
                   onClick={() => router.push("/register")}
                   className="font-bold underline-offset-4 hover:underline"
-                  style={{ color: branding.primary_color }}
+                  style={{ color: primaryColor }}
                 >
                   Start for free
                 </button>
@@ -501,10 +457,10 @@ export default function LoginPage() {
       <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
           <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-            © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.
+            © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.
           </p>
           <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-            Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a>
+            Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
           </p>
         </div>
       </footer>

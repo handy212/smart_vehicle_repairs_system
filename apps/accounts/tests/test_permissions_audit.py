@@ -87,6 +87,36 @@ class PublicSettingsEndpointTests(TestCase):
         values = {item['key']: item['value'] for item in response.data}
         self.assertEqual(values['document_watermark_enabled'], 'false')
 
+    def test_public_display_exposes_currency_without_auth(self):
+        SystemSettings.objects.update_or_create(
+            key='currency',
+            defaults={
+                'category': 'payment',
+                'value': 'GHS',
+                'is_active': True,
+                'is_secret': False,
+            },
+        )
+        SystemSettings.objects.update_or_create(
+            key='currency_symbol',
+            defaults={
+                'category': 'payment',
+                'value': '₵',
+                'is_active': True,
+                'is_secret': False,
+            },
+        )
+
+        from apps.accounts.settings_utils import clear_public_display_cache
+
+        clear_public_display_cache()
+        response = APIClient().get('/api/accounts/admin/settings/public/display/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        values = {item['key']: item['value'] for item in response.data}
+        self.assertEqual(values['currency'], 'GHS')
+        self.assertEqual(values['currency_symbol'], '₵')
+
 
 class SelfRegistrationSettingsTests(TestCase):
     def test_manual_registration_initiate_respects_disabled_setting(self):

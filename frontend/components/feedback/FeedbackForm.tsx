@@ -9,7 +9,8 @@ import ReCAPTCHA from "react-google-recaptcha";
 import { useQuery } from "@tanstack/react-query";
 import { branchesApi, Branch } from '@/lib/api/branches';
 import { feedbackApi } from '@/lib/api/feedback';
-import { adminApi, SystemSetting } from '@/lib/api/admin';
+import { adminApi } from '@/lib/api/admin';
+import { useBranding } from '@/lib/hooks/useBranding';
 import { Button } from '@/components/ui/button';
 import {
     Form,
@@ -59,36 +60,13 @@ export function FeedbackForm() {
     const [error, setError] = useState<string | null>(null);
     const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
-    const { data: brandingSettings } = useQuery<SystemSetting[]>({
-        queryKey: ["settings", "branding", "public"],
-        queryFn: () => adminApi.settings.publicBranding(),
-        staleTime: 5 * 60 * 1000,
-    });
+    const { siteName, companyName } = useBranding("public");
 
     const { data: integrationSettings } = useQuery({
         queryKey: ["settings", "integrations", "public"],
         queryFn: () => adminApi.settings.publicIntegrations(),
         staleTime: 5 * 60 * 1000,
     });
-
-    const branding = useMemo(() => {
-        if (!brandingSettings) {
-            return {
-                site_name: "Smart Repairs",
-                company_name: "Smart Vehicle Repairs",
-            };
-        }
-
-        const getSetting = (key: string): string | null => {
-            const setting = brandingSettings.find((s) => s.key === key);
-            return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-        };
-
-        return {
-            site_name: getSetting("site_name") || "Smart Repairs",
-            company_name: getSetting("company_name") || "Smart Vehicle Repairs",
-        };
-    }, [brandingSettings]);
 
     const isRecaptchaEnabled = integrationSettings?.recaptcha_enabled === 'true' && !!integrationSettings?.recaptcha_site_key;
 
@@ -354,7 +332,7 @@ export function FeedbackForm() {
                 </Form>
             </CardContent>
             <CardFooter className="text-xs text-center text-muted-foreground justify-center py-6">
-                Powered by {branding.site_name}
+                Powered by {siteName}
             </CardFooter>
         </Card>
     );

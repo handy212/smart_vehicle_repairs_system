@@ -7,12 +7,25 @@ import { ThemeScript } from "./theme-script";
 import { APP_CONFIG } from "@/lib/config";
 
 import { adminApi } from "@/lib/api/admin";
+import { unstable_cache } from "next/cache";
+
+const getCachedPublicBranding = unstable_cache(
+  async () => {
+    try {
+      return await adminApi.settings.publicBranding();
+    } catch {
+      return [];
+    }
+  },
+  ["root-public-branding"],
+  { revalidate: 300 }
+);
 
 export async function generateMetadata(): Promise<Metadata> {
   let companyName = APP_CONFIG.name;
 
   try {
-    const settings = await adminApi.settings.publicBranding();
+    const settings = await getCachedPublicBranding();
     const setting = settings.find((s) => s.key === "company_name" || s.key === "site_name");
     if (setting && setting.value) {
       companyName = setting.value;
