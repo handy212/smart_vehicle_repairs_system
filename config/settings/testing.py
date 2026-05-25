@@ -80,6 +80,9 @@ QUICKBOOKS_AUTO_SYNC_ENABLED = False
 SKIP_AUDIT_REGISTRY = True
 SKIP_MODULE_PERMISSION_CHECKS = True
 
+# DRF APIClient reads JSON bodies, not HttpOnly cookies — keep tokens in response data.
+JWT_EMIT_TOKENS_IN_JSON = True
+
 # Test-specific installed apps
 # INSTALLED_APPS += [
 #     'django_coverage',

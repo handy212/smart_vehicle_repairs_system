@@ -89,6 +89,8 @@ def clear_access_cookie(response) -> None:
 
 
 def strip_refresh_from_response_data(data: dict) -> dict:
+    if getattr(settings, 'JWT_EMIT_TOKENS_IN_JSON', False):
+        return data
     if isinstance(data, dict) and 'refresh' in data:
         data = dict(data)
         data.pop('refresh', None)

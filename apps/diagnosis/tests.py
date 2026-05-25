@@ -492,6 +492,7 @@ class CustomerPortalDiagnosisAPITest(APITestCase):
         self.work_order = WorkOrder.objects.create(
             customer=self.customer,
             vehicle=self.vehicle,
+            work_order_number='WO-PORTAL-CUST-001',
             customer_concerns='Noise from engine',
             odometer_in=50000,
             status='diagnosis',
@@ -526,6 +527,7 @@ class CustomerPortalDiagnosisAPITest(APITestCase):
         other_work_order = WorkOrder.objects.create(
             customer=self.other_customer,
             vehicle=other_vehicle,
+            work_order_number='WO-PORTAL-OTHER-001',
             customer_concerns='Other issue',
             odometer_in=40000,
         )
