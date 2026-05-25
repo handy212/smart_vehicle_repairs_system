@@ -28,7 +28,8 @@ export async function applyAuth(
     baseURL: string,
 ) {
     const url = new URL(baseURL);
-    await context.addCookies([
+    const api = new URL(process.env.E2E_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001/api');
+    const cookies = [
         {
             name: 'access_token',
             value: accessToken,
@@ -36,15 +37,26 @@ export async function applyAuth(
             path: '/',
             httpOnly: false,
             secure: url.protocol === 'https:',
-            sameSite: 'Lax',
+            sameSite: 'Lax' as const,
         },
-    ]);
+    ];
+    if (api.hostname !== url.hostname) {
+        cookies.push({
+            name: 'access_token',
+            value: accessToken,
+            domain: api.hostname,
+            path: '/',
+            httpOnly: false,
+            secure: api.protocol === 'https:',
+            sameSite: 'Lax' as const,
+        });
+    }
+    await context.addCookies(cookies);
 
     await page.addInitScript(
-        ([access, refresh]) => {
-            localStorage.setItem('access_token', access);
-            localStorage.setItem('refresh_token', refresh);
+        ([access]) => {
+            sessionStorage.setItem('e2e_access', access);
         },
-        [accessToken, refreshToken],
+        [accessToken],
     );
 }

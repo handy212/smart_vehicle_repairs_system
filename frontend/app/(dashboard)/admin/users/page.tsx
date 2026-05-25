@@ -185,7 +185,7 @@ export default function UsersManagementPage() {
       <DynamicPageTitle title="User Management" />
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0" aria-label="Go back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

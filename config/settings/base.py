@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -232,8 +233,26 @@ REST_FRAMEWORK = {
         'anon': '100/hour',
         'user': '5000/hour',
         'login': '10/minute',  # Tight limit for auth endpoints — prevents brute-force
+        '2fa_verify': '5/minute',
+        'refresh': '30/minute',
+        'public_settings': '60/hour',
+        'share_access_code': '10/minute',
     },
 }
+
+# JWT refresh cookie (HttpOnly; not readable by JavaScript)
+JWT_REFRESH_COOKIE_NAME = 'svr_refresh_token'
+JWT_REFRESH_COOKIE_PATH = '/api/auth/'
+JWT_REFRESH_COOKIE_SAMESITE = 'Lax'
+
+JWT_ACCESS_COOKIE_NAME = 'access_token'
+JWT_ACCESS_COOKIE_PATH = '/'
+JWT_ACCESS_COOKIE_SAMESITE = 'Lax'
+# When True, omit access token from login JSON (cookie + memory bootstrap only)
+JWT_OMIT_ACCESS_FROM_JSON = env.bool('JWT_OMIT_ACCESS_FROM_JSON', default=False)
+
+# Webhooks must be signed in production (see production.py)
+REQUIRE_WEBHOOK_SIGNATURES = env.bool('REQUIRE_WEBHOOK_SIGNATURES', default=False)
 
 # CORS Headers (allow branch switch header by default)
 # Note: This can be overridden in environment-specific settings

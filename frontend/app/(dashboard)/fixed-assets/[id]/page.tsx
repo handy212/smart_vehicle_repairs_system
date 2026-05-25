@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { format } from "date-fns";
 import { use } from "react";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
 import { documentsApi } from "@/lib/api/documents";
 import type { FixedAssetInvoiceReceiptDoc } from "@/lib/api/fixed-assets";
@@ -18,9 +18,9 @@ import { sameOriginMediaPath } from "@/lib/utils/media";
 
 export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     return (
-        <PermissionGuard permission="view_assets">
+        <PermissionPageGuard permission="view_assets">
             <AssetDetailsContent params={params} />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

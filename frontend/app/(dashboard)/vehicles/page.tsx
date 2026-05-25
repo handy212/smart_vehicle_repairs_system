@@ -363,6 +363,7 @@ export default function VehiclesPage() {
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={!data.previous}
                   className="h-8 w-8 p-0"
+                  aria-label="Previous page"
                 >
                   <ChevronDown className="w-4 h-4 rotate-90" />
                 </Button>
@@ -395,6 +396,7 @@ export default function VehiclesPage() {
                   onClick={() => setPage(p => p + 1)}
                   disabled={!data.next}
                   className="h-8 w-8 p-0"
+                  aria-label="Next page"
                 >
                   <ChevronDown className="w-4 h-4 -rotate-90" />
                 </Button>

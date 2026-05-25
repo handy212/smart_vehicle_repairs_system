@@ -17,6 +17,29 @@ from .models import (
 User = get_user_model()
 
 
+class ProtectedFileRepresentationMixin:
+    """Replace raw storage URLs with presigned or authenticated download URLs."""
+
+    def _protected_file_url(self, obj):
+        from apps.core.media_urls import get_protected_file_url
+
+        request = self.context.get('request')
+        download_path = f'/api/documents/documents/{obj.pk}/download/'
+        return get_protected_file_url(
+            obj.file,
+            request=request,
+            download_path=download_path,
+        )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.pk:
+            protected = self._protected_file_url(instance)
+            if protected:
+                data['file'] = protected
+        return data
+
+
 class DocumentCategorySerializer(serializers.ModelSerializer):
     """Serializer for DocumentCategory"""
     
@@ -93,7 +116,7 @@ class DocumentCategoryTreeSerializer(serializers.ModelSerializer):
         return obj.documents.filter(status='active').count()
 
 
-class DocumentListSerializer(serializers.ModelSerializer):
+class DocumentListSerializer(ProtectedFileRepresentationMixin, serializers.ModelSerializer):
     """Lightweight serializer for document lists"""
     
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -146,7 +169,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
         ]
 
 
-class DocumentDetailSerializer(serializers.ModelSerializer):
+class DocumentDetailSerializer(ProtectedFileRepresentationMixin, serializers.ModelSerializer):
     """Detailed serializer for document with all relationships"""
     
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -276,8 +299,8 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
             'asset_acquisition_request',
             'fixed_asset',
             'acquisition_document_kind',
-            'is_public'
         ]
+        read_only_fields = ['is_public']
     
     def validate_file(self, value):
         """Validate file upload"""

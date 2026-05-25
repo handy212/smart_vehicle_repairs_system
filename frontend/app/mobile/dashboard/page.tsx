@@ -12,7 +12,6 @@ import {
   CheckCircle,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   AlertCircle,
-  Play,
   ClipboardCheck,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Pause,
@@ -26,10 +25,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { MobileErrorState } from "@/components/mobile/MobileErrorState";
+import { useAuthStore } from "@/store/authStore";
 
 export default function MobileDashboardPage() {
   const { isOnline, sync, isSyncing } = useOfflineStore();
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const techName = user?.first_name || user?.username || "Technician";
   const [stats, setStats] = useState({
     total: 0,
     in_progress: 0,
@@ -37,6 +40,7 @@ export default function MobileDashboardPage() {
     completed: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeWorkOrders, setActiveWorkOrders] = useState<WorkOrder[]>([]);
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [recentWorkOrders, setRecentWorkOrders] = useState<any[]>([]);
@@ -62,6 +66,7 @@ export default function MobileDashboardPage() {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       if (isOnline) {
         // Load from API
@@ -113,6 +118,17 @@ export default function MobileDashboardPage() {
       }
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
+      const cachedWorkOrders = await workOrdersDB.getAll();
+      if (cachedWorkOrders.length > 0) {
+        setRecentWorkOrders(cachedWorkOrders.slice(0, 5));
+        setActiveWorkOrders(
+          cachedWorkOrders
+            .filter((wo) => wo.status === "in_progress" || wo.status === "assigned")
+            .slice(0, 5)
+        );
+      } else {
+        setLoadError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -134,16 +150,24 @@ export default function MobileDashboardPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="p-4">
+        <MobileErrorState title="Could not load dashboard" onRetry={loadData} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">
-            Dashboard
+            Hi, {techName}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {isOnline ? "Online" : "Offline Mode"}
+            Technician · {isOnline ? "Online" : "Offline mode"}
           </p>
         </div>
         {isOnline && (
@@ -152,6 +176,7 @@ export default function MobileDashboardPage() {
             variant="outline"
             onClick={handleSync}
             disabled={isSyncing}
+            aria-label="Sync offline changes"
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`}
@@ -190,26 +215,32 @@ export default function MobileDashboardPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-2">
+        <CardContent className="grid grid-cols-3 gap-2">
+          <Button
+            onClick={() => router.push('/mobile/workorders')}
+            variant="outline"
+            className="h-auto py-4 flex-col gap-2"
+            aria-label="View my work orders"
+          >
+            <Wrench className="h-5 w-5" />
+            <span className="text-xs font-medium">My Jobs</span>
+          </Button>
+          <Button
+            onClick={() => router.push('/mobile/inspections')}
+            variant="outline"
+            className="h-auto py-4 flex-col gap-2"
+            aria-label="View inspections"
+          >
+            <ClipboardCheck className="h-5 w-5" />
+            <span className="text-xs font-medium">Inspections</span>
+          </Button>
           <Button
             onClick={() => router.push('/mobile/time-tracking')}
             className="h-auto py-4 flex-col gap-2"
+            aria-label="Open time tracking"
           >
             <Clock className="h-5 w-5" />
-            <span className="text-sm font-medium">Time Tracking</span>
-          </Button>
-          <Button
-            onClick={() => {
-              if (activeWorkOrders.length > 0) {
-                router.push(`/mobile/workorders/${activeWorkOrders[0].id}`);
-              }
-            }}
-            disabled={activeWorkOrders.length === 0}
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-          >
-            <Play className="h-5 w-5" />
-            <span className="text-sm font-medium">Start Next</span>
+            <span className="text-xs font-medium">Time</span>
           </Button>
         </CardContent>
       </Card>

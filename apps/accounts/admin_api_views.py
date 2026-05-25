@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from apps.accounts.throttles import PublicSettingsRateThrottle
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q, Count
 from django.http import FileResponse
@@ -142,7 +143,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         permission_classes=[AllowAny],
         authentication_classes=[],
         url_path='public/branding',
-        throttle_classes=[],
+        throttle_classes=[PublicSettingsRateThrottle],
     )
     def public_branding(self, request):
         """
@@ -178,7 +179,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         permission_classes=[AllowAny],
         authentication_classes=[],
         url_path='public/firebase',
-        throttle_classes=[],
+        throttle_classes=[PublicSettingsRateThrottle],
     )
     def public_firebase(self, request):
         """
@@ -227,7 +228,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         permission_classes=[AllowAny],
         authentication_classes=[],
         url_path='public/integrations',
-        throttle_classes=[],
+        throttle_classes=[PublicSettingsRateThrottle],
     )
     def public_integrations(self, request):
         """

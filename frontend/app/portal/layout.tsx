@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import dynamic from "next/dynamic";
+import { PortalMobileActionsBar } from "./components/PortalMobileActionsBar";
+import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 
 // Lazy load sidebar and navbar for better performance
 const PortalNavbar = dynamic(() => import("@/components/layout/PortalNavbar").then(mod => ({ default: mod.PortalNavbar })), {
@@ -77,11 +79,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }, [user, isLoading, mounted, router]);
 
   if (!mounted || isLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <AppShellSkeleton />;
   }
 
   // Calculate sidebar width
@@ -114,7 +112,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         isCollapsed={mounted ? isSidebarCollapsed : false}
       />
       <main
-        className="min-h-screen px-3 sm:px-4 md:px-6 lg:px-8 py-0 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300"
+        className="min-h-screen px-3 sm:px-4 md:px-6 lg:px-8 py-0 pb-24 sm:pb-6 lg:pb-8 transition-all duration-300"
         style={{
           marginLeft: `${totalMargin}px`,
           paddingTop: '5rem' // 80px to account for header (64px) + extra space
@@ -124,6 +122,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           {children}
         </ErrorBoundary>
       </main>
+      <PortalMobileActionsBar />
     </div>
   );
 }

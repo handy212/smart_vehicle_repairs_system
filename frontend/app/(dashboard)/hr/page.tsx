@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { hrApi } from "@/lib/api/hr";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
@@ -31,10 +32,10 @@ import { format, differenceInDays, parseISO } from "date-fns";
 
 export default function HRPage() {
     return (
-        <PermissionGuard permission="view_hr">
+        <PermissionPageGuard permission="view_hr">
             <DynamicPageTitle title="HR Management" />
             <HRDashboardContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

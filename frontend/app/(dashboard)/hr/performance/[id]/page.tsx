@@ -9,6 +9,7 @@ import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -24,9 +25,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 export default function PerformanceReviewPage() {
     return (
-        <PermissionGuard permission="view_performance">
+        <PermissionPageGuard permission="view_performance">
             <ReviewDetailContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

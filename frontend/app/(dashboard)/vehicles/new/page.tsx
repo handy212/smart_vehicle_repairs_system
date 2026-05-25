@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm";
+import { INTAKE_FORM_CLASS } from "@/lib/constants/layout";
 
 export default function NewVehiclePage() {
   const router = useRouter();
@@ -103,7 +104,7 @@ export default function NewVehiclePage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className={`${INTAKE_FORM_CLASS} space-y-8 pb-12`}>
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">

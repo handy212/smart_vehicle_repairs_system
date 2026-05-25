@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import {
+  type DashboardRoleConfig,
+  dashboardShowsSection,
+} from "@/lib/utils/dashboard-role-config";
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -90,6 +94,7 @@ export interface PerfexDashboardProps {
   onRefresh?: () => void;
   todayLabel: string;
   formatCurrency: (val: number) => string;
+  roleConfig?: DashboardRoleConfig;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -169,7 +174,7 @@ function SortHeader({ col, label, sortCol, sortDir, onSort, className = "" }: {
 }) {
   const active = sortCol === col;
   return (
-    <th className={`cursor-pointer select-none px-4 py-2 text-left text-[11px] font-semibold text-[#374151] hover:text-primary ${className}`}
+    <th className={`cursor-pointer select-none px-4 py-2 text-left text-xs font-semibold text-[#374151] hover:text-primary ${className}`}
         onClick={() => onSort(col)}>
       <span className="inline-flex items-center gap-1">
         {label}
@@ -286,13 +291,16 @@ export function PerfexDashboard({
   serviceDueVehicles = [], technicianData = [], revenueChartData = [],
   invoiceStats, recentInvoices = [],
   isLoading = false, queryErrors = [], onRefresh, todayLabel, formatCurrency,
+  roleConfig,
 }: PerfexDashboardProps) {
 
   const router = useRouter();
+  const showSection = (section: Parameters<typeof dashboardShowsSection>[1]) =>
+    !roleConfig || dashboardShowsSection(roleConfig, section);
 
   /* ── state ── */
-  const [mainTab,         setMainTab]         = useState<MainTab>("workorders");
-  const [woFilter,        setWoFilter]        = useState<WOFilterKey>("all");
+  const [mainTab,         setMainTab]         = useState<MainTab>(roleConfig?.defaultMainTab ?? "workorders");
+  const [woFilter,        setWoFilter]        = useState<WOFilterKey>(roleConfig?.defaultWoFilter ?? "all");
   const [invFilter,       setInvFilter]       = useState<InvFilterKey>("all");
   const [woDateRange,     setWoDateRange]     = useState<WODateRange>("all");
   const [woSearch,        setWoSearch]        = useState("");
@@ -303,6 +311,12 @@ export function PerfexDashboard({
   const [isRefreshing,    setIsRefreshing]    = useState(false);
   const [lastUpdated,     setLastUpdated]     = useState<Date>(() => new Date());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!roleConfig) return;
+    if (roleConfig.defaultMainTab) setMainTab(roleConfig.defaultMainTab);
+    if (roleConfig.defaultWoFilter) setWoFilter(roleConfig.defaultWoFilter);
+  }, [roleConfig?.variant, roleConfig?.defaultMainTab, roleConfig?.defaultWoFilter]);
 
   /* ── auto-refresh ── */
   useEffect(() => {
@@ -447,12 +461,26 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       icon: TrendingUp,   iconColor: "text-violet-600", iconBg: "bg-violet-50", href: "/reports", pulse: false },
   ], [stats, workOrderSummary, weeklyDailyAvg, formatCurrency]);
 
+  const visibleKpis = useMemo(() => {
+    if (!roleConfig || roleConfig.kpiLabels === "all") return kpis;
+    const allowed = new Set(roleConfig.kpiLabels);
+    return kpis.filter((k) => allowed.has(k.label));
+  }, [kpis, roleConfig]);
+
+  const kpiGridClass = useMemo(() => {
+    const n = visibleKpis.length;
+    if (n <= 3) return "grid grid-cols-2 gap-3 sm:grid-cols-3";
+    if (n <= 4) return "grid grid-cols-2 gap-3 sm:grid-cols-4";
+    if (n <= 6) return "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6";
+    return "grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8";
+  }, [visibleKpis.length]);
+
   if (isLoading) return <PerfexSkeleton />;
 
   /* ═══════════ RENDER ═══════════ */
   return (
     <div className="space-y-4 p-4 pb-8 max-w-[1700px] mx-auto">
-      <DynamicPageTitle title="Dashboard" />
+      <DynamicPageTitle title={roleConfig?.title ?? "Dashboard"} />
 
       {queryErrors.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3">
@@ -474,34 +502,58 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       {/* ── Page Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 print:mb-4">
         <div>
-          <h1 className="text-base font-semibold text-foreground">Dashboard</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">{todayLabel}</p>
+          <h1 className="text-base font-semibold text-foreground">{roleConfig?.title ?? "Dashboard"}</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {roleConfig?.subtitle ?? todayLabel}
+          </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
           {onRefresh && (
             <button onClick={handleRefresh} disabled={isRefreshing}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 mr-1"
-              title="Refresh (R)">
+              title="Refresh (R)"
+              aria-label="Refresh dashboard">
               <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">{formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             </button>
           )}
-<Button variant="outline" size="sm" asChild>
+          {roleConfig?.showCheckIn && (
+            <Button variant="default" size="sm" asChild>
+              <Link href="/check-in">
+                <UserCheck className="h-3.5 w-3.5 mr-1" /> Check-in
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" asChild>
             <Link href="/appointments/new" title="New appointment (Ctrl+Shift+A)">
               <Plus className="h-3.5 w-3.5 mr-1" /> Appointment
             </Link>
           </Button>
-          <Button size="sm" asChild>
-            <Link href="/workorders/new" title="New work order (Ctrl+N)">
-              <Plus className="h-3.5 w-3.5 mr-1" /> Work Order
-            </Link>
-          </Button>
+          {roleConfig?.variant === "accountant" ? (
+            <Button size="sm" asChild>
+              <Link href="/billing/invoices">
+                <Receipt className="h-3.5 w-3.5 mr-1" /> Invoices
+              </Link>
+            </Button>
+          ) : roleConfig?.variant === "parts_manager" ? (
+            <Button size="sm" asChild>
+              <Link href="/inventory">
+                <Package className="h-3.5 w-3.5 mr-1" /> Inventory
+              </Link>
+            </Button>
+          ) : (
+            <Button size="sm" asChild>
+              <Link href="/workorders/new" title="New work order (Ctrl+N)">
+                <Plus className="h-3.5 w-3.5 mr-1" /> Work Order
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-        {kpis.map((card) => (
+      <div className={kpiGridClass}>
+        {visibleKpis.map((card) => (
           <Link key={card.label} href={card.href}
             className={`relative flex items-center gap-3 rounded-md border bg-card p-3
                         shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]
@@ -520,7 +572,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
         ))}
       </div>
 
-      {workOrderByStatus.length > 0 && (
+      {showSection("wo_status_breakdown") && workOrderByStatus.length > 0 && (
         <div className="rounded-md border border-border bg-card px-4 py-3 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -546,11 +598,13 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       )}
 
       {/* ── Main Grid: Work Orders/Invoices + Appointments ── */}
+      {(showSection("main_table") || showSection("appointments")) && (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
 
         {/* Tabbed table: Work Orders | Invoices */}
-        <div className="overflow-hidden rounded-md border border-border bg-card
-                        shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] lg:col-span-8">
+        {showSection("main_table") && (
+        <div className={`overflow-hidden rounded-md border border-border bg-card
+                        shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] ${showSection("appointments") ? "lg:col-span-8" : "lg:col-span-12"}`}>
 
           {/* Top bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
@@ -635,7 +689,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                   <tr className="border-b border-border bg-[#f1f5f9]">
                     <SortHeader col="wo_number"  label="WO #"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="whitespace-nowrap" />
                     <SortHeader col="customer"   label="Customer" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Vehicle</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Vehicle</th>
                     <SortHeader col="status"     label="Status"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                     <SortHeader col="created_at" label="Date"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="whitespace-nowrap" />
                     <th className="px-4 py-2" />
@@ -688,12 +742,12 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               <table className="w-full">
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-border bg-[#f1f5f9]">
-                    <th className="whitespace-nowrap px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Invoice #</th>
-                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Customer</th>
-                    <th className="whitespace-nowrap px-4 py-2 text-right text-[11px] font-semibold text-[#374151]">Total</th>
-                    <th className="whitespace-nowrap px-4 py-2 text-right text-[11px] font-semibold text-[#374151]">Balance Due</th>
-                    <th className="whitespace-nowrap px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Due Date</th>
-                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Status</th>
+                    <th className="whitespace-nowrap px-4 py-2 text-left text-xs font-semibold text-[#374151]">Invoice #</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Customer</th>
+                    <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-semibold text-[#374151]">Total</th>
+                    <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-semibold text-[#374151]">Balance Due</th>
+                    <th className="whitespace-nowrap px-4 py-2 text-left text-xs font-semibold text-[#374151]">Due Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Status</th>
                     <th className="px-4 py-2" />
                   </tr>
                 </thead>
@@ -735,8 +789,10 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
             )}
           </div>
         </div>
+        )}
 
         {/* Today's Appointments */}
+        {showSection("appointments") && (
         <div className="overflow-hidden rounded-md border border-border bg-card
                         shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] lg:col-span-4">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -792,9 +848,12 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
             })}
           </div>
         </div>
+        )}
       </div>
+      )}
 
       {/* ── Bottom Row: Pipeline + Revenue + Alerts (collapsible) ── */}
+      {showSection("bottom_summary") && (
       <div className="rounded-md border border-border bg-card/50 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.06)]">
         <button onClick={() => setBottom((v) => !v)}
           className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted/30 rounded-t-md print:hidden">
@@ -906,9 +965,10 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
           </div>
         )}
       </div>
+      )}
 
       {/* ── Technician Performance ── */}
-      {technicianData.length > 0 && (
+      {showSection("technician_perf") && technicianData.length > 0 && (
         <div className="overflow-hidden rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
           <button onClick={() => setTechExpanded((v) => !v)}
             className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30 print:hidden">
@@ -930,13 +990,13 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               <table className="w-full">
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-border bg-[#f1f5f9]">
-                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Technician</th>
-                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-[#374151]">Total Jobs</th>
-                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-[#374151]">Completed</th>
-                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-[#374151]">In Progress</th>
-                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151] min-w-[140px]">Completion Rate</th>
-                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-[#374151]">Avg Days</th>
-                    <th className="px-4 py-2 text-right text-[11px] font-semibold text-[#374151]">Revenue</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Technician</th>
+                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">Total Jobs</th>
+                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">Completed</th>
+                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">In Progress</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151] min-w-[140px]">Completion Rate</th>
+                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">Avg Days</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-[#374151]">Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -981,7 +1041,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       )}
 
       {/* ── Low Stock Table ── */}
-      {lowStockItems.length > 0 && (
+      {showSection("low_stock") && lowStockItems.length > 0 && (
         <div className="overflow-hidden rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -998,11 +1058,11 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
             <table className="w-full">
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-border bg-[#f1f5f9]">
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Part Name</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Part #</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">In Stock</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Reorder At</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-[#374151]">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Part Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Part #</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">In Stock</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Reorder At</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1037,7 +1097,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       )}
 
             {/* ── Service Due — card grid ── */}
-      {serviceDueVehicles.length > 0 && (
+      {showSection("service_due") && serviceDueVehicles && serviceDueVehicles.length > 0 && (
         <div className="overflow-hidden rounded-md border border-warning/20 bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
           <div className="flex items-center justify-between border-b border-warning/20 bg-warning/10/60 px-4 py-2.5">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-warning">

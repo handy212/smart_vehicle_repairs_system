@@ -420,7 +420,7 @@ export default function ReconciliationDetailPage() {
                     </CardHeader>
                     <CardContent className="p-3 pt-1">
                         <div className="text-base font-mono font-semibold">{formatCurrency(reconciledBalance)}</div>
-                        <div className="text-[10px] text-muted-foreground mt-1">Based on matched lines</div>
+                        <div className="text-xs text-muted-foreground mt-1">Based on matched lines</div>
                     </CardContent>
                 </Card>
                 <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-destructive/10 dark:bg-red-900/10 border-destructive/20")}>
@@ -431,7 +431,7 @@ export default function ReconciliationDetailPage() {
                         <div className={cn("text-base font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-destructive")}>
                             {formatCurrency(difference)}
                         </div>
-                        <div className="text-[10px] text-muted-foreground mt-1">{Math.abs(difference) < 0.01 ? "Perfectly balanced" : "Review needed"}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{Math.abs(difference) < 0.01 ? "Perfectly balanced" : "Review needed"}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -441,7 +441,7 @@ export default function ReconciliationDetailPage() {
                     <CardHeader className="py-2 px-4 border-b bg-muted text-sm font-medium flex justify-between items-center flex-shrink-0">
                         <div className="flex items-center gap-2">
                             <span>Statement Lines</span>
-                            <Badge variant="secondary" className="text-[10px]">{visibleBankLines.length}</Badge>
+                            <Badge variant="secondary" className="text-xs">{visibleBankLines.length}</Badge>
                         </div>
 
                         <Tabs value={viewMatched} onValueChange={(value) => {
@@ -474,7 +474,7 @@ export default function ReconciliationDetailPage() {
                                     <div className="flex-1">
                                         <div className="text-foreground font-medium">{format(new Date(line.transaction_date), 'MMM d')}</div>
                                         <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={line.description}>{line.description}</div>
-                                        {line.matched && <div className="text-[10px] text-success flex items-center mt-0.5"><Check className="w-3 h-3 mr-1" /> Matched</div>}
+                                        {line.matched && <div className="text-xs text-success flex items-center mt-0.5"><Check className="w-3 h-3 mr-1" /> Matched</div>}
                                     </div>
                                     <div className="font-mono text-right">
                                         {parseFloat(line.debit_amount) > 0 ? (

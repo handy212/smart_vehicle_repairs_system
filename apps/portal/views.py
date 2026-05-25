@@ -14,7 +14,7 @@ from apps.vehicles.models import Vehicle
 from apps.inventory.models import ServiceBundle
 from apps.customers.models import Customer
 from apps.inspections.models import VehicleInspection
-from apps.billing.models import Invoice
+from apps.billing.models import Invoice, Estimate
 
 from .serializers import (
     PortalServiceBundleSerializer, 
@@ -170,6 +170,101 @@ class PortalViewSet(viewsets.ViewSet):
             
         return Response({'date': date_str, 'slots': available_slots})
     
+    def _build_actions_needed(self, customer):
+        """Customer tasks requiring attention on the portal home page."""
+        actions = []
+        today = timezone.now().date()
+
+        for est in Estimate.objects.filter(
+            customer=customer,
+            status__in=['sent', 'viewed'],
+        ).select_related('vehicle').order_by('-created_at')[:5]:
+            vehicle_label = (
+                f"{est.vehicle.year} {est.vehicle.make} {est.vehicle.model}"
+                if est.vehicle else "Your vehicle"
+            )
+            actions.append({
+                'type': 'approve_estimate',
+                'id': est.id,
+                'title': f'Approve estimate {est.estimate_number}',
+                'subtitle': vehicle_label,
+                'href': f'/portal/estimates/{est.id}',
+                'action_label': 'Review estimate',
+                'amount': float(est.total or 0),
+            })
+
+        for inv in Invoice.objects.filter(
+            customer=customer,
+            status__in=['sent', 'viewed', 'partial', 'overdue'],
+            amount_due__gt=0,
+        ).order_by('-invoice_date')[:5]:
+            actions.append({
+                'type': 'pay_invoice',
+                'id': inv.id,
+                'title': f'Pay invoice {inv.invoice_number}',
+                'subtitle': f'Balance due',
+                'href': f'/portal/payment/{inv.id}',
+                'action_label': 'Pay now',
+                'amount': float(inv.amount_due or 0),
+            })
+
+        for apt in Appointment.objects.filter(
+            customer=customer,
+            status='pending',
+            appointment_date__gte=today,
+        ).select_related('vehicle').order_by('appointment_date')[:5]:
+            vehicle_label = (
+                f"{apt.vehicle.year} {apt.vehicle.make} {apt.vehicle.model}"
+                if apt.vehicle else "Appointment"
+            )
+            actions.append({
+                'type': 'confirm_appointment',
+                'id': apt.id,
+                'title': 'Review appointment',
+                'subtitle': f'{vehicle_label} · {apt.appointment_date}',
+                'href': f'/portal/appointments/{apt.id}',
+                'action_label': 'View details',
+            })
+
+        for wo in WorkOrder.objects.filter(
+            customer=customer,
+            requires_approval=True,
+            approved_by_customer=False,
+        ).select_related('vehicle').order_by('-created_at')[:5]:
+            vehicle_label = (
+                f"{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}"
+                if wo.vehicle else "Work order"
+            )
+            actions.append({
+                'type': 'approve_work_order',
+                'id': wo.id,
+                'title': f'Approve work order {wo.work_order_number}',
+                'subtitle': vehicle_label,
+                'href': f'/portal/work-orders/{wo.id}',
+                'action_label': 'Review & approve',
+            })
+
+        for insp in VehicleInspection.objects.filter(
+            vehicle__owner=customer,
+            status='completed',
+            sent_to_customer_at__isnull=False,
+            customer_signature='',
+        ).select_related('vehicle', 'template').order_by('-completed_at')[:5]:
+            vehicle_label = (
+                f"{insp.vehicle.year} {insp.vehicle.make} {insp.vehicle.model}"
+                if insp.vehicle else "Inspection"
+            )
+            actions.append({
+                'type': 'approve_inspection',
+                'id': insp.id,
+                'title': f'Review inspection {insp.inspection_number}',
+                'subtitle': vehicle_label,
+                'href': f'/portal/inspections/{insp.id}',
+                'action_label': 'Review inspection',
+            })
+
+        return actions[:8]
+
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
         """
@@ -190,6 +285,11 @@ class PortalViewSet(viewsets.ViewSet):
         pending_invoices_count = Invoice.objects.filter(
             customer=customer,
             status__in=['sent', 'viewed', 'partial', 'overdue']
+        ).count()
+
+        pending_estimates_count = Estimate.objects.filter(
+            customer=customer,
+            status__in=['sent', 'viewed'],
         ).count()
         
         total_spent = Invoice.objects.filter(
@@ -213,8 +313,10 @@ class PortalViewSet(viewsets.ViewSet):
                 'total_vehicles': total_vehicles,
                 'upcoming_appointments_count': upcoming_appointments_count,
                 'pending_invoices_count': pending_invoices_count,
+                'pending_estimates_count': pending_estimates_count,
                 'total_spent': total_spent
             },
             'recent_appointments': PortalBookingSerializer(recent_appointments, many=True).data,
-            'recent_invoices': PortalInvoiceSerializer(recent_invoices, many=True).data
+            'recent_invoices': PortalInvoiceSerializer(recent_invoices, many=True).data,
+            'actions_needed': self._build_actions_needed(customer),
         })

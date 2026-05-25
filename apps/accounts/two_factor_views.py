@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import get_user_model
+from .throttles import TwoFactorVerifyRateThrottle
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from rest_framework_simplejwt.tokens import RefreshToken
 import pyotp
@@ -16,6 +17,12 @@ class TwoFactorViewSet(viewsets.GenericViewSet):
     """
     ViewSet for Two-Factor Authentication management.
     """
+
+    def get_throttles(self):
+        if self.action == 'verify_login':
+            return [TwoFactorVerifyRateThrottle()]
+        return super().get_throttles()
+
     def get_permissions(self):
         if self.action == 'verify_login':
             return [AllowAny()]
@@ -138,14 +145,18 @@ class TwoFactorViewSet(viewsets.GenericViewSet):
         if totp.verify(code):
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
-            
+
             # Serialize user data for response like standard login
             from apps.accounts.serializers import UserSerializer
-            
-            return Response({
+            from apps.accounts.jwt_cookies import apply_auth_cookies
+
+            payload = {
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
-                'user': UserSerializer(user).data
-            })
+                'user': UserSerializer(user).data,
+            }
+            response = Response(payload)
+            response.data = apply_auth_cookies(response, payload)
+            return response
             
         return Response({'code': ['Invalid verification code.']}, status=status.HTTP_401_UNAUTHORIZED)

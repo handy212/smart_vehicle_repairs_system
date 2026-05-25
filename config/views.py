@@ -112,12 +112,63 @@ def api_root(request):
     })
 
 
+def _check_database():
+    from django.db import connection
+    connection.ensure_connection()
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT 1')
+
+
+def _check_redis():
+    from django.conf import settings
+    backend = settings.CACHES['default']['BACKEND']
+    if 'dummy' in backend.lower():
+        return
+    from django.core.cache import cache
+    cache.set('health_check_probe', 'ok', timeout=5)
+    if cache.get('health_check_probe') != 'ok':
+        raise RuntimeError('Redis cache probe failed')
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_live(request):
+    """Process is running (liveness)."""
+    return Response({'status': 'ok'})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_ready(request):
+    """Dependencies are reachable (readiness)."""
+    checks = {}
+    errors = []
+
+    try:
+        _check_database()
+        checks['database'] = 'ok'
+    except Exception as exc:
+        checks['database'] = 'error'
+        errors.append(f'database: {exc}')
+
+    try:
+        _check_redis()
+        checks['redis'] = 'ok'
+    except Exception as exc:
+        checks['redis'] = 'error'
+        errors.append(f'redis: {exc}')
+
+    payload = {'status': 'ok' if not errors else 'degraded', 'checks': checks}
+    if errors:
+        payload['errors'] = errors
+        return Response(payload, status=503)
+    return Response(payload)
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
-    """
-    Lightweight container health endpoint.
-    """
+    """Backward-compatible alias for liveness."""
     return Response({'status': 'ok'})
 
 

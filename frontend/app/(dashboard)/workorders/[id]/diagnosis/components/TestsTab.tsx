@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import {
     TestTube,
     Plus,
@@ -50,6 +51,7 @@ export function TestsTab({
     isDisabled = false,
 }: TestsTabProps) {
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const queryClient = useQueryClient();
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingTest, setEditingTest] = useState<DiagnosticTest | null>(null);
@@ -222,10 +224,14 @@ export function TestsTab({
                                                     variant="ghost"
                                                     size="sm"
                                                     className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                                                    onClick={() => {
-                                                        if (confirm("Delete this test?")) {
-                                                            deleteMutation.mutate(test.id);
-                                                        }
+                                                    onClick={async () => {
+                                                        const ok = await confirm({
+                                                            title: "Delete test?",
+                                                            description: "Delete this diagnostic test?",
+                                                            confirmLabel: "Delete",
+                                                            variant: "destructive",
+                                                        });
+                                                        if (ok) deleteMutation.mutate(test.id);
                                                     }}
                                                     disabled={isDisabled}
                                                     aria-label="Delete diagnostic test"
@@ -263,6 +269,7 @@ export function TestsTab({
                 }}
                 isLoading={createMutation.isPending || updateMutation.isPending}
             />
+            <ConfirmDialog />
         </>
     );
 }

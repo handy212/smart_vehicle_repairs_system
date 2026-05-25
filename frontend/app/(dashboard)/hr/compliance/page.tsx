@@ -9,6 +9,7 @@ import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,10 +24,10 @@ import { toast } from "sonner";
 
 export default function CompliancePage() {
     return (
-        <PermissionGuard permission="view_compliance">
+        <PermissionPageGuard permission="view_compliance">
             <DynamicPageTitle title="Compliance" />
             <ComplianceContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -145,7 +146,7 @@ function ComplianceContent() {
                                         <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={`Actions for ${doc.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     {doc.document_file && (

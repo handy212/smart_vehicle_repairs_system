@@ -8,6 +8,7 @@ import { Clock, Filter, LogIn, LogOut, Search } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,10 @@ import { useEffect } from "react";
 
 export default function AttendancePage() {
     return (
-        <PermissionGuard permission="view_attendance">
+        <PermissionPageGuard permission="view_attendance">
             <DynamicPageTitle title="Attendance" />
             <AttendanceContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -258,7 +259,7 @@ function AttendanceContent() {
                                             <PermissionGuard permission="manage_attendance">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={`Actions for ${rec.staff_name} on ${rec.date}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={() => setEditingRec(rec)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>

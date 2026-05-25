@@ -126,6 +126,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
         try {
             const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/complete_registration/`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -140,9 +141,8 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
             const authData = (await apiResponse.json()) as CompleteRegistrationSuccess;
 
-            // Store tokens
-            localStorage.setItem('access_token', authData.access);
-            localStorage.setItem('refresh_token', authData.refresh);
+            const { setTokens } = await import('@/lib/utils/token');
+            setTokens(authData.access);
             localStorage.setItem('user', JSON.stringify(authData.user));
 
             onSuccess(authData);

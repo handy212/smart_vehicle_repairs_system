@@ -14,18 +14,17 @@ import {
   Search,
   Wrench,
 } from "lucide-react";
-import Link from "next/link";
 import { format } from "date-fns";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 interface DiagnosisTabProps {
   workOrderId: number;
-
   workOrder?: any;
   onRefresh?: () => void;
+  onOpenFull?: () => void;
 }
 
-export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
+export default function DiagnosisTab({ workOrderId, onOpenFull }: DiagnosisTabProps) {
   const { formatCurrency } = useCurrency();
 
   // Fetch diagnosis for this work order
@@ -56,12 +55,10 @@ export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Start diagnosis to document findings, identify root causes, and create repair recommendations for the customer.
           </p>
-          <Link href={`/workorders/${workOrderId}/diagnosis`}>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Start Diagnosis
-            </Button>
-          </Link>
+          <Button onClick={() => onOpenFull?.()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Start Diagnosis
+          </Button>
         </CardContent>
       </Card>
     );
@@ -99,21 +96,19 @@ export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
               >
                 {diagnosis.status_display || diagnosis.status}
               </Badge>
-              <Link href={`/workorders/${workOrderId}/diagnosis`}>
-                <Button variant="secondary" size="sm">
-                  {diagnosis.is_completed ? (
-                    <>
-                      <Edit className="w-4 h-4 mr-2" />
-                      View Details
-                    </>
-                  ) : (
-                    <>
-                      <Wrench className="w-4 h-4 mr-2" />
-                      Continue Diagnosis
-                    </>
-                  )}
-                </Button>
-              </Link>
+              <Button variant="secondary" size="sm" onClick={() => onOpenFull?.()}>
+                {diagnosis.is_completed ? (
+                  <>
+                    <Edit className="w-4 h-4 mr-2" />
+                    View Details
+                  </>
+                ) : (
+                  <>
+                    <Wrench className="w-4 h-4 mr-2" />
+                    Continue Diagnosis
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </CardHeader>

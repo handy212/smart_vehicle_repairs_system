@@ -70,7 +70,9 @@ if USE_S3:
     AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='us-east-1')
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    AWS_DEFAULT_ACL = 'public-read'
+    AWS_DEFAULT_ACL = 'private'
+    AWS_QUERYSTRING_AUTH = True
+    AWS_PRESIGNED_URL_EXPIRY = env.int('AWS_PRESIGNED_URL_EXPIRY', default=3600)
     
     # S3 Static Settings
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -186,13 +188,16 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
     'rest_framework.throttling.UserRateThrottle'
 ]
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
-    # NOTE: The dashboard polls multiple endpoints frequently (e.g. notifications),
-    # so the previous limits could lock out legitimate users.
-    # You can override these via env vars if needed.
-    'anon': os.getenv('DRF_THROTTLE_ANON', '1000/hour'),
-    'user': os.getenv('DRF_THROTTLE_USER', '50000/hour'),
+    'anon': os.getenv('DRF_THROTTLE_ANON', '200/hour'),
+    'user': os.getenv('DRF_THROTTLE_USER', '2000/hour'),
     'login': os.getenv('DRF_THROTTLE_LOGIN', '10/minute'),
+    '2fa_verify': os.getenv('DRF_THROTTLE_2FA', '5/minute'),
+    'refresh': os.getenv('DRF_THROTTLE_REFRESH', '30/minute'),
+    'public_settings': os.getenv('DRF_THROTTLE_PUBLIC_SETTINGS', '60/hour'),
 }
+
+REQUIRE_WEBHOOK_SIGNATURES = True
+JWT_REFRESH_COOKIE_SECURE = True
 
 # Disable debug toolbar and extensions in production
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in ['debug_toolbar', 'django_extensions']]
@@ -205,3 +210,23 @@ if _csp not in MIDDLEWARE:
         (i for i, m in enumerate(MIDDLEWARE) if 'SecurityMiddleware' in m), 0
     )
     MIDDLEWARE.insert(_sec_idx + 1, _csp)
+
+# Error tracking (optional — set SENTRY_DSN on production server)
+SENTRY_DSN = env('SENTRY_DSN', default='')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=env('SENTRY_ENVIRONMENT', default='production'),
+        release=env('SENTRY_RELEASE', default=None),
+        traces_sample_rate=env.float('SENTRY_TRACES_SAMPLE_RATE', default=0.1),
+        profiles_sample_rate=env.float('SENTRY_PROFILES_SAMPLE_RATE', default=0.0),
+        send_default_pii=False,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+    )

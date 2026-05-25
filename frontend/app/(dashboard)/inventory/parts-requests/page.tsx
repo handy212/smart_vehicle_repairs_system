@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowRight, Package, Search, AlertCircle, CheckCircle, Clock, X, ChevronDown, Download } from "lucide-react";
 import Link from "next/link";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { Input } from "@/components/ui/input";
 import { PartRequestDetailDialog } from "./components/PartRequestDetailDialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -148,7 +148,7 @@ export default function PartsRequestsPage() {
 
 
     return (
-        <PermissionGuard permissions={['view_workorder']}>
+        <PermissionPageGuard permissions={['view_workorder']}>
             <div className="space-y-6">
                 {/* Header Block */}
                 <div className="flex flex-col space-y-4">
@@ -339,6 +339,6 @@ export default function PartsRequestsPage() {
                     onRefresh={refetch}
                 />
             </div>
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }

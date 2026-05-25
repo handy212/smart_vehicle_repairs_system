@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi, type TaxReport } from "@/lib/api/accounting";
@@ -7,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, FileText, TrendingUp, TrendingDown } from "lucide-react";
+import { FileText, TrendingUp, TrendingDown } from "lucide-react";
 import { format, startOfYear, endOfYear } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
@@ -97,9 +99,7 @@ export default function TaxReportPage() {
             </Card>
 
             {isLoading ? (
-                <div className="flex justify-center items-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
+                <AccountingReportSkeleton />
             ) : report ? (
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

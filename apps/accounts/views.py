@@ -429,9 +429,12 @@ class GoogleAuthView(viewsets.GenericViewSet):
         # Create/get user and generate tokens
         auth_data = serializer.save()
         
-        # Return response
+        from apps.accounts.jwt_cookies import apply_auth_cookies
+
         response_serializer = GoogleAuthResponseSerializer(auth_data)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        response = Response(response_serializer.data, status=status.HTTP_200_OK)
+        response.data = apply_auth_cookies(response, dict(response.data))
+        return response
 
     @action(detail=False, methods=['post'])
     def resend_otp(self, request):
@@ -462,8 +465,12 @@ class GoogleAuthView(viewsets.GenericViewSet):
         auth_data = serializer.save()
         
         from apps.accounts.google_auth import GoogleAuthResponseSerializer
+        from apps.accounts.jwt_cookies import apply_auth_cookies
+
         response_serializer = GoogleAuthResponseSerializer(auth_data)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        response = Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        response.data = apply_auth_cookies(response, dict(response.data))
+        return response
 
 
 class ManualRegistrationView(viewsets.GenericViewSet):
@@ -523,9 +530,13 @@ class ManualRegistrationView(viewsets.GenericViewSet):
         
         auth_data = serializer.save()
         
-        # Return standard auth response
-        return Response({
+        from apps.accounts.jwt_cookies import apply_auth_cookies
+
+        payload = {
             'user': UserSerializer(auth_data['user']).data,
             'access': auth_data['access'],
-            'refresh': auth_data['refresh']
-        }, status=status.HTTP_201_CREATED)
+            'refresh': auth_data['refresh'],
+        }
+        response = Response(payload, status=status.HTTP_201_CREATED)
+        response.data = apply_auth_cookies(response, payload)
+        return response

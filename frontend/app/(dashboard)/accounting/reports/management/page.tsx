@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,11 +13,9 @@ import {
     TableCell,
     TableHead,
     TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    TableRow} from "@/components/ui/table";
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
@@ -53,29 +53,24 @@ export default function ManagementReportsPage() {
 
     const { data: scorecard, isLoading: loadingScorecard } = useQuery({
         queryKey: ["mgmt", "scorecard", startDate, endDate],
-        queryFn: () => accountingApi.getBranchPLScorecard(startDate, endDate),
-    });
+        queryFn: () => accountingApi.getBranchPLScorecard(startDate, endDate)});
 
     const { data: consolidated, isLoading: loadingConsolidated } = useQuery({
         queryKey: ["mgmt", "consolidated", startDate, endDate],
-        queryFn: () => accountingApi.getConsolidatedProfitLoss(startDate, endDate),
-    });
+        queryFn: () => accountingApi.getConsolidatedProfitLoss(startDate, endDate)});
 
     const { data: cashCollection, isLoading: loadingCash } = useQuery({
         queryKey: ["mgmt", "cash", startDate, endDate, activeBranchId],
         queryFn: () =>
-            accountingApi.getCashCollectionReport(startDate, endDate, activeBranchId || undefined),
-    });
+            accountingApi.getCashCollectionReport(startDate, endDate, activeBranchId || undefined)});
 
     const { data: revenueMix, isLoading: loadingMix } = useQuery({
         queryKey: ["mgmt", "mix", startDate, endDate, activeBranchId],
-        queryFn: () => accountingApi.getRevenueMix(startDate, endDate, activeBranchId || undefined),
-    });
+        queryFn: () => accountingApi.getRevenueMix(startDate, endDate, activeBranchId || undefined)});
 
     const { data: mgmtMetrics, isLoading: loadingMetrics } = useQuery({
         queryKey: ["mgmt", "dashboard", startDate, endDate, activeBranchId],
-        queryFn: () => accountingApi.getManagementMetrics(startDate, endDate),
-    });
+        queryFn: () => accountingApi.getManagementMetrics(startDate, endDate)});
 
     const kpis = (mgmtMetrics as { kpis?: Record<string, number> })?.kpis;
     const topExpenses = (mgmtMetrics as { top_expenses?: Array<{ name: string; amount: number }> })?.top_expenses ?? [];
@@ -102,8 +97,7 @@ export default function ManagementReportsPage() {
                     dateInfo,
                     headers: ["Account", "Amount"],
                     rows: topExpenses.map((e) => [e.name, e.amount]),
-                    currencyColumnIndexes: [1],
-                };
+                    currencyColumnIndexes: [1]};
             }
             if (kpis) {
                 return {
@@ -119,8 +113,7 @@ export default function ManagementReportsPage() {
                         ["AP outstanding", kpis.ap_outstanding ?? 0],
                         ["Runway (months)", `${(kpis.runway_months ?? 0).toFixed(1)}`],
                     ],
-                    currencyColumnIndexes: [1],
-                };
+                    currencyColumnIndexes: [1]};
             }
         }
         if (activeTab === "scorecard" && scorecardBranches.length > 0) {
@@ -137,8 +130,7 @@ export default function ManagementReportsPage() {
                     b.net_income,
                     b.margin_percent,
                 ]),
-                currencyColumnIndexes: [2, 3, 4],
-            };
+                currencyColumnIndexes: [2, 3, 4]};
         }
         if (activeTab === "consolidated") {
             const branchRows =
@@ -157,8 +149,7 @@ export default function ManagementReportsPage() {
                 dateInfo,
                 headers: ["Branch", "Revenue", "Net income"],
                 rows: branchRows,
-                currencyColumnIndexes: [1, 2],
-            };
+                currencyColumnIndexes: [1, 2]};
         }
         if (activeTab === "cash" && cashSegments.length > 0) {
             return {
@@ -173,8 +164,7 @@ export default function ManagementReportsPage() {
                     s.collection_rate_percent,
                     s.invoice_count,
                 ]),
-                currencyColumnIndexes: [1, 2],
-            };
+                currencyColumnIndexes: [1, 2]};
         }
         if (activeTab === "mix" && byProduct.length > 0) {
             return {
@@ -183,8 +173,7 @@ export default function ManagementReportsPage() {
                 dateInfo,
                 headers: ["Product", "Invoiced", "Collected"],
                 rows: byProduct.map((p) => [p.label, p.invoiced, p.collected]),
-                currencyColumnIndexes: [1, 2],
-            };
+                currencyColumnIndexes: [1, 2]};
         }
         return null;
     };
@@ -237,8 +226,8 @@ export default function ManagementReportsPage() {
 
                 <TabsContent value="executive" className="space-y-4">
                     {loadingMetrics ? (
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : kpis ? (
+                        <AccountingReportSkeleton compact rows={3} />
+      ) : kpis ? (
                         <>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 <Card>
@@ -305,8 +294,8 @@ export default function ManagementReportsPage() {
                         </CardHeader>
                         <CardContent>
                             {loadingScorecard ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : (
+                        <AccountingReportSkeleton compact rows={3} />
+      ) : (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -343,8 +332,8 @@ export default function ManagementReportsPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {loadingConsolidated ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : consolidatedTotals ? (
+                        <AccountingReportSkeleton compact rows={4} />
+      ) : consolidatedTotals ? (
                                 <>
                                     <div className="grid grid-cols-3 gap-4 max-w-xl">
                                         <div>
@@ -411,8 +400,8 @@ export default function ManagementReportsPage() {
                         </CardHeader>
                         <CardContent>
                             {loadingCash ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : (
+                        <AccountingReportSkeleton compact rows={3} />
+      ) : (
                                 <>
                                     <p className="text-sm mb-4">
                                         Overall collection rate:{" "}
@@ -460,8 +449,8 @@ export default function ManagementReportsPage() {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             {loadingMix ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : (
+                        <AccountingReportSkeleton compact rows={3} />
+      ) : (
                                 <>
                                     <div>
                                         <h3 className="font-medium mb-2">By product</h3>

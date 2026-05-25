@@ -1,0 +1,96 @@
+# Staging overlay — isolated stack for pre-production validation.
+# Use on a staging VM (can run alongside production with separate project name/volumes):
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+#
+# Copy .env.staging.example to .env before bootstrap.
+
+name: svr-staging
+
+services:
+  db:
+    container_name: svr_staging_db
+    ports: []
+    environment:
+      POSTGRES_DB: ${DB_NAME:-svr_staging_db}
+      POSTGRES_USER: ${DB_USER:-svr_staging_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+
+  redis:
+    container_name: svr_staging_redis
+    ports: []
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data_staging:/data
+
+  backend:
+    container_name: svr_staging_backend
+    environment:
+      DJANGO_ENVIRONMENT: staging
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      DATABASE_URL: postgresql://${DB_USER:-svr_staging_user}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-svr_staging_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+    volumes:
+      - ./media-staging:/app/media
+      - ./logs-staging:/app/logs
+      - static_volume_staging:/app/staticfiles
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/ready/"]
+
+  celery:
+    container_name: svr_staging_celery
+    environment:
+      DJANGO_ENVIRONMENT: staging
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DATABASE_URL: postgresql://${DB_USER:-svr_staging_user}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-svr_staging_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+    volumes:
+      - ./media-staging:/app/media
+      - ./logs-staging:/app/logs
+    healthcheck:
+      disable: true
+
+  celerybeat:
+    container_name: svr_staging_celerybeat
+    environment:
+      DJANGO_ENVIRONMENT: staging
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DATABASE_URL: postgresql://${DB_USER:-svr_staging_user}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-svr_staging_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+    volumes:
+      - ./media-staging:/app/media
+      - ./logs-staging:/app/logs
+    healthcheck:
+      disable: true
+
+  frontend:
+    container_name: svr_staging_frontend
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:8000/api}
+    environment:
+      - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:8000/api}
+      - NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN:-}
+      - NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-staging}
+
+  nginx:
+    container_name: svr_staging_nginx
+    ports:
+      - "${STAGING_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/default.conf.http-npm:/etc/nginx/conf.d/default.conf:ro
+      - static_volume_staging:/var/www/static:ro
+      - ./media-staging:/var/www/media:ro
+
+volumes:
+  postgres_data_staging:
+  redis_data_staging:
+  static_volume_staging:

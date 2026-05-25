@@ -1,10 +1,13 @@
-export default function ModuleLoading() {
+import { TableSkeleton } from "@/components/ui/skeleton";
+
+export default function AccountingLoading() {
   return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground animate-pulse text-sm">Loading module...</p>
+    <div className="p-4 sm:p-6 space-y-4">
+      <div className="space-y-2">
+        <div className="h-8 w-48 rounded-md bg-muted animate-pulse" />
+        <div className="h-4 w-64 rounded-md bg-muted animate-pulse" />
       </div>
+      <TableSkeleton rows={8} />
     </div>
   );
 }

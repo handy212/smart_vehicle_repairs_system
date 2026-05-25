@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { FileText, Plus, Trash2, Download, Mic, Sparkles, Wand2 } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { format } from "date-fns";
 
 interface DocumentsTabProps {
@@ -18,6 +19,7 @@ interface DocumentsTabProps {
 
 export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const queryClient = useQueryClient();
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [processingId, setProcessingId] = useState<number | null>(null);
@@ -182,10 +184,14 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                        onClick={() => {
-                                            if (confirm("Delete this document?")) {
-                                                deleteMutation.mutate(doc.id);
-                                            }
+                                        onClick={async () => {
+                                            const ok = await confirm({
+                                                title: "Delete document?",
+                                                description: "Delete this document?",
+                                                confirmLabel: "Delete",
+                                                variant: "destructive",
+                                            });
+                                            if (ok) deleteMutation.mutate(doc.id);
                                         }}
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -296,6 +302,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
                     </form>
                 </DialogContent>
             </Dialog>
+            <ConfirmDialog />
         </div>
     );
 }

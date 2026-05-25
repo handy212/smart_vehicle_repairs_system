@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAccessToken } from "@/lib/utils/token";
 
 export interface SearchResult {
   type: "customer" | "vehicle" | "workorder" | "appointment" | "invoice" | "part";
@@ -24,13 +25,13 @@ const searchClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
-// Add auth token to search requests
 searchClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token");
+      const token = getAccessToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }

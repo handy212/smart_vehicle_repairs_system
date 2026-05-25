@@ -119,6 +119,7 @@ export default function GoogleLoginButton({
         try {
             const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/login/`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -146,9 +147,8 @@ export default function GoogleLoginButton({
                 return;
             }
 
-            // Store tokens (Standard login)
-            localStorage.setItem('access_token', data.access);
-            localStorage.setItem('refresh_token', data.refresh);
+            const { setTokens } = await import('@/lib/utils/token');
+            setTokens(data.access);
             localStorage.setItem('user', JSON.stringify(data.user));
 
             if (onSuccess) {

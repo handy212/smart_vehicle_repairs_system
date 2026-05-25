@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 
 const ACTION_CHOICES = [
   { value: "create", label: "Create" },
@@ -218,7 +218,7 @@ export default function AuditLogPage() {
   const actionCounts: AuditLogStats["by_action"] = statsData?.by_action ?? [];
 
   return (
-    <PermissionGuard permission="view_audit_logs">
+    <PermissionPageGuard permission="view_audit_logs">
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <Link href="/admin">
@@ -687,6 +687,6 @@ export default function AuditLogPage() {
         </Dialog>
 
       </div>
-    </PermissionGuard>
+    </PermissionPageGuard>
   );
 }

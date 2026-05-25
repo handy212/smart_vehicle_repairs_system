@@ -12,6 +12,7 @@ import { useParams, useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -29,9 +30,9 @@ import { MoreHorizontal } from "lucide-react";
 
 export default function ApplicantPage() {
     return (
-        <PermissionGuard permission="view_recruitment">
+        <PermissionPageGuard permission="view_recruitment">
             <ApplicantDetailContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

@@ -1,7 +1,8 @@
 import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
 import { useBranchStore } from "@/store/branchStore";
 import { queueRequest } from "@/lib/offline/queue";
-import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "@/lib/utils/token";
+import { getAccessToken, setAccessToken, clearTokens } from "@/lib/utils/token";
+import { authApi } from "@/lib/api/auth";
 
 export type ApiRequestConfig = AxiosRequestConfig & {
   skipAuth?: boolean;
@@ -45,6 +46,7 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 // Request interceptor for auth token and offline handling
@@ -195,45 +197,26 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       if (typeof window !== "undefined") {
-        const refreshToken = getRefreshToken();
-        if (refreshToken) {
-          try {
-            const response = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/auth/token/refresh/`,
-              {
-                refresh: refreshToken,
-              }
-            );
+        try {
+          const { access } = await authApi.refreshToken();
+          setAccessToken(access);
 
-            const { access } = response.data;
-            setAccessToken(access);
+          processQueue(null, access);
 
-            // Process queue with new token
-            processQueue(null, access);
-
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${access}`;
-            }
-
-            return apiClient(originalRequest);
-          } catch (refreshError) {
-            // Process queue with error
-            processQueue(refreshError, null);
-
-            // Refresh failed, redirect to login
-            clearTokens();
-            if (typeof window !== "undefined") {
-              window.location.href = "/login";
-            }
-            return Promise.reject(refreshError);
-          } finally {
-            isRefreshing = false;
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${access}`;
           }
-        } else {
-          // No refresh token, redirect to login
-          if (typeof window !== "undefined") {
+
+          return apiClient(originalRequest);
+        } catch (refreshError) {
+          processQueue(refreshError, null);
+          clearTokens();
+          if (window.location.pathname !== "/login") {
             window.location.href = "/login";
           }
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
         }
       }
     }

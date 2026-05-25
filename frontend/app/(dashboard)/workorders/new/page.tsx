@@ -198,6 +198,7 @@ export default function NewWorkOrderPage() {
   }>>([]);
   const [workOrderSearchQuery, setWorkOrderSearchQuery] = useState<string>("");
   const [showWorkOrderSearch, setShowWorkOrderSearch] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedRelatedWorkOrderDetail, setSelectedRelatedWorkOrderDetail] = useState<{
     id: number;
     work_order_number: string;
@@ -743,6 +744,24 @@ export default function NewWorkOrderPage() {
         </Card>
       )}
 
+      {!appointment && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Walk-in check-in?</p>
+              <p className="text-xs text-muted-foreground">
+                Use the guided check-in wizard for faster receptionist intake.
+              </p>
+            </div>
+            <Link href="/check-in">
+              <Button type="button" variant="outline" size="sm">
+                Use Check-in Wizard
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
         <DialogContent>
           <DialogHeader>
@@ -1050,13 +1069,27 @@ export default function NewWorkOrderPage() {
             {/* Work Order Details */}
             <Card className="border-0 overflow-hidden">
               <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <PremiumIcons.FileText className="w-5 h-5 text-primary/80" />
-                  Work Order Details
-                </CardTitle>
-                <CardDescription>Priority and description for this job</CardDescription>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <PremiumIcons.FileText className="w-5 h-5 text-primary/80" />
+                      Work Order Details
+                    </CardTitle>
+                    <CardDescription>Priority and description for this job</CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs w-fit"
+                    onClick={() => setShowAdvanced((v) => !v)}
+                  >
+                    {showAdvanced ? "Hide advanced options" : "Show advanced options"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {showAdvanced && (
                 <div className="grid grid-cols-2 gap-4">
                   {/* Maintenance Type */}
                   <div className="col-span-2 md:col-span-1">
@@ -1147,6 +1180,7 @@ export default function NewWorkOrderPage() {
                     </div>
                   )}
                 </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1264,7 +1298,7 @@ export default function NewWorkOrderPage() {
               </CardContent>
             </Card>
 
-            {/* Return / Rework — optional, full-width */}
+            {showAdvanced && (
             <Card className={`border overflow-hidden transition-colors ${isWarrantyRework ? "border-primary/30" : "border-border"}`}>
               <button
                 type="button"
@@ -1419,6 +1453,7 @@ export default function NewWorkOrderPage() {
                 </CardContent>
               )}
             </Card>
+            )}
         </div>
       </form>
 

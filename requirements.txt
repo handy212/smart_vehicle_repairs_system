@@ -165,3 +165,4 @@ python-quickbooks==0.9.12
 model-bakery==1.20.5
 pytest-django==4.11.1
 pytest-cov==7.0.0
+sentry-sdk[django,celery]>=2.19.0,<3

@@ -1,11 +1,13 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Package, Wrench, BarChart3, DollarSign } from "lucide-react";
+import { Package, Wrench, BarChart3, DollarSign } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { useBranchStore } from "@/store/branchStore";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -28,8 +30,7 @@ export default function ExpenseBreakdownPage() {
     const { activeBranchId } = useBranchStore();
     const [filters, setFilters] = useState({
         start_date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split("T")[0],
-        end_date: new Date().toISOString().split("T")[0],
-    });
+        end_date: new Date().toISOString().split("T")[0]});
 
     const { data: report, isLoading } = useQuery({
         queryKey: ["expense-breakdown", filters, activeBranchId],
@@ -40,8 +41,7 @@ export default function ExpenseBreakdownPage() {
             if (activeBranchId) params.append("branch_id", activeBranchId.toString());
             const response = await apiClient.get(`/accounting/reports/expense-breakdown/?${params}`);
             return response.data;
-        },
-    });
+        }});
 
     const categories = report?.categories ?? {};
     const total = report?.total_expenses ?? 0;
@@ -53,24 +53,21 @@ export default function ExpenseBreakdownPage() {
             description: "Cost of parts issued to work orders",
             icon: Package,
             color: "bg-amber-500",
-            textColor: "text-amber-600 dark:text-amber-400",
-        },
+            textColor: "text-amber-600 dark:text-amber-400"},
         {
             key: "labor",
             label: "Direct Labor",
             description: "Technician labor costs on work orders",
             icon: Wrench,
             color: "bg-blue-500",
-            textColor: "text-blue-600 dark:text-blue-400",
-        },
+            textColor: "text-blue-600 dark:text-blue-400"},
         {
             key: "overhead",
             label: "Overhead & Operating",
             description: "Rent, utilities, admin and other indirect costs",
             icon: BarChart3,
             color: "bg-purple-500",
-            textColor: "text-purple-600 dark:text-purple-400",
-        },
+            textColor: "text-purple-600 dark:text-purple-400"},
     ];
 
     return (
@@ -95,8 +92,7 @@ export default function ExpenseBreakdownPage() {
                                 const pct = total > 0 ? (amount / total) * 100 : 0;
                                 return [c.label, amount, pct];
                             }),
-                            currencyColumnIndexes: [1],
-                        };
+                            currencyColumnIndexes: [1]};
                     }}
                     disabled={!report}
                 />
@@ -131,10 +127,8 @@ export default function ExpenseBreakdownPage() {
             </Card>
 
             {isLoading ? (
-                <div className="flex justify-center p-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-            ) : report ? (
+                <AccountingReportSkeleton />
+      ) : report ? (
                 <>
                     {/* Total banner */}
                     <Card className="shadow-sm border bg-muted/30">

@@ -10,6 +10,7 @@ interface PortalStats {
     total_vehicles: number;
     upcoming_appointments_count: number;
     pending_invoices_count: number;
+    pending_estimates_count?: number;
     total_spent: number;
 }
 
@@ -48,6 +49,15 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
             alert: stats.pending_invoices_count > 0
         },
         {
+            label: "Pending Estimates",
+            value: stats.pending_estimates_count ?? 0,
+            icon: PremiumIcons.FileText,
+            iconClass: "text-primary",
+            iconBg: "bg-primary/10",
+            href: "/portal/estimates",
+            alert: (stats.pending_estimates_count ?? 0) > 0
+        },
+        {
             label: "Total Spent",
             value: formatCurrency(stats.total_spent || 0),
             icon: PremiumIcons.CreditCard,
@@ -58,7 +68,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {items.map((item, index) => (
                 <Link key={index} href={item.href}>
                     <Card className="hover:bg-muted/40 transition-colors cursor-pointer">

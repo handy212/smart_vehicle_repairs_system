@@ -12,8 +12,13 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error("Global application error:", error);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      import("@sentry/nextjs").then((Sentry) => {
+        Sentry.captureException(error);
+      });
+    } else {
+      console.error("Global application error:", error);
+    }
   }, [error]);
 
   return (

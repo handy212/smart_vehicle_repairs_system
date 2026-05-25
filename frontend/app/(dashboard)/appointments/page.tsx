@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
@@ -59,6 +60,7 @@ export default function AppointmentsPage() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPermission } = usePermissions();
@@ -181,10 +183,14 @@ export default function AppointmentsPage() {
   });
 
 
-  const handleDelete = (appointment: any) => {
-    if (confirm(`Are you sure you want to delete appointment "${appointment.appointment_number}"? This action cannot be undone.`)) {
-      deleteMutation.mutate(appointment.id);
-    }
+  const handleDelete = async (appointment: any) => {
+    const ok = await confirm({
+      title: "Delete appointment?",
+      description: `Delete "${appointment.appointment_number}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (ok) deleteMutation.mutate(appointment.id);
   };
 
   const bulkDeleteMutation = useMutation({
@@ -236,10 +242,14 @@ export default function AppointmentsPage() {
     },
   });
 
-  const handleBulkDelete = () => {
-    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} appointment(s)? This action cannot be undone.`)) {
-      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
-    }
+  const handleBulkDelete = async () => {
+    const ok = await confirm({
+      title: `Delete ${bulkSelection.selectedCount} appointment(s)?`,
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete all",
+      variant: "destructive",
+    });
+    if (ok) bulkDeleteMutation.mutate(bulkSelection.selectedIds);
   };
 
   const handleBulkStatusUpdate = () => {
@@ -696,11 +706,7 @@ export default function AppointmentsPage() {
                             <DropdownMenuSeparator />
                             <PermissionGuard permission="delete_appointments">
                               <DropdownMenuItem
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to delete appointment "${appointment.appointment_number}"? This action cannot be undone.`)) {
-                                    handleDelete(appointment);
-                                  }
-                                }}
+                                onClick={() => handleDelete(appointment)}
                                 className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20"
                                 disabled={deleteMutation.isPending}
                               >
@@ -794,6 +800,7 @@ export default function AppointmentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog />
     </div>
   );
 }

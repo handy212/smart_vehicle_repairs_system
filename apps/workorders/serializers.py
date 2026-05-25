@@ -1177,8 +1177,10 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
     ))
     def get_vehicle_details(self, obj):
         if obj.vehicle:
+            vin = obj.vehicle.vin or ''
+            masked_vin = vin if len(vin) <= 4 else f"{'*' * (len(vin) - 4)}{vin[-4:]}"
             return {
-                'vin': obj.vehicle.vin,
+                'vin': masked_vin,
                 'license_plate': obj.vehicle.license_plate,
                 'color': obj.vehicle.exterior_color
             }

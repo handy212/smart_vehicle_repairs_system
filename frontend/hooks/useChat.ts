@@ -44,7 +44,8 @@ export const useChat = (conversationId: string | number | null) => {
 
     const wsUrl = getWsUrl();
     const token = getAccessToken();
-    const finalUrl = token ? `${wsUrl}?token=${token}` : wsUrl;
+    // Prefer cookie auth on same host; fall back to query token for cross-origin dev
+    const finalUrl = token ? `${wsUrl}?token=${encodeURIComponent(token)}` : wsUrl;
 
     const socket = new WebSocket(finalUrl);
     socketRef.current = socket;

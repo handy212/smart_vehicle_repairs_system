@@ -11,6 +11,7 @@ import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,10 +28,10 @@ import { toast } from "sonner";
 
 export default function TrainingPage() {
     return (
-        <PermissionGuard permission="view_training">
+        <PermissionPageGuard permission="view_training">
             <DynamicPageTitle title="Training" />
             <TrainingContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -114,7 +115,7 @@ function AvailableProgramsList() {
                                 <PermissionGuard permission="manage_training">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for ${prog.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => setEditingProg(prog)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>

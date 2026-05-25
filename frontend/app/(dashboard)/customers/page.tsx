@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { exportToExcel } from "@/lib/utils/excel-export";
 import jsPDF from "jspdf";
@@ -64,6 +65,7 @@ export default function CustomersPage() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { hasPermission } = usePermissions();
   const canImportCustomers = hasPermission("create_customers") || hasPermission("manage_customers");
   const canExportCustomers = hasPermission("view_customers") || hasPermission("manage_customers");
@@ -210,11 +212,15 @@ export default function CustomersPage() {
     },
   });
 
-  const handleDelete = useCallback((customer: any) => {
-    if (confirm(`Are you sure you want to delete customer "${customer.full_name || customer.company_name || 'this customer'}"?`)) {
-      deleteMutation.mutate(customer.id);
-    }
-  }, [deleteMutation]);
+  const handleDelete = useCallback(async (customer: any) => {
+    const ok = await confirm({
+      title: "Delete customer?",
+      description: `Delete "${customer.full_name || customer.company_name || "this customer"}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (ok) deleteMutation.mutate(customer.id);
+  }, [confirm, deleteMutation]);
 
   const getCustomerExportRows = () => customers.map((customer: Customer) => ({
     name: customer.company_name || customer.full_name || `${customer.user?.first_name || ""} ${customer.user?.last_name || ""}`.trim(),
@@ -483,6 +489,7 @@ export default function CustomersPage() {
             className="h-8 w-8 disabled:opacity-30"
             disabled={page === 1}
             onClick={() => setPage(p => p - 1)}
+            aria-label="Previous page"
           >
             &lt;
           </Button>
@@ -506,11 +513,13 @@ export default function CustomersPage() {
             className="h-8 w-8 disabled:opacity-30"
             disabled={!customerData?.next}
             onClick={() => setPage(p => p + 1)}
+            aria-label="Next page"
           >
             &gt;
           </Button>
         </div>
       </div>
+      <ConfirmDialog />
     </div>
   );
 }

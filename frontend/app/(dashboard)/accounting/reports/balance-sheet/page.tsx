@@ -16,11 +16,11 @@ import {
     TableCell,
     TableHead,
     TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    TableRow} from "@/components/ui/table";
 import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
 import { exportToExcel } from "@/lib/utils/excel-export";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
 import { COMPANY_NAME } from "@/lib/constants";
 
 export default function BalanceSheetPage() {
@@ -30,8 +30,7 @@ export default function BalanceSheetPage() {
 
     const { data: report, isLoading } = useQuery({
         queryKey: ["accounting", "balance-sheet", date],
-        queryFn: () => accountingApi.getBalanceSheet(date),
-    });
+        queryFn: () => accountingApi.getBalanceSheet(date)});
 
     const handleExportCSV = () => {
         if (!report) return;
@@ -125,8 +124,7 @@ export default function BalanceSheetPage() {
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
             companyName: COMPANY_NAME,
-            currencySymbol,
-        });
+            currencySymbol});
     };
 
     return (
@@ -178,9 +176,7 @@ export default function BalanceSheetPage() {
             </div>
 
             {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                </div>
+                <AccountingReportSkeleton />
             ) : report ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Assets */}

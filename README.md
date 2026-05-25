@@ -119,10 +119,24 @@ See [frontend/e2e/README.md](frontend/e2e/README.md).
 
 ## Production deployment
 
-- **Docker:** [deploy/DOCKER_PRODUCTION_RUNBOOK.md](deploy/DOCKER_PRODUCTION_RUNBOOK.md) — full stack (Postgres 15, Redis 7, nginx, Celery).
-- **Rsync / systemd:** [deploy/README.md](deploy/README.md).
+- **Docker (recommended):** [deploy/PRODUCTION.md](deploy/PRODUCTION.md) — production install/update with `docker-compose.prod.yml`
+- **Docker runbook (detailed):** [deploy/DOCKER_PRODUCTION_RUNBOOK.md](deploy/DOCKER_PRODUCTION_RUNBOOK.md)
+- **Legacy rsync / systemd:** [deploy/README.md](deploy/README.md)
 
-Production API is typically on port **8000** behind nginx; frontend on **3000**. Development intentionally uses **8001** / **3001** to avoid conflicts.
+Production commands:
+
+```bash
+cp .env.production.example .env   # on the production server only
+bash scripts/validate-env.sh .env
+bash deploy/bootstrap.sh          # first install
+bash deploy/release.sh            # subsequent updates
+```
+
+Local full-stack Docker (exposes DB/Redis ports for debugging):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+```
 
 ## Project structure
 
@@ -182,9 +196,12 @@ Dynamic RBAC with roles such as Admin, Manager, Service Coordinator, Receptionis
 
 ## CI
 
+- **Release gate:** `.github/workflows/release-gate.yml` — full pre-release validation on `main`
 - **Backend:** `.github/workflows/backend-ci.yml` — pytest + coverage gate
 - **Frontend:** `.github/workflows/frontend-ci.yml` — lint, typecheck, tests, build
 - **E2E:** `.github/workflows/e2e.yml` — Playwright smoke tests
+- **Docker images:** `.github/workflows/docker-build.yml` — on version tags `v*`
+- **Production deploy:** `.github/workflows/deploy-production.yml` — manual with optional SSH
 
 ## License
 

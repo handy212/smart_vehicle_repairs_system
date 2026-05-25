@@ -1,12 +1,18 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
+import { cn } from "@/lib/utils/cn";
+import { ACCOUNTING_TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
+
+
 import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, TrendingUp, TrendingDown, DollarSign, Wrench, Package, MoreHorizontal } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Wrench, Package, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import apiClient from "@/lib/api/client";
@@ -196,7 +202,7 @@ export default function JobProfitabilityPage() {
                                 <p className={`text-lg font-bold mt-1 ${(totals.avg_margin_percent ?? 0) >= 20 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
                                     {(totals.avg_margin_percent ?? 0).toFixed(1)}%
                                 </p>
-                                <div className="mt-1 grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
+                                <div className="mt-1 grid grid-cols-3 gap-1 text-xs text-muted-foreground">
                                     <span>Labor: {formatCurrency(totals.total_labor_revenue ?? 0)}</span>
                                     <span>Parts: {formatCurrency(totals.total_parts_revenue ?? 0)}</span>
                                     <span>Other: {formatCurrency(totals.total_other_revenue ?? 0)}</span>
@@ -214,22 +220,20 @@ export default function JobProfitabilityPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        </div>
+                        <AccountingReportSkeleton compact rows={6} />
                     ) : jobs.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">WO #</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Customer</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Date</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Revenue</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Labor Cost</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Parts Cost</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Gross Profit</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Margin</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>WO #</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Customer</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Date</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Revenue</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Labor Cost</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Parts Cost</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Gross Profit</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Margin</TableHead>
                                         <TableHead className="h-8 w-8 px-2"></TableHead>
                                     </TableRow>
                                 </TableHeader>

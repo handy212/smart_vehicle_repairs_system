@@ -40,18 +40,18 @@ import {
 } from "@/components/ui/tooltip";
 
 import { getStatusVariant, getStatusLabel } from "@/lib/utils/workorder-status";
+import {
+  DASHBOARD_GROUP_STATUS_MAP,
+  WORK_ORDER_STATUS_GROUPS,
+  getStatusGroupFilterValue,
+  getStatusGroupLabel,
+  getGroupedStatusFilterOptions,
+} from "@/lib/utils/workorder-status-groups";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 import { usePrint } from "@/lib/hooks/usePrint";
-
-const DASHBOARD_GROUP_STATUS_MAP: Record<string, string[]> = {
-  intake: ["intake", "inspection"],
-  diagnosis: ["diagnosis", "awaiting_approval"],
-  repair: ["assigned", "in_progress", "additional_work_found"],
-  qc: ["quality_check"],
-  ready: ["completed"],
-};
 
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
@@ -65,36 +65,28 @@ export default function WorkOrdersPage() {
   const [newStatus, setNewStatus] = useState<string>("in_progress");
 
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+  const [activeStatusGroup, setActiveStatusGroup] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const dashboardGroup = searchParams.get("group");
   const groupedStatuses = dashboardGroup ? DASHBOARD_GROUP_STATUS_MAP[dashboardGroup] ?? [] : [];
   const groupedStatusFilter = groupedStatuses.length > 0 ? groupedStatuses.join(",") : undefined;
+  const statusGroupFilter = activeStatusGroup
+    ? getStatusGroupFilterValue(activeStatusGroup)
+    : undefined;
+
+  const statusFilterOptions = getGroupedStatusFilterOptions();
 
   const filterOptions: FilterOption[] = [
     {
       key: "status",
       label: "Status",
       type: "select",
-      options: [
-        { value: "draft", label: "Draft" },
-        { value: "inspection", label: "Initial Inspection" },
-        { value: "intake", label: "Intake" },
-        { value: "assigned", label: "Assigned" },
-        { value: "diagnosis", label: "Diagnosis" },
-        { value: "awaiting_approval", label: "Awaiting Customer Approval" },
-        { value: "approved", label: "Approved" },
-        { value: "in_progress", label: "In Progress" },
-        { value: "additional_work_found", label: "Additional Work Found" },
-        { value: "paused", label: "Paused" },
-        { value: "quality_check", label: "Quality Check" },
-        { value: "completed", label: "Completed" },
-        { value: "invoiced", label: "Invoiced" },
-        { value: "closed", label: "Closed" },
-      ],
+      options: statusFilterOptions.map(({ value, label }) => ({ value, label })),
     },
     {
       key: "priority",
@@ -132,6 +124,16 @@ export default function WorkOrdersPage() {
       },
     },
     {
+      label: "Waiting",
+      value: "group_waiting",
+      filters: { status: getStatusGroupFilterValue("waiting") },
+    },
+    {
+      label: "Active",
+      value: "group_active",
+      filters: { status: getStatusGroupFilterValue("active") },
+    },
+    {
       label: "In Progress",
       value: "in_progress",
       filters: {
@@ -160,7 +162,7 @@ export default function WorkOrdersPage() {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig, groupedStatusFilter],
+    queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig, groupedStatusFilter, activeStatusGroup],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -168,7 +170,8 @@ export default function WorkOrdersPage() {
       return workordersApi.list({
         page,
         search: debouncedSearch || undefined,
-        status: advancedFilters.status || groupedStatusFilter,
+        status:
+          advancedFilters.status || statusGroupFilter || groupedStatusFilter,
         priority: advancedFilters.priority || undefined,
         created_at__gte: advancedFilters.created_at_from || undefined,
         created_at__lte: advancedFilters.created_at_to || undefined,
@@ -197,10 +200,14 @@ export default function WorkOrdersPage() {
   });
 
 
-  const handleDelete = (workOrder: any) => {
-    if (confirm(`Are you sure you want to delete work order "${workOrder.work_order_number}"? This action cannot be undone.`)) {
-      deleteMutation.mutate(workOrder.id);
-    }
+  const handleDelete = async (workOrder: any) => {
+    const ok = await confirm({
+      title: "Delete work order?",
+      description: `Delete "${workOrder.work_order_number}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (ok) deleteMutation.mutate(workOrder.id);
   };
 
   const bulkDeleteMutation = useMutation({
@@ -243,10 +250,14 @@ export default function WorkOrdersPage() {
     },
   });
 
-  const handleBulkDelete = () => {
-    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} work order(s)? This action cannot be undone.`)) {
-      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
-    }
+  const handleBulkDelete = async () => {
+    const ok = await confirm({
+      title: `Delete ${bulkSelection.selectedCount} work order(s)?`,
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete all",
+      variant: "destructive",
+    });
+    if (ok) bulkDeleteMutation.mutate(bulkSelection.selectedIds);
   };
 
   const handleBulkStatusUpdate = () => {
@@ -357,9 +368,32 @@ export default function WorkOrdersPage() {
         </Card>
       </div>
 
+      <div className="flex flex-wrap items-center gap-1.5">
+        {WORK_ORDER_STATUS_GROUPS.map((group) => (
+          <Button
+            key={group.id}
+            type="button"
+            variant={activeStatusGroup === group.id ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setActiveStatusGroup((current) => (current === group.id ? null : group.id));
+              setAdvancedFilters((prev) => {
+                const next = { ...prev };
+                delete next.status;
+                return next;
+              });
+              setPage(1);
+            }}
+          >
+            {group.label}
+          </Button>
+        ))}
+      </div>
+
       {/* Unified Toolbar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-card/50 p-2 rounded-lg border border-border shadow-sm">
-        <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-56">
             <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
@@ -394,24 +428,38 @@ export default function WorkOrdersPage() {
           </div>
 
           {/* Clear Filters (Icon only) */}
-          {(search || Object.keys(advancedFilters).length > 0) && (
+          {(search || Object.keys(advancedFilters).length > 0 || activeStatusGroup) && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setSearch("");
                 setAdvancedFilters({});
+                setActiveStatusGroup(null);
                 setPage(1);
               }}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
               title="Clear all filters"
+              aria-label="Clear all filters"
             >
               <X className="w-3.5 h-3.5" />
             </Button>
           )}
 
-          {/* Active Filter Badges */}
-          <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
+          {/* Active filter badges — visible on all breakpoints */}
+          <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto md:ml-2">
+            {activeStatusGroup && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-border text-muted-foreground font-normal border border-border">
+                Group: {getStatusGroupLabel(activeStatusGroup)}
+                <X
+                  className="w-3 h-3 cursor-pointer hover:text-destructive"
+                  onClick={() => {
+                    setActiveStatusGroup(null);
+                    setPage(1);
+                  }}
+                />
+              </Badge>
+            )}
             {Object.entries(advancedFilters).map(([key, value]) => {
               if (!value || (typeof value === 'string' && value === '')) return null;
               const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
@@ -686,7 +734,7 @@ export default function WorkOrdersPage() {
                               <Printer className="mr-2 h-3.5 w-3.5" />
                               Print Job Card
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}/diagnosis`)} className="text-xs">
+                            <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}?tab=diagnosis&panel=full`)} className="text-xs">
                               <FileText className="mr-2 h-3.5 w-3.5" />
                               View Diagnosis
                             </DropdownMenuItem>
@@ -811,6 +859,7 @@ export default function WorkOrdersPage() {
         open={showTaskTypesDialog}
         onOpenChange={setShowTaskTypesDialog}
       />
+      <ConfirmDialog />
     </div>
   );
 }
@@ -824,6 +873,7 @@ function TaskTypesDialog({
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [editing, setEditing] = useState<ServiceTaskType | null>(null);
   const [form, setForm] = useState({
     code: "",
@@ -997,8 +1047,14 @@ function TaskTypesDialog({
                             size="sm"
                             variant="ghost"
                             className="text-destructive"
-                            onClick={() => {
-                              if (confirm(`Delete task type "${taskType.name || taskType.label}"?`)) {
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: "Delete task type?",
+                                description: `Delete "${taskType.name || taskType.label}"?`,
+                                confirmLabel: "Delete",
+                                variant: "destructive",
+                              });
+                              if (ok && taskType.id) {
                                 deleteMutation.mutate(taskType.id as number);
                               }
                             }}
@@ -1016,6 +1072,7 @@ function TaskTypesDialog({
           </div>
         </div>
       </DialogContent>
+      <ConfirmDialog />
     </Dialog>
   );
 }

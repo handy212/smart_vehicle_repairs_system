@@ -11,6 +11,7 @@ import { useParams, useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -28,9 +29,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function TrainingDetailPage() {
     return (
-        <PermissionGuard permission="view_training">
+        <PermissionPageGuard permission="view_training">
             <TrainingDetailContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -133,7 +134,7 @@ function TrainingDetailContent() {
                                                 <PermissionGuard permission="manage_training">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for ${rec.staff_name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem onClick={() => setEditingEnrollment(rec)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>

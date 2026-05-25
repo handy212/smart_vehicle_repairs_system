@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
@@ -74,7 +75,7 @@ export default function MarginAnalysisPage() {
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
       {loadingJobs ? (
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <AccountingReportSkeleton compact rows={4} />
       ) : totals ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
@@ -102,8 +103,8 @@ export default function MarginAnalysisPage() {
         </CardHeader>
         <CardContent className="max-h-[420px] overflow-auto">
           {loadingJobs ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
+        <AccountingReportSkeleton compact rows={4} />
+      ) : (
             <Table>
               <TableHeader>
                 <TableRow>

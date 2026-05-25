@@ -10,6 +10,7 @@ import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,10 +36,10 @@ import Link from "next/link";
 
 export default function LeavePage() {
     return (
-        <PermissionGuard permission="view_leave">
+        <PermissionPageGuard permission="view_leave">
             <DynamicPageTitle title="Leave Management" />
             <LeaveContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -238,7 +239,7 @@ function LeaveContent() {
                                                 <PermissionGuard permission="manage_leave">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={`Actions for leave request by ${req.staff_name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem onClick={() => setEditingRequest(req)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>

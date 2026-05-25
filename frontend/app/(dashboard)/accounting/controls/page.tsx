@@ -357,7 +357,7 @@ export default function ControlPanelPage() {
                       </TableCell>
                       <TableCell className="text-sm py-2 font-medium">{log.user_name || "System"}</TableCell>
                       <TableCell className="py-2">
-                        <Badge variant={actionBadgeVariant(log.action)} className="text-[10px] capitalize">
+                        <Badge variant={actionBadgeVariant(log.action)} className="text-xs capitalize">
                           {log.action}
                         </Badge>
                       </TableCell>

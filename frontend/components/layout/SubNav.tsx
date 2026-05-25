@@ -71,6 +71,7 @@ interface SubNavItem {
   permission?: string;
   icon?: LucideIcon;
   module?: string;
+  group?: string;
 }
 
 interface SubNavProps {
@@ -258,6 +259,33 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     }
     return link;
   };
+  const renderNavItems = (variant: "mobile" | "desktop") => {
+    let lastGroup: string | undefined;
+
+    return filteredItems.map((item) => {
+      const groupHeader =
+        variant === "desktop" && !isCollapsed && item.group && item.group !== lastGroup ? (
+          <p
+            key={`group-${item.group}-${item.name}`}
+            className={cn(
+              "px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+              lastGroup !== undefined && "mt-1"
+            )}
+          >
+            {item.group}
+          </p>
+        ) : null;
+
+      if (item.group) lastGroup = item.group;
+
+      return (
+        <div key={item.name}>
+          {groupHeader}
+          {renderItem(item, variant)}
+        </div>
+      );
+    });
+  };
 
   return (
     <>
@@ -267,7 +295,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
         isPerfexTheme && "bg-card shadow-none"
       )}>
         <nav className="flex items-center gap-0 px-2 overflow-x-auto scrollbar-none">
-          {filteredItems.map((item) => renderItem(item, "mobile"))}
+          {renderNavItems("mobile")}
         </nav>
       </div>
 
@@ -287,7 +315,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
             {!isCollapsed && (
               <h2 className={cn(
                 "text-xs font-semibold uppercase tracking-wider",
-                isPerfexTheme ? "text-muted-foreground text-[10px]" : "text-muted-foreground"
+                "text-muted-foreground"
               )}>
                 {title}
               </h2>
@@ -303,7 +331,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
             </Button>
           </div>
           <nav className={isPerfexTheme ? "space-y-0" : "space-y-1"}>
-            {filteredItems.map((item) => renderItem(item, "desktop"))}
+            {renderNavItems("desktop")}
           </nav>
         </div>
       </aside>
@@ -350,27 +378,15 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
   ],
   accounting: [
-    { name: "Overview", href: "/accounting", permission: "view_accounting", icon: BarChart3 },
-    { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries", icon: BookOpen },
-    { name: "General Ledger", href: "/accounting/reports/general-ledger", permission: "view_financial_reports", icon: BookOpen },
-    { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounting", icon: Hash },
-    { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_bank_statements", icon: Landmark },
-    { name: "Balance Sheet", href: "/accounting/reports/balance-sheet", permission: "view_financial_reports", icon: Scale },
-    { name: "Profit & Loss", href: "/accounting/reports/profit-loss", permission: "view_financial_reports", icon: PieChart },
-    { name: "Management Reports", href: "/accounting/reports/management", permission: "view_financial_reports", icon: BarChart3 },
-    { name: "Margin Analysis", href: "/accounting/reports/margin-analysis", permission: "view_financial_reports", icon: Target },
-    { name: "Cost Control", href: "/accounting/reports/cost-control", permission: "view_financial_reports", icon: BarChart3 },
-    { name: "OPEX Variance", href: "/accounting/reports/opex-variance", permission: "view_budgets", icon: Wallet },
-    { name: "Trial Balance", href: "/accounting/reports/trial-balance", permission: "view_financial_reports", icon: Library },
-    { name: "Aging Report", href: "/accounting/reports/aging", permission: "view_financial_reports", icon: Clock },
-    { name: "Cash Flow", href: "/accounting/reports/cash-flow", permission: "view_financial_reports", icon: Activity },
-    { name: "Tax Report", href: "/accounting/reports/tax", permission: "view_financial_reports", icon: Percent },
-    { name: "Job Profitability", href: "/accounting/reports/job-profitability", permission: "view_financial_reports", icon: Target },
-    { name: "Expense Breakdown", href: "/accounting/reports/expense-breakdown", permission: "view_financial_reports", icon: BarChart3 },
-    { name: "Budgets", href: "/accounting/budgets", permission: "view_budgets", icon: Wallet },
-    { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_transfer_requests", icon: Repeat },
-    { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting", icon: Zap },
-    { name: "Controls & Compliance", href: "/accounting/controls", permission: "manage_accounting_periods", icon: Shield },
+    { name: "Overview", href: "/accounting", permission: "view_accounting", icon: BarChart3, group: "Overview" },
+    { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries", icon: BookOpen, group: "Ledger" },
+    { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounting", icon: Hash, group: "Ledger" },
+    { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting", icon: Zap, group: "Ledger" },
+    { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_bank_statements", icon: Landmark, group: "Banking" },
+    { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_transfer_requests", icon: Repeat, group: "Banking" },
+    { name: "Budgets", href: "/accounting/budgets", permission: "view_budgets", icon: Wallet, group: "Planning" },
+    { name: "Financial Reports", href: "/accounting/reports", permission: "view_financial_reports", icon: PieChart, group: "Reports" },
+    { name: "Controls & Compliance", href: "/accounting/controls", permission: "manage_accounting_periods", icon: Shield, group: "Governance" },
   ],
   hr: [
     { name: "Dashboard", href: "/hr", permission: "view_hr", icon: LayoutDashboard },

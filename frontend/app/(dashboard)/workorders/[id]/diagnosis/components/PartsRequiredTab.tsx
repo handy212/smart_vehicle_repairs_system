@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import {
     Package,
     Plus,
@@ -72,6 +73,7 @@ export function PartsRequiredTab({
     isDisabled = false,
 }: PartsRequiredTabProps) {
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const queryClient = useQueryClient();
     const [showAddDialog, setShowAddDialog] = useState(false);
 
@@ -281,10 +283,14 @@ export function PartsRequiredTab({
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:ring-1"
-                                                                onClick={() => {
-                                                                    if (confirm("Remove this part request?")) {
-                                                                        deleteMutation.mutate(part.id);
-                                                                    }
+                                                                onClick={async () => {
+                                                                    const ok = await confirm({
+                                                                        title: "Remove part request?",
+                                                                        description: "Remove this part request?",
+                                                                        confirmLabel: "Remove",
+                                                                        variant: "destructive",
+                                                                    });
+                                                                    if (ok) deleteMutation.mutate(part.id);
                                                                 }}
                                                                 disabled={isDisabled}
                                                                 aria-label="Remove part request"
@@ -317,6 +323,7 @@ export function PartsRequiredTab({
                     onRefresh();
                 }}
             />
+            <ConfirmDialog />
         </>
     );
 }

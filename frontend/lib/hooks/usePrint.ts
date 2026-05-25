@@ -122,13 +122,18 @@ export function usePrint() {
                     endpoint = `/billing/${documentType}s/${documentId}/pdf/`;
             }
 
+            const token = getAccessToken();
+            const headers: Record<string, string> = {
+                'X-Branch-ID': useBranchStore.getState().activeBranchId?.toString() || '',
+            };
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`,
                 {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'X-Branch-ID': useBranchStore.getState().activeBranchId?.toString() || '',
-                    },
+                    credentials: 'include',
+                    headers,
                 }
             );
 

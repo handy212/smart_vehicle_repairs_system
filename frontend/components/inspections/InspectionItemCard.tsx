@@ -139,6 +139,8 @@ export function InspectionItemCard({
                                     key={opt.value}
                                     type="button"
                                     onClick={() => onUpdate("result", opt.value)}
+                                    aria-pressed={isActive}
+                                    aria-label={`${item.name}: ${opt.label}`}
                                     className={cn(
                                         "flex flex-col items-center justify-center gap-1 py-2 rounded-lg border transition-all duration-200",
                                         isActive
@@ -201,6 +203,8 @@ export function InspectionItemCard({
                                         key={n}
                                         type="button"
                                         onClick={() => onUpdate("rating_value", n)}
+                                        aria-pressed={result.rating_value === n}
+                                        aria-label={`Rate ${n} out of 5`}
                                         className={cn(
                                             "w-8 h-8 text-[11px] font-bold rounded border transition-all duration-200",
                                             result.rating_value === n
@@ -279,6 +283,7 @@ export function InspectionItemCard({
                                 <button
                                     type="button"
                                     onClick={() => onDeletePhoto && onDeletePhoto(photo.id)}
+                                    aria-label="Delete inspection photo"
                                     className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                     <Trash2 className="w-4 h-4 text-white" />

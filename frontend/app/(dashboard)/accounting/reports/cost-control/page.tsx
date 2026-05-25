@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
-import { Loader2, Package, Wrench, BarChart3 } from "lucide-react";
+import { Package, Wrench, BarChart3 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
@@ -31,8 +33,7 @@ export default function CostControlReportPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["cost-control", startDate, endDate, activeBranchId],
     queryFn: () =>
-      accountingApi.getCostControlReport(startDate, endDate, activeBranchId || undefined),
-  });
+      accountingApi.getCostControlReport(startDate, endDate, activeBranchId || undefined)});
 
   const expense = (data as { expense_breakdown?: { categories?: Record<string, ExpenseCategory>; total_expenses?: number } })
     ?.expense_breakdown;
@@ -42,8 +43,7 @@ export default function CostControlReportPage() {
   const icons: Record<string, typeof Package> = {
     parts: Package,
     labor: Wrench,
-    overhead: BarChart3,
-  };
+    overhead: BarChart3};
 
   const buildExportPayload = (): TableExportPayload | null => {
     if (returnJobs.length === 0) return null;
@@ -59,8 +59,7 @@ export default function CostControlReportPage() {
         j.is_warranty_rework ? "Yes" : "No",
         j.cost_variance ?? 0,
       ]),
-      currencyColumnIndexes: [4],
-    };
+      currencyColumnIndexes: [4]};
   };
 
   return (
@@ -79,7 +78,7 @@ export default function CostControlReportPage() {
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
       {isLoading ? (
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <AccountingReportSkeleton compact rows={4} />
       ) : (
         <>
           <p className="text-sm font-medium">

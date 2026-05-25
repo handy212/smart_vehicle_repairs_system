@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,10 +30,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function RecruitmentPage() {
     return (
-        <PermissionGuard permission="view_recruitment">
+        <PermissionPageGuard permission="view_recruitment">
             <DynamicPageTitle title="Recruitment" />
             <RecruitmentContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -118,7 +119,7 @@ function JobOpeningsList() {
                             <PermissionGuard permission="manage_recruitment">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for job ${job.title}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => setEditingJob(job)}>Edit</DropdownMenuItem>
@@ -313,7 +314,7 @@ function ApplicantsList() {
                                     <PermissionGuard permission="manage_recruitment">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for applicant ${app.full_name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onClick={() => router.push(`/hr/recruitment/applicants/${app.id}`)}><ArrowRight className="h-4 w-4 mr-2" />Details</DropdownMenuItem>

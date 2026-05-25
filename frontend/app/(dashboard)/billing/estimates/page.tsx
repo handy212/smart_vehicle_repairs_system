@@ -769,6 +769,7 @@ export default function EstimatesPage() {
                               setOpenMenuId(openMenuId === estimate.id ? null : estimate.id);
                             }}
                             className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            aria-label={`Actions for estimate ${estimate.estimate_number || estimate.id}`}
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
                           </Button>

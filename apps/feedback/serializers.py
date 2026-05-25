@@ -15,7 +15,10 @@ class FeedbackSerializer(serializers.ModelSerializer):
             'name', 'email', 'phone', 
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'status', 'status_display', 'internal_notes',
+            'branch', 'branch_name', 'created_at', 'updated_at',
+        ]
 
     def validate(self, data):
         """

@@ -1,5 +1,9 @@
 "use client";
 
+import { cn } from "@/lib/utils/cn";
+import { ACCOUNTING_TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
+
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -352,12 +356,12 @@ export default function ChartOfAccountsPage() {
                                     <Table>
                                         <TableHeader className="bg-muted/10">
                                             <TableRow className="hover:bg-transparent border-none">
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Code</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Type</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Balance</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
+                                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Code</TableHead>
+                                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Name</TableHead>
+                                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Type</TableHead>
+                                                <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Balance</TableHead>
+                                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</TableHead>
+                                                <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -373,7 +377,7 @@ export default function ChartOfAccountsPage() {
                                                         {account.balance !== undefined ? formatCurrency(account.balance) : "-"}
                                                     </TableCell>
                                                     <TableCell className="px-4 py-2">
-                                                        <Badge variant="outline" className={`px-2 py-0 text-[10px] ${account.is_active
+                                                        <Badge variant="outline" className={`px-2 py-0 text-xs ${account.is_active
                                                             ? "border-success/20 bg-success/10 text-success"
                                                             : "border-border bg-muted text-muted-foreground"
                                                             }`}>

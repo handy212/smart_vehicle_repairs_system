@@ -7,6 +7,7 @@ import { User, LogOut } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils/cn";
 import { authApi } from "@/lib/api/auth";
+import { useAuthStore } from "@/store/authStore";
 import { Badge } from "@/components/ui/badge";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useBranding } from "@/lib/hooks/useBranding";
@@ -31,6 +32,7 @@ interface PortalNavbarProps {
 
 export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSidebarCollapsed, user }: PortalNavbarProps) {
   const router = useRouter();
+  const logout = useAuthStore((s) => s.logout);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [logoLoadError, setLogoLoadError] = useState(false);
@@ -53,9 +55,12 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
   const handleLogout = async () => {
     try {
       await authApi.logout();
+      logout();
       router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);
+      logout();
+      router.push("/login");
     }
   };
 

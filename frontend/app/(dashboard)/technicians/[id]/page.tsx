@@ -28,13 +28,14 @@ import { ShiftSchedule } from "@/components/technicians/ShiftSchedule";
 import { JobHistory } from "@/components/technicians/JobHistory";
 import { Certifications } from "@/components/technicians/Certifications";
 import { PerformanceMetrics } from "@/components/technicians/PerformanceMetrics";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function TechnicianProfilePage() {
     return (
-        <PermissionGuard permission="view_technicians">
+        <PermissionPageGuard permission="view_technicians">
             <TechnicianProfileContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

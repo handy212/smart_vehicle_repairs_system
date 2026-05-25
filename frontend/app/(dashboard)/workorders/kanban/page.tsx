@@ -39,30 +39,42 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInView } from "react-intersection-observer";
 
-import { WORK_ORDER_STATUSES } from "@/lib/utils/workorder-status";
+import {
+  WORK_ORDER_STATUS_GROUPS,
+  getDefaultStatusForGroup,
+  getStatusGroupForStatus,
+  groupWorkOrdersByStatusGroup,
+  type WorkOrderStatusGroupId,
+} from "@/lib/utils/workorder-status-groups";
+import { getStatusLabel, getStatusVariant } from "@/lib/utils/workorder-status";
+
+type KanbanGroup = (typeof WORK_ORDER_STATUS_GROUPS)[number];
 
 interface KanbanColumnProps {
-  status: typeof WORK_ORDER_STATUSES[0];
+  group: KanbanGroup;
   workOrders: WorkOrder[];
 }
 
-function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
+function KanbanColumn({ group, workOrders }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useSortable({
-    id: status.value,
+    id: group.id,
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[280px] max-w-[280px] bg-muted/50 rounded-lg p-2.5 border ${isOver ? "border-primary bg-primary/5" : "border-border"
+      className={`min-w-[300px] max-w-[300px] bg-muted/50 rounded-lg p-2.5 border ${isOver ? "border-primary bg-primary/5" : "border-border"
         } transition-all flex flex-col`}
     >
-      <div className="flex justify-between items-center mb-3 p-2 bg-card rounded border border-border shadow-sm">
-        <h6 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{status.label}</h6>
+      <div className="flex justify-between items-center mb-1 p-2 bg-card rounded border border-border shadow-sm">
+        <h6 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{group.label}</h6>
         <div className="px-2 h-5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-[10px] font-bold">
           {workOrders.length}
         </div>
       </div>
+      {"description" in group && group.description && (
+        <p className="text-[10px] text-muted-foreground px-2 mb-2 leading-snug">{group.description}</p>
+      )}
 
       <SortableContext
         items={workOrders.map((wo) => wo.id.toString())}
@@ -131,7 +143,9 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
           {workOrder.work_order_number}
         </Link>
         <div className="flex flex-col items-end gap-1">
-
+          <Badge variant={getStatusVariant(workOrder.status) as any} className="text-[9px] px-1.5 h-4 font-bold tracking-tight capitalize">
+            {getStatusLabel(workOrder.status)}
+          </Badge>
           <Badge variant={getPriorityVariant(workOrder.priority) as any} className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight">
             {workOrder.priority}
           </Badge>
@@ -333,28 +347,13 @@ export default function WorkOrderKanbanPage() {
     },
   });
 
-  // Group work orders by status
-  const workOrdersByStatus = useMemo(() => {
-    const grouped: Record<string, WorkOrder[]> = {};
-    WORK_ORDER_STATUSES.forEach((status) => {
-      grouped[status.value] = [];
-    });
-
+  // Group work orders by status group
+  const workOrdersByGroup = useMemo(() => {
+    const allWorkOrders: WorkOrder[] = [];
     workOrdersData?.pages.forEach((page) => {
-      page.results?.forEach((wo) => {
-        if (grouped[wo.status]) {
-          grouped[wo.status].push(wo);
-        } else {
-          // Handle unknown statuses
-          if (!grouped["other"]) {
-            grouped["other"] = [];
-          }
-          grouped["other"].push(wo);
-        }
-      });
+      page.results?.forEach((wo) => allWorkOrders.push(wo));
     });
-
-    return grouped;
+    return groupWorkOrdersByStatusGroup(allWorkOrders);
   }, [workOrdersData]);
 
   // Find active work order for overlay
@@ -379,7 +378,7 @@ export default function WorkOrderKanbanPage() {
     if (!over) return;
 
     const workOrderId = parseInt(active.id as string);
-    const newStatus = over.id as string;
+    const targetGroupId = over.id as WorkOrderStatusGroupId;
 
     // Find the work order
     let workOrder: WorkOrder | undefined;
@@ -394,10 +393,12 @@ export default function WorkOrderKanbanPage() {
     }
     if (!workOrder) return;
 
-    // Don't update if status hasn't changed
+    const currentGroup = getStatusGroupForStatus(workOrder.status);
+    if (currentGroup === targetGroupId) return;
+
+    const newStatus = getDefaultStatusForGroup(targetGroupId);
     if (workOrder.status === newStatus) return;
 
-    // Optimistically update instantly
     updateStatusMutation.mutate({ id: workOrderId, status: newStatus });
   };
 
@@ -415,8 +416,8 @@ export default function WorkOrderKanbanPage() {
           </div>
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "70vh" }}>
-          {WORK_ORDER_STATUSES.map((status) => (
-            <div key={status.value} className="min-w-[280px] max-w-[280px] bg-muted/50 rounded-lg p-2.5 border border-border flex flex-col">
+          {WORK_ORDER_STATUS_GROUPS.map((group) => (
+            <div key={group.id} className="min-w-[300px] max-w-[300px] bg-muted/50 rounded-lg p-2.5 border border-border flex flex-col">
               <div className="flex justify-between items-center mb-3 p-2 bg-card rounded border border-border shadow-sm">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-5 w-8 rounded-full" />
@@ -553,11 +554,11 @@ export default function WorkOrderKanbanPage() {
         modifiers={[restrictToWindowEdges, snapCenterToCursor]}
       >
         <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "70vh" }}>
-          {WORK_ORDER_STATUSES.map((status) => (
+          {WORK_ORDER_STATUS_GROUPS.map((group) => (
             <KanbanColumn
-              key={status.value}
-              status={status}
-              workOrders={workOrdersByStatus[status.value] || []}
+              key={group.id}
+              group={group}
+              workOrders={workOrdersByGroup[group.id] || []}
             />
           ))}
         </div>

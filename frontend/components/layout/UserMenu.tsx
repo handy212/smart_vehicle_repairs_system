@@ -69,10 +69,13 @@ export function UserMenu() {
         }
     };
 
-    const handleLogout = () => {
-        authApi.logout();
-        logout();
-        router.push("/login");
+    const handleLogout = async () => {
+        try {
+            await authApi.logout();
+        } finally {
+            logout();
+            router.push("/login");
+        }
     };
 
     if (!user) return null;

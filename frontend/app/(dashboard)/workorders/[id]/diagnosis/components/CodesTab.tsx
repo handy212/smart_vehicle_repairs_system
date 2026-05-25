@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { Plus, Edit, Trash2, Search, X, AlertTriangle, Info, AlertCircle as AlertCircleIcon, Code } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -56,6 +57,7 @@ function inferCodeType(codeNumber: string): DiagnosticCode["code_type"] {
 
 export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTabProps) {
   const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCode, setEditingCode] = useState<DiagnosticCode | null>(null);
@@ -231,10 +233,14 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            onClick={() => {
-                              if (confirm("Delete this code?")) {
-                                deleteMutation.mutate(code.id);
-                              }
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: "Delete code?",
+                                description: "Delete this diagnostic code?",
+                                confirmLabel: "Delete",
+                                variant: "destructive",
+                              });
+                              if (ok) deleteMutation.mutate(code.id);
                             }}
                             disabled={isDisabled}
                             aria-label="Delete diagnostic code"
@@ -283,6 +289,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
         }}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
+      <ConfirmDialog />
     </div>
   );
 }

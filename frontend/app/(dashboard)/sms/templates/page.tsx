@@ -1,6 +1,6 @@
 "use client";
 
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { TemplateManager } from "@/components/sms/TemplateManager";
 import { useTheme } from "@/lib/hooks/useTheme";
 
@@ -9,7 +9,7 @@ export default function SMSTemplatesPage() {
   const isPerfex = activeTheme.startsWith("perfex");
 
   return (
-    <PermissionGuard permission="send_notifications">
+    <PermissionPageGuard permission="send_notifications">
       <div className={isPerfex ? "space-y-4 p-4" : "space-y-6 p-4 sm:p-6 max-w-[1600px] mx-auto"}>
         <div>
           <h1 className={isPerfex ? "text-base font-semibold text-foreground" : "text-2xl font-bold text-foreground tracking-tight"}>
@@ -21,6 +21,6 @@ export default function SMSTemplatesPage() {
         </div>
         <TemplateManager />
       </div>
-    </PermissionGuard>
+    </PermissionPageGuard>
   );
 }

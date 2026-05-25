@@ -3,9 +3,9 @@ URL configuration for accounts app
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+from rest_framework_simplejwt.views import TokenVerifyView
 from .views import UserViewSet, GoogleAuthView, ManualRegistrationView
-from .recaptcha_views import RecaptchaTokenObtainPairView
+from .jwt_views import CookieTokenObtainPairView, CookieTokenRefreshView, LogoutView
 from .two_factor_views import TwoFactorViewSet
 from .admin_api_views import (
     SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet,
@@ -32,9 +32,10 @@ admin_router.register(r'modules', SystemModuleViewSet, basename='system-module')
 
 urlpatterns = [
     # JWT Authentication (with reCAPTCHA support)
-    path('token/', RecaptchaTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/', CookieTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('logout/', LogoutView.as_view(), name='token_logout'),
     
     # User management
     path('', include(router.urls)),

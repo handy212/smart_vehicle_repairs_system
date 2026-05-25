@@ -10,6 +10,7 @@ import { Plus, Filter, Pencil, Trash2, DollarSign, Percent, User, Building2 } fr
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,7 @@ import { Check } from "lucide-react";
 
 export default function SalaryComponentsPage() {
     return (
-        <PermissionGuard permission="view_payroll">
+        <PermissionPageGuard permission="view_payroll">
             <DynamicPageTitle title="Salary Components" />
             <Tabs defaultValue="components">
                 <div className="space-y-4">
@@ -54,7 +55,7 @@ export default function SalaryComponentsPage() {
                     </TabsContent>
                 </div>
             </Tabs>
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -119,7 +120,7 @@ function SalaryComponentsContent() {
                                         <TableCell className="px-4 py-2 text-sm text-right font-mono">{comp.calculation_type === "fixed" ? parseFloat(comp.amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 }) : `${comp.percentage}%`}</TableCell>
                                         <TableCell className="px-4 py-2"><Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 border shadow-none", comp.is_taxable ? "bg-warning/10 text-amber-700 border-warning/20" : "bg-gray-100 text-gray-600 border-gray-200")}>{comp.is_taxable ? "Taxable" : "Non-taxable"}</Badge></TableCell>
                                         <TableCell className="px-4 py-2"><Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 border shadow-none", comp.is_active ? "bg-success/10 text-green-700 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200")}>{comp.is_active ? "Active" : "Inactive"}</Badge></TableCell>
-                                        <TableCell className="px-4 py-2 text-right"><PermissionGuard permission="manage_payroll"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditItem(comp)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteMut.mutate(comp.id)} disabled={deleteMut.isPending}><Trash2 className="h-3.5 w-3.5" /></Button></div></PermissionGuard></TableCell>
+                                        <TableCell className="px-4 py-2 text-right"><PermissionGuard permission="manage_payroll"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditItem(comp)} aria-label={`Edit ${comp.name}`}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteMut.mutate(comp.id)} disabled={deleteMut.isPending} aria-label={`Delete ${comp.name}`}><Trash2 className="h-3.5 w-3.5" /></Button></div></PermissionGuard></TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">No salary components configured</TableCell></TableRow>
@@ -184,7 +185,7 @@ function AssignmentsContent() {
                                         <TableCell className="px-4 py-2"><Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", a.component_type === "allowance" ? "bg-success/10 text-green-700" : "bg-destructive/10 text-destructive")}>{a.component_type}</Badge></TableCell>
                                         <TableCell className="px-4 py-2 text-sm text-right font-mono">{parseFloat(a.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                         <TableCell className="px-4 py-2"><Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 border shadow-none", a.is_active ? "bg-success/10 text-green-700" : "bg-gray-100 text-gray-600")}>{a.is_active ? "Active" : "Inactive"}</Badge></TableCell>
-                                        <TableCell className="px-4 py-2 text-right"><PermissionGuard permission="manage_payroll"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditItem(a)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteMut.mutate(a.id)} disabled={deleteMut.isPending}><Trash2 className="h-3.5 w-3.5" /></Button></div></PermissionGuard></TableCell>
+                                        <TableCell className="px-4 py-2 text-right"><PermissionGuard permission="manage_payroll"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditItem(a)} aria-label={`Edit assignment for ${a.employee_name}`}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteMut.mutate(a.id)} disabled={deleteMut.isPending} aria-label={`Delete assignment for ${a.employee_name}`}><Trash2 className="h-3.5 w-3.5" /></Button></div></PermissionGuard></TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">No assignments found</TableCell></TableRow>

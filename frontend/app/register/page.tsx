@@ -20,6 +20,7 @@ import { Car, Eye, EyeOff, MoveLeft, Phone, Building2 } from "lucide-react";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
+import { getPostLoginPath } from "@/lib/utils/post-login-redirect";
 
 const registerSchema = z.object({
     first_name: z.string().min(2, "First name must be at least 2 characters"),
@@ -181,10 +182,10 @@ export default function RegisterPage() {
             });
 
             // Login user
-            setTokens(authData.access, authData.refresh);
+            setTokens(authData.access);
             setUser(authData.user);
 
-            router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");
+            router.push(getPostLoginPath(authData.user.role));
         } catch (err: unknown) {
             console.error("Verification error:", err);
             // Extract meaningful error message
@@ -285,7 +286,7 @@ export default function RegisterPage() {
                                 userData={regData.user_data}
                                 onSuccess={(authData) => {
                                     setUser(authData.user);
-                                    router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");
+                                    router.push(getPostLoginPath(authData.user.role));
                                 }}
                                 onCancel={() => setRegData(null)}
                             />
@@ -458,7 +459,7 @@ export default function RegisterPage() {
                                                 <GoogleLoginButton
                                                     onSuccess={(data) => {
                                                         setUser(data.user);
-                                                        router.push(data.user.role === "customer" ? "/portal" : "/dashboard");
+                                                        router.push(getPostLoginPath(data.user.role));
                                                     }}
                                                     onRegistrationRequired={(data) => setRegData(data)}
                                                     onError={(msg) => setError(msg)}

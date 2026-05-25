@@ -15,7 +15,7 @@ import {
     Sparkles, Paperclip, Clock, Calendar, MoreVertical,
     CheckCircle2, History
 } from 'lucide-react';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PermissionPageGuard } from '@/components/auth/PermissionPageGuard';
 import smsApi, { SMSRecipient, SMSHistoryItem, SMSTemplate } from '@/services/sms';
 import { AIAssistDialog } from '@/components/sms/AIAssistDialog';
 import { useQuery } from '@tanstack/react-query';
@@ -240,7 +240,7 @@ export default function SMSConsolePage() {
     };
 
     return (
-        <PermissionGuard permission="send_notifications">
+        <PermissionPageGuard permission="send_notifications">
             <div className="space-y-4">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
@@ -647,7 +647,7 @@ export default function SMSConsolePage() {
                 mode="sms"
                 onUseSuggestion={(text) => setMessage(text)}
             />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

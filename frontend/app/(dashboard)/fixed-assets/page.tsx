@@ -24,7 +24,7 @@ import {
 import { useState } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { format } from "date-fns";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
 import {
     DropdownMenu,
@@ -36,9 +36,9 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export default function FixedAssetsListPage() {
     return (
-        <PermissionGuard permission="view_assets">
+        <PermissionPageGuard permission="view_assets">
             <FixedAssetsContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

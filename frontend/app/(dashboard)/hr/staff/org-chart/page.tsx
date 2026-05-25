@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { hrApi } from "@/lib/api/hr";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,7 +25,7 @@ interface OrgNode {
 
 export default function OrgChartPage() {
     return (
-        <PermissionGuard permission="view_staff">
+        <PermissionPageGuard permission="view_staff">
             <DynamicPageTitle title="Interactive Org Chart" />
             <div className="space-y-4">
                 <StaffPageHeader
@@ -44,7 +44,7 @@ export default function OrgChartPage() {
                     </CardContent>
                 </Card>
             </div>
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, FileText, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/hooks/usePermissions";
@@ -64,9 +64,9 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function EditFixedAssetPage({ params }: { params: Promise<{ id: string }> }) {
     return (
-        <PermissionGuard permission="edit_assets">
+        <PermissionPageGuard permission="edit_assets">
             <EditFixedAssetContent params={params} />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

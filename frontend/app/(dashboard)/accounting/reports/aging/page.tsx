@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -10,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { useState } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Download, Loader2, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
     Table,
@@ -222,9 +224,7 @@ export default function AgingReportPage() {
 
                 <TabsContent value={activeTab} className="space-y-4">
                     {loading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <Loader2 className="w-8 h-8 animate-spin" />
-                        </div>
+                        <AccountingReportSkeleton />
                     ) : showSupplierAp ? (
                         supplierRows.length === 0 ? (
                             <div className="p-4 text-muted-foreground">No open supplier balances.</div>

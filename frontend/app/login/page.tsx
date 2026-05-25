@@ -21,6 +21,7 @@ import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import Script from "next/script";
 import { useTheme } from "@/lib/hooks/useTheme";
+import { getPostLoginPath } from "@/lib/utils/post-login-redirect";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -153,18 +154,14 @@ export default function LoginPage() {
       }
 
       // Store tokens (localStorage + cookie for middleware)
-      setTokens(authData.access!, authData.refresh!);
+      setTokens(authData.access!);
 
       // Update global state
       const user = await authApi.getCurrentUser();
       setUser(user);
 
       // Redirect based on role
-      if (user.role === "customer") {
-        router.push("/portal");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push(getPostLoginPath(user.role));
     } catch (err: unknown) {
       console.error("Login error:", err);
 
@@ -201,18 +198,14 @@ export default function LoginPage() {
       const authData = await authApi.verify2FALogin(twoFactorData.temp_token, twoFactorCode);
 
       // Store tokens
-      setTokens(authData.access!, authData.refresh!);
+      setTokens(authData.access!);
 
       // Update global state
       setUser(authData.user || await authApi.getCurrentUser());
 
       // Redirect based on role
       const role = authData.user?.role || (await authApi.getCurrentUser()).role;
-      if (role === "customer") {
-        router.push("/portal");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push(getPostLoginPath(role));
     } catch (err: unknown) {
       console.error("2FA error:", err);
       const axiosError = err as { response?: { data?: Record<string, unknown> } };
@@ -327,7 +320,7 @@ export default function LoginPage() {
                     userData={regData.user_data}
                     onSuccess={(authData) => {
                       setUser(authData.user);
-                      router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");
+                      router.push(getPostLoginPath(authData.user.role));
                     }}
                     onCancel={() => setRegData(null)}
                   />
@@ -477,7 +470,7 @@ export default function LoginPage() {
                     <GoogleLoginButton
                       onSuccess={(data) => {
                         setUser(data.user);
-                        router.push(data.user.role === "customer" ? "/portal" : "/dashboard");
+                        router.push(getPostLoginPath(data.user.role));
                       }}
                       onRegistrationRequired={(data) => setRegData(data)}
                       onError={(msg) => setError(msg)}

@@ -7,7 +7,7 @@ import {
     type AssetAcquisitionRequest,
     type AssetAcquisitionStatus,
 } from "@/lib/api/fixed-assets";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +29,9 @@ function statusBadge(status: AssetAcquisitionStatus) {
 
 export default function AcquisitionsListPage() {
     return (
-        <PermissionGuard permission="view_assets">
+        <PermissionPageGuard permission="view_assets">
             <AcquisitionsListContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

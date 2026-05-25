@@ -10,9 +10,9 @@ from django.views.generic import TemplateView, RedirectView
 from django.views.static import serve as static_serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from .views import (
-    api_root, HomePageView, test_fcm_view, firebase_messaging_sw, 
-    dashboard_view, health_check, logout_view, search_view, staff_register_view,
-    profile_view
+    api_root, HomePageView, test_fcm_view, firebase_messaging_sw,
+    dashboard_view, health_check, health_live, health_ready, logout_view,
+    search_view, staff_register_view, profile_view,
 )
 from apps.mobile_views import mobile_search_api
 # Import customer auth views
@@ -39,6 +39,8 @@ urlpatterns = [
     # API Root
     path('api/', api_root, name='api-root'),
     path('api/health/', health_check, name='api-health'),
+    path('api/health/live/', health_live, name='api-health-live'),
+    path('api/health/ready/', health_ready, name='api-health-ready'),
     
     # Global Search API (accessible via /api/search/ for frontend proxy routing)
     path('api/search/', mobile_search_api, name='api-search'),

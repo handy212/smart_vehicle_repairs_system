@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import path from "path";
 import withPWAInit from "@ducanh2912/next-pwa";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Get API URL from environment or use default
 const getApiHost = () => {
@@ -98,4 +99,18 @@ const withPWA = withPWAInit({
   },
 });
 
-export default withPWA(nextConfig);
+const sentryEnabled = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
+
+const finalConfig = sentryEnabled
+  ? withSentryConfig(withPWA(nextConfig), {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      disableLogger: true,
+      automaticVercelMonitors: false,
+      telemetry: false,
+    })
+  : withPWA(nextConfig);
+
+export default finalConfig;

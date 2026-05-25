@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
+import { TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
 
@@ -67,7 +68,7 @@ export function DataTable<T>({
                                 <TableHead
                                     key={index}
                                     className={cn(
-                                        "px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground select-none",
+                                        TABLE_HEAD_CLASS,
                                         col.sortable && "cursor-pointer hover:bg-muted/50 hover:bg-muted/50",
                                         col.className
                                     )}

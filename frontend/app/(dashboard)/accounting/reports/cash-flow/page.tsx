@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -8,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, startOfYear } from "date-fns";
 import { useState } from "react";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
@@ -38,8 +40,7 @@ type ExportCell = string | number;
 function ActivitySection({
     title,
     data,
-    formatCurrency,
-}: {
+    formatCurrency}: {
     title: string;
     data: CashFlowActivity;
     formatCurrency: (value: number) => string;
@@ -73,8 +74,7 @@ export default function CashFlowPage() {
 
     const { data: report, isLoading, isError } = useQuery({
         queryKey: ["accounting", "cash-flow", startDate, endDate],
-        queryFn: () => accountingApi.getCashFlowStatement(startDate, endDate) as Promise<CashFlowReport>,
-    });
+        queryFn: () => accountingApi.getCashFlowStatement(startDate, endDate) as Promise<CashFlowReport>});
 
     const handleExportCSV = () => {
         if (!report) return;
@@ -164,8 +164,7 @@ export default function CashFlowPage() {
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
             companyName: COMPANY_NAME,
-            currencySymbol,
-        });
+            currencySymbol});
     };
 
     return (
@@ -207,10 +206,8 @@ export default function CashFlowPage() {
             </div>
 
             {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                </div>
-            ) : isError || !report ? (
+                <AccountingReportSkeleton />
+      ) : isError || !report ? (
                 <div className="p-4 text-destructive">Error loading report</div>
             ) : (
                 <Card>

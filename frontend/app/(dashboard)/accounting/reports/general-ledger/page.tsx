@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
@@ -9,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 import type { TableExportPayload } from "@/lib/utils/report-export";
@@ -36,9 +37,7 @@ export default function GeneralLedgerPage() {
     queryFn: () =>
       accountingApi.getGeneralLedger({
         start_date: startDate,
-        end_date: endDate,
-      }),
-  });
+        end_date: endDate})});
 
   const results = (data as { results?: LedgerLine[] })?.results ?? (data as LedgerLine[]) ?? [];
 
@@ -56,8 +55,7 @@ export default function GeneralLedgerPage() {
         Number(line.debit) > 0 ? Number(line.debit) : "",
         Number(line.credit) > 0 ? Number(line.credit) : "",
       ]),
-      currencyColumnIndexes: [3, 4],
-    };
+      currencyColumnIndexes: [3, 4]};
   };
 
   return (
@@ -81,7 +79,7 @@ export default function GeneralLedgerPage() {
           <CardTitle className="text-base">Transactions</CardTitle>
         </CardHeader>
         <CardContent className="max-h-[600px] overflow-auto">
-          {isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
+          {isLoading && <AccountingReportSkeleton compact rows={5} />}
           {isError && (
             <p className="text-sm text-destructive">
               Failed to load ledger.{" "}

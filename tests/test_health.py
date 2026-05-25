@@ -1,0 +1,29 @@
+"""Health endpoint tests."""
+import pytest
+from django.test import Client
+
+
+@pytest.mark.django_db
+def test_health_live():
+    client = Client()
+    response = client.get('/api/health/live/')
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+
+
+@pytest.mark.django_db
+def test_health_ready():
+    client = Client()
+    response = client.get('/api/health/ready/')
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['status'] == 'ok'
+    assert payload['checks']['database'] == 'ok'
+
+
+@pytest.mark.django_db
+def test_health_legacy_alias():
+    client = Client()
+    response = client.get('/api/health/')
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'

@@ -10,6 +10,7 @@ import { ClipboardCheck, User, Calendar, Plus, ArrowRight, BarChart, MoreHorizon
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -28,10 +29,10 @@ import { toast } from "sonner";
 
 export default function PerformancePage() {
     return (
-        <PermissionGuard permission="view_performance">
+        <PermissionPageGuard permission="view_performance">
             <DynamicPageTitle title="Performance" />
             <PerformanceContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -106,7 +107,7 @@ function PerformanceContent() {
                                             <PermissionGuard permission="manage_performance">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for review of ${review.staff_name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={() => router.push(`/hr/performance/${review.id}`)}><ArrowRight className="h-4 w-4 mr-2" />Details</DropdownMenuItem>

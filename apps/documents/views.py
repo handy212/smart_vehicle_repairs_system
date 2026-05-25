@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.throttles import ShareAccessCodeRateThrottle
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse, HttpResponse
@@ -796,7 +797,10 @@ class DocumentShareViewSet(viewsets.ModelViewSet):
         )
         
         # Return document details and file URL
-        document_serializer = DocumentDetailSerializer(share.document)
+        document_serializer = DocumentDetailSerializer(
+            share.document,
+            context={'request': request},
+        )
         return Response({
             'document': document_serializer.data,
             'share_info': {
@@ -805,7 +809,13 @@ class DocumentShareViewSet(viewsets.ModelViewSet):
             }
         })
     
-    @action(detail=False, methods=['post'], url_path='(?P<token>[^/.]+)/verify_code', permission_classes=[AllowAny])
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='(?P<token>[^/.]+)/verify_code',
+        permission_classes=[AllowAny],
+        throttle_classes=[ShareAccessCodeRateThrottle],
+    )
     def verify_code(self, request, token=None):
         """Verify access code for share link"""
         share = get_object_or_404(DocumentShare, share_token=token)
@@ -838,7 +848,10 @@ class DocumentShareViewSet(viewsets.ModelViewSet):
         )
         
         # Return document details
-        document_serializer = DocumentDetailSerializer(share.document)
+        document_serializer = DocumentDetailSerializer(
+            share.document,
+            context={'request': request},
+        )
         return Response({
             'document': document_serializer.data,
             'share_info': {
@@ -906,7 +919,10 @@ class DocumentSignatureViewSet(viewsets.ModelViewSet):
             })
         
         # Return signature request details
-        document_serializer = DocumentDetailSerializer(signature.document)
+        document_serializer = DocumentDetailSerializer(
+            signature.document,
+            context={'request': request},
+        )
         return Response({
             'signature_request': {
                 'signer_name': signature.signer_name,

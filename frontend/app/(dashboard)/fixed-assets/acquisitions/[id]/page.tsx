@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/fixed-assets";
 import { documentsApi } from "@/lib/api/documents";
 import { hrApi, type StaffListItem } from "@/lib/api/hr";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +34,9 @@ import type { Document } from "@/lib/api/documents";
 
 export default function AcquisitionDetailPage() {
     return (
-        <PermissionGuard permission="view_assets">
+        <PermissionPageGuard permission="view_assets">
             <AcquisitionDetailContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

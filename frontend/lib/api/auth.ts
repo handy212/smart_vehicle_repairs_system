@@ -57,15 +57,21 @@ export interface UpdateProfileData {
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await apiClient.post("/auth/token/", credentials);
+    const response = await apiClient.post("/auth/token/", credentials, {
+      withCredentials: true,
+    });
     return response.data;
   },
 
   verify2FALogin: async (tempToken: string, code: string): Promise<AuthResponse> => {
-    const response = await apiClient.post("/auth/2fa/verify_login/", {
-      temp_token: tempToken,
-      code,
-    });
+    const response = await apiClient.post(
+      "/auth/2fa/verify_login/",
+      {
+        temp_token: tempToken,
+        code,
+      },
+      { withCredentials: true }
+    );
     return response.data;
   },
 
@@ -84,8 +90,12 @@ export const authApi = {
     return response.data;
   },
 
-  refreshToken: async (refresh: string): Promise<{ access: string }> => {
-    const response = await apiClient.post("/auth/token/refresh/", { refresh });
+  refreshToken: async (): Promise<{ access: string; refresh?: string }> => {
+    const response = await apiClient.post(
+      "/auth/token/refresh/",
+      {},
+      { withCredentials: true, skipAuth: true, skipAuthRefresh: true }
+    );
     return response.data;
   },
 
@@ -126,16 +136,23 @@ export const authApi = {
     },
 
     verify: async (data: any): Promise<any> => {
-      const response = await apiClient.post("/auth/register/verify/", data);
+      const response = await apiClient.post("/auth/register/verify/", data, {
+        withCredentials: true,
+      });
       return response.data;
     }
   },
 
-  logout: () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+  logout: async (): Promise<void> => {
+    if (typeof window === "undefined") return;
+    try {
+      await apiClient.post(
+        "/auth/logout/",
+        {},
+        { withCredentials: true, skipAuth: true, skipAuthRefresh: true }
+      );
+    } catch {
+      // Still clear local state if API is unreachable
     }
   },
 };
-

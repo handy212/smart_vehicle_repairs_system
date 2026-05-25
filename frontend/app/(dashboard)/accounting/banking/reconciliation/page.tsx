@@ -1,5 +1,9 @@
 "use client";
 
+import { cn } from "@/lib/utils/cn";
+import { ACCOUNTING_TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
+
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi, type Account, type BankStatement } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,12 +120,12 @@ export default function BankReconciliationPage() {
                     <Table>
                         <TableHeader className="bg-muted/50 border-y border-border">
                             <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Statement Date</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Bank Account</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Opening Balance</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Closing Balance</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
+                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Statement Date</TableHead>
+                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Bank Account</TableHead>
+                                <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Opening Balance</TableHead>
+                                <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Closing Balance</TableHead>
+                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</TableHead>
+                                <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -156,11 +160,11 @@ export default function BankReconciliationPage() {
                                         </TableCell>
                                         <TableCell className="px-4 py-2">
                                             {statement.reconciled ? (
-                                                <Badge variant="outline" className="text-[10px] bg-success/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                                                <Badge variant="outline" className="text-xs bg-success/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
                                                     <Check className="w-3 h-3 mr-1" /> Reconciled
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="text-[10px] bg-warning/10 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+                                                <Badge variant="outline" className="text-xs bg-warning/10 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
                                                     <AlertCircle className="w-3 h-3 mr-1" /> Pending
                                                 </Badge>
                                             )}

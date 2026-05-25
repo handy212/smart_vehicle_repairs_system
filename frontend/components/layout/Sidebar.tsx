@@ -24,6 +24,7 @@ const navigationGroups = [
   {
     name: "Operations",
     items: [
+      { name: "Vehicle Check-in", href: "/check-in", icon: PremiumIcons.ClipboardList, permission: "create_workorders" },
       { name: "Customers", href: "/customers", icon: PremiumIcons.Users, permission: "view_customers" },
       { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles" },
       { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments" },

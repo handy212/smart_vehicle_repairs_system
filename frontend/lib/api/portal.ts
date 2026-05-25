@@ -73,7 +73,25 @@ export interface PortalDashboardStats {
   total_vehicles: number;
   upcoming_appointments_count: number;
   pending_invoices_count: number;
+  pending_estimates_count?: number;
   total_spent: number;
+}
+
+export type PortalActionType =
+  | "approve_estimate"
+  | "pay_invoice"
+  | "confirm_appointment"
+  | "approve_work_order"
+  | "approve_inspection";
+
+export interface PortalActionNeeded {
+  type: PortalActionType;
+  id: number;
+  title: string;
+  subtitle: string;
+  href: string;
+  action_label: string;
+  amount?: number;
 }
 
 export interface PortalRecentAppointment {
@@ -89,6 +107,7 @@ export interface PortalDashboardResponse {
   stats: PortalDashboardStats;
   recent_appointments: PortalRecentAppointment[];
   recent_invoices: PortalInvoice[];
+  actions_needed?: PortalActionNeeded[];
 }
 
 export interface AvailabilityResponse {

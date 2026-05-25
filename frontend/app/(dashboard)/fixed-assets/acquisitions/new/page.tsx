@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { branchesApi } from "@/lib/api/branches";
 import { inventoryApi } from "@/lib/api/inventory";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,9 +26,9 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function NewAcquisitionPage() {
     return (
-        <PermissionGuard permission="create_assets">
+        <PermissionPageGuard permission="create_assets">
             <NewAcquisitionContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

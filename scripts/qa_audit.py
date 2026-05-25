@@ -62,6 +62,16 @@ ABUSE_POSTS = [
     ("/auth/token/", {"email": "' OR 1=1--@x.com", "password": "x"}, "sql_injection_login"),
     ("/auth/token/", {"email": E2E_EMAIL, "password": ""}, "empty_password"),
     ("/accounts/register/initiate/", {"email": "not-an-email"}, "invalid_registration"),
+    (
+        "/feedback/",
+        {
+            "message": "audit probe",
+            "category": "suggestion",
+            "status": "resolved",
+            "internal_notes": "INJECTED",
+        },
+        "feedback_mass_assignment",
+    ),
 ]
 
 
@@ -315,6 +325,37 @@ def run_audit() -> AuditReport:
             severity="High" if status == 200 else "Low",
             expected="4xx rejection",
             actual=f"HTTP {status}",
+        )
+
+    # Feedback mass-assignment (when create succeeds, status must stay 'new')
+    status, data = http_request(
+        "POST",
+        "/feedback/",
+        body={
+            "message": "security audit",
+            "category": "suggestion",
+            "status": "resolved",
+            "internal_notes": "INJECTED",
+        },
+    )
+    if status == 201 and isinstance(data, dict):
+        ok = data.get("status") == "new" and not data.get("internal_notes")
+        report.add(
+            test_id="QA-SEC-FEEDBACK-001",
+            module="Security",
+            name="Feedback anonymous mass-assignment blocked",
+            status="PASS" if ok else "FAIL",
+            severity="Critical" if not ok else "",
+            expected="status=new, internal_notes empty",
+            actual=f"status={data.get('status')}, notes={data.get('internal_notes')!r}",
+        )
+    else:
+        report.add(
+            test_id="QA-SEC-FEEDBACK-001",
+            module="Security",
+            name="Feedback anonymous mass-assignment blocked",
+            status="PASS" if status in (400, 403, 503) else "SKIP",
+            detail=f"HTTP {status} (recaptcha or validation may block create)",
         )
 
     # Rate-limit / timing smoke (login burst)

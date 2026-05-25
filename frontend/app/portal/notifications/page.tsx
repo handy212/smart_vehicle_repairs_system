@@ -24,6 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthStore } from "@/store/authStore";
 
 export default function NotificationsPage() {
   const { toast } = useToast();
@@ -31,8 +32,7 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const hasAccessToken =
-    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ["portal", "notifications", filter, typeFilter],
@@ -41,13 +41,13 @@ export default function NotificationsPage() {
         is_read: filter === "unread" ? false : undefined,
         notification_type: typeFilter !== "all" ? typeFilter : undefined,
       }),
-    enabled: hasAccessToken,
+    enabled: isAuthenticated,
   });
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["portal", "notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
-    enabled: hasAccessToken,
+    enabled: isAuthenticated,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 

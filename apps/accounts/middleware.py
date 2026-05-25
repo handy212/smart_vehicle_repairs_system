@@ -66,6 +66,7 @@ class MaintenanceModeMiddleware:
     Blocks non-admin traffic when the maintenance_mode system setting is enabled.
     """
     EXEMPT_PATH_PREFIXES = (
+        '/api/health',
         '/api/health/',
         '/api/auth/token/',
         '/api/auth/users/me/',

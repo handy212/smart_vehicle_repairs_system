@@ -366,6 +366,8 @@ class QBOWebhookView(View):
         except Exception:
             webhook_token = ''
 
+        from django.conf import settings as django_settings
+
         if webhook_token:
             expected = hmac.new(
                 webhook_token.encode('utf-8'),
@@ -377,6 +379,12 @@ class QBOWebhookView(View):
             if not hmac.compare_digest(signature, expected_b64):
                 logger.warning("QBO webhook: invalid signature — request rejected.")
                 return JsonResponse({'error': 'Invalid signature'}, status=401)
+        elif getattr(django_settings, 'REQUIRE_WEBHOOK_SIGNATURES', False):
+            logger.warning("QBO webhook rejected: quickbooks_webhook_token not configured")
+            return JsonResponse({'error': 'Webhook verification token required'}, status=401)
+        elif not signature:
+            logger.warning("QBO webhook: no signature and no verifier token — request rejected.")
+            return JsonResponse({'error': 'Invalid signature'}, status=401)
 
         # --- Parse payload ---
         try:

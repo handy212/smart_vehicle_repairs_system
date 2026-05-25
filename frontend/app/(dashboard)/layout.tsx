@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { authApi } from "@/lib/api/auth";
 import { useModules } from "@/lib/hooks/useModules";
 
@@ -26,32 +27,33 @@ export default function DashboardLayoutWrapper({
     let isMounted = true;
 
     const checkAuth = async () => {
-      const token = localStorage.getItem("access_token");
-
-      if (!token) {
-        if (isMounted) router.push("/login");
-        return;
-      }
-
-      // If user is not in store, fetch it
-      if (!user && token) {
+      if (!user) {
         try {
           const currentUser = await authApi.getCurrentUser();
           if (isMounted) setUser(currentUser);
 
-          // Redirect customers to portal
+          // Redirect customers to portal; technicians to mobile app
           if (currentUser.role === "customer") {
             if (isMounted) router.push("/portal");
             return;
           }
-        } catch (error) {
-          // Token invalid, redirect to login
+          if (currentUser.role === "technician") {
+            if (isMounted) router.push("/mobile/dashboard");
+            return;
+          }
+        } catch {
           if (isMounted) router.push("/login");
+          return;
         }
-      } else if (user) {
+      }
+      if (user) {
         // Check role if user is already loaded
         if (user.role === "customer") {
           if (isMounted) router.push("/portal");
+          return;
+        }
+        if (user.role === "technician") {
+          if (isMounted) router.push("/mobile/dashboard");
           return;
         }
       }
@@ -90,17 +92,10 @@ export default function DashboardLayoutWrapper({
   }, [pathname, mounted, modulesLoading, user, isModuleEnabled, router]);
 
   if (!mounted || !isAuthenticated || modulesLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AppShellSkeleton />;
   }
 
-  if (user?.role === "customer") {
+  if (user?.role === "customer" || user?.role === "technician") {
     return null;
   }
 

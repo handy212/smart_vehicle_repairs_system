@@ -1,5 +1,9 @@
 "use client";
 
+import { cn } from "@/lib/utils/cn";
+import { ACCOUNTING_TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
+
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,7 +130,7 @@ export default function BudgetsPage() {
             active: "success",
             closed: "danger"
         };
-        return <Badge variant={variants[status] || "outline"} className="text-[10px] px-2 py-0">{status.toUpperCase()}</Badge>;
+        return <Badge variant={variants[status] || "outline"} className="text-xs px-2 py-0">{status.toUpperCase()}</Badge>;
     };
 
     return (
@@ -265,12 +269,12 @@ export default function BudgetsPage() {
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Fiscal Year</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Period</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Branch</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Name</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Fiscal Year</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Period</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Branch</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>

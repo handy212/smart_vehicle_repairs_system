@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 type BranchOption = {
@@ -60,9 +60,9 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function NewFixedAssetPage() {
     return (
-        <PermissionGuard permission="create_assets">
+        <PermissionPageGuard permission="create_assets">
             <NewFixedAssetContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

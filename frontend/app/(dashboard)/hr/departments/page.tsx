@@ -13,6 +13,7 @@ import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -28,10 +29,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default function DepartmentsPage() {
     return (
-        <PermissionGuard permission="view_departments">
+        <PermissionPageGuard permission="view_departments">
             <DynamicPageTitle title="Departments & Positions" />
             <DepartmentsContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -190,8 +191,8 @@ function PositionsList({ onEdit, onDelete }: { onEdit: (p: Position) => void, on
                             <TableCell>
                                 <PermissionGuard permission="manage_departments">
                                     <div className="flex gap-1 justify-end">
-                                        <Button variant="ghost" size="icon" onClick={() => onEdit(pos)}><Pencil className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(pos.id)}><Trash2 className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => onEdit(pos)} aria-label={`Edit position ${pos.title}`}><Pencil className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(pos.id)} aria-label={`Delete position ${pos.title}`}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                 </PermissionGuard>
                             </TableCell>

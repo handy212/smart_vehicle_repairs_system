@@ -1,5 +1,11 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
+import { cn } from "@/lib/utils/cn";
+import { ACCOUNTING_TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
+
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +20,9 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    SelectValue} from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import {
@@ -26,8 +31,7 @@ import {
     TableCell,
     TableHead,
     TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    TableRow} from "@/components/ui/table";
 import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
 import { exportToExcel } from "@/lib/utils/excel-export";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
@@ -56,8 +60,7 @@ export default function ProfitLossPage() {
     const { data: report, isLoading } = useQuery({
         queryKey: ["accounting", "profit-loss", startDate, endDate, activeBranchId],
         queryFn: () => accountingApi.getProfitLoss(startDate, endDate, activeBranchId || undefined) as Promise<ProfitLossReport>,
-        enabled: comparison === "none",
-    });
+        enabled: comparison === "none"});
 
     const { data: comparative, isLoading: loadingComparative } = useQuery({
         queryKey: ["accounting", "profit-loss-comparative", startDate, endDate, activeBranchId, comparison],
@@ -68,8 +71,7 @@ export default function ProfitLossPage() {
                 comparison as "mom" | "yoy",
                 activeBranchId || undefined
             ),
-        enabled: comparison !== "none",
-    });
+        enabled: comparison !== "none"});
 
     const displayReport =
         comparison === "none"
@@ -258,10 +260,8 @@ export default function ProfitLossPage() {
             </Card>
 
             {isLoadingReport ? (
-                <div className="flex justify-center p-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-            ) : !displayReport ? (
+                <AccountingReportSkeleton />
+      ) : !displayReport ? (
                 <div className="flex justify-center p-12 text-destructive">
                     Report data not available
                 </div>
@@ -275,8 +275,8 @@ export default function ProfitLossPage() {
                             <Table>
                                 <TableHeader className="bg-muted/10">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Account</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Amount</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Account</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Amount</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -312,8 +312,8 @@ export default function ProfitLossPage() {
                             <Table>
                                 <TableHeader className="bg-muted/10">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Account</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Amount</TableHead>
+                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Account</TableHead>
+                                        <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Amount</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>

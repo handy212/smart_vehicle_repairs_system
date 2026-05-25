@@ -298,6 +298,10 @@ def paystack_webhook(request):
     """
     # Verify webhook signature
     paystack_signature = request.headers.get('X-Paystack-Signature')
+
+    if getattr(settings, 'REQUIRE_WEBHOOK_SIGNATURES', False) and not settings.PAYSTACK_SECRET_KEY:
+        logger.warning("Paystack webhook rejected: PAYSTACK_SECRET_KEY not configured")
+        return HttpResponse(status=401)
     
     if not paystack_signature:
         logger.warning("Paystack webhook received without signature")
@@ -308,6 +312,10 @@ def paystack_webhook(request):
     import hmac
     
     body = request.body
+    if not settings.PAYSTACK_SECRET_KEY:
+        logger.warning("Paystack webhook rejected: missing secret key")
+        return HttpResponse(status=401)
+
     secret = settings.PAYSTACK_SECRET_KEY.encode('utf-8')
     
     hash_value = hmac.new(secret, body, hashlib.sha512).hexdigest()

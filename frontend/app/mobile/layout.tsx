@@ -9,6 +9,7 @@ import { SyncStatusBanner } from "@/components/mobile/SyncStatusBanner";
 import { BellRing, Home, Wrench, ClipboardCheck, Clock, Truck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 
 export default function MobileLayout({
   children,
@@ -17,7 +18,7 @@ export default function MobileLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, setUser, isAuthenticated } = useAuthStore();
+  const { user, setUser, isAuthenticated, logout } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -28,20 +29,31 @@ export default function MobileLayout({
     let isMounted = true;
 
     const checkAuth = async () => {
-      const token = localStorage.getItem("access_token");
-
-      if (!token) {
-        if (isMounted) router.push("/login");
-        return;
-      }
-
-      if (!user && token) {
+      if (!user) {
         try {
           const currentUser = await authApi.getCurrentUser();
-          if (isMounted) setUser(currentUser);
+          if (isMounted) {
+            const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
+            if (!allowedRoles.has(currentUser.role)) {
+              logout();
+              router.push("/dashboard");
+              return;
+            }
+            setUser(currentUser);
+          }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
+        } catch {
           if (isMounted) router.push("/login");
+          return;
+        }
+      }
+      if (user) {
+        const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
+        if (!allowedRoles.has(user.role)) {
+          if (isMounted) {
+            logout();
+            router.push("/dashboard");
+          }
         }
       }
     };
@@ -60,14 +72,7 @@ export default function MobileLayout({
   const hasAttemptedPushRef = useRef(false);
 
   if (!mounted || !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AppShellSkeleton />;
   }
 
   const navItems = [
@@ -119,7 +124,10 @@ export default function MobileLayout({
 
       <main className="flex-1 overflow-y-auto">{children}</main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-inset-bottom">
+      <nav
+        className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-inset-bottom"
+        aria-label="Mobile navigation"
+      >
         <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -129,8 +137,9 @@ export default function MobileLayout({
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 text-xs transition-colors",
+                  "flex flex-col items-center justify-center gap-1 text-xs transition-colors min-h-[44px]",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground"

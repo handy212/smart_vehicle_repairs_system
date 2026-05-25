@@ -20,8 +20,18 @@ import {
 import type { ReportCatalogItem } from "@/lib/api/reporting";
 import type { LucideIcon } from "lucide-react";
 
+const HUB_TAB_ROUTES: Record<string, string> = {
+  financial: "/reports/financial",
+  operational: "/reports/operational",
+  inventory: "/reports/inventory",
+  customers: "/reports/customers",
+  subscriptions: "/reports/subscriptions",
+  vehicles: "/reports/vehicles",
+  controls: "/reports/controls",
+};
+
 const CATALOG_ROUTE_BY_KEY: Record<string, string> = {
-  revenue: "/reports",
+  revenue: "/reports/financial",
   profit_margin: "/accounting/reports/margin-analysis",
   work_orders: "/reports/operations",
   technician_performance: "/reports/efficiency",
@@ -34,7 +44,7 @@ const CATALOG_ROUTE_BY_KEY: Record<string, string> = {
   service_due: "/vehicles",
   subscriptions: "/subscriptions",
   service_bundles: "/reports/bundles",
-  controls: "/reports",
+  controls: "/reports/controls",
   roadside_revenue: "/reports/operations",
   exception_log: "/reports/operations",
   system_usage: "/reports/operations",
@@ -92,7 +102,6 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
 interface ReportCatalogDirectoryProps {
   reports: ReportCatalogItem[];
   isPerfex?: boolean;
-  onOpenHubTab?: (tab: string) => void;
 }
 
 type DirectoryEntry = {
@@ -114,7 +123,11 @@ function buildEntries(reports: ReportCatalogItem[]): DirectoryEntry[] {
     drillDown: item.drill_down,
     isHub: item.key === "revenue" || item.key === "controls",
     hubTab: item.key === "revenue" ? "financial" : item.key === "controls" ? "controls" : undefined,
-    href: CATALOG_ROUTE_BY_KEY[item.key] || "/reports",
+    href:
+      (item.key === "revenue" ? HUB_TAB_ROUTES.financial : undefined) ||
+      (item.key === "controls" ? HUB_TAB_ROUTES.controls : undefined) ||
+      CATALOG_ROUTE_BY_KEY[item.key] ||
+      "/reports",
   }));
 
   const accounting = ACCOUNTING_LINKS.map((l) => ({
@@ -158,7 +171,6 @@ function matchesFilter(entry: DirectoryEntry, filter: FilterKey): boolean {
 export function ReportCatalogDirectory({
   reports,
   isPerfex = false,
-  onOpenHubTab,
 }: ReportCatalogDirectoryProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -247,16 +259,16 @@ export function ReportCatalogDirectory({
                   </div>
                   <p className="mt-3 text-sm font-medium text-foreground leading-snug">{entry.name}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
-                    <Badge variant="outline" className="text-[10px] capitalize">
+                    <Badge variant="outline" className="text-xs capitalize">
                       {entry.group.replace(/_/g, " ")}
                     </Badge>
                     {entry.isHub && (
-                      <Badge variant="secondary" className="text-[10px]">
+                      <Badge variant="secondary" className="text-xs">
                         Hub tab
                       </Badge>
                     )}
                     {entry.drillDown && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-xs">
                         Drill-down
                       </Badge>
                     )}
@@ -266,19 +278,6 @@ export function ReportCatalogDirectory({
 
               const cardClass =
                 "group flex flex-col rounded-lg border border-border/80 bg-muted/20 p-3 text-left transition-all hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm";
-
-              if (entry.isHub && entry.hubTab && onOpenHubTab) {
-                return (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => onOpenHubTab(entry.hubTab!)}
-                    className={cardClass}
-                  >
-                    {content}
-                  </button>
-                );
-              }
 
               return (
                 <Link key={entry.id} href={entry.href ?? "/reports"} className={cardClass}>

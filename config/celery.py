@@ -16,8 +16,8 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Auto-discover tasks from all installed apps
 app.autodiscover_tasks()
 
-# Celery Beat Schedule for periodic tasks
-app.conf.beat_schedule = {
+# Celery Beat Schedule for periodic tasks (merged with CELERY_BEAT_SCHEDULE from settings)
+app.conf.beat_schedule.update({
     'send-service-reminders-daily': {
         'task': 'apps.notifications_app.tasks.send_service_reminders',
         'schedule': crontab(hour=9, minute=0),  # Run daily at 9 AM
@@ -50,7 +50,7 @@ app.conf.beat_schedule = {
         'task': 'apps.accounts.tasks.cleanup_expired_system_backups',
         'schedule': crontab(hour=2, minute=30),  # Run daily at 2:30 AM
     },
-}
+})
 
 @app.task(bind=True)
 def debug_task(self):

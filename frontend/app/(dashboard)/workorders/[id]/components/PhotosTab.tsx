@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Image as ImageIcon, Eye, Sparkles, Loader2, Info } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,6 +23,7 @@ interface PhotosTabProps {
 
 export default function PhotosTab({ workOrderId }: PhotosTabProps) {
   const { toast } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const queryClient = useQueryClient();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<WorkOrderPhoto | null>(null);
@@ -262,10 +264,14 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => {
-                                if (confirm("Are you sure you want to delete this photo?")) {
-                                  deleteMutation.mutate(photo.id);
-                                }
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: "Delete photo?",
+                                  description: "Are you sure you want to delete this photo?",
+                                  confirmLabel: "Delete",
+                                  variant: "destructive",
+                                });
+                                if (ok) deleteMutation.mutate(photo.id);
                               }}
                               disabled={deleteMutation.isPending}
                             >
@@ -428,10 +434,15 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
             <DialogFooter>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  if (confirm("Are you sure you want to delete this photo?")) {
-                    deleteMutation.mutate(selectedPhoto.id);
-                  }
+                onClick={async () => {
+                  if (!selectedPhoto) return;
+                  const ok = await confirm({
+                    title: "Delete photo?",
+                    description: "Are you sure you want to delete this photo?",
+                    confirmLabel: "Delete",
+                    variant: "destructive",
+                  });
+                  if (ok) deleteMutation.mutate(selectedPhoto.id);
                 }}
                 disabled={deleteMutation.isPending}
               >
@@ -442,6 +453,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
           </DialogContent>
         </Dialog>
       )}
+      <ConfirmDialog />
     </div>
   );
 }

@@ -223,6 +223,7 @@ export default function GatePassPage() {
                 setPage(1);
               }}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+              aria-label="Clear all filters"
               title="Clear all filters"
             >
               <X className="w-3.5 h-3.5" />

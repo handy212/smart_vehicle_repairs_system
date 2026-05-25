@@ -18,6 +18,7 @@ export async function fetchE2ETokens(): Promise<TokenPair> {
 
     const response = await fetch(`${apiURL}/auth/token/`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
     });
@@ -28,6 +29,10 @@ export async function fetchE2ETokens(): Promise<TokenPair> {
         );
     }
 
-    cachedTokens = (await response.json()) as TokenPair;
+    const data = (await response.json()) as Partial<TokenPair>;
+    if (!data.access) {
+        throw new Error('E2E login response missing access token');
+    }
+    cachedTokens = { access: data.access, refresh: data.refresh || '' };
     return cachedTokens;
 }

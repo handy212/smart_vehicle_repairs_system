@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PortalStatsGrid } from "./components/PortalStatsGrid";
 import { PortalQuickActions } from "./components/PortalQuickActions";
+import { PortalActionsNeeded } from "./components/PortalActionsNeeded";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { cn } from "@/lib/utils/cn";
 
@@ -76,16 +77,19 @@ export default function PortalHomePage() {
     );
   }
 
-  const { stats, recent_appointments, recent_invoices } = dashboard;
+  const { stats, recent_appointments, recent_invoices, actions_needed = [] } = dashboard;
   const firstName = user?.first_name || user?.username || "there";
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-24 lg:pb-8 max-w-3xl mx-auto lg:max-w-none">
       {/* Greeting */}
       <div>
         <h1 className="text-xl font-bold text-foreground">Welcome back, {firstName}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Here's an overview of your account.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Here&apos;s what needs your attention.</p>
       </div>
+
+      {/* Actions needed — first on mobile */}
+      <PortalActionsNeeded actions={actions_needed} />
 
       {/* Stats */}
       <PortalStatsGrid stats={stats} />

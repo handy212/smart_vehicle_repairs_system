@@ -12,6 +12,8 @@ import { useMemo, useCallback } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PerfexDashboard } from "./components/PerfexDashboard";
 import { useBranchStore } from "@/store/branchStore";
+import { useAuthStore } from "@/store/authStore";
+import { getDashboardRoleConfig } from "@/lib/utils/dashboard-role-config";
 
 type DashboardAppointment = {
   id: number;
@@ -52,6 +54,8 @@ type TechnicianPerformanceItem = {
 export default function DashboardPage() {
   const { formatCurrency } = useCurrency();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const userRole = useAuthStore((s) => s.user?.role);
+  const roleConfig = useMemo(() => getDashboardRoleConfig(userRole), [userRole]);
 
   const {
     data: dashboardData,
@@ -285,6 +289,7 @@ export default function DashboardPage() {
       onRefresh={handleRefresh}
       todayLabel={todayLabel}
       formatCurrency={formatCurrency}
+      roleConfig={roleConfig}
     />
   );
 }

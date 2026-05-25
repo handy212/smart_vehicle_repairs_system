@@ -8,6 +8,7 @@ import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -27,10 +28,10 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function NewJobOpeningPage() {
     return (
-        <PermissionGuard permission="manage_recruitment">
+        <PermissionPageGuard permission="manage_recruitment">
             <DynamicPageTitle title="Post New Job" />
             <NewJobOpeningContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

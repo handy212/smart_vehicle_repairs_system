@@ -795,9 +795,11 @@ export default function EmailTemplatesPage() {
                   </TabsContent>
                   <TabsContent value="html" className="mt-0">
                     <div className="rounded-md border border-border bg-white overflow-hidden">
-                      <div
-                        className="text-sm"
-                        dangerouslySetInnerHTML={{ __html: previewRendered?.html_body || previewTemplate.html_body || "" }}
+                      <iframe
+                        title="Email HTML preview"
+                        sandbox=""
+                        className="w-full min-h-[320px] border-0"
+                        srcDoc={previewRendered?.html_body || previewTemplate.html_body || ""}
                       />
                     </div>
                   </TabsContent>

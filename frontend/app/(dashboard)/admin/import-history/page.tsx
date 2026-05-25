@@ -17,7 +17,7 @@ import { useState } from "react";
 import { exportToCSV } from "@/lib/utils/export";
 import { useToast } from "@/lib/hooks/useToast";
 import { Label } from "@/components/ui/label";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 
@@ -132,7 +132,7 @@ export default function ImportHistoryPage() {
   };
 
   return (
-    <PermissionGuard permission="view_audit_logs">
+    <PermissionPageGuard permission="view_audit_logs">
       <div className="space-y-4 bg-background min-h-screen">
         <div className="flex items-center justify-between px-4 pt-4 flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -367,6 +367,6 @@ export default function ImportHistoryPage() {
           </Card>
         </div>
       </div>
-    </PermissionGuard>
+    </PermissionPageGuard>
   );
 }

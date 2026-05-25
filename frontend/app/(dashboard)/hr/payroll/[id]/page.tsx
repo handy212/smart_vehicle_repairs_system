@@ -9,6 +9,7 @@ import {
     RotateCcw, User,
 } from "lucide-react";
 import { hrApi, PaySlip, PayrollPeriod } from "@/lib/api/hr";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
@@ -73,9 +74,9 @@ function statusConfig(status: string) {
 
 export default function PayrollPeriodDetailPage() {
     return (
-        <PermissionGuard permission="view_payroll">
+        <PermissionPageGuard permission="view_payroll">
             <PayrollPeriodDetail />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,10 +23,10 @@ import Link from "next/link";
 
 export default function LeaveTypesPage() {
     return (
-        <PermissionGuard permission="view_hr">
+        <PermissionPageGuard permission="view_hr">
             <DynamicPageTitle title="Leave Types" />
             <LeaveTypesContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
@@ -136,10 +137,10 @@ function LeaveTypesContent() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex gap-1 justify-end">
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(lt)}>
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(lt)} aria-label={`Edit leave type ${lt.name}`}>
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(lt)}>
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(lt)} aria-label={`Delete leave type ${lt.name}`}>
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>

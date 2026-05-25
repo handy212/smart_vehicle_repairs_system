@@ -31,6 +31,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useAuthStore } from "@/store/authStore";
 
 type FilterType = "all" | "unread" | "failed";
 
@@ -45,8 +46,7 @@ export default function NotificationsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
 
-  const hasAccessToken =
-    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { data: notificationsData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["notifications", filter, debouncedSearch, canManageNotifications],
@@ -60,21 +60,21 @@ export default function NotificationsPage() {
     getNextPageParam: (lastPage, pages) => {
       return lastPage.next ? pages.length + 1 : undefined;
     },
-    enabled: hasAccessToken,
+    enabled: isAuthenticated,
     initialPageParam: 1,
   });
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
-    enabled: hasAccessToken,
+    enabled: isAuthenticated,
     refetchInterval: 30000,
   });
 
   const { data: adminStats } = useQuery({
     queryKey: ["notifications", "admin-stats"],
     queryFn: () => notificationsApi.adminStats(30),
-    enabled: hasAccessToken && canManageNotifications,
+    enabled: isAuthenticated && canManageNotifications,
     refetchInterval: 60000,
   });
 

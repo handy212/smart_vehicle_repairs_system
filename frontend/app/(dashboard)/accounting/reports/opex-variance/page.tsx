@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +12,10 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth } from "date-fns";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 import type { TableExportPayload } from "@/lib/utils/report-export";
@@ -38,15 +38,13 @@ export default function OpexVariancePage() {
     queryFn: async () => {
       const res = await apiClient.get("/accounting/budgets/");
       return (res.data.results || res.data) as Budget[];
-    },
-  });
+    }});
 
   const { data: report, isLoading } = useQuery({
     queryKey: ["opex-variance", budgetId, startDate, endDate],
     queryFn: () =>
       accountingApi.getOpexVariance(Number(budgetId), startDate, endDate),
-    enabled: !!budgetId,
-  });
+    enabled: !!budgetId});
 
   const lines = (report as { lines?: Array<{ account_code: string; account_name: string; budget: number; actual: number; variance: number; variance_percent: number }> })?.lines ?? [];
   const totals = (report as { totals?: { budget: number; actual: number; variance: number; variance_percent: number } })?.totals;
@@ -66,8 +64,7 @@ export default function OpexVariancePage() {
         line.variance,
         line.variance_percent.toFixed(1),
       ]),
-      currencyColumnIndexes: [1, 2, 3],
-    };
+      currencyColumnIndexes: [1, 2, 3]};
   };
 
   return (
@@ -103,7 +100,7 @@ export default function OpexVariancePage() {
       {!budgetId ? (
         <p className="text-sm text-muted-foreground">Select a budget to view OPEX variance.</p>
       ) : isLoading ? (
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <AccountingReportSkeleton compact rows={4} />
       ) : (
         <>
           {totals && (

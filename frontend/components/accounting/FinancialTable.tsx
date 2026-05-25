@@ -75,7 +75,7 @@ export function FinancialTable({
                             <TableHead
                                 key={column.key}
                                 className={cn(
-                                    "text-[10px] uppercase tracking-wider font-bold text-muted-foreground",
+                                    "text-xs uppercase tracking-wider font-bold text-muted-foreground",
                                     compact ? "h-8 px-3" : "h-10 px-4",
                                     column.align === "right" && "text-right",
                                     column.align === "center" && "text-center",

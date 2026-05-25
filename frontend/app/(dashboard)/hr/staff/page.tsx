@@ -14,6 +14,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import {
@@ -37,10 +38,10 @@ import { toast } from "sonner";
 
 export default function StaffPage() {
     return (
-        <PermissionGuard permission="view_staff">
+        <PermissionPageGuard permission="view_staff">
             <DynamicPageTitle title="Staff" />
             <StaffContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

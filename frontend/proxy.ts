@@ -13,11 +13,10 @@ const PUBLIC_PATHS = [
     '/login',
     '/register',
     '/maintenance',
-    '/portal',
+    '/feedback',
     '/api',
     '/media',
     '/offline',
-    '/mobile',
     '/favicon.ico',
     '/manifest.json',
     '/sw.js',
@@ -25,16 +24,54 @@ const PUBLIC_PATHS = [
     '/_next',
 ];
 
-const PUBLIC_ROUTE_GROUPS = ['(public)'];
+/** Authenticated customer portal routes (first path segment after /portal/) */
+const PORTAL_AUTH_SEGMENTS = new Set([
+    'work-orders',
+    'vehicles',
+    'estimates',
+    'roadside',
+    'notifications',
+    'inspections',
+    'subscriptions',
+    'book',
+    'invoices',
+    'payment',
+    'payments',
+    'search',
+    'appointments',
+    'profile',
+    'history',
+]);
+
+function isPublicPortalEstimateRoute(pathname: string): boolean {
+    if (!pathname.startsWith('/portal')) {
+        return false;
+    }
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.length !== 2 || segments[0] !== 'portal') {
+        return false;
+    }
+    const token = segments[1];
+    if (PORTAL_AUTH_SEGMENTS.has(token)) {
+        return false;
+    }
+    return /^[0-9a-f-]{20,}$/i.test(token);
+}
+
+function isPublicPath(pathname: string): boolean {
+    if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+        return true;
+    }
+    if (isPublicPortalEstimateRoute(pathname)) {
+        return true;
+    }
+    return false;
+}
 
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-        return NextResponse.next();
-    }
-
-    if (PUBLIC_ROUTE_GROUPS.some((g) => pathname.includes(g))) {
+    if (isPublicPath(pathname)) {
         return NextResponse.next();
     }
 

@@ -12,6 +12,7 @@ import { useParams, useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -31,9 +32,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function JobOpeningDetailPage() {
     return (
-        <PermissionGuard permission="view_recruitment">
+        <PermissionPageGuard permission="view_recruitment">
             <JobOpeningDetailContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 

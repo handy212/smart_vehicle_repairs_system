@@ -420,7 +420,7 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: Create
                         <div className="space-y-2">
                             <Label>Reversal Date (Optional)</Label>
                             <Input name="reversal_date" type="date" />
-                            <p className="text-[10px] text-muted-foreground">Usually 1st of next month</p>
+                            <p className="text-xs text-muted-foreground">Usually 1st of next month</p>
                         </div>
                     </div>
 

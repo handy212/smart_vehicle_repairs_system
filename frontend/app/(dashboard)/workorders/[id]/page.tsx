@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
@@ -27,8 +28,20 @@ import { useToast } from "@/lib/hooks/useToast";
 import { WorkOrderCommandBar } from "./components/WorkOrderCommandBar";
 import { WorkOrderProgress } from "./components/WorkOrderProgress";
 import { GatePassBanner } from "./components/GatePassBanner";
+import { CheckInInspectionBanner } from "./components/CheckInInspectionBanner";
 import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
+
+const DiagnosisWorkspace = dynamic(
+  () => import("./diagnosis/DiagnosisWorkspace"),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    ),
+  }
+);
 
 const VALID_TABS = new Set([
   "overview",
@@ -47,6 +60,8 @@ export default function WorkOrderDetailPage() {
   const searchParams = useSearchParams();
   const workOrderId = parseInt(params.id as string);
   const requestedTab = searchParams.get("tab");
+  const diagnosisPanel = searchParams.get("panel");
+  const showFullDiagnosis = diagnosisPanel === "full";
   const initialTab =
     requestedTab && VALID_TABS.has(requestedTab) ? requestedTab : "overview";
 
@@ -124,7 +139,7 @@ export default function WorkOrderDetailPage() {
   });
 
   const handleTabChange = useCallback(
-    (tab: string) => {
+    (tab: string, options?: { panel?: "full" | null }) => {
       setActiveTab(tab);
       const params = new URLSearchParams(searchParams.toString());
       if (tab === "overview") {
@@ -132,11 +147,19 @@ export default function WorkOrderDetailPage() {
       } else {
         params.set("tab", tab);
       }
+      if (tab === "diagnosis" && options?.panel === "full") {
+        params.set("panel", "full");
+      } else {
+        params.delete("panel");
+      }
       const qs = params.toString();
       router.replace(`/workorders/${workOrderId}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [router, workOrderId, searchParams]
   );
+
+  const showDiagnosisSummary = () => handleTabChange("diagnosis");
+  const showDiagnosisFull = () => handleTabChange("diagnosis", { panel: "full" });
 
   if (isLoading) {
     return <WorkOrderDetailSkeleton />;
@@ -228,6 +251,12 @@ export default function WorkOrderDetailPage() {
 
       <WorkOrderProgress status={workOrder.status} />
 
+      <CheckInInspectionBanner
+        workOrder={workOrder}
+        workOrderId={workOrderId}
+        onStatusChange={refreshData}
+      />
+
       {workOrder.status === "closed" && <GatePassBanner workOrderId={workOrderId} />}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -273,7 +302,22 @@ export default function WorkOrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="diagnosis" className="mt-4">
-          <DiagnosisTab workOrderId={workOrderId} workOrder={workOrder} onRefresh={refreshData} />
+          {showFullDiagnosis ? (
+            <div className="space-y-4">
+              <Button variant="outline" size="sm" onClick={showDiagnosisSummary}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to summary
+              </Button>
+              <DiagnosisWorkspace />
+            </div>
+          ) : (
+            <DiagnosisTab
+              workOrderId={workOrderId}
+              workOrder={workOrder}
+              onRefresh={refreshData}
+              onOpenFull={showDiagnosisFull}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">

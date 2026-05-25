@@ -205,6 +205,13 @@ def payment_callback(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
     else:
+        from django.conf import settings as django_settings
+        if getattr(django_settings, 'REQUIRE_WEBHOOK_SIGNATURES', False):
+            logger.warning("Hubtel callback rejected: HUBTEL_API_SECRET not configured")
+            return Response(
+                {'message': 'Webhook signature verification is required'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         logger.warning(
             "HUBTEL_API_SECRET not configured — webhook signature verification skipped. "
             "Set HUBTEL_API_SECRET in settings to enable verification."

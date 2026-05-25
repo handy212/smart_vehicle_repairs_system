@@ -13,7 +13,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import React from "react";
 
 const branchSchema = z.object({
@@ -200,7 +200,7 @@ export default function BranchEditPage() {
   }
 
   return (
-    <PermissionGuard permission="manage_branches">
+    <PermissionPageGuard permission="manage_branches">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -372,6 +372,6 @@ export default function BranchEditPage() {
           </div>
         </form>
       </div>
-    </PermissionGuard>
+    </PermissionPageGuard>
   );
 }

@@ -62,21 +62,26 @@ class FeedbackViewSet(viewsets.ModelViewSet):
                         )
                 except Exception as e:
                     logger.error(f"Error during reCAPTCHA verification: {str(e)}")
-                    # If Google API is down, we might want to allow submission or fail.
-                    # Given it's security, failing is safer, but user experience might suffer.
-                    # allowing for now if it's a technical error to avoid blocking users
-                    pass
+                    return Response(
+                        {'detail': 'reCAPTCHA verification is temporarily unavailable. Please try again later.'},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
 
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         # Force is_anonymous=True if no user is authenticated
         is_anonymous = not self.request.user.is_authenticated
-        
+
+        save_kwargs = {
+            'status': 'new',
+            'internal_notes': '',
+        }
         if is_anonymous:
-            instance = serializer.save(is_anonymous=True)
-        else:
-            instance = serializer.save()
+            save_kwargs['is_anonymous'] = True
+            save_kwargs['branch'] = None
+
+        instance = serializer.save(**save_kwargs)
             
         # Trigger notification to admins/managers
         self._notify_admins(instance)

@@ -121,6 +121,8 @@ export function InspectionItemRow({
                                     key={opt.value}
                                     type="button"
                                     onClick={() => onUpdate("result", opt.value)}
+                                    aria-pressed={isActive}
+                                    aria-label={`${item.name}: ${opt.label}`}
                                     className={cn(
                                         "flex items-center justify-center w-8 h-8 rounded border transition-all",
                                         isActive

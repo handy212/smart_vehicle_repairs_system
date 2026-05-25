@@ -319,6 +319,7 @@ export default function InventoryPage() {
                 setAdvancedFilters({});
               }}
               className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+              aria-label="Clear all filters"
               title="Clear all filters"
             >
               <X className="w-4 h-4" />
@@ -546,7 +547,7 @@ export default function InventoryPage() {
                       <TableCell className="px-4 py-2 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={(e: React.MouseEvent) => e.stopPropagation()} className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground">
+                            <Button variant="ghost" size="sm" onClick={(e: React.MouseEvent) => e.stopPropagation()} className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground" aria-label={`Actions for ${part.name}`}>
                               <MoreVertical className="w-3.5 h-3.5" />
                             </Button>
                           </DropdownMenuTrigger>

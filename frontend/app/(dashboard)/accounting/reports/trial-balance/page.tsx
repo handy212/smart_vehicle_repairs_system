@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
+
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
     Table,
@@ -15,8 +17,7 @@ import {
     TableCell,
     TableHead,
     TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    TableRow} from "@/components/ui/table";
 import Link from "next/link";
 import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
 import { exportToExcel } from "@/lib/utils/excel-export";
@@ -46,8 +47,7 @@ export default function TrialBalancePage() {
 
     const { data: report, isLoading, isError } = useQuery<TrialBalanceReport>({
         queryKey: ["accounting", "trial-balance", date],
-        queryFn: () => accountingApi.getTrialBalance(date),
-    });
+        queryFn: () => accountingApi.getTrialBalance(date)});
 
     const handleExportCSV = () => {
         if (!report) return;
@@ -109,16 +109,11 @@ export default function TrialBalancePage() {
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
             companyName: COMPANY_NAME,
-            currencySymbol,
-        });
+            currencySymbol});
     };
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-        );
+        return <AccountingReportSkeleton />;
     }
 
     if (isError) {

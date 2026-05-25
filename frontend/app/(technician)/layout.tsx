@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, LogOut, Wrench } from "lucide-react";
+import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import Link from "next/link";
 
 export default function TechnicianLayout({
@@ -23,19 +24,11 @@ export default function TechnicianLayout({
 
     useEffect(() => {
         const checkAuth = async () => {
-            const token = localStorage.getItem("access_token");
-
-            if (!token) {
-                router.push("/login");
-                return;
-            }
-
-            if (!user && token) {
+            if (!user) {
                 try {
                     const currentUser = await authApi.getCurrentUser();
                     setUser(currentUser);
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                } catch (error) {
+                } catch {
                     router.push("/login");
                 }
             }
@@ -46,20 +39,17 @@ export default function TechnicianLayout({
         }
     }, [user, setUser, router, mounted]);
 
-    const handleLogout = () => {
-        logout();
-        router.push("/login");
+    const handleLogout = async () => {
+        try {
+            await authApi.logout();
+        } finally {
+            logout();
+            router.push("/login");
+        }
     };
 
     if (!mounted || !isAuthenticated) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-muted bg-background">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-muted-foreground">Loading...</p>
-                </div>
-            </div>
-        );
+        return <AppShellSkeleton />;
     }
 
     return (

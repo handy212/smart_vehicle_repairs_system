@@ -30,6 +30,14 @@ export function QuickActionsMenu() {
 
   const allActions: QuickAction[] = [
     {
+      label: "Vehicle Check-in",
+      icon: <PremiumIcons.ClipboardList className="w-4 h-4" />,
+      href: "/check-in",
+      color: "text-primary",
+      category: "Operations",
+      permission: PERMISSIONS.CREATE_WORKORDERS
+    },
+    {
       label: "New Work Order",
       icon: <PremiumIcons.Wrench className="w-4 h-4" />,
       href: "/workorders/new",

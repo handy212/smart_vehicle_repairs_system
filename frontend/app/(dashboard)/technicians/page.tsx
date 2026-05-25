@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import {
     Card,
     CardContent,
@@ -49,10 +49,10 @@ const statusOptions = [
 
 export default function TechniciansPage() {
     return (
-        <PermissionGuard permission="view_technicians">
+        <PermissionPageGuard permission="view_technicians">
             <DynamicPageTitle title="Technicians" />
             <TechniciansContent />
-        </PermissionGuard>
+        </PermissionPageGuard>
     );
 }
 
