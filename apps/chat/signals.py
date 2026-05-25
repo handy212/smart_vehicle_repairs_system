@@ -40,16 +40,32 @@ def work_order_status_update_notification(sender, instance, created, **kwargs):
 
     status_display = instance.get_status_display()
 
-    # Check if a conversation exists or create one
+    # Check if a system conversation exists or create one. Production can also
+    # have private/user chats linked to the same work order, so avoid a broad
+    # get_or_create() that can raise MultipleObjectsReturned.
     with transaction.atomic():
-        conversation, created_conv = Conversation.objects.get_or_create(
+        conversations = Conversation.objects.select_for_update().filter(
             related_object_type='workorder',
             related_object_id=instance.id,
-            defaults={
-                'title': f"Work Order {instance.work_order_number}",
-                'type': 'system'
-            }
-        )
+            type='system',
+        ).order_by('id')
+        conversation = conversations.first()
+        if conversation:
+            duplicate_count = conversations.count() - 1
+            if duplicate_count:
+                logger.warning(
+                    "Found %s duplicate chat conversation(s) for work order %s; using conversation %s.",
+                    duplicate_count,
+                    instance.id,
+                    conversation.id,
+                )
+        else:
+            conversation = Conversation.objects.create(
+                related_object_type='workorder',
+                related_object_id=instance.id,
+                title=f"Work Order {instance.work_order_number}",
+                type='system',
+            )
 
         # Ensure customer and coordinator are members
         if instance.customer and hasattr(instance.customer, 'user') and instance.customer.user:
