@@ -33,12 +33,17 @@ function isPaginatedRoadsideResponse(
     return !Array.isArray(data) && Array.isArray(data.results);
 }
 
+export type RoadsideAssignmentStatus = "pending" | "accepted" | "rejected";
+
 export interface DispatchedTechnician {
     id: number;
     technician: number;
     technician_name: string;
     dispatched_at: string;
     notes?: string;
+    response_status?: RoadsideAssignmentStatus;
+    responded_at?: string | null;
+    rejection_reason?: string;
 }
 
 export interface RoadsideBranchDetail {
@@ -61,6 +66,28 @@ export interface RoadsideTimelineEntry {
     meta?: string;
     invoice_id?: number;
     invoice_number?: string;
+}
+
+export interface RoadsideNote {
+    id: number;
+    request: number;
+    note: string;
+    created_by?: number | null;
+    created_by_name?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RoadsidePhoto {
+    id: number;
+    request: number;
+    image: string;
+    photo_type: "arrival" | "diagnostic" | "repair" | "damage" | "completion" | "other";
+    caption?: string;
+    taken_at: string;
+    uploaded_by?: number | null;
+    uploaded_by_name?: string | null;
+    uploaded_at: string;
 }
 
 export interface RoadsideRequest {
@@ -131,6 +158,10 @@ export interface RoadsideRequest {
     timeline?: RoadsideTimelineEntry[];
     available_actions?: string[];
     rating?: number | null;
+    site_notes?: RoadsideNote[];
+    photos?: RoadsidePhoto[];
+    /** Current user's dispatch response (technician mobile) */
+    my_assignment_status?: RoadsideAssignmentStatus | null;
 }
 
 export type RoadsideRequestDetail = RoadsideRequest;
@@ -158,15 +189,21 @@ type RoadsideRequestUpdate = Omit<Partial<RoadsideRequest>, "charge_amount"> & {
 
 export const roadsideApi = {
     /**
-     * Get requests assigned to the current user (technician)
+     * Technician field app: only this user's assignments (active + recent completed).
      */
-    getAssignedRequests: async () => {
-
-        const response = await apiClient.get<PaginatedResponse<RoadsideRequest> | RoadsideRequest[]>("/roadside/requests/");
-        if (isPaginatedRoadsideResponse(response.data)) {
-            return response.data.results;
-        }
+    getMyAssignments: async (options?: { includeHistory?: boolean }) => {
+        const response = await apiClient.get<RoadsideRequest[]>(
+            "/roadside/requests/my-assignments/",
+            {
+                params: options?.includeHistory ? { include_history: "true" } : undefined,
+            }
+        );
         return Array.isArray(response.data) ? response.data : [];
+    },
+
+    /** @deprecated Use getMyAssignments for the technician mobile app */
+    getAssignedRequests: async (options?: { includeHistory?: boolean }) => {
+        return roadsideApi.getMyAssignments(options);
     },
 
     /**
@@ -174,6 +211,21 @@ export const roadsideApi = {
      */
     getRequest: async (id: number | string) => {
         const response = await apiClient.get<RoadsideRequest>(`/roadside/requests/${id}/`);
+        return response.data;
+    },
+
+    acceptAssignment: async (id: number | string) => {
+        const response = await apiClient.post<RoadsideRequest>(
+            `/roadside/requests/${id}/accept-assignment/`
+        );
+        return response.data;
+    },
+
+    rejectAssignment: async (id: number | string, reason?: string) => {
+        const response = await apiClient.post<RoadsideRequest>(
+            `/roadside/requests/${id}/reject-assignment/`,
+            { reason: reason || "" }
+        );
         return response.data;
     },
 
@@ -308,6 +360,30 @@ export const roadsideApi = {
      */
     removeTechnician: async (id: number | string, technicianId: number) => {
         const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/remove_technician/`, { technician_id: technicianId });
+        return response.data;
+    },
+
+    /**
+     * Technician: Add an on-site note
+     */
+    addSiteNote: async (id: number | string, note: string) => {
+        const response = await apiClient.post<RoadsideNote>(`/roadside/requests/${id}/site-notes/`, { note });
+        return response.data;
+    },
+
+    /**
+     * Technician: Upload an on-site photo
+     */
+    uploadSitePhoto: async (
+        id: number | string,
+        data: { image: File; photo_type?: RoadsidePhoto["photo_type"]; caption?: string }
+    ) => {
+        const formData = new FormData();
+        formData.append("image", data.image);
+        formData.append("photo_type", data.photo_type || "other");
+        if (data.caption) formData.append("caption", data.caption);
+
+        const response = await apiClient.post<RoadsidePhoto>(`/roadside/requests/${id}/site-photos/`, formData);
         return response.data;
     },
 

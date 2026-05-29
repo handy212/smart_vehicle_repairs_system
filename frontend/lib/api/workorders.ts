@@ -124,6 +124,8 @@ export interface WorkOrder {
   customer_discontinuation_notes?: string;
   customer_discontinued_at?: string | null;
   customer_discontinued_by?: number | { id: number; first_name: string; last_name: string } | null;
+  customer_rating?: number | null;
+  customer_feedback?: string;
 }
 
 export interface WorkOrderListResponse {
@@ -258,6 +260,11 @@ export const workordersApi = {
 
   updateStatus: async (id: number, status: string): Promise<WorkOrder> => {
     const response = await apiClient.patch(`/workorders/work-orders/${id}/`, { status });
+    return response.data;
+  },
+
+  rateService: async (id: number, data: { rating: number; customer_feedback?: string }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/rate_service/`, data);
     return response.data;
   },
 

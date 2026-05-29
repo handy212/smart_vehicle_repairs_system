@@ -2,26 +2,43 @@
  * Utilities for API data handling
  */
 
+import { getBackendOrigin } from "@/lib/api/base-url";
+import { sameOriginMediaPath } from "@/lib/utils/media";
+
 /**
- * Gets the full URL for a media file (image, document, etc.)
- * Handles both relative paths from Django and already absolute URLs.
+ * Resolves a Django media path or absolute backend media URL for display in the browser.
+ * In the browser, always uses same-origin `/media/...` so Next.js proxies to Django
+ * (avoids broken images when the API returns http://127.0.0.1:8001/media/...).
  */
+/** Settings sometimes store the field key as a filename before a real file is uploaded. */
+function isPlaceholderMediaPath(path: string): boolean {
+  const base = path.split("/").pop()?.toLowerCase() ?? "";
+  return base === "favicon_path.png" || base === "logo_path.png" || base === "favicon_path";
+}
+
 export function getMediaUrl(path: string | null | undefined): string {
-  if (!path) return "";
-  
-  // If it's already an absolute URL or a data/blob URL, return it as is
-  if (path.startsWith("http://") || path.startsWith("https://") || 
-      path.startsWith("blob:") || path.startsWith("data:")) {
+  if (!path || isPlaceholderMediaPath(path)) return "";
+
+  if (path.startsWith("blob:") || path.startsWith("data:")) {
     return path;
   }
-  
-  // Get API base URL from env
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-  
-  // The API URL usually ends with /api, so we need the base backend URL
-  const backendUrl = apiUrl.replace(/\/api\/?$/, "");
-  
-  // Prefix the path with backend URL, ensuring no double slashes
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${backendUrl}${cleanPath}`;
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    if (typeof window !== "undefined") {
+      const local = sameOriginMediaPath(path);
+      if (local) return local;
+    }
+    return path;
+  }
+
+  const normalized = path.replace(/^\/+/, "");
+  const mediaPath = normalized.startsWith("media/")
+    ? `/${normalized}`
+    : `/media/${normalized}`;
+
+  if (typeof window !== "undefined") {
+    return mediaPath;
+  }
+
+  return `${getBackendOrigin()}${mediaPath}`;
 }

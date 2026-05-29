@@ -6,10 +6,11 @@ from django.core.cache import cache
 from .admin_models import SystemSettings
 
 
-def get_setting(key, default='', use_cache=True):
+def get_setting(key, default='', use_cache=True, db_first=False):
     """
     Get a setting value by key with optional caching.
-    PRIORITY: Django Settings (.env) > Database > Default
+    Default priority: Django Settings (.env) > Database > Default.
+    Set db_first=True for admin-managed values that must override .env.
     """
     from django.conf import settings
     
@@ -51,33 +52,49 @@ def get_setting(key, default='', use_cache=True):
         'quickbooks_client_secret': 'QUICKBOOKS_CLIENT_SECRET',
         'quickbooks_sandbox_enabled': 'QUICKBOOKS_SANDBOX_ENABLED',
     }
-    
-    if key in env_mapping:
-        env_val = getattr(settings, env_mapping[key], None)
-        if env_val is not None:
-            # Handle boolean strings from settings if necessary
-            if isinstance(env_val, bool):
-                return 'true' if env_val else 'false'
-            return str(env_val)
 
-    if use_cache:
-        try:
-            cache_key = f'setting_{key}'
-            value = cache.get(cache_key)
-            
-            if value is None:
-                value = SystemSettings.get_setting(key, default)
-                cache.set(cache_key, value, 300)  # Cache for 5 minutes
-            
-            return value
-        except Exception:
-            # If cache fails (e.g., Redis not running), fall back to database
-            return SystemSettings.get_setting(key, default)
-    
-    return SystemSettings.get_setting(key, default)
+    def get_env_value():
+        if key in env_mapping:
+            env_val = getattr(settings, env_mapping[key], None)
+            if env_val is not None:
+                # Handle boolean strings from settings if necessary
+                if isinstance(env_val, bool):
+                    return 'true' if env_val else 'false'
+                return str(env_val)
+        return None
+
+    def get_db_value(db_default=default):
+        if use_cache:
+            try:
+                cache_key = f'setting_{key}'
+                value = cache.get(cache_key)
+
+                if value is None:
+                    value = SystemSettings.get_setting(key, db_default)
+                    cache.set(cache_key, value, 300)  # Cache for 5 minutes
+
+                return value
+            except Exception:
+                # If cache fails (e.g., Redis not running), fall back to database
+                return SystemSettings.get_setting(key, db_default)
+
+        return SystemSettings.get_setting(key, db_default)
+
+    if db_first:
+        db_value = get_db_value(db_default=None)
+        if db_value not in (None, ''):
+            return db_value
+        env_value = get_env_value()
+        return env_value if env_value is not None else default
+
+    env_value = get_env_value()
+    if env_value is not None:
+        return env_value
+
+    return get_db_value()
 
 
-def get_settings(keys, defaults=None, use_cache=True):
+def get_settings(keys, defaults=None, use_cache=True, db_first=False):
     """
     Get multiple settings at once
     
@@ -85,6 +102,7 @@ def get_settings(keys, defaults=None, use_cache=True):
         keys (list): List of setting keys
         defaults (dict): Dictionary of default values
         use_cache (bool): Whether to use cache
+        db_first (bool): Whether database settings should override mapped env vars
     
     Returns:
         dict: Dictionary of key-value pairs
@@ -96,7 +114,7 @@ def get_settings(keys, defaults=None, use_cache=True):
     
     for key in keys:
         default = defaults.get(key, '')
-        results[key] = get_setting(key, default, use_cache)
+        results[key] = get_setting(key, default, use_cache, db_first=db_first)
     
     return results
 
@@ -228,7 +246,7 @@ def get_email_settings():
 
 
 def get_sms_settings():
-    """Get all SMS settings"""
+    """Get all SMS settings, prioritizing admin-configured database values."""
     keys = [
         'sms_enabled',
         'sms_provider',
@@ -236,6 +254,9 @@ def get_sms_settings():
         'hubtel_client_secret',
         'hubtel_sender_id',
         'hubtel_api_url',
+        'twilio_account_sid',
+        'twilio_auth_token',
+        'twilio_phone_number',
         'sms_signature',
         'sms_test_number',
     ]
@@ -246,7 +267,7 @@ def get_sms_settings():
         'hubtel_api_url': 'https://smsc.hubtel.com/v1/messages/send',
     }
     
-    return get_settings(keys, defaults)
+    return get_settings(keys, defaults, db_first=True)
 
 
 def get_whatsapp_settings():

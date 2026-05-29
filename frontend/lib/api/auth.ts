@@ -57,7 +57,7 @@ export interface UpdateProfileData {
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await apiClient.post("/auth/token/", credentials, {
+    const response = await apiClient.post("/auth/token", credentials, {
       withCredentials: true,
     });
     return response.data;
@@ -92,7 +92,7 @@ export const authApi = {
 
   refreshToken: async (): Promise<{ access: string; refresh?: string }> => {
     const response = await apiClient.post(
-      "/auth/token/refresh/",
+      "/auth/token/refresh",
       {},
       { withCredentials: true, skipAuth: true, skipAuthRefresh: true }
     );
@@ -114,7 +114,7 @@ export const authApi = {
   },
 
   getCurrentUser: async (): Promise<User> => {
-    const response = await apiClient.get("/auth/users/me/");
+    const response = await apiClient.get("/auth/users/me");
     return response.data;
   },
 

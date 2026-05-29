@@ -14,6 +14,8 @@ import {
   Phone,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Mail,
+  Star,
+  Send,
   MapPin,
   Wrench,
   AlertCircle,
@@ -58,6 +60,8 @@ export default function AppointmentDetailPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rating, setRating] = useState(5);
+  const [feedback, setFeedback] = useState("");
 
   const { data: appointment, isLoading } = useQuery({
     queryKey: ["portal", "appointment", appointmentId],
@@ -111,6 +115,26 @@ export default function AppointmentDetailPage() {
       toast({
         title: "Reschedule Failed",
         description: error.response?.data?.error || "Failed to reschedule appointment. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rateServiceMutation = useMutation({
+    mutationFn: (data: { rating: number; customer_feedback?: string }) =>
+      appointmentsApi.rateService(appointmentId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal", "appointment", appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ["portal", "appointments"] });
+      toast({
+        title: "Feedback Submitted",
+        description: "Thank you for rating your appointment experience.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission Failed",
+        description: error.response?.data?.error || "Failed to submit feedback.",
         variant: "destructive",
       });
     },
@@ -333,6 +357,71 @@ export default function AppointmentDetailPage() {
                 <p className="text-card-foreground whitespace-pre-wrap">
                   {apt.special_instructions}
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {appointment.status === "completed" && (
+            <Card className="border-none shadow-premium bg-gradient-to-br from-orange-50 to-indigo-50 dark:from-orange-900/10 dark:to-indigo-900/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                  Appointment Experience
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(appointment.customer_feedback || appointment.customer_rating) ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Your Feedback:</p>
+                    {appointment.customer_rating && (
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="p-4 bg-card/50 rounded-xl italic text-sm">
+                      {appointment.customer_feedback ? `"${appointment.customer_feedback}"` : "No written comment submitted."}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">How was your appointment experience today?</p>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className="focus:outline-none transition-transform hover:scale-110"
+                        >
+                          <Star className={`h-8 w-8 ${star <= rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="appointment-feedback">Tell us more (Optional)</Label>
+                      <Textarea
+                        id="appointment-feedback"
+                        placeholder="What did you like? What can we improve?"
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        className="bg-card/50"
+                      />
+                    </div>
+                    <Button
+                      className="w-full bg-primary hover:bg-primary/90 font-bold gap-2"
+                      onClick={() => rateServiceMutation.mutate({ rating, customer_feedback: feedback })}
+                      disabled={rateServiceMutation.isPending}
+                    >
+                      <Send className="h-4 w-4" />
+                      {rateServiceMutation.isPending ? "Submitting..." : "Submit Feedback"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

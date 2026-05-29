@@ -6,12 +6,7 @@ import { isAxiosError } from "axios";
 import { adminApi, type SystemSetting } from "@/lib/api/admin";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { getAccessToken } from "@/lib/utils/token";
-
-/** Shared media-URL builder derived from the API base URL. */
-function getMediaBaseUrl() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-    return apiUrl.replace(/\/api\/?$/, "");
-}
+import { getMediaUrl as resolveMediaUrl } from "@/lib/api/utils";
 
 interface BrandingResult {
     siteName: string;
@@ -64,22 +59,11 @@ export function useBranding(
         },
     });
 
-    const mediaBaseUrl = useMemo(() => getMediaBaseUrl(), []);
-
-    const getMediaUrl = useCallback(
-        (path: string, cacheKey?: number) => {
-            if (path.startsWith("http")) {
-                return cacheKey
-                    ? `${path}${path.includes("?") ? "&" : "?"}v=${cacheKey}`
-                    : path;
-            }
-            const url = `${mediaBaseUrl}/media/${path}`;
-            return cacheKey
-                ? `${url}${url.includes("?") ? "&" : "?"}v=${cacheKey}`
-                : url;
-        },
-        [mediaBaseUrl],
-    );
+    const getMediaUrl = useCallback((path: string, cacheKey?: number) => {
+        const url = resolveMediaUrl(path);
+        if (!cacheKey || !url) return url;
+        return `${url}${url.includes("?") ? "&" : "?"}v=${cacheKey}`;
+    }, []);
 
     const branding = useMemo(() => {
         const getSetting = (key: string): string | null => {

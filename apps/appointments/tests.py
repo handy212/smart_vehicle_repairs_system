@@ -471,3 +471,50 @@ class ServiceBayAPITest(APITestCase):
         # Only available bays should be returned
         for bay in response.data:
             self.assertEqual(bay['status'], 'available')
+
+
+class AppointmentRatingAPITest(APITestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email='rating-admin@test.com', username='rating-admin', password='test123',
+            first_name='Rating', last_name='Admin', phone='1112223333', role='admin'
+        )
+        self.customer_user = User.objects.create_user(
+            email='rating-customer@test.com', username='rating-customer', password='test123',
+            first_name='Rating', last_name='Customer', phone='4445556666', role='customer'
+        )
+        self.branch = Branch.objects.create(
+            name='Rating Branch', code='RAT', phone='1234567890',
+            address='123 Rating St', city='Accra', state='GA',
+            zip_code='00000', created_by=self.admin_user
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer, make='Toyota', model='Corolla', year=2021,
+            vin='5YFBURHE0MP123456', license_plate='RTG001',
+            exterior_color='Gray', current_mileage=20000,
+            engine_type='gasoline', transmission_type='automatic'
+        )
+        self.appointment = Appointment.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            appointment_date=date.today(),
+            appointment_time=time(10, 0),
+            service_type='maintenance',
+            customer_concerns='Service',
+            created_by=self.admin_user,
+            status='completed',
+        )
+
+    def test_customer_can_rate_completed_appointment(self):
+        self.client.force_authenticate(user=self.customer_user)
+        response = self.client.post(
+            f'/api/appointments/appointments/{self.appointment.id}/rate_service/',
+            {'rating': 5, 'customer_feedback': 'Excellent service'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.customer_rating, 5)
+        self.assertEqual(self.appointment.customer_feedback, 'Excellent service')

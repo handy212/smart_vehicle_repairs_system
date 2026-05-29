@@ -169,6 +169,15 @@ class WorkOrder(models.Model):
     customer_concerns = models.TextField(
         help_text="What the customer reported"
     )
+    customer_rating = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Customer satisfaction rating (1-5) after work completion",
+    )
+    customer_feedback = models.TextField(
+        blank=True,
+        help_text="Optional customer feedback after work completion",
+    )
     special_instructions = models.TextField(blank=True)
     
     # Diagnosis
@@ -1034,6 +1043,7 @@ class WorkOrder(models.Model):
                 'approved_by',
                 'updated_at',
             ])
+            estimate.apply_quoted_prices_to_work_order()
 
         return estimate
 
@@ -1469,7 +1479,22 @@ class WorkOrder(models.Model):
             
             # Recalculate totals after creating tasks and linking parts
             self.recalculate_totals()
-            
+
+            try:
+                Estimate = self._meta.apps.get_model('billing', 'Estimate')
+                estimate = (
+                    Estimate.objects.filter(
+                        work_order=self,
+                        status__in=('approved', 'converted'),
+                    )
+                    .order_by('-approved_date', '-created_at')
+                    .first()
+                )
+                if estimate:
+                    estimate.apply_quoted_prices_to_work_order()
+            except Exception:
+                pass
+
             return tasks_created, parts_linked
             
         except Exception as e:

@@ -150,11 +150,24 @@ export default function LoginPage() {
           (typeof data.recaptcha_token === "string" && data.recaptcha_token) ||
           (Array.isArray(data.recaptcha_token) && data.recaptcha_token[0]) ||
           (typeof data.non_field_errors === "object" && Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+          (typeof data.email === "object" && Array.isArray(data.email) && data.email[0]) ||
           null;
 
         setError(message || "Invalid email or password.");
+      } else if (axiosError?.response?.status && axiosError.response.status >= 500) {
+        setError("Server error during sign-in. Restart the dev servers and try again.");
       } else {
-        setError("Unable to connect. Please check your internet and try again.");
+        const networkMsg =
+          err instanceof Error ? err.message : "Network error";
+        const isNetwork =
+          networkMsg === "Network Error" ||
+          networkMsg.includes("ECONNREFUSED") ||
+          networkMsg.includes("ERR_NETWORK");
+        setError(
+          isNetwork
+            ? "Cannot reach the API. Restart dev servers (bash scripts/dev-server.sh) and use http://127.0.0.1:3001 or http://localhost:3001."
+            : networkMsg || "Unable to connect. Please try again.",
+        );
       }
     } finally {
       setIsLoading(false);

@@ -1488,3 +1488,43 @@ class TestDiagnosisAPI:
         results = response.data.get('results', response.data)
         assert any(item['name'] == 'Battery Voltage Test' for item in results)
         assert ProcedureLibrary.objects.filter(name='Battery Voltage Test').exists()
+
+    def test_technician_can_increment_test_procedure_use_count(self, api_client):
+        """Technicians may call /use/ during diagnosis without manage_diagnostic_codes."""
+        SystemModule.objects.get_or_create(
+            slug='diagnosis',
+            defaults={'name': 'Diagnosis', 'is_enabled': True},
+        )
+        tech = User.objects.create_user(
+            email='proc_tech@test.com',
+            username='proc_tech',
+            password='test123',
+            role='technician',
+        )
+        role, _ = Role.objects.get_or_create(
+            code='technician',
+            defaults={'name': 'Technician', 'is_active': True},
+        )
+        for code in (
+            'view_diagnosis',
+            'edit_diagnosis',
+            'view_diagnostic_codes',
+            'perform_diagnostic_tests',
+        ):
+            perm, _ = Permission.objects.get_or_create(
+                code=code,
+                defaults={'name': code, 'category': 'diagnosis', 'is_active': True},
+            )
+            role.permissions.add(perm)
+
+        procedure = ProcedureLibrary.objects.create(
+            name='Compression Test',
+            category='engine',
+            description='Cylinder compression',
+            test_procedure='Measure PSI per cylinder',
+        )
+        api_client.force_authenticate(user=tech)
+        response = api_client.post(f'/api/diagnosis/test-procedures/{procedure.id}/use/')
+        assert response.status_code == status.HTTP_200_OK
+        procedure.refresh_from_db()
+        assert procedure.use_count == 1

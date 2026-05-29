@@ -182,6 +182,11 @@ class WhatsAppService:
                 error_subcode = data.get('error', {}).get('error_subcode', '')
                 
                 detailed_error = f"{error_msg} (Code: {error_code}, Subcode: {error_subcode})"
+                if str(error_code) == '131030':
+                    detailed_error = (
+                        f"{detailed_error}. If this is a Meta test WhatsApp number, add "
+                        f"+{payload.get('to', '')} to the app's allowed recipient list in Meta."
+                    )
                 logger.error(f"WhatsApp API Error: {detailed_error}")
                 return False, detailed_error
                 
@@ -199,9 +204,16 @@ class WhatsAppService:
             
         # Remove all non-digit characters
         digits = ''.join(filter(str.isdigit, phone))
-        
-        # WhatsApp usually expects country code without +
-        # But if it's already there (e.g. 233...) we just return digits
+
+        # Ghana local mobile numbers are commonly stored as 0XXXXXXXXX.
+        # Meta expects international format without the leading +.
+        if digits.startswith('233'):
+            return digits
+        if digits.startswith('0') and len(digits) == 10:
+            return f"233{digits[1:]}"
+        if len(digits) == 9:
+            return f"233{digits}"
+
         return digits
 
 # Global instance

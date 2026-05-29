@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.utils import timezone
@@ -10,7 +11,7 @@ from apps.accounts.models import User
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.branches.models import Branch
-from apps.roadside.models import RoadsideRequest
+from apps.roadside.models import RoadsideRequest, RoadsideNote, RoadsidePhoto
 from apps.notifications_app.models import Notification
 from apps.subscriptions.models import Package, Subscription, SubscriptionUsage
 from apps.accounts.admin_models import SystemModule
@@ -417,6 +418,65 @@ class RoadsideRequestTests(TestCase):
         self.assertIn('Enter a charge amount', str(response.data))
         request_obj = RoadsideRequest.objects.get(pk=request_id)
         self.assertEqual(request_obj.status, 'in_progress')
+
+    def test_technician_can_add_site_notes_and_photos_when_working(self):
+        """Assigned technicians can document roadside work on site"""
+        vehicle_no_sub = Vehicle.objects.create(
+            owner=self.customer,
+            license_plate="DOC-123",
+            make="Honda",
+            model="Civic",
+            year=2019,
+            current_mileage=30000,
+            vin="VINDOCSITE001"
+        )
+
+        response = self.client.post(self.url, {
+            'customer': self.customer.id,
+            'vehicle': vehicle_no_sub.id,
+            'service_type': 'flat_tyre',
+            'breakdown_location': 'Home',
+            'customer_phone': '1234567890',
+            'branch': self.branch.id,
+            'pay_as_you_go': True,
+            'charge_amount': '50.00',
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        request_id = response.data['id']
+
+        self.client.force_authenticate(user=self.manager)
+        self.client.post(f"{self.url}{request_id}/assign_dispatch/", {'technician_id': self.technician.id})
+        self.client.post(f"{self.url}{request_id}/en_route/")
+        self.client.post(f"{self.url}{request_id}/arrive/")
+        self.client.post(f"{self.url}{request_id}/in_progress/")
+
+        self.client.force_authenticate(user=self.technician)
+        response = self.client.post(
+            f"{self.url}{request_id}/site-notes/",
+            {'note': 'Replaced damaged tyre and checked pressure.'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(RoadsideNote.objects.filter(request_id=request_id).count(), 1)
+        self.assertEqual(response.data['created_by'], self.technician.id)
+
+        image = SimpleUploadedFile(
+            "roadside.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        response = self.client.post(
+            f"{self.url}{request_id}/site-photos/",
+            {'image': image, 'photo_type': 'repair', 'caption': 'Tyre replaced'},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(RoadsidePhoto.objects.filter(request_id=request_id).count(), 1)
+        self.assertEqual(response.data['uploaded_by'], self.technician.id)
+
+        response = self.client.get(f"{self.url}{request_id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['site_notes']), 1)
+        self.assertEqual(len(response.data['photos']), 1)
         
     def test_cancellation(self):
         """Test cancellation logic"""

@@ -86,6 +86,14 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('delete_appointments')]
         elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
             return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('edit_appointments')]
+        elif self.action == 'rate_service':
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated(), IsModuleEnabled('appointments')]
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('edit_appointments')]
+        elif self.action == 'my_schedule':
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('view_own_appointments')]
+        elif self.action == 'technician_schedule':
+            return [IsAuthenticated(), IsModuleEnabled('appointments')]
         return action_permission_instances(
             'appointments',
             self.action,
@@ -271,6 +279,50 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 "Failed to send vehicle ready notification: %s", e, exc_info=True
             )
         
+        serializer = AppointmentDetailSerializer(appointment)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def rate_service(self, request, pk=None):
+        """Allow customer/staff to submit post-appointment rating."""
+        appointment = self.get_object()
+
+        if appointment.status != 'completed':
+            return Response(
+                {'error': 'Only completed appointments can be rated'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        if getattr(user, 'role', None) == 'customer':
+            from apps.customers.models import Customer
+            try:
+                customer = Customer.objects.get(user=user)
+            except Customer.DoesNotExist:
+                return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            if appointment.customer_id != customer.id:
+                return Response(
+                    {'error': 'You do not have permission to rate this appointment'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        rating = request.data.get('rating')
+        feedback = request.data.get('customer_feedback') or request.data.get('feedback') or ''
+        if rating in (None, ''):
+            return Response({'error': 'Rating is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rating = int(rating)
+        except (TypeError, ValueError):
+            return Response({'error': 'Rating must be a number from 1 to 5'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if rating < 1 or rating > 5:
+            return Response({'error': 'Rating must be between 1 and 5'}, status=status.HTTP_400_BAD_REQUEST)
+
+        appointment.customer_rating = rating
+        appointment.customer_feedback = str(feedback).strip()
+        appointment.save(update_fields=['customer_rating', 'customer_feedback', 'updated_at'])
+
         serializer = AppointmentDetailSerializer(appointment)
         return Response(serializer.data)
     
@@ -686,18 +738,66 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             'available_slots': len([s for s in all_slots if s['available']])
         })
     
+    @action(detail=False, methods=['get'], url_path='my_schedule')
+    def my_schedule(self, request):
+        """Get schedule for the authenticated technician."""
+        from apps.accounts.permissions import user_has_permission
+
+        if not user_has_permission(request.user, 'view_own_appointments'):
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        date_str = request.query_params.get('date', timezone.now().date().isoformat())
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
+
+        appointments = self.get_queryset().filter(
+            assigned_technicians__id=request.user.id,
+            appointment_date=selected_date,
+        ).exclude(status='cancelled')
+
+        total_minutes = sum(apt.estimated_duration or 0 for apt in appointments)
+        return Response({
+            'technician_id': request.user.id,
+            'technician_name': request.user.get_full_name(),
+            'date': selected_date,
+            'appointments': AppointmentListSerializer(appointments, many=True).data,
+            'total_hours': round(total_minutes / 60, 2),
+        })
+
     @action(detail=False, methods=['get'])
     def technician_schedule(self, request):
         """Get schedule for specific technician"""
+        from apps.accounts.permissions import user_has_permission
+        from rest_framework.exceptions import PermissionDenied
+
         technician_id = request.query_params.get('technician_id')
         date_str = request.query_params.get('date', timezone.now().date().isoformat())
-        
+
         if not technician_id:
             return Response(
                 {'error': 'Technician ID is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        try:
+            tech_id = int(technician_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'Invalid technician ID'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if tech_id != request.user.id and not user_has_permission(request.user, 'view_appointments'):
+            raise PermissionDenied('You can only view your own schedule.')
+
+        if tech_id == request.user.id and not (
+            user_has_permission(request.user, 'view_appointments')
+            or user_has_permission(request.user, 'view_own_appointments')
+        ):
+            raise PermissionDenied('You do not have permission to view schedules.')
+
         try:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
@@ -705,27 +805,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 {'error': 'Invalid date format'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Get technician's appointments
+
         appointments = self.get_queryset().filter(
-            assigned_technicians__id=technician_id,
+            assigned_technicians__id=tech_id,
             appointment_date=selected_date
         ).exclude(status='cancelled')
-        
-        # Calculate total hours
-        total_minutes = sum(apt.estimated_duration for apt in appointments)
-        total_hours = total_minutes / 60
-        
+
+        total_minutes = sum(apt.estimated_duration or 0 for apt in appointments)
+
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        technician = User.objects.get(pk=technician_id)
-        
+        technician = User.objects.get(pk=tech_id)
+
         return Response({
-            'technician_id': technician_id,
+            'technician_id': tech_id,
             'technician_name': technician.get_full_name(),
             'date': selected_date,
             'appointments': AppointmentListSerializer(appointments, many=True).data,
-            'total_hours': round(total_hours, 2)
+            'total_hours': round(total_minutes / 60, 2)
         })
 
 

@@ -32,10 +32,22 @@ admin_router.register(r'modules', SystemModuleViewSet, basename='system-module')
 
 urlpatterns = [
     # JWT Authentication (with reCAPTCHA support)
+    # Accept with and without trailing slash (Next.js proxy strips slashes on /api/*).
+    path('token', CookieTokenObtainPairView.as_view(), name='token_obtain_pair_no_slash'),
     path('token/', CookieTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh', CookieTokenRefreshView.as_view(), name='token_refresh_no_slash'),
     path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+    path('token/verify', TokenVerifyView.as_view(), name='token_verify_no_slash'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('logout', LogoutView.as_view(), name='token_logout_no_slash'),
     path('logout/', LogoutView.as_view(), name='token_logout'),
+
+    # Profile (no-slash variant for Next.js /api proxy without trailing-slash redirects)
+    path(
+        'users/me',
+        UserViewSet.as_view({'get': 'me', 'put': 'me', 'patch': 'me'}),
+        name='user_me_no_slash',
+    ),
     
     # User management
     path('', include(router.urls)),

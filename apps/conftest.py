@@ -35,3 +35,39 @@ def admin_user(db):
         is_superuser=True,
         is_active=True,
     )
+
+
+@pytest.fixture
+def manager_user(db):
+    """Project-aware manager fixture for app-level API tests."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    return User.objects.create_user(
+        username='manager',
+        email='manager@test.com',
+        password='test123',
+        first_name='Manager',
+        last_name='User',
+        role='manager',
+        is_staff=True,
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def technician_user(db):
+    """Project-aware technician fixture for app-level API tests."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    return User.objects.create_user(
+        username='technician',
+        email='technician@test.com',
+        password='test123',
+        first_name='Technician',
+        last_name='User',
+        role='technician',
+        is_staff=True,
+        is_active=True,
+    )

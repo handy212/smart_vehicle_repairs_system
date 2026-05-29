@@ -172,3 +172,58 @@ class SMSConsoleViewSetTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['message'], 'History 1')
+
+    def test_sms_log_details(self):
+        from apps.notifications_app.models import Notification
+        notification = Notification.objects.create(
+            recipient=self.recipient,
+            notification_type='custom',
+            channel='sms',
+            title='Detail SMS',
+            message='Detail message',
+            status='sent'
+        )
+
+        response = self.client.get(f'/api/notifications/sms-console/{notification.id}/details/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], notification.id)
+        self.assertEqual(response.data['message'], 'Detail message')
+        self.assertEqual(response.data['recipient_phone'], self.recipient.phone)
+
+    @patch('apps.notifications_app.views.send_sms')
+    def test_resend_direct_sms_log(self, mock_send_sms):
+        from apps.notifications_app.models import Notification
+        mock_send_sms.return_value = (True, {'message_id': 'resent-123'})
+        notification = Notification.objects.create(
+            recipient=None,
+            notification_type='custom',
+            channel='sms',
+            title='Direct SMS',
+            message='Please call us',
+            status='sent',
+            data={'phone_number': '0244123456', 'direct_send': True},
+        )
+
+        response = self.client.post(f'/api/notifications/sms-console/{notification.id}/resend/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'success')
+        mock_send_sms.assert_called_once_with('0244123456', 'Please call us')
+        self.assertNotEqual(response.data['notification_id'], notification.id)
+
+    def test_delete_sms_log(self):
+        from apps.notifications_app.models import Notification
+        notification = Notification.objects.create(
+            recipient=self.recipient,
+            notification_type='custom',
+            channel='sms',
+            title='Delete SMS',
+            message='Delete me',
+            status='sent'
+        )
+
+        response = self.client.delete(f'/api/notifications/sms-console/{notification.id}/delete_log/')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Notification.objects.filter(id=notification.id).exists())

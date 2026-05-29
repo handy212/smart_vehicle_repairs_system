@@ -15,6 +15,7 @@ from apps.workorders.permission_utils import (
     workorder_module_permissions,
     workorder_read_permissions,
     workorder_status_change_permissions,
+    workorder_task_workflow_permissions,
 )
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
@@ -112,6 +113,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         'get_recent_work_orders', 'active', 'overdue', 'awaiting_approval',
         'customer_waiting', 'by_technician', 'status_summary', 'technician_workload',
         'workflow_metrics', 'predict_service', 'suggest_observations', 'suggest_qc_notes',
+        'rate_service',
     })
 
     def get_permissions(self):
@@ -128,6 +130,10 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             return workorder_module_permissions() + [HasPermission('create_workorders')()]
         if self.action == 'check_overdue':
             return workorder_module_permissions() + [HasPermission('manage_workorders')()]
+        if self.action == 'rate_service':
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated(), IsModuleEnabled('workorders')]
+            return workorder_edit_permissions()
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             return workorder_read_permissions()
         if self.request.method in ('PUT', 'PATCH'):
@@ -299,6 +305,47 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             import traceback
             logger.error(traceback.format_exc())
             raise
+
+    @action(detail=True, methods=['post'])
+    def rate_service(self, request, pk=None):
+        """Allow customer (or staff) to submit post-service rating/feedback."""
+        work_order = self.get_object()
+
+        if work_order.status not in ['completed', 'closed', 'invoiced']:
+            return Response(
+                {'error': 'Only completed work orders can be rated'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        if getattr(user, 'role', None) == 'customer':
+            customer_profile = getattr(user, 'customer_profile', None)
+            if not customer_profile or work_order.customer_id != customer_profile.id:
+                return Response(
+                    {'error': 'You do not have permission to rate this work order'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        rating = request.data.get('rating')
+        feedback = request.data.get('customer_feedback') or request.data.get('feedback') or ''
+
+        if rating in (None, ''):
+            return Response({'error': 'Rating is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rating = int(rating)
+        except (TypeError, ValueError):
+            return Response({'error': 'Rating must be a number from 1 to 5'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if rating < 1 or rating > 5:
+            return Response({'error': 'Rating must be between 1 and 5'}, status=status.HTTP_400_BAD_REQUEST)
+
+        work_order.customer_rating = rating
+        work_order.customer_feedback = str(feedback).strip()
+        work_order.save(update_fields=['customer_rating', 'customer_feedback', 'updated_at'])
+
+        serializer = self.get_serializer(work_order)
+        return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def check_unapproved_recommendations(self, request):
@@ -1006,6 +1053,15 @@ class ServiceTaskViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet)
     filterset_fields = ['work_order', 'status', 'task_type', 'assigned_to']
     ordering_fields = ['sequence_order', 'created_at']
     ordering = ['work_order', 'sequence_order']
+
+    TASK_WORKFLOW_ACTIONS = frozenset({'start', 'complete'})
+
+    def get_permissions(self):
+        if getattr(self, 'action', None) in self.TASK_WORKFLOW_ACTIONS:
+            return workorder_task_workflow_permissions()
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return workorder_read_permissions()
+        return workorder_edit_permissions()
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -1866,7 +1922,13 @@ class TechnicianTimeLogViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelVi
     def get_permissions(self):
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             return workorder_read_permissions()
-        return workorder_module_permissions() + [HasPermission('clock_work_time')()]
+        return workorder_module_permissions() + [
+            HasAnyPermission([
+                'clock_work_time',
+                'edit_workorders',
+                'update_workorder_status',
+            ])(),
+        ]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = TechnicianTimeLogFilter
     ordering_fields = ['clock_in', 'created_at']
@@ -1890,6 +1952,35 @@ class TechnicianTimeLogViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelVi
             
         serializer = self.get_serializer(active_log)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='my-recent')
+    def my_recent(self, request):
+        """Recent time logs for the authenticated technician (mobile app)."""
+        logs = (
+            self.get_queryset()
+            .filter(technician=request.user)
+            .order_by('-clock_in')[:25]
+        )
+        serializer = self.get_serializer(logs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='clock-in')
+    def clock_in(self, request):
+        """Clock in using server time (mobile-friendly)."""
+        serializer = TechnicianTimeLogCreateSerializer(
+            data={
+                'work_order': request.data.get('work_order'),
+                'task': request.data.get('task'),
+                'description': request.data.get('description', 'Field work'),
+            },
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(
+            TechnicianTimeLogSerializer(serializer.instance).data,
+            status=status.HTTP_201_CREATED,
+        )
     
     def perform_create(self, serializer):
         """Auto-populate technician and hourly_rate if not provided"""

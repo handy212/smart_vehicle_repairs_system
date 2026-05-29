@@ -18,11 +18,14 @@ import {
   getMobileWorkOrderStatusBadgeClass,
 } from "@/lib/utils/mobile-workorder-filters";
 import { MobileErrorState } from "@/components/mobile/MobileErrorState";
+import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
+import { useAuthStore } from "@/store/authStore";
 
 export default function MobileWorkOrdersPage() {
   const { formatCurrency } = useCurrency();
   const searchParams = useSearchParams();
   const { isOnline } = useOfflineStore();
+  const user = useAuthStore((s) => s.user);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -36,9 +39,14 @@ export default function MobileWorkOrdersPage() {
     setError(false);
     try {
       if (isOnline) {
-        const params: Record<string, string> = {};
+        const params: Parameters<typeof workordersApi.list>[0] = {
+          ordering: "-created_at",
+        };
         if (statusFilter) {
           params.status = statusFilter;
+        }
+        if (user?.id) {
+          params.primary_technician = user.id;
         }
         const response = await workordersApi.list(params);
         const orders = response.results || [];
@@ -69,11 +77,13 @@ export default function MobileWorkOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [isOnline, statusFilter]);
+  }, [isOnline, statusFilter, user?.id]);
 
   useEffect(() => {
     loadWorkOrders();
   }, [loadWorkOrders]);
+
+  usePullToRefresh(loadWorkOrders);
 
   const filteredWorkOrders = workOrders.filter((wo) => {
     if (!search) return true;
@@ -109,7 +119,7 @@ export default function MobileWorkOrdersPage() {
   }
 
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="mx-auto max-w-md space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Work Orders</h2>
         <Button

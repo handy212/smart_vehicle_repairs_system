@@ -1,6 +1,9 @@
 import { authApi } from "@/lib/api/auth";
-import { getAccessToken, setAccessToken, setTokens } from "@/lib/utils/token";
+import { refreshAccessToken } from "@/lib/auth/refresh-access-token";
+import { getAccessToken, setTokens } from "@/lib/utils/token";
 import { useAuthStore } from "@/store/authStore";
+
+let inflightSession: Promise<boolean> | null = null;
 
 /** After login/2FA when tokens may be HttpOnly-only (no access in JSON). */
 export async function applyLoginTokens(access?: string | null): Promise<void> {
@@ -8,14 +11,7 @@ export async function applyLoginTokens(access?: string | null): Promise<void> {
     setTokens(access);
     return;
   }
-  try {
-    const { access: refreshed } = await authApi.refreshToken();
-    if (refreshed) {
-      setAccessToken(refreshed);
-    }
-  } catch {
-    // Cookie-only session; subsequent getCurrentUser validates via JWTCookieAuthentication.
-  }
+  await refreshAccessToken();
 }
 
 /**
@@ -31,22 +27,31 @@ export async function ensureApiSession(): Promise<boolean> {
     return true;
   }
 
-  try {
-    const { access } = await authApi.refreshToken();
-    if (access) {
-      setAccessToken(access);
-      return true;
-    }
-  } catch {
-    // Fall through — cookie-only session may still work once JWTCookieAuthentication runs.
-  }
-
-  try {
-    const user = await authApi.getCurrentUser();
-    useAuthStore.getState().setUser(user);
-    return true;
-  } catch {
-    useAuthStore.getState().logout();
+  if (!useAuthStore.getState().isAuthenticated) {
     return false;
   }
+
+  if (inflightSession) {
+    return inflightSession;
+  }
+
+  inflightSession = (async () => {
+    const access = await refreshAccessToken();
+    if (access) {
+      return true;
+    }
+
+    try {
+      const user = await authApi.getCurrentUser();
+      useAuthStore.getState().setUser(user);
+      return true;
+    } catch {
+      useAuthStore.getState().logout();
+      return false;
+    }
+  })().finally(() => {
+    inflightSession = null;
+  });
+
+  return inflightSession;
 }

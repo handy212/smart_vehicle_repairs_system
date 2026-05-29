@@ -313,20 +313,19 @@ class QBOInboundSyncView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperU
 
         return redirect(build_qbo_integrations_url(qbo_status="sync_started"))
 
-class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
+class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
     """
     Returns the current connection status and basic stats for QBO.
+    Readable by any authenticated user (used to gate operational UI).
     """
     def get(self, request):
         config = QuickBooksService.get_config(active_only=False)
 
         has_keys = config and config.client_id and config.client_secret
-        has_token = config and hasattr(config, 'token') and config.token is not None
-
         last_sync = QBOSyncLog.objects.order_by('-finished_at').first()
 
         return JsonResponse({
-            'is_connected': config.is_active and has_token if config else False,
+            'is_connected': QuickBooksService.is_connected(),
             'has_keys': bool(has_keys),
             'realm_id': config.realm_id if config else None,
             'is_sandbox': config.is_sandbox if config else True,

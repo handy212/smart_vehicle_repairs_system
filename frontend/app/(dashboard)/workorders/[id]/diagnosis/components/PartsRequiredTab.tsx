@@ -78,9 +78,12 @@ export function PartsRequiredTab({
     const [showAddDialog, setShowAddDialog] = useState(false);
 
     // Fetch parts for this work order
-    const { data: partsData, isLoading, error } = useQuery({
+    const { data: partsData, isLoading } = useQuery({
         queryKey: ["workorder-parts", workOrder?.id],
-        queryFn: () => workordersApi.parts.list(workOrder?.id!),
+        queryFn: () => {
+            if (!workOrder?.id) return Promise.resolve([]);
+            return workordersApi.parts.list(workOrder.id);
+        },
         enabled: !!workOrder?.id,
     });
 

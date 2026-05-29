@@ -301,8 +301,8 @@ export const roleGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/workorders",
-                actionLabel: "My Work Orders",
+                actionLink: "/mobile/dashboard",
+                actionLabel: "Mobile Dashboard",
             },
             {
                 title: "Assigned work orders",
@@ -310,7 +310,7 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Open **Work Orders** and filter by **Primary Technician** or use **Kanban → My Tasks**.",
+                            "Open **Mobile → Work Orders** to see jobs assigned to you.",
                             "Open the job detail page to see customer complaint, service history, and linked inspection.",
                             "Read notes from intake and the service coordinator before touching the vehicle.",
                             "Use the **Repairs** tab to manage service tasks and mark individual tasks complete.",
@@ -319,8 +319,8 @@ export const roleGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/workorders/kanban",
-                actionLabel: "Kanban Board",
+                actionLink: "/mobile/workorders",
+                actionLabel: "Mobile Work Orders",
             },
             {
                 title: "Inspections",
@@ -344,8 +344,8 @@ export const roleGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/inspections",
-                actionLabel: "Inspections",
+                actionLink: "/mobile/inspections",
+                actionLabel: "Mobile Inspections",
             },
             {
                 title: "Diagnosis",
@@ -361,8 +361,8 @@ export const roleGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/diagnosis",
-                actionLabel: "Diagnosis List",
+                actionLink: "/mobile/workorders",
+                actionLabel: "Work Orders (open job → Diagnosis)",
             },
             {
                 title: "Time tracking",
@@ -418,8 +418,8 @@ export const roleGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/inventory/parts-requests",
-                actionLabel: "Parts Requests",
+                actionLink: "/mobile/workorders",
+                actionLabel: "Request Parts from Work Order",
             },
         ],
     },

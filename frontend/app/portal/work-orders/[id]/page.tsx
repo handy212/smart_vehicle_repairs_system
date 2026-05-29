@@ -8,7 +8,7 @@ import { workordersApi } from "@/lib/api/workorders";
 
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, CheckCircle, XCircle, AlertTriangle, AlertCircle, Package, CheckSquare, FileText, Receipt, CreditCard } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle, XCircle, AlertTriangle, AlertCircle, Package, CheckSquare, FileText, Receipt, CreditCard, Star, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -26,6 +26,7 @@ import {
 } from "@/lib/workorders/workOrderBillingDisplay";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function WorkOrderDetailPage() {
     const params = useParams();
@@ -37,6 +38,8 @@ export default function WorkOrderDetailPage() {
     const [showApproveDialog, setShowApproveDialog] = useState(false);
     const [customerSignature, setCustomerSignature] = useState<string | null>(null);
     const signaturePadRef = useRef<SignatureCanvas>(null);
+    const [rating, setRating] = useState(5);
+    const [feedback, setFeedback] = useState("");
 
     // State for selected recommendations
     const [selectedRecommendations, setSelectedRecommendations] = useState<number[]>([]);
@@ -119,6 +122,27 @@ export default function WorkOrderDetailPage() {
                 variant: "destructive",
             });
         }
+    });
+
+    const rateServiceMutation = useMutation({
+        mutationFn: (data: { rating: number; customer_feedback?: string }) =>
+            workordersApi.rateService(workOrderId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["portal", "workorder", workOrderId] });
+            queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+            toast({
+                title: "Feedback submitted",
+                description: "Thanks for rating your work order experience.",
+                variant: "success",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Submission failed",
+                description: error?.response?.data?.error || "Could not submit rating.",
+                variant: "destructive",
+            });
+        },
     });
 
     const handleApproveWorkOrder = () => {
@@ -493,6 +517,71 @@ export default function WorkOrderDetailPage() {
                             )}
                         </CardContent>
                     </Card> */}
+
+                    {["completed", "invoiced", "closed"].includes(workOrder.status) && (
+                        <Card className="border-none shadow-premium bg-gradient-to-br from-orange-50 to-indigo-50 dark:from-orange-900/10 dark:to-indigo-900/10">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                                    Service Experience
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {(workOrder.customer_feedback || workOrder.customer_rating) ? (
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium text-muted-foreground">Your feedback:</p>
+                                        {workOrder.customer_rating && (
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <Star
+                                                        key={star}
+                                                        className={`h-4 w-4 ${star <= (workOrder.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="p-4 bg-card/50 rounded-xl italic text-sm">
+                                            {workOrder.customer_feedback ? `"${workOrder.customer_feedback}"` : "No written comment submitted."}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <p className="text-sm text-muted-foreground">How was your work order experience?</p>
+                                        <div className="flex gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button
+                                                    key={star}
+                                                    type="button"
+                                                    onClick={() => setRating(star)}
+                                                    className="focus:outline-none transition-transform hover:scale-110"
+                                                >
+                                                    <Star className={`h-8 w-8 ${star <= rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="workorder-feedback">Tell us more (optional)</Label>
+                                            <Textarea
+                                                id="workorder-feedback"
+                                                placeholder="What went well? What can we improve?"
+                                                value={feedback}
+                                                onChange={(e) => setFeedback(e.target.value)}
+                                                className="bg-card/50"
+                                            />
+                                        </div>
+                                        <Button
+                                            className="w-full bg-primary hover:bg-primary/90 font-bold gap-2"
+                                            onClick={() => rateServiceMutation.mutate({ rating, customer_feedback: feedback })}
+                                            disabled={rateServiceMutation.isPending}
+                                        >
+                                            <Send className="h-4 w-4" />
+                                            {rateServiceMutation.isPending ? "Submitting..." : "Submit Feedback"}
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
                 </div>
 

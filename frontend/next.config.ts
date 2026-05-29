@@ -26,6 +26,8 @@ const apiConfig = getApiHost();
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Keep trailing slashes on proxied /api/* POSTs (Django requires them; default redirect drops POST body).
+  skipTrailingSlashRedirect: true,
   // Silence Turbopack/webpack config conflict (Next.js 16 defaults to Turbopack)
   turbopack: {},
   // Ensure Next doesn't infer the workspace root from a different lockfile when deployed
@@ -70,19 +72,20 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // /api and /media: proxy.ts + beforeFiles rewrites (matcher must include /media/* — image ext. excluded from catch-all)
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-    const baseUrl = apiUrl.replace(/\/api\/?$/, "");
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiUrl}/:path*`,
-      },
-      {
-        source: "/media/:path*",
-        destination: `${baseUrl}/media/:path*`,
-      },
-    ];
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api").replace(
+      /\/$/,
+      ""
+    );
+    const backendOrigin = apiUrl.replace(/\/api\/?$/, "");
+    return {
+      beforeFiles: [
+        { source: "/api", destination: apiUrl },
+        { source: "/api/:path*", destination: `${apiUrl}/:path*` },
+        { source: "/media/:path*", destination: `${backendOrigin}/media/:path*` },
+      ],
+    };
   },
 };
 

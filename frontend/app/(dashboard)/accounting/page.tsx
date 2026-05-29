@@ -15,6 +15,7 @@ import { RefreshCw, Download, Database } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useBranchStore } from "@/store/branchStore";
@@ -103,6 +104,7 @@ export default function AccountingDashboardPage() {
         to: endOfMonth(new Date())
     });
     const [isSyncing, setIsSyncing] = useState(false);
+    const { isConnected: isQboConnected } = useQuickBooksConnection();
 
     const handleQBOSync = async () => {
         try {
@@ -249,10 +251,12 @@ export default function AccountingDashboardPage() {
                     <Button variant="outline" size="icon" className={isPerfex ? "h-8 w-8 text-xs" : "h-9 w-9"} onClick={() => refetch()}>
                         <RefreshCw className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={handleQBOSync} disabled={isSyncing}>
-                        <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
-                        {isSyncing ? "Syncing..." : "Sync from QuickBooks"}
-                    </Button>
+                    {isQboConnected && (
+                        <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={handleQBOSync} disabled={isSyncing}>
+                            <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
+                            {isSyncing ? "Syncing..." : "Sync from QuickBooks"}
+                        </Button>
+                    )}
                     <Button size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={() => handleExport()}>
                         <Download className="w-4 h-4 mr-2" />
                         Board pack PDF

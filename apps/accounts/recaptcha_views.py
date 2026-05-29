@@ -36,7 +36,11 @@ def _get_recaptcha_config():
         secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', '') or ''
 
     is_enabled = enabled.lower() in ('true', '1', 'yes')
-    return is_enabled, secret_key.strip() or None
+    secret_key = secret_key.strip() or None
+    # Do not block login when reCAPTCHA is toggled on without a secret key configured.
+    if is_enabled and not secret_key:
+        is_enabled = False
+    return is_enabled, secret_key
 
 
 class RecaptchaTokenObtainPairSerializer(TokenObtainPairSerializer):

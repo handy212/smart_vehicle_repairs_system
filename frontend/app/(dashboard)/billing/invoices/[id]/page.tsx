@@ -32,6 +32,7 @@ import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { Undo2, Database } from "lucide-react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
@@ -84,6 +85,7 @@ export default function InvoiceDetailPage() {
   const { toast } = useToast();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const [isSyncing, setIsSyncing] = useState(false);
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
 
   const handleQBOSync = async () => {
     try {
@@ -567,9 +569,11 @@ export default function InvoiceDetailPage() {
                 <CardContent className="p-5">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Accounting</p>
                   <p className="mt-2 text-sm font-semibold text-foreground capitalize">{currentStatus || invoice.status}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {invoice.qbo_sync_status ? `QuickBooks ${invoice.qbo_sync_status}` : "No external sync status"}
-                  </p>
+                  {isQboConnected && invoice.qbo_sync_status && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {`QuickBooks ${invoice.qbo_sync_status}`}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -644,7 +648,7 @@ export default function InvoiceDetailPage() {
                         </div>
                       )}
 
-                      {invoice.qbo_sync_status && (
+                      {isQboConnected && invoice.qbo_sync_status && (
                         <div className="flex flex-col mt-2">
                           <span className="text-sm text-muted-foreground mb-1">QuickBooks Sync</span>
                           <div className="flex flex-col items-start gap-1">

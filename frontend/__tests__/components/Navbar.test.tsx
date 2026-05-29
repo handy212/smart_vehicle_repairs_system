@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navbar } from '@/components/layout/Navbar';
 import { useAuthStore } from '@/store/authStore';
+import type { Mock } from 'vitest';
 
 // Mock the auth store
 vi.mock('@/store/authStore', () => ({
@@ -58,15 +59,16 @@ const createWrapper = () => {
             queries: { retry: false },
         },
     });
-    return ({ children }: { children: React.ReactNode }) => (
+    const Wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
+    Wrapper.displayName = 'TestQueryClientWrapper';
+    return Wrapper;
 };
 
 describe('Navbar Component', () => {
     beforeEach(() => {
-
-        (useAuthStore as any).mockReturnValue({
+        const authState = {
             user: {
                 id: 1,
                 email: 'test@example.com',
@@ -76,7 +78,11 @@ describe('Navbar Component', () => {
             },
             isAuthenticated: true,
             logout: vi.fn(),
-        });
+        };
+
+        (useAuthStore as Mock).mockImplementation((selector?: (state: typeof authState) => unknown) =>
+            selector ? selector(authState) : authState
+        );
     });
 
     it('should render navbar with user information', async () => {

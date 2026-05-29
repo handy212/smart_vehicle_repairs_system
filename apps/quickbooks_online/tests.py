@@ -443,6 +443,13 @@ class QuickBooksAuthFlowTests(TestCase):
             realm_id="realm-123",
             is_active=True,
         )
+        self.token = QBOToken.objects.create(
+            config=self.config,
+            access_token="access",
+            refresh_token="refresh",
+            expires_at=timezone.now() + timedelta(days=1),
+            refresh_token_expires_at=timezone.now() + timedelta(days=1),
+        )
 
     @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
     @patch("apps.quickbooks_online.views.QuickBooksService.get_config")
@@ -481,6 +488,40 @@ class QuickBooksAuthFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["login_url"], "http://frontend.test/login?next=%2Fadmin%2Fintegrations%3Fcategory%3Daccounting")
+
+    def test_status_view_accessible_to_authenticated_non_superuser(self):
+        staff_user = User.objects.create_user(
+            email="staff@example.com",
+            username="staff",
+            password="password",
+            first_name="Staff",
+            last_name="User",
+            role="technician",
+        )
+        access_token = str(RefreshToken.for_user(staff_user).access_token)
+        self.client.cookies["access_token"] = access_token
+
+        response = self.client.get(
+            reverse("quickbooks_online:status"),
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("is_connected", response.json())
+        self.assertTrue(response.json()["is_connected"])
+
+    def test_status_view_not_connected_without_token(self):
+        self.token.delete()
+        access_token = str(RefreshToken.for_user(self.admin_user).access_token)
+        self.client.cookies["access_token"] = access_token
+
+        response = self.client.get(
+            reverse("quickbooks_online:status"),
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["is_connected"])
 
     def test_disconnect_redirects_to_frontend_when_not_json(self):
         self.client.force_login(self.admin_user)

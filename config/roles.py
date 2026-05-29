@@ -622,6 +622,12 @@ class Technician(AbstractUserRole):
         'view_documents': True,
         'upload_documents': True,
         'download_documents': True,
+
+        # Notifications (own notifications only; queryset scoped to recipient)
+        'view_notifications': True,
+
+        # Appointments (own schedule only via my_schedule API)
+        'view_own_appointments': True,
     }
 
 

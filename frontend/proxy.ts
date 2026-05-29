@@ -2,6 +2,35 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAccessTokenUsable } from '@/lib/auth/jwt';
 
+function getApiBase(): string {
+    return (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001/api').replace(/\/$/, '');
+}
+
+function getBackendBase(): string {
+    return getApiBase().replace(/\/api\/?$/, '');
+}
+
+/** Proxy /api and /media to Django (avoids Next trailing-slash redirects that break POST + cookies). */
+function rewriteBackend(request: NextRequest): NextResponse | null {
+    const { pathname, search } = request.nextUrl;
+
+    if (pathname.startsWith('/api/') || pathname === '/api') {
+        const subPath = pathname === '/api' ? '' : pathname.slice('/api/'.length);
+        const destination = subPath
+            ? `${getApiBase()}/${subPath}${search}`
+            : `${getApiBase()}${search}`;
+        return NextResponse.rewrite(new URL(destination));
+    }
+
+    if (pathname.startsWith('/media/')) {
+        const subPath = pathname.slice('/media/'.length);
+        const destination = `${getBackendBase()}/media/${subPath}${search}`;
+        return NextResponse.rewrite(new URL(destination));
+    }
+
+    return null;
+}
+
 /**
  * Next.js Middleware — Server-side authentication gate.
  *
@@ -21,6 +50,7 @@ const PUBLIC_PATHS = [
     '/manifest.json',
     '/sw.js',
     '/workbox-',
+    '/worker-',
     '/_next',
 ];
 
@@ -69,6 +99,11 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export function proxy(request: NextRequest) {
+    const backendRewrite = rewriteBackend(request);
+    if (backendRewrite) {
+        return backendRewrite;
+    }
+
     const { pathname } = request.nextUrl;
 
     if (isPublicPath(pathname)) {
@@ -98,6 +133,10 @@ export function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+        // Must run before the catch-all: image extensions are excluded there but /media/* are images
+        '/media/:path*',
+        '/api',
+        '/api/:path*',
+        '/((?!_next/static|_next/image|favicon.ico|media/|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
     ],
 };

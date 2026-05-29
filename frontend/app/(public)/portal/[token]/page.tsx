@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { workordersApi } from "@/lib/api/workorders";
 import { Loader2, CheckCircle2, XCircle, AlertCircle, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ export default function PortalPage() {
                 <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
                 <p className="text-muted-foreground">{error || "Work order not found."}</p>
                 <Button className="mt-6" variant="outline" asChild>
-                    <a href="/portal">Back to Portal Home</a>
+                    <Link href="/portal">Back to Portal Home</Link>
                     {/* If we had a home, forcing refresh usually clears issues contextually */}
                 </Button>
             </div>

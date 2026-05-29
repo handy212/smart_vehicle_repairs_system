@@ -19,6 +19,7 @@ export const useChat = (conversationId: string | number | null) => {
   const reconnectDelayRef = useRef(RECONNECT_BASE_DELAY);
   const typingTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   const isMountedRef = useRef(true);
+  const connectRef = useRef<() => void>(() => {});
 
   const { user } = useAuthStore();
 
@@ -142,9 +143,15 @@ export const useChat = (conversationId: string | number | null) => {
       // Exponential backoff reconnect
       const delay = reconnectDelayRef.current;
       reconnectDelayRef.current = Math.min(delay * 2, RECONNECT_MAX_DELAY);
-      reconnectTimeoutRef.current = setTimeout(connect, delay);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connectRef.current();
+      }, delay);
     };
   }, [conversationId, user, getWsUrl]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     isMountedRef.current = true;

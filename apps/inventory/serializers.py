@@ -11,6 +11,7 @@ from .models import (
 
 from apps.accounts.models import User
 from apps.branches.utils import resolve_branch
+from apps.quickbooks_online.serializer_mixins import QBOSyncFieldsMixin
 
 
 class PartCategorySerializer(serializers.ModelSerializer):
@@ -59,7 +60,7 @@ class SupplierListSerializer(serializers.ModelSerializer):
         ).count()
 
 
-class SupplierDetailSerializer(serializers.ModelSerializer):
+class SupplierDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     parts_count = serializers.SerializerMethodField()
     total_po_count = serializers.SerializerMethodField()
@@ -94,14 +95,6 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
                 object_id=obj.id
             ).first()
         return self._qbo_mapping_cache[obj.id]
-
-    def get_qbo_sync_status(self, obj):
-        mapping = self._get_qbo_mapping(obj)
-        return mapping.status if mapping else 'un-synced'
-
-    def get_qbo_sync_error(self, obj):
-        mapping = self._get_qbo_mapping(obj)
-        return mapping.error_message if mapping else ''
 
 
 class SupplierCreateSerializer(serializers.ModelSerializer):
@@ -389,7 +382,7 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
         }
 
 
-class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
+class PurchaseOrderDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     supplier = SupplierListSerializer(read_only=True)
     items = PurchaseOrderItemSerializer(many=True, read_only=True)
     approvals = PurchaseOrderApprovalSerializer(many=True, read_only=True)
@@ -455,14 +448,6 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
                 object_id=obj.id
             ).first()
         return self._qbo_mapping_cache[obj.id]
-
-    def get_qbo_sync_status(self, obj):
-        mapping = self._get_qbo_mapping(obj)
-        return mapping.status if mapping else 'un-synced'
-
-    def get_qbo_sync_error(self, obj):
-        mapping = self._get_qbo_mapping(obj)
-        return mapping.error_message if mapping else ''
 
 
 class PurchaseOrderCreateSerializer(serializers.ModelSerializer):

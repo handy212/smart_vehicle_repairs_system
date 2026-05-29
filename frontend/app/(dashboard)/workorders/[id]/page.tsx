@@ -12,7 +12,7 @@ import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 import WorkOrderOverviewTab from "./components/OverviewTab";
 import WorkOrderTasksTab from "./components/TasksTab";
 import WorkOrderPartsTab from "./components/PartsTab";
@@ -250,6 +250,29 @@ export default function WorkOrderDetailPage() {
       />
 
       <WorkOrderProgress status={workOrder.status} />
+
+      {(workOrder.customer_rating || workOrder.customer_feedback) && (
+        <Card>
+          <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm font-medium">Customer Experience</div>
+            <div className="flex items-center gap-2">
+              {workOrder.customer_rating && (
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${star <= (workOrder.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`}
+                    />
+                  ))}
+                </div>
+              )}
+              {workOrder.customer_feedback && (
+                <span className="text-sm text-muted-foreground italic">"{workOrder.customer_feedback}"</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <CheckInInspectionBanner
         workOrder={workOrder}

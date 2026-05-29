@@ -5,8 +5,9 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { authApi } from "@/lib/api/auth";
 import { SyncStatusBanner } from "@/components/mobile/SyncStatusBanner";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { BellRing, Home, Wrench, ClipboardCheck, Clock, Truck } from "lucide-react";
+import { OfflineIndicator } from "@/components/mobile/OfflineIndicator";
+import { MobileNotificationBell } from "@/components/mobile/MobileNotificationBell";
+import { Home, Wrench, Truck, MoreHorizontal, Calendar } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
@@ -87,19 +88,19 @@ export default function MobileLayout({
       icon: Wrench,
     },
     {
-      href: "/mobile/inspections",
-      label: "Inspections",
-      icon: ClipboardCheck,
-    },
-    {
-      href: "/mobile/time-tracking",
-      label: "Time",
-      icon: Clock,
+      href: "/mobile/schedule",
+      label: "Schedule",
+      icon: Calendar,
     },
     {
       href: "/mobile/roadside",
       label: "Roadside",
       icon: Truck,
+    },
+    {
+      href: "/mobile/more",
+      label: "More",
+      icon: MoreHorizontal,
     },
   ];
 
@@ -115,20 +116,24 @@ export default function MobileLayout({
             Tech App
           </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <OfflineIndicator />
+          <MobileNotificationBell />
+          <div className="hidden text-sm text-muted-foreground sm:block">
             {user?.first_name} {user?.last_name}
           </div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom,0px))]">
+        {children}
+      </main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-inset-bottom"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card safe-area-inset-bottom"
         aria-label="Mobile navigation"
       >
-        <div className="grid grid-cols-5 h-16">
+        <div className="grid h-16 grid-cols-5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =

@@ -3,7 +3,7 @@ Serializers for roadside assistance
 """
 from rest_framework import serializers
 from decimal import Decimal
-from .models import RoadsideRequest, RoadsideDispatch
+from .models import RoadsideRequest, RoadsideDispatch, RoadsideNote, RoadsidePhoto
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.branches.models import Branch
@@ -35,8 +35,66 @@ class DispatchedTechnicianSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RoadsideDispatch
-        fields = ['id', 'technician', 'technician_name', 'dispatched_at', 'notes']
+        fields = [
+            'id', 'technician', 'technician_name', 'dispatched_at', 'notes',
+            'response_status', 'responded_at', 'rejection_reason',
+        ]
 
+
+class RoadsideNoteSerializer(serializers.ModelSerializer):
+    """Technician note captured on site."""
+
+    created_by_name = serializers.SerializerMethodField()
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None
+
+    class Meta:
+        model = RoadsideNote
+        fields = ['id', 'request', 'note', 'created_by', 'created_by_name', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'request', 'created_by', 'created_at', 'updated_at']
+
+
+class RoadsideNoteCreateSerializer(serializers.ModelSerializer):
+    """Create a technician site note."""
+
+    class Meta:
+        model = RoadsideNote
+        fields = ['note']
+
+    def validate_note(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Note cannot be blank.")
+        return value.strip()
+
+
+class RoadsidePhotoSerializer(serializers.ModelSerializer):
+    """Photo captured for a roadside request."""
+
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    def get_uploaded_by_name(self, obj):
+        if obj.uploaded_by:
+            return obj.uploaded_by.get_full_name() or obj.uploaded_by.username
+        return None
+
+    class Meta:
+        model = RoadsidePhoto
+        fields = [
+            'id', 'request', 'image', 'photo_type', 'caption',
+            'taken_at', 'uploaded_by', 'uploaded_by_name', 'uploaded_at',
+        ]
+        read_only_fields = ['id', 'request', 'uploaded_by', 'uploaded_at']
+
+
+class RoadsidePhotoCreateSerializer(serializers.ModelSerializer):
+    """Upload a roadside service photo."""
+
+    class Meta:
+        model = RoadsidePhoto
+        fields = ['image', 'photo_type', 'caption']
 
 
 class RoadsideRequestSerializer(serializers.ModelSerializer):
@@ -54,7 +112,24 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
     dispatched_technicians = DispatchedTechnicianSerializer(source='dispatches', many=True, read_only=True)
-    
+    my_assignment_status = serializers.SerializerMethodField()
+
+    def get_my_assignment_status(self, obj):
+        request = self.context.get('request')
+        if not request or not getattr(request, 'user', None) or request.user.is_anonymous:
+            return None
+        user = request.user
+        dispatch = obj.dispatches.filter(technician=user).first()
+        if dispatch:
+            return dispatch.response_status
+        # Primary technician before/without a dispatch row
+        if obj.assigned_technician_id == user.id:
+            if obj.status in ('en_route', 'on_site', 'in_progress', 'completed'):
+                return RoadsideDispatch.RESPONSE_ACCEPTED
+            if obj.status in ('dispatched', 'requested'):
+                return RoadsideDispatch.RESPONSE_PENDING
+        return None
+
     def get_customer_name(self, obj):
         """Get customer name safely"""
         if obj.customer:
@@ -123,10 +198,11 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
             'invoice', 'invoice_number',
             'notes', 'customer_feedback', 'rating',
             'requested_at', 'created_by', 'updated_at',
-            'is_active', 'can_be_cancelled',
+            'is_active', 'can_be_cancelled', 'my_assignment_status',
         ]
         read_only_fields = [
-            'request_number', 'dispatched_at', 'arrived_at', 
+            'request_number', 'dispatched_at', 'arrived_at',
+            'my_assignment_status',
             'completed_at', 'subscription_allowance_deducted',
             'requested_at', 'updated_at', 'rating',
         ]
@@ -142,6 +218,8 @@ class RoadsideRequestDetailSerializer(RoadsideRequestSerializer):
     created_by_name = serializers.SerializerMethodField()
     timeline = serializers.SerializerMethodField()
     available_actions = serializers.SerializerMethodField()
+    site_notes = RoadsideNoteSerializer(many=True, read_only=True)
+    photos = RoadsidePhotoSerializer(many=True, read_only=True)
 
     class Meta(RoadsideRequestSerializer.Meta):
         fields = RoadsideRequestSerializer.Meta.fields + [
@@ -152,6 +230,8 @@ class RoadsideRequestDetailSerializer(RoadsideRequestSerializer):
             'created_by_name',
             'timeline',
             'available_actions',
+            'site_notes',
+            'photos',
         ]
 
     def get_created_by_name(self, obj):

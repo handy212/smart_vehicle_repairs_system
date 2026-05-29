@@ -58,14 +58,30 @@ import { CodesTab } from "./components/CodesTab";
 import { ComplaintTab } from "./components/ComplaintTab";
 import { TestsTab } from "./components/TestsTab";
 import { RecommendationDialog } from "./components/RecommendationDialog";
+import { useOfflineStore } from "@/store/offlineStore";
+import {
+  fetchDiagnosisForWorkOrder,
+  patchDiagnosisOfflineAware,
+  runDiagnosisMutation,
+} from "@/lib/offline/diagnosis";
+import { cn } from "@/lib/utils";
 
 
-export default function DiagnosisWorkspace() {
+type DiagnosisWorkspaceProps = {
+  isMobile?: boolean;
+};
+
+export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorkspaceProps) {
   const params = useParams();
   const router = useRouter();
   const workOrderId = parseInt(params.id as string);
+  const workOrderBackHref = isMobile
+    ? `/mobile/workorders/${workOrderId}`
+    : `/workorders/${workOrderId}`;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isOnline } = useOfflineStore();
+  const useOfflineDiagnosis = isMobile;
   const [activeTab, setActiveTab] = useState("complaint");
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [pauseReason, setPauseReason] = useState("");
@@ -78,10 +94,10 @@ export default function DiagnosisWorkspace() {
 
   // Fetch or create diagnosis
   const { data: diagnosis, isLoading, error: diagnosisError } = useQuery({
-    queryKey: ["diagnosis", "workorder", workOrderId],
-    queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
+    queryKey: ["diagnosis", "workorder", workOrderId, useOfflineDiagnosis ? isOnline : "online"],
+    queryFn: () => fetchDiagnosisForWorkOrder(workOrderId, useOfflineDiagnosis),
     enabled: !!workOrderId && !!workOrder,
-    retry: 1,
+    retry: isOnline ? 1 : 0,
     retryDelay: 1000,
   });
 
@@ -119,11 +135,27 @@ export default function DiagnosisWorkspace() {
   const updateDiagnosisMutation = useMutation({
     mutationFn: (data: Partial<Diagnosis>) => {
       if (!diagnosis) throw new Error("Diagnosis not found");
+      if (useOfflineDiagnosis && !isOnline) {
+        return patchDiagnosisOfflineAware(workOrderId, diagnosis.id, data, false);
+      }
       return diagnosisApi.update(diagnosis.id, data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-      toast({ title: "Diagnosis updated", variant: "default" });
+      toast({
+        title: useOfflineDiagnosis && !isOnline ? "Saved offline" : "Diagnosis updated",
+        description:
+          useOfflineDiagnosis && !isOnline
+            ? "Changes will sync when you are back online."
+            : undefined,
+        variant: "default",
+      });
+      if (useOfflineDiagnosis && !isOnline && diagnosis) {
+        queryClient.setQueryData(
+          ["diagnosis", "workorder", workOrderId, isOnline],
+          { ...diagnosis, ...variables }
+        );
+      }
     },
 
     onError: (error: any) => {
@@ -139,12 +171,23 @@ export default function DiagnosisWorkspace() {
   const startDiagnosisMutation = useMutation({
     mutationFn: () => {
       if (!diagnosis) throw new Error("Diagnosis not found");
-      return diagnosisApi.start(diagnosis.id);
+      return runDiagnosisMutation(
+        workOrderId,
+        isOnline,
+        {
+          endpoint: `/diagnosis/diagnoses/${diagnosis.id}/start/`,
+          method: "POST",
+        },
+        () => diagnosisApi.start(diagnosis.id).then((r) => r.diagnosis)
+      );
     },
     onSuccess: () => {
       toast({
-        title: "Diagnosis started",
-        description: "Diagnosis workflow has been started.",
+        title: useOfflineDiagnosis && !isOnline ? "Queued offline" : "Diagnosis started",
+        description:
+          useOfflineDiagnosis && !isOnline
+            ? "Start action will sync when online."
+            : "Diagnosis workflow has been started.",
         variant: "default"
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -256,7 +299,7 @@ export default function DiagnosisWorkspace() {
       queryClient.invalidateQueries({ queryKey: ["diagnosis"] });
 
       // Redirect to work order page to see updated status
-      router.push(`/workorders/${workOrderId}`);
+      router.push(workOrderBackHref);
     },
 
     onError: (error: any) => {
@@ -422,27 +465,45 @@ export default function DiagnosisWorkspace() {
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", isMobile && "space-y-4 pb-28")}>
+      {isMobile && !isOnline && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          Offline — viewing cached diagnosis. Edits queue for sync.
+        </div>
+      )}
       {/* Header */}
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className={cn(
+        "flex flex-col sm:flex-row sm:items-center justify-between gap-4",
+        isMobile && "gap-3"
+      )}>
         <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-primary transition-colors">
-              Dashboard
+          {!isMobile && (
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/dashboard" className="hover:text-primary transition-colors">
+                Dashboard
+              </Link>
+              <span>/</span>
+              <Link href={`/workorders`} className="hover:text-primary transition-colors">
+                Work Orders
+              </Link>
+              <span>/</span>
+              <Link href={workOrderBackHref} className="hover:text-primary transition-colors">
+                #{workOrderId}
+              </Link>
+              <span>/</span>
+              <span className="text-foreground font-medium">Diagnosis</span>
+            </div>
+          )}
+          {isMobile && (
+            <Link href={workOrderBackHref} className="text-sm text-primary mb-1 inline-flex items-center">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to work order
             </Link>
-            <span>/</span>
-            <Link href={`/workorders`} className="hover:text-primary transition-colors">
-              Work Orders
-            </Link>
-            <span>/</span>
-            <Link href={`/workorders/${workOrderId}`} className="hover:text-primary transition-colors">
-              #{workOrderId}
-            </Link>
-            <span>/</span>
-            <span className="text-foreground font-medium">Diagnosis</span>
-          </div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">
+          )}
+          <h1 className={cn(
+            "font-bold text-foreground tracking-tight",
+            isMobile ? "text-lg" : "text-xl"
+          )}>
             Diagnosis & Repair Recommendations
           </h1>
         </div>
@@ -680,7 +741,10 @@ export default function DiagnosisWorkspace() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="border-b border-border mb-6">
-          <TabsList className="flex w-full h-auto flex-wrap gap-6 bg-transparent p-0">
+          <TabsList className={cn(
+            "flex w-full h-auto bg-transparent p-0",
+            isMobile ? "flex-nowrap overflow-x-auto gap-2 pb-1" : "flex-wrap gap-6"
+          )}>
             <TabsTrigger
               value="complaint"
               className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
@@ -800,6 +864,8 @@ export default function DiagnosisWorkspace() {
               queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
             }}
             isDisabled={!diagnosisActive}
+            isMobile={isMobile}
+            isOnline={isOnline}
           />
         </TabsContent>
 
@@ -1333,6 +1399,8 @@ function RecommendationsTab({
   workOrderId,
   onRefresh,
   isDisabled = false,
+  isMobile = false,
+  isOnline = true,
 }: {
   diagnosis: Diagnosis;
   workOrderId: number;
@@ -1340,6 +1408,8 @@ function RecommendationsTab({
   workOrder?: any;
   onRefresh: () => void;
   isDisabled?: boolean;
+  isMobile?: boolean;
+  isOnline?: boolean;
 }) {
   const { toast } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -1348,13 +1418,26 @@ function RecommendationsTab({
   const [editingRecommendation, setEditingRecommendation] = useState<any>(null);
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => diagnosisApi.addRecommendation(diagnosis.id, data),
+    mutationFn: (data: any) =>
+      runDiagnosisMutation(
+        workOrderId,
+        isOnline,
+        {
+          endpoint: `/diagnosis/diagnoses/${diagnosis.id}/add_recommendation/`,
+          method: "POST",
+          payload: data,
+        },
+        () => diagnosisApi.addRecommendation(diagnosis.id, data)
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
       onRefresh();
       setShowAddDialog(false);
       setEditingRecommendation(null);
-      toast({ title: "Recommendation added", variant: "default" });
+      toast({
+        title: isMobile && !isOnline ? "Queued offline" : "Recommendation added",
+        variant: "default",
+      });
     },
 
     onError: (error: any) => {

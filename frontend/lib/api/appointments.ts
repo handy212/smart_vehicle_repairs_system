@@ -26,6 +26,8 @@ export interface Appointment {
   service_bay_name?: string;
   confirmed_at?: string;
   check_in_time?: string;
+  customer_rating?: number | null;
+  customer_feedback?: string;
   created_at: string;
 }
 
@@ -117,6 +119,11 @@ export const appointmentsApi = {
     return response.data;
   },
 
+  rateService: async (id: number, data: { rating: number; customer_feedback?: string }): Promise<Appointment> => {
+    const response = await apiClient.post(`/appointments/appointments/${id}/rate_service/`, data);
+    return response.data;
+  },
+
   cancel: async (id: number, reason?: string): Promise<Appointment> => {
     const response = await apiClient.post(`/appointments/appointments/${id}/cancel/`, {
       reason: reason || "",
@@ -148,6 +155,19 @@ export const appointmentsApi = {
 
   sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
     const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_email/`, { subject, message });
+    return response.data;
+  },
+
+  mySchedule: async (date?: string): Promise<{
+    technician_id: number;
+    technician_name: string;
+    date: string;
+    appointments: Appointment[];
+    total_hours: number;
+  }> => {
+    const response = await apiClient.get("/appointments/appointments/my_schedule/", {
+      params: date ? { date } : undefined,
+    });
     return response.data;
   },
 };

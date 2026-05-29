@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
 import { SystemSetting } from "@/lib/api/admin";
+import { fieldPrefixForKey, integrationFieldLabel } from "@/lib/integrations/fieldLabels";
 import { cn } from "@/lib/utils/cn";
 
 interface IntegrationFieldProps {
@@ -45,13 +46,9 @@ export function IntegrationField({
   deferSave = false,
 }: IntegrationFieldProps) {
   const pendingChanges = value !== (setting.value ?? "");
-  const label = setting.display_name || humanizeKey(setting.key, prefix);
+  const fieldPrefix = prefix || fieldPrefixForKey(setting.key);
+  const label = integrationFieldLabel(setting.key, fieldPrefix);
   const isEnabledToggle = setting.key.match(/(enabled)$/i);
-
-  function humanizeKey(key: string, prefix = "") {
-    const cleaned = prefix && key.startsWith(prefix) ? key.slice(prefix.length) : key;
-    return cleaned.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-  }
 
   const isTruthy = (val: string) => {
     const str = val.toLowerCase().trim();
@@ -75,11 +72,6 @@ export function IntegrationField({
                 />
             </div>
           </div>
-          {setting.description ? (
-            <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight line-clamp-2">
-              {setting.description}
-            </div>
-          ) : null}
           {showKey ? (
             <div className="text-[9px] text-muted-foreground/50 font-mono mt-0.5">
               {setting.key}
@@ -136,8 +128,8 @@ export function IntegrationField({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-1.5 min-w-[80px]">
-            {pendingChanges ? (
+          {pendingChanges ? (
+            <div className="flex items-center justify-end gap-1.5 shrink-0">
               <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-200">
                 <Button
                   variant="ghost"
@@ -163,13 +155,8 @@ export function IntegrationField({
                   </Button>
                 )}
               </div>
-            ) : (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/40 font-bold uppercase tracking-widest px-2">
-                <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-                Synced
-              </div>
-            )}
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

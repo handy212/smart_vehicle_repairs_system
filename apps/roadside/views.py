@@ -3,12 +3,15 @@ Views for roadside assistance
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
+from datetime import timedelta
 from django.core.exceptions import ValidationError as DjangoValidationError
 
 from .models import RoadsideRequest, RoadsideDispatch
@@ -17,6 +20,10 @@ from .serializers import (
     RoadsideRequestDetailSerializer,
     RoadsideRequestCreateSerializer,
     RoadsideRequestUpdateSerializer,
+    RoadsideNoteSerializer,
+    RoadsideNoteCreateSerializer,
+    RoadsidePhotoSerializer,
+    RoadsidePhotoCreateSerializer,
 )
 from apps.accounts.permissions import HasPermission, HasAnyPermission, IsModuleEnabled
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
@@ -30,6 +37,37 @@ from apps.subscriptions.services import SubscriptionUsageService
 from apps.subscriptions.models import SubscriptionUsage
 
 logger = logging.getLogger(__name__)
+
+ACTIVE_ROADSIDE_STATUSES = ('requested', 'dispatched', 'en_route', 'on_site', 'in_progress')
+TERMINAL_ROADSIDE_STATUSES = ('completed', 'cancelled', 'failed')
+TECH_APP_HISTORY_DAYS = 14
+
+
+def _is_tech_app_client(request):
+    """Next.js technician PWA sends this header — enforce field-tech scoping."""
+    return request.headers.get('X-Tech-App', '').lower() in ('1', 'true', 'yes')
+
+
+def _technician_roadside_queryset(queryset, user, include_history=False):
+    """Only jobs assigned to this technician; hide old completed by default."""
+    assigned = queryset.filter(
+        Q(assigned_technician=user) | Q(dispatches__technician=user)
+    ).distinct()
+
+    if include_history:
+        return assigned
+
+    cutoff = timezone.now() - timedelta(days=TECH_APP_HISTORY_DAYS)
+    return assigned.filter(
+        Q(status__in=ACTIVE_ROADSIDE_STATUSES)
+        | Q(status__in=TERMINAL_ROADSIDE_STATUSES, completed_at__gte=cutoff)
+        | Q(
+            status__in=TERMINAL_ROADSIDE_STATUSES,
+            completed_at__isnull=True,
+            updated_at__gte=cutoff,
+        )
+    )
+
 
 class RoadsideRequestViewSet(viewsets.ModelViewSet):
     """
@@ -45,7 +83,11 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         queryset = RoadsideRequest.objects.select_related(
             'customer', 'customer__user', 'vehicle', 'branch', 'assigned_technician',
             'subscription_used', 'subscription_used__package', 'created_by', 'invoice',
-        ).prefetch_related('dispatches__technician')
+        ).prefetch_related(
+            'dispatches__technician',
+            'site_notes__created_by',
+            'photos__uploaded_by',
+        )
         
         # For my_requests action, let the action handle filtering
         if action == 'my_requests':
@@ -66,10 +108,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 except Customer.DoesNotExist:
                     return queryset.none()
         
-        elif getattr(user, 'is_technician', False):
-             # Technicians can only see requests assigned to them
-             return queryset.filter(assigned_technician=user)
-             
+        elif getattr(user, 'is_technician', False) or _is_tech_app_client(self.request):
+            include_history = self.request.query_params.get('include_history', '').lower() in (
+                '1', 'true', 'yes',
+            )
+            return _technician_roadside_queryset(queryset, user, include_history=include_history)
+
         # Admin, Manager, and other staff -> Apply branch filtering
         return filter_queryset_for_user_branches(queryset, user, self.request)
 
@@ -111,9 +155,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         action = getattr(self, 'action', None)
         permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
         is_customer = getattr(self.request.user, 'role', None) == 'customer'
+        is_technician = getattr(self.request.user, 'is_technician', False)
         if action in ['list', 'retrieve']:
             if is_customer:
                 return self._customer_portal_permissions()
+            if is_technician:
+                return [p() for p in permission_classes]
             permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
         if action == 'dashboard_stats':
@@ -136,12 +183,18 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         elif action in ['add_technician', 'remove_technician']:
             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
             return [p() for p in permission_classes]
+        elif action == 'my_assignments':
+            return [p() for p in permission_classes]
+        elif action in ['accept_assignment', 'reject_assignment']:
+            return [p() for p in permission_classes]
         elif action in ['en_route', 'in_progress', 'arrive', 'complete', 'fail']:
              # Allow dispatchers OR the assigned technician (via object permission or get_queryset security)
              # But we must Block customers
              if getattr(self.request.user, "role", None) == "customer":
                  permission_classes.append(HasAnyPermission(['manage_roadside'])) # Effectively blocks customers
                  return [p() for p in permission_classes]
+             return [p() for p in permission_classes]
+        elif action in ['site_notes', 'site_photos']:
              return [p() for p in permission_classes]
         elif action in ['update', 'partial_update']:
              permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
@@ -157,6 +210,67 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         else:
             permission_classes.append(HasAnyPermission(['edit_roadside', 'manage_roadside']))
         return [p() for p in permission_classes]
+
+    def _can_add_site_update(self, roadside_request):
+        return roadside_request.status in ['on_site', 'in_progress']
+
+    def _get_technician_dispatch(self, roadside_request, user):
+        return roadside_request.dispatches.filter(technician=user).first()
+
+    def _ensure_technician_accepted(self, roadside_request, user):
+        """Field technicians must accept before status transitions."""
+        if not getattr(user, 'is_technician', False) and not _is_tech_app_client(self.request):
+            return
+        dispatch = self._get_technician_dispatch(roadside_request, user)
+        if not dispatch:
+            raise ValueError('You are not assigned to this request.')
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_PENDING:
+            raise ValueError('Accept the assignment before continuing.')
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_REJECTED:
+            raise ValueError('You rejected this assignment.')
+
+    def _apply_dispatch_rejection(self, roadside_request, technician, reason=''):
+        """Update dispatch + primary assignment after technician rejects."""
+        dispatch = roadside_request.dispatches.filter(technician=technician).first()
+        if not dispatch:
+            return
+        dispatch.response_status = RoadsideDispatch.RESPONSE_REJECTED
+        dispatch.rejection_reason = (reason or '').strip()
+        dispatch.responded_at = timezone.now()
+        dispatch.save(update_fields=['response_status', 'rejection_reason', 'responded_at'])
+
+        was_primary = roadside_request.assigned_technician_id == technician.id
+        if not was_primary:
+            return
+
+        next_dispatch = (
+            roadside_request.dispatches.filter(
+                response_status=RoadsideDispatch.RESPONSE_ACCEPTED
+            )
+            .select_related('technician')
+            .first()
+        )
+        if next_dispatch:
+            roadside_request.assigned_technician = next_dispatch.technician
+            roadside_request.save(update_fields=['assigned_technician', 'updated_at'])
+            return
+
+        roadside_request.assigned_technician = None
+        has_pending = roadside_request.dispatches.filter(
+            response_status=RoadsideDispatch.RESPONSE_PENDING
+        ).exists()
+        if roadside_request.status == 'dispatched' and not has_pending:
+            roadside_request.status = 'requested'
+            roadside_request.dispatched_at = None
+        roadside_request.save(
+            update_fields=['assigned_technician', 'status', 'dispatched_at', 'updated_at']
+        )
+
+    def _site_update_unavailable_response(self):
+        return Response(
+            {'error': 'Site notes and photos can be added once the technician is on site or working.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     
     def get_serializer_class(self):
         action = getattr(self, 'action', None)
@@ -398,12 +512,21 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST
                         )
                     roadside_request.mark_dispatched(technician=technician)
-                    # Record in the dispatch log (upsert: ignore if already exists)
-                    RoadsideDispatch.objects.get_or_create(
+                    dispatch, _created = RoadsideDispatch.objects.get_or_create(
                         request=roadside_request,
                         technician=technician,
-                        defaults={'dispatched_by': request.user}
+                        defaults={
+                            'dispatched_by': request.user,
+                            'response_status': RoadsideDispatch.RESPONSE_PENDING,
+                        },
                     )
+                    if not _created:
+                        dispatch.response_status = RoadsideDispatch.RESPONSE_PENDING
+                        dispatch.rejection_reason = ''
+                        dispatch.responded_at = None
+                        dispatch.dispatched_by = request.user
+                        dispatch.dispatched_at = timezone.now()
+                        dispatch.save()
                 except User.DoesNotExist:
                     return Response(
                         {'error': 'Technician not found'},
@@ -460,13 +583,25 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         dispatch, created = RoadsideDispatch.objects.get_or_create(
             request=roadside_request,
             technician=technician,
-            defaults={'dispatched_by': request.user, 'notes': notes}
+            defaults={
+                'dispatched_by': request.user,
+                'notes': notes,
+                'response_status': RoadsideDispatch.RESPONSE_PENDING,
+            },
         )
         if not created:
-            return Response(
-                {'error': 'This technician is already assigned to this request'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            if dispatch.response_status != RoadsideDispatch.RESPONSE_REJECTED:
+                return Response(
+                    {'error': 'This technician is already assigned to this request'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            dispatch.response_status = RoadsideDispatch.RESPONSE_PENDING
+            dispatch.rejection_reason = ''
+            dispatch.responded_at = None
+            dispatch.dispatched_at = timezone.now()
+            dispatch.dispatched_by = request.user
+            dispatch.notes = notes or dispatch.notes
+            dispatch.save()
 
         # If this is the first dispatch record, set as primary technician & transition status
         if not roadside_request.assigned_technician:
@@ -514,12 +649,67 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(roadside_request)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['post'], url_path='accept-assignment')
+    def accept_assignment(self, request, pk=None):
+        """Technician accepts a dispatched assignment."""
+        roadside_request = self.get_object()
+        dispatch = self._get_technician_dispatch(roadside_request, request.user)
+        if not dispatch:
+            return Response(
+                {'error': 'You are not assigned to this request'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_REJECTED:
+            return Response(
+                {'error': 'This assignment was already rejected'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if dispatch.response_status != RoadsideDispatch.RESPONSE_ACCEPTED:
+            dispatch.response_status = RoadsideDispatch.RESPONSE_ACCEPTED
+            dispatch.responded_at = timezone.now()
+            dispatch.save(update_fields=['response_status', 'responded_at'])
+            if not roadside_request.assigned_technician_id:
+                roadside_request.assigned_technician = request.user
+                roadside_request.save(update_fields=['assigned_technician', 'updated_at'])
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='reject-assignment')
+    def reject_assignment(self, request, pk=None):
+        """Technician declines a dispatched assignment."""
+        roadside_request = self.get_object()
+        dispatch = self._get_technician_dispatch(roadside_request, request.user)
+        if not dispatch:
+            return Response(
+                {'error': 'You are not assigned to this request'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_ACCEPTED:
+            return Response(
+                {'error': 'Cannot reject after accepting. Contact dispatch.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if dispatch.response_status != RoadsideDispatch.RESPONSE_REJECTED:
+            reason = (request.data.get('reason') or '').strip()
+            self._apply_dispatch_rejection(roadside_request, request.user, reason)
+            try:
+                notification_triggers.roadside_assignment_rejected(
+                    roadside_request, request.user, reason
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send rejection notification: {e}")
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def en_route(self, request, pk=None):
         """Mark that service provider is en route"""
         roadside_request = self.get_object()
-        
+
         try:
+            self._ensure_technician_accepted(roadside_request, request.user)
             roadside_request.mark_en_route()
         except ValueError as e:
             return Response(
@@ -534,8 +724,9 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     def in_progress(self, request, pk=None):
         """Mark that service is in progress"""
         roadside_request = self.get_object()
-        
+
         try:
+            self._ensure_technician_accepted(roadside_request, request.user)
             roadside_request.mark_in_progress()
         except ValueError as e:
             return Response(
@@ -550,8 +741,9 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     def arrive(self, request, pk=None):
         """Mark that service provider has arrived on site"""
         roadside_request = self.get_object()
-        
+
         try:
+            self._ensure_technician_accepted(roadside_request, request.user)
             roadside_request.mark_arrived()
         except ValueError as e:
             return Response(
@@ -567,13 +759,71 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(roadside_request)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'post'], url_path='site-notes')
+    def site_notes(self, request, pk=None):
+        """List or add technician notes captured on site."""
+        roadside_request = self.get_object()
+
+        if request.method == 'GET':
+            notes = roadside_request.site_notes.select_related('created_by').all()
+            serializer = RoadsideNoteSerializer(notes, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        if getattr(request.user, 'role', None) == 'customer':
+            return Response(
+                {'error': 'Customers cannot add technician site notes.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not self._can_add_site_update(roadside_request):
+            return self._site_update_unavailable_response()
+
+        serializer = RoadsideNoteCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        note = serializer.save(request=roadside_request, created_by=request.user)
+        return Response(
+            RoadsideNoteSerializer(note, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=['get', 'post'],
+        url_path='site-photos',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def site_photos(self, request, pk=None):
+        """List or upload technician photos captured on site."""
+        roadside_request = self.get_object()
+
+        if request.method == 'GET':
+            photos = roadside_request.photos.select_related('uploaded_by').all()
+            serializer = RoadsidePhotoSerializer(photos, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        if getattr(request.user, 'role', None) == 'customer':
+            return Response(
+                {'error': 'Customers cannot upload technician site photos.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not self._can_add_site_update(roadside_request):
+            return self._site_update_unavailable_response()
+
+        serializer = RoadsidePhotoCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        photo = serializer.save(request=roadside_request, uploaded_by=request.user)
+        return Response(
+            RoadsidePhotoSerializer(photo, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
     
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
         """Mark roadside request as completed"""
         roadside_request = self.get_object()
-        
+
         try:
+            self._ensure_technician_accepted(roadside_request, request.user)
             with transaction.atomic():
                 if not roadside_request.is_covered_by_subscription and (
                     not roadside_request.charge_amount or roadside_request.charge_amount <= 0
@@ -703,6 +953,27 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(roadside_request)
         return Response(serializer.data)
     
+    @action(detail=False, methods=['get'], url_path='my-assignments')
+    def my_assignments(self, request):
+        """Field technician: only this user's assignments (active + recent history)."""
+        user = request.user
+        if not user or user.is_anonymous:
+            return Response([], status=status.HTTP_200_OK)
+
+        include_history = request.query_params.get('include_history', '').lower() in (
+            '1', 'true', 'yes',
+        )
+        qs = _technician_roadside_queryset(
+            RoadsideRequest.objects.select_related(
+                'customer', 'customer__user', 'vehicle', 'branch', 'assigned_technician',
+            ).prefetch_related('dispatches__technician'),
+            user,
+            include_history=include_history,
+        ).order_by('-requested_at')
+
+        serializer = RoadsideRequestSerializer(qs, many=True)
+        return Response(serializer.data)
+
     @action(detail=False, methods=['get'])
     def my_requests(self, request):
         """Get current user's roadside requests (for customer portal)"""

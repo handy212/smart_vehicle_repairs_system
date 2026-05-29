@@ -30,6 +30,13 @@ def workorder_status_change_permissions():
     ]
 
 
+def workorder_task_workflow_permissions():
+    """Technicians may start/complete assigned tasks without full WO edit access."""
+    return workorder_module_permissions() + [
+        HasAnyPermission([*WORKORDER_STATUS_PERMISSIONS, 'clock_work_time'])(),
+    ]
+
+
 class WorkOrderRelatedPermissionMixin:
     """Apply view/edit permission codes to work-order satellite viewsets."""
 

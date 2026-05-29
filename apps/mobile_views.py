@@ -128,70 +128,16 @@ def mobile_dashboard(request):
 
 @login_required
 def mobile_workorder_list(request):
-    """Mobile-optimized work order list view"""
-    if not is_mobile_request(request) and not request.GET.get('force_mobile'):
-        return redirect('workorders:workorder_list')
-    
-    # Get filters from request
-    status_filter = request.GET.get('status', 'all')
-    priority_filter = request.GET.get('priority')
-    search_query = request.GET.get('q', '').strip()
-    
-    # Base queryset
-    workorders_qs = WorkOrder.objects.select_related('customer', 'vehicle').order_by('-created_at')
-    workorders = filter_queryset_for_user_branches(workorders_qs, request.user, request)
-    
-    # Apply filters
-    if status_filter != 'all':
-        workorders = workorders.filter(status=status_filter)
-    
-    if priority_filter:
-        workorders = workorders.filter(priority=priority_filter)
-    
-    if search_query:
-        workorders = workorders.filter(
-            Q(customer__first_name__icontains=search_query) |
-            Q(customer__last_name__icontains=search_query) |
-            Q(vehicle__make__icontains=search_query) |
-            Q(vehicle__model__icontains=search_query) |
-            Q(vehicle__license_plate__icontains=search_query) |
-            Q(description__icontains=search_query)
-        )
-    
-    # Pagination for mobile (smaller page size)
-    paginator = Paginator(workorders, 10)
-    page_number = request.GET.get('page')
-    workorders_page = paginator.get_page(page_number)
-    
-    context = {
-        'workorders': workorders_page,
-        'status_filter': status_filter,
-        'priority_filter': priority_filter,
-        'search_query': search_query,
-    }
-    
-    return render(request, 'mobile/workorder_list.html', context)
+    """Deprecated: redirect to Next.js PWA work orders."""
+    return redirect('/mobile/workorders/')
 
 
 @login_required  
 def mobile_inspection_form(request, vehicle_id=None):
-    """Mobile-optimized inspection form with camera integration"""
-    if not is_mobile_request(request) and not request.GET.get('force_mobile'):
-        return redirect('inspections:inspection_create')
-    
-    vehicle = None
+    """Deprecated: redirect to Next.js PWA inspection create."""
     if vehicle_id:
-        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
-    
-    context = {
-        'vehicle': vehicle,
-    }
-    
-    if request.method == 'POST':
-        # Handle inspection form submission
-        return handle_mobile_inspection_submit(request, vehicle)
-    
-    return render(request, 'mobile/inspection_form.html', context)
+        return redirect(f'/mobile/inspections/new?vehicle={vehicle_id}')
+    return redirect('/mobile/inspections/new')
 
 
 @login_required
@@ -494,7 +440,10 @@ def mobile_search_api(request):
 
 @login_required
 def pwa_manifest(request):
-    """Serve PWA manifest with dynamic content"""
+    """
+    Deprecated: PWA manifest is served by Next.js at /manifest.json.
+    This view is not registered in urls.py; kept for backward compatibility only.
+    """
     manifest = {
         "name": "Vehicle Repairs System",
         "short_name": "VehicleRepairs",

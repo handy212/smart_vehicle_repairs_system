@@ -1,27 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useOfflineStore } from "@/store/offlineStore";
 import { timeLogsDB } from "@/lib/offline/db";
-// Force HMR rebuild
 import { queueRequest } from "@/lib/offline/queue";
 import { Clock, Play, Square, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import apiClient from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/apiErrors";
+import { timeLogsApi } from "@/lib/api/timeLogs";
 import { useAuthStore } from "@/store/authStore";
-import { workordersApi, WorkOrder as WorkOrderType } from "@/lib/api/workorders";
-import { toast } from "sonner"; // Using toast for better feedback
+import { workordersApi, WorkOrder } from "@/lib/api/workorders";
+import { toast } from "sonner";
+import Link from "next/link";
 
 interface TimeLog {
   id?: number;
   work_order: number;
   work_order_number?: string;
   clock_in: string;
-  clock_out?: string;
+  clock_out?: string | null;
   duration_hours?: number;
   description?: string;
   synced?: boolean;
+  technician?: number;
 }
 
 export default function TimeTrackingPage() {
@@ -29,110 +33,103 @@ export default function TimeTrackingPage() {
   const { user } = useAuthStore();
   const [activeLog, setActiveLog] = useState<TimeLog | null>(null);
   const [recentLogs, setRecentLogs] = useState<TimeLog[]>([]);
-  const [assignedWorkOrders, setAssignedWorkOrders] = useState<WorkOrderType[]>([]);
+  const [assignedWorkOrders, setAssignedWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadRecentLogs();
-    checkActiveLog();
-    if (user && isOnline) {
-      loadAssignedWorkOrders();
-    }
-  }, [user, isOnline]);
-
-  const checkActiveLog = async () => {
+  const checkActiveLog = useCallback(async () => {
     try {
       if (isOnline) {
-        // Check for active time log from API
-        const response = await apiClient.get("/workorders/time-logs/active/");
-        if (response.data) {
-          setActiveLog(response.data);
-        }
+        const response = await apiClient.get<TimeLog | null>("/workorders/time-logs/active/");
+        setActiveLog(response.data || null);
       } else {
-        // Check cache for active log
         const logs = await timeLogsDB.getAll();
         const active = logs.find((log) => log.clock_in && !log.clock_out);
-        if (active) {
-          setActiveLog(active);
-        }
+        setActiveLog(active || null);
       }
-
-    } catch (error: any) {
-      // 404 is expected when no active time log exists - silently ignore
-      if (error?.response?.status !== 404) {
-        console.error("Failed to check active log:", error);
-      }
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status !== 404) console.error("Failed to check active log:", error);
       setActiveLog(null);
     }
-  };
+  }, [isOnline]);
 
-  const loadRecentLogs = async () => {
+  const loadRecentLogs = useCallback(async () => {
+    if (!user?.id) return;
     try {
       if (isOnline) {
-        const response = await apiClient.get("/workorders/time-logs/", {
-          params: {
-            limit: 10,
-            ordering: "-clock_in",
-            ...(user?.id ? { technician: user.id } : {})
-          },
-        });
-        const logs = response.data.results || response.data || [];
-        setRecentLogs(Array.isArray(logs) ? logs : []);
-
-        // Cache logs
-        for (const log of Array.isArray(logs) ? logs : []) {
-          await timeLogsDB.set(log.id, log, true);
+        const response = await apiClient.get<TimeLog[]>("/workorders/time-logs/my-recent/");
+        const logs = Array.isArray(response.data) ? response.data : [];
+        const completed = logs.filter((log) => log.clock_out);
+        setRecentLogs(completed.slice(0, 15));
+        for (const log of logs) {
+          if (log.id) await timeLogsDB.set(log.id, log, true);
         }
       } else {
         const cached = await timeLogsDB.getAll();
-        setRecentLogs(cached.filter(log => log.technician === user?.id).slice(0, 10));
+        setRecentLogs(
+          cached
+            .filter((log) => log.technician === user.id && log.clock_out)
+            .slice(0, 15)
+        );
       }
     } catch (error) {
       console.error("Failed to load time logs:", error);
+      const cached = await timeLogsDB.getAll();
+      setRecentLogs(
+        cached.filter((log) => log.technician === user.id && log.clock_out).slice(0, 15)
+      );
     }
-  };
+  }, [isOnline, user?.id]);
 
-  const loadAssignedWorkOrders = async () => {
-    if (!user) return;
+  const loadAssignedWorkOrders = useCallback(async () => {
+    if (!user?.id || !isOnline) return;
     try {
       const response = await workordersApi.list({
         primary_technician: user.id,
-        status: 'assigned,in_progress' // Note: This might need backend support for comma-separated status
       });
-      // Filter for active ones as fallback if backend doesn't support comma
       const results = response.results || [];
-      const active = results.filter(wo => wo.status === 'assigned' || wo.status === 'in_progress');
+      const active = results.filter(
+        (wo) => wo.status === "assigned" || wo.status === "in_progress"
+      );
       setAssignedWorkOrders(active);
     } catch (error) {
       console.error("Failed to load assigned work orders:", error);
     }
-  };
+  }, [user?.id, isOnline]);
+
+  useEffect(() => {
+    checkActiveLog();
+    loadRecentLogs();
+    loadAssignedWorkOrders();
+  }, [checkActiveLog, loadRecentLogs, loadAssignedWorkOrders]);
 
   const handleClockIn = async (workOrderId: number) => {
     setLoading(true);
     try {
-      const timeLog = {
-        work_order: workOrderId,
-        clock_in: new Date().toISOString(),
-        description: "Started work",
-      };
-
       if (isOnline) {
-        const response = await apiClient.post("/workorders/time-logs/", timeLog);
-        setActiveLog(response.data);
+        const log = await timeLogsApi.clockIn(workOrderId);
+        setActiveLog(log);
       } else {
         const tempId = Date.now();
-        const logWithId = { ...timeLog, id: tempId };
+        const clockIn = new Date().toISOString();
+        const logWithId: TimeLog = {
+          work_order: workOrderId,
+          clock_in: clockIn,
+          description: "Field work",
+          id: tempId,
+          technician: user?.id,
+        };
         await timeLogsDB.set(tempId, logWithId, false);
-        await queueRequest("create", "/workorders/time-logs/", "POST", timeLog);
+        await queueRequest("create", "/workorders/time-logs/clock-in/", "POST", {
+          work_order: workOrderId,
+          description: "Field work",
+        });
         setActiveLog(logWithId);
       }
-
-      toast.success("Clocked in successfully");
+      toast.success("Clocked in");
       await loadRecentLogs();
     } catch (error) {
-      console.error("Failed to clock in:", error);
-      toast.error("Failed to clock in");
+      toast.error(getApiErrorMessage(error, "Failed to clock in"));
     } finally {
       setLoading(false);
     }
@@ -140,47 +137,37 @@ export default function TimeTrackingPage() {
 
   const handleClockOut = async () => {
     if (!activeLog) return;
-
     setLoading(true);
     try {
       const clockOut = new Date().toISOString();
-      const duration = calculateDuration(activeLog.clock_in, clockOut);
-
       if (isOnline && activeLog.id) {
-        await apiClient.post(`/workorders/time-logs/${activeLog.id}/clock_out/`, {
-          clock_out: clockOut,
-        });
+        await timeLogsApi.clockOut(activeLog.id, clockOut);
       } else {
         const updated = {
           ...activeLog,
           clock_out: clockOut,
-          duration_hours: duration,
+          duration_hours: calculateDuration(activeLog.clock_in, clockOut),
         };
         await timeLogsDB.set(activeLog.id || Date.now(), updated, false);
         if (activeLog.id) {
           await queueRequest("update", `/workorders/time-logs/${activeLog.id}/`, "PATCH", {
             clock_out: clockOut,
-            duration_hours: duration,
           });
         }
       }
-
       setActiveLog(null);
-      toast.success("Clocked out successfully");
+      toast.success("Clocked out");
       await loadRecentLogs();
     } catch (error) {
-      console.error("Failed to clock out:", error);
-      toast.error("Failed to clock out");
+      toast.error(getApiErrorMessage(error, "Failed to clock out"));
     } finally {
       setLoading(false);
     }
   };
 
   const calculateDuration = (clockIn: string, clockOut: string): number => {
-    const start = new Date(clockIn);
-    const end = new Date(clockOut);
-    const diffMs = end.getTime() - start.getTime();
-    return diffMs / (1000 * 60 * 60); // Convert to hours
+    const diffMs = new Date(clockOut).getTime() - new Date(clockIn).getTime();
+    return diffMs / (1000 * 60 * 60);
   };
 
   const formatDuration = (hours?: number): string => {
@@ -190,153 +177,144 @@ export default function TimeTrackingPage() {
     return `${h}h ${m}m`;
   };
 
+  const refreshAll = async () => {
+    setLoading(true);
+    await Promise.all([checkActiveLog(), loadRecentLogs(), loadAssignedWorkOrders()]);
+    setLoading(false);
+  };
+
   return (
-    <div className="p-4 space-y-4 max-w-md mx-auto">
-      {/* Header */}
+    <MobilePageShell className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">
-          Time Tracking
-        </h2>
-        <Button size="sm" variant="outline" onClick={loadRecentLogs} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        <h2 className="text-2xl font-bold text-foreground">Time Tracking</h2>
+        <Button size="sm" variant="outline" onClick={refreshAll} disabled={loading} aria-label="Refresh">
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
-      {/* Active Time Log */}
       {activeLog && (
-        <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 animate-pulse-border ring-1 ring-primary/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 text-primary dark:text-orange-400">
-              <Clock className="h-5 w-5 animate-pulse" />
-              Currently Clocked In
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Clocked in
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <div className="text-xs text-muted-foreground uppercase font-semibold mb-1">
-                  Work Order
-                </div>
-                <div className="font-medium text-foreground">
+                <p className="text-xs uppercase text-muted-foreground">Work order</p>
+                <Link
+                  href={`/mobile/workorders/${activeLog.work_order}`}
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                >
                   {activeLog.work_order_number || `WO #${activeLog.work_order}`}
-                </div>
+                </Link>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground uppercase font-semibold mb-1">
-                  Started At
-                </div>
-                <div className="font-medium text-foreground">
-                  {new Date(activeLog.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
+                <p className="text-xs uppercase text-muted-foreground">Started</p>
+                <p className="font-medium">
+                  {new Date(activeLog.clock_in).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
               </div>
             </div>
-
-            <div className="bg-card p-4 rounded-lg flex flex-col items-center justify-center border border-orange-100 dark:border-orange-900/50">
-              <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Elapsed Time</div>
-              <div className="font-mono text-3xl font-bold text-primary">
-                {formatDuration(
-                  activeLog.duration_hours ||
-                  calculateDuration(activeLog.clock_in, new Date().toISOString())
-                )}
-              </div>
-            </div>
-
+            <p className="text-center font-mono text-2xl font-bold text-primary">
+              {formatDuration(
+                calculateDuration(activeLog.clock_in, new Date().toISOString())
+              )}
+            </p>
             <Button
               onClick={handleClockOut}
               disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
-              size="lg"
+              className="h-11 w-full bg-destructive hover:bg-destructive/90"
             >
-              <Square className="h-4 w-4 mr-2fill-current" />
-              Clock Out
+              <Square className="mr-2 h-4 w-4" />
+              Clock out
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Assigned Work Orders (Only show if not clocked in) */}
       {!activeLog && assignedWorkOrders.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider ml-1">
-            Ready for Work
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Clock in to a job
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {assignedWorkOrders.map((wo) => (
-              <Card key={wo.id} className="overflow-hidden hover:border-primary/50 transition-colors">
-                <div className="p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-lg text-foreground">
-                      {wo.work_order_number || `WO #${wo.id}`}
-                    </div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <span>{wo.vehicle_info || "Vehicle"}</span>
-                      {wo.status && (
-                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs uppercase font-semibold">
-                          {wo.status.replace('_', ' ')}
-                        </span>
-                      )}
-                    </div>
+              <Card key={wo.id}>
+                <CardContent className="flex items-center justify-between gap-2 p-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{wo.work_order_number || `WO #${wo.id}`}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {wo.vehicle_info || "Vehicle"}
+                    </p>
                   </div>
                   <Button
+                    size="sm"
                     onClick={() => handleClockIn(wo.id)}
                     disabled={loading}
-                    className="bg-success hover:bg-green-700"
+                    className="shrink-0"
                   >
-                    <Play className="h-4 w-4 mr-1 fill-current" />
+                    <Play className="mr-1 h-4 w-4" />
                     Start
                   </Button>
-                </div>
+                </CardContent>
               </Card>
             ))}
           </div>
         </div>
       )}
 
-      {/* Recent Time Logs */}
-      <div className="space-y-2 pt-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider ml-1">
-          Recent Activity
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Recent activity
         </h3>
-        <Card className="bg-transparent border-none shadow-none">
-          <CardContent className="p-0">
-            {recentLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4 italic">
-                No recent time logs
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {recentLogs.map((log) => (
-                  <div
-                    key={log.id || Math.random()}
-                    className="p-3 bg-card rounded-lg border border-border shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground text-sm">
-                          {log.work_order_number || `WO #${log.work_order}`}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(log.clock_in).toLocaleDateString()} • {new Date(log.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono font-semibold text-foreground">
-                          {formatDuration(log.duration_hours)}
-                        </div>
-                        {!log.synced && (
-                          <div className="text-[10px] text-primary font-medium">
-                            Pending Sync
-                          </div>
-                        )}
-                      </div>
-                    </div>
+        {recentLogs.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              No completed time entries yet. Clock in from an assigned work order above.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {recentLogs.map((log) => (
+              <Card key={log.id}>
+                <CardContent className="flex items-center justify-between gap-2 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {log.work_order_number || `WO #${log.work_order}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(log.clock_in).toLocaleDateString()} ·{" "}
+                      {new Date(log.clock_in).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {log.clock_out &&
+                        ` – ${new Date(log.clock_out).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}`}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <p className="shrink-0 font-mono text-sm font-semibold">
+                    {formatDuration(
+                      log.duration_hours ??
+                        (log.clock_out
+                          ? calculateDuration(log.clock_in, log.clock_out)
+                          : undefined)
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </MobilePageShell>
   );
 }

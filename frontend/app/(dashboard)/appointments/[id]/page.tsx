@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck } from "lucide-react";
+import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck, Star } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 
@@ -456,6 +456,30 @@ export default function AppointmentDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {(appointment.customer_rating || appointment.customer_feedback) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Rating</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {appointment.customer_rating && (
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`}
+                      />
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-1">({appointment.customer_rating}/5)</span>
+                  </div>
+                )}
+                {appointment.customer_feedback && (
+                  <p className="text-sm italic text-foreground">"{appointment.customer_feedback}"</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

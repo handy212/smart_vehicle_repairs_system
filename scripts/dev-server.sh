@@ -23,7 +23,8 @@ FRONTEND_DIR="$PROJECT_DIR/frontend"
 DJANGO_PORT=8001
 NEXTJS_PORT=3001
 DJANGO_BIND_ADDRESS="${DJANGO_BIND_ADDRESS:-127.0.0.1}"
-NEXTJS_BIND_ADDRESS="${NEXTJS_BIND_ADDRESS:-127.0.0.1}"
+# Listen on all interfaces so Windows/host can reach WSL via 172.x (API still reached via Next proxy).
+NEXTJS_BIND_ADDRESS="${NEXTJS_BIND_ADDRESS:-0.0.0.0}"
 PUBLIC_HOST="${PUBLIC_HOST:-${DJANGO_HOST:-localhost}}"
 
 # Virtualenv settings
@@ -208,10 +209,11 @@ echo -e "${YELLOW}Configuring frontend env: $FRONTEND_ENV_FILE${NC}"
 GOOGLE_CLIENT_ID=$(grep "^GOOGLE_OAUTH_CLIENT_ID=" "$PROJECT_DIR/.env" | cut -d '=' -f2- | tr -d '\r')
 
 cat > "$FRONTEND_ENV_FILE" << EOF
-NEXT_PUBLIC_API_URL=http://${DJANGO_HOST:-localhost}:$DJANGO_PORT/api
+# Backend URL for Next.js rewrites (SSR/proxy target). Browser uses same-origin /api.
+NEXT_PUBLIC_API_URL=http://127.0.0.1:$DJANGO_PORT/api
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 EOF
-echo -e "${GREEN}✓ Frontend API URL set to http://$PUBLIC_HOST:$DJANGO_PORT/api${NC}"
+echo -e "${GREEN}✓ Frontend proxy target: http://127.0.0.1:$DJANGO_PORT/api (browser calls /api)${NC}"
 echo ""
 
 # Check if development database exists
@@ -327,7 +329,7 @@ sleep 3
 # Start Next.js development server
 echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
 cd "$FRONTEND_DIR"
-NEXT_PUBLIC_API_URL="http://$PUBLIC_HOST:$DJANGO_PORT/api" npx next dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT" > /tmp/nextjs-dev.log 2>&1 &
+NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT" > /tmp/nextjs-dev.log 2>&1 &
 NEXTJS_PID=$!
 
 # Start Celery Worker

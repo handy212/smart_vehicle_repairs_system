@@ -16,6 +16,10 @@ export interface SendSMSResponse {
 export interface SMSHistoryItem {
     id: number;
     created_at: string;
+    updated_at?: string;
+    sent_at?: string | null;
+    delivered_at?: string | null;
+    failed_at?: string | null;
     recipient_name: string;
     recipient_phone: string;
     recipient_initials: string;
@@ -23,6 +27,10 @@ export interface SMSHistoryItem {
     status: string;
     scheduled_for?: string;
     error_message?: string;
+    title?: string;
+    priority?: string;
+    recipient_id?: number | null;
+    data?: Record<string, unknown>;
 }
 
 export interface SMSTemplate {
@@ -68,9 +76,26 @@ const smsApi = {
     },
 
     // Get SMS History
-    getHistory: async () => {
-        const response = await api.get<SMSHistoryItem[]>('/notifications/sms-console/history/');
+    getHistory: async (params?: { limit?: number }) => {
+        const response = await api.get<SMSHistoryItem[]>('/notifications/sms-console/history/', { params });
         return response.data;
+    },
+
+    // Get one SMS log
+    getLog: async (id: number) => {
+        const response = await api.get<SMSHistoryItem>(`/notifications/sms-console/${id}/details/`);
+        return response.data;
+    },
+
+    // Resend an SMS log
+    resendLog: async (id: number) => {
+        const response = await api.post<SendSMSResponse>(`/notifications/sms-console/${id}/resend/`);
+        return response.data;
+    },
+
+    // Delete an SMS log
+    deleteLog: async (id: number) => {
+        await api.delete(`/notifications/sms-console/${id}/delete_log/`);
     },
 
     // AI Chat (multi-turn)

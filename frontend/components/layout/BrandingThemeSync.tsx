@@ -34,6 +34,7 @@ export function BrandingThemeSync() {
     useEffect(() => {
         if (!faviconPath) return;
         const faviconUrl = getMediaUrl(faviconPath);
+        if (!faviconUrl) return;
 
         const updateLinkTag = (rel: string) => {
             let link = document.querySelector(`link[rel*='${rel}']`) as HTMLLinkElement;

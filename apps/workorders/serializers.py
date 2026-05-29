@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 from rest_framework import serializers
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
+from apps.accounts.permissions import filter_workorders_for_user
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from .models import (
@@ -202,6 +205,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'assigned_technicians_detail', 'created_at', 'updated_at',
             'started_at', 'completed_at', 'estimated_completion',
             'customer_concerns', 'special_instructions',
+            'customer_rating', 'customer_feedback',
             'diagnosis_notes', 'diagnosis_completed_at', 'diagnosis_by',
             'requires_approval', 'approval_requested_at', 'approved_at',
             'approved_by_customer', 'approval_method', 'approval_notes',
@@ -1005,6 +1009,7 @@ class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
         decimal_places=2,
         required=False
     )
+    clock_in = serializers.DateTimeField(required=False)
     
     class Meta:
         model = TechnicianTimeLog
@@ -1014,11 +1019,58 @@ class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, data):
-        # Ensure clock_in is not in the future
-        if data['clock_in'] > timezone.now():
-            raise serializers.ValidationError(
-                "Clock in time cannot be in the future."
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        work_order = data.get('work_order')
+        if work_order is None:
+            raise serializers.ValidationError({'work_order': 'Work order is required.'})
+
+        if user and user.is_authenticated:
+            accessible = filter_workorders_for_user(
+                WorkOrder.objects.filter(pk=work_order.pk), user
             )
+            if not accessible.exists():
+                raise serializers.ValidationError({
+                    'work_order': 'You do not have access to this work order.',
+                })
+
+            active = TechnicianTimeLog.objects.filter(
+                technician=user,
+                clock_out__isnull=True,
+            ).first()
+            if active:
+                raise serializers.ValidationError({
+                    'detail': (
+                        'You are already clocked in. Clock out before starting another job.'
+                    ),
+                    'active_log_id': active.id,
+                    'active_work_order': active.work_order_id,
+                })
+
+        if work_order.status in ('cancelled', 'void', 'closed'):
+            raise serializers.ValidationError({
+                'work_order': 'Cannot clock in on a closed work order.',
+            })
+
+        now = timezone.now()
+        clock_in = data.get('clock_in')
+        if clock_in is None:
+            data['clock_in'] = now
+        else:
+            grace = timedelta(minutes=2)
+            if clock_in > now + grace:
+                raise serializers.ValidationError({
+                    'clock_in': 'Clock in time cannot be in the future.',
+                })
+            if clock_in < now - timedelta(days=1):
+                raise serializers.ValidationError({
+                    'clock_in': 'Clock in time is too far in the past.',
+                })
+
+        description = (data.get('description') or '').strip()
+        if not description:
+            data['description'] = 'Field work'
+
         return data
 
 
@@ -1150,6 +1202,7 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
             'customer_name', 'vehicle_info', 'vehicle_details',
             'estimated_total', 'total_cost',
             'customer_concerns',
+            'customer_rating', 'customer_feedback',
             'recommendations', 'approved_jobs', 'timeline_status',
             'estimate_summary', 'invoice_summary',
         ]

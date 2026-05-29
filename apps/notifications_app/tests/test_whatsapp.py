@@ -38,6 +38,11 @@ class TestWhatsAppService(SimpleTestCase):
         self.mock_settings.return_value['whatsapp_enabled'] = 'false'
         self.service._load_config()
         self.assertFalse(self.service.is_available())
+
+    def test_format_ghana_phone_numbers_for_meta(self):
+        self.assertEqual(self.service._format_phone_number('0548996607'), '233548996607')
+        self.assertEqual(self.service._format_phone_number('+233548996607'), '233548996607')
+        self.assertEqual(self.service._format_phone_number('548996607'), '233548996607')
         
     @patch('requests.post')
     def test_send_message_success(self, mock_post):

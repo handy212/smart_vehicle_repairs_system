@@ -210,13 +210,18 @@ class NotificationViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         queryset = self.queryset
-        
+
+        # Technician mobile app: always own notifications only
+        tech_app = self.request.headers.get('X-Tech-App', '').lower() in ('1', 'true', 'yes')
+        if tech_app or getattr(user, 'role', None) == 'technician':
+            return queryset.filter(recipient=user)
+
         # Admins and managers can see all IF explicitly requested
         from apps.accounts.permissions import user_can_view_all_notifications
 
         if user_can_view_all_notifications(user) and self.request.query_params.get('all', 'false') == 'true':
             return queryset
-        
+
         # Default: See only their own
         return queryset.filter(recipient=user)
     
@@ -707,6 +712,67 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         """
         return [IsAuthenticated(), IsModuleEnabled('sms'), HasPermission('send_notifications')]
 
+    def _get_sms_notification(self, pk):
+        try:
+            return Notification.objects.select_related('recipient').get(
+                pk=pk,
+                channel='sms',
+                notification_type='custom',
+            )
+        except Notification.DoesNotExist:
+            return None
+
+    def _serialize_sms_notification(self, notification):
+        recipient_name = "Unknown"
+        recipient_phone = ""
+        recipient_initials = "U"
+
+        if notification.recipient:
+            full_name = notification.recipient.get_full_name()
+            if not full_name:
+                try:
+                    if hasattr(notification.recipient, 'customer_profile') and notification.recipient.customer_profile.company_name:
+                        full_name = notification.recipient.customer_profile.company_name
+                except Exception:
+                    pass
+
+            recipient_name = full_name or notification.recipient.username or notification.recipient.email or f"User #{notification.recipient.id}"
+            recipient_phone = notification.recipient.phone or ""
+
+            if full_name:
+                parts = full_name.split()
+                if len(parts) >= 2:
+                    recipient_initials = (parts[0][0] + parts[-1][0]).upper()
+                else:
+                    recipient_initials = parts[0][:2].upper()
+            else:
+                recipient_initials = recipient_name[:2].upper()
+        elif notification.data.get('direct_send'):
+            phone_number = notification.data.get('phone_number', '')
+            recipient_name = phone_number
+            recipient_phone = phone_number
+            recipient_initials = phone_number[:2] if phone_number else 'DP'
+
+        return {
+            'id': notification.id,
+            'created_at': notification.created_at,
+            'updated_at': notification.updated_at,
+            'sent_at': notification.sent_at,
+            'delivered_at': notification.delivered_at,
+            'failed_at': notification.failed_at,
+            'recipient_name': recipient_name,
+            'recipient_phone': recipient_phone,
+            'recipient_initials': recipient_initials,
+            'message': notification.message,
+            'status': notification.status,
+            'scheduled_for': notification.scheduled_for,
+            'error_message': notification.error_message,
+            'title': notification.title,
+            'priority': notification.priority,
+            'recipient_id': notification.recipient_id,
+            'data': notification.data,
+        }
+
     @action(detail=False, methods=['post'])
     def send_single(self, request):
         """
@@ -891,63 +957,104 @@ class SMSConsoleViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def history(self, request):
         """
-        Get recent SMS history (last 50) with structured recipient data
+        Get SMS history with structured recipient data
         """
+        try:
+            limit = int(request.query_params.get('limit', 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(1, min(limit, 500))
+
         recent = Notification.objects.filter(
             channel='sms',
             notification_type='custom'
-        ).select_related('recipient').order_by('-created_at')[:50]
+        ).select_related('recipient').order_by('-created_at')[:limit]
         
-        data = []
-        for n in recent:
-            recipient_name = "Unknown"
-            recipient_phone = ""
-            recipient_initials = "U"
-
-            if n.recipient:
-                # Name
-                full_name = n.recipient.get_full_name()
-                if not full_name:
-                    try:
-                        if hasattr(n.recipient, 'customer_profile') and n.recipient.customer_profile.company_name:
-                            full_name = n.recipient.customer_profile.company_name
-                    except:
-                        pass
-
-                recipient_name = full_name or n.recipient.username or n.recipient.email or f"User #{n.recipient.id}"
-
-                # Phone
-                recipient_phone = n.recipient.phone or ""
-
-                # Initials
-                if full_name:
-                    parts = full_name.split()
-                    if len(parts) >= 2:
-                        recipient_initials = (parts[0][0] + parts[-1][0]).upper()
-                    else:
-                        recipient_initials = parts[0][:2].upper()
-                else:
-                    recipient_initials = recipient_name[:2].upper()
-            elif n.data.get('direct_send'):
-                # Direct phone SMS — no registered user
-                phone_number = n.data.get('phone_number', '')
-                recipient_name = phone_number
-                recipient_phone = phone_number
-                recipient_initials = phone_number[:2] if phone_number else 'DP'
-            
-            data.append({
-                'id': n.id,
-                'created_at': n.created_at,
-                'recipient_name': recipient_name,
-                'recipient_phone': recipient_phone,
-                'recipient_initials': recipient_initials,
-                'message': n.message,
-                'status': n.status,
-                'scheduled_for': n.scheduled_for,
-                'error_message': n.error_message
-            })
+        data = [self._serialize_sms_notification(n) for n in recent]
             
         return Response(data)
+
+    @action(detail=True, methods=['get'])
+    def details(self, request, pk=None):
+        """Get one SMS log entry."""
+        notification = self._get_sms_notification(pk)
+        if not notification:
+            return Response({'error': 'SMS log not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(self._serialize_sms_notification(notification))
+
+    @action(detail=True, methods=['post'])
+    def resend(self, request, pk=None):
+        """Resend an SMS console log entry."""
+        notification = self._get_sms_notification(pk)
+        if not notification:
+            return Response({'error': 'SMS log not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if notification.data.get('direct_send'):
+            phone = notification.data.get('phone_number')
+            if not phone:
+                return Response({'error': 'Original phone number is missing'}, status=status.HTTP_400_BAD_REQUEST)
+
+            success, response = send_sms(phone, notification.message)
+            resent = Notification.objects.create(
+                recipient=None,
+                notification_type='custom',
+                channel='sms',
+                priority=notification.priority,
+                title='Resent Direct SMS',
+                message=notification.message,
+                status='sent' if success else 'failed',
+                data={'phone_number': phone, 'direct_send': True, 'resent_from': notification.id},
+                error_message=str(response) if not success else '',
+            )
+            if success:
+                resent.sent_at = timezone.now()
+                resent.save(update_fields=['sent_at', 'updated_at'])
+                return Response({
+                    'status': 'success',
+                    'message': 'SMS resent successfully',
+                    'notification_id': resent.id,
+                })
+            return Response({
+                'status': 'failed',
+                'error': str(response),
+                'notification_id': resent.id,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not notification.recipient_id:
+            return Response({'error': 'Original recipient is missing'}, status=status.HTTP_400_BAD_REQUEST)
+
+        resent = Notification.objects.create(
+            recipient=notification.recipient,
+            notification_type='custom',
+            channel='sms',
+            priority=notification.priority,
+            title='Resent SMS Console Message',
+            message=notification.message,
+            status='pending',
+            data={**notification.data, 'resent_from': notification.id},
+        )
+        success = NotificationService().send_notification(resent)
+        if not success:
+            return Response({
+                'status': 'failed',
+                'error': resent.error_message or 'SMS failed to resend',
+                'notification_id': resent.id,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'status': 'success',
+            'message': 'SMS resent successfully',
+            'notification_id': resent.id,
+        })
+
+    @action(detail=True, methods=['delete'])
+    def delete_log(self, request, pk=None):
+        """Delete one SMS log entry."""
+        notification = self._get_sms_notification(pk)
+        if not notification:
+            return Response({'error': 'SMS log not found'}, status=status.HTTP_404_NOT_FOUND)
+        notification.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['post'])
     def ai_assist(self, request):

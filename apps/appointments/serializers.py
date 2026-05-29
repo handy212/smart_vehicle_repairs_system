@@ -37,7 +37,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
             'appointment_time', 'end_time', 'estimated_duration', 'service_type',
             'priority', 'status', 'service_bay', 'service_bay_name', 'branch', 'branch_name',
             'technician_names', 'estimated_cost', 'is_today', 'is_overdue',
-            'checked_in', 'created_at'
+            'checked_in', 'created_at', 'customer_rating', 'customer_feedback'
         ]
 
 

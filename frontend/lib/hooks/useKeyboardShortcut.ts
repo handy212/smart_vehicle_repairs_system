@@ -23,7 +23,10 @@ export function useKeyboardShortcut(
   enabled: boolean = true
 ) {
   const shortcutsRef = useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
+
+  useEffect(() => {
+    shortcutsRef.current = shortcuts;
+  }, [shortcuts]);
 
   useEffect(() => {
     if (!enabled) return;

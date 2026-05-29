@@ -354,6 +354,16 @@ class RoadsideDispatch(models.Model):
     Tracks each technician dispatched to a roadside request.
     Allows multiple technicians per request.
     """
+
+    RESPONSE_PENDING = 'pending'
+    RESPONSE_ACCEPTED = 'accepted'
+    RESPONSE_REJECTED = 'rejected'
+    RESPONSE_STATUS_CHOICES = [
+        (RESPONSE_PENDING, 'Pending'),
+        (RESPONSE_ACCEPTED, 'Accepted'),
+        (RESPONSE_REJECTED, 'Rejected'),
+    ]
+
     request = models.ForeignKey(
         RoadsideRequest,
         on_delete=models.CASCADE,
@@ -384,6 +394,22 @@ class RoadsideDispatch(models.Model):
         blank=True,
         help_text="Optional notes for this dispatch assignment"
     )
+    response_status = models.CharField(
+        _('response status'),
+        max_length=20,
+        choices=RESPONSE_STATUS_CHOICES,
+        default=RESPONSE_PENDING,
+        help_text="Technician accept/reject for this assignment",
+    )
+    responded_at = models.DateTimeField(
+        _('responded at'),
+        null=True,
+        blank=True,
+    )
+    rejection_reason = models.TextField(
+        _('rejection reason'),
+        blank=True,
+    )
 
     class Meta:
         ordering = ['dispatched_at']
@@ -393,3 +419,74 @@ class RoadsideDispatch(models.Model):
 
     def __str__(self):
         return f"{self.request.request_number} → {self.technician}"
+
+
+class RoadsideNote(models.Model):
+    """Technician notes captured while handling a roadside request."""
+
+    request = models.ForeignKey(
+        RoadsideRequest,
+        on_delete=models.CASCADE,
+        related_name='site_notes',
+        help_text="Roadside request this note belongs to"
+    )
+    note = models.TextField(_('note'))
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roadside_notes',
+        help_text="User who added the note"
+    )
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _('roadside note')
+        verbose_name_plural = _('roadside notes')
+
+    def __str__(self):
+        return f"{self.request.request_number} note - {self.created_at:%Y-%m-%d}"
+
+
+class RoadsidePhoto(models.Model):
+    """Photos captured by technicians during roadside service."""
+
+    PHOTO_TYPE_CHOICES = [
+        ('arrival', 'Arrival'),
+        ('diagnostic', 'Diagnostic'),
+        ('repair', 'Repair'),
+        ('damage', 'Damage'),
+        ('completion', 'Completion'),
+        ('other', 'Other'),
+    ]
+
+    request = models.ForeignKey(
+        RoadsideRequest,
+        on_delete=models.CASCADE,
+        related_name='photos',
+        help_text="Roadside request this photo belongs to"
+    )
+    image = models.ImageField(upload_to='roadside/photos/%Y/%m/')
+    photo_type = models.CharField(max_length=20, choices=PHOTO_TYPE_CHOICES, default='other')
+    caption = models.CharField(max_length=255, blank=True)
+    taken_at = models.DateTimeField(_('taken at'), default=timezone.now)
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roadside_photos',
+        help_text="User who uploaded the photo"
+    )
+    uploaded_at = models.DateTimeField(_('uploaded at'), auto_now_add=True)
+
+    class Meta:
+        ordering = ['-taken_at']
+        verbose_name = _('roadside photo')
+        verbose_name_plural = _('roadside photos')
+
+    def __str__(self):
+        return f"{self.request.request_number} - {self.photo_type} photo"

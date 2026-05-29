@@ -48,7 +48,37 @@ class MobileAPITestCase(TestCase):
                 'is_active': True,
             },
         )
-        self.tech_role.permissions.add(self.view_wo_perm, self.edit_wo_perm)
+        self.view_own_appt_perm, _ = Permission.objects.update_or_create(
+            code='view_own_appointments',
+            defaults={
+                'name': 'View Own Appointments',
+                'category': 'appointments',
+                'is_active': True,
+            },
+        )
+        self.view_notifications_perm, _ = Permission.objects.update_or_create(
+            code='view_notifications',
+            defaults={
+                'name': 'View Notifications',
+                'category': 'notifications',
+                'is_active': True,
+            },
+        )
+        self.clock_work_time_perm, _ = Permission.objects.update_or_create(
+            code='clock_work_time',
+            defaults={
+                'name': 'Clock Work Time',
+                'category': 'workorders',
+                'is_active': True,
+            },
+        )
+        self.tech_role.permissions.add(
+            self.view_wo_perm,
+            self.edit_wo_perm,
+            self.view_own_appt_perm,
+            self.view_notifications_perm,
+            self.clock_work_time_perm,
+        )
         
         # Create users
         self.technician = User.objects.create_user(
@@ -114,18 +144,25 @@ class MobileAPITestCase(TestCase):
     def test_time_tracking_flow(self, mock_filter):
         """Test the full time tracking flow for a technician"""
         
-        # 1. Clock In (create time log)
-        # Mobile app sends only work_order, technician and rate should auto-populate
+        # 1. Clock In (mobile clock-in action; server sets clock_in)
         clock_in_data = {
             'work_order': self.work_order.id,
             'description': 'Starting work',
-            'clock_in': timezone.now().isoformat()
         }
         
-        response = self.client.post('/api/workorders/time-logs/', clock_in_data, format='json')
+        response = self.client.post(
+            '/api/workorders/time-logs/clock-in/', clock_in_data, format='json'
+        )
         if response.status_code != 201:
             print(f"Clock In Failed: {response.data}")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Duplicate clock-in should fail with a clear message
+        dup = self.client.post(
+            '/api/workorders/time-logs/clock-in/', clock_in_data, format='json'
+        )
+        self.assertEqual(dup.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('already clocked in', str(dup.data).lower())
         self.assertEqual(response.data['technician'], self.technician.id)
         self.assertEqual(float(response.data['hourly_rate']), 50.00)
         
@@ -151,6 +188,17 @@ class MobileAPITestCase(TestCase):
         response = self.client.get('/api/workorders/time-logs/active/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data)
+
+    def test_technician_can_start_task_without_edit_workorders(self, mock_filter):
+        """Task start/complete should not require edit_workorders."""
+        self.tech_role.permissions.remove(self.edit_wo_perm)
+        self.work_order.status = 'approved'
+        self.work_order.save(update_fields=['status'])
+
+        response = self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, 'in_progress')
 
     def test_work_order_mobile_actions(self, mock_filter):
         """Test work order actions used in mobile app"""

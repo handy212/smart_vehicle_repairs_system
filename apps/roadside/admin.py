@@ -2,7 +2,7 @@
 Admin for roadside assistance
 """
 from django.contrib import admin
-from .models import RoadsideRequest, RoadsideDispatch
+from .models import RoadsideRequest, RoadsideDispatch, RoadsideNote, RoadsidePhoto
 
 
 class RoadsideDispatchInline(admin.TabularInline):
@@ -10,6 +10,20 @@ class RoadsideDispatchInline(admin.TabularInline):
     extra = 0
     fields = ['technician', 'dispatched_at', 'dispatched_by', 'notes']
     readonly_fields = ['dispatched_at']
+
+
+class RoadsideNoteInline(admin.TabularInline):
+    model = RoadsideNote
+    extra = 0
+    fields = ['note', 'created_by', 'created_at']
+    readonly_fields = ['created_at']
+
+
+class RoadsidePhotoInline(admin.TabularInline):
+    model = RoadsidePhoto
+    extra = 0
+    fields = ['image', 'photo_type', 'caption', 'taken_at', 'uploaded_by']
+    readonly_fields = ['uploaded_at']
 
 
 @admin.register(RoadsideRequest)
@@ -23,7 +37,7 @@ class RoadsideRequestAdmin(admin.ModelAdmin):
     search_fields = ['request_number', 'customer__first_name', 'customer__last_name', 'vehicle__license_plate']
     readonly_fields = ['request_number', 'requested_at', 'updated_at']
     date_hierarchy = 'requested_at'
-    inlines = [RoadsideDispatchInline]
+    inlines = [RoadsideDispatchInline, RoadsideNoteInline, RoadsidePhotoInline]
     
     fieldsets = (
         ('Request Information', {
@@ -57,3 +71,18 @@ class RoadsideDispatchAdmin(admin.ModelAdmin):
     search_fields = ['request__request_number', 'technician__first_name', 'technician__last_name']
     readonly_fields = ['dispatched_at']
 
+
+@admin.register(RoadsideNote)
+class RoadsideNoteAdmin(admin.ModelAdmin):
+    list_display = ['request', 'created_by', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['request__request_number', 'note', 'created_by__first_name', 'created_by__last_name']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(RoadsidePhoto)
+class RoadsidePhotoAdmin(admin.ModelAdmin):
+    list_display = ['request', 'photo_type', 'caption', 'uploaded_by', 'uploaded_at']
+    list_filter = ['photo_type', 'uploaded_at']
+    search_fields = ['request__request_number', 'caption', 'uploaded_by__first_name', 'uploaded_by__last_name']
+    readonly_fields = ['uploaded_at']

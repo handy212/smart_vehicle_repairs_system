@@ -61,6 +61,24 @@ export async function processQueuedRequest(
 
     // Request succeeded, remove from queue
     await syncQueueDB.delete(request.id);
+
+    if (request.endpoint.includes('/diagnosis/')) {
+      const { diagnosisDraftsDB } = await import('./db');
+      const match = request.endpoint.match(/\/diagnosis\/diagnoses\/(\d+)\//);
+      if (match) {
+        const diagnosisId = parseInt(match[1], 10);
+        const drafts = await diagnosisDraftsDB.getUnsynced();
+        const draft = drafts.find((d) => d.id === diagnosisId);
+        const woId =
+          typeof draft?.work_order === 'number'
+            ? draft.work_order
+            : draft?.work_order?.id;
+        if (woId) {
+          await diagnosisDraftsDB.markSynced(woId);
+        }
+      }
+    }
+
     return true;
 
   } catch (error: any) {

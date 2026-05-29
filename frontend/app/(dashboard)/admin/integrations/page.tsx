@@ -17,6 +17,11 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { QuickBooksOnlineCard } from "@/components/integrations/QuickBooksOnlineCard";
 import { IntegrationField } from "@/components/integrations/IntegrationField";
+import {
+  fieldPrefixForKey,
+  isHubtelSmsSetting,
+  sortHubtelSmsSettings,
+} from "@/lib/integrations/fieldLabels";
 import { cn } from "@/lib/utils/cn";
 
 const CATEGORIES = [
@@ -120,13 +125,13 @@ export default function IntegrationsPage() {
     filteredSettings.forEach(s => {
       let provider = "General";
       let prefix = "";
-      
-      if (s.key.startsWith("firebase_")) {
+
+      if (isHubtelSmsSetting(s)) {
+        provider = "Hubtel SMS";
+        prefix = "";
+      } else if (s.key.startsWith("firebase_")) {
         provider = "Firebase";
         prefix = "firebase_";
-      } else if (s.key.startsWith("hubtel_")) {
-        provider = "Hubtel";
-        prefix = "hubtel_";
       } else if (s.key.startsWith("recaptcha_")) {
         provider = "Recaptcha";
         prefix = "recaptcha_";
@@ -135,18 +140,19 @@ export default function IntegrationsPage() {
         prefix = "quickbooks_";
       } else if (/(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key)) {
         provider = "Analytics & Tracking";
-        prefix = ""; // Keep full labels for mixing
-      } else if (s.category === "sms") {
-        provider = "SMS Integration";
-        prefix = "sms_";
+        prefix = "";
       }
-      
+
       if (!groups[provider]) {
         groups[provider] = { label: provider, settings: [], prefix };
       }
       groups[provider].settings.push(s);
     });
-    
+
+    if (groups["Hubtel SMS"]) {
+      groups["Hubtel SMS"].settings = sortHubtelSmsSettings(groups["Hubtel SMS"].settings);
+    }
+
     return groups;
   }, [filteredSettings]);
 
@@ -259,7 +265,7 @@ export default function IntegrationsPage() {
                             onToggleActive={(active) => updateMutation.mutate({ id: s.id, data: { is_active: active } })}
                             canManage={canManage}
                             isPending={updateMutation.isPending}
-                            prefix={group.prefix}
+                            prefix={group.prefix || fieldPrefixForKey(s.key)}
                             deferSave
                           />
                         </div>

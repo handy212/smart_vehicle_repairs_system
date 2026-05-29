@@ -708,3 +708,51 @@ class OpenRecommendationLookupAPITest(APITestCase):
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['recommendations'][0]['id'], recommendation.id)
         self.assertEqual(response.data['recommendations'][0]['work_order_id'], workorder.id)
+
+
+class WorkOrderRatingAPITest(APITestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email='wo-rating-admin@test.com',
+            username='wo-rating-admin',
+            password='test123',
+            role='admin',
+            is_staff=True
+        )
+        self.customer_user = User.objects.create_user(
+            email='wo-rating-customer@test.com',
+            username='wo-rating-customer',
+            password='test123',
+            role='customer'
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Honda',
+            model='Civic',
+            year=2022,
+            vin='2HGFC2F69NH123456',
+            license_plate='WOR001',
+            current_mileage=10000
+        )
+        self.workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='completed',
+            customer_concerns='General service',
+            odometer_in=10000,
+            created_by=self.admin_user,
+        )
+
+    def test_customer_can_rate_completed_workorder(self):
+        self.client.force_authenticate(user=self.customer_user)
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.workorder.id}/rate_service/',
+            {'rating': 4, 'customer_feedback': 'Good overall'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.workorder.refresh_from_db()
+        self.assertEqual(self.workorder.customer_rating, 4)
+        self.assertEqual(self.workorder.customer_feedback, 'Good overall')

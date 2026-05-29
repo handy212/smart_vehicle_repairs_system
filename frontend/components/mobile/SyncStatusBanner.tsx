@@ -3,11 +3,21 @@
 import { useEffect, useState, useRef } from "react";
 import { useOfflineStore } from "@/store/offlineStore";
 import { queueDB } from "@/lib/offline/queue";
-import { photosDB } from "@/lib/offline/photos";
+import { photosDB as woPhotosDB } from "@/lib/offline/photos";
+import { photosDB as offlinePhotosDB } from "@/lib/offline/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Wifi, WifiOff, Upload, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+async function getPendingCount() {
+    const queue = await queueDB.getAll();
+    const [woPhotos, offlinePhotos] = await Promise.all([
+        woPhotosDB.getUnuploaded(),
+        offlinePhotosDB.getUnsynced(),
+    ]);
+    return queue.length + woPhotos.length + offlinePhotos.length;
+}
 
 export function SyncStatusBanner() {
     const { isOnline, sync, isSyncing } = useOfflineStore();
@@ -18,6 +28,17 @@ export function SyncStatusBanner() {
     const isMountedRef = useRef(true);
 
     useEffect(() => {
+        const loadPendingCount = async () => {
+            try {
+                const count = await getPendingCount();
+                if (isMountedRef.current) {
+                    setPendingCount(count);
+                }
+            } catch (error) {
+                console.error("Failed to load pending count:", error);
+            }
+        };
+
         isMountedRef.current = true;
         loadPendingCount();
 
@@ -36,11 +57,10 @@ export function SyncStatusBanner() {
 
     const loadPendingCount = async () => {
         try {
-            const queue = await queueDB.getAll();
-            const photos = await photosDB.getUnuploaded();
+            const count = await getPendingCount();
 
             if (isMountedRef.current) {
-                setPendingCount(queue.length + photos.length);
+                setPendingCount(count);
             }
         } catch (error) {
             console.error("Failed to load pending count:", error);

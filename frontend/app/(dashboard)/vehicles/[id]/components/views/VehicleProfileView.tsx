@@ -17,6 +17,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+function DataField({
+    label,
+    value,
+    icon: Icon,
+    className
+}: {
+    label: string;
+    value: React.ReactNode;
+    icon?: React.ComponentType<{ className?: string }> | null;
+    className?: string;
+}) {
+    return (
+        <div className={`space-y-0.5 ${className}`}>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                {Icon && <Icon className="w-3 h-3" />}
+                {label}
+            </span>
+            <div className="text-sm font-medium text-foreground truncate line-clamp-1">{value || <span className="text-muted-foreground font-normal">-</span>}</div>
+        </div>
+    );
+}
+
 interface VehicleProfileViewProps {
     vehicle: Vehicle;
 
@@ -50,17 +72,6 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
 
     const vinData = (vehicle as any)?.vin_decoded_data || null;
-
-
-    const DataField = ({ label, value, icon: Icon, className }: { label: string, value: React.ReactNode, icon?: any, className?: string }) => (
-        <div className={`space-y-0.5 ${className}`}>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                {Icon && <Icon className="w-3 h-3" />}
-                {label}
-            </span>
-            <div className="text-sm font-medium text-foreground truncate line-clamp-1">{value || <span className="text-muted-foreground font-normal">-</span>}</div>
-        </div>
-    );
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">

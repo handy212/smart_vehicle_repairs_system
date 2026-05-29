@@ -374,6 +374,10 @@ class EstimateActionMixin:
                 estimate.approved_date = timezone.now()
                 estimate.approved_by = request.user
                 estimate.save(update_fields=['status', 'approved_date', 'approved_by', 'updated_at'])
+
+            estimate.refresh_from_db()
+            if estimate.status == 'approved':
+                estimate.apply_quoted_prices_to_work_order()
         
         # Trigger notification
         try:

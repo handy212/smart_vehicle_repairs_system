@@ -78,6 +78,32 @@ def invoice_summary_payload(invoice: Invoice, *, include_internal: bool = True) 
     }
 
 
+def get_billable_estimate_for_work_order(work_order: WorkOrder | None):
+    """
+    Return the customer-approved estimate that should drive invoicing for this WO.
+
+    Prefers the OneToOne ``work_order.estimate`` link, then the newest approved
+    estimate for the same work order.
+    """
+    if not work_order or not work_order.pk:
+        return None
+
+    from apps.billing.models import Estimate
+
+    linked = getattr(work_order, 'estimate', None)
+    if linked and linked.status in ('approved', 'converted') and linked.line_items.exists():
+        return linked
+
+    return (
+        Estimate.objects.filter(
+            work_order=work_order,
+            status__in=('approved', 'converted'),
+        )
+        .order_by('-approved_date', '-created_at')
+        .first()
+    )
+
+
 INVOICE_READY_NOTIFY_STATUSES = ('sent', 'viewed', 'partial', 'paid', 'overdue')
 
 

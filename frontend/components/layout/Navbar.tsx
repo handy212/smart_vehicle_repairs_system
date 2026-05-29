@@ -39,7 +39,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
   const { activeBranchId, activeBranch, setBranch } = useBranchStore();
   const previousBranchIdRef = useRef<number | null>(null);
   const hasInitializedBranchRef = useRef(false);
-  const [logoLoadError, setLogoLoadError] = useState(false);
+  const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null);
 
   // Use shared branding hook (authenticated variant for dashboard)
   const branding = useBranding("authenticated");
@@ -73,13 +73,6 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
       }
     }
   }, [brandingSettings, brandingLoading]);
-
-  // Reset logo error state when the logo source changes
-  useEffect(() => {
-    setLogoLoadError(false);
-  }, [branding.logoSrc]);
-
-
 
   const {
     data: accessibleBranchesData,
@@ -175,13 +168,13 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             )}
 
             <Link href="/dashboard" className="flex items-center space-x-2 group">
-              {branding.logoSrc && !logoLoadError ? (
+              {branding.logoSrc && failedLogoSrc !== branding.logoSrc ? (
                 <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-border relative">
                   <img
                     src={branding.logoSrc}
                     alt={branding.siteName}
                     className="h-full w-full object-contain p-1"
-                    onError={() => setLogoLoadError(true)}
+                    onError={() => setFailedLogoSrc(branding.logoSrc)}
                   />
                 </div>
               ) : (

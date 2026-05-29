@@ -26,7 +26,7 @@ The **canonical user interface** is the Next.js app in [`frontend/`](../frontend
 | `/reporting/` | `reporting` | `/reports` | Deprecated |
 | `/notifications/` | `notifications` | `/notifications` | Deprecated |
 | `/portal/` (customer templates) | `portal` | `/portal` | Deprecated |
-| `/mobile/` | `mobile` | `/mobile` | Deprecated |
+| `/mobile/` | `mobile` | `/mobile` (Next.js PWA) | Deprecated — `workorders/` and `inspections/new/` Django paths redirect to Next |
 | `/admin-panel/` | `admin_panel` | `/admin` | Deprecated |
 | `/accounts/login/` etc. | — | `/login`, `/register` | Deprecated |
 | `/customer/login/` | — | `/portal` auth flows | Deprecated |

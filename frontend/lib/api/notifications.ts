@@ -119,6 +119,19 @@ export const notificationsApi = {
     return response.data;
   },
 
+  /** Current user only — preferred for technician mobile app */
+  listMine: async (params?: {
+    page?: number;
+    unread_only?: boolean;
+    type?: string;
+    ordering?: string;
+  }): Promise<NotificationListResponse> => {
+    const response = await apiClient.get("/notifications/notifications/my_notifications/", {
+      params,
+    });
+    return response.data;
+  },
+
   create: async (data: Partial<Notification>): Promise<Notification> => {
     const response = await apiClient.post("/notifications/notifications/", data);
     return response.data;

@@ -29,6 +29,7 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
 from apps.inventory.models import Part, PurchaseOrder
+from apps.quickbooks_online.serializer_mixins import QBOSyncFieldsMixin
 
 
 def calculate_discounted_line_total(item):
@@ -586,7 +587,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
 
 
-class InvoiceDetailSerializer(serializers.ModelSerializer):
+class InvoiceDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Serializer for invoice details"""
     
     customer_name = serializers.SerializerMethodField()
@@ -753,14 +754,6 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             ).first()
         return self._qbo_mapping_cache[obj.id]
 
-    def get_qbo_sync_status(self, obj):
-        mapping = self._get_qbo_mapping(obj)
-        return mapping.status if mapping else 'un-synced'
-
-    def get_qbo_sync_error(self, obj):
-        mapping = self._get_qbo_mapping(obj)
-        return mapping.error_message if mapping else ''
-
 
 def _default_invoice_notes_from_work_order(work_order):
     """Human-readable notes when creating an invoice from a work order (API defaults)."""
@@ -910,12 +903,27 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                 }
                 validated_data['terms'] = terms_map.get(payment_terms, payment_terms)
         
-        # Create invoice
+        billable_estimate = None
+        if work_order and not line_items_data:
+            from apps.billing.work_order_invoices import get_billable_estimate_for_work_order
+            billable_estimate = get_billable_estimate_for_work_order(work_order)
+            if billable_estimate:
+                validated_data['estimate'] = billable_estimate
+                if not validated_data.get('branch') and billable_estimate.branch_id:
+                    validated_data['branch'] = billable_estimate.branch
+                validated_data.setdefault(
+                    'description',
+                    f"Invoice from estimate {billable_estimate.estimate_number} "
+                    f"for work order {work_order.work_order_number}",
+                )
+
         invoice = Invoice.objects.create(**validated_data)
 
         if work_order and line_items_data:
-            # Form / API submitted lines take precedence (staff may adjust amounts vs raw WO tasks).
             finalize_invoice_from_line_items(invoice, line_items_data)
+        elif work_order and billable_estimate:
+            billable_estimate.apply_quoted_prices_to_work_order()
+            invoice.populate_from_estimate(billable_estimate, mark_converted=True)
         elif work_order:
             invoice.calculate_totals_from_work_order()
             invoice.save()
@@ -1065,8 +1073,14 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
             else:
                 # No line items provided; fallback to work order totals if available
                 if instance.work_order:
-                    instance.calculate_totals_from_work_order()
-                    instance.save()
+                    from apps.billing.work_order_invoices import get_billable_estimate_for_work_order
+                    estimate = get_billable_estimate_for_work_order(instance.work_order)
+                    if estimate and not instance.estimate_id:
+                        estimate.apply_quoted_prices_to_work_order()
+                        instance.populate_from_estimate(estimate, mark_converted=True)
+                    else:
+                        instance.calculate_totals_from_work_order()
+                        instance.save()
         
         # try:
         #     from apps.billing.accounting_service import AccountingService

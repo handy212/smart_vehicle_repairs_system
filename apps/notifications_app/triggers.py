@@ -1882,7 +1882,7 @@ Service: {roadside_request.get_service_type_display()}
 Vehicle: {vehicle_display}
 Location: {roadside_request.breakdown_location}
 
-Please proceed to location and mark arrival when on-site.''',
+Open the Tech App to accept or decline this job.''',
                 data={
                     'request_id': roadside_request.id,
                     'request_number': roadside_request.request_number,
@@ -1914,7 +1914,38 @@ Check app for details.''',
                     related_object_id=roadside_request.id
                 )
                 self.service.send_notification(tech_sms)
-    
+
+    def roadside_assignment_rejected(self, roadside_request, technician, reason=''):
+        """Alert dispatch staff when a technician declines an assignment."""
+        from apps.roadside.branch_utils import get_roadside_branch_notification_recipients
+
+        tech_name = technician.get_full_name() or technician.username
+        reason_line = f"\nReason: {reason}" if reason else ""
+        message = (
+            f"{tech_name} declined roadside assignment {roadside_request.request_number}."
+            f"{reason_line}\n\nPlease assign another technician."
+        )
+        recipients = get_roadside_branch_notification_recipients(roadside_request.branch)
+        for staff in recipients:
+            if staff.id == technician.id:
+                continue
+            notification = Notification.objects.create(
+                recipient=staff,
+                notification_type='roadside',
+                channel='in_app',
+                priority='high',
+                title=f'Assignment declined — {roadside_request.request_number}',
+                message=message,
+                data={
+                    'request_id': roadside_request.id,
+                    'request_number': roadside_request.request_number,
+                    'technician_id': technician.id,
+                },
+                related_object_type='roadside',
+                related_object_id=roadside_request.id,
+            )
+            self.service.send_notification(notification)
+
     def roadside_arrived(self, roadside_request):
         """Notify customer when service provider arrives - Enhanced with Optional SMS"""
         customer_name = self._build_customer_name(roadside_request.customer)

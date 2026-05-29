@@ -614,48 +614,9 @@ def convert_estimate_to_invoice(request, estimate_id):
         return redirect('billing:estimate_detail', estimate_id=estimate_id)
     
     try:
-        from datetime import timedelta
+        invoice = estimate.convert_to_invoice(created_by=request.user)
         
-        # Create invoice from estimate
-        invoice = Invoice.objects.create(
-            customer=estimate.customer,
-            vehicle=estimate.vehicle,
-            work_order=estimate.work_order,
-            estimate=estimate,
-            status='draft',
-            invoice_date=timezone.now().date(),
-            due_date=(timezone.now() + timedelta(days=30)).date(),
-            description=estimate.description,
-            notes=estimate.notes,
-            customer_notes=estimate.customer_notes,
-            labor_subtotal=estimate.labor_subtotal,
-            parts_subtotal=estimate.parts_subtotal,
-            sublet_subtotal=estimate.sublet_subtotal,
-            subtotal=estimate.subtotal,
-            discount_amount=estimate.discount_amount,
-            discount_percentage=estimate.discount_percentage,
-            discount_reason=estimate.discount_reason,
-            tax_amount=estimate.tax_amount,
-            shop_supplies_fee=estimate.shop_supplies_fee,
-            environmental_fee=estimate.environmental_fee,
-            total=estimate.total,
-            amount_due=estimate.total,
-            created_by=request.user,
-        )
-        
-        # Note: Invoices in this system don't have separate line items
-        # They pull data from the work order's tasks and parts
-        # The line item details from the estimate are preserved in the estimate itself
-        
-        # Update estimate status
-        estimate.status = 'converted'
-        estimate.converted_date = timezone.now()
-        estimate.save()
-        
-        # Keep the linked work order in its current workflow state. Creating
-        # an invoice must not move repair work back into progress.
         if estimate.work_order:
-            # Create activity note
             from apps.workorders.models import WorkOrderNote
             WorkOrderNote.objects.create(
                 work_order=estimate.work_order,

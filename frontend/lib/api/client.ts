@@ -1,7 +1,9 @@
 import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
 import { useBranchStore } from "@/store/branchStore";
 import { queueRequest } from "@/lib/offline/queue";
-import { getAccessToken, setAccessToken, clearTokens } from "@/lib/utils/token";
+import { getApiBaseUrl } from "@/lib/api/base-url";
+import { refreshAccessToken } from "@/lib/auth/refresh-access-token";
+import { getAccessToken, clearTokens } from "@/lib/utils/token";
 import { authApi } from "@/lib/api/auth";
 
 export type ApiRequestConfig = AxiosRequestConfig & {
@@ -42,7 +44,7 @@ const isOfflineQueuedError = (error: unknown): error is OfflineQueuedError => {
 };
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+  baseURL: getApiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -109,6 +111,13 @@ apiClient.interceptors.request.use(
         })();
       if (branchId && config.headers) {
         config.headers["X-Branch-ID"] = branchId.toString();
+      }
+      if (
+        typeof window !== "undefined" &&
+        window.location.pathname.startsWith("/mobile") &&
+        config.headers
+      ) {
+        config.headers["X-Tech-App"] = "1";
       }
     }
     return config;
@@ -198,8 +207,16 @@ apiClient.interceptors.response.use(
 
       if (typeof window !== "undefined") {
         try {
-          const { access } = await authApi.refreshToken();
-          setAccessToken(access);
+          const access = await refreshAccessToken();
+          if (!access) {
+            const refreshError = new Error("Session expired");
+            processQueue(refreshError, null);
+            clearTokens();
+            if (window.location.pathname !== "/login") {
+              window.location.href = "/login";
+            }
+            return Promise.reject(refreshError);
+          }
 
           processQueue(null, access);
 

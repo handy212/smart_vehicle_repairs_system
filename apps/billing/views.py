@@ -722,11 +722,27 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
         request = self.request
         branch_id = request.data.get('branch') or request.data.get('branch_id')
         branch = resolve_branch(request, branch_id=branch_id)
-        
+
+        if branch is None:
+            work_order_id = request.data.get('work_order')
+            if work_order_id:
+                from apps.workorders.models import WorkOrder
+                work_order = (
+                    WorkOrder.objects.filter(pk=work_order_id)
+                    .select_related('branch', 'estimate')
+                    .first()
+                )
+                if work_order and work_order.branch_id:
+                    branch = work_order.branch
+                elif work_order:
+                    estimate = getattr(work_order, 'estimate', None)
+                    if estimate and estimate.branch_id:
+                        branch = estimate.branch
+
         if branch is None:
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
-        
+
         invoice = serializer.save(branch=branch, created_by=request.user)
 
         if invoice.status == 'sent':

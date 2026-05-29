@@ -7,6 +7,7 @@ import {
   inspectionsDB,
   timeLogsDB,
   photosDB,
+  diagnosisDraftsDB,
 } from './db';
 import { processQueue, getQueueStats } from './queue';
 import apiClient from '../api/client';
@@ -80,9 +81,14 @@ export async function syncAll(): Promise<SyncResult> {
     for (const timeLog of unsyncedTimeLogs) {
       try {
         if (timeLog.id && timeLog.id > 0) {
-          await apiClient.patch(`/workorders/${timeLog.work_order}/time-logs/${timeLog.id}/`, timeLog);
+          await apiClient.post(`/workorders/time-logs/${timeLog.id}/clock_out/`, {
+            clock_out: timeLog.clock_out ?? new Date().toISOString(),
+          });
         } else {
-          await apiClient.post(`/workorders/${timeLog.work_order}/time-logs/`, timeLog);
+          await apiClient.post("/workorders/time-logs/clock-in/", {
+            work_order: timeLog.work_order,
+            description: timeLog.description || "Field work",
+          });
         }
         await timeLogsDB.markSynced(timeLog.id || timeLog.tempId);
         synced.timeLogs++;
@@ -92,23 +98,34 @@ export async function syncAll(): Promise<SyncResult> {
       }
     }
 
-    // Sync photos
+    // Sync photos (work orders, inspections, roadside)
     const unsyncedPhotos = await photosDB.getUnsynced();
     for (const photo of unsyncedPhotos) {
       try {
         const formData = new FormData();
-        formData.append('photo', photo.blob, `photo-${photo.id}.jpg`);
-        if (photo.workOrderId) {
-          formData.append('work_order', photo.workOrderId.toString());
-        }
-        if (photo.inspectionId) {
-          formData.append('inspection', photo.inspectionId.toString());
+        const filename = `photo-${photo.id}.jpg`;
+
+        if (photo.roadsideRequestId) {
+          formData.append('image', photo.blob, filename);
+          formData.append('photo_type', photo.photoType || 'other');
+          if (photo.caption) formData.append('caption', photo.caption);
+          await apiClient.post(
+            `/roadside/requests/${photo.roadsideRequestId}/site-photos/`,
+            formData
+          );
+        } else {
+          formData.append('photo', photo.blob, filename);
+          if (photo.workOrderId) {
+            formData.append('work_order', photo.workOrderId.toString());
+          }
+          if (photo.inspectionId) {
+            formData.append('inspection', photo.inspectionId.toString());
+          }
+          await apiClient.post('/workorders/photos/', formData);
         }
 
-        await apiClient.post('/workorders/photos/', formData);
         await photosDB.markSynced(photo.id);
         synced.photos++;
-
       } catch (error: any) {
         errors.push(`Photo ${photo.id}: ${error.message}`);
       }
@@ -116,6 +133,23 @@ export async function syncAll(): Promise<SyncResult> {
 
     // Process sync queue
     const queueResult = await processQueue();
+
+    // Refresh diagnosis drafts after queue sync
+    const unsyncedDrafts = await diagnosisDraftsDB.getUnsynced();
+    for (const draft of unsyncedDrafts) {
+      const woId =
+        typeof draft.work_order === 'number'
+          ? draft.work_order
+          : draft.work_order?.id;
+      if (woId && draft.id) {
+        try {
+          const response = await apiClient.get(`/diagnosis/diagnoses/${draft.id}/`);
+          await diagnosisDraftsDB.set(woId, response.data, true);
+        } catch {
+          // leave unsynced for next pass
+        }
+      }
+    }
 
     return {
       success: errors.length === 0,

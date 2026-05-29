@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -35,6 +36,7 @@ export default function SupplierDetailPage() {
   const id = parseInt(params.id as string);
   const { success: toastSuccess, error: toastError } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
 
   const { data: supplier, isLoading, refetch } = useQuery({
     queryKey: ["supplier", id],
@@ -127,7 +129,7 @@ export default function SupplierDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {supplier.qbo_sync_status && (
+          {isQboConnected && supplier.qbo_sync_status && (
             <div className="flex items-center gap-2 mr-2">
               <Badge 
                 variant={supplier.qbo_sync_status === 'synced' ? 'success' : supplier.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} 

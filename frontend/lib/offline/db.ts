@@ -4,7 +4,14 @@
 
 import { openDB, DBSchema, IDBPDatabase, deleteDB } from 'idb';
 
-type StoreName = "workOrders" | "inspections" | "timeLogs" | "syncQueue" | "photos";
+type StoreName =
+  | "workOrders"
+  | "inspections"
+  | "timeLogs"
+  | "syncQueue"
+  | "photos"
+  | "roadsideRequests"
+  | "diagnosisDrafts";
 
 interface VehicleRepairsDB extends DBSchema {
   workOrders: {
@@ -65,15 +72,38 @@ interface VehicleRepairsDB extends DBSchema {
       blob: Blob;
       workOrderId?: number;
       inspectionId?: number;
+      roadsideRequestId?: string;
+      caption?: string;
+      photoType?: string;
       synced: 0 | 1;
       timestamp: number;
     };
-    indexes: { 'by-synced': 0 | 1; 'by-workOrderId': number; 'by-inspectionId': number };
+    indexes: { 'by-synced': 0 | 1; 'by-workOrderId': number; 'by-inspectionId': number; 'by-roadsideRequestId': string };
+  };
+  roadsideRequests: {
+    key: string;
+    value: {
+      id: string;
+      data: any;
+      synced: 0 | 1;
+      lastModified: number;
+    };
+    indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
+  };
+  diagnosisDrafts: {
+    key: number;
+    value: {
+      workOrderId: number;
+      data: any;
+      synced: 0 | 1;
+      lastModified: number;
+    };
+    indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
   };
 }
 
 const DB_NAME = 'vehicle-repairs-db';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 let dbInstance: IDBPDatabase<VehicleRepairsDB> | null = null;
 
@@ -154,11 +184,33 @@ export async function openDatabase(): Promise<IDBPDatabase<VehicleRepairsDB>> {
         safeCreateIndex(photosStore, 'by-synced', 'synced');
         safeCreateIndex(photosStore, 'by-workOrderId', 'workOrderId');
         safeCreateIndex(photosStore, 'by-inspectionId', 'inspectionId');
+        safeCreateIndex(photosStore, 'by-roadsideRequestId', 'roadsideRequestId');
       } else if (transaction) {
         const photosStore = transaction.objectStore('photos');
         safeCreateIndex(photosStore, 'by-synced', 'synced');
         safeCreateIndex(photosStore, 'by-workOrderId', 'workOrderId');
         safeCreateIndex(photosStore, 'by-inspectionId', 'inspectionId');
+        safeCreateIndex(photosStore, 'by-roadsideRequestId', 'roadsideRequestId');
+      }
+
+      if (!db.objectStoreNames.contains('roadsideRequests')) {
+        const roadsideStore = db.createObjectStore('roadsideRequests', { keyPath: 'id' });
+        safeCreateIndex(roadsideStore, 'by-synced', 'synced');
+        safeCreateIndex(roadsideStore, 'by-lastModified', 'lastModified');
+      } else if (transaction) {
+        const roadsideStore = transaction.objectStore('roadsideRequests');
+        safeCreateIndex(roadsideStore, 'by-synced', 'synced');
+        safeCreateIndex(roadsideStore, 'by-lastModified', 'lastModified');
+      }
+
+      if (!db.objectStoreNames.contains('diagnosisDrafts')) {
+        const draftsStore = db.createObjectStore('diagnosisDrafts', { keyPath: 'workOrderId' });
+        safeCreateIndex(draftsStore, 'by-synced', 'synced');
+        safeCreateIndex(draftsStore, 'by-lastModified', 'lastModified');
+      } else if (transaction) {
+        const draftsStore = transaction.objectStore('diagnosisDrafts');
+        safeCreateIndex(draftsStore, 'by-synced', 'synced');
+        safeCreateIndex(draftsStore, 'by-lastModified', 'lastModified');
       }
     },
   });
@@ -413,19 +465,25 @@ export const syncQueueDB = {
 /**
  * Photos operations
  */
+export type OfflinePhotoMeta = {
+  workOrderId?: number;
+  inspectionId?: number;
+  roadsideRequestId?: string;
+  caption?: string;
+  photoType?: string;
+};
+
 export const photosDB = {
-  async add(
-    id: string,
-    blob: Blob,
-    workOrderId?: number,
-    inspectionId?: number
-  ): Promise<void> {
+  async add(id: string, blob: Blob, meta: OfflinePhotoMeta = {}): Promise<void> {
     const db = await getDB();
     await db.put('photos', {
       id,
       blob,
-      workOrderId,
-      inspectionId,
+      workOrderId: meta.workOrderId,
+      inspectionId: meta.inspectionId,
+      roadsideRequestId: meta.roadsideRequestId,
+      caption: meta.caption,
+      photoType: meta.photoType,
       synced: 0,
       timestamp: Date.now(),
     });
@@ -478,6 +536,90 @@ export const photosDB = {
 /**
  * Clear all data (for testing/debugging)
  */
+export const diagnosisDraftsDB = {
+  async get(workOrderId: number): Promise<any | null> {
+    const db = await getDB();
+    const item = await db.get('diagnosisDrafts', workOrderId);
+    return item?.data ?? null;
+  },
+
+  async set(workOrderId: number, data: any, synced: boolean = false): Promise<void> {
+    const db = await getDB();
+    await db.put('diagnosisDrafts', {
+      workOrderId,
+      data,
+      synced: synced ? 1 : 0,
+      lastModified: Date.now(),
+    });
+  },
+
+  async getUnsynced(): Promise<any[]> {
+    const items = await safeGetAll('diagnosisDrafts');
+    return items.filter((item) => item.synced === 0).map((item) => item.data);
+  },
+
+  async markSynced(workOrderId: number): Promise<void> {
+    const db = await getDB();
+    const item = await db.get('diagnosisDrafts', workOrderId);
+    if (item) {
+      await db.put('diagnosisDrafts', { ...item, synced: 1 });
+    }
+  },
+};
+
+export const roadsideRequestsDB = {
+  async getAll(): Promise<any[]> {
+    const items = await safeGetAll('roadsideRequests');
+    return items.map((item) => item.data);
+  },
+
+  async get(id: string): Promise<any | null> {
+    const db = await getDB();
+    const item = await db.get('roadsideRequests', id);
+    return item?.data || null;
+  },
+
+  async set(id: string, data: any, synced: boolean = false): Promise<void> {
+    const db = await getDB();
+    await db.put('roadsideRequests', {
+      id: String(id),
+      data,
+      synced: synced ? 1 : 0,
+      lastModified: Date.now(),
+    });
+  },
+
+  async getUnsynced(): Promise<any[]> {
+    const items = await safeGetAll('roadsideRequests');
+    return items.filter((item) => item.synced === 0).map((item) => item.data);
+  },
+
+  async markSynced(id: string): Promise<void> {
+    const db = await getDB();
+    const item = await db.get('roadsideRequests', id);
+    if (item) {
+      await db.put('roadsideRequests', { ...item, synced: 1 });
+    }
+  },
+
+  /** Replace offline cache with a fresh assignment list (avoids stale branch-wide data). */
+  async replaceAll(requests: { id: number | string }[]): Promise<void> {
+    const db = await getDB();
+    const tx = db.transaction('roadsideRequests', 'readwrite');
+    await tx.store.clear();
+    const now = Date.now();
+    for (const req of requests) {
+      await tx.store.put({
+        id: String(req.id),
+        data: req,
+        synced: 1,
+        lastModified: now,
+      });
+    }
+    await tx.done;
+  },
+};
+
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
   await db.clear('workOrders');
@@ -485,4 +627,6 @@ export async function clearAllData(): Promise<void> {
   await db.clear('timeLogs');
   await db.clear('syncQueue');
   await db.clear('photos');
+  await db.clear('roadsideRequests');
+  await db.clear('diagnosisDrafts');
 }

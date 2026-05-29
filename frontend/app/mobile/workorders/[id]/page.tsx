@@ -11,6 +11,8 @@ import { workOrdersDB } from "@/lib/offline/db";
 import { queueRequest } from "@/lib/offline/queue";
 import { useToast } from "@/lib/hooks/useToast";
 import apiClient from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/apiErrors";
+import { timeLogsApi } from "@/lib/api/timeLogs";
 import {
   ArrowLeft,
   Clock,
@@ -44,6 +46,7 @@ import {
   parseWorkOrderMoney,
   resolveWorkOrderInvoiceAmount,
 } from "@/lib/workorders/workOrderBillingDisplay";
+import { MobileWorkOrderSections } from "@/components/mobile/workorder/MobileWorkOrderSections";
 
 export default function MobileWorkOrderDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -219,15 +222,12 @@ export default function MobileWorkOrderDetailPage() {
     if (!workOrder) return;
     setLoading(true);
     try {
-      const timeLog = {
-        work_order: workOrder.id,
-        clock_in: new Date().toISOString(),
-        description: "Started work via Mobile detail",
-      };
-
       if (isOnline) {
-        const response = await apiClient.post("/workorders/time-logs/", timeLog);
-        setActiveLog(response.data);
+        const log = await timeLogsApi.clockIn(
+          workOrder.id,
+          "Started work via Mobile detail"
+        );
+        setActiveLog(log);
         if (workOrder.status === 'assigned') {
           await handleStatusChangeAction('startWork');
         }
@@ -235,7 +235,11 @@ export default function MobileWorkOrderDetailPage() {
       }
     } catch (error) {
       console.error("Failed to clock in:", error);
-      toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to clock in"),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -247,9 +251,7 @@ export default function MobileWorkOrderDetailPage() {
     try {
       const clockOut = new Date().toISOString();
       if (isOnline && activeLog.id) {
-        await apiClient.post(`/workorders/time-logs/${activeLog.id}/clock_out/`, {
-          clock_out: clockOut,
-        });
+        await timeLogsApi.clockOut(activeLog.id, clockOut);
       }
       setActiveLog(null);
       toast({ title: "Clocked Out", description: "Time log saved" });
@@ -328,35 +330,36 @@ export default function MobileWorkOrderDetailPage() {
     }
   };
 
-  const handleToggleTask = async (task: ServiceTask) => {
-    const newStatus = task.status === "completed" ? "in_progress" : "completed";
+  const handleTaskAction = async (task: ServiceTask) => {
+    if (task.status === "completed") return;
+
     try {
       if (isOnline) {
-        // Use patch and only send the status field
-        await apiClient.patch(`/workorders/tasks/${task.id}/`, {
-          status: newStatus
-        });
+        if (task.status === "in_progress") {
+          await workOrderTasksApi.complete(task.id);
+          toast({ title: "Task completed", description: task.description });
+        } else {
+          await workOrderTasksApi.start(task.id);
+          toast({ title: "Task started", description: task.description });
+        }
         await loadWorkOrder();
       } else {
-        // Update locally and queue
+        const newStatus = task.status === "in_progress" ? "completed" : "in_progress";
         const updatedTasks = tasks.map((t) =>
           t.id === task.id ? { ...t, status: newStatus } : t
         );
         setTasks(updatedTasks);
-        await queueRequest(
-          "update",
-          `/workorders/tasks/${task.id}/`,
-          "PATCH",
-          { status: newStatus }
-        );
+        const endpoint =
+          newStatus === "in_progress"
+            ? `/workorders/tasks/${task.id}/start/`
+            : `/workorders/tasks/${task.id}/complete/`;
+        await queueRequest("update", endpoint, "POST", {});
       }
-
-    } catch (error: any) {
-      console.error("Failed to toggle task:", error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update task";
+    } catch (error: unknown) {
+      console.error("Failed to update task:", error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: getApiErrorMessage(error, "Failed to update task"),
         variant: "destructive",
       });
     }
@@ -708,17 +711,20 @@ export default function MobileWorkOrderDetailPage() {
               <div
                 key={task.id}
                 className={cn(
-                  "p-3 rounded-lg border transition-colors cursor-pointer",
+                  "p-3 rounded-lg border transition-colors",
                   task.status === "completed"
                     ? "bg-success/10 border-green-200 dark:bg-green-950 dark:border-green-800"
-                    : "bg-card border-border bg-background border-border hover:bg-muted hover:bg-muted"
+                    : "bg-card border-border bg-background border-border",
+                  task.status !== "completed" && "cursor-pointer hover:bg-muted"
                 )}
-                onClick={() => handleToggleTask(task)}
+                onClick={() => task.status !== "completed" && handleTaskAction(task)}
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">
                     {task.status === "completed" ? (
                       <CheckCircle2 className="h-5 w-5 text-success" />
+                    ) : task.status === "in_progress" ? (
+                      <Play className="h-5 w-5 text-primary" />
                     ) : (
                       <Circle className="h-5 w-5 text-muted-foreground" />
                     )}
@@ -743,6 +749,11 @@ export default function MobileWorkOrderDetailPage() {
                       <div className="text-xs text-muted-foreground mt-1">
                         Est. {task.estimated_hours}h
                       </div>
+                    )}
+                    {task.status !== "completed" && (
+                      <p className="text-xs text-primary mt-1">
+                        Tap to {task.status === "in_progress" ? "complete" : "start"}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -861,6 +872,10 @@ export default function MobileWorkOrderDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {workOrder && (
+        <MobileWorkOrderSections workOrder={workOrder} workOrderId={workOrderId} />
+      )}
     </div>
   );
 }

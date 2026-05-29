@@ -37,6 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CircleDollarSign, Clock, Database, FileText, ReceiptText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 
 export default function PurchaseOrderDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -67,6 +68,7 @@ export default function PurchaseOrderDetailPage() {
     (approval) => approval.approver === currentUser?.id && approval.status === "pending"
   );
   const { hasPermission } = usePermissions();
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
   const isPrivilegedApprover = hasPermission("approve_purchase_orders");
   const isLegacyApprover = currentUser?.id === purchaseOrder?.assigned_approver;
   const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isPrivilegedApprover);
@@ -484,20 +486,22 @@ export default function PurchaseOrderDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-2 border-l-green-500 shadow-sm">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sync Status</p>
-                <h3 className="text-xl font-bold text-foreground capitalize">
-                  {purchaseOrder.qbo_sync_status || 'Un-synced'}
-                </h3>
-                <p className="text-[10px] text-muted-foreground">QuickBooks integration</p>
+        {isQboConnected && (
+          <Card className="border-l-2 border-l-green-500 shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sync Status</p>
+                  <h3 className="text-xl font-bold text-foreground capitalize">
+                    {purchaseOrder.qbo_sync_status || 'Un-synced'}
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground">QuickBooks integration</p>
+                </div>
+                <Database className="h-6 w-6 text-success/30" />
               </div>
-              <Database className="h-6 w-6 text-success/30" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-l-2 border-l-purple-500 shadow-sm">
           <CardContent className="p-3">

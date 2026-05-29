@@ -216,6 +216,15 @@ class Appointment(models.Model):
     customer_concerns = models.TextField(
         help_text="Customer's concerns or service requests"
     )
+    customer_rating = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Customer satisfaction rating (1-5) after appointment completion"
+    )
+    customer_feedback = models.TextField(
+        blank=True,
+        help_text="Optional customer feedback after appointment completion"
+    )
     special_instructions = models.TextField(
         blank=True,
         help_text="Special instructions or notes"

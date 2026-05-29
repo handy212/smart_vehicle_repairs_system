@@ -90,7 +90,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
     const handleResendOTP = async () => {
         if (resendTimer > 0) return;
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/resend_otp/`, {
+            const response = await fetch(`/api/auth/google/resend_otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: userData.email })
@@ -124,7 +124,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
         }
 
         try {
-            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/google/complete_registration/`, {
+            const apiResponse = await fetch(`/api/auth/google/complete_registration`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {

@@ -13,13 +13,23 @@ import {
     Loader2, Send, Users, UserPlus, X,
     Search, TrendingUp, AlertCircle, DollarSign,
     Sparkles, Paperclip, Clock, Calendar, MoreVertical,
-    CheckCircle2, History
+    CheckCircle2, History, RotateCcw, Eye, Trash2
 } from 'lucide-react';
 import { PermissionPageGuard } from '@/components/auth/PermissionPageGuard';
 import smsApi, { SMSRecipient, SMSHistoryItem, SMSTemplate } from '@/services/sms';
 import { AIAssistDialog } from '@/components/sms/AIAssistDialog';
-import { useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import api from '@/lib/api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSearchParams } from 'next/navigation';
@@ -55,6 +65,7 @@ const customersApi = {
 
 export default function SMSConsolePage() {
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     const searchParams = useSearchParams();
     const [message, setMessage] = useState('');
     const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
@@ -64,6 +75,9 @@ export default function SMSConsolePage() {
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
     const [scheduledFor, setScheduledFor] = useState('');
     const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+    const [isFullLogsOpen, setIsFullLogsOpen] = useState(false);
+    const [selectedLog, setSelectedLog] = useState<SMSHistoryItem | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<SMSHistoryItem | null>(null);
 
     // Queries
     const { data: templates } = useQuery({
@@ -74,6 +88,12 @@ export default function SMSConsolePage() {
     const { data: history, refetch: refetchHistory } = useQuery({
         queryKey: ['sms-history'],
         queryFn: () => smsApi.getHistory(),
+    });
+
+    const { data: fullHistory, isFetching: isFetchingFullHistory } = useQuery({
+        queryKey: ['sms-history', 'full'],
+        queryFn: () => smsApi.getHistory({ limit: 500 }),
+        enabled: isFullLogsOpen,
     });
 
     const { data: stats } = useQuery({
@@ -93,6 +113,45 @@ export default function SMSConsolePage() {
         queryFn: () => customersApi.getAll({ limit: 1000 }),
     });
     const customers = customersData?.results || [];
+
+    const refreshSmsHistory = () => {
+        refetchHistory();
+        queryClient.invalidateQueries({ queryKey: ['sms-history'] });
+        queryClient.invalidateQueries({ queryKey: ['sms-stats'] });
+    };
+
+    const resendMutation = useMutation({
+        mutationFn: (id: number) => smsApi.resendLog(id),
+        onSuccess: () => {
+            toast({ title: 'Sent', description: 'SMS resent successfully.' });
+            refreshSmsHistory();
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: 'Resend failed',
+                description: getApiErrorMessage(error, 'Could not resend SMS.'),
+                variant: 'destructive'
+            });
+            refreshSmsHistory();
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => smsApi.deleteLog(id),
+        onSuccess: () => {
+            toast({ title: 'Deleted', description: 'SMS log deleted.' });
+            setDeleteTarget(null);
+            setSelectedLog(null);
+            refreshSmsHistory();
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: 'Delete failed',
+                description: getApiErrorMessage(error, 'Could not delete SMS log.'),
+                variant: 'destructive'
+            });
+        }
+    });
 
 
     useEffect(() => {
@@ -551,7 +610,12 @@ export default function SMSConsolePage() {
                             <History className="h-4 w-4 text-primary" />
                             <span>Recent History</span>
                         </div>
-                        <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/5 font-semibold text-xs h-8">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary hover:bg-primary/5 font-semibold text-xs h-8"
+                            onClick={() => setIsFullLogsOpen(true)}
+                        >
                             View Full Logs
                         </Button>
                     </div>
@@ -616,9 +680,29 @@ export default function SMSConsolePage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="rounded-xl shadow-lg border-muted">
-                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1">Resend Message</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1">View Details</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1 text-destructive hover:text-destructive focus:text-destructive">Delete Log</DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-xs cursor-pointer rounded-lg m-1"
+                                                        disabled={resendMutation.isPending}
+                                                        onClick={() => resendMutation.mutate(row.id)}
+                                                    >
+                                                        <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                                                        Resend Message
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-xs cursor-pointer rounded-lg m-1"
+                                                        onClick={() => setSelectedLog(row)}
+                                                    >
+                                                        <Eye className="mr-2 h-3.5 w-3.5" />
+                                                        View Details
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-xs cursor-pointer rounded-lg m-1 text-destructive hover:text-destructive focus:text-destructive"
+                                                        disabled={deleteMutation.isPending}
+                                                        onClick={() => setDeleteTarget(row)}
+                                                    >
+                                                        <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                        Delete Log
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </td>
@@ -647,10 +731,243 @@ export default function SMSConsolePage() {
                 mode="sms"
                 onUseSuggestion={(text) => setMessage(text)}
             />
+
+            <SMSLogDetailsDialog
+                log={selectedLog}
+                onOpenChange={(open) => {
+                    if (!open) setSelectedLog(null);
+                }}
+                onResend={(id) => resendMutation.mutate(id)}
+                onDelete={(log) => setDeleteTarget(log)}
+                isResending={resendMutation.isPending}
+            />
+
+            <Dialog open={isFullLogsOpen} onOpenChange={setIsFullLogsOpen}>
+                <DialogContent className="max-w-6xl p-0">
+                    <DialogHeader className="border-b p-4">
+                        <DialogTitle>SMS Logs</DialogTitle>
+                        <DialogDescription>Recent SMS console activity and delivery status.</DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[70vh] overflow-auto">
+                        {isFetchingFullHistory ? (
+                            <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Loading logs...
+                            </div>
+                        ) : (
+                            <SMSLogsTable
+                                rows={fullHistory || []}
+                                onResend={(row) => resendMutation.mutate(row.id)}
+                                onView={setSelectedLog}
+                                onDelete={setDeleteTarget}
+                                isMutating={resendMutation.isPending || deleteMutation.isPending}
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete SMS log?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This removes the selected SMS log from history. It will not recall any message already sent.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    {deleteTarget && (
+                        <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+                            <div className="font-semibold text-foreground">{deleteTarget.recipient_name}</div>
+                            <div className="mt-1 line-clamp-2">{deleteTarget.message}</div>
+                        </div>
+                    )}
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deleteMutation.isPending || !deleteTarget}
+                            onClick={(event) => {
+                                event.preventDefault();
+                                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+                            }}
+                        >
+                            {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete Log
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </PermissionPageGuard>
     );
 }
 
+
+function SMSLogsTable({
+    rows,
+    onResend,
+    onView,
+    onDelete,
+    isMutating,
+}: {
+    rows: SMSHistoryItem[];
+    onResend: (row: SMSHistoryItem) => void;
+    onView: (row: SMSHistoryItem) => void;
+    onDelete: (row: SMSHistoryItem) => void;
+    isMutating: boolean;
+}) {
+    return (
+        <table className="w-full min-w-[800px] border-collapse text-left">
+            <thead className="sticky top-0 z-10 border-b bg-muted/60 backdrop-blur">
+                <tr>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Recipient</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Message</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Date & Time</th>
+                    <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-muted/50">
+                {rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-muted/10">
+                        <td className="px-5 py-3">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9 rounded-full border bg-white">
+                                    <AvatarFallback className="bg-muted/50 text-xs font-bold uppercase text-muted-foreground">
+                                        {row.recipient_initials || 'U'}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0">
+                                    <div className="truncate text-sm font-semibold text-foreground">{row.recipient_name}</div>
+                                    <div className="text-[11px] font-medium text-muted-foreground">{row.recipient_phone || 'No phone recorded'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td className="px-5 py-3">
+                            <p className="line-clamp-2 max-w-[360px] text-sm text-muted-foreground">{row.message}</p>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-foreground">
+                            <div>{formatSMSDate(row.created_at)}</div>
+                            <div className="text-[11px] text-muted-foreground">{formatSMSTime(row.created_at)}</div>
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                            <StatusBadge status={row.status} />
+                        </td>
+                        <td className="px-5 py-3">
+                            <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isMutating} onClick={() => onResend(row)}>
+                                    <RotateCcw className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView(row)}>
+                                    <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={isMutating} onClick={() => onDelete(row)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+                {rows.length === 0 && (
+                    <tr>
+                        <td colSpan={5} className="px-6 py-16 text-center text-sm text-muted-foreground">
+                            No SMS logs found.
+                        </td>
+                    </tr>
+                )}
+            </tbody>
+        </table>
+    );
+}
+
+function SMSLogDetailsDialog({
+    log,
+    onOpenChange,
+    onResend,
+    onDelete,
+    isResending,
+}: {
+    log: SMSHistoryItem | null;
+    onOpenChange: (open: boolean) => void;
+    onResend: (id: number) => void;
+    onDelete: (log: SMSHistoryItem) => void;
+    isResending: boolean;
+}) {
+    return (
+        <Dialog open={!!log} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>SMS Details</DialogTitle>
+                    <DialogDescription>Delivery information for this SMS log.</DialogDescription>
+                </DialogHeader>
+                {log && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <DetailItem label="Recipient" value={log.recipient_name} />
+                            <DetailItem label="Phone" value={log.recipient_phone || 'No phone recorded'} />
+                            <DetailItem label="Status" value={log.status} />
+                            <DetailItem label="Created" value={`${formatSMSDate(log.created_at)} ${formatSMSTime(log.created_at)}`} />
+                            <DetailItem label="Scheduled" value={log.scheduled_for ? `${formatSMSDate(log.scheduled_for)} ${formatSMSTime(log.scheduled_for)}` : 'Not scheduled'} />
+                            <DetailItem label="Sent" value={log.sent_at ? `${formatSMSDate(log.sent_at)} ${formatSMSTime(log.sent_at)}` : 'Not recorded'} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Message</Label>
+                            <div className="whitespace-pre-wrap rounded-md border bg-muted/20 p-3 text-sm text-foreground">
+                                {log.message}
+                            </div>
+                        </div>
+                        {log.error_message ? (
+                            <div className="space-y-2">
+                                <Label className="text-[11px] font-bold uppercase tracking-wider text-destructive">Error</Label>
+                                <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                                    {log.error_message}
+                                </div>
+                            </div>
+                        ) : null}
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                    {log && (
+                        <>
+                            <Button
+                                variant="outline"
+                                disabled={isResending}
+                                onClick={() => onResend(log.id)}
+                            >
+                                {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                                Resend
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => onDelete(log)}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                            </Button>
+                        </>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-md border bg-muted/10 p-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+            <div className="mt-1 break-words text-sm font-medium text-foreground">{value}</div>
+        </div>
+    );
+}
+
+function formatSMSDate(value: string) {
+    return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatSMSTime(value: string) {
+    return new Date(value).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
 
 function StatCard({ label, value, icon, iconBg, symbol = "", variant = "default" }: { 
     label: string, 

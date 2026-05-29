@@ -246,20 +246,28 @@ class Estimate(models.Model):
             from apps.billing.models import EstimateLineItem
             line_items = EstimateLineItem.objects.filter(estimate=self)
             
-            # Parts cost comes only from diagnosis-created work-order part rows.
-            parts_subtotal = self.work_order.parts.aggregate(
-                total=Sum('selling_price')
-            )['total'] or Decimal('0')
-            
-            # Calculate labor cost from estimate line items
-            labor_subtotal = sum(
-                Decimal(str(item.total or '0')) for item in line_items if item.item_type == 'labor'
-            ) or Decimal('0')
-            
-            # Calculate labor hours
-            labor_hours = sum(
-                Decimal(str(item.labor_hours or '0')) for item in line_items if item.item_type == 'labor'
-            ) or Decimal('0')
+            if self.status in ('approved', 'converted'):
+                parts_subtotal = self.parts_subtotal or Decimal('0')
+                labor_subtotal = self.labor_subtotal or Decimal('0')
+                labor_hours = sum(
+                    Decimal(str(item.labor_hours or '0'))
+                    for item in line_items.filter(item_type='labor')
+                ) or Decimal('0')
+            else:
+                # Parts cost comes only from diagnosis-created work-order part rows.
+                parts_subtotal = self.work_order.parts.aggregate(
+                    total=Sum('selling_price')
+                )['total'] or Decimal('0')
+                
+                # Calculate labor cost from estimate line items
+                labor_subtotal = sum(
+                    Decimal(str(item.total or '0')) for item in line_items if item.item_type == 'labor'
+                ) or Decimal('0')
+                
+                # Calculate labor hours
+                labor_hours = sum(
+                    Decimal(str(item.labor_hours or '0')) for item in line_items if item.item_type == 'labor'
+                ) or Decimal('0')
             
             # Update work order fields
             self.work_order.estimated_parts_cost = parts_subtotal
@@ -300,6 +308,149 @@ class Estimate(models.Model):
         self.line_items.filter(item_type='part').exclude(
             notes__contains=diagnosis_marker
         ).delete()
+
+    def _match_work_order_part_for_line(self, line):
+        """Match an estimate part line to a work-order part row."""
+        wo = self.work_order
+        if not wo:
+            return None
+
+        import re
+
+        part_number = (line.part_number or '').strip()
+        if part_number:
+            match = wo.parts.filter(part_number__iexact=part_number).first()
+            if match:
+                return match
+
+        desc = (line.description or '').strip()
+        if desc:
+            match = wo.parts.filter(part_name__iexact=desc).first()
+            if match:
+                return match
+            match = wo.parts.filter(part_name__icontains=desc[:80]).first()
+            if match:
+                return match
+
+        marker = re.search(r'\[DIAG-REC:(\d+)\]', line.notes or '')
+        if marker:
+            from apps.diagnosis.models import RepairRecommendation
+
+            rec = RepairRecommendation.objects.filter(
+                pk=int(marker.group(1)),
+                diagnosis__work_order=wo,
+            ).first()
+            if rec:
+                for part_data in rec.parts_needed or []:
+                    pn = (part_data.get('part_number') or '').strip()
+                    pname = (part_data.get('part_name') or '').strip()
+                    if pn:
+                        match = wo.parts.filter(part_number__iexact=pn).first()
+                        if match:
+                            return match
+                    if pname:
+                        match = wo.parts.filter(part_name__iexact=pname).first()
+                        if match:
+                            return match
+        return None
+
+    def _apply_quoted_part_prices(self):
+        """Push approved estimate part unit prices onto matching work-order parts."""
+        if not self.work_order_id:
+            return 0
+
+        updated = 0
+        for line in self.line_items.filter(item_type='part'):
+            wo_part = self._match_work_order_part_for_line(line)
+            if not wo_part:
+                continue
+            unit_price = Decimal(str(line.unit_price or '0'))
+            if unit_price <= 0:
+                continue
+            wo_part.unit_cost = unit_price
+            wo_part.markup_percentage = Decimal('0')
+            wo_part.save()
+            updated += 1
+        return updated
+
+    def _sync_mechanical_task_labor_from_estimate(self):
+        """Align mechanical task labor with approved estimate labor lines."""
+        wo = self.work_order
+        if not wo:
+            return 0
+
+        labor_lines = list(self.line_items.filter(item_type='labor').order_by('order', 'id'))
+        if not labor_lines:
+            return 0
+
+        mech_tasks = list(
+            wo.tasks.filter(is_workflow_task=False).order_by('sequence_order', 'id')
+        )
+        if not mech_tasks:
+            return 0
+
+        updated = 0
+        unassigned = labor_lines[:]
+
+        for task in mech_tasks:
+            desc = (task.description or '').lower()
+            matched = [
+                line for line in unassigned
+                if desc and desc in (line.description or '').lower()
+            ]
+            if not matched and len(mech_tasks) == 1:
+                matched = unassigned[:]
+            if not matched:
+                continue
+
+            line_cost = sum(Decimal(str(line.total or '0')) for line in matched)
+            line_hours = sum(
+                Decimal(str(line.labor_hours or line.quantity or '0')) for line in matched
+            )
+            task.estimated_hours = line_hours
+            if line_hours > 0:
+                task.labor_rate = (line_cost / line_hours).quantize(Decimal('0.01'))
+            task.labor_cost = line_cost
+            if task.status == 'completed':
+                task.actual_hours = max(task.actual_hours or Decimal('0'), line_hours)
+            task.save()
+            updated += 1
+            for line in matched:
+                if line in unassigned:
+                    unassigned.remove(line)
+
+        if unassigned and len(mech_tasks) == 1:
+            task = mech_tasks[0]
+            extra_cost = sum(Decimal(str(line.total or '0')) for line in unassigned)
+            extra_hours = sum(
+                Decimal(str(line.labor_hours or line.quantity or '0')) for line in unassigned
+            )
+            task.estimated_hours = (task.estimated_hours or Decimal('0')) + extra_hours
+            task.labor_cost = (task.labor_cost or Decimal('0')) + extra_cost
+            if extra_hours > 0:
+                task.labor_rate = (task.labor_cost / task.estimated_hours).quantize(Decimal('0.01'))
+            if task.status == 'completed':
+                task.actual_hours = max(task.actual_hours or Decimal('0'), task.estimated_hours or Decimal('0'))
+                task.labor_cost = task.labor_cost
+            task.save()
+            updated += 1
+
+        wo.recalculate_totals()
+        return updated
+
+    def apply_quoted_prices_to_work_order(self):
+        """
+        After customer approval, sync quoted part prices and labor onto the WO
+        so workshop actuals and invoicing match the approved estimate.
+        """
+        if self.status not in ('approved', 'converted') or not self.work_order_id:
+            return
+
+        self.calculate_totals()
+        self.refresh_from_db()
+        self._apply_quoted_part_prices()
+        self._sync_mechanical_task_labor_from_estimate()
+        self.sync_parts_to_work_order()
     
     def calculate_totals(self):
         """Calculate all totals from line items"""
@@ -456,15 +607,15 @@ class Estimate(models.Model):
         
         return work_order
 
-    def convert_to_invoice(self):
-        """Convert estimate to an Invoice"""
-        from apps.billing.models import Invoice, InvoiceLineItem
+    def convert_to_invoice(self, *, created_by=None, mark_converted=True):
+        """Convert estimate to an Invoice (copies all line items and tax totals)."""
+        from apps.billing.models import Invoice
 
         existing_invoice = self.invoices.exclude(status='void').order_by('-created_at').first()
         if existing_invoice is not None:
             return existing_invoice
-        
-        # Create invoice
+
+        creator = created_by or self.created_by
         invoice = Invoice.objects.create(
             customer=self.customer,
             vehicle=self.vehicle,
@@ -475,36 +626,9 @@ class Estimate(models.Model):
             due_date=timezone.now().date() + timedelta(days=15),
             status='draft',
             description=f"Generated from Estimate {self.estimate_number}",
-            created_by=self.created_by,
-            subtotal=self.subtotal,
-            discount_percentage=self.discount_percentage,
-            discount_amount=self.discount_amount,
-            taxable_subtotal=self.taxable_subtotal,
-            tax_amount=self.tax_amount,
-            total=self.total,
-            amount_due=self.total
+            created_by=creator,
         )
-        
-        # Copy line items
-        for item in self.line_items.all():
-            InvoiceLineItem.objects.create(
-                invoice=invoice,
-                item_type=item.item_type,
-                description=item.description,
-                notes=item.notes,
-                part=item.part,
-                part_number=item.part_number,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
-                discount_percentage=item.discount_percentage,
-                discount_amount=item.discount_amount,
-                total=item.total,
-                is_taxable=item.is_taxable
-            )
-        
-        self.status = 'converted'
-        self.save()
-        
+        invoice.populate_from_estimate(self, mark_converted=mark_converted)
         return invoice
 
 
@@ -850,13 +974,76 @@ class Invoice(models.Model):
             status_user = getattr(self, '_status_change_user', None)
             try_auto_mark_work_order_invoiced(self, user=status_user)
     
+    def populate_from_estimate(self, estimate, *, mark_converted=True):
+        """Copy approved estimate totals and line items onto this invoice."""
+        from apps.billing.models import InvoiceLineItem
+
+        self.estimate = estimate
+        self.labor_subtotal = estimate.labor_subtotal
+        self.parts_subtotal = estimate.parts_subtotal
+        self.sublet_subtotal = estimate.sublet_subtotal
+        self.subtotal = estimate.subtotal
+        self.discount_percentage = estimate.discount_percentage
+        self.discount_amount = estimate.discount_amount
+        self.discount_reason = estimate.discount_reason or ''
+        self.taxable_subtotal = estimate.taxable_subtotal
+        self.tax_nhil_amount = estimate.tax_nhil_amount
+        self.tax_getfund_amount = estimate.tax_getfund_amount
+        self.tax_hrl_amount = estimate.tax_hrl_amount
+        self.tax_vat_amount = estimate.tax_vat_amount
+        self.tax_amount = estimate.tax_amount
+        self.tax_regime = estimate.tax_regime or ''
+        self.shop_supplies_fee = estimate.shop_supplies_fee
+        self.environmental_fee = estimate.environmental_fee
+        self.total = estimate.total
+        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+
+        self.line_items.all().delete()
+        for order, item in enumerate(estimate.line_items.order_by('order', 'id')):
+            InvoiceLineItem.objects.create(
+                invoice=self,
+                order=order,
+                item_type=item.item_type,
+                description=item.description,
+                notes=item.notes,
+                part=item.part,
+                part_number=item.part_number,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                labor_hours=item.labor_hours,
+                labor_rate=item.labor_rate,
+                discount_percentage=item.discount_percentage,
+                discount_amount=item.discount_amount,
+                is_taxable=item.is_taxable,
+            )
+
+        self.save()
+
+        if mark_converted and estimate.status == 'approved':
+            estimate.status = 'converted'
+            estimate.converted_date = timezone.now()
+            estimate.save(update_fields=['status', 'converted_date', 'updated_at'])
+
     def calculate_totals_from_work_order(self):
         """Calculate invoice totals from work order.
+
+        When an approved estimate exists for the work order, bill from that
+        quote (customer-approved price) instead of raw workshop actuals.
+
         For discontinued (pending invoice) work orders, bill only mechanical labor
         on completed/skipped tasks and parts already installed (customer-facing).
         """
         if not self.work_order:
             return
+
+        from apps.billing.work_order_invoices import get_billable_estimate_for_work_order
+
+        if self.work_order.status != 'discontinued_pending_bill':
+            estimate = get_billable_estimate_for_work_order(self.work_order)
+            if estimate:
+                estimate.apply_quoted_prices_to_work_order()
+                self.populate_from_estimate(estimate, mark_converted=True)
+                return
 
         from decimal import Decimal
         from django.db.models import Sum

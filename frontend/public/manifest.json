@@ -1,8 +1,9 @@
 {
-    "name": "Vehicle Repairs System",
-    "short_name": "VehicleRepairs",
-    "description": "Professional vehicle repair management system",
-    "start_url": "/",
+    "name": "Tech App - Vehicle Repairs",
+    "short_name": "Tech App",
+    "description": "Technician field app for vehicle repair management",
+    "start_url": "/mobile/dashboard",
+    "scope": "/mobile",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#4f46e5",

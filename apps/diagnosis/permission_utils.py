@@ -71,6 +71,25 @@ def diagnosis_code_manage_permissions():
     ]
 
 
+# Custom @action endpoints that only bump library analytics counters.
+LIBRARY_USE_ACTIONS = frozenset({'use', 'increment_use'})
+
+
+def diagnosis_code_use_permissions():
+    """Allow technicians to record library usage during diagnosis (not full CRUD)."""
+    return diagnosis_module_permissions() + [
+        HasAnyPermission([
+            'view_diagnostic_codes',
+            'view_diagnosis',
+            'create_diagnosis',
+            'edit_diagnosis',
+            'perform_diagnostic_tests',
+            'manage_diagnostic_codes',
+            'manage_diagnosis',
+        ])(),
+    ]
+
+
 class DiagnosisPermissionMixin:
     """Standard CRUD permission mapping for diagnosis records."""
 
@@ -101,6 +120,8 @@ class DiagnosisCodeLibraryPermissionMixin:
     """Permissions for diagnostic code / test procedure libraries."""
 
     def get_permissions(self):
+        if getattr(self, 'action', None) in LIBRARY_USE_ACTIONS:
+            return diagnosis_code_use_permissions()
         if self.request.method in SAFE_METHODS:
             return diagnosis_code_read_permissions()
         return diagnosis_code_manage_permissions()

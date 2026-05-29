@@ -12,7 +12,7 @@ import {
     MapPin, CheckCircle, XCircle,
     Wrench, Navigation,
     ExternalLink, MessageSquare, ShieldCheck,
-    Mail, Sparkles, Building2
+    Mail, Sparkles, Building2, Camera
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -513,6 +513,54 @@ export default function RoadsideDetailPage() {
                         </Card>
                     )}
 
+                    {((request.site_notes?.length || 0) > 0 || (request.photos?.length || 0) > 0) && (
+                        <Card>
+                            <CardHeader className="py-3 px-4 border-b">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <Camera className="h-4 w-4 text-primary" />
+                                    Site Documentation
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-4">
+                                {(request.site_notes?.length || 0) > 0 && (
+                                    <div className="space-y-2">
+                                        {request.site_notes?.map((note) => (
+                                            <div key={note.id} className="rounded-md border border-border bg-muted/40 p-3">
+                                                <p className="text-sm whitespace-pre-wrap">{note.note}</p>
+                                                <p className="mt-2 text-xs text-muted-foreground">
+                                                    {note.created_by_name || "Technician"} · {format(new Date(note.created_at), "MMM d, yyyy · h:mm a")}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {(request.photos?.length || 0) > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {request.photos?.map((photo) => (
+                                            <a
+                                                key={photo.id}
+                                                href={photo.image}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="group overflow-hidden rounded-md border border-border bg-card"
+                                            >
+                                                <img
+                                                    src={photo.image}
+                                                    alt={photo.caption || "Roadside photo"}
+                                                    className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
+                                                />
+                                                {photo.caption && (
+                                                    <p className="p-2 text-xs text-muted-foreground line-clamp-2">{photo.caption}</p>
+                                                )}
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Map */}
                     {request.latitude && request.longitude && (
                         <Card>
@@ -816,6 +864,29 @@ export default function RoadsideDetailPage() {
                                 <div className="text-xl font-bold text-foreground">
                                     {currencySymbol} {request.charge_amount}
                                 </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {(request.rating || request.customer_feedback) && (
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Customer Rating</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {request.rating && (
+                                    <div className="flex items-center gap-1">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <span key={star} className={star <= request.rating! ? "text-yellow-500" : "text-muted-foreground"}>
+                                                ★
+                                            </span>
+                                        ))}
+                                        <span className="text-xs text-muted-foreground ml-1">({request.rating}/5)</span>
+                                    </div>
+                                )}
+                                {request.customer_feedback && (
+                                    <p className="text-xs text-foreground italic">"{request.customer_feedback}"</p>
+                                )}
                             </CardContent>
                         </Card>
                     )}

@@ -74,13 +74,15 @@ class TwilioSMSService(SMSService):
         self.name = "Twilio"
         try:
             from twilio.rest import Client
+
+            sms_settings = get_sms_settings()
             
-            account_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '')
-            auth_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '')
+            account_sid = sms_settings.get('twilio_account_sid') or getattr(settings, 'TWILIO_ACCOUNT_SID', '')
+            auth_token = sms_settings.get('twilio_auth_token') or getattr(settings, 'TWILIO_AUTH_TOKEN', '')
             
             if account_sid and auth_token:
                 self.client = Client(account_sid, auth_token)
-                self.from_number = getattr(settings, 'TWILIO_PHONE_NUMBER', '')
+                self.from_number = sms_settings.get('twilio_phone_number') or getattr(settings, 'TWILIO_PHONE_NUMBER', '')
             else:
                 self.client = None
                 logger.warning("Twilio credentials not configured")
@@ -249,4 +251,3 @@ def send_notification_sms(
     except Exception as e:
         logger.error(f"Failed to send notification SMS: {str(e)}")
         return False
-

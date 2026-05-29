@@ -21,7 +21,7 @@ export interface SearchResponse {
 // Use the standard API base URL so requests route through /api/ prefix
 // which the production proxy correctly routes to Django
 const searchClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+  baseURL: typeof window !== "undefined" ? "/api" : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"),
   headers: {
     "Content-Type": "application/json",
   },
