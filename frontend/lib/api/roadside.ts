@@ -114,6 +114,7 @@ export interface RoadsideRequest {
         model: string;
         year: number;
         license_plate: string;
+        vin?: string;
     };
     breakdown_location: string;
     latitude?: string;
