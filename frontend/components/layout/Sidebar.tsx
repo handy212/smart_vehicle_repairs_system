@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PremiumIcons } from "@/components/ui/icons";
-import {
-  HelpCircle,
-} from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useBranding } from "@/lib/hooks/useBranding";
@@ -13,55 +11,188 @@ import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
 import { useModules } from "@/lib/hooks/useModules";
 
-const navigationGroups = [
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  permission?: string;
+  module?: string;
+}
+
+interface NavigationGroup {
+  name: string;
+  items: NavigationItem[];
+}
+
+const navigationGroups: NavigationGroup[] = [
   {
     name: "Main",
     items: [
-      { name: "Dashboard", href: "/dashboard", icon: PremiumIcons.Dashboard, permission: "view_dashboard", module: "dashboard" },
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: PremiumIcons.Dashboard,
+        permission: "view_dashboard",
+        module: "dashboard",
+      },
     ],
   },
   {
     name: "Operations",
     items: [
-      { name: "Vehicle Check-in", href: "/check-in", icon: PremiumIcons.ClipboardList, permission: "create_workorders", module: "workorders" },
-      { name: "Customers", href: "/customers", icon: PremiumIcons.Users, permission: "view_customers", module: "customers" },
-      { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles", module: "vehicles" },
-      { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments", module: "appointments" },
-      { name: "Work Orders", href: "/workorders", icon: PremiumIcons.Wrench, permission: "view_workorders", module: "workorders" },
-      { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass", module: "gatepass" },
-      { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside", module: "roadside" },
-      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians", module: "technicians" },
-      { name: "HR", href: "/hr", icon: PremiumIcons.Building2, permission: "view_hr", module: "hr" },
+      {
+        name: "Vehicle Check-in",
+        href: "/check-in",
+        icon: PremiumIcons.ClipboardList,
+        permission: "create_workorders",
+        module: "workorders",
+      },
+      {
+        name: "Customers",
+        href: "/customers",
+        icon: PremiumIcons.Users,
+        permission: "view_customers",
+        module: "customers",
+      },
+      {
+        name: "Vehicles",
+        href: "/vehicles",
+        icon: PremiumIcons.Car,
+        permission: "view_vehicles",
+        module: "vehicles",
+      },
+      {
+        name: "Appointments",
+        href: "/appointments",
+        icon: PremiumIcons.Calendar,
+        permission: "view_appointments",
+        module: "appointments",
+      },
+      {
+        name: "Work Orders",
+        href: "/workorders",
+        icon: PremiumIcons.Wrench,
+        permission: "view_workorders",
+        module: "workorders",
+      },
+      {
+        name: "Gate Passes",
+        href: "/gatepass",
+        icon: PremiumIcons.FileText,
+        permission: "view_gatepass",
+        module: "gatepass",
+      },
+      {
+        name: "Roadside",
+        href: "/roadside",
+        icon: PremiumIcons.Truck,
+        permission: "view_roadside",
+        module: "roadside",
+      },
+      {
+        name: "Technicians",
+        href: "/technicians",
+        icon: PremiumIcons.UserCog,
+        permission: "view_technicians",
+        module: "technicians",
+      },
+      {
+        name: "HR",
+        href: "/hr",
+        icon: PremiumIcons.Building2,
+        permission: "view_hr",
+        module: "hr",
+      },
     ],
   },
   {
     name: "Inventory & Billing",
     items: [
-      { name: "Inventory", href: "/inventory", icon: PremiumIcons.Package, permission: "view_inventory", module: "inventory" },
-      { name: "Billing", href: "/billing", icon: PremiumIcons.Receipt, permission: "view_billing", module: "billing" },
-      { name: "Accounting", href: "/accounting", icon: PremiumIcons.Calculator, permission: "view_accounting", module: "accounting" },
-      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_assets", module: "fixed-assets" },
-      { name: "Subscriptions", href: "/subscriptions", icon: PremiumIcons.CreditCard, permission: "view_subscriptions", module: "subscriptions" },
+      {
+        name: "Inventory",
+        href: "/inventory",
+        icon: PremiumIcons.Package,
+        permission: "view_inventory",
+        module: "inventory",
+      },
+      {
+        name: "Billing",
+        href: "/billing",
+        icon: PremiumIcons.Receipt,
+        permission: "view_billing",
+        module: "billing",
+      },
+      {
+        name: "Accounting",
+        href: "/accounting",
+        icon: PremiumIcons.Calculator,
+        permission: "view_accounting",
+        module: "accounting",
+      },
+      {
+        name: "Fixed Assets",
+        href: "/fixed-assets",
+        icon: PremiumIcons.Landmark,
+        permission: "view_assets",
+        module: "fixed-assets",
+      },
+      {
+        name: "Subscriptions",
+        href: "/subscriptions",
+        icon: PremiumIcons.CreditCard,
+        permission: "view_subscriptions",
+        module: "subscriptions",
+      },
     ],
   },
   {
     name: "Tools & Reports",
     items: [
-      { name: "Inspections", href: "/inspections", icon: PremiumIcons.FileText, permission: "view_inspections", module: "inspections" },
-      { name: "Diagnosis", href: "/diagnosis", icon: PremiumIcons.Stethoscope, permission: "view_diagnosis", module: "diagnosis" },
-      { name: "Reports", href: "/reports", icon: PremiumIcons.BarChart, permission: "view_reports", module: "reports" },
+      {
+        name: "Inspections",
+        href: "/inspections",
+        icon: PremiumIcons.FileText,
+        permission: "view_inspections",
+        module: "inspections",
+      },
+      {
+        name: "Diagnosis",
+        href: "/diagnosis",
+        icon: PremiumIcons.Stethoscope,
+        permission: "view_diagnosis",
+        module: "diagnosis",
+      },
+      {
+        name: "Reports",
+        href: "/reports",
+        icon: PremiumIcons.BarChart,
+        permission: "view_reports",
+        module: "reports",
+      },
     ],
   },
   {
     name: "Communications",
     items: [
-      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications", module: "sms" },
+      {
+        name: "SMS Console",
+        href: "/sms",
+        icon: PremiumIcons.MessageSquare,
+        permission: "send_notifications",
+        module: "sms",
+      },
     ],
   },
   {
     name: "System",
     items: [
-      { name: "Configurations", href: "/admin/settings", icon: PremiumIcons.Settings, permission: "view_settings" },
+      {
+        name: "Configurations",
+        href: "/admin/settings",
+        icon: PremiumIcons.Settings,
+        permission: "view_settings",
+        module: "settings",
+      },
     ],
   },
 ];
@@ -73,17 +204,24 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: SidebarProps) {
+export function Sidebar({
+  isOpen = true,
+  onClose,
+  isCollapsed = false,
+}: SidebarProps) {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
   const { isModuleEnabled } = useModules();
 
   const { primaryColor } = useBranding("authenticated");
   const branding = { primary_color: primaryColor };
+
   const visibleGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.module || isModuleEnabled(item.module)),
+      items: group.items.filter(
+        (item) => !item.module || isModuleEnabled(item.module)
+      ),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -105,12 +243,17 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-16" : ""
         )}
-        style={{ 
-          top: 'var(--header-height)',
-          width: isCollapsed ? '64px' : 'var(--sidebar-width)'
+        style={{
+          top: "var(--header-height)",
+          width: isCollapsed ? "64px" : "var(--sidebar-width)",
         }}
       >
-        <nav className={cn("flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800", isCollapsed && "px-2")}>
+        <nav
+          className={cn(
+            "flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800",
+            isCollapsed && "px-2"
+          )}
+        >
           {visibleGroups.map((group) => (
             <div key={group.name}>
               {!isCollapsed && group.name !== "Main" && (
@@ -118,11 +261,18 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
                   {group.name}
                 </h3>
               )}
+
               <div className="space-y-1">
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                  const isActive =
+                    pathname === item.href ||
+                    pathname?.startsWith(item.href + "/");
+
                   const isDark = resolvedTheme === "dark";
-                  const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
+                  const visiblePrimary = branding.primary_color
+                    ? ensureVisibleColor(branding.primary_color, isDark)
+                    : undefined;
+
                   const Icon = item.icon;
 
                   const navItem = (
@@ -130,21 +280,31 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
                       key={item.name}
                       href={item.href}
                       onClick={() => {
-                        if (onClose && typeof window !== 'undefined' && window.innerWidth < 1024) {
+                        if (
+                          onClose &&
+                          typeof window !== "undefined" &&
+                          window.innerWidth < 1024
+                        ) {
                           onClose();
                         }
                       }}
                       className={cn(
                         "group relative mx-2 mb-1 flex items-center overflow-hidden rounded-xl transition-colors duration-200",
-                        isCollapsed ? "justify-center px-2 py-2.5" : "px-3.5 py-2.5",
+                        isCollapsed
+                          ? "justify-center px-2 py-2.5"
+                          : "px-3.5 py-2.5",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground "
+                          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                       )}
-                      style={isActive ? {
-                        backgroundColor: `${visiblePrimary}15`,
-                        color: visiblePrimary,
-                      } : undefined}
+                      style={
+                        isActive
+                          ? {
+                              backgroundColor: `${visiblePrimary}15`,
+                              color: visiblePrimary,
+                            }
+                          : undefined
+                      }
                       title={isCollapsed ? item.name : undefined}
                     >
                       {isActive && (
@@ -153,17 +313,24 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
                           style={{ backgroundColor: visiblePrimary }}
                         />
                       )}
+
                       <Icon
                         className={cn(
                           "flex-shrink-0 transition-colors duration-200",
                           isCollapsed ? "w-6 h-6" : "w-5 h-5 mr-3.5",
-                          isActive ? "" : "text-muted-foreground group-hover:text-foreground"
+                          isActive
+                            ? ""
+                            : "text-muted-foreground group-hover:text-foreground"
                         )}
                         style={isActive ? { color: visiblePrimary } : undefined}
                       />
+
                       {!isCollapsed && (
                         <>
-                          <span className="flex-1 tracking-tight">{item.name}</span>
+                          <span className="flex-1 tracking-tight">
+                            {item.name}
+                          </span>
+
                           {isActive && (
                             <div
                               className="w-1.5 h-1.5 rounded-full ml-auto shadow-sm"
@@ -177,11 +344,15 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
 
                   if (item.permission) {
                     return (
-                      <PermissionGuard key={item.name} permission={item.permission}>
+                      <PermissionGuard
+                        key={item.name}
+                        permission={item.permission}
+                      >
                         {navItem}
                       </PermissionGuard>
                     );
                   }
+
                   return navItem;
                 })}
               </div>
@@ -200,6 +371,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
             </Link>
           </div>
         )}
+
         {isCollapsed && (
           <div className="flex-shrink-0 border-t border-border bg-background p-2">
             <Link
