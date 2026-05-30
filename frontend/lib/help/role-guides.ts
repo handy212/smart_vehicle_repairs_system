@@ -805,12 +805,11 @@ export const roleGuides: HelpGuide[] = [
         id: "administrator",
         title: "Administrator Guide",
         description:
-            "System administration: users, roles, permissions, modules, integrations, branding, backups, and security.",
+            "System administration: users, roles, permissions, integrations, branding, backups, and security.",
         icon: Settings,
         section: "roles",
         responsibilities: [
             "Provision staff accounts with correct roles and branch access",
-            "Enable or disable modules per business need",
             "Configure integrations (Paystack, Hubtel, QuickBooks, email)",
             "Maintain branding and system settings",
             "Schedule backups and review audit logs",
@@ -836,12 +835,11 @@ export const roleGuides: HelpGuide[] = [
                 actionLabel: "User Management",
             },
             {
-                title: "Modules, integrations, and settings",
+                title: "Integrations and settings",
                 blocks: [
                     {
                         type: "steps",
                         items: [
-                            "Toggle modules in **Admin → Module Control** — disabled modules hide from sidebar.",
                             "Configure Paystack, Hubtel SMS, email SMTP, and QuickBooks under **Settings** and **Integrations**.",
                             "Set business defaults: currency (GHS), tax rates, document numbering per branch.",
                             "Upload logo and brand colors under **Settings → Branding**.",

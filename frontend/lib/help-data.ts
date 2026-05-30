@@ -43,7 +43,7 @@ export const helpContent: Record<string, HelpModule> = {
     admin: {
         id: "admin",
         title: "Admin & Configuration",
-        description: "Settings, users, roles, branches, modules, audit logs, backups, integrations, and feedback.",
+        description: "Settings, users, roles, branches, audit logs, backups, integrations, and feedback.",
         icon: Settings,
         keywords: ["configuration", "settings", "admin", "security", "roles", "users", "branches"],
         topics: [
@@ -74,17 +74,15 @@ export const helpContent: Record<string, HelpModule> = {
                 keywords: ["2fa", "activate", "deactivate", "permission", "rbac"],
             },
             {
-                title: "Branches and module control",
+                title: "Branches and operational controls",
                 steps: [
                     "Open Branch Management to create, view, edit, or archive branches.",
                     "Branch archive uses a typed confirmation so the branch name must match before the action is accepted.",
-                    "Open Module Control to enable or disable system modules with the module switch.",
-                    "Module changes affect module availability for users who have the related permissions.",
                     "Workflow Builder is currently parked. The page says work orders continue to use the validated repair flow instead of the workflow engine.",
                 ],
-                actionLink: "/admin/modules",
-                actionLabel: "Open Module Control",
-                keywords: ["branches", "modules", "workflow builder", "disabled"],
+                actionLink: "/admin/branches",
+                actionLabel: "Open Branch Management",
+                keywords: ["branches", "workflow builder"],
             },
             {
                 title: "Audit logs, backups, imports, and feedback",
@@ -124,7 +122,7 @@ export const helpContent: Record<string, HelpModule> = {
                 steps: [
                     "Use the global search trigger in the top navigation or press Ctrl+K.",
                     "Search can route you to supported records such as customers, vehicles, work orders, and inventory.",
-                    "Use the sidebar for module navigation. Items are permission-gated, so unavailable modules may be hidden.",
+                    "Use the sidebar for navigation. Items are permission-gated, so unavailable areas may be hidden.",
                 ],
                 actionLink: "/search",
                 actionLabel: "Open Search",

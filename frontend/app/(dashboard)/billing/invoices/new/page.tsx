@@ -183,6 +183,8 @@ export default function NewInvoicePage() {
   const workOrderPrefillApplied = useRef<number | null>(null);
   const prevCustomerIdRef = useRef<number | undefined>(undefined);
   const invoiceRedirectDone = useRef(false);
+  const submitInFlightRef = useRef(false);
+  const [submitInFlight, setSubmitInFlight] = useState(false);
 
   useEffect(() => {
     if (invoiceRedirectDone.current || !workOrder?.invoice_summary?.id) return;
@@ -267,8 +269,9 @@ export default function NewInvoicePage() {
   }, [invoiceDate, paymentTerms, dueDateManual, setValue]);
 
   const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
+    let updated: typeof lineItems;
     if (type === "part" && partData) {
-      setLineItems([
+      updated = [
         ...lineItems,
         {
           item_type: "part",
@@ -280,14 +283,18 @@ export default function NewInvoicePage() {
           part_number: partData.part_number,
           is_taxable: true,
         },
-      ]);
+      ];
     } else {
-      setLineItems([...lineItems, { item_type: "labor", description: "", quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true }]);
+      updated = [...lineItems, { item_type: "labor", description: "", quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true }];
     }
+    setLineItems(updated);
+    setValue("line_items", updated as any, { shouldValidate: false });
   };
 
   const removeLineItem = (index: number) => {
-    setLineItems(lineItems.filter((_, i) => i !== index));
+    const updated = lineItems.filter((_, i) => i !== index);
+    setLineItems(updated);
+    setValue("line_items", updated as any, { shouldValidate: true });
   };
 
 
@@ -409,22 +416,27 @@ export default function NewInvoicePage() {
     },
   });
 
-  const onSubmit = (data: InvoiceFormData, status?: string, redirectMode: 'list' | 'payment' = 'list') => {
-    setServerError(null);
-    createMutation.mutateAsync({ ...data, status })
-      .then((res) => {
-        startTransition(() => {
-          if (redirectMode === "payment") {
-            router.push(`/billing/invoices/${res.id}?action=record_payment`);
-          } else {
-            router.push("/billing");
-          }
-        });
-      })
+  const onSubmit = async (data: InvoiceFormData, status?: string, redirectMode: 'list' | 'payment' = 'list') => {
+    if (submitInFlightRef.current || createMutation.isPending) {
+      return;
+    }
 
-      .catch((err) => {
-        // Error already handled by onError
+    submitInFlightRef.current = true;
+    setSubmitInFlight(true);
+    setServerError(null);
+    try {
+      const res = await createMutation.mutateAsync({ ...data, status });
+      startTransition(() => {
+        if (redirectMode === "payment") {
+          router.push(`/billing/invoices/${res.id}?action=record_payment`);
+        } else {
+          router.push("/billing");
+        }
       });
+    } catch {
+      submitInFlightRef.current = false;
+      setSubmitInFlight(false);
+    }
   };
 
   const isProforma = invoiceType === 'proforma';
@@ -888,7 +900,7 @@ export default function NewInvoicePage() {
         </Link>
         <div className="w-auto">
           <BillingSubmitActions
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || createMutation.isPending || submitInFlight}
             resourceType="invoice"
             mode={isProforma ? "create" : "create"}
             onSend={handleSubmit((data) => onSubmit(data, "sent"))}

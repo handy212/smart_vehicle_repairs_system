@@ -13,7 +13,16 @@ import { sameOriginMediaPath } from "@/lib/utils/media";
 /** Settings sometimes store the field key as a filename before a real file is uploaded. */
 function isPlaceholderMediaPath(path: string): boolean {
   const base = path.split("/").pop()?.toLowerCase() ?? "";
-  return base === "favicon_path.png" || base === "logo_path.png" || base === "favicon_path";
+  const placeholderNames = new Set([
+    "favicon_path",
+    "logo_path",
+    "logo_dark_path",
+    "login_background",
+    "customer_login_background",
+    "staff_login_background",
+  ]);
+  const nameWithoutExtension = base.replace(/\.[^.]+$/, "");
+  return placeholderNames.has(base) || placeholderNames.has(nameWithoutExtension);
 }
 
 export function getMediaUrl(path: string | null | undefined): string {

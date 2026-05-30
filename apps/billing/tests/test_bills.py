@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from apps.billing.models import Bill, BillLineItem
 from apps.inventory.models import Supplier
 from apps.branches.models import Branch
+from apps.accounts.permission_models import Permission, Role
 from django.utils import timezone
 from decimal import Decimal
 
@@ -27,6 +28,47 @@ class BillTests(TestCase):
         
         # Add user to branch (if applicable, or assume superuser for simplicity)
         # self.user.branches.add(self.branch) 
+
+    def _create_bill(self, **kwargs):
+        defaults = {
+            "vendor": self.supplier,
+            "branch": self.branch,
+            "bill_date": timezone.now().date(),
+            "due_date": timezone.now().date(),
+            "created_by": self.user,
+            "total": Decimal("100.00"),
+            "amount_due": Decimal("100.00"),
+        }
+        defaults.update(kwargs)
+        bill = Bill.objects.create(**defaults)
+        BillLineItem.objects.create(
+            bill=bill,
+            description="Test bill line",
+            quantity=1,
+            unit_price=defaults["total"],
+        )
+        bill.refresh_from_db()
+        return bill
+
+    def _staff_user_with_permissions(self, email, role_code, permission_codes):
+        role, _ = Role.objects.update_or_create(
+            code=role_code,
+            defaults={"name": role_code.title(), "is_active": True},
+        )
+        for code in permission_codes:
+            permission, _ = Permission.objects.update_or_create(
+                code=code,
+                defaults={"name": code.replace("_", " ").title(), "category": "billing", "is_active": True},
+            )
+            role.permissions.add(permission)
+
+        return User.objects.create_user(
+            username=email,
+            email=email,
+            password="password123",
+            role=role_code,
+            branch=self.branch,
+        )
 
     def test_create_bill(self):
         url = reverse('api_billing:bill-list')
@@ -77,20 +119,87 @@ class BillTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
     def test_get_bills(self):
-        Bill.objects.create(
-            vendor=self.supplier,
-            branch=self.branch,
-            bill_date=timezone.now().date(),
-            due_date=timezone.now().date(),
-            created_by=self.user,
-            total=Decimal('100.00'),
-            amount_due=Decimal('100.00')
-        )
+        self._create_bill()
         
         url = reverse('api_billing:bill-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
+
+    def test_assigned_bill_approver_can_approve_without_manage_billing(self):
+        approver = self._staff_user_with_permissions(
+            "approver@example.com",
+            "accountant",
+            ["edit_bills", "view_bills"],
+        )
+        bill = self._create_bill(
+            status="pending_approval",
+            submitted_by=self.user,
+            submitted_at=timezone.now(),
+            assigned_approver=approver,
+        )
+
+        self.client.force_authenticate(user=approver)
+        response = self.client.post(reverse('api_billing:bill-approve', args=[bill.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, "open")
+        self.assertEqual(bill.approved_by, approver)
+
+    def test_unassigned_edit_bill_user_cannot_approve_pending_bill(self):
+        assigned = self._staff_user_with_permissions(
+            "assigned@example.com",
+            "accountant",
+            ["edit_bills", "view_bills"],
+        )
+        other = self._staff_user_with_permissions(
+            "other@example.com",
+            "service_coordinator",
+            ["edit_bills", "view_bills"],
+        )
+        bill = self._create_bill(
+            status="pending_approval",
+            submitted_by=self.user,
+            submitted_at=timezone.now(),
+            assigned_approver=assigned,
+        )
+
+        self.client.force_authenticate(user=other)
+        response = self.client.post(reverse('api_billing:bill-approve', args=[bill.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, "pending_approval")
+
+    def test_pending_bill_cannot_be_edited_or_opened_by_update(self):
+        bill = self._create_bill(
+            status="pending_approval",
+            submitted_by=self.user,
+            submitted_at=timezone.now(),
+            assigned_approver=self.user,
+        )
+        url = reverse('api_billing:bill-detail', args=[bill.id])
+        data = {
+            "vendor": self.supplier.id,
+            "branch": self.branch.id,
+            "bill_date": str(bill.bill_date),
+            "due_date": str(bill.due_date),
+            "status": "open",
+            "line_items": [
+                {
+                    "description": "Changed",
+                    "quantity": 1,
+                    "unit_price": "100.00",
+                }
+            ],
+        }
+
+        response = self.client.put(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, "pending_approval")
 
     # def test_ledger_integration_trigger(self):
     #     # mocking AccountingService to avoid actual DB ledger creation during basic tests

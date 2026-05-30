@@ -11,8 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
-import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 type PremiumIconName = keyof typeof PremiumIcons;
 
@@ -25,11 +26,17 @@ function isPremiumIconName(icon: string): icon is PremiumIconName {
 }
 
 export default function ModuleControlPage() {
-  const { modules, isLoading, error, refetch } = useModules();
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const { canViewModuleManagement, modules, isLoading, error, refetch } = useModules();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
-  const canManageModules = hasPermission("manage_modules");
+
+  useEffect(() => {
+    if (user && !canViewModuleManagement) {
+      router.replace("/dashboard");
+    }
+  }, [canViewModuleManagement, router, user]);
 
   const mutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<SystemModule> }) =>
@@ -56,6 +63,10 @@ export default function ModuleControlPage() {
       data: { is_enabled: !module.is_enabled },
     });
   };
+
+  if (!user || !canViewModuleManagement) {
+    return null;
+  }
 
   if (isLoading) {
     return (
@@ -106,13 +117,11 @@ export default function ModuleControlPage() {
                     <CardDescription className="text-xs">{module.slug}</CardDescription>
                   </div>
                 </div>
-                <PermissionGuard permission="manage_modules">
-                  <Switch
-                    checked={module.is_enabled}
-                    onCheckedChange={() => handleToggle(module)}
-                    disabled={!canManageModules || (mutation.isPending && mutation.variables?.id === module.id)}
-                  />
-                </PermissionGuard>
+                <Switch
+                  checked={module.is_enabled}
+                  onCheckedChange={() => handleToggle(module)}
+                  disabled={mutation.isPending && mutation.variables?.id === module.id}
+                />
               </CardHeader>
               <CardContent className="pt-2">
                 <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">

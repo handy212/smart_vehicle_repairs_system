@@ -6,11 +6,35 @@ import { ensureApiSession } from "@/lib/auth/session";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useMemo, useState } from "react";
 
+const CONTROLLED_MODULE_SLUGS = new Set([
+  "dashboard",
+  "customers",
+  "vehicles",
+  "appointments",
+  "workorders",
+  "gatepass",
+  "roadside",
+  "technicians",
+  "hr",
+  "inventory",
+  "billing",
+  "accounting",
+  "fixed-assets",
+  "subscriptions",
+  "inspections",
+  "diagnosis",
+  "reports",
+  "sms",
+  "chat",
+]);
+
 /**
  * Hook to fetch and manage system module statuses
  */
 export function useModules() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const canViewModuleManagement = user?.role === "super-admin";
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
@@ -30,7 +54,7 @@ export function useModules() {
   const { data: moduleData, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "modules"],
     queryFn: () => adminApi.modules.list(),
-    enabled: isAuthenticated && sessionReady,
+    enabled: isAuthenticated && sessionReady && canViewModuleManagement,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, err) => {
       const status = (err as { response?: { status?: number } })?.response?.status;
@@ -44,22 +68,31 @@ export function useModules() {
     return moduleData.results;
   }, [moduleData]);
 
+  const enabledModuleSlugs = useMemo(
+    () => new Set(user?.enabled_modules || []),
+    [user?.enabled_modules]
+  );
+  const hasModuleAvailability = Array.isArray(user?.enabled_modules);
+
   /**
    * Check if a specific module is enabled
    * @param slug The module slug (e.g., 'hr', 'accounting')
    */
   const isModuleEnabled = useMemo(() => {
     return (slug: string) => {
-      // No bypass for super-admin - they should respect system-wide module settings
-
+      if (!canViewModuleManagement) {
+        if (!hasModuleAvailability) return true;
+        return CONTROLLED_MODULE_SLUGS.has(slug) ? enabledModuleSlugs.has(slug) : true;
+      }
       if (!modules.length) return true; // Default to true if not loaded yet
       const matchedModule = modules.find((m) => m.slug === slug);
       return matchedModule ? matchedModule.is_enabled : true;
     };
-  }, [modules]);
+  }, [canViewModuleManagement, enabledModuleSlugs, hasModuleAvailability, modules]);
 
   return {
     modules,
+    canViewModuleManagement,
     isModuleEnabled,
     isLoading,
     error,

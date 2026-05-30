@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt, FileCheck, Plus, CreditCard, Wrench, Clock, StickyNote, FileText, MessageSquare, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt, FileCheck, Plus, CreditCard, Wrench, Clock, StickyNote, FileText, MessageSquare, Sparkles, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
@@ -121,6 +121,7 @@ export default function InvoiceDetailPage() {
   const canSendInvoice = hasAnyPermission(["edit_invoices", "send_notifications"]);
   const canConvertProforma = hasPermission("create_invoices");
   const canRecordPayment = hasAnyPermission(["create_payments", "process_payments", "manage_billing"]);
+  const canDeleteInvoice = hasAnyPermission(["delete_invoices", "manage_billing"]);
   const canManagePaymentAdjustments = hasAnyPermission([
     "process_payments",
     "refund_payments",
@@ -223,6 +224,27 @@ export default function InvoiceDetailPage() {
       toast({
         title: "Error",
         description: getApiErrorMessage(error, "Failed to convert proforma. Please try again."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      return billingApi.invoices.delete(invoiceId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast({
+        title: "Invoice Deleted",
+        description: "The invoice was deleted successfully.",
+      });
+      router.push("/billing/invoices");
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Delete Failed",
+        description: getApiErrorMessage(error, "Failed to delete invoice. Please try again."),
         variant: "destructive",
       });
     },
@@ -510,6 +532,24 @@ export default function InvoiceDetailPage() {
                           >
                             <MessageSquare className="w-4 h-4" />
                             Message Customer
+                          </button>
+                        </>
+                      )}
+                      {canDeleteInvoice && (
+                        <>
+                          <div className="border-t border-border my-1" />
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete invoice ${invoice.invoice_number}? This cannot be undone.`)) {
+                                deleteInvoiceMutation.mutate();
+                              }
+                              setShowActionsMenu(false);
+                            }}
+                            disabled={deleteInvoiceMutation.isPending}
+                            className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {deleteInvoiceMutation.isPending ? "Deleting..." : "Delete"}
                           </button>
                         </>
                       )}

@@ -27,7 +27,7 @@ from .serializers import UserSerializer
 User = get_user_model()
 
 
-from .permissions import HasAnyPermission, HasPermission, IsModuleEnabled, user_has_permission
+from .permissions import HasAnyPermission, HasPermission, IsModuleEnabled, IsSuperAdmin, user_has_permission
 
 def is_admin_user(user):
     """Users with full system settings access (respects permission overrides)."""
@@ -465,6 +465,22 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         # Use LogEntry from django-auditlog
         queryset = LogEntry.objects.select_related('actor', 'content_type').all()
+        queryset = queryset.exclude(actor__role='super-admin')
+
+        try:
+            from django.contrib.contenttypes.models import ContentType
+
+            user_content_type = ContentType.objects.get_for_model(User)
+            super_admin_ids = list(
+                User.objects.filter(role='super-admin').values_list('id', flat=True)
+            )
+            if super_admin_ids:
+                queryset = queryset.exclude(
+                    content_type=user_content_type,
+                    object_pk__in=[str(user_id) for user_id in super_admin_ids],
+                )
+        except Exception:
+            pass
 
         # Handle manual date filtering (Bug 1 fix: use proper datetime objects)
         date_from = self.request.query_params.get('date_from')
@@ -955,6 +971,8 @@ class RoleViewSet(viewsets.ModelViewSet):
         """Get all permissions for a role"""
         role = self.get_object()
         permissions = role.permissions.all()
+        if getattr(request.user, 'role', None) != 'super-admin':
+            permissions = permissions.exclude(code__in=['view_modules', 'manage_modules'])
         from .admin_serializers import PermissionSerializer
         return Response(PermissionSerializer(permissions, many=True).data)
     
@@ -967,6 +985,18 @@ class RoleViewSet(viewsets.ModelViewSet):
 
         role = self.get_object()
         permission_ids = list(dict.fromkeys(request.data.get('permission_ids', [])))
+        if getattr(request.user, 'role', None) != 'super-admin':
+            restricted_ids = set(
+                Permission.objects.filter(
+                    id__in=permission_ids,
+                    code__in=['view_modules', 'manage_modules'],
+                ).values_list('id', flat=True)
+            )
+            if restricted_ids:
+                return Response(
+                    {'permission_ids': ['Invalid or inactive permission ids.']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         active_ids = set(Permission.objects.filter(id__in=permission_ids, is_active=True).values_list('id', flat=True))
         missing_ids = [permission_id for permission_id in permission_ids if permission_id not in active_ids]
         if missing_ids:
@@ -992,7 +1022,10 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ['category', 'name']
     
     def get_queryset(self):
-        return Permission.objects.all()
+        queryset = Permission.objects.all()
+        if getattr(self.request.user, 'role', None) != 'super-admin':
+            queryset = queryset.exclude(code__in=['view_modules', 'manage_modules'])
+        return queryset
     
     def get_serializer_class(self):
         from .admin_serializers import PermissionSerializer
@@ -1003,7 +1036,7 @@ class SystemModuleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing system modules
     """
-    permission_classes = [IsAuthenticated, HasPermission('view_modules')]
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_enabled']
     search_fields = ['name', 'slug', 'description']
@@ -1019,9 +1052,7 @@ class SystemModuleViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        List/Retrieve require module visibility. Create/Update/Delete
-        (enabling/disabling) require module management permission.
+        Module visibility and management are owner-only. This endpoint is not
+        permission-delegable because module availability is a system boundary.
         """
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_modules')]
-        return [IsAuthenticated(), HasPermission('manage_modules')]
+        return [IsAuthenticated(), IsSuperAdmin()]

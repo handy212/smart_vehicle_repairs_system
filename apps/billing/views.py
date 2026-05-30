@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -748,9 +749,31 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
         if invoice.status == 'sent':
             try:
                 invoice.sent_by = request.user
+                invoice.sent_at = timezone.now()
                 invoice.save(update_fields=['sent_by', 'sent_at'])
             except Exception as e:
                 logger.warning(f"Failed to update sent metadata on invoice: {e}")
+
+    def perform_destroy(self, instance):
+        """Delete invoices in any document status when no financial records depend on them."""
+        blocking_records = []
+        if instance.payments.exists():
+            blocking_records.append("payments")
+        if instance.refunds.exists():
+            blocking_records.append("refunds")
+        if instance.credit_note_applications.exists():
+            blocking_records.append("credit note applications")
+
+        if blocking_records:
+            raise ValidationError({
+                "detail": (
+                    "This invoice has related "
+                    f"{', '.join(blocking_records)} and cannot be deleted. "
+                    "Void or reverse those records first."
+                )
+            })
+
+        super().perform_destroy(instance)
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -2061,22 +2084,23 @@ class BillViewSet(viewsets.ModelViewSet):
     ViewSet for managing vendor bills
     """
     queryset = Bill.objects.select_related(
-        'vendor', 'branch', 'purchase_order', 'created_by'
+        'vendor', 'branch', 'purchase_order', 'created_by',
+        'submitted_by', 'assigned_approver', 'approved_by', 'rejected_by'
     ).prefetch_related('line_items', 'payments')
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_bills')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_bills')]
         elif self.action in ['create']:
-            return [IsAuthenticated(), HasPermission('create_bills')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_bills')]
         elif self.action in ['update', 'partial_update', 'record_payment', 'void', 'submit_for_approval', 'approvers']:
-            return [IsAuthenticated(), HasPermission('edit_bills')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_bills')]
         elif self.action in ['approve', 'reject']:
-            return [IsAuthenticated(), HasPermission('manage_billing')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_bills')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('manage_billing')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
         return [IsAuthenticated(), IsModuleEnabled('billing')(), HasPermission('view_bills')()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'vendor', 'branch', 'purchase_order', 'due_date']
@@ -2097,6 +2121,22 @@ class BillViewSet(viewsets.ModelViewSet):
             request=self.request, 
             use_active_branch=not show_all
         )
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        date_from = self.request.query_params.get('bill_date__gte') or self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('bill_date__lte') or self.request.query_params.get('date_to')
+        due_date_from = self.request.query_params.get('due_date__gte') or self.request.query_params.get('due_date_from')
+        due_date_to = self.request.query_params.get('due_date__lte') or self.request.query_params.get('due_date_to')
+        if date_from:
+            queryset = queryset.filter(bill_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(bill_date__lte=date_to)
+        if due_date_from:
+            queryset = queryset.filter(due_date__gte=due_date_from)
+        if due_date_to:
+            queryset = queryset.filter(due_date__lte=due_date_to)
         return queryset
 
     def get_serializer_class(self):
@@ -2211,12 +2251,10 @@ class BillViewSet(viewsets.ModelViewSet):
                 {"error": "Only pending approval bills can be approved."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        from apps.accounts.permissions import user_can_approve_bills
-
         is_assigned_approver = bill.assigned_approver_id == request.user.id
-        if not is_assigned_approver and not user_can_approve_bills(request.user):
+        if not is_assigned_approver and not user_has_permission(request.user, 'manage_billing'):
             return Response(
-                {"error": "Only the assigned approver or a user with bill approval permissions can approve this bill."},
+                {"error": "Only the assigned approver or a billing manager can approve this bill."},
                 status=status.HTTP_403_FORBIDDEN
             )
         bill.status = 'open'
@@ -2239,12 +2277,10 @@ class BillViewSet(viewsets.ModelViewSet):
                 {"error": "Only pending approval bills can be rejected."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        from apps.accounts.permissions import user_can_approve_bills
-
         is_assigned_approver = bill.assigned_approver_id == request.user.id
-        if not is_assigned_approver and not user_can_approve_bills(request.user):
+        if not is_assigned_approver and not user_has_permission(request.user, 'manage_billing'):
             return Response(
-                {"error": "Only the assigned approver or a user with bill approval permissions can reject this bill."},
+                {"error": "Only the assigned approver or a billing manager can reject this bill."},
                 status=status.HTTP_403_FORBIDDEN
             )
         bill.status = 'rejected'

@@ -254,7 +254,7 @@ export default function BillsPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <TableSkeleton rows={8} columns={9} />
+                        <TableSkeleton rows={8} columns={10} />
                     ) : data?.results && data.results.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
@@ -268,6 +268,7 @@ export default function BillsPage() {
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Total</TableHead>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Due</TableHead>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Approval</TableHead>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -304,9 +305,22 @@ export default function BillsPage() {
                                                 <Badge variant={getStatusVariant(bill.status)} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                                                     <span className="flex items-center gap-1.5">
                                                         {getStatusIcon(bill.status)}
-                                                        <span className="capitalize">{bill.status.replace("_", " ")}</span>
+                                                        <span className="capitalize">{bill.status.replace(/_/g, " ")}</span>
                                                     </span>
                                                 </Badge>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
+                                                {bill.purchase_order ? (
+                                                    <span>PO approved</span>
+                                                ) : bill.status === "pending_approval" ? (
+                                                    <span>Assigned to {bill.assigned_approver_name || "approver"}</span>
+                                                ) : bill.status === "rejected" ? (
+                                                    <span className="text-destructive">Rejected{bill.rejected_by_name ? ` by ${bill.rejected_by_name}` : ""}</span>
+                                                ) : bill.approved_by_name ? (
+                                                    <span>Approved by {bill.approved_by_name}</span>
+                                                ) : (
+                                                    <span>-</span>
+                                                )}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
                                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">

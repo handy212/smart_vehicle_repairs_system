@@ -67,6 +67,7 @@ interface SubNavItem {
   name: string;
   href: string;
   permission?: string;
+  superAdminOnly?: boolean;
   icon?: LucideIcon;
   module?: string;
   group?: string;
@@ -84,7 +85,7 @@ interface SubNavProps {
 export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed, sidebarCollapsed = false, module }: SubNavProps) {
   const pathname = usePathname();
   const { resolvedTheme, theme: activeTheme } = useTheme();
-  const { isModuleEnabled } = useModules();
+  const { canViewModuleManagement, isModuleEnabled } = useModules();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
@@ -123,9 +124,10 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     return null;
   }
 
-  const filteredItems = items.filter(item =>
-    !item.module || isModuleEnabled(item.module)
-  );
+  const filteredItems = items.filter((item) => {
+    if (item.superAdminOnly && !canViewModuleManagement) return false;
+    return !item.module || isModuleEnabled(item.module);
+  });
 
   const renderItem = (item: SubNavItem, variant: "mobile" | "desktop") => {
     const isActive = getIsActive(item);
@@ -347,7 +349,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Branches", href: "/admin/branches", permission: "view_branches", icon: Building2 },
     { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
     { name: "Settings", href: "/admin/settings", permission: "view_settings", icon: Settings },
-    { name: "Modules", href: "/admin/modules", permission: "view_modules", icon: Puzzle },
+    { name: "Modules", href: "/admin/modules", superAdminOnly: true, icon: Puzzle },
     { name: "Email Templates", href: "/admin/settings/email-templates", permission: "manage_notification_templates", icon: Mail },
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_logs", icon: History },
     { name: "Import History", href: "/admin/import-history", permission: "view_audit_logs", icon: Inbox },

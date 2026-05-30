@@ -100,7 +100,7 @@ export default function RegisterPage() {
         !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
     const heroImage = loginBackground
-        ? getMediaUrl(loginBackground)
+        ? getMediaUrl(loginBackground) || DEFAULT_HERO_IMAGE
         : DEFAULT_HERO_IMAGE;
 
     const {

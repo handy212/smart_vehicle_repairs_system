@@ -209,10 +209,11 @@ export default function LoginPage() {
   };
 
   const heroImage = loginBackground
-    ? getMediaUrl(loginBackground)
+    ? getMediaUrl(loginBackground) || DEFAULT_HERO_IMAGE
     : DEFAULT_HERO_IMAGE;
 
   const heroLogo = logoDarkPath || logoPath;
+  const heroLogoSrc = heroLogo ? getMediaUrl(heroLogo) || null : null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -243,10 +244,10 @@ export default function LoginPage() {
           />
 
           <div className="relative z-10 flex items-center gap-3">
-            {heroLogo ? (
+            {heroLogoSrc ? (
               <div className="p-3 bg-card rounded-xl shadow-lg">
                 <img
-                  src={getMediaUrl(heroLogo)}
+                  src={heroLogoSrc}
                   alt={siteName}
                   className="h-10 w-auto object-contain"
                 />

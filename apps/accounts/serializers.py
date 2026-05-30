@@ -21,6 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
     branch_name = serializers.SerializerMethodField()
     managed_branches_names = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
+    enabled_modules = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -32,7 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active', 'created_at', 'updated_at', 'customer_profile',
             'branch', 'managed_branches', 'branch_name', 'managed_branches_names',
             'employee_id', 'hire_date', 'hourly_rate', 'permissions',
-            'two_factor_enabled'
+            'enabled_modules', 'two_factor_enabled'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'two_factor_enabled']
         extra_kwargs = {
@@ -65,6 +66,13 @@ class UserSerializer(serializers.ModelSerializer):
         """Get user's permissions based on their role"""
         from apps.accounts.permissions import get_user_permissions
         return get_user_permissions(obj)
+
+    def get_enabled_modules(self, obj):
+        """Return enabled module slugs for client-side navigation gating."""
+        from apps.accounts.admin_models import SystemModule
+        return list(
+            SystemModule.objects.filter(is_enabled=True).values_list('slug', flat=True)
+        )
     
     def get_managed_branches_names(self, obj):
         """Return list of managed branch names"""
@@ -535,50 +543,34 @@ class ManualRegistrationInitiateSerializer(serializers.Serializer):
         # 1. reCAPTCHA Validation
         recaptcha_token = attrs.get('recaptcha_token')
         
-        # Get config from SystemSettings
-        try:
-            from apps.accounts.admin_models import SystemSettings
-            recaptcha_enabled = SystemSettings.get_setting('recaptcha_enabled', 'false').lower() == 'true'
-            recaptcha_secret = SystemSettings.get_setting('recaptcha_secret_key', '')
-        except Exception:
-            recaptcha_enabled = False
-            recaptcha_secret = ''
-            
-        # Fallback to env vars
-        if not recaptcha_secret:
-             recaptcha_secret = getattr(settings, 'RECAPTCHA_SECRET_KEY', '') or ''
+        from apps.accounts.recaptcha_views import _get_recaptcha_config
+        recaptcha_enabled, recaptcha_secret = _get_recaptcha_config()
              
-        if recaptcha_enabled:
+        if recaptcha_enabled and recaptcha_secret:
             if not recaptcha_token:
                 raise serializers.ValidationError({"recaptcha_token": "reCAPTCHA verification is required."})
-            if not recaptcha_secret:
-                # Configuration error, but don't block user? Or fail safe?
-                # Failing safe means allowing registration if we can't verify.
-                # But here we assume if enabled, secret must exist.
-                pass 
-            else:
-                try:
-                    response = requests.post(
-                        'https://www.google.com/recaptcha/api/siteverify',
-                        data={
-                            'secret': recaptcha_secret,
-                            'response': recaptcha_token,
-                        },
-                        timeout=5,
-                    )
-                    result = response.json()
-                    if not result.get('success', False):
-                        raise serializers.ValidationError({"recaptcha_token": "reCAPTCHA verification failed. Please try again."})
-                except serializers.ValidationError:
-                    raise
-                except Exception as e:
-                    # Log error and decide whether to block or allow
-                    # For security, usually block, but for UX, maybe allow if Google is down?
-                    # Going with block for now as per other views.
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"reCAPTCHA verification error: {str(e)}")
-                    raise serializers.ValidationError({"detail": "Security check failed. Please try again later."})
+            try:
+                response = requests.post(
+                    'https://www.google.com/recaptcha/api/siteverify',
+                    data={
+                        'secret': recaptcha_secret,
+                        'response': recaptcha_token,
+                    },
+                    timeout=5,
+                )
+                result = response.json()
+                if not result.get('success', False):
+                    raise serializers.ValidationError({"recaptcha_token": "reCAPTCHA verification failed. Please try again."})
+            except serializers.ValidationError:
+                raise
+            except Exception as e:
+                # Log error and decide whether to block or allow
+                # For security, usually block, but for UX, maybe allow if Google is down?
+                # Going with block for now as per other views.
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"reCAPTCHA verification error: {str(e)}")
+                raise serializers.ValidationError({"detail": "Security check failed. Please try again later."})
 
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password": "Passwords didn't match."})

@@ -864,6 +864,19 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         line_items_data = validated_data.pop('line_items', [])
         work_order = validated_data.get('work_order')
+
+        if work_order:
+            work_order = WorkOrder.objects.select_for_update().get(pk=work_order.pk)
+            from apps.billing.work_order_invoices import active_invoice_exists_for_work_order
+
+            if active_invoice_exists_for_work_order(work_order):
+                raise serializers.ValidationError({
+                    "work_order": (
+                        "An active invoice already exists for this work order. "
+                        "Open the existing invoice or void it before creating a revision."
+                    ),
+                })
+            validated_data['work_order'] = work_order
         
         # Set created_by
         validated_data['created_by'] = self.context['request'].user
@@ -1681,8 +1694,21 @@ class BillCreateSerializer(serializers.ModelSerializer):
         ).exists()
     
     def validate(self, data):
-        if not data.get('line_items'):
+        line_items = data.get('line_items')
+        if self.instance is None and not line_items:
             raise serializers.ValidationError({"line_items": "At least one line item is required"})
+        if line_items is not None and not line_items:
+            raise serializers.ValidationError({"line_items": "At least one line item is required"})
+
+        if self.instance is not None:
+            if self.instance.status not in {'draft', 'rejected'}:
+                raise serializers.ValidationError({
+                    "detail": "Only draft or rejected bills can be edited. Use the approval, payment, or void actions for workflow changes."
+                })
+            if 'status' in data and data['status'] != self.instance.status:
+                raise serializers.ValidationError({
+                    "status": "Bill status cannot be changed from the edit form. Use Submit Approval, Approve, Reject, Record Payment, or Void."
+                })
 
         purchase_order = data.get(
             'purchase_order',
@@ -1712,9 +1738,13 @@ class BillCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "purchase_order": "A non-void bill already exists for this purchase order."
                 })
-        elif requested_status in {'open', 'paid', 'partially_paid'}:
+            if self.instance is None and requested_status not in {'draft', 'open'}:
+                raise serializers.ValidationError({
+                    "status": "PO-linked bills can only be created as draft or open."
+                })
+        elif self.instance is None and requested_status != 'draft':
             raise serializers.ValidationError({
-                "status": "Standalone bills must be submitted and approved before they can be opened."
+                "status": "Standalone bills must be created as draft, then submitted and approved through the approval workflow."
             })
         return data
 

@@ -34,6 +34,7 @@ export interface User {
   hire_date?: string;
   branch_name?: string;
   permissions?: string[];
+  enabled_modules?: string[];
   customer_profile?: {
     id: number;
   };

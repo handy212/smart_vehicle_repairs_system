@@ -114,6 +114,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'apps.accounts.middleware.AuditlogDRFMiddleware',
+    'apps.accounts.middleware.ModuleAvailabilityMiddleware',
     'apps.accounts.middleware.MaintenanceModeMiddleware',
     'auditlog.middleware.AuditlogMiddleware',
 ]

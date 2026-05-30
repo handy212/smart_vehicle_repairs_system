@@ -697,7 +697,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         # Parse hours string (e.g., "08:00-18:00" or "Closed")
         if hours_str.lower() == 'closed':
-            return Response({'available_slots': []})
+            return Response({
+                'date': selected_date,
+                'slots': [],
+                'total_slots': 0,
+                'available_slots': 0
+            })
         
         try:
             from datetime import time

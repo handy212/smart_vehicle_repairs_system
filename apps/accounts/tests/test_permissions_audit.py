@@ -500,6 +500,31 @@ class UserAndRolePermissionBoundaryTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @override_settings(SKIP_MODULE_PERMISSION_CHECKS=False)
+    def test_disabled_modules_are_hidden_from_me_and_blocked_by_permission(self):
+        inventory = SystemModule.objects.get(slug='inventory')
+        inventory.is_enabled = False
+        inventory.save(update_fields=['is_enabled', 'updated_at'])
+
+        response = self.admin_client.get('/api/accounts/users/me/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('enabled_modules', response.data)
+        self.assertNotIn('inventory', response.data['enabled_modules'])
+
+        from apps.accounts.permissions import IsModuleEnabled
+        request = RequestFactory().get('/api/inventory/parts/')
+        request.user = self.admin_user
+        self.assertFalse(IsModuleEnabled('inventory').has_permission(request, view=None))
+
+        request.user = self.super_admin_user
+        self.assertFalse(IsModuleEnabled('inventory').has_permission(request, view=None))
+
+        response = self.super_admin_client.get('/api/inventory/categories/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        response = self.super_admin_client.get('/api/accounts/admin/modules/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_super_admin_account_and_role_are_hidden_from_admin_surfaces(self):
         Role.objects.update_or_create(
             code='super-admin',

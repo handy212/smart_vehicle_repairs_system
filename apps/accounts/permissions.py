@@ -149,12 +149,6 @@ class IsModuleEnabled(permissions.BasePermission):
         if getattr(settings, 'SKIP_MODULE_PERMISSION_CHECKS', False):
             return True
 
-        # Allow only the 'super-admin' role to bypass module status checks
-        if request.user and request.user.role == 'super-admin':
-            return True
-        # Note: We even block superusers if they don't have the 'super-admin' role 
-        # to ensure strict role-based access control per user requirements.
-            
         # If no slug provided, attempt to get it from view if it exists
         module_slug = self.module_slug
         if not module_slug and hasattr(view, 'module_slug'):

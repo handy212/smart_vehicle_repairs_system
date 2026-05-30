@@ -25,20 +25,25 @@ def _get_recaptcha_config():
         from .admin_models import SystemSettings
 
         enabled = SystemSettings.get_setting('recaptcha_enabled', 'false')
+        site_key = SystemSettings.get_setting('recaptcha_site_key', '')
         secret_key = SystemSettings.get_setting('recaptcha_secret_key', '')
     except Exception:
         # DB might not be ready (e.g. during migrations)
         enabled = 'false'
+        site_key = ''
         secret_key = ''
 
-    # Fall back to env var if DB has no secret key
+    # Fall back to env vars if DB has no keys.
+    if not site_key:
+        site_key = getattr(settings, 'RECAPTCHA_SITE_KEY', '') or ''
     if not secret_key:
         secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', '') or ''
 
     is_enabled = enabled.lower() in ('true', '1', 'yes')
+    site_key = site_key.strip()
     secret_key = secret_key.strip() or None
-    # Do not block login when reCAPTCHA is toggled on without a secret key configured.
-    if is_enabled and not secret_key:
+    # Do not block login when reCAPTCHA is toggled on but cannot be rendered or verified.
+    if is_enabled and (not site_key or not secret_key):
         is_enabled = False
     return is_enabled, secret_key
 

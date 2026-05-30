@@ -49,7 +49,7 @@ export const troubleshootingGuides: HelpGuide[] = [
                             {
                                 problem: "Sidebar module is missing",
                                 solution:
-                                    "Your role may lack permission, or the module is disabled in Admin → Module Control. Contact your administrator.",
+                                    "Your role may lack permission, or the area may be unavailable. Contact your administrator.",
                             },
                             {
                                 problem: "Action button is greyed out or absent",

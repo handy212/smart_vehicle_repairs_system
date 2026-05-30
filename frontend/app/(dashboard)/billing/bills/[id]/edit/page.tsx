@@ -40,7 +40,6 @@ const formSchema = z.object({
     due_date: z.string().min(1, "Due date is required"),
     terms: z.string().optional(),
     notes: z.string().optional(),
-    status: z.enum(["draft", "pending_approval", "rejected", "open", "partially_paid", "paid", "overdue", "void"]),
     currency: z.string().min(1),
     line_items: z.array(lineItemSchema).min(1, "At least one line item is required"),
 });
@@ -66,7 +65,6 @@ export default function EditBillPage() {
             due_date: format(new Date(), "yyyy-MM-dd"),
             terms: "",
             notes: "",
-            status: "draft",
             currency: "USD",
             line_items: [{ description: "", quantity: 1, unit_price: 0, expense_category: "", inventory_item: undefined }],
         },
@@ -110,7 +108,6 @@ export default function EditBillPage() {
             due_date: bill.due_date,
             terms: bill.terms || "",
             notes: bill.notes || "",
-            status: bill.status,
             currency: bill.currency || "USD",
             line_items: (bill.line_items || []).map((item) => ({
                 description: item.description,
@@ -152,7 +149,6 @@ export default function EditBillPage() {
             due_date: data.due_date,
             terms: data.terms,
             notes: data.notes,
-            status: data.status,
             currency: data.currency,
             line_items: data.line_items.map((item) => ({
                 ...item,
@@ -211,20 +207,6 @@ export default function EditBillPage() {
                                 <FormItem>
                                     <FormLabel>Reference #</FormLabel>
                                     <FormControl><Input placeholder="Vendor invoice number" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="status" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            {["draft", "pending_approval", "rejected", "open", "partially_paid", "paid", "overdue", "void"].map((status) => (
-                                                <SelectItem key={status} value={status}>{status.replace("_", " ")}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )} />

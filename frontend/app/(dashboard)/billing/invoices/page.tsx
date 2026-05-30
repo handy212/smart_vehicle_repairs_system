@@ -198,9 +198,50 @@ export default function InvoicesPage() {
         }
     });
 
+    const bulkDeleteMutation = useMutation({
+        mutationFn: async (ids: number[]) => {
+            const results = await Promise.allSettled(
+                ids.map((id) => billingApi.invoices.delete(id))
+            );
+            const failed = results.filter((result) => result.status === "rejected");
+
+            if (failed.length > 0) {
+                throw new Error(`${ids.length - failed.length} deleted, ${failed.length} failed`);
+            }
+
+            return { deletedCount: ids.length };
+        },
+        onSuccess: ({ deletedCount }) => {
+            toast({
+                title: "Invoices Deleted",
+                description: `${deletedCount} invoice${deletedCount !== 1 ? "s" : ""} deleted successfully.`,
+                variant: "success",
+            });
+            bulkSelection.clearSelection();
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+            queryClient.invalidateQueries({ queryKey: ["invoice-stats"] });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Bulk Delete Incomplete",
+                description: error.message || "Some invoices could not be deleted.",
+                variant: "destructive",
+            });
+            bulkSelection.clearSelection();
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+            queryClient.invalidateQueries({ queryKey: ["invoice-stats"] });
+        },
+    });
+
     const handleBulkSend = () => {
         if (!confirm(`Are you sure you want to mark ${bulkSelection.selectedCount} invoices as sent?`)) return;
         bulkSendMutation.mutate(bulkSelection.selectedIds);
+    };
+
+    const handleBulkDelete = () => {
+        if (bulkSelection.selectedCount === 0 || bulkDeleteMutation.isPending) return;
+        if (!confirm(`Delete ${bulkSelection.selectedCount} selected invoice${bulkSelection.selectedCount !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+        bulkDeleteMutation.mutate(bulkSelection.selectedIds);
     };
 
     const handleBulkStatusUpdate = () => {
@@ -658,7 +699,7 @@ export default function InvoicesPage() {
             <BulkActionToolbar
                 selectedCount={bulkSelection.selectedCount}
                 onClearSelection={bulkSelection.clearSelection}
-                onBulkDelete={() => { }}
+                onBulkDelete={hasPermission("delete_invoices") ? handleBulkDelete : undefined}
                 showBulkSend={true}
                 showStatusUpdate={true}
                 onBulkSend={hasPermission("create_invoices") ? handleBulkSend : undefined}

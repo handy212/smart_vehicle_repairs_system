@@ -25,10 +25,12 @@ class AuditLogAPISetup(TestCase):
         call_command("init_permissions", verbosity=0)
 
         # Admin user
-        self.admin_user = User.objects.create_superuser(
+        self.admin_user = User.objects.create_user(
             username="admin_audit_test",
             email="admin_audit@example.com",
             password="adminpass123",
+            role="admin",
+            is_staff=True,
         )
         self.admin_client = APIClient()
         self.admin_client.force_authenticate(user=self.admin_user)
@@ -42,6 +44,15 @@ class AuditLogAPISetup(TestCase):
         )
         self.regular_client = APIClient()
         self.regular_client.force_authenticate(user=self.regular_user)
+
+        self.super_admin_user = User.objects.create_user(
+            username="owner_audit_test",
+            email="owner_audit@example.com",
+            password="ownerpass123",
+            role="super-admin",
+            is_staff=True,
+            is_superuser=True,
+        )
 
         # Seed a few LogEntry records for testing
         user_ct = ContentType.objects.get_for_model(User)
@@ -77,6 +88,23 @@ class AuditLogAPISetup(TestCase):
         )
         LogEntry.objects.filter(id=self.log_delete.id).update(timestamp=now - timedelta(days=1))
 
+        self.super_admin_actor_log = LogEntry.objects.create(
+            content_type=user_ct,
+            object_pk=str(self.admin_user.id),
+            object_repr="Owner changed admin",
+            action=LogEntry.Action.UPDATE,
+            actor=self.super_admin_user,
+            remote_addr="127.0.0.1",
+        )
+        self.super_admin_object_log = LogEntry.objects.create(
+            content_type=user_ct,
+            object_pk=str(self.super_admin_user.id),
+            object_repr="owner_audit@example.com",
+            action=LogEntry.Action.UPDATE,
+            actor=self.admin_user,
+            remote_addr="127.0.0.1",
+        )
+
 
 class AuditLogPermissionsTest(AuditLogAPISetup):
     """Test access control on the audit log endpoint."""
@@ -104,6 +132,18 @@ class AuditLogPermissionsTest(AuditLogAPISetup):
         response = self.regular_client.get(AUDIT_LOGS_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('results', response.data)
+
+    def test_super_admin_entries_are_hidden_from_audit_api(self):
+        """The database keeps owner logs, but frontend audit API never exposes them."""
+        self.assertTrue(LogEntry.objects.filter(id=self.super_admin_actor_log.id).exists())
+        self.assertTrue(LogEntry.objects.filter(id=self.super_admin_object_log.id).exists())
+
+        response = self.admin_client.get(AUDIT_LOGS_URL, {"page_size": 1000})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {item["id"] for item in response.data["results"]}
+        self.assertNotIn(self.super_admin_actor_log.id, ids)
+        self.assertNotIn(self.super_admin_object_log.id, ids)
 
     def test_view_audit_logs_user_cannot_archive(self):
         """view_audit_logs alone does not allow purging old logs."""

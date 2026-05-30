@@ -135,3 +135,73 @@ class MaintenanceModeMiddleware:
             status=503,
             content_type='text/html',
         )
+
+
+class ModuleAvailabilityMiddleware:
+    """
+    Fail closed for disabled modules based on API URL prefixes.
+
+    The owner-only module-management API remains reachable so disabled modules
+    can be re-enabled, but disabled business modules are not usable by anyone.
+    """
+    MODULE_API_PREFIXES = {
+        '/api/customers/': 'customers',
+        '/api/vehicles/': 'vehicles',
+        '/api/appointments/': 'appointments',
+        '/api/workorders/': 'workorders',
+        '/api/gatepass/': 'gatepass',
+        '/api/roadside/': 'roadside',
+        '/api/technicians/': 'technicians',
+        '/api/hr/': 'hr',
+        '/api/inventory/': 'inventory',
+        '/api/billing/': 'billing',
+        '/api/accounting/': 'accounting',
+        '/api/fixed-assets/': 'fixed-assets',
+        '/api/subscriptions/': 'subscriptions',
+        '/api/inspections/': 'inspections',
+        '/api/diagnosis/': 'diagnosis',
+        '/api/reporting/': 'reports',
+        '/api/chat/': 'chat',
+    }
+
+    EXEMPT_PREFIXES = (
+        '/api/accounts/admin/modules/',
+        '/api/auth/users/me',
+        '/api/accounts/users/me',
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if self._should_skip(request):
+            return self.get_response(request)
+
+        module_slug = self._module_for_path(request.path_info or request.path)
+        if not module_slug or self._is_enabled(module_slug):
+            return self.get_response(request)
+
+        return JsonResponse({'detail': 'Not found.'}, status=404)
+
+    def _should_skip(self, request):
+        from django.conf import settings
+
+        if getattr(settings, 'SKIP_MODULE_PERMISSION_CHECKS', False):
+            return True
+
+        path = request.path_info or request.path
+        return any(path.startswith(prefix) for prefix in self.EXEMPT_PREFIXES)
+
+    def _module_for_path(self, path):
+        for prefix, module_slug in self.MODULE_API_PREFIXES.items():
+            if path.startswith(prefix):
+                return module_slug
+        return None
+
+    def _is_enabled(self, module_slug):
+        from .admin_models import SystemModule
+
+        try:
+            return SystemModule.objects.get(slug=module_slug).is_enabled
+        except SystemModule.DoesNotExist:
+            return False

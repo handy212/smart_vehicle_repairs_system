@@ -309,6 +309,17 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
         return normalized
 
     def validate_permission_ids(self, value):
+        request = self.context.get('request')
+        if not request or getattr(request.user, 'role', None) != 'super-admin':
+            restricted = set(
+                Permission.objects.filter(
+                    id__in=value,
+                    code__in=['view_modules', 'manage_modules'],
+                ).values_list('id', flat=True)
+            )
+            if restricted:
+                raise serializers.ValidationError("Invalid or inactive permission ids.")
+
         permission_ids = list(dict.fromkeys(value))
         found = set(Permission.objects.filter(id__in=permission_ids, is_active=True).values_list('id', flat=True))
         missing = [permission_id for permission_id in permission_ids if permission_id not in found]

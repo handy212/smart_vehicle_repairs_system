@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
     }, []);
 
     const heroImage = loginBackground
-        ? getMediaUrl(loginBackground)
+        ? getMediaUrl(loginBackground) || DEFAULT_HERO_IMAGE
         : DEFAULT_HERO_IMAGE;
 
     const handleSubmit = async (e: React.FormEvent) => {

@@ -11,50 +11,51 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useBranding } from "@/lib/hooks/useBranding";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
+import { useModules } from "@/lib/hooks/useModules";
 
 const navigationGroups = [
   {
     name: "Main",
     items: [
-      { name: "Dashboard", href: "/dashboard", icon: PremiumIcons.Dashboard, permission: "view_dashboard" },
+      { name: "Dashboard", href: "/dashboard", icon: PremiumIcons.Dashboard, permission: "view_dashboard", module: "dashboard" },
     ],
   },
   {
     name: "Operations",
     items: [
-      { name: "Vehicle Check-in", href: "/check-in", icon: PremiumIcons.ClipboardList, permission: "create_workorders" },
-      { name: "Customers", href: "/customers", icon: PremiumIcons.Users, permission: "view_customers" },
-      { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles" },
-      { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments" },
-      { name: "Work Orders", href: "/workorders", icon: PremiumIcons.Wrench, permission: "view_workorders" },
-      { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass" },
-      { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside" },
-      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians" },
-      { name: "HR", href: "/hr", icon: PremiumIcons.Building2, permission: "view_hr" },
+      { name: "Vehicle Check-in", href: "/check-in", icon: PremiumIcons.ClipboardList, permission: "create_workorders", module: "workorders" },
+      { name: "Customers", href: "/customers", icon: PremiumIcons.Users, permission: "view_customers", module: "customers" },
+      { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles", module: "vehicles" },
+      { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments", module: "appointments" },
+      { name: "Work Orders", href: "/workorders", icon: PremiumIcons.Wrench, permission: "view_workorders", module: "workorders" },
+      { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass", module: "gatepass" },
+      { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside", module: "roadside" },
+      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians", module: "technicians" },
+      { name: "HR", href: "/hr", icon: PremiumIcons.Building2, permission: "view_hr", module: "hr" },
     ],
   },
   {
     name: "Inventory & Billing",
     items: [
-      { name: "Inventory", href: "/inventory", icon: PremiumIcons.Package, permission: "view_inventory" },
-      { name: "Billing", href: "/billing", icon: PremiumIcons.Receipt, permission: "view_billing" },
-      { name: "Accounting", href: "/accounting", icon: PremiumIcons.Calculator, permission: "view_accounting" },
-      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_assets" },
-      { name: "Subscriptions", href: "/subscriptions", icon: PremiumIcons.CreditCard, permission: "view_subscriptions" },
+      { name: "Inventory", href: "/inventory", icon: PremiumIcons.Package, permission: "view_inventory", module: "inventory" },
+      { name: "Billing", href: "/billing", icon: PremiumIcons.Receipt, permission: "view_billing", module: "billing" },
+      { name: "Accounting", href: "/accounting", icon: PremiumIcons.Calculator, permission: "view_accounting", module: "accounting" },
+      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_assets", module: "fixed-assets" },
+      { name: "Subscriptions", href: "/subscriptions", icon: PremiumIcons.CreditCard, permission: "view_subscriptions", module: "subscriptions" },
     ],
   },
   {
     name: "Tools & Reports",
     items: [
-      { name: "Inspections", href: "/inspections", icon: PremiumIcons.FileText, permission: "view_inspections" },
-      { name: "Diagnosis", href: "/diagnosis", icon: PremiumIcons.Stethoscope, permission: "view_diagnosis" },
-      { name: "Reports", href: "/reports", icon: PremiumIcons.BarChart, permission: "view_reports" },
+      { name: "Inspections", href: "/inspections", icon: PremiumIcons.FileText, permission: "view_inspections", module: "inspections" },
+      { name: "Diagnosis", href: "/diagnosis", icon: PremiumIcons.Stethoscope, permission: "view_diagnosis", module: "diagnosis" },
+      { name: "Reports", href: "/reports", icon: PremiumIcons.BarChart, permission: "view_reports", module: "reports" },
     ],
   },
   {
     name: "Communications",
     items: [
-      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications" },
+      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications", module: "sms" },
     ],
   },
   {
@@ -75,9 +76,16 @@ interface SidebarProps {
 export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: SidebarProps) {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
+  const { isModuleEnabled } = useModules();
 
   const { primaryColor } = useBranding("authenticated");
   const branding = { primary_color: primaryColor };
+  const visibleGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.module || isModuleEnabled(item.module)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -103,7 +111,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: Sidebar
         }}
       >
         <nav className={cn("flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800", isCollapsed && "px-2")}>
-          {navigationGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.name}>
               {!isCollapsed && group.name !== "Main" && (
                 <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

@@ -98,12 +98,12 @@ export function useBranding(
             const ck = logoDarkUpdatedAt
                 ? new Date(logoDarkUpdatedAt).getTime()
                 : undefined;
-            logoSrc = getMediaUrl(logoDarkPath, ck);
+            logoSrc = getMediaUrl(logoDarkPath, ck) || null;
         } else if (logoPath) {
             const ck = logoUpdatedAt
                 ? new Date(logoUpdatedAt).getTime()
                 : undefined;
-            logoSrc = getMediaUrl(logoPath, ck);
+            logoSrc = getMediaUrl(logoPath, ck) || null;
         }
 
         return {

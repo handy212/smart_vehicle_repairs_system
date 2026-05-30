@@ -34,6 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useAuthStore } from "@/store/authStore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -66,6 +68,8 @@ export default function BillDetailPage() {
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
     const { downloadPDF, isDownloading } = usePrint();
+    const { user } = useAuthStore();
+    const { hasPermission } = usePermissions();
     const id = Number.parseInt(params.id as string, 10);
     const isValidId = Number.isFinite(id) && id > 0;
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -227,9 +231,13 @@ export default function BillDetailPage() {
     const billDate = bill.bill_date ? format(new Date(bill.bill_date), "MMM d, yyyy") : "-";
     const dueDate = bill.due_date ? format(new Date(bill.due_date), "MMM d, yyyy") : "-";
     const statusLabel = bill.status.replace(/_/g, " ");
-    const canRecordPayment = !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) && Number.parseFloat(bill.amount_due || "0") > 0;
-    const canEditBill = ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0;
+    const canRecordPayment = hasPermission("edit_bills") && !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) && Number.parseFloat(bill.amount_due || "0") > 0;
+    const canEditBill = hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0;
     const isStandaloneBill = !bill.purchase_order;
+    const canSubmitBill = hasPermission("edit_bills");
+    const canApproveOrRejectBill =
+        hasPermission("manage_billing") ||
+        (hasPermission("edit_bills") && bill.assigned_approver === user?.id);
 
     return (
         <div className="space-y-6 p-6">
@@ -270,7 +278,7 @@ export default function BillDetailPage() {
                             </Button>
                         </Link>
                     )}
-                    {isStandaloneBill && ["draft", "rejected"].includes(bill.status) && (
+                    {canSubmitBill && isStandaloneBill && ["draft", "rejected"].includes(bill.status) && (
                         <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button size="sm" disabled={submitApprovalMutation.isPending}>
@@ -311,7 +319,7 @@ export default function BillDetailPage() {
                             </DialogContent>
                         </Dialog>
                     )}
-                    {isStandaloneBill && bill.status === "pending_approval" && (
+                    {canApproveOrRejectBill && isStandaloneBill && bill.status === "pending_approval" && (
                         <>
                             <Button
                                 size="sm"
@@ -403,7 +411,7 @@ export default function BillDetailPage() {
                             </DialogContent>
                         </Dialog>
                     )}
-                    {["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0 && (
+                    {hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0 && (
                         <Button
                             variant="outline"
                             size="sm"
