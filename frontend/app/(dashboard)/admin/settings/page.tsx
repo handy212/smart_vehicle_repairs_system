@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Eye, EyeOff, Image as ImageIcon, Mail, Save, Upload } from "lucide-react";
+import { ArrowLeft, Database, Eye, EyeOff, Image as ImageIcon, Mail, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -26,6 +26,27 @@ const CATEGORIES = [
   { value: "business", label: "Business" },
   { value: "tax", label: "Tax" },
   { value: "maintenance", label: "Maintenance" },
+];
+
+const CLEANUP_MODULES = [
+  "customers",
+  "vehicles",
+  "technicians",
+  "appointments",
+  "workorders",
+  "inspections",
+  "diagnosis",
+  "gatepass",
+  "inventory",
+  "billing",
+  "accounting",
+  "hr",
+  "fixed_assets",
+  "roadside",
+  "subscriptions",
+  "documents",
+  "feedback",
+  "chat",
 ];
 
 const SELECT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
@@ -164,6 +185,10 @@ function imageUrl(value: string) {
   return value.startsWith("/") ? value : `/media/${value}`;
 }
 
+function cleanupLabel(moduleName: string) {
+  return moduleName.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export default function SystemSettingsPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -176,6 +201,9 @@ export default function SystemSettingsPage() {
   const selectedCategory = requestedCategory === "sms" ? "company" : requestedCategory;
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [visibleSecrets, setVisibleSecrets] = useState<Record<number, boolean>>({});
+  const [cleanupModules, setCleanupModules] = useState<string[]>(CLEANUP_MODULES);
+  const [demoConfirm, setDemoConfirm] = useState("");
+  const [permanentConfirm, setPermanentConfirm] = useState("");
 
   useEffect(() => {
     if (requestedCategory === "sms") {
@@ -186,6 +214,12 @@ export default function SystemSettingsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "settings", selectedCategory],
     queryFn: () => adminApi.settings.list({ category: selectedCategory }),
+  });
+
+  const demoStatusQuery = useQuery({
+    queryKey: ["admin", "demo-data", "status", selectedCategory],
+    queryFn: () => adminApi.demoData.status(),
+    enabled: selectedCategory === "maintenance",
   });
 
   const settings = data?.results || [];
@@ -223,6 +257,50 @@ export default function SystemSettingsPage() {
       toast({
         title: "Upload failed",
         description: getApiErrorMessage(error, "Failed to upload image"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cleanupSelectedModules = cleanupModules;
+  const cleanupScopeLabel = cleanupModules.length === CLEANUP_MODULES.length ? "all modules" : `${cleanupModules.length} selected module${cleanupModules.length === 1 ? "" : "s"}`;
+
+  const refreshCleanupStatus = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin", "demo-data"] });
+  };
+
+  const demoPurgeMutation = useMutation({
+    mutationFn: () => adminApi.demoData.purge({ modules: cleanupSelectedModules }),
+    onSuccess: (result) => {
+      setDemoConfirm("");
+      refreshCleanupStatus();
+      toast({ title: "Demo data purged", description: `${result.modules.length} module(s) processed` });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Purge failed",
+        description: getApiErrorMessage(error, "Failed to purge demo data"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const permanentPurgeMutation = useMutation({
+    mutationFn: () =>
+      adminApi.demoData.purge({
+        modules: cleanupSelectedModules,
+        permanent: true,
+        confirmation: "DELETE PERMANENT DATA",
+      }),
+    onSuccess: (result) => {
+      setPermanentConfirm("");
+      refreshCleanupStatus();
+      toast({ title: "Permanent data cleanup complete", description: `${result.modules.length} module(s) processed` });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Cleanup failed",
+        description: getApiErrorMessage(error, "Failed to clean permanent data"),
         variant: "destructive",
       });
     },
@@ -268,6 +346,129 @@ export default function SystemSettingsPage() {
       ...draft,
     }));
     bulkUpdateMutation.mutate(payload);
+  };
+
+  const toggleCleanupModule = (moduleName: string, checked: boolean) => {
+    setCleanupModules((current) => (checked ? [...current, moduleName] : current.filter((item) => item !== moduleName)));
+  };
+
+  const renderMaintenanceCleanup = () => {
+    if (selectedCategory !== "maintenance") return null;
+
+    const demoTotal = (demoStatusQuery.data?.modules || []).reduce((total, moduleSummary) => total + moduleSummary.existing, 0);
+    const busy = demoPurgeMutation.isPending || permanentPurgeMutation.isPending;
+    const canPurgeDemo = demoConfirm.trim().toUpperCase() === "PURGE DEMO DATA";
+    const canPurgePermanent = permanentConfirm.trim().toUpperCase() === "DELETE PERMANENT DATA";
+    const hasCleanupSelection = cleanupModules.length > 0;
+
+    return (
+      <Card className="border-border shadow-sm">
+        <CardContent className="space-y-5 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Data Cleanup</div>
+              <p className="text-xs text-muted-foreground">
+                Purge demo records or permanently clean module data. SMS data is not seeded by the demo loader.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={refreshCleanupStatus} disabled={busy}>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+              Refresh
+            </Button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-border p-3">
+              <div className="text-xs text-muted-foreground">Demo records found</div>
+              <div className="text-xl font-semibold">{demoStatusQuery.isLoading ? "..." : demoTotal}</div>
+            </div>
+            <div className="rounded-md border border-border p-3">
+              <div className="text-xs text-muted-foreground">Cleanup scope</div>
+              <div className="text-xl font-semibold">{cleanupScopeLabel}</div>
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border p-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-foreground">Modules</span>
+              <Button variant="ghost" size="sm" onClick={() => setCleanupModules(CLEANUP_MODULES)} className="h-7 text-xs">
+                Use all
+              </Button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {CLEANUP_MODULES.map((moduleName) => (
+                <label key={moduleName} className="flex items-center gap-2 text-xs text-foreground">
+                  <Checkbox
+                    checked={cleanupModules.includes(moduleName)}
+                    onCheckedChange={(checked) => toggleCleanupModule(moduleName, checked === true)}
+                    disabled={busy}
+                  />
+                  {cleanupLabel(moduleName)}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-md border border-border p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Database className="h-4 w-4" />
+                Demo Cleanup
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Deletes only records carrying the client demo identifiers or marker.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Input
+                  value={demoConfirm}
+                  onChange={(event) => setDemoConfirm(event.target.value)}
+                  placeholder="Type PURGE DEMO DATA"
+                  className="h-8 text-xs"
+                  disabled={busy}
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!canManage || !canPurgeDemo || busy || !hasCleanupSelection}
+                  onClick={() => demoPurgeMutation.mutate()}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  Purge Demo
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-destructive/40 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-destructive">
+                <Trash2 className="h-4 w-4" />
+                Permanent Cleanup
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Deletes real module data for the selected scope. System settings, roles, permissions, and module config are preserved.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Input
+                  value={permanentConfirm}
+                  onChange={(event) => setPermanentConfirm(event.target.value)}
+                  placeholder="Type DELETE PERMANENT DATA"
+                  className="h-8 text-xs"
+                  disabled={busy}
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!canManage || !canPurgePermanent || busy || !hasCleanupSelection}
+                  onClick={() => permanentPurgeMutation.mutate()}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  Clean Data
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderValueControl = (setting: SystemSetting) => {
@@ -478,40 +679,43 @@ export default function SystemSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm">
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between border-b border-border px-4 py-2">
-              <div className="text-sm font-semibold text-foreground">{selectedLabel}</div>
-              <div className="text-xs text-muted-foreground">{data?.count || settings.length} settings</div>
-            </div>
+        <div className="space-y-4">
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                <div className="text-sm font-semibold text-foreground">{selectedLabel}</div>
+                <div className="text-xs text-muted-foreground">{data?.count || settings.length} settings</div>
+              </div>
 
-            {settings.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">No settings found.</div>
-            ) : (
-              <div className="divide-y divide-border">
-                {settings.map((setting) => (
-                  <div key={setting.id} className="grid gap-3 px-4 py-3 md:grid-cols-[240px_1fr_90px]">
-                    <div className="flex min-w-0 items-center">
-                      <div className="truncate text-sm font-medium text-foreground" title={labelFor(setting)}>
-                        {labelFor(setting)}
+              {settings.length === 0 ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">No settings found.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {settings.map((setting) => (
+                    <div key={setting.id} className="grid gap-3 px-4 py-3 md:grid-cols-[240px_1fr_90px]">
+                      <div className="flex min-w-0 items-center">
+                        <div className="truncate text-sm font-medium text-foreground" title={labelFor(setting)}>
+                          {labelFor(setting)}
+                        </div>
+                      </div>
+                      <div>{renderValueControl(setting)}</div>
+                      <div className="flex items-center justify-end gap-2">
+                        <Checkbox
+                          checked={activeFor(setting)}
+                          disabled={!canManage}
+                          onCheckedChange={(checked) => updateDraft(setting, { is_active: Boolean(checked) })}
+                          className="h-4 w-4"
+                        />
+                        <span className="text-xs text-muted-foreground">Active</span>
                       </div>
                     </div>
-                    <div>{renderValueControl(setting)}</div>
-                    <div className="flex items-center justify-end gap-2">
-                      <Checkbox
-                        checked={activeFor(setting)}
-                        disabled={!canManage}
-                        onCheckedChange={(checked) => updateDraft(setting, { is_active: Boolean(checked) })}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-xs text-muted-foreground">Active</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {renderMaintenanceCleanup()}
+        </div>
       </div>
     </div>
   );

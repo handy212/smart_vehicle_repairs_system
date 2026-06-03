@@ -293,6 +293,30 @@ export interface SystemModuleListResponse {
   results: SystemModule[];
 }
 
+export interface DemoDataModuleSummary {
+  module: string;
+  target: number;
+  created: number;
+  existing: number;
+  purged: number;
+  skipped: number;
+  warnings: string[];
+  errors: string[];
+}
+
+export interface DemoDataResponse {
+  action: "loaded" | "purged" | "status";
+  marker: string;
+  modules: DemoDataModuleSummary[];
+}
+
+export interface DemoDataRequest {
+  count?: number;
+  modules?: string[];
+  permanent?: boolean;
+  confirmation?: string;
+}
+
 export const adminApi = {
   // User Management
   users: {
@@ -364,6 +388,26 @@ export const adminApi = {
   dashboardStats: async (): Promise<AdminDashboardStats> => {
     const response = await apiClient.get("/accounts/admin/dashboard-stats/");
     return response.data;
+  },
+
+  demoData: {
+    status: async (params?: DemoDataRequest): Promise<DemoDataResponse> => {
+      const response = await apiClient.get("/accounts/admin/demo-data/status/", {
+        params: {
+          count: params?.count,
+          modules: params?.modules,
+        },
+      });
+      return response.data;
+    },
+    load: async (data?: DemoDataRequest): Promise<DemoDataResponse> => {
+      const response = await apiClient.post("/accounts/admin/demo-data/load/", data || {});
+      return response.data;
+    },
+    purge: async (data?: DemoDataRequest): Promise<DemoDataResponse> => {
+      const response = await apiClient.post("/accounts/admin/demo-data/purge/", data || {});
+      return response.data;
+    },
   },
 
   // System Settings

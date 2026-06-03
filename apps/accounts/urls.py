@@ -10,7 +10,7 @@ from .two_factor_views import TwoFactorViewSet
 from .admin_api_views import (
     SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet,
     EmailTemplateViewSet, SMSTemplateViewSet, admin_dashboard_stats,
-    RoleViewSet, PermissionViewSet, SystemModuleViewSet
+    RoleViewSet, PermissionViewSet, SystemModuleViewSet, DemoDataView
 )
 
 router = DefaultRouter()
@@ -54,5 +54,7 @@ urlpatterns = [
     
     # Admin API
     path('admin/dashboard-stats/', admin_dashboard_stats, name='admin-dashboard-stats'),
+    path('admin/demo-data/status/', DemoDataView.as_view(), name='admin-demo-data-status'),
+    path('admin/demo-data/<str:action_name>/', DemoDataView.as_view(), name='admin-demo-data-action'),
     path('admin/', include(admin_router.urls)),
 ]

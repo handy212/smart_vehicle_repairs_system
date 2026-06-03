@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from apps.accounts.throttles import PublicSettingsRateThrottle
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q, Count
@@ -34,6 +35,56 @@ def is_admin_user(user):
     if not user or not user.is_authenticated:
         return False
     return user_has_permission(user, 'manage_settings')
+
+
+class DemoDataView(APIView):
+    """Admin-only client demo data loader/purger."""
+
+    permission_classes = [IsAuthenticated, HasPermission('manage_settings')]
+
+    def _options(self, request):
+        count = request.data.get('count', 100) if hasattr(request, 'data') else request.query_params.get('count', 100)
+        try:
+            count = int(count)
+        except (TypeError, ValueError):
+            count = 100
+
+        modules = request.data.get('modules') if hasattr(request, 'data') else request.query_params.getlist('modules')
+        if isinstance(modules, str):
+            modules = [modules]
+        if modules is not None and not isinstance(modules, list):
+            modules = None
+        return count, modules
+
+    def get(self, request, action_name=None):
+        from apps.accounts.client_demo_data import ClientDemoDataService
+
+        count = request.query_params.get('count', 100)
+        modules = request.query_params.getlist('modules') or request.query_params.getlist('modules[]') or None
+        try:
+            count = int(count)
+        except (TypeError, ValueError):
+            count = 100
+        return Response(ClientDemoDataService(count=count, user=request.user).status(modules))
+
+    def post(self, request, action_name):
+        from apps.accounts.client_demo_data import ClientDemoDataService
+
+        count, modules = self._options(request)
+        permanent = bool(request.data.get('permanent', False))
+        if permanent and request.data.get('confirmation') != 'DELETE PERMANENT DATA':
+            return Response(
+                {'error': 'Permanent cleanup requires confirmation: DELETE PERMANENT DATA'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        service = ClientDemoDataService(count=count, user=request.user)
+        if action_name == 'load':
+            if permanent:
+                return Response({'error': 'Permanent mode is only supported for purge'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(service.load(modules))
+        if action_name == 'purge':
+            return Response(service.purge(modules, permanent=permanent))
+        return Response({'error': 'Unsupported demo data action'}, status=status.HTTP_404_NOT_FOUND)
 
 
 
