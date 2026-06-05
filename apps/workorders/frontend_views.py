@@ -11,7 +11,10 @@ from django.template.loader import render_to_string
 from decimal import Decimal
 import json
 import csv
+from io import BytesIO
 from datetime import datetime, timedelta
+import openpyxl
+from openpyxl.styles import Alignment, Font, PatternFill
 
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
 
@@ -24,6 +27,269 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.accounts.models import User
 from apps.billing.models import Estimate, EstimateLineItem
+
+
+WORKORDER_EXPORT_HEADERS = [
+    'Date In', 'Work Order Number', 'Registration Number', 'Customer Code',
+    'Customer Name', 'Customer Balance', 'Job Status', 'Phone Number',
+    'Mileage In', 'Job Description', 'Contact Name', 'Received By', 'Needs By',
+    'Payment Method', 'Created By', 'Work Hours', 'Labor Amount',
+    'Parts Amount', 'Sublet Amount', 'Misc Amount', 'Paid Amount',
+    'Tax Amount', 'Date Out', 'Last Note Date', 'Last Note', 'Status Date',
+    'VAT Rate', 'Other Tax Rate', 'User Code', 'Changed Date',
+    'Recommendations', 'Regular Service', 'Region Code', 'Region', 'Follow Up',
+    'Feedback', 'Account To Bill', 'Service Category', 'Invoice Status',
+    'Job Type', 'Approval/Diagnosis Comment', 'Repair By', 'Job Location',
+    'Insurance Provider', 'Next Action By', 'Next Action On', 'Job Notes',
+    'Parts Required', 'Parts Progress', 'Close Date', 'Approval Requested Date',
+    'Approved Date', 'Job Hours', 'Invoice Comment', 'Customer Score',
+    'Approval Status', 'Subcontract Amount', 'Test Drive By',
+    'Quality/Diagnosis Comment', 'Return Reference Number', 'Invoice Date',
+    'Mileage In/Out', 'Make', 'Model',
+]
+
+
+def _export_date(value):
+    if not value:
+        return ''
+    if hasattr(value, 'date') and not isinstance(value, datetime):
+        return value.strftime('%Y-%m-%d')
+    return value.strftime('%Y-%m-%d')
+
+
+def _export_datetime(value):
+    if not value:
+        return ''
+    return value.strftime('%Y-%m-%d %H:%M:%S')
+
+
+def _export_decimal(value):
+    if value is None or value == '':
+        return ''
+    try:
+        return f"{Decimal(str(value)):.2f}"
+    except Exception:
+        return str(value)
+
+
+def _export_bool(value):
+    return 'Y' if value else 'N'
+
+
+def _full_name(user):
+    return user.get_full_name() if user else ''
+
+
+def _customer_name(customer):
+    if not customer:
+        return ''
+    if customer.company_name:
+        return customer.company_name
+    user = getattr(customer, 'user', None)
+    return _full_name(user)
+
+
+def _contact_name(customer):
+    if not customer:
+        return ''
+    return customer.contact_person_name or _full_name(getattr(customer, 'user', None))
+
+
+def _customer_phone(customer):
+    user = getattr(customer, 'user', None) if customer else None
+    return (
+        getattr(user, 'phone', '')
+        or getattr(customer, 'company_phone', '')
+        or getattr(customer, 'alternative_phone', '')
+        or ''
+    )
+
+
+def _payment_method(customer):
+    if not customer or not customer.default_payment_method:
+        return ''
+    return customer.get_default_payment_method_display()
+
+
+def _latest_note(workorder):
+    note = workorder.notes.order_by('-created_at').first()
+    return note.note if note else ''
+
+
+def _latest_note_datetime(workorder):
+    note = workorder.notes.order_by('-created_at').first()
+    return note.created_at if note else None
+
+
+def _parts_required(workorder):
+    return '; '.join(
+        filter(None, workorder.parts.order_by('created_at').values_list('part_name', flat=True))
+    )
+
+
+def _parts_progress(workorder):
+    statuses = list(workorder.parts.order_by('created_at').values_list('status', flat=True))
+    if not statuses:
+        return ''
+
+    counts = {}
+    for status in statuses:
+        counts[status] = counts.get(status, 0) + 1
+    return '; '.join(f'{status}:{count}' for status, count in counts.items())
+
+
+def _recommendations_summary(workorder):
+    try:
+        diagnosis = workorder.diagnosis
+    except Diagnosis.DoesNotExist:
+        diagnosis = None
+    if not diagnosis:
+        return ''
+    descriptions = diagnosis.repair_recommendations.order_by('created_at').values_list('description', flat=True)
+    return '; '.join(filter(None, descriptions))
+
+
+def _approval_summary(workorder):
+    if workorder.approved_by_customer:
+        method = workorder.get_approval_method_display() if workorder.approval_method else 'Approved'
+        return method
+    if workorder.requires_approval:
+        return 'Pending'
+    return 'Not Required'
+
+
+def _resolved_workorder_labor_hours(workorder):
+    actual_hours = getattr(workorder, 'actual_labor_hours', None)
+    if actual_hours and Decimal(str(actual_hours)) > 0:
+        return actual_hours
+    totals = workorder.time_logs.aggregate(total=Sum('duration_hours'))
+    return totals['total'] or Decimal('0')
+
+
+def _resolved_workorder_labor_amount(workorder):
+    actual_cost = getattr(workorder, 'actual_labor_cost', None)
+    if actual_cost and Decimal(str(actual_cost)) > 0:
+        return actual_cost
+    totals = workorder.time_logs.aggregate(total=Sum('labor_cost'))
+    return totals['total'] or Decimal('0')
+
+
+def _resolved_workorder_parts_amount(workorder):
+    actual_parts = getattr(workorder, 'actual_parts_cost', None)
+    if actual_parts and Decimal(str(actual_parts)) > 0:
+        return actual_parts
+    totals = workorder.parts.aggregate(total=Sum('selling_price'))
+    return totals['total'] or Decimal('0')
+
+
+def _primary_invoice_for_export(workorder):
+    try:
+        from apps.billing.work_order_invoices import get_primary_invoice
+    except ImportError:
+        return None
+    return get_primary_invoice(workorder)
+
+
+def _tax_rates_for_export():
+    try:
+        from apps.billing.tax_service import TaxService
+    except ImportError:
+        return '', ''
+
+    config = TaxService.get_config()
+    tax1 = _export_decimal(config.vat_rate)
+    tax2 = _export_decimal(config.nhil_rate + config.getfund_rate)
+    return tax1, tax2
+
+
+def _workorder_export_row(workorder, tax1_rate='', tax2_rate=''):
+    invoice = _primary_invoice_for_export(workorder)
+    customer = getattr(workorder, 'customer', None)
+    vehicle = getattr(workorder, 'vehicle', None)
+    branch = getattr(workorder, 'branch', None)
+    try:
+        triage = workorder.triage_form
+    except WorkOrder.triage_form.RelatedObjectDoesNotExist:
+        triage = None
+    latest_note_at = _latest_note_datetime(workorder)
+    latest_note_text = _latest_note(workorder)
+    recommendations = _recommendations_summary(workorder)
+    close_date = workorder.updated_at if workorder.status == 'closed' else workorder.completed_at
+    labor_hours = _resolved_workorder_labor_hours(workorder)
+    labor_amount = _resolved_workorder_labor_amount(workorder)
+    parts_amount = _resolved_workorder_parts_amount(workorder)
+    misc_amount = Decimal('0')
+    if invoice:
+        misc_amount = (invoice.shop_supplies_fee or Decimal('0')) + (invoice.environmental_fee or Decimal('0'))
+
+    row = {
+        'Date In': _export_datetime(workorder.created_at),
+        'Work Order Number': workorder.work_order_number,
+        'Registration Number': getattr(vehicle, 'license_plate', '') or '',
+        'Customer Code': getattr(customer, 'customer_number', '') or '',
+        'Customer Name': _customer_name(customer),
+        'Customer Balance': _export_decimal(invoice.amount_due if invoice else getattr(customer, 'current_balance', '')),
+        'Job Status': workorder.get_status_display(),
+        'Phone Number': _customer_phone(customer),
+        'Mileage In': workorder.odometer_in or '',
+        'Job Description': workorder.customer_concerns or '',
+        'Contact Name': _contact_name(customer),
+        'Received By': _full_name(workorder.created_by),
+        'Needs By': _export_datetime(workorder.estimated_completion),
+        'Payment Method': _payment_method(customer),
+        'Created By': _full_name(workorder.created_by),
+        'Work Hours': _export_decimal(labor_hours),
+        'Labor Amount': _export_decimal(labor_amount),
+        'Parts Amount': _export_decimal(parts_amount),
+        'Sublet Amount': _export_decimal(invoice.sublet_subtotal if invoice else ''),
+        'Misc Amount': _export_decimal(misc_amount),
+        'Paid Amount': _export_decimal(invoice.amount_paid if invoice else ''),
+        'Tax Amount': _export_decimal(invoice.tax_amount if invoice else ''),
+        'Date Out': _export_datetime(workorder.completed_at),
+        'Last Note Date': _export_datetime(latest_note_at),
+        'Last Note': latest_note_text,
+        'Status Date': _export_datetime(workorder.updated_at),
+        'VAT Rate': tax1_rate,
+        'Other Tax Rate': tax2_rate,
+        'User Code': getattr(workorder.created_by, 'employee_id', '') or getattr(workorder.created_by, 'username', '') or '',
+        'Changed Date': _export_datetime(workorder.updated_at),
+        'Recommendations': recommendations,
+        'Regular Service': _export_bool(workorder.maintenance_type == 'routine'),
+        'Region Code': getattr(branch, 'code', '') or '',
+        'Region': getattr(branch, 'name', '') or '',
+        'Follow Up': _export_bool(bool(getattr(vehicle, 'next_service_due_date', None) or getattr(vehicle, 'next_service_due_mileage', None))),
+        'Feedback': workorder.customer_feedback or '',
+        'Account To Bill': _export_bool(getattr(customer, 'customer_type', '') in {'business', 'fleet'}) if customer else '',
+        'Service Category': getattr(getattr(workorder, 'service_type', None), 'name', '') or workorder.get_maintenance_type_display(),
+        'Invoice Status': invoice.get_status_display() if invoice else '',
+        'Job Type': workorder.get_maintenance_type_display(),
+        'Approval/Diagnosis Comment': workorder.approval_notes or workorder.diagnosis_notes or '',
+        'Repair By': _full_name(workorder.lead_technician),
+        'Job Location': getattr(branch, 'full_address', '') or getattr(branch, 'name', '') or '',
+        'Insurance Provider': getattr(customer, 'insurance_provider', '') or '',
+        'Next Action By': _full_name(workorder.service_coordinator),
+        'Next Action On': _export_date(getattr(vehicle, 'next_service_due_date', None)),
+        'Job Notes': workorder.special_instructions or '',
+        'Parts Required': _parts_required(workorder),
+        'Parts Progress': _parts_progress(workorder),
+        'Close Date': _export_datetime(close_date),
+        'Approval Requested Date': _export_datetime(workorder.approval_requested_at),
+        'Approved Date': _export_datetime(workorder.approved_at),
+        'Job Hours': _export_decimal(labor_hours),
+        'Invoice Comment': (invoice.customer_notes or invoice.notes) if invoice else '',
+        'Customer Score': workorder.customer_rating or '',
+        'Approval Status': _approval_summary(workorder),
+        'Subcontract Amount': _export_decimal(invoice.sublet_subtotal if invoice else ''),
+        'Test Drive By': _full_name(getattr(triage, 'performed_by', None)),
+        'Quality/Diagnosis Comment': workorder.quality_check_notes or workorder.diagnosis_notes or '',
+        'Return Reference Number': getattr(workorder.related_work_order, 'work_order_number', '') if workorder.related_work_order else '',
+        'Invoice Date': _export_date(getattr(invoice, 'invoice_date', None)),
+        'Mileage In/Out': f"{workorder.odometer_in or ''}/{workorder.odometer_out or ''}",
+        'Make': getattr(vehicle, 'make', '') or '',
+        'Model': getattr(vehicle, 'model', '') or '',
+    }
+
+    return [row.get(header, '') for header in WORKORDER_EXPORT_HEADERS]
 
 
 def _get_workorder_or_404(request, queryset=None, **lookup):
@@ -509,19 +775,25 @@ def technician_time_clock(request, pk):
 @login_required
 def workorder_export_view(request):
     """
-    Export work orders to CSV or PDF format
+    Export work orders to Excel or CSV format
     """
-    format_type = request.GET.get('format', 'csv').lower()
+    format_type = request.GET.get('format', 'xlsx').lower()
     
-    # Get work orders with select_related for efficiency
     workorders = WorkOrder.objects.select_related(
-        'customer', 'vehicle', 'primary_technician', 'branch'
-    ).annotate(
-        completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
-        task_count=Count('tasks'),
-        total_parts_quantity=Sum('parts__quantity'),
-        total_hours=Sum('time_logs__duration_hours'),
-        total_labor_cost=Sum('time_logs__labor_cost')
+        'customer__user',
+        'vehicle',
+        'primary_technician',
+        'branch',
+        'created_by',
+        'service_coordinator',
+        'service_type',
+        'triage_form__performed_by',
+        'diagnosis',
+    ).prefetch_related(
+        'notes',
+        'parts',
+        'invoices',
+        'diagnosis__repair_recommendations',
     ).all()
     
     # Filter by active branch from session
@@ -545,10 +817,53 @@ def workorder_export_view(request):
     if date_to:
         workorders = workorders.filter(created_at__date__lte=date_to)
     
+    if format_type == 'xlsx':
+        return export_workorders_excel(workorders)
     if format_type == 'csv':
         return export_workorders_csv(workorders)
     else:
-        return JsonResponse({'error': 'Invalid format. Use csv.'}, status=400)
+        return JsonResponse({'error': 'Invalid format. Use xlsx or csv.'}, status=400)
+
+
+def export_workorders_excel(workorders):
+    """Export work orders to Excel format."""
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = 'Work Orders'
+
+    header_fill = PatternFill(fill_type='solid', fgColor='1F4E78')
+    header_font = Font(color='FFFFFF', bold=True)
+    header_alignment = Alignment(horizontal='center', vertical='center')
+
+    for index, header in enumerate(WORKORDER_EXPORT_HEADERS, start=1):
+        cell = worksheet.cell(row=1, column=index, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+
+    tax1_rate, tax2_rate = _tax_rates_for_export()
+    for row_index, workorder in enumerate(workorders, start=2):
+        row_values = _workorder_export_row(workorder, tax1_rate=tax1_rate, tax2_rate=tax2_rate)
+        for column_index, value in enumerate(row_values, start=1):
+            worksheet.cell(row=row_index, column=column_index, value=value)
+
+    worksheet.freeze_panes = 'A2'
+    for column_cells in worksheet.columns:
+        values = [str(cell.value or '') for cell in column_cells[:50]]
+        max_length = max((len(value) for value in values), default=0)
+        adjusted_width = min(max(max_length + 2, 12), 40)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = adjusted_width
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="workorders_export.xlsx"'
+    return response
 
 
 def export_workorders_csv(workorders):
@@ -557,47 +872,13 @@ def export_workorders_csv(workorders):
     response['Content-Disposition'] = 'attachment; filename="workorders_export.csv"'
     
     writer = csv.writer(response)
-    
-    # Write header
-    writer.writerow([
-        'Work Order #',
-        'Status',
-        'Priority',
-        'Customer',
-        'Vehicle',
-        'Primary Technician',
-        'Created Date',
-        'Started Date',
-        'Completed Date',
-        'Customer Concerns',
-        'Estimated Total',
-        'Actual Total',
-        'Task Count',
-        'Parts Count'
-    ])
-    
-    # Write data
+
+    writer.writerow(WORKORDER_EXPORT_HEADERS)
+
+    tax1_rate, tax2_rate = _tax_rates_for_export()
+
     for wo in workorders:
-        customer_name = f"{wo.customer.user.first_name} {wo.customer.user.last_name}" if wo.customer else "N/A"
-        vehicle_info = f"{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}" if wo.vehicle else "N/A"
-        tech_name = f"{wo.primary_technician.first_name} {wo.primary_technician.last_name}" if wo.primary_technician else "N/A"
-        
-        writer.writerow([
-            wo.work_order_number,
-            wo.get_status_display(),
-            wo.get_priority_display(),
-            customer_name,
-            vehicle_info,
-            tech_name,
-            wo.created_at.strftime('%Y-%m-%d %H:%M') if wo.created_at else '',
-            wo.started_at.strftime('%Y-%m-%d %H:%M') if wo.started_at else '',
-            wo.completed_at.strftime('%Y-%m-%d %H:%M') if wo.completed_at else '',
-            wo.customer_concerns or '',
-            wo.estimated_total or '',
-            wo.actual_total or '',
-            wo.tasks.count(),
-            wo.parts.count()
-        ])
+        writer.writerow(_workorder_export_row(wo, tax1_rate=tax1_rate, tax2_rate=tax2_rate))
     
     return response
 

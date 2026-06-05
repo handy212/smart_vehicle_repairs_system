@@ -7,8 +7,15 @@ from rest_framework.test import APIClient
 from apps.accounts.client_demo_data import ClientDemoDataService, DEMO_MARKER
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
-from apps.billing.models import Invoice
+from apps.billing.models import Invoice, Payment
+from apps.diagnosis.models import DiagnosisFinding, RepairRecommendation
+from apps.documents.models import Document
+from apps.hr.models import Attendance, EmployeeTraining
+from apps.inspections.models import InspectionResult
 from apps.notifications_app.models import Notification, NotificationLog
+from apps.quickbooks_online.models import QBOConfig, QBOSyncLog
+from apps.reporting.models import ReportSchedule, SavedReport
+from apps.workorders.models import ServiceTask, TechnicianTimeLog, WorkOrder, WorkOrderNote, WorkOrderPart
 
 
 User = get_user_model()
@@ -59,6 +66,61 @@ class ClientDemoDataServiceTests(TestCase):
     def test_management_command_status_runs(self):
         call_command("seed_client_demo_data", count=2, status=True, verbosity=0)
 
+    def test_status_includes_backend_module_metadata(self):
+        result = ClientDemoDataService(count=2).status()
+        modules = {item["module"]: item for item in result["modules"]}
+
+        for module in ["accounts", "branches", "documents", "notifications_app", "reporting", "quickbooks_online", "portal"]:
+            self.assertIn(module, modules)
+            self.assertTrue(modules[module]["label"])
+            self.assertIn("installed", modules[module])
+            self.assertIn("seedable", modules[module])
+
+    def test_full_load_creates_seedable_module_data(self):
+        result = ClientDemoDataService(count=2).load()
+
+        self.assertFalse(any(item["errors"] for item in result["modules"]))
+        self.assertEqual(Document.objects.filter(document_number__startswith="CDDOC").count(), 2)
+        self.assertEqual(Notification.objects.filter(message__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(ReportSchedule.objects.filter(parameters__marker=DEMO_MARKER).count(), 1)
+        self.assertGreaterEqual(SavedReport.objects.filter(parameters__marker=DEMO_MARKER).count(), 1)
+        self.assertEqual(QBOConfig.objects.filter(client_id="client-demo-qbo").count(), 1)
+        self.assertEqual(QBOSyncLog.objects.filter(error_message=DEMO_MARKER).count(), 1)
+
+    def test_refresh_rebuilds_demo_only_and_preserves_real_data(self):
+        real_user = User.objects.create_user(
+            username="real_refresh_customer",
+            email="real.refresh@example.com",
+            password="test123",
+            role="customer",
+        )
+        real_customer = Customer.objects.create(user=real_user, customer_number="REAL-REFRESH")
+
+        ClientDemoDataService(count=3).load(["customers", "vehicles", "workorders", "billing", "documents"])
+        result = ClientDemoDataService(count=2).refresh(["customers", "vehicles", "workorders", "billing", "documents"])
+
+        self.assertFalse(any(item["errors"] for item in result["modules"]))
+        self.assertEqual(Customer.objects.filter(user__email__startswith="client.demo.customer").count(), 2)
+        self.assertEqual(Vehicle.objects.filter(notes__contains=DEMO_MARKER).count(), 2)
+        self.assertEqual(WorkOrder.objects.filter(customer_concerns__contains=DEMO_MARKER).count(), 2)
+        self.assertEqual(Invoice.objects.filter(description__contains=DEMO_MARKER).count(), 2)
+        self.assertEqual(Document.objects.filter(document_number__startswith="CDDOC").count(), 2)
+        self.assertTrue(Customer.objects.filter(pk=real_customer.pk).exists())
+
+    def test_repair_lifecycle_has_dependent_records(self):
+        ClientDemoDataService(count=2).refresh()
+
+        self.assertGreaterEqual(ServiceTask.objects.filter(description__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(WorkOrderNote.objects.filter(note__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(WorkOrderPart.objects.filter(description__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(TechnicianTimeLog.objects.filter(description__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(DiagnosisFinding.objects.filter(description__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(RepairRecommendation.objects.filter(description__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(InspectionResult.objects.filter(notes__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(Payment.objects.filter(notes=DEMO_MARKER).count(), 1)
+        self.assertGreaterEqual(Attendance.objects.filter(notes__contains=DEMO_MARKER).count(), 2)
+        self.assertGreaterEqual(EmployeeTraining.objects.filter(notes__contains=DEMO_MARKER).count(), 2)
+
 
 class ClientDemoDataAPITests(TestCase):
     def setUp(self):
@@ -106,6 +168,20 @@ class ClientDemoDataAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(any(item["errors"] for item in response.data["modules"]))
         self.assertEqual(Vehicle.objects.filter(notes__contains=DEMO_MARKER).count(), 0)
+
+    def test_admin_can_refresh_demo_data(self):
+        self.client.force_authenticate(self.admin)
+
+        response = self.client.post(
+            "/api/accounts/admin/demo-data/refresh/",
+            {"count": 2, "modules": ["customers", "vehicles", "documents"]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["action"], "refreshed")
+        self.assertFalse(any(item["errors"] for item in response.data["modules"]))
+        self.assertEqual(Document.objects.filter(document_number__startswith="CDDOC").count(), 2)
 
     def test_permanent_cleanup_requires_confirmation(self):
         self.client.force_authenticate(self.admin)

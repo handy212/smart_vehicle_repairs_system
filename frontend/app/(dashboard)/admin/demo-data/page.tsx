@@ -4,33 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Database, RefreshCw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { adminApi, DemoDataModuleSummary, DemoDataResponse } from "@/lib/api/admin";
+import { adminApi, DemoDataModuleSummary } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/lib/hooks/useToast";
-
-const MODULES = [
-  "customers",
-  "vehicles",
-  "technicians",
-  "appointments",
-  "workorders",
-  "inspections",
-  "diagnosis",
-  "gatepass",
-  "inventory",
-  "billing",
-  "accounting",
-  "hr",
-  "fixed_assets",
-  "roadside",
-  "subscriptions",
-  "documents",
-  "feedback",
-  "chat",
-];
 
 function labelFor(moduleName: string) {
   return moduleName.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -45,17 +24,22 @@ export default function DemoDataPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [count, setCount] = useState(100);
-  const [selected, setSelected] = useState<string[]>(MODULES);
+  const [selected, setSelected] = useState<string[] | null>(null);
   const [confirmText, setConfirmText] = useState("");
-  const [loadingModule, setLoadingModule] = useState<string | null>(null);
-
-  const selectedModules = selected;
-  const selectedLabel = selected.length === MODULES.length ? "all modules" : `${selected.length} selected`;
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "demo-data", "status", count],
     queryFn: () => adminApi.demoData.status({ count }),
   });
+
+  const availableModules = useMemo(
+    () => (data?.modules || []).filter((row) => row.installed && row.seedable),
+    [data]
+  );
+  const availableModuleKeys = useMemo(() => availableModules.map((row) => row.module), [availableModules]);
+  const selectedModules = (selected ?? availableModuleKeys).filter((moduleName) => availableModuleKeys.includes(moduleName));
+  const selectedLabel =
+    selectedModules.length === availableModuleKeys.length ? "all modules" : `${selectedModules.length} selected`;
 
   const totals = useMemo(() => {
     const rows = data?.modules || [];
@@ -72,27 +56,24 @@ export default function DemoDataPage() {
   const refreshStatus = () => queryClient.invalidateQueries({ queryKey: ["admin", "demo-data"] });
 
   const loadMutation = useMutation({
-    mutationFn: async () => {
-      const modulesToLoad = selectedModules;
-      const responses: DemoDataResponse[] = [];
-      for (const moduleName of modulesToLoad) {
-        setLoadingModule(moduleName);
-        responses.push(await adminApi.demoData.load({ count, modules: [moduleName] }));
-      }
-      setLoadingModule(null);
-      return {
-        action: "loaded" as const,
-        marker: responses[0]?.marker || "[CLIENT_DEMO_DATA]",
-        modules: responses.flatMap((response) => response.modules),
-      };
-    },
+    mutationFn: () => adminApi.demoData.load({ count, modules: selectedModules }),
     onSuccess: (result) => {
       refreshStatus();
       toast({ title: "Demo data loaded", description: `${result.modules.length} module(s) processed.` });
     },
     onError: (error: unknown) => {
-      setLoadingModule(null);
       toast({ title: "Load failed", description: getApiErrorMessage(error, "Unable to load demo data"), variant: "destructive" });
+    },
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: () => adminApi.demoData.refresh({ count, modules: selectedModules }),
+    onSuccess: (result) => {
+      refreshStatus();
+      toast({ title: "Demo data refreshed", description: `${result.modules.length} module(s) rebuilt.` });
+    },
+    onError: (error: unknown) => {
+      toast({ title: "Refresh failed", description: getApiErrorMessage(error, "Unable to refresh demo data"), variant: "destructive" });
     },
   });
 
@@ -109,11 +90,14 @@ export default function DemoDataPage() {
   });
 
   const toggleModule = (moduleName: string, checked: boolean) => {
-    setSelected((current) => (checked ? [...current, moduleName] : current.filter((item) => item !== moduleName)));
+    setSelected((current) => {
+      const base = current ?? availableModuleKeys;
+      return checked ? [...base, moduleName] : base.filter((item) => item !== moduleName);
+    });
   };
 
-  const busy = loadMutation.isPending || purgeMutation.isPending;
-  const hasModuleSelection = selected.length > 0;
+  const busy = loadMutation.isPending || refreshMutation.isPending || purgeMutation.isPending;
+  const hasModuleSelection = selectedModules.length > 0;
   const purgeEnabled = confirmText.trim().toUpperCase() === "PURGE DEMO DATA";
 
   return (
@@ -150,15 +134,15 @@ export default function DemoDataPage() {
             <div className="rounded-md border p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <span className="text-sm font-medium">Modules</span>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(MODULES)}>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(availableModuleKeys)}>
                   Use all
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {MODULES.map((moduleName) => (
-                  <label key={moduleName} className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={selected.includes(moduleName)} onCheckedChange={(checked) => toggleModule(moduleName, checked === true)} />
-                    {labelFor(moduleName)}
+                {availableModules.map((row) => (
+                  <label key={row.module} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedModules.includes(row.module)} onCheckedChange={(checked) => toggleModule(row.module, checked === true)} />
+                    {row.label || labelFor(row.module)}
                   </label>
                 ))}
               </div>
@@ -168,7 +152,11 @@ export default function DemoDataPage() {
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button onClick={() => loadMutation.mutate()} disabled={busy || !hasModuleSelection}>
               <Database className="mr-2 h-4 w-4" />
-              {loadingModule ? `Loading ${labelFor(loadingModule)}` : `Load ${selectedLabel}`}
+              Load {selectedLabel}
+            </Button>
+            <Button variant="secondary" onClick={() => refreshMutation.mutate()} disabled={busy || !hasModuleSelection}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh {selectedLabel}
             </Button>
           </div>
         </CardContent>
@@ -225,7 +213,7 @@ export default function DemoDataPage() {
               <tbody>
                 {(data?.modules || []).map((row: DemoDataModuleSummary) => (
                   <tr key={row.module} className="border-b">
-                    <td className="py-2 pr-4 font-medium">{labelFor(row.module)}</td>
+                    <td className="py-2 pr-4 font-medium">{row.label || labelFor(row.module)}</td>
                     <td className="py-2 pr-4">{row.target}</td>
                     <td className="py-2 pr-4">{row.existing}</td>
                     <td className="py-2 pr-4">{row.warnings.length}</td>

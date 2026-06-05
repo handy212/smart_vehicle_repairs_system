@@ -28,6 +28,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // Keep trailing slashes on proxied /api/* POSTs (Django requires them; default redirect drops POST body).
   skipTrailingSlashRedirect: true,
+  // Allow the dev server to accept 127.0.0.1 origin requests in addition to localhost.
+  // This fixes blocked HMR/dev resource access when browsing via 127.0.0.1.
+  allowedDevOrigins: ['127.0.0.1'],
   // Silence Turbopack/webpack config conflict (Next.js 16 defaults to Turbopack)
   turbopack: {},
   // Ensure Next doesn't infer the workspace root from a different lockfile when deployed

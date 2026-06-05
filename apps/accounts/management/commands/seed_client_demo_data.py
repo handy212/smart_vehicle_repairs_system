@@ -24,6 +24,11 @@ class Command(BaseCommand):
             help="Purge demo records instead of loading them.",
         )
         parser.add_argument(
+            "--refresh",
+            action="store_true",
+            help="Purge demo records and reload a clean demo dataset.",
+        )
+        parser.add_argument(
             "--permanent",
             action="store_true",
             help="With --purge, delete real module data instead of demo-marked records only.",
@@ -50,6 +55,10 @@ class Command(BaseCommand):
 
         if options["status"]:
             result = service.status(modules)
+        elif options["refresh"]:
+            if options["permanent"]:
+                raise SystemExit("--refresh cannot be combined with --permanent")
+            result = service.refresh(modules)
         elif options["purge"]:
             if options["permanent"] and not options["confirm_permanent"]:
                 raise SystemExit("--purge --permanent requires --confirm-permanent")

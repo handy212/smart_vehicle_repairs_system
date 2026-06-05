@@ -154,6 +154,21 @@ export const workordersApi = {
     return response.data;
   },
 
+  exportExcel: async (params?: {
+    status?: string;
+    priority?: string;
+    search?: string;
+    created_at__gte?: string;
+    created_at__lte?: string;
+    ordering?: string;
+  }): Promise<Blob> => {
+    const response = await apiClient.get("/workorders/work-orders/export/", {
+      params: { ...params, export_format: "xlsx" },
+      responseType: "blob",
+    });
+    return response.data;
+  },
+
   dashboardStats: async (): Promise<{
     total_workorders: number;
     in_progress: number;

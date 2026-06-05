@@ -82,6 +82,10 @@ class DemoDataView(APIView):
             if permanent:
                 return Response({'error': 'Permanent mode is only supported for purge'}, status=status.HTTP_400_BAD_REQUEST)
             return Response(service.load(modules))
+        if action_name == 'refresh':
+            if permanent:
+                return Response({'error': 'Permanent mode is only supported for purge'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(service.refresh(modules))
         if action_name == 'purge':
             return Response(service.purge(modules, permanent=permanent))
         return Response({'error': 'Unsupported demo data action'}, status=status.HTTP_404_NOT_FOUND)

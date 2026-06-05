@@ -295,6 +295,9 @@ export interface SystemModuleListResponse {
 
 export interface DemoDataModuleSummary {
   module: string;
+  label: string;
+  installed: boolean;
+  seedable: boolean;
   target: number;
   created: number;
   existing: number;
@@ -305,7 +308,7 @@ export interface DemoDataModuleSummary {
 }
 
 export interface DemoDataResponse {
-  action: "loaded" | "purged" | "status";
+  action: "loaded" | "purged" | "refreshed" | "status";
   marker: string;
   modules: DemoDataModuleSummary[];
 }
@@ -406,6 +409,10 @@ export const adminApi = {
     },
     purge: async (data?: DemoDataRequest): Promise<DemoDataResponse> => {
       const response = await apiClient.post("/accounts/admin/demo-data/purge/", data || {});
+      return response.data;
+    },
+    refresh: async (data?: DemoDataRequest): Promise<DemoDataResponse> => {
+      const response = await apiClient.post("/accounts/admin/demo-data/refresh/", data || {});
       return response.data;
     },
   },

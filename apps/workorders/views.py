@@ -118,6 +118,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
 
     def get_permissions(self):
         """Return appropriate permissions based on action and HTTP method."""
+        if self.action == 'export':
+            return workorder_module_permissions() + [HasPermission('export_workorders')()]
         if self.action in self.WORKORDER_READ_ACTIONS:
             return workorder_read_permissions()
         if self.action == 'create':
@@ -305,6 +307,41 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             import traceback
             logger.error(traceback.format_exc())
             raise
+
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        """Export filtered work orders using the clean supported column layout."""
+        queryset = self.filter_queryset(self.get_queryset()).select_related(
+            'diagnosis',
+            'triage_form__performed_by',
+        ).prefetch_related(
+            'diagnosis__repair_recommendations',
+        )
+
+        date_from = request.query_params.get('created_at__gte') or request.query_params.get('date_from')
+        date_to = request.query_params.get('created_at__lte') or request.query_params.get('date_to')
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+
+        export_format = (
+            request.query_params.get('export_format')
+            or request.query_params.get('file_format')
+            or request.query_params.get('format')
+            or 'xlsx'
+        ).lower()
+        from apps.workorders.frontend_views import export_workorders_csv, export_workorders_excel
+
+        if export_format == 'csv':
+            return export_workorders_csv(queryset)
+        if export_format == 'xlsx':
+            return export_workorders_excel(queryset)
+
+        return Response(
+            {'error': 'Invalid format. Use xlsx or csv.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     @action(detail=True, methods=['post'])
     def rate_service(self, request, pk=None):

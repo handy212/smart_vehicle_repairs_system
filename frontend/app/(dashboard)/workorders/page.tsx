@@ -1,5 +1,6 @@
 "use client";
 
+import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
 import { serviceTaskTypesApi, type ServiceTaskType } from "@/lib/api/workorder-tasks";
@@ -16,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
-import { exportToCSV, exportToPDF } from "@/lib/utils/export";
+import { exportToPDF } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -271,7 +272,7 @@ export default function WorkOrdersPage() {
     });
   };
 
-  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
+  const handleExport = async (format: "xlsx" | "pdf" = "xlsx") => {
     if (!data?.results || data.results.length === 0) {
       toast({
         title: "No Data",
@@ -281,21 +282,57 @@ export default function WorkOrdersPage() {
       return;
     }
 
-    (format === "pdf" ? exportToPDF : exportToCSV)(
-      data.results,
-      "workorders",
-      [
-        { key: "work_order_number", label: "Work Order Number" },
-        { key: "customer_name", label: "Customer" },
-        { key: "vehicle_info", label: "Vehicle" },
-        { key: "status", label: "Status" },
-        { key: "priority", label: "Priority" },
-        { key: "total_cost", label: "Invoice Total" },
-        { key: "created_at", label: "Created Date" },
-      ]
-    );
+    if (format === "pdf") {
+      exportToPDF(
+        data.results,
+        "workorders",
+        [
+          { key: "work_order_number", label: "Work Order Number" },
+          { key: "customer_name", label: "Customer" },
+          { key: "vehicle_info", label: "Vehicle" },
+          { key: "status", label: "Status" },
+          { key: "priority", label: "Priority" },
+          { key: "total_cost", label: "Invoice Total" },
+          { key: "created_at", label: "Created Date" },
+        ]
+      );
+      toast({ title: "Success", description: "Work orders exported successfully" });
+      return;
+    }
 
-    toast({ title: "Success", description: "Work orders exported successfully" });
+    try {
+      const ordering = sortConfig
+        ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
+        : undefined;
+      const blob = await workordersApi.exportExcel({
+        search: debouncedSearch || undefined,
+        status:
+          advancedFilters.status || statusGroupFilter || groupedStatusFilter,
+        priority: advancedFilters.priority || undefined,
+        created_at__gte: advancedFilters.created_at_from || undefined,
+        created_at__lte: advancedFilters.created_at_to || undefined,
+        ordering,
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "workorders_export.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "Success", description: "Work orders exported successfully" });
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.detail
+        : undefined;
+      toast({
+        title: "Export failed",
+        description: message || "Failed to export work orders",
+        variant: "destructive",
+      });
+    }
   };
 
   const getPriorityVariant = (priority: string) => {
