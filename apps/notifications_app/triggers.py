@@ -248,16 +248,21 @@ Please contact us to reschedule.'''
         )
         self.service.send_notification(notification)
     
-    def appointment_reminder(self, appointment):
+    def appointment_reminder(self, appointment, channel='email'):
         """Send appointment reminder (to be called by scheduled task)"""
         if not appointment.customer.user:
             return
-        
-        template = self._get_template('appointment_reminder', 'email')
+
+        channel = (channel or 'email').lower()
+        if channel not in ['email', 'sms', 'push']:
+            channel = 'email'
+
+        template = self._get_template('appointment_reminder', channel)
         customer_name = self._build_customer_name(appointment.customer)
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
         technician = appointment.assigned_technicians.first()
         technician_name = technician.get_full_name() if technician else "TBD"
+        service_description = appointment.customer_concerns or "General Service"
         
         # Build context
         context = self._get_default_context()
@@ -268,7 +273,7 @@ Please contact us to reschedule.'''
             'appointment_time': str(appointment.appointment_time),
             'vehicle': vehicle_display,
             'vehicle_display': vehicle_display,
-            'service_description': appointment.service_description or "General Service",
+            'service_description': service_description,
             'technician_name': technician_name,
         })
         
@@ -279,11 +284,20 @@ Please contact us to reschedule.'''
         message = f'Reminder: You have an appointment on {appointment.appointment_date} at {appointment.appointment_time}'
         if template and template.body:
             message = self.service._render_template(template.body, context)
+
+        if channel == 'sms':
+            message = (
+                f"Appointment Reminder: {appointment.appointment_number} on "
+                f"{appointment.appointment_date} at {appointment.appointment_time}. "
+                f"Service: {service_description}. - {self._get_company_name()}"
+            )
+            if len(message) > 160:
+                message = message[:157] + "..."
         
         notification = Notification.objects.create(
             recipient=appointment.customer.user,
             notification_type='appointment',
-            channel='email',
+            channel=channel,
             priority='high',
             template=template,
             title=title,
@@ -1113,12 +1127,16 @@ Thank you for your business!'''
             from apps.billing.models import Invoice as _Invoice
             _Invoice.objects.filter(pk=invoice.pk).update(sent_at=tz.now())
 
-    def invoice_due_soon(self, invoice, days_until_due):
+    def invoice_due_soon(self, invoice, days_until_due, channel='email'):
         """Remind customer that invoice is due soon"""
         if not invoice.customer.user:
             return
         
-        template = self._get_template('invoice_due', 'email')
+        channel = (channel or 'email').lower()
+        if channel not in ['email', 'sms']:
+            channel = 'email'
+
+        template = self._get_template('invoice_due', channel)
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         
@@ -1126,7 +1144,7 @@ Thank you for your business!'''
             'invoice_id': invoice.id,
             'invoice_number': invoice.invoice_number,
             'days_until_due': str(days_until_due),
-            'balance_due': str(invoice.balance_due or invoice.total),
+            'balance_due': str(invoice.amount_due or invoice.total),
             'due_date': str(invoice.due_date),
             'customer_name': customer_name,
             'vehicle_display': vehicle_info,
@@ -1150,11 +1168,21 @@ Due Date: {invoice.due_date} ({days_until_due} days)
 Please remit payment to avoid late fees.'''
         if template and template.body:
             message = self.service._render_template(template.body, context)
+
+        if channel == 'sms':
+            message = (
+                f"Invoice {invoice.invoice_number} due in {days_until_due} days. "
+                f"Amount due: {context['balance_due_display']}. "
+                f"Due date: {invoice.due_date}. "
+                f"Pay: {context['payment_link']}"
+            )
+            if len(message) > 160:
+                message = message[:157] + "..."
         
         notification = Notification.objects.create(
             recipient=invoice.customer.user,
             notification_type='invoice',
-            channel='email',
+            channel=channel,
             priority='high',
             template=template,
             title=title,
@@ -1165,12 +1193,16 @@ Please remit payment to avoid late fees.'''
         )
         self.service.send_notification(notification)
     
-    def invoice_overdue(self, invoice):
+    def invoice_overdue(self, invoice, channel='email'):
         """Notify customer that invoice is overdue"""
         if not invoice.customer.user:
             return
         
-        template = self._get_template('invoice_overdue', 'email')
+        channel = (channel or 'email').lower()
+        if channel not in ['email', 'sms']:
+            channel = 'email'
+
+        template = self._get_template('invoice_overdue', channel)
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         days_overdue = (timezone.now().date() - invoice.due_date).days
@@ -1179,7 +1211,7 @@ Please remit payment to avoid late fees.'''
             'invoice_id': invoice.id,
             'invoice_number': invoice.invoice_number,
             'days_overdue': str(days_overdue),
-            'balance_due': str(invoice.balance_due or invoice.total),
+            'balance_due': str(invoice.amount_due or invoice.total),
             'due_date': str(invoice.due_date),
             'customer_name': customer_name,
             'vehicle_display': vehicle_info,
@@ -1203,11 +1235,21 @@ Due Date: {invoice.due_date} ({days_overdue} days overdue)
 Late fees may apply. Please contact us to arrange payment.'''
         if template and template.body:
             message = self.service._render_template(template.body, context)
+
+        if channel == 'sms':
+            message = (
+                f"OVERDUE: Invoice {invoice.invoice_number}. "
+                f"Amount due: {context['balance_due_display']}. "
+                f"Overdue by {days_overdue} days. "
+                f"Pay: {context['payment_link']}"
+            )
+            if len(message) > 160:
+                message = message[:157] + "..."
         
         notification = Notification.objects.create(
             recipient=invoice.customer.user,
             notification_type='invoice',
-            channel='email',
+            channel=channel,
             priority='urgent',
             template=template,
             title=title,

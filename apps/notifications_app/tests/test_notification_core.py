@@ -1,8 +1,10 @@
 from datetime import time
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.notifications_app.models import Notification, NotificationPreference
 from apps.notifications_app.serializers import (
@@ -40,6 +42,46 @@ class NotificationCoreTests(TestCase):
 
         self.assertEqual(data['recipient'], None)
         self.assertEqual(data['recipient_name'], '0244123456')
+
+    @patch('apps.notifications_app.services.get_whatsapp_settings')
+    @patch('apps.notifications_app.services.get_notification_settings')
+    @patch('apps.notifications_app.hubtel_sms.is_hubtel_available')
+    @patch('apps.notifications_app.hubtel_sms.send_sms')
+    def test_scheduled_direct_sms_sends_without_user_recipient(
+        self,
+        mock_send_sms,
+        mock_is_hubtel_available,
+        mock_get_notification_settings,
+        mock_get_whatsapp_settings,
+    ):
+        mock_is_hubtel_available.return_value = True
+        mock_send_sms.return_value = (True, {'message_id': 'abc123'})
+        mock_get_notification_settings.return_value = {
+            'notification_sms_enabled': 'true',
+        }
+        mock_get_whatsapp_settings.return_value = {
+            'whatsapp_enabled': 'false',
+        }
+
+        notification = Notification.objects.create(
+            recipient=None,
+            notification_type='custom',
+            channel='sms',
+            priority='normal',
+            title='Scheduled Direct SMS',
+            message='Hello from the scheduler',
+            status='pending',
+            scheduled_for=timezone.now() - timedelta(minutes=5),
+            data={'phone_number': '0244123456', 'direct_send': True},
+        )
+
+        service = NotificationService()
+        result = service.send_notification(notification)
+
+        self.assertTrue(result)
+        notification.refresh_from_db()
+        self.assertEqual(notification.status, 'delivered')
+        mock_send_sms.assert_called_once()
 
     def test_estimate_and_subscription_are_valid_notification_types(self):
         for notification_type in ['estimate', 'subscription']:

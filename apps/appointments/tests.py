@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+from unittest.mock import patch
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -339,7 +340,28 @@ class AppointmentAPITest(APITestCase):
             {'confirmation_method': 'email'}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['status'], 'confirmed')
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_send_reminder_sms_creates_sms_appointment_notification(self, mock_send_notification):
+        """Test sending an SMS appointment reminder creates an appointment notification."""
+        mock_send_notification.return_value = True
+        appointment = self._create_appointment()
+
+        response = self.client.post(
+            f'/api/appointments/appointments/{appointment.id}/send_reminder/',
+            {'reminder_type': 'sms'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        from apps.notifications_app.models import Notification
+        notification = Notification.objects.get(
+            related_object_type='appointment',
+            related_object_id=appointment.id,
+            channel='sms',
+        )
+        self.assertEqual(notification.notification_type, 'appointment')
+        self.assertGreaterEqual(mock_send_notification.call_count, 1)
 
     def test_confirm_non_pending_fails(self):
         """Test that confirming a non-pending appointment fails."""

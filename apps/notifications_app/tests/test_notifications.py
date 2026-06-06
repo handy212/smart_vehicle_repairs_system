@@ -1,10 +1,24 @@
+from datetime import date, time, timedelta
+from decimal import Decimal
+from unittest.mock import patch
+from io import StringIO
+
+from django.core.management import call_command
+
 from django.test import TestCase
+from django.test import override_settings
 from django.contrib.auth import get_user_model
 from apps.notifications_app.triggers import NotificationTriggers
 from apps.notifications_app.triggers import NotificationTriggers
 from apps.notifications_app.models import Notification, NotificationTemplate
 from apps.inventory.models import PurchaseOrder, Transfer, Part, Supplier, PartCategory
 from apps.branches.models import Branch
+from apps.appointments.models import Appointment
+from apps.customers.models import Customer
+from apps.vehicles.models import Vehicle
+from apps.vehicles.models import VehicleServiceSchedule, ServiceType
+from apps.billing.models import Invoice
+from apps.notifications_app.models import NotificationPreference
 
 User = get_user_model()
 
@@ -109,3 +123,208 @@ class NotificationTriggersTest(TestCase):
         self.assertEqual(notif.channel, 'in_app')
         self.assertEqual(notif.title, 'Low Stock: Test Part')
         self.assertIn('Test Part', notif.message)
+
+
+class AppointmentReminderTriggerTest(TestCase):
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staff',
+            email='staff@example.com',
+            password='password123',
+            role='manager',
+        )
+        self.branch = Branch.objects.create(
+            name='Main Branch',
+            code='MBR',
+            created_by=self.staff_user,
+        )
+        self.customer_user = User.objects.create_user(
+            username='customer',
+            email='customer@example.com',
+            password='password123',
+            role='customer',
+            phone='233244123456',
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='Corolla',
+            year=2022,
+            vin='1HGBH41JXMN109187',
+            license_plate='REM123',
+            current_mileage=12000,
+            engine_type='gasoline',
+            transmission_type='automatic',
+        )
+        self.appointment = Appointment.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            appointment_date=date.today() + timedelta(days=2),
+            appointment_time=time(10, 30),
+            service_type='maintenance',
+            customer_concerns='Brake inspection and oil change',
+            created_by=self.staff_user,
+        )
+        self.triggers = NotificationTriggers()
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_appointment_reminder_sms_uses_customer_concerns(self, mock_send_notification):
+        mock_send_notification.return_value = True
+
+        self.triggers.appointment_reminder(self.appointment, channel='sms')
+
+        notification = Notification.objects.get(
+            related_object_type='appointment',
+            related_object_id=self.appointment.id,
+            channel='sms',
+        )
+        self.assertEqual(notification.notification_type, 'appointment')
+        self.assertIn('Brake inspection', notification.message)
+        mock_send_notification.assert_called_once()
+
+
+class ServiceReminderTriggerTest(TestCase):
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='service_staff',
+            email='service.staff@example.com',
+            password='password123',
+            role='manager',
+        )
+        self.branch = Branch.objects.create(
+            name='Service Branch',
+            code='SRV',
+            created_by=self.staff_user,
+        )
+        self.customer_user = User.objects.create_user(
+            username='service_customer',
+            email='service.customer@example.com',
+            password='password123',
+            role='customer',
+            phone='233244123456',
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Nissan',
+            model='Altima',
+            year=2021,
+            vin='1N4AL3AP7JC123456',
+            license_plate='SRV123',
+            current_mileage=18000,
+            engine_type='gasoline',
+            transmission_type='automatic',
+        )
+        self.service_type = ServiceType.objects.create(
+            name='Oil Change',
+            default_interval_months=6,
+            default_interval_miles=5000,
+            created_by=self.staff_user,
+        )
+        self.schedule = VehicleServiceSchedule.objects.create(
+            vehicle=self.vehicle,
+            service_type=self.service_type,
+            last_service_date=date.today() - timedelta(days=180),
+            last_service_mileage=13000,
+            next_service_due_date=date.today() + timedelta(days=3),
+            next_service_due_mileage=18000,
+            is_active=True,
+        )
+        self.triggers = NotificationTriggers()
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_service_due_sms(self, mock_send_notification):
+        mock_send_notification.return_value = True
+
+        self.triggers.service_due_reminder(self.schedule, channel='sms')
+
+        notification = Notification.objects.get(
+            related_object_type='service_schedule',
+            related_object_id=self.schedule.id,
+            channel='sms',
+        )
+        self.assertEqual(notification.notification_type, 'vehicle')
+        self.assertIn('Service Reminder', notification.message)
+        mock_send_notification.assert_called_once()
+
+
+class InvoiceReminderTriggerTest(TestCase):
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='invoice_staff',
+            email='invoice.staff@example.com',
+            password='password123',
+            role='manager',
+        )
+        self.customer_user = User.objects.create_user(
+            username='invoice_customer',
+            email='invoice.customer@example.com',
+            password='password123',
+            role='customer',
+            phone='233244123456',
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Hyundai',
+            model='Elantra',
+            year=2020,
+            vin='5NPD84LF8LH123456',
+            license_plate='INV123',
+            current_mileage=45000,
+            engine_type='gasoline',
+            transmission_type='automatic',
+        )
+        with patch('apps.billing.work_order_invoices.notify_invoice_ready_if_needed'):
+            self.due_soon_invoice = Invoice.objects.create(
+                customer=self.customer,
+                vehicle=self.vehicle,
+                status='draft',
+                due_date=date.today() + timedelta(days=2),
+                total=Decimal('120.00'),
+                amount_paid=Decimal('0.00'),
+                created_by=self.staff_user,
+            )
+            self.overdue_invoice = Invoice.objects.create(
+                customer=self.customer,
+                vehicle=self.vehicle,
+                status='draft',
+                due_date=date.today() - timedelta(days=1),
+                total=Decimal('240.00'),
+                amount_paid=Decimal('0.00'),
+                created_by=self.staff_user,
+            )
+        self.triggers = NotificationTriggers()
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_invoice_due_soon_sms_creates_sms_notification(self, mock_send_notification):
+        mock_send_notification.return_value = True
+
+        self.triggers.invoice_due_soon(self.due_soon_invoice, days_until_due=2, channel='sms')
+
+        notification = Notification.objects.get(
+            related_object_type='invoice',
+            related_object_id=self.due_soon_invoice.id,
+            channel='sms',
+        )
+        self.assertEqual(notification.notification_type, 'invoice')
+        self.assertIn('Invoice', notification.message)
+        self.assertIn('due in 2 days', notification.message)
+        mock_send_notification.assert_called_once()
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_invoice_overdue_sms_creates_sms_notification(self, mock_send_notification):
+        mock_send_notification.return_value = True
+
+        self.triggers.invoice_overdue(self.overdue_invoice, channel='sms')
+
+        notification = Notification.objects.get(
+            related_object_type='invoice',
+            related_object_id=self.overdue_invoice.id,
+            channel='sms',
+        )
+        self.assertEqual(notification.notification_type, 'invoice')
+        self.assertIn('OVERDUE', notification.message)
+        mock_send_notification.assert_called_once()

@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/lib/hooks/useToast';
 import {
     Loader2, Send, Users, UserPlus, X,
-    Search, TrendingUp, AlertCircle, DollarSign,
+    Search, TrendingUp, AlertCircle,
     Sparkles, Paperclip, Clock, Calendar, MoreVertical,
     CheckCircle2, History, RotateCcw, Eye, Trash2
 } from 'lucide-react';
@@ -100,12 +100,6 @@ export default function SMSConsolePage() {
         queryKey: ['sms-stats'],
         queryFn: () => smsApi.getStats(),
         refetchInterval: 30000,
-    });
-
-    const { data: balance } = useQuery({
-        queryKey: ['sms-balance'],
-        queryFn: () => smsApi.getBalance(),
-        refetchInterval: 60000,
     });
 
     const { data: customersData } = useQuery({
@@ -331,13 +325,6 @@ export default function SMSConsolePage() {
                         icon={<AlertCircle className="h-5 w-5 text-destructive" />}
                         iconBg="bg-red-100"
                         variant="danger"
-                    />
-                    <StatCard
-                        label="SMS BALANCE"
-                        value={balance?.success ? balance.balance.toLocaleString() : 'N/A'}
-                        icon={<DollarSign className="h-5 w-5 text-warning" />}
-                        iconBg="bg-orange-100"
-                        symbol={balance?.currency || ""}
                     />
                 </div>
 

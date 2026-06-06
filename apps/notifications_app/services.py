@@ -194,27 +194,29 @@ class NotificationService:
         Send SMS notification via Hubtel (Ghana) or Twilio
         """
         try:
-            if not notification.recipient:
-                notification.mark_as_failed("No recipient configured for voice call")
-                self._log_action(notification, 'failed', 'No call recipient')
-                return False
-
+            notification_data = notification.data or {}
             phone_number = None
 
-            if notification.data.get('direct_send'):
-                phone_number = notification.data.get('phone_number')
+            # Direct-send SMS notifications can be queued without a user recipient.
+            # In that case, the destination phone number lives in notification.data.
+            if notification_data.get('direct_send'):
+                phone_number = notification_data.get('phone_number')
+            elif not notification.recipient:
+                notification.mark_as_failed("No recipient configured for SMS notification")
+                self._log_action(notification, 'failed', 'No SMS recipient')
+                return False
             
             # 1. Try to get phone from preferences
-            if not phone_number and hasattr(notification.recipient, 'notification_preferences'):
+            if not phone_number and notification.recipient and hasattr(notification.recipient, 'notification_preferences'):
                 phone_number = notification.recipient.notification_preferences.phone_number
             
             # 2. Fallback to user account phone
-            if not phone_number and hasattr(notification.recipient, 'phone'):
+            if not phone_number and notification.recipient and hasattr(notification.recipient, 'phone'):
                 phone_number = notification.recipient.phone
             
             # 3. Validation
             if not phone_number:
-                notification.mark_as_failed("No phone number configured (checked prefs and account)")
+                notification.mark_as_failed("No phone number configured for SMS notification")
                 self._log_action(notification, 'failed', 'No phone number')
                 return False
             

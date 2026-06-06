@@ -453,12 +453,26 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             if appointment.customer_concerns:
                 message += f" Service: {appointment.customer_concerns[:100]}"
             
-            # Determine channel based on reminder type
-            channel = 'email' if reminder_type in ['email', 'push'] else reminder_type
+            # Map reminder types to delivery channels.
+            channel_map = {
+                'email': 'email',
+                'sms': 'sms',
+                'push': 'push',
+                'phone': 'call',
+            }
+            channel = channel_map.get(reminder_type)
+            if not channel:
+                reminder.status = 'failed'
+                reminder.error_message = f'Invalid reminder type: {reminder_type}'
+                reminder.save(update_fields=['status', 'error_message'])
+                return Response(
+                    {'error': 'Invalid reminder type. Must be email, sms, push, or phone.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             notification = Notification.objects.create(
                 recipient=customer_user,
-                notification_type='reminder',
+                notification_type='appointment',
                 channel=channel,
                 priority='normal',
                 title=f'Appointment Reminder - {appointment.appointment_number}',
@@ -843,4 +857,3 @@ class AppointmentReminderViewSet(viewsets.ReadOnlyModelViewSet):
         return AppointmentReminder.objects.select_related(
             'appointment', 'appointment__customer', 'appointment__customer__user'
         ).all()
-

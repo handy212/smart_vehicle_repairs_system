@@ -3,7 +3,7 @@ Management command to send appointment reminders.
 Run this command via cron job (e.g., daily at 9 AM) to send reminders for upcoming appointments.
 
 Usage:
-    python manage.py send_appointment_reminders [--hours-ahead 24]
+    python manage.py send_appointment_reminders [--hours-ahead 24] [--channel email|sms|push]
 """
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -22,9 +22,17 @@ class Command(BaseCommand):
             default=24,
             help='Send reminders for appointments within this many hours (default: 24)'
         )
+        parser.add_argument(
+            '--channel',
+            type=str,
+            choices=['email', 'sms', 'push'],
+            default='email',
+            help='Notification channel to use (default: email)'
+        )
 
     def handle(self, *args, **options):
         hours_ahead = options['hours_ahead']
+        channel = options['channel']
         now = timezone.now()
         reminder_window_start = now
         reminder_window_end = now + timedelta(hours=hours_ahead)
@@ -49,10 +57,10 @@ class Command(BaseCommand):
             try:
                 # Check if reminder already sent today
                 # (You could add a field to track this or check NotificationLog)
-                notification_triggers.appointment_reminder(appointment)
+                notification_triggers.appointment_reminder(appointment, channel=channel)
                 count += 1
                 self.stdout.write(self.style.SUCCESS(
-                    f'  ✓ Sent reminder for appointment {appointment.appointment_number} to {appointment.customer}'
+                    f'  ✓ Sent {channel} reminder for appointment {appointment.appointment_number} to {appointment.customer}'
                 ))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(

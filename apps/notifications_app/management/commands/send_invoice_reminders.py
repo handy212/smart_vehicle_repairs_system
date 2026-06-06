@@ -3,7 +3,7 @@ Management command to send invoice reminders and overdue notices.
 Run this command via cron job (e.g., daily at 8 AM) to send reminders for upcoming and overdue invoices.
 
 Usage:
-    python manage.py send_invoice_reminders [--due-soon-days 3]
+    python manage.py send_invoice_reminders [--due-soon-days 3] [--channel email|sms]
 """
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -22,9 +22,17 @@ class Command(BaseCommand):
             default=3,
             help='Send "due soon" reminders for invoices due within this many days (default: 3)'
         )
+        parser.add_argument(
+            '--channel',
+            type=str,
+            choices=['email', 'sms'],
+            default='email',
+            help='Notification channel to use (default: email)'
+        )
 
     def handle(self, *args, **options):
         due_soon_days = options['due_soon_days']
+        channel = options['channel']
         today = timezone.now().date()
         due_soon_date = today + timedelta(days=due_soon_days)
         
@@ -69,18 +77,18 @@ class Command(BaseCommand):
                         invoice.status = 'overdue'
                         invoice.save()
                     
-                    notification_triggers.invoice_overdue(invoice)
+                    notification_triggers.invoice_overdue(invoice, channel=channel)
                     overdue_count += 1
                     self.stdout.write(self.style.WARNING(
-                        f'  ⚠️  Sent overdue notice for invoice {invoice.invoice_number} to {invoice.customer}'
+                        f'  ⚠️  Sent {channel} overdue notice for invoice {invoice.invoice_number} to {invoice.customer}'
                     ))
                     
                 elif 0 <= days_until_due <= due_soon_days:
                     # Due soon
-                    notification_triggers.invoice_due_soon(invoice, days_until_due)
+                    notification_triggers.invoice_due_soon(invoice, days_until_due, channel=channel)
                     due_soon_count += 1
                     self.stdout.write(self.style.SUCCESS(
-                        f'  ✓ Sent due soon reminder for invoice {invoice.invoice_number} to {invoice.customer} ({days_until_due} days)'
+                        f'  ✓ Sent {channel} due soon reminder for invoice {invoice.invoice_number} to {invoice.customer} ({days_until_due} days)'
                     ))
                     
             except Exception as e:
