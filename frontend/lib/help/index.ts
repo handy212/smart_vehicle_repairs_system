@@ -1,12 +1,10 @@
 import { BookOpen } from "lucide-react";
 import { helpContent as legacyModuleContent } from "@/lib/help-data";
 import { bestPracticeGuides } from "./best-practices";
-import { deploymentGuides } from "./deployment";
 import { glossaryGuides } from "./glossary";
 import { quickStartGuides } from "./quick-start";
 import { roleGuides } from "./role-guides";
 import { helpSections } from "./sections";
-import { trainingGuides } from "./training";
 import { troubleshootingGuides } from "./troubleshooting";
 import type { HelpGuide, HelpModule, HelpSectionId } from "./types";
 import { workflowGuides } from "./workflows";
@@ -62,8 +60,6 @@ export const overviewGuide: HelpGuide = {
                         "**Workflow Guides** — Cross-role processes (repair lifecycle, walk-in, parts, payment)",
                         "**Troubleshooting** — Login, permissions, billing, mobile sync, reports",
                         "**Best Practices** — Standards that reduce mistakes",
-                        "**Training** — Onboarding order, duration, and practice exercises",
-                        "**Installation & Deployment** — For IT staff deploying Docker production",
                         "**Glossary** — Terms and work order status definitions",
                         "**Module Reference** — Screen-by-screen feature guides",
                     ],
@@ -82,7 +78,7 @@ export const overviewGuide: HelpGuide = {
                         "**Accountant** → Accountant Guide, Payment to Release Workflow, Troubleshooting (billing)",
                         "**Parts Manager** → Inventory Guide, Parts Request Workflow",
                         "**Manager** → Manager Guide, Reports, Best Practices",
-                        "**Administrator** → Administrator Guide, Installation Guide, Security Best Practices",
+                        "**Administrator** → Administrator Guide, Security Best Practices",
                         "**Customer** → Customer Portal Guide (share portal URL separately)",
                     ],
                 },
@@ -107,8 +103,6 @@ export const allGuides: HelpGuide[] = [
     ...workflowGuides,
     ...troubleshootingGuides,
     ...bestPracticeGuides,
-    ...trainingGuides,
-    ...deploymentGuides,
     ...glossaryGuides,
     ...convertLegacyModules(legacyModuleContent),
 ];

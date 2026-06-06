@@ -37,8 +37,6 @@ export type HelpSectionId =
     | "workflows"
     | "troubleshooting"
     | "best-practices"
-    | "training"
-    | "deployment"
     | "glossary"
     | "modules";
 

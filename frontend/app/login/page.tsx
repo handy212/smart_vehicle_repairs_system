@@ -471,7 +471,7 @@ export default function LoginPage() {
             © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.
           </p>
           <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-            Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
+            Developed by <a href="https://safetracksystems.com/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
           </p>
         </div>
       </footer>

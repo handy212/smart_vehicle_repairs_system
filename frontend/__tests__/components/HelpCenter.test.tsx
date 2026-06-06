@@ -72,8 +72,8 @@ describe("HelpCenter", () => {
             />
         );
 
-        expect(screen.getByText("Help Center")).toBeInTheDocument();
-        expect(screen.getByText("Test Overview")).toBeInTheDocument();
+        expect(screen.getAllByText("Help Center").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Test Overview").length).toBeGreaterThan(0);
     });
 
     it("opens a guide and renders formatted steps", () => {
@@ -81,7 +81,7 @@ describe("HelpCenter", () => {
             <HelpCenter
                 title="Help Center"
                 subtitle="Guides for staff"
-                supportHref="mailto:support@example.com"
+                supportHref="mailto:support@safetracksystems.com"
             />
         );
 
@@ -90,7 +90,7 @@ describe("HelpCenter", () => {
         fireEvent.click(screen.getByText("Open Guide"));
         fireEvent.click(screen.getByRole("button", { name: /adding vehicles/i }));
 
-        expect(screen.getByText("Vehicles", { selector: "strong" })).toBeInTheDocument();
+        expect(screen.getAllByText("Vehicles", { selector: "strong" }).length).toBeGreaterThan(0);
         expect(screen.getByRole("button", { name: /add vehicle/i })).toBeInTheDocument();
     });
 
@@ -99,7 +99,7 @@ describe("HelpCenter", () => {
             <HelpCenter
                 title="Help Center"
                 subtitle="Guides for staff"
-                supportHref="mailto:support@example.com"
+                supportHref="mailto:support@safetracksystems.com"
             />
         );
 
@@ -109,11 +109,11 @@ describe("HelpCenter", () => {
         expect(screen.getByText("No matching guides")).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: /clear search/i }));
-        expect(screen.getByText("Test Overview")).toBeInTheDocument();
+        expect(screen.getAllByText("Test Overview").length).toBeGreaterThan(0);
 
         fireEvent.change(screen.getByLabelText("Search help topics"), {
             target: { value: "profile" },
         });
-        expect(screen.getByText("Vehicles")).toBeInTheDocument();
+        expect(screen.getAllByText("Vehicles").length).toBeGreaterThan(0);
     });
 });

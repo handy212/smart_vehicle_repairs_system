@@ -9,6 +9,7 @@ import {
     BookOpen,
     CheckCircle2,
     ChevronRight,
+    Download,
     ExternalLink,
     Lightbulb,
     Mail,
@@ -21,7 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { allGuides, countTopics, helpSections } from "@/lib/help";
+import { allGuides, helpSections } from "@/lib/help";
+import { downloadHelpManualPdf } from "@/lib/help/pdf";
 import type { HelpBlock, HelpGuide, HelpSectionId } from "@/lib/help/types";
 import { cn } from "@/lib/utils/cn";
 
@@ -218,7 +220,6 @@ function HelpBlockRenderer({ block }: { block: HelpBlock }) {
             return null;
     }
 }
-
 export function HelpCenter({
     title,
     subtitle,
@@ -228,6 +229,7 @@ export function HelpCenter({
     const [searchQuery, setSearchQuery] = useState("");
     const [activeSectionId, setActiveSectionId] = useState<HelpSectionId>("overview");
     const [activeGuideId, setActiveGuideId] = useState<string | null>(null);
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const router = useRouter();
 
     const sectionGuides = useMemo(
@@ -245,8 +247,6 @@ export function HelpCenter({
         return filteredGuides.find((g) => g.id === activeGuideId) ?? allGuides.find((g) => g.id === activeGuideId) ?? null;
     }, [activeGuideId, filteredGuides]);
 
-    const totalTopics = useMemo(() => countTopics(allGuides), []);
-
     const navigateToAction = (href: string) => {
         if (href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("http")) {
             window.location.href = href;
@@ -261,143 +261,165 @@ export function HelpCenter({
         if (searchQuery) setSearchQuery("");
     };
 
+    const handleDownloadPdf = async () => {
+        setIsDownloadingPdf(true);
+        try {
+            await downloadHelpManualPdf({
+                title,
+                subtitle,
+                sections: helpSections.map((section) => ({
+                    section,
+                    guides: allGuides.filter((guide) => guide.section === section.id),
+                })),
+                filename: "help-manual.pdf",
+            });
+        } finally {
+            setIsDownloadingPdf(false);
+        }
+    };
+
     return (
-        <div className="mx-auto flex h-[calc(100vh-5rem)] max-w-7xl flex-col gap-4 p-4 md:gap-5 md:p-6 lg:p-8">
-            <header className="shrink-0 rounded-lg border border-border bg-card p-4 shadow-sm">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <BookOpen className="h-6 w-6" />
+        <>
+            <div className="mx-auto flex h-[calc(100vh-5rem)] max-w-7xl flex-col gap-4 p-4 md:gap-5 md:p-6 lg:p-8">
+                <header className="shrink-0 rounded-lg border border-border bg-card p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <BookOpen className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0">
+                                <h1 className="text-xl font-bold text-foreground md:text-2xl">{title}</h1>
+                                <p className="text-sm text-muted-foreground">{subtitle}</p>
+                            </div>
                         </div>
-                        <div className="min-w-0">
-                            <h1 className="text-xl font-bold text-foreground md:text-2xl">{title}</h1>
-                            <p className="text-sm text-muted-foreground">{subtitle}</p>
+                        <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
+                            <div className="relative w-full lg:w-96">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search guides, workflows, roles..."
+                                    value={searchQuery}
+                                    onChange={(event) => {
+                                        setSearchQuery(event.target.value);
+                                        setActiveGuideId(null);
+                                    }}
+                                    className="h-10 pl-10"
+                                    aria-label="Search help topics"
+                                />
+                            </div>
+                            <Button variant="outline" asChild className="shrink-0">
+                                <Link href={supportHref}>
+                                    <Mail className="h-4 w-4" />
+                                    {supportLabel}
+                                </Link>
+                            </Button>
+                            <Button variant="outline" onClick={handleDownloadPdf} disabled={isDownloadingPdf} className="shrink-0">
+                                <Download className="h-4 w-4" />
+                                {isDownloadingPdf ? "Generating..." : "Download PDF"}
+                            </Button>
                         </div>
                     </div>
-                    <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
-                        <div className="relative w-full lg:w-96">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search guides, workflows, roles..."
-                                value={searchQuery}
-                                onChange={(event) => {
-                                    setSearchQuery(event.target.value);
-                                    setActiveGuideId(null);
-                                }}
-                                className="h-10 pl-10"
-                                aria-label="Search help topics"
-                            />
-                        </div>
-                        <Button variant="outline" asChild className="shrink-0">
-                            <Link href={supportHref}>
-                                <Mail className="h-4 w-4" />
-                                {supportLabel}
-                            </Link>
-                        </Button>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge variant="secondary">{helpSections.length} sections</Badge>
+                        <Badge variant="secondary">{allGuides.length} guides</Badge>
+                        {searchQuery && <Badge variant="outline">Filtered by &quot;{searchQuery}&quot;</Badge>}
                     </div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                    <Badge variant="secondary">{helpSections.length} sections</Badge>
-                    <Badge variant="secondary">{allGuides.length} guides</Badge>
-                    <Badge variant="secondary">{totalTopics} topics</Badge>
-                    {searchQuery && <Badge variant="outline">Filtered by &quot;{searchQuery}&quot;</Badge>}
-                </div>
-            </header>
+                </header>
 
-            <div className="flex min-h-0 flex-1 gap-4 md:gap-5">
-                <aside className="hidden w-64 shrink-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm lg:flex lg:w-72 lg:flex-col">
-                    <div className="border-b border-border p-4">
-                        <h2 className="text-xs font-semibold uppercase text-muted-foreground">Documentation</h2>
-                    </div>
-                    <ScrollArea className="flex-1">
-                        <div className="space-y-1 p-2">
-                            {helpSections.map((section) => {
-                                const Icon = section.icon;
-                                const isActive = !searchQuery && activeSectionId === section.id;
-                                const guideCount = allGuides.filter((g) => g.section === section.id).length;
-
-                                return (
-                                    <button
-                                        key={section.id}
-                                        type="button"
-                                        onClick={() => handleSectionChange(section.id)}
-                                        className={cn(
-                                            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                                            isActive
-                                                ? "bg-primary/10 font-medium text-primary"
-                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                        )}
-                                    >
-                                        <Icon className="h-4 w-4 shrink-0" />
-                                        <span className="min-w-0 flex-1 truncate">{section.title}</span>
-                                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                                            {guideCount}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                <div className="flex min-h-0 flex-1 gap-4 md:gap-5">
+                    <aside className="hidden w-64 shrink-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm lg:flex lg:w-72 lg:flex-col">
+                        <div className="border-b border-border p-4">
+                            <h2 className="text-xs font-semibold uppercase text-muted-foreground">Documentation</h2>
                         </div>
-                    </ScrollArea>
-                </aside>
+                        <ScrollArea className="flex-1">
+                            <div className="space-y-1 p-2">
+                                {helpSections.map((section) => {
+                                    const Icon = section.icon;
+                                    const isActive = !searchQuery && activeSectionId === section.id;
+                                    const guideCount = allGuides.filter((g) => g.section === section.id).length;
 
-                <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                    <div className="border-b border-border lg:hidden">
-                        <ScrollArea className="w-full">
-                            <div className="flex gap-1 p-2">
-                                {helpSections.map((section) => (
-                                    <Button
-                                        key={section.id}
-                                        variant={activeSectionId === section.id && !searchQuery ? "default" : "ghost"}
-                                        size="sm"
-                                        className="shrink-0 text-xs"
-                                        onClick={() => handleSectionChange(section.id)}
-                                    >
-                                        {section.title}
-                                    </Button>
-                                ))}
+                                    return (
+                                        <button
+                                            key={section.id}
+                                            type="button"
+                                            onClick={() => handleSectionChange(section.id)}
+                                            className={cn(
+                                                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                                                isActive
+                                                    ? "bg-primary/10 font-medium text-primary"
+                                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            )}
+                                        >
+                                            <Icon className="h-4 w-4 shrink-0" />
+                                            <span className="min-w-0 flex-1 truncate">{section.title}</span>
+                                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                                                {guideCount}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </ScrollArea>
-                    </div>
+                    </aside>
 
-                    <ScrollArea className="flex-1">
-                        {filteredGuides.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center p-8 text-center">
-                                <Search className="mb-4 h-10 w-10 text-muted-foreground" />
-                                <h2 className="text-lg font-semibold">No matching guides</h2>
-                                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                                    Try another search term — role name, workflow, invoice, mobile, etc.
-                                </p>
-                                <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
-                                    Clear Search
-                                </Button>
-                            </div>
-                        ) : activeGuide ? (
-                            <GuideDetail
-                                guide={activeGuide}
-                                onBack={() => setActiveGuideId(null)}
-                                onNavigate={navigateToAction}
-                            />
-                        ) : (
-                            <GuideGrid
-                                guides={filteredGuides}
-                                sectionTitle={
-                                    searchQuery
-                                        ? `Search results (${filteredGuides.length})`
-                                        : helpSections.find((s) => s.id === activeSectionId)?.title ?? "Guides"
-                                }
-                                sectionDescription={
-                                    searchQuery
-                                        ? "Topics matching your search across all documentation."
-                                        : helpSections.find((s) => s.id === activeSectionId)?.description
-                                }
-                                onSelect={(id) => setActiveGuideId(id)}
-                            />
-                        )}
-                    </ScrollArea>
-                </main>
+                    <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                        <div className="border-b border-border lg:hidden">
+                            <ScrollArea className="w-full">
+                                <div className="flex gap-1 p-2">
+                                    {helpSections.map((section) => (
+                                        <Button
+                                            key={section.id}
+                                            variant={activeSectionId === section.id && !searchQuery ? "default" : "ghost"}
+                                            size="sm"
+                                            className="shrink-0 text-xs"
+                                            onClick={() => handleSectionChange(section.id)}
+                                        >
+                                            {section.title}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </div>
+
+                        <ScrollArea className="flex-1">
+                            {filteredGuides.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-8 text-center">
+                                    <Search className="mb-4 h-10 w-10 text-muted-foreground" />
+                                    <h2 className="text-lg font-semibold">No matching guides</h2>
+                                    <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                                        Try another search term — role name, workflow, invoice, mobile, etc.
+                                    </p>
+                                    <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
+                                        Clear Search
+                                    </Button>
+                                </div>
+                            ) : activeGuide ? (
+                                <GuideDetail
+                                    guide={activeGuide}
+                                    onBack={() => setActiveGuideId(null)}
+                                    onNavigate={navigateToAction}
+                                />
+                            ) : (
+                                <GuideGrid
+                                    guides={filteredGuides}
+                                    sectionTitle={
+                                        searchQuery
+                                            ? `Search results (${filteredGuides.length})`
+                                            : helpSections.find((s) => s.id === activeSectionId)?.title ?? "Guides"
+                                    }
+                                    sectionDescription={
+                                        searchQuery
+                                            ? "Topics matching your search across all documentation."
+                                            : helpSections.find((s) => s.id === activeSectionId)?.description
+                                    }
+                                    onSelect={(id) => setActiveGuideId(id)}
+                                />
+                            )}
+                        </ScrollArea>
+                    </main>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

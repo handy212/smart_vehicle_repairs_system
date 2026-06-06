@@ -6,7 +6,6 @@ import {
     GraduationCap,
     LayoutGrid,
     Rocket,
-    Server,
     Sparkles,
     Users,
 } from "lucide-react";
@@ -48,18 +47,6 @@ export const helpSections: HelpSection[] = [
         title: "Best Practices",
         description: "Operational standards",
         icon: Sparkles,
-    },
-    {
-        id: "training",
-        title: "Training",
-        description: "Onboarding recommendations",
-        icon: GraduationCap,
-    },
-    {
-        id: "deployment",
-        title: "Installation & Deployment",
-        description: "Docker, SSL, backups for IT staff",
-        icon: Server,
     },
     {
         id: "glossary",
