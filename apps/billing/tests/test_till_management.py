@@ -14,7 +14,7 @@ from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
 from apps.accounts.permission_models import Permission
 from apps.billing.models import CashierTill, Invoice, Payment, Refund
-from apps.accounting.models import JournalEntry
+from apps.accounting.models import Account, AccountingControl, JournalEntry
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 
@@ -28,6 +28,9 @@ def billing_module(db):
     for code, name in [
         ("view_billing", "View Billing"),
         ("create_payments", "Create Payments"),
+        ("process_payments", "Process Payments"),
+        ("manage_billing", "Manage Billing"),
+        ("refund_payments", "Refund Payments"),
     ]:
         Permission.objects.update_or_create(
             code=code,
@@ -37,6 +40,73 @@ def billing_module(db):
                 "is_active": True,
             },
         )
+
+
+@pytest.fixture(autouse=True)
+def accounting_controls(db):
+    specs = {
+        "1010": ("Cash in Safe", "asset", "debit", "cash"),
+        "1100": ("Operating Bank", "asset", "debit", "bank"),
+        "1200": ("Accounts Receivable", "asset", "debit", "accounts_receivable"),
+        "1500": ("Inventory Asset", "asset", "debit", "inventory"),
+        "2000": ("Accounts Payable", "liability", "credit", "accounts_payable"),
+        "2100": ("Sales Tax Payable", "liability", "credit", "tax_payable"),
+        "2200": ("Input Tax", "asset", "debit", "current_asset"),
+        "4000": ("Sales Revenue", "income", "credit", "revenue"),
+        "4050": ("Shop Supplies Revenue", "income", "credit", "revenue"),
+        "4060": ("Environmental Fee Revenue", "income", "credit", "revenue"),
+        "4100": ("Sales Returns", "income", "debit", "revenue"),
+        "5000": ("Default Expense", "expense", "debit", "expense"),
+        "5100": ("Cost of Goods Sold", "expense", "debit", "expense"),
+        "5950": ("Cash Over Short", "expense", "debit", "expense"),
+    }
+    accounts = {}
+    for code, (name, account_type, balance_type, subtype) in specs.items():
+        accounts[code], _ = Account.objects.get_or_create(
+            code=code,
+            defaults={
+                "name": name,
+                "account_type": account_type,
+                "balance_type": balance_type,
+                "account_subtype": subtype,
+                "is_active": True,
+            },
+        )
+    controls = AccountingControl.get_settings()
+    controls.accounts_receivable_account = accounts["1200"]
+    controls.accounts_payable_account = accounts["2000"]
+    controls.sales_revenue_account = accounts["4000"]
+    controls.sales_discount_account = accounts["4100"]
+    controls.sales_tax_payable_account = accounts["2100"]
+    controls.shop_supplies_revenue_account = accounts["4050"]
+    controls.environmental_fee_revenue_account = accounts["4060"]
+    controls.input_tax_account = accounts["2200"]
+    controls.default_expense_account = accounts["5000"]
+    controls.inventory_asset_account = accounts["1500"]
+    controls.cost_of_goods_sold_account = accounts["5100"]
+    controls.cash_over_short_account = accounts["5950"]
+    controls.till_counterparty_cash_account = accounts["1010"]
+    controls.default_bank_account = accounts["1100"]
+    controls.save()
+
+
+@pytest.fixture
+def till_account(db):
+    account, _ = Account.objects.get_or_create(
+        code="1111",
+        defaults={
+            "name": "Main Cash",
+            "account_type": "asset",
+            "balance_type": "debit",
+            "account_subtype": "cash",
+            "is_active": True,
+            "is_till_enabled": True,
+        },
+    )
+    if not account.is_till_enabled:
+        account.is_till_enabled = True
+        account.save(update_fields=["is_till_enabled"])
+    return account
 
 
 @pytest.fixture
@@ -108,7 +178,7 @@ def create_invoice(customer, branch, user, total=Decimal("200.00")):
 
 
 @pytest.mark.django_db
-def test_cash_payment_api_requires_open_till(branch, staff_user, customer):
+def test_cash_payment_api_requires_open_till(branch, staff_user, customer, till_account):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     invoice = create_invoice(customer, branch, staff_user)
@@ -118,6 +188,7 @@ def test_cash_payment_api_requires_open_till(branch, staff_user, customer):
         {
             "invoice": invoice.id,
             "payment_method": "cash",
+            "cash_account": till_account.id,
             "amount": "25.00",
         },
         format="json",
@@ -128,12 +199,13 @@ def test_cash_payment_api_requires_open_till(branch, staff_user, customer):
 
 
 @pytest.mark.django_db
-def test_cash_payment_api_assigns_current_open_till(branch, staff_user, customer):
+def test_cash_payment_api_assigns_current_open_till(branch, staff_user, customer, till_account):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("20.00"),
     )
     invoice = create_invoice(customer, branch, staff_user)
@@ -143,6 +215,7 @@ def test_cash_payment_api_assigns_current_open_till(branch, staff_user, customer
         {
             "invoice": invoice.id,
             "payment_method": "cash",
+            "cash_account": till_account.id,
             "amount": "25.00",
         },
         format="json",
@@ -157,7 +230,7 @@ def test_cash_payment_api_assigns_current_open_till(branch, staff_user, customer
         object_id=payment.id,
     )
     debit = entry.transactions.get(transaction_type="debit")
-    assert debit.account.code == "1020"
+    assert debit.account_id == till_account.id
 
 
 @pytest.mark.django_db
@@ -166,17 +239,27 @@ def test_till_close_uses_only_that_tills_cash_activity(
     staff_user,
     other_staff,
     customer,
+    till_account,
 ):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("50.00"),
     )
     other_till = CashierTill.objects.create(
         branch=branch,
         cashier=other_staff,
+        till_account=Account.objects.create(
+            code="1112",
+            name="Petty Cash",
+            account_type="asset",
+            balance_type="debit",
+            account_subtype="cash",
+            is_till_enabled=True,
+        ),
         opening_balance=Decimal("0.00"),
     )
     invoice = create_invoice(customer, branch, staff_user)
@@ -204,10 +287,11 @@ def test_till_close_uses_only_that_tills_cash_activity(
     Payment.objects.create(
         invoice=legacy_invoice,
         customer=customer,
-        payment_method="cash",
+        payment_method="check",
         amount=Decimal("75.00"),
         status="completed",
         processed_by=staff_user,
+        bank_account=Account.objects.get(code="1100"),
     )
     Refund.objects.create(
         original_payment=payment,
@@ -251,17 +335,27 @@ def test_till_pay_in_increases_expected_balance_at_close(
     staff_user,
     other_staff,
     customer,
+    till_account,
 ):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("50.00"),
     )
     other_till = CashierTill.objects.create(
         branch=branch,
         cashier=other_staff,
+        till_account=Account.objects.create(
+            code="1112",
+            name="Petty Cash",
+            account_type="asset",
+            balance_type="debit",
+            account_subtype="cash",
+            is_till_enabled=True,
+        ),
         opening_balance=Decimal("0.00"),
     )
     invoice = create_invoice(customer, branch, staff_user)
@@ -289,10 +383,11 @@ def test_till_pay_in_increases_expected_balance_at_close(
     Payment.objects.create(
         invoice=legacy_invoice,
         customer=customer,
-        payment_method="cash",
+        payment_method="check",
         amount=Decimal("75.00"),
         status="completed",
         processed_by=staff_user,
+        bank_account=Account.objects.get(code="1100"),
     )
     Refund.objects.create(
         original_payment=payment,
@@ -335,12 +430,13 @@ def test_till_pay_in_increases_expected_balance_at_close(
 
 
 @pytest.mark.django_db
-def test_till_pay_out_rejected_when_exceeds_expected_balance(branch, staff_user):
+def test_till_pay_out_rejected_when_exceeds_expected_balance(branch, staff_user, till_account):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("10.00"),
     )
     response = client.post(
@@ -353,12 +449,13 @@ def test_till_pay_out_rejected_when_exceeds_expected_balance(branch, staff_user)
 
 
 @pytest.mark.django_db
-def test_till_movement_posts_gl_entry(branch, staff_user):
+def test_till_movement_posts_gl_entry(branch, staff_user, till_account):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("20.00"),
     )
     response = client.post(
@@ -373,14 +470,15 @@ def test_till_movement_posts_gl_entry(branch, staff_user):
 
 
 @pytest.mark.django_db
-def test_till_record_movement_forbidden_for_other_cashiers_till(
-    branch, staff_user, other_staff
+def test_till_record_movement_allows_other_branch_cashiers_to_use_open_till(
+    branch, staff_user, other_staff, till_account
 ):
     client = APIClient()
     client.force_authenticate(user=other_staff)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("100.00"),
     )
     response = client.post(
@@ -388,16 +486,17 @@ def test_till_record_movement_forbidden_for_other_cashiers_till(
         {"movement_type": "pay_out", "amount": "10.00"},
         format="json",
     )
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_201_CREATED
 
 
 @pytest.mark.django_db
-def test_till_movements_list_empty(branch, staff_user):
+def test_till_movements_list_empty(branch, staff_user, till_account):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("10.00"),
     )
     r = client.get(reverse("api_billing:till-movements", args=[till.id]))
@@ -406,12 +505,13 @@ def test_till_movements_list_empty(branch, staff_user):
 
 
 @pytest.mark.django_db
-def test_till_movements_list_after_record(branch, staff_user):
+def test_till_movements_list_after_record(branch, staff_user, till_account):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("25.00"),
     )
     rec = client.post(
@@ -429,13 +529,14 @@ def test_till_movements_list_after_record(branch, staff_user):
 
 @pytest.mark.django_db
 def test_till_movements_list_visible_to_other_billing_user(
-    branch, staff_user, other_staff
+    branch, staff_user, other_staff, till_account
 ):
     client = APIClient()
     client.force_authenticate(user=staff_user)
     till = CashierTill.objects.create(
         branch=branch,
         cashier=staff_user,
+        till_account=till_account,
         opening_balance=Decimal("40.00"),
     )
     client.post(

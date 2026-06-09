@@ -18,6 +18,8 @@ import {
 import { searchApi, type SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useModules } from "@/lib/hooks/useModules";
+import { DASHBOARD_HUB_COMMAND_ACTIONS } from "@/lib/utils/dashboard-quick-access";
 
 interface QuickAction {
   id: string;
@@ -26,6 +28,7 @@ interface QuickAction {
   url: string;
   icon: LucideIcon;
   permission?: string;
+  module?: string;
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
@@ -92,6 +95,15 @@ const QUICK_ACTIONS: QuickAction[] = [
     icon: Package,
     permission: "view_parts",
   },
+  ...DASHBOARD_HUB_COMMAND_ACTIONS.map((action) => ({
+    ...action,
+    icon:
+      action.id === "hub-payroll"
+        ? Users
+        : action.id === "hub-chart-of-accounts" || action.id === "hub-bank-reconciliation"
+          ? FileText
+          : Package,
+  })),
 ];
 
 type PaletteEntry =
@@ -107,13 +119,16 @@ export function CommandPalette() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { hasPermission } = usePermissions();
+  const { isModuleEnabled } = useModules();
 
   const quickActions = React.useMemo(
     () =>
       QUICK_ACTIONS.filter(
-        (action) => !action.permission || hasPermission(action.permission)
+        (action) =>
+          (!action.permission || hasPermission(action.permission)) &&
+          (!action.module || isModuleEnabled(action.module))
       ),
-    [hasPermission]
+    [hasPermission, isModuleEnabled]
   );
 
   const viewableItems: PaletteEntry[] = React.useMemo(() => {

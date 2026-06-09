@@ -9,7 +9,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
 from django.db.models import Sum, Q, F, Prefetch
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from decimal import Decimal
 from datetime import timedelta
 import logging
@@ -85,6 +85,21 @@ from apps.billing.serializers import (
     RefundCreateSerializer,
 )
 from apps.billing.tax_service import TaxService
+
+
+def log_accounting_audit(user, action, resource_type, resource_id, details, metadata=None):
+    try:
+        from apps.accounting.models import AuditLog
+        AuditLog.objects.create(
+            user=user,
+            action=action,
+            resource_type=resource_type,
+            resource_id=str(resource_id),
+            details=details,
+            metadata=metadata or {},
+        )
+    except Exception:
+        logger.warning("Failed to write accounting audit log", exc_info=True)
 
 
 class TaxRateViewSet(viewsets.ModelViewSet):
@@ -794,7 +809,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
     """
     
     queryset = Payment.objects.select_related(
-        'invoice', 'customer', 'processed_by', 'refunded_by'
+        'invoice', 'customer', 'processed_by', 'refunded_by',
+        'till', 'till__till_account', 'bank_account'
     ).prefetch_related('allocations')
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
@@ -808,7 +824,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('process_payments')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_payments')]
-        elif self.action in ['destroy', 'refund']:
+        elif self.action == 'refund':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('refund_payments')]
+        elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
         return [IsAuthenticated(), IsModuleEnabled('billing')]
 
@@ -875,28 +893,19 @@ class PaymentViewSet(viewsets.ModelViewSet):
         )
         
         if serializer.is_valid():
-            refund_amount = serializer.validated_data['refund_amount']
-            refund_reason = serializer.validated_data['refund_reason']
-            
-            # Update payment
-            payment.refund_amount += refund_amount
-            payment.refund_date = timezone.now()
-            payment.refund_reason = refund_reason
-            payment.refunded_by = request.user
-            
-            # If fully refunded, update status
-            if payment.refund_amount >= payment.amount:
-                payment.status = 'refunded'
-            
-            payment.save()
-            
-            # Update invoice amount_paid
-            payment.update_invoice_payment()
-            
+            refund = Refund.objects.create(
+                original_payment=payment,
+                invoice=payment.invoice,
+                customer=payment.customer,
+                amount=serializer.validated_data['refund_amount'],
+                reason=serializer.validated_data['refund_reason'],
+                refund_method='original_method',
+                requested_by=request.user,
+            )
             return Response({
-                "message": "Payment refunded successfully",
-                "payment": PaymentSerializer(payment).data
-            })
+                "message": "Refund request created. Approve and complete it to post cash/bank and accounting entries.",
+                "refund": RefundSerializer(refund).data,
+            }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -1240,19 +1249,30 @@ class TillViewSet(viewsets.ModelViewSet):
     
     queryset = CashierTill.objects.all()
     serializer_class = CashierTillSerializer
+    module_slug = 'billing'
+    read_permission = 'manage_billing'
+    write_permission = 'manage_billing'
+    manage_permission = 'manage_billing'
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
 
     def get_permissions(self):
         """Open/close tills require payment privileges; read uses view_billing."""
-        base = [IsAuthenticated(), IsModuleEnabled('billing')]
+        base = [IsAuthenticated(), IsModuleEnabled(self.module_slug)]
         if self.action in ('open', 'close', 'record_movement'):
-            return base + [HasPermission('process_payments')]
+            return base + [HasPermission(self.write_permission)]
+        if self.action in ('approve_variance',):
+            return base + [HasPermission(self.manage_permission)]
         if self.action in ('list', 'retrieve', 'current', 'movements'):
-            return base + [HasPermission('view_billing')]
-        return base + [HasPermission('manage_billing')]
+            return base + [HasPermission(self.read_permission)]
+        return base + [HasPermission(self.manage_permission)]
     
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = filter_queryset_for_user_branches(
+            super().get_queryset(),
+            self.request.user,
+            request=self.request,
+            use_active_branch=True,
+        )
         
         # Filter by branch if specified
         branch_id = self.request.query_params.get('branch')
@@ -1268,13 +1288,17 @@ class TillViewSet(viewsets.ModelViewSet):
         cashier_id = self.request.query_params.get('cashier')
         if cashier_id:
             queryset = queryset.filter(cashier_id=cashier_id)
+
+        till_account = self.request.query_params.get('till_account') or self.request.query_params.get('account')
+        if till_account:
+            queryset = queryset.filter(till_account_id=till_account)
         
         # Filter by date
         date = self.request.query_params.get('date')
         if date:
             queryset = queryset.filter(opened_at__date=date)
         
-        return queryset.select_related('branch', 'cashier').prefetch_related(
+        return queryset.select_related('branch', 'cashier', 'closed_by', 'till_account').prefetch_related(
             'cash_counts',
             Prefetch(
                 'cash_movements',
@@ -1288,40 +1312,62 @@ class TillViewSet(viewsets.ModelViewSet):
         serializer = OpenTillSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # Check if user already has an open till
-        existing_till = CashierTill.objects.filter(
-            cashier=request.user,
-            status='open'
-        ).first()
-        
-        if existing_till:
-            return Response(
-                {'error': 'You already have an open till'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         branch = resolve_branch(request)
         if branch is None:
             return Response(
                 {'error': 'A branch context is required to open a till. Select a branch and try again.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        with transaction.atomic():
-            till = CashierTill.objects.create(
-                branch=branch,
-                cashier=request.user,
-                opening_balance=serializer.validated_data['opening_balance'],
-                status='open'
+        till_account = serializer.validated_data['till_account']
+        existing_till = CashierTill.objects.filter(
+            branch=branch,
+            till_account=till_account,
+            status='open'
+        ).first()
+        if existing_till:
+            return Response(
+                {'error': 'This cash account already has an open till for the selected branch.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-            for count_data in serializer.validated_data.get('cash_counts', []):
-                CashCount.objects.create(
-                    till=till,
-                    count_type='opening',
-                    denomination=Decimal(str(count_data['denomination'])),
-                    quantity=int(count_data['quantity'])
+        try:
+            with transaction.atomic():
+                till = CashierTill.objects.create(
+                    branch=branch,
+                    cashier=request.user,
+                    till_account=till_account,
+                    opening_balance=serializer.validated_data['opening_balance'],
+                    status='open'
                 )
+
+                for count_data in serializer.validated_data.get('cash_counts', []):
+                    CashCount.objects.create(
+                        till=till,
+                        count_type='opening',
+                        denomination=Decimal(str(count_data['denomination'])),
+                        quantity=int(count_data['quantity'])
+                    )
+                log_accounting_audit(
+                    request.user,
+                    'create',
+                    'CashierTill',
+                    till.id,
+                    (
+                        f"Opened till for {till_account.code} - {till_account.name}; "
+                        f"Branch: {branch}; Opening balance: {till.opening_balance}"
+                    ),
+                    metadata={
+                        'event': 'till_opened',
+                        'branch_id': branch.id,
+                        'till_account_id': till_account.id,
+                        'opening_balance': str(till.opening_balance),
+                    },
+                )
+        except IntegrityError:
+            return Response(
+                {'error': 'This cash account already has an open till for the selected branch.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         return Response(
             CashierTillSerializer(till).data,
@@ -1339,12 +1385,6 @@ class TillViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if till.cashier != request.user:
-            return Response(
-                {'error': 'You can only close your own till'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
         serializer = CloseTillSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -1353,7 +1393,7 @@ class TillViewSet(viewsets.ModelViewSet):
             till.cash_counts.filter(count_type='closing').delete()
 
             total_counted = Decimal('0')
-            for count_data in serializer.validated_data['cash_counts']:
+            for count_data in serializer.validated_data.get('cash_counts', []):
                 cash_count = CashCount.objects.create(
                     till=till,
                     count_type='closing',
@@ -1361,22 +1401,57 @@ class TillViewSet(viewsets.ModelViewSet):
                     quantity=int(count_data['quantity'])
                 )
                 total_counted += cash_count.total
+            if not serializer.validated_data.get('cash_counts'):
+                total_counted = serializer.validated_data['counted_amount']
 
             expected_balance = till.calculate_expected_balance()
+            variance = (total_counted - expected_balance).quantize(Decimal('0.01'))
+            notes = serializer.validated_data.get('notes', '')
+            if variance != 0 and not notes.strip():
+                return Response(
+                    {'error': 'A variance reason is required before closing a till with shortage or excess.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             till.closing_balance = total_counted
             till.expected_balance = expected_balance
-            till.variance = total_counted - expected_balance
+            till.variance = variance
             till.closed_at = timezone.now()
+            till.closed_by = request.user
             till.status = 'closed'
-            till.notes = serializer.validated_data.get('notes', '')
+            till.notes = notes
+            till.set_variance_approval_status()
             till.save()
+            log_accounting_audit(
+                request.user,
+                'update',
+                'CashierTill',
+                till.id,
+                (
+                    f"Closed till for {till.till_account}; Opening: {till.opening_balance}; "
+                    f"Expected: {till.expected_balance}; Actual: {till.closing_balance}; "
+                    f"Variance: {till.variance}; Approval: {till.variance_approval_status}; "
+                    f"Reason: {till.notes}"
+                ),
+                metadata={
+                    'event': 'till_closed',
+                    'branch_id': till.branch_id,
+                    'till_account_id': till.till_account_id,
+                    'opening_balance': str(till.opening_balance),
+                    'expected_balance': str(till.expected_balance),
+                    'actual_counted_balance': str(till.closing_balance),
+                    'variance': str(till.variance),
+                    'variance_approval_status': till.variance_approval_status,
+                    'reason': till.notes,
+                },
+            )
         
         return Response({
             'message': 'Till closed successfully',
             'closing_balance': str(total_counted),
             'expected_balance': str(expected_balance),
             'variance': str(till.variance),
+            'variance_approval_status': till.variance_approval_status,
             'is_balanced': abs(till.variance) < Decimal('0.01')
         })
 
@@ -1388,6 +1463,38 @@ class TillViewSet(viewsets.ModelViewSet):
         serializer = TillCashMovementSerializer(qs, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'], url_path='approve-variance')
+    def approve_variance(self, request, pk=None):
+        """Supervisor approval for a closed till variance."""
+        till = self.get_object()
+        if till.status != 'closed':
+            return Response(
+                {'error': 'Only closed tills can have variances approved.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if till.variance in (None, Decimal('0')):
+            return Response(
+                {'error': 'This till has no variance to approve.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        till.variance_approval_status = 'approved'
+        till.save(update_fields=['variance_approval_status', 'updated_at'])
+        log_accounting_audit(
+            request.user,
+            'update',
+            'CashierTill',
+            till.id,
+            f"Approved till variance {till.variance} for {till.till_account}; Branch: {till.branch}",
+            metadata={
+                'event': 'till_variance_approved',
+                'branch_id': till.branch_id,
+                'till_account_id': till.till_account_id,
+                'variance': str(till.variance),
+                'approval_state': till.variance_approval_status,
+            },
+        )
+        return Response(CashierTillSerializer(till).data)
+
     @action(detail=True, methods=['post'])
     def record_movement(self, request, pk=None):
         """Record pay-in or pay-out against an open till you own."""
@@ -1396,11 +1503,6 @@ class TillViewSet(viewsets.ModelViewSet):
             return Response(
                 {'error': 'Till is not open'},
                 status=status.HTTP_400_BAD_REQUEST,
-            )
-        if till.cashier_id != request.user.id:
-            return Response(
-                {'error': 'You can only record movements on your own till'},
-                status=status.HTTP_403_FORBIDDEN,
             )
         serializer = RecordTillMovementSerializer(
             data=request.data,
@@ -1415,6 +1517,24 @@ class TillViewSet(viewsets.ModelViewSet):
                 reason=serializer.validated_data.get('reason') or '',
                 recorded_by=request.user,
             )
+            log_accounting_audit(
+                request.user,
+                'create',
+                'TillCashMovement',
+                movement.id,
+                (
+                    f"{movement.get_movement_type_display()} {movement.amount} on "
+                    f"{till.till_account}; Branch: {till.branch}; Reason: {movement.reason}"
+                ),
+                metadata={
+                    'event': 'till_cash_movement',
+                    'branch_id': till.branch_id,
+                    'till_account_id': till.till_account_id,
+                    'movement_type': movement.movement_type,
+                    'amount': str(movement.amount),
+                    'reason': movement.reason,
+                },
+            )
         return Response(
             TillCashMovementSerializer(movement).data,
             status=status.HTTP_201_CREATED,
@@ -1422,11 +1542,17 @@ class TillViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def current(self, request):
-        """Get current user's open till"""
-        till = CashierTill.objects.filter(
-            cashier=request.user,
-            status='open'
-        ).select_related('branch').prefetch_related(
+        """Get current open till for account/branch, or current user's latest open till."""
+        qs = CashierTill.objects.filter(status='open')
+        account_id = request.query_params.get('till_account') or request.query_params.get('account')
+        if account_id:
+            qs = qs.filter(till_account_id=account_id)
+        branch = resolve_branch(request)
+        if branch:
+            qs = qs.filter(branch=branch)
+        elif not account_id:
+            qs = qs.filter(cashier=request.user)
+        till = qs.select_related('branch', 'till_account').order_by('-opened_at').prefetch_related(
             'cash_counts',
             Prefetch(
                 'cash_movements',
@@ -1467,6 +1593,15 @@ class RefundViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
+        from apps.branches.utils import filter_queryset_for_user_branches
+
+        invoice_ids = filter_queryset_for_user_branches(
+            Invoice.objects.all(),
+            self.request.user,
+            request=self.request,
+            use_active_branch=True,
+        ).values_list('id', flat=True)
+        queryset = queryset.filter(invoice_id__in=invoice_ids)
         
         # Filter by status
         status_filter = self.request.query_params.get('status')
@@ -1480,7 +1615,8 @@ class RefundViewSet(viewsets.ModelViewSet):
         
         return queryset.select_related(
             'customer', 'customer__user', 'invoice', 'original_payment',
-            'requested_by', 'approved_by', 'processed_by'
+            'original_payment__bank_account', 'original_payment__till', 'original_payment__till__till_account',
+            'requested_by', 'approved_by', 'processed_by', 'bank_account', 'till', 'till__till_account'
         )
     
     def get_serializer_class(self):
@@ -1546,21 +1682,51 @@ class RefundViewSet(viewsets.ModelViewSet):
             )
         )
         if is_cash_refund:
-            till = CashierTill.objects.filter(
-                cashier=request.user,
-                status='open',
-            ).first()
+            cash_account_id = request.data.get('cash_account')
+            cash_account = None
+            if cash_account_id:
+                from apps.accounting.models import Account
+                cash_account = Account.objects.filter(pk=cash_account_id, is_till_enabled=True).first()
+            if cash_account is None and refund.original_payment.till_id:
+                cash_account = refund.original_payment.till.till_account
+            till_qs = CashierTill.objects.filter(status='open')
+            if cash_account:
+                till_qs = till_qs.filter(till_account=cash_account)
+            if refund.invoice.branch_id:
+                till_qs = till_qs.filter(branch_id=refund.invoice.branch_id)
+            till = till_qs.order_by('-opened_at').first()
             if not till:
                 return Response(
-                    {'error': 'Open a till before completing a cash refund'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            if refund.invoice.branch_id and till.branch_id != refund.invoice.branch_id:
-                return Response(
-                    {'error': 'Your open till must belong to the refund invoice branch'},
+                    {'error': 'Open a till for the selected cash account before completing a cash refund'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             refund.till = till
+            refund.bank_account = None
+        else:
+            from apps.accounting.models import Account
+            bank_account_id = request.data.get('bank_account')
+            bank_account = None
+            if bank_account_id:
+                bank_account = Account.objects.filter(
+                    pk=bank_account_id,
+                    is_active=True,
+                    account_type='asset',
+                    account_subtype__in=['bank', 'cash_equivalent'],
+                ).first()
+            if bank_account is None and refund.refund_method == 'original_method':
+                bank_account = refund.original_payment.bank_account
+            if bank_account is None:
+                return Response(
+                    {'error': 'Select the bank or cash-equivalent account before completing this refund'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not bank_account.is_leaf:
+                return Response(
+                    {'error': 'Refund bank account must be a detail/leaf account'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            refund.bank_account = bank_account
+            refund.till = None
 
         with transaction.atomic():
             refund.status = 'completed'
@@ -1569,8 +1735,13 @@ class RefundViewSet(viewsets.ModelViewSet):
             refund.save()
 
             # Update original payment refund amount
-            payment = refund.original_payment
+            payment = Payment.objects.select_for_update().get(pk=refund.original_payment_id)
             payment.refund_amount = (payment.refund_amount or Decimal('0')) + refund.amount
+            payment.refund_date = timezone.now()
+            payment.refund_reason = refund.reason
+            payment.refunded_by = request.user
+            if payment.refund_amount >= payment.amount:
+                payment.status = 'refunded'
             payment.save()
         
         return Response({'message': 'Refund completed'})
@@ -2101,7 +2272,7 @@ class BillViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_bills')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
-        return [IsAuthenticated(), IsModuleEnabled('billing')(), HasPermission('view_bills')()]
+        return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_bills')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'vendor', 'branch', 'purchase_order', 'due_date']
     search_fields = ['bill_number', 'vendor__name', 'purchase_order__po_number', 'reference_number', 'notes']
@@ -2302,7 +2473,7 @@ class BillViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = BillPaymentCreateSerializer(data=request.data)
+        serializer = BillPaymentCreateSerializer(data=request.data, context={'request': request, 'bill': bill})
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data['amount'] > bill.amount_due:
             return Response(

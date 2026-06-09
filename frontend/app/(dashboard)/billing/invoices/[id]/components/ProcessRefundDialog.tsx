@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { billingApi } from "@/lib/api/billing";
+import { refundApi } from "@/lib/api/till-refund";
 import {
     Dialog,
     DialogContent,
@@ -21,12 +21,20 @@ import { AlertCircle, DollarSign } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface ProcessRefundDialogProps {
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    payment: any;
+    payment: {
+        id: number;
+        invoice: number | { id: number };
+        customer: number | { id: number };
+        amount: string;
+        refund_amount?: string;
+        payment_number?: string;
+    };
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
 }
+
+type ApiError = { response?: { data?: { error?: string } } };
 
 const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
     payment,
@@ -44,18 +52,25 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
 
     const refundMutation = useMutation({
         mutationFn: (data: { refund_amount: string; refund_reason: string }) =>
-            billingApi.payments.refund(payment.id, data),
+            refundApi.create({
+                original_payment: payment.id,
+                invoice: typeof payment.invoice === "number" ? payment.invoice : payment.invoice?.id,
+                customer: typeof payment.customer === "number" ? payment.customer : payment.customer?.id,
+                amount: data.refund_amount,
+                reason: data.refund_reason,
+                refund_method: "original_method",
+            }),
         onSuccess: () => {
             toast({
-                title: "Refund Processed",
-                description: "The refund has been recorded successfully.",
+                title: "Refund Requested",
+                description: "The refund request was created for approval and completion.",
             });
             queryClient.invalidateQueries({ queryKey: ["payments"] });
             queryClient.invalidateQueries({ queryKey: ["invoice"] });
             onSuccess();
         },
 
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
             toast({
                 title: "Refund Failed",
                 description: error.response?.data?.error || "Error processing refund.",
@@ -98,7 +113,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <DollarSign className="h-5 w-5 text-destructive" />
-                        Process Refund
+                        Request Refund
                     </DialogTitle>
                     <DialogDescription>
                         Refund payment for Transaction #{payment.payment_number}.
@@ -153,7 +168,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
                         onClick={handleSubmit}
                         disabled={refundMutation.isPending || parseFloat(amount) > maxRefund || parseFloat(amount) <= 0}
                     >
-                        {refundMutation.isPending ? "Processing..." : "Confirm Refund"}
+                        {refundMutation.isPending ? "Requesting..." : "Create Refund Request"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

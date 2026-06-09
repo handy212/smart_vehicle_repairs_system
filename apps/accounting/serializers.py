@@ -27,10 +27,17 @@ def _user_can_use_branch(user, branch):
 
 class AccountSimpleSerializer(serializers.ModelSerializer):
     balance = serializers.SerializerMethodField()
+    children_count = serializers.IntegerField(source='children.count', read_only=True)
+    parent_code = serializers.CharField(source='parent.code', read_only=True)
+    parent_name = serializers.CharField(source='parent.name', read_only=True)
     
     class Meta:
         model = Account
-        fields = ['id', 'code', 'name', 'account_type', 'balance_type', 'is_active', 'balance']
+        fields = [
+            'id', 'code', 'name', 'account_type', 'balance_type',
+            'account_subtype', 'parent', 'parent_code', 'parent_name',
+            'description', 'is_active', 'is_till_enabled', 'children_count', 'balance'
+        ]
     
     def get_balance(self, obj):
         """Ending balance through today from posted journals only."""
@@ -43,10 +50,48 @@ class AccountSimpleSerializer(serializers.ModelSerializer):
 
 class AccountSerializer(serializers.ModelSerializer):
     """Full serializer for creating and updating accounts"""
+    children_count = serializers.IntegerField(source='children.count', read_only=True)
+
     class Meta:
         model = Account
-        fields = ['id', 'code', 'name', 'account_type', 'balance_type', 'description', 'is_active', 'created_at', 'updated_at']
+        fields = [
+            'id', 'code', 'name', 'account_type', 'balance_type',
+            'account_subtype', 'parent', 'is_till_enabled',
+            'description', 'is_active', 'children_count',
+            'created_at', 'updated_at'
+        ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def validate(self, attrs):
+        instance = self.instance
+        account_type = attrs.get('account_type', getattr(instance, 'account_type', None))
+        account_subtype = attrs.get('account_subtype', getattr(instance, 'account_subtype', ''))
+        is_active = attrs.get('is_active', getattr(instance, 'is_active', True))
+        is_till_enabled = attrs.get('is_till_enabled', getattr(instance, 'is_till_enabled', False))
+        parent = attrs.get('parent', getattr(instance, 'parent', None))
+        if instance and parent and parent.pk == instance.pk:
+            raise serializers.ValidationError({'parent': 'An account cannot be its own parent.'})
+        if parent and parent.is_till_enabled:
+            raise serializers.ValidationError({
+                'parent': 'A till-enabled account cannot be used as a parent account.'
+            })
+        if instance and parent:
+            ancestor = parent
+            seen = set()
+            while ancestor is not None:
+                if ancestor.pk == instance.pk or ancestor.pk in seen:
+                    raise serializers.ValidationError({
+                        'parent': 'Account hierarchy cannot contain cycles.'
+                    })
+                seen.add(ancestor.pk)
+                ancestor = ancestor.parent
+        has_children = instance.children.exists() if instance and instance.pk else False
+        if is_till_enabled:
+            if not is_active or account_type != 'asset' or account_subtype not in Account.TILL_ELIGIBLE_SUBTYPES or has_children:
+                raise serializers.ValidationError({
+                    'is_till_enabled': 'Only active leaf Asset accounts classified as Cash, Bank, or Cash Equivalent can be till-enabled.'
+                })
+        return attrs
 
 class TransactionSerializer(serializers.ModelSerializer):
     account = AccountSimpleSerializer(read_only=True)
@@ -93,6 +138,13 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ['account_id', 'amount', 'transaction_type', 'description']
+
+    def validate_account_id(self, account):
+        if account.children.exists():
+            raise serializers.ValidationError(
+                'Journal transactions must use a detail/leaf account, not a parent category account.'
+            )
+        return account
 
 class JournalEntryCreateSerializer(serializers.ModelSerializer):
     transactions = TransactionCreateSerializer(many=True)
@@ -197,8 +249,36 @@ from .models import AccountingControl, AuditLog
 class AccountingControlSerializer(serializers.ModelSerializer):
     class Meta:
         model = AccountingControl
-        fields = ['period_lock_date', 'updated_at', 'updated_by']
+        fields = [
+            'period_lock_date',
+            'accounts_receivable_account',
+            'accounts_payable_account',
+            'sales_revenue_account',
+            'sales_discount_account',
+            'sales_tax_payable_account',
+            'shop_supplies_revenue_account',
+            'environmental_fee_revenue_account',
+            'input_tax_account',
+            'default_expense_account',
+            'inventory_asset_account',
+            'cost_of_goods_sold_account',
+            'cash_over_short_account',
+            'till_counterparty_cash_account',
+            'default_bank_account',
+            'updated_at',
+            'updated_by',
+        ]
         read_only_fields = ['updated_at', 'updated_by']
+
+    def validate(self, attrs):
+        instance = self.instance or AccountingControl.get_settings()
+        for field_name in AccountingControl.ACCOUNT_FIELD_NAMES:
+            account = attrs.get(field_name, getattr(instance, field_name, None))
+            if account and not account.is_leaf:
+                raise serializers.ValidationError({
+                    field_name: 'Select a detail/leaf account, not a parent category account.'
+                })
+        return attrs
 
 class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()

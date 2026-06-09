@@ -50,6 +50,12 @@ export interface Account {
     name: string;
     account_type: string;
     balance_type?: string;
+    account_subtype?: string;
+    parent?: number | null;
+    parent_code?: string | null;
+    parent_name?: string | null;
+    is_till_enabled?: boolean;
+    children_count?: number;
     is_active?: boolean;
     balance?: number | string;
 }
@@ -166,6 +172,82 @@ export interface FundTransfer {
     status: "draft" | "pending" | "approved" | "completed" | "cancelled";
 }
 
+export interface CashCount {
+    id?: number;
+    denomination: string;
+    quantity: number;
+    total?: string;
+    count_type?: "opening" | "closing";
+}
+
+export interface Till {
+    id: number;
+    branch: number;
+    branch_name: string;
+    cashier: number;
+    cashier_name: string;
+    till_account: number;
+    till_account_name?: string;
+    till_account_code?: string;
+    status: "open" | "closed";
+    opened_at: string;
+    closed_at?: string | null;
+    opening_balance: string;
+    closing_balance?: string | null;
+    expected_balance?: string | null;
+    variance?: string | null;
+    variance_approval_status?: string;
+    is_balanced?: boolean;
+    duration?: string;
+    cash_payments_total?: string;
+    cash_refunds_total?: string;
+    cash_bill_payments_total?: string;
+    till_cash_movements_net?: string;
+    current_expected_balance?: string;
+    notes: string;
+    cash_counts: CashCount[];
+}
+
+export interface TillCashMovement {
+    id: number;
+    till: number;
+    movement_type: "pay_in" | "pay_out";
+    amount: string;
+    reason: string;
+    recorded_by: number;
+    recorded_by_name: string;
+    created_at: string;
+}
+
+export interface TillReconciliationRow {
+    id: number;
+    branch_name: string;
+    till_account_code: string;
+    till_account_name: string;
+    status: string;
+    opened_at: string;
+    closed_at?: string | null;
+    opened_by: string;
+    closed_by?: string;
+    opening_balance: string;
+    cash_received: string;
+    cash_paid_out: string;
+    net_movements: string;
+    expected_balance: string;
+    actual_counted_balance: string;
+    variance: string;
+    shortage: string;
+    excess: string;
+    variance_reason: string;
+    variance_approval_status: string;
+}
+
+export interface TillReconciliationReport {
+    period: { start: string; end: string };
+    results: TillReconciliationRow[];
+    totals: Record<string, string>;
+}
+
 export interface ApiError {
     response?: {
         data?: {
@@ -258,6 +340,25 @@ export const accountingApi = {
     getAccounts: async (): Promise<Account[]> => {
         const response = await apiClient.get("/accounting/accounts/");
         return response.data.results || response.data;
+    },
+
+    getTillEnabledAccounts: async (): Promise<Account[]> => {
+        const response = await apiClient.get("/accounting/accounts/", {
+            params: { is_till_enabled: true, is_active: true },
+        });
+        return response.data.results || response.data;
+    },
+
+    getBankAccounts: async (): Promise<Account[]> => {
+        const response = await apiClient.get("/accounting/accounts/", {
+            params: { account_type: "asset", account_subtype: "bank", is_active: true },
+        });
+        const bankAccounts = response.data.results || response.data;
+        const cashEquivalentsResponse = await apiClient.get("/accounting/accounts/", {
+            params: { account_type: "asset", account_subtype: "cash_equivalent", is_active: true },
+        });
+        const cashEquivalents = cashEquivalentsResponse.data.results || cashEquivalentsResponse.data;
+        return [...bankAccounts, ...cashEquivalents].filter((account: Account) => (account.children_count || 0) === 0);
     },
 
 
@@ -406,6 +507,57 @@ export const accountingApi = {
 
     reconcileStatement: async (id: string): Promise<unknown> => {
         const response = await apiClient.post(`/accounting/bank-statements/${id}/reconcile/`);
+        return response.data;
+    },
+
+    getTills: async (params?: QueryParams): Promise<Till[]> => {
+        const response = await apiClient.get("/accounting/tills/", { params });
+        return response.data.results || response.data;
+    },
+
+    getTill: async (id: number): Promise<Till> => {
+        const response = await apiClient.get(`/accounting/tills/${id}/`);
+        return response.data;
+    },
+
+    openTill: async (data: { till_account: number | string; opening_balance: string; cash_counts?: CashCount[] }): Promise<Till> => {
+        const response = await apiClient.post("/accounting/tills/open/", data);
+        return response.data;
+    },
+
+    closeTill: async (
+        id: number,
+        data: { cash_counts?: CashCount[]; counted_amount?: string; notes?: string }
+    ): Promise<{ closing_balance: string; expected_balance: string; variance: string; variance_approval_status: string; is_balanced: boolean }> => {
+        const response = await apiClient.post(`/accounting/tills/${id}/close/`, data);
+        return response.data;
+    },
+
+    getCurrentTill: async (params?: QueryParams): Promise<Till | { id: null; message: string }> => {
+        const response = await apiClient.get("/accounting/tills/current/", { params });
+        return response.data;
+    },
+
+    getTillMovements: async (id: number): Promise<TillCashMovement[]> => {
+        const response = await apiClient.get(`/accounting/tills/${id}/movements/`);
+        return response.data;
+    },
+
+    recordTillMovement: async (
+        id: number,
+        data: { movement_type: "pay_in" | "pay_out"; amount: string; reason?: string }
+    ): Promise<TillCashMovement> => {
+        const response = await apiClient.post(`/accounting/tills/${id}/record_movement/`, data);
+        return response.data;
+    },
+
+    approveTillVariance: async (id: number): Promise<Till> => {
+        const response = await apiClient.post(`/accounting/tills/${id}/approve-variance/`);
+        return response.data;
+    },
+
+    getTillReconciliationReport: async (params?: QueryParams): Promise<TillReconciliationReport> => {
+        const response = await apiClient.get("/accounting/reports/till-reconciliation/", { params });
         return response.data;
     },
 

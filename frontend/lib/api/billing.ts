@@ -110,6 +110,10 @@ export interface Payment {
   payment_date: string;
   amount: string;
   payment_method: string;
+  till?: number | null;
+  till_account_name?: string | null;
+  bank_account?: number | null;
+  bank_account_name?: string | null;
   status: string;
   transaction_id?: string;
   reference_number?: string;
@@ -316,6 +320,10 @@ export interface BillPayment {
   amount: string;
   payment_date: string;
   payment_method: "cash" | "check" | "bank_transfer" | "mobile_money" | "credit_card" | "other";
+  till?: number | null;
+  till_account_name?: string | null;
+  bank_account?: number | null;
+  bank_account_name?: string | null;
   reference_number?: string;
   notes?: string;
   paid_by?: number;

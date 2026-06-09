@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { refundApi, type Refund } from "@/lib/api/till-refund";
@@ -13,8 +14,12 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { accountingApi, type Account } from "@/lib/api/accounting";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+type ApiError = { response?: { data?: { error?: string } } };
+
 export default function RefundDetailPage() {
     const { formatCurrency } = useCurrency();
     const params = useParams();
@@ -22,6 +27,8 @@ export default function RefundDetailPage() {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const id = parseInt(params.id as string);
+    const [cashAccount, setCashAccount] = useState("");
+    const [bankAccount, setBankAccount] = useState("");
 
     // Validate ID to prevent NaN API calls
     const isValidId = !isNaN(id) && id > 0;
@@ -30,6 +37,20 @@ export default function RefundDetailPage() {
         queryKey: ['refund', id],
         queryFn: () => refundApi.get(id),
         enabled: isValidId,
+    });
+    const requiresCashAccount = refund?.refund_method === "cash";
+    const requiresBankAccount = refund && !["cash", "original_method"].includes(refund.refund_method);
+
+    const { data: tillAccounts = [] } = useQuery({
+        queryKey: ["accounting", "till-enabled-accounts"],
+        queryFn: () => accountingApi.getTillEnabledAccounts(),
+        enabled: Boolean(refund && refund.status === "approved" && requiresCashAccount),
+    });
+
+    const { data: bankAccounts = [] } = useQuery({
+        queryKey: ["accounting", "bank-accounts"],
+        queryFn: () => accountingApi.getBankAccounts(),
+        enabled: Boolean(refund && refund.status === "approved" && requiresBankAccount),
     });
 
     const approveMutation = useMutation({
@@ -40,7 +61,7 @@ export default function RefundDetailPage() {
             toast({ title: "Success", description: "Refund approved successfully" });
         },
 
-        onError: (err: any) => {
+        onError: (err: ApiError) => {
             toast({
                 title: "Error",
                 description: err.response?.data?.error || "Failed to approve refund",
@@ -57,7 +78,7 @@ export default function RefundDetailPage() {
             toast({ title: "Success", description: "Refund rejected successfully" });
         },
 
-        onError: (err: any) => {
+        onError: (err: ApiError) => {
             toast({
                 title: "Error",
                 description: err.response?.data?.error || "Failed to reject refund",
@@ -67,14 +88,17 @@ export default function RefundDetailPage() {
     });
 
     const completeMutation = useMutation({
-        mutationFn: () => refundApi.complete(id),
+        mutationFn: () => refundApi.complete(id, {
+            ...(requiresCashAccount && cashAccount ? { cash_account: cashAccount } : {}),
+            ...(requiresBankAccount && bankAccount ? { bank_account: bankAccount } : {}),
+        }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['refund', id] });
             queryClient.invalidateQueries({ queryKey: ['refunds'] });
             toast({ title: "Success", description: "Refund marked as completed" });
         },
 
-        onError: (err: any) => {
+        onError: (err: ApiError) => {
             toast({
                 title: "Error",
                 description: err.response?.data?.error || "Failed to complete refund",
@@ -118,7 +142,7 @@ export default function RefundDetailPage() {
 
     const getStatusVariant = (status: string) => {
 
-        const variants: Record<string, any> = {
+        const variants: Record<string, "warning" | "default" | "success" | "destructive" | "secondary"> = {
             pending: 'warning',
             approved: 'default',
             completed: 'success',
@@ -173,13 +197,43 @@ export default function RefundDetailPage() {
                         </>
                     )}
                     {refund.status === 'approved' && (
-                        <Button
-                            onClick={() => completeMutation.mutate()}
-                            disabled={completeMutation.isPending}
-                        >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Mark Completed
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            {requiresCashAccount && (
+                                <Select value={cashAccount} onValueChange={setCashAccount}>
+                                    <SelectTrigger className="w-56">
+                                        <SelectValue placeholder="Select cash account" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {tillAccounts.map((account: Account) => (
+                                            <SelectItem key={account.id} value={String(account.id)}>
+                                                {account.code} - {account.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            {requiresBankAccount && (
+                                <Select value={bankAccount} onValueChange={setBankAccount}>
+                                    <SelectTrigger className="w-56">
+                                        <SelectValue placeholder="Select bank account" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {bankAccounts.map((account: Account) => (
+                                            <SelectItem key={account.id} value={String(account.id)}>
+                                                {account.code} - {account.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            <Button
+                                onClick={() => completeMutation.mutate()}
+                                disabled={completeMutation.isPending || (requiresCashAccount && !cashAccount) || (requiresBankAccount && !bankAccount)}
+                            >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Mark Completed
+                            </Button>
+                        </div>
                     )}
                 </div>
             </div>

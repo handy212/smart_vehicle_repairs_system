@@ -25,12 +25,39 @@ class Account(models.Model):
         ('credit', 'Credit'),
     ]
 
+    ACCOUNT_SUBTYPE_CHOICES = [
+        ('', 'Unclassified'),
+        ('cash', 'Cash on Hand'),
+        ('bank', 'Bank Account'),
+        ('cash_equivalent', 'Cash Equivalent'),
+        ('accounts_receivable', 'Accounts Receivable'),
+        ('inventory', 'Inventory'),
+        ('fixed_asset', 'Fixed Asset'),
+        ('current_asset', 'Current Asset'),
+        ('current_liability', 'Current Liability'),
+        ('tax_payable', 'Taxes Payable'),
+        ('accounts_payable', 'Accounts Payable'),
+        ('revenue', 'Revenue'),
+        ('expense', 'Expense'),
+        ('category', 'Category/Header'),
+    ]
+
+    TILL_ELIGIBLE_SUBTYPES = {'cash', 'bank', 'cash_equivalent'}
+
     code = models.CharField(max_length=20, unique=True, help_text="Unique account code (e.g., 1000)")
     name = models.CharField(max_length=255)
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES)
     balance_type = models.CharField(max_length=20, choices=BALANCE_TYPE_CHOICES, help_text="Normal balance side")
+    account_subtype = models.CharField(
+        max_length=30,
+        choices=ACCOUNT_SUBTYPE_CHOICES,
+        blank=True,
+        default='',
+        help_text="Classification used for reporting and till eligibility."
+    )
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
     is_active = models.BooleanField(default=True)
+    is_till_enabled = models.BooleanField(default=False)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -40,10 +67,47 @@ class Account(models.Model):
         indexes = [
             models.Index(fields=['code']),
             models.Index(fields=['account_type']),
+            models.Index(fields=['parent']),
+            models.Index(fields=['is_till_enabled']),
         ]
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+    @property
+    def is_leaf(self):
+        if not self.pk:
+            return True
+        return not self.children.exists()
+
+    @property
+    def can_enable_till(self):
+        return (
+            self.is_active
+            and self.account_type == 'asset'
+            and self.account_subtype in self.TILL_ELIGIBLE_SUBTYPES
+            and self.is_leaf
+        )
+
+    def clean(self):
+        super().clean()
+        if self.parent_id and self.parent_id == self.pk:
+            raise ValidationError(_("An account cannot be its own parent."))
+        parent = self.parent
+        seen = set()
+        while parent is not None:
+            if parent.pk == self.pk:
+                raise ValidationError(_("Account hierarchy cannot contain cycles."))
+            if parent.pk in seen:
+                raise ValidationError(_("Account hierarchy cannot contain cycles."))
+            seen.add(parent.pk)
+            parent = parent.parent
+        if self.parent_id and self.parent and self.parent.is_till_enabled:
+            raise ValidationError(_("A till-enabled account cannot be used as a parent account."))
+        if self.is_till_enabled and not self.can_enable_till:
+            raise ValidationError(
+                _("Only active leaf Asset accounts classified as Cash, Bank, or Cash Equivalent can be till-enabled.")
+            )
 
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -141,6 +205,10 @@ class Transaction(models.Model):
     def clean(self):
         if self.amount <= 0:
             raise ValidationError(_("Transaction amount must be positive."))
+        if self.account_id and self.account.children.exists():
+            raise ValidationError(
+                _("Journal transactions must be posted to detail/leaf accounts, not parent category accounts.")
+            )
         allow_initial_line = (
             self.pk is None
             and getattr(self.journal_entry, '_allow_initial_posted_lines', False)
@@ -171,7 +239,94 @@ class AccountingControl(models.Model):
     Global accounting settings/controls.
     Expected to have only one active record.
     """
+    ACCOUNT_FIELD_NAMES = [
+        'accounts_receivable_account',
+        'accounts_payable_account',
+        'sales_revenue_account',
+        'sales_discount_account',
+        'sales_tax_payable_account',
+        'shop_supplies_revenue_account',
+        'environmental_fee_revenue_account',
+        'input_tax_account',
+        'default_expense_account',
+        'inventory_asset_account',
+        'cost_of_goods_sold_account',
+        'cash_over_short_account',
+        'till_counterparty_cash_account',
+        'default_bank_account',
+    ]
+
     period_lock_date = models.DateField(null=True, blank=True, help_text="Transactions on or before this date cannot be modified.")
+    accounts_receivable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_accounts_receivable',
+        help_text="Control account for customer receivables."
+    )
+    accounts_payable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_accounts_payable',
+        help_text="Control account for vendor payables."
+    )
+    sales_revenue_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_sales_revenue',
+        help_text="Default revenue account for invoice sales."
+    )
+    sales_discount_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_sales_discounts',
+        help_text="Contra-revenue account for invoice discounts."
+    )
+    sales_tax_payable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_sales_tax_payable',
+        help_text="Liability account for output VAT/tax."
+    )
+    shop_supplies_revenue_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_shop_supplies_revenue',
+        help_text="Revenue account for shop supplies fees."
+    )
+    environmental_fee_revenue_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_environmental_fee_revenue',
+        help_text="Revenue account for environmental fees."
+    )
+    input_tax_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_input_tax',
+        help_text="Asset account for recoverable input VAT/tax."
+    )
+    default_expense_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_default_expense',
+        help_text="Default expense account for vendor bill lines."
+    )
+    inventory_asset_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_inventory_asset',
+        help_text="Inventory asset control account."
+    )
+    cost_of_goods_sold_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_cogs',
+        help_text="Cost of goods sold account."
+    )
+    cash_over_short_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_cash_over_short',
+        help_text="Account used for till shortage and overage variances."
+    )
+    till_counterparty_cash_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_till_counterparty_cash',
+        help_text="Cash account used as the other side of till pay-in/pay-out movements."
+    )
+    default_bank_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_default_bank',
+        help_text="Optional default bank/cash-equivalent account for non-cash settlement."
+    )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 
@@ -185,6 +340,13 @@ class AccountingControl(models.Model):
     def get_settings(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+
+    def clean(self):
+        super().clean()
+        for field_name in self.ACCOUNT_FIELD_NAMES:
+            account = getattr(self, field_name, None)
+            if account and not account.is_leaf:
+                raise ValidationError(_("%(field)s must be a leaf/detail account.") % {'field': field_name})
 
 class AuditLog(models.Model):
     """
@@ -201,6 +363,7 @@ class AuditLog(models.Model):
     resource_type = models.CharField(max_length=50)
     resource_id = models.CharField(max_length=50)
     details = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 

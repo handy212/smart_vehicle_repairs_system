@@ -583,13 +583,13 @@ export const roleGuides: HelpGuide[] = [
                         items: [
                             "Process refunds from the payment detail page or **Billing → Refunds**.",
                             "Pending refunds require approval — check your branch policy on who approves.",
-                            "Open a **Till** at the start of each cashier shift; close with counted cash vs. system total.",
+                            "Open **Accounting → Till Management** at the start of the day; close with counted cash vs. system total.",
                             "Record **Pay In** and **Pay Out** for petty cash movements.",
                             "Issue **Credit Notes** for post-invoice adjustments instead of editing closed invoices.",
                         ],
                     },
                 ],
-                actionLink: "/billing/tills",
+                actionLink: "/accounting/tills",
                 actionLabel: "Till Management",
             },
             {

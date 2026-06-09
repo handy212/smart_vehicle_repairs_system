@@ -30,6 +30,39 @@ from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
 from apps.inventory.models import Part, PurchaseOrder
 from apps.quickbooks_online.serializer_mixins import QBOSyncFieldsMixin
+from apps.accounting.models import Account
+
+
+BANK_SETTLEMENT_PAYMENT_METHODS = {
+    'check', 'cheque', 'ach', 'wire', 'bank_transfer',
+    'credit_card', 'debit_card', 'pos',
+    'paypal', 'venmo', 'zelle',
+    'mtn_momo', 'vodafone_cash', 'airteltigo_money', 'mobile_money',
+    'hubtel_card', 'paystack', 'other',
+}
+
+
+def bank_account_queryset():
+    return Account.objects.filter(
+        is_active=True,
+        account_type='asset',
+        account_subtype__in=['bank', 'cash_equivalent'],
+    )
+
+
+def validate_bank_account(account):
+    if not account:
+        return account
+    if (
+        not account.is_active
+        or account.account_type != 'asset'
+        or account.account_subtype not in {'bank', 'cash_equivalent'}
+        or not account.is_leaf
+    ):
+        raise serializers.ValidationError(
+            "Select an active leaf Asset account classified as Bank or Cash Equivalent."
+        )
+    return account
 
 
 def calculate_discounted_line_total(item):
@@ -1115,6 +1148,8 @@ class PaymentSerializer(serializers.ModelSerializer):
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     processed_by_name = serializers.CharField(source='processed_by.get_full_name', read_only=True)
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
+    till_account_name = serializers.CharField(source='till.till_account.name', read_only=True, allow_null=True)
     refunded_by_name = serializers.CharField(source='refunded_by.get_full_name', read_only=True)
     
     net_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
@@ -1128,7 +1163,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'payment_number', 'invoice', 'invoice_number',
             'customer', 'customer_name',
-            'till',
+            'till', 'till_account_name', 'bank_account', 'bank_account_name',
             'payment_method', 'status', 'amount', 'payment_date',
             'reference_number', 'card_last_four', 'card_type',
             'notes',
@@ -1155,12 +1190,23 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 class PaymentCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating payments"""
+    cash_account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        required=False,
+        write_only=True,
+    )
+    bank_account = serializers.PrimaryKeyRelatedField(
+        queryset=bank_account_queryset(),
+        required=False,
+        allow_null=True,
+    )
     
     class Meta:
         model = Payment
         fields = [
             'invoice', 'payment_method', 'amount', 'payment_date',
-            'reference_number', 'card_last_four', 'card_type', 'notes'
+            'reference_number', 'card_last_four', 'card_type', 'notes',
+            'cash_account', 'bank_account'
         ]
     
     def validate(self, data):
@@ -1185,25 +1231,41 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
                 {"invoice": f"Invoice {inv_num} is already fully paid. Cannot record additional payments."}
             )
 
-        if data.get('payment_method') == 'cash':
+        payment_method = data.get('payment_method')
+        if payment_method == 'cash':
             request = self.context.get('request')
-            open_till = CashierTill.objects.filter(
-                cashier=request.user,
-                status='open',
-            ).select_related('branch').first() if request else None
+            cash_account = data.pop('cash_account', None)
+            if cash_account is None:
+                raise serializers.ValidationError({
+                    "cash_account": "Select the till-enabled cash account for this cash payment."
+                })
+            invoice_branch_id = getattr(invoice, 'branch_id', None)
+            open_till = None
+            if request and cash_account:
+                till_qs = CashierTill.objects.filter(status='open', till_account=cash_account)
+                if invoice_branch_id:
+                    till_qs = till_qs.filter(branch_id=invoice_branch_id)
+                open_till = till_qs.select_related('branch', 'till_account').order_by('-opened_at').first()
 
             if not open_till:
                 raise serializers.ValidationError({
-                    "payment_method": "Open a till before recording a cash payment."
+                    "payment_method": "Open a till for the selected cash account before recording a cash payment."
                 })
 
-            invoice_branch_id = getattr(invoice, 'branch_id', None)
             if invoice_branch_id and open_till.branch_id != invoice_branch_id:
                 raise serializers.ValidationError({
-                    "payment_method": "Your open till must belong to the invoice branch."
+                    "payment_method": "The active till must belong to the invoice branch."
                 })
 
             data['till'] = open_till
+            data['bank_account'] = None
+        elif payment_method in BANK_SETTLEMENT_PAYMENT_METHODS:
+            bank_account = validate_bank_account(data.get('bank_account'))
+            if bank_account is None:
+                raise serializers.ValidationError({
+                    "bank_account": "Select the bank or cash-equivalent account for this payment."
+                })
+            data['till'] = None
         
         return data
     
@@ -1265,10 +1327,13 @@ class CashierTillSerializer(serializers.ModelSerializer):
     
     cashier_name = serializers.CharField(source='cashier.get_full_name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
+    till_account_name = serializers.CharField(source='till_account.name', read_only=True)
+    till_account_code = serializers.CharField(source='till_account.code', read_only=True)
     cash_counts = CashCountSerializer(many=True, read_only=True)
     duration = serializers.SerializerMethodField()
     cash_payments_total = serializers.SerializerMethodField()
     cash_refunds_total = serializers.SerializerMethodField()
+    cash_bill_payments_total = serializers.SerializerMethodField()
     till_cash_movements_net = serializers.SerializerMethodField()
     current_expected_balance = serializers.SerializerMethodField()
     
@@ -1276,10 +1341,11 @@ class CashierTillSerializer(serializers.ModelSerializer):
         model = CashierTill
         fields = [
             'id', 'branch', 'branch_name', 'cashier', 'cashier_name',
+            'till_account', 'till_account_name', 'till_account_code',
             'opened_at', 'closed_at', 'status',
             'opening_balance', 'closing_balance', 'expected_balance', 'variance',
-            'is_balanced', 'duration', 'notes', 'cash_counts',
-            'cash_payments_total', 'cash_refunds_total', 'till_cash_movements_net',
+            'variance_approval_status', 'is_balanced', 'duration', 'notes', 'cash_counts',
+            'cash_payments_total', 'cash_refunds_total', 'cash_bill_payments_total', 'till_cash_movements_net',
             'current_expected_balance'
         ]
         read_only_fields = ['opened_at', 'created_at', 'updated_at']
@@ -1298,6 +1364,9 @@ class CashierTillSerializer(serializers.ModelSerializer):
     def get_cash_refunds_total(self, obj):
         return obj.cash_refunds_total()
 
+    def get_cash_bill_payments_total(self, obj):
+        return obj.cash_bill_payments_total()
+
     def get_till_cash_movements_net(self, obj):
         return obj.till_cash_movements_net()
 
@@ -1307,6 +1376,10 @@ class CashierTillSerializer(serializers.ModelSerializer):
 
 class OpenTillSerializer(serializers.Serializer):
     """Serializer for opening a till"""
+    till_account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        required=True,
+    )
     opening_balance = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -1322,6 +1395,11 @@ class OpenTillSerializer(serializers.Serializer):
         return _validate_cash_count_lines(value)
 
     def validate(self, data):
+        account = data['till_account']
+        if not account.can_enable_till:
+            raise serializers.ValidationError({
+                'till_account': 'Select an active leaf Cash, Bank, or Cash Equivalent asset account.'
+            })
         counts = data.get('cash_counts') or []
         if counts:
             counted_total = _sum_cash_count_lines(counts)
@@ -1336,14 +1414,33 @@ class CloseTillSerializer(serializers.Serializer):
     """Serializer for closing a till"""
     cash_counts = serializers.ListField(
         child=serializers.DictField(),
-        required=True
+        required=False
+    )
+    counted_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('0'),
+        required=False,
     )
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate_cash_counts(self, value):
-        if not value:
-            raise serializers.ValidationError("At least one cash count line is required.")
         return _validate_cash_count_lines(value)
+
+    def validate(self, data):
+        counts = data.get('cash_counts') or []
+        counted_amount = data.get('counted_amount')
+        if not counts and counted_amount is None:
+            raise serializers.ValidationError(
+                "Enter a physical cash count using denominations or total counted amount."
+            )
+        if counts and counted_amount is not None:
+            count_total = _sum_cash_count_lines(counts)
+            if count_total != counted_amount:
+                raise serializers.ValidationError({
+                    'counted_amount': 'Total counted amount must equal denomination count total.'
+                })
+        return data
 
 
 class TillCashMovementSerializer(serializers.ModelSerializer):
@@ -1436,6 +1533,8 @@ class RefundSerializer(serializers.ModelSerializer):
     requested_by_name = serializers.CharField(source='requested_by.get_full_name', read_only=True)
     approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True, allow_null=True)
     processed_by_name = serializers.CharField(source='processed_by.get_full_name', read_only=True, allow_null=True)
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
+    till_account_name = serializers.CharField(source='till.till_account.name', read_only=True, allow_null=True)
     
     class Meta:
         model = Refund
@@ -1445,7 +1544,7 @@ class RefundSerializer(serializers.ModelSerializer):
             'requested_by', 'requested_by_name', 'requested_at',
             'approved_by', 'approved_by_name', 'approved_at',
             'processed_by', 'processed_by_name', 'processed_at',
-            'till', 'notes'
+            'till', 'till_account_name', 'bank_account', 'bank_account_name', 'notes'
         ]
         read_only_fields = ['refund_number', 'requested_at', 'approved_at', 'processed_at']
     
@@ -1457,13 +1556,34 @@ class RefundSerializer(serializers.ModelSerializer):
 
 class RefundCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating refunds"""
+    bank_account = serializers.PrimaryKeyRelatedField(
+        queryset=bank_account_queryset(),
+        required=False,
+        allow_null=True,
+    )
     
     class Meta:
         model = Refund
         fields = [
             'original_payment', 'invoice', 'customer',
-            'amount', 'reason', 'refund_method', 'reference_number'
+            'amount', 'reason', 'refund_method', 'reference_number', 'bank_account'
         ]
+
+    def validate(self, data):
+        payment = data.get('original_payment')
+        amount = data.get('amount') or Decimal('0')
+        if payment and amount > (payment.amount - (payment.refund_amount or Decimal('0'))):
+            raise serializers.ValidationError({
+                'amount': 'Refund amount cannot exceed the remaining refundable payment amount.'
+            })
+        refund_method = data.get('refund_method')
+        if refund_method in BANK_SETTLEMENT_PAYMENT_METHODS:
+            bank_account = validate_bank_account(data.get('bank_account'))
+            if bank_account is None:
+                raise serializers.ValidationError({
+                    'bank_account': 'Select the bank or cash-equivalent account for this refund.'
+                })
+        return data
 
 # ============================================================================
 # CREDIT NOTE SERIALIZERS
@@ -1806,12 +1926,15 @@ class BillCreateSerializer(serializers.ModelSerializer):
 
 class BillPaymentSerializer(serializers.ModelSerializer):
     paid_by_name = serializers.CharField(source='paid_by.get_full_name', read_only=True)
+    till_account_name = serializers.CharField(source='till.till_account.name', read_only=True)
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
 
     class Meta:
         model = BillPayment
         fields = [
             'id', 'payment_number', 'bill', 'amount', 'payment_date',
-            'payment_method', 'reference_number', 'notes', 'paid_by',
+            'payment_method', 'till', 'till_account_name', 'bank_account', 'bank_account_name',
+            'reference_number', 'notes', 'paid_by',
             'paid_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -1821,6 +1944,49 @@ class BillPaymentSerializer(serializers.ModelSerializer):
 
 
 class BillPaymentCreateSerializer(serializers.ModelSerializer):
+    cash_account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        required=False,
+        write_only=True,
+    )
+    bank_account = serializers.PrimaryKeyRelatedField(
+        queryset=bank_account_queryset(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = BillPayment
-        fields = ['amount', 'payment_date', 'payment_method', 'reference_number', 'notes']
+        fields = ['amount', 'payment_date', 'payment_method', 'reference_number', 'notes', 'cash_account', 'bank_account']
+
+    def validate(self, data):
+        payment_method = data.get('payment_method')
+        if payment_method == 'cash':
+            request = self.context.get('request')
+            bill = self.context.get('bill')
+            cash_account = data.pop('cash_account', None)
+            if cash_account is None:
+                raise serializers.ValidationError({
+                    'cash_account': 'Select the till-enabled cash account for this cash vendor payment.'
+                })
+            branch_id = getattr(bill, 'branch_id', None)
+            till = None
+            if cash_account:
+                till_qs = CashierTill.objects.filter(status='open', till_account=cash_account)
+                if branch_id:
+                    till_qs = till_qs.filter(branch_id=branch_id)
+                till = till_qs.select_related('till_account').order_by('-opened_at').first()
+            if not till:
+                raise serializers.ValidationError({
+                    'payment_method': 'Open a till for the selected cash account before recording a cash vendor payment.'
+                })
+            data['till'] = till
+            data['bank_account'] = None
+        elif payment_method in BANK_SETTLEMENT_PAYMENT_METHODS:
+            bank_account = validate_bank_account(data.get('bank_account'))
+            if bank_account is None:
+                raise serializers.ValidationError({
+                    'bank_account': 'Select the bank or cash-equivalent account for this vendor payment.'
+                })
+            data['till'] = None
+        return data

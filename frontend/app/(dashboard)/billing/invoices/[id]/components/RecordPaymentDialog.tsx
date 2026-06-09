@@ -1,10 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi, Invoice } from "@/lib/api/billing";
+import { accountingApi, type Account } from "@/lib/api/accounting";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,8 @@ const paymentSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   payment_date: z.string().min(1, "Payment date is required"),
   reference_number: z.string().optional(),
+  cash_account: z.string().optional(),
+  bank_account: z.string().optional(),
   card_last_four: z.string().optional(),
   card_type: z.string().optional(),
   notes: z.string().optional(),
@@ -91,7 +94,7 @@ export default function RecordPaymentDialog({
     formState: { errors, isSubmitting },
     reset,
     setError,
-    watch,
+    control,
     setValue,
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -99,22 +102,47 @@ export default function RecordPaymentDialog({
       payment_method: "cash",
       payment_date: new Date().toISOString().split("T")[0],
       amount: balanceDue,
+      cash_account: "",
+      bank_account: "",
     },
   });
 
-  const paymentMethod = watch("payment_method");
-  const amount = watch("amount") || 0;
+  const paymentMethod = useWatch({ control, name: "payment_method" });
+  const cashAccount = useWatch({ control, name: "cash_account" });
+  const bankAccount = useWatch({ control, name: "bank_account" });
+  const cardType = useWatch({ control, name: "card_type" });
+  const amount = useWatch({ control, name: "amount" }) || 0;
   const isOverPayment = amount > balanceDue;
   const overPaymentAmount = isOverPayment ? (amount - balanceDue) : 0;
 
+  const { data: tillAccounts = [], isLoading: tillAccountsLoading } = useQuery({
+    queryKey: ["accounting", "till-enabled-accounts"],
+    queryFn: () => accountingApi.getTillEnabledAccounts(),
+    enabled: open && paymentMethod === "cash",
+  });
+
+  const requiresBankAccount = paymentMethod !== "cash";
+  const { data: bankAccounts = [], isLoading: bankAccountsLoading } = useQuery({
+    queryKey: ["accounting", "bank-accounts"],
+    queryFn: () => accountingApi.getBankAccounts(),
+    enabled: open && requiresBankAccount,
+  });
+
   const createPaymentMutation = useMutation({
-    mutationFn: (data: PaymentFormData) =>
-      billingApi.payments.create({
+    mutationFn: (data: PaymentFormData) => {
+      const payload = {
         ...data,
         amount: data.amount.toString(),
         payment_date: `${data.payment_date}T00:00:00`,
         invoice: Number(invoice.id),
-      }),
+      };
+      if (data.payment_method !== "cash") {
+        delete payload.cash_account;
+      } else {
+        delete payload.bank_account;
+      }
+      return billingApi.payments.create(payload);
+    },
     onSuccess: () => {
       reset();
       setServerError(null);
@@ -144,6 +172,8 @@ export default function RecordPaymentDialog({
           "amount",
           "payment_date",
           "reference_number",
+          "cash_account",
+          "bank_account",
           "card_last_four",
           "card_type",
           "notes",
@@ -189,6 +219,20 @@ export default function RecordPaymentDialog({
       });
       return;
     }
+    if (data.payment_method === "cash" && !data.cash_account) {
+      setError("cash_account", {
+        type: "manual",
+        message: "Select the cash account/till for this payment.",
+      });
+      return;
+    }
+    if (data.payment_method !== "cash" && !data.bank_account) {
+      setError("bank_account", {
+        type: "manual",
+        message: "Select the bank account for this payment.",
+      });
+      return;
+    }
     await createPaymentMutation.mutateAsync(data);
   };
 
@@ -230,9 +274,13 @@ export default function RecordPaymentDialog({
                 Payment Method *
               </label>
               <Select
-                value={watch("payment_method")}
+                value={paymentMethod}
 
-                onValueChange={(val) => setValue("payment_method", val as PaymentFormData["payment_method"], { shouldValidate: true })}
+                onValueChange={(val) => {
+                  setValue("payment_method", val as PaymentFormData["payment_method"], { shouldValidate: true });
+                  if (val !== "cash") setValue("cash_account", "");
+                  if (val === "cash") setValue("bank_account", "");
+                }}
               >
                 <SelectTrigger id="payment_method" className={`h-9 ${errors.payment_method ? "border-destructive" : ""}`}>
                   <SelectValue />
@@ -259,6 +307,60 @@ export default function RecordPaymentDialog({
                 <p className="text-xs text-destructive">{errors.payment_method.message}</p>
               )}
             </div>
+
+            {paymentMethod === "cash" && (
+              <div className="space-y-1.5">
+                <label htmlFor="cash_account" className="block text-sm font-medium">
+                  Cash Account / Till *
+                </label>
+                <Select
+                  value={cashAccount || ""}
+                  onValueChange={(val) => setValue("cash_account", val, { shouldValidate: true })}
+                  disabled={tillAccountsLoading}
+                >
+                  <SelectTrigger id="cash_account" className={`h-9 ${errors.cash_account ? "border-destructive" : ""}`}>
+                    <SelectValue placeholder={tillAccountsLoading ? "Loading cash accounts..." : "Select cash account"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tillAccounts.map((account: Account) => (
+                      <SelectItem key={account.id} value={String(account.id)}>
+                        {account.code} - {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.cash_account && (
+                  <p className="text-xs text-destructive">{errors.cash_account.message}</p>
+                )}
+              </div>
+            )}
+
+            {paymentMethod !== "cash" && (
+              <div className="space-y-1.5">
+                <label htmlFor="bank_account" className="block text-sm font-medium">
+                  Bank Account *
+                </label>
+                <Select
+                  value={bankAccount || ""}
+                  onValueChange={(val) => setValue("bank_account", val, { shouldValidate: true })}
+                  disabled={bankAccountsLoading}
+                >
+                  <SelectTrigger id="bank_account" className={`h-9 ${errors.bank_account ? "border-destructive" : ""}`}>
+                    <SelectValue placeholder={bankAccountsLoading ? "Loading bank accounts..." : "Select bank account"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account: Account) => (
+                      <SelectItem key={account.id} value={String(account.id)}>
+                        {account.code} - {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.bank_account && (
+                  <p className="text-xs text-destructive">{errors.bank_account.message}</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label htmlFor="payment_date" className="block text-sm font-medium">
@@ -334,7 +436,7 @@ export default function RecordPaymentDialog({
                   Card Type
                 </label>
                 <Select
-                  value={watch("card_type") || ""}
+                  value={cardType || ""}
                   onValueChange={(val) => setValue("card_type", val)}
                 >
                   <SelectTrigger id="card_type" className="h-9">

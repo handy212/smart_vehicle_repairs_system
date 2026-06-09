@@ -50,7 +50,7 @@ def _schedule_post_payment_ledger(payment_pk: int):
         payment = (
             PaymentModel.objects.filter(pk=payment_pk, status='completed')
             .prefetch_related('allocations__invoice__branch')
-            .select_related('invoice', 'invoice__branch', 'customer', 'customer__user', 'processed_by')
+            .select_related('invoice', 'invoice__branch', 'customer', 'customer__user', 'processed_by', 'till', 'till__till_account', 'bank_account')
             .first()
         )
         if payment:
@@ -71,7 +71,7 @@ def _schedule_post_bill_payment_ledger(bill_payment_pk: int):
         from apps.billing.models import BillPayment as BillPaymentModel
 
         bp = BillPaymentModel.objects.filter(pk=bill_payment_pk).select_related(
-            'bill', 'bill__branch', 'paid_by'
+            'bill', 'bill__branch', 'paid_by', 'till', 'till__till_account', 'bank_account'
         ).first()
         if bp:
             AccountingService.post_bill_payment(bp)
@@ -207,7 +207,7 @@ def post_till_to_ledger(sender, instance, created, **kwargs):
     """
     if created and instance.status == 'open':
         AccountingService.post_till_open(instance)
-    elif instance.status == 'closed' and instance.closing_balance:
+    elif instance.status == 'closed' and instance.closing_balance is not None:
         # Check if not already posted by looking for existing JE
         existing = JournalEntry.objects.filter(reference=f"TILL-{instance.id}-CLOSE").exists()
         if not existing:

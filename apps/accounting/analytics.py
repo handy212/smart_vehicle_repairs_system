@@ -20,12 +20,15 @@ class AnalyticsService:
         """
         # 1. Financial Health (Pulse)
         # ------------------------------------------------------------------
-        # Cash on Hand (Sum of all Bank/Cash accounts)
-        cash_code_prefix = ['1000', '1010', '1020']
+        # Cash on Hand (sum of active cash, bank, and cash-equivalent detail accounts)
         cash_balance = Decimal('0.00')
-        for code in cash_code_prefix:
-            accounts = Account.objects.filter(code__startswith=code)
-            for acc in accounts:
+        cash_accounts = Account.objects.filter(
+            is_active=True,
+            account_type='asset',
+            account_subtype__in=['cash', 'bank', 'cash_equivalent'],
+        )
+        for acc in cash_accounts:
+            if acc.is_leaf:
                 cash_balance += ReportingService.get_account_balance(acc, date=end_date, branch_id=branch_id)
 
         # Net Profit (Income - Expenses)
@@ -93,7 +96,8 @@ class AnalyticsService:
         cash_txs = Transaction.objects.filter(
             journal_entry__date__range=[start_date, end_date],
             journal_entry__posted=True,
-            account__code__startswith='10'  # Cash/Bank
+            account__account_type='asset',
+            account__account_subtype__in=['cash', 'bank', 'cash_equivalent'],
         )
         if branch_id:
             cash_txs = cash_txs.filter(journal_entry__branch_id=branch_id)

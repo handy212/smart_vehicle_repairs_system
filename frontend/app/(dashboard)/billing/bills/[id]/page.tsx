@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, CreditCard, Download, Edit, FileText, Package, Rec
 import { useState } from "react";
 
 import { billingApi } from "@/lib/api/billing";
+import { accountingApi, type Account } from "@/lib/api/accounting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +37,7 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useAuthStore } from "@/store/authStore";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
@@ -55,6 +56,8 @@ const paymentSchema = z.object({
     amount: z.string().min(1, "Amount is required"),
     payment_date: z.string().min(1, "Payment date is required"),
     payment_method: z.enum(["cash", "check", "bank_transfer", "mobile_money", "credit_card", "other"]),
+    cash_account: z.string().optional(),
+    bank_account: z.string().optional(),
     reference_number: z.string().optional(),
     notes: z.string().optional(),
 });
@@ -82,6 +85,8 @@ export default function BillDetailPage() {
             amount: "",
             payment_date: format(new Date(), "yyyy-MM-dd"),
             payment_method: "bank_transfer",
+            cash_account: "",
+            bank_account: "",
             reference_number: "",
             notes: "",
         },
@@ -97,9 +102,32 @@ export default function BillDetailPage() {
         queryKey: ["bill-approvers"],
         queryFn: billingApi.bills.approvers,
     });
+    const paymentMethod = useWatch({ control: paymentForm.control, name: "payment_method" });
+    const cashAccount = useWatch({ control: paymentForm.control, name: "cash_account" });
+    const bankAccount = useWatch({ control: paymentForm.control, name: "bank_account" });
+
+    const { data: tillAccounts = [], isLoading: tillAccountsLoading } = useQuery({
+        queryKey: ["accounting", "till-enabled-accounts"],
+        queryFn: () => accountingApi.getTillEnabledAccounts(),
+        enabled: isPaymentDialogOpen && paymentMethod === "cash",
+    });
+
+    const { data: bankAccounts = [], isLoading: bankAccountsLoading } = useQuery({
+        queryKey: ["accounting", "bank-accounts"],
+        queryFn: () => accountingApi.getBankAccounts(),
+        enabled: isPaymentDialogOpen && paymentMethod !== "cash",
+    });
 
     const recordPaymentMutation = useMutation({
-        mutationFn: (data: PaymentValues) => billingApi.bills.recordPayment(id, data),
+        mutationFn: (data: PaymentValues) => {
+            const payload = { ...data };
+            if (payload.payment_method !== "cash") {
+                delete payload.cash_account;
+            } else {
+                delete payload.bank_account;
+            }
+            return billingApi.bills.recordPayment(id, payload);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["bill", id] });
             queryClient.invalidateQueries({ queryKey: ["bills"] });
@@ -108,20 +136,44 @@ export default function BillDetailPage() {
                 amount: "",
                 payment_date: format(new Date(), "yyyy-MM-dd"),
                 payment_method: "bank_transfer",
+                cash_account: "",
+                bank_account: "",
                 reference_number: "",
                 notes: "",
             });
             toast({ title: "Payment Recorded", description: "Vendor bill payment was recorded successfully." });
         },
         onError: (error: unknown) => {
-            const apiError = error as { response?: { data?: { error?: string; detail?: string } } };
+            const apiError = error as { response?: { data?: Record<string, string | string[]> } };
+            const data = apiError.response?.data;
+            const firstFieldError = data
+                ? Object.values(data).map((value) => Array.isArray(value) ? value.join(" ") : value).find(Boolean)
+                : undefined;
             toast({
                 title: "Payment Failed",
-                description: apiError.response?.data?.error || apiError.response?.data?.detail || "Failed to record bill payment.",
+                description: firstFieldError || "Failed to record bill payment.",
                 variant: "destructive",
             });
         },
     });
+
+    function handleRecordPayment(data: PaymentValues) {
+        if (data.payment_method === "cash" && !data.cash_account) {
+            paymentForm.setError("cash_account", {
+                type: "manual",
+                message: "Select the cash account/till for this payment.",
+            });
+            return;
+        }
+        if (data.payment_method !== "cash" && !data.bank_account) {
+            paymentForm.setError("bank_account", {
+                type: "manual",
+                message: "Select the bank account for this payment.",
+            });
+            return;
+        }
+        recordPaymentMutation.mutate(data);
+    }
 
     const voidMutation = useMutation({
         mutationFn: () => billingApi.bills.void(id),
@@ -355,7 +407,7 @@ export default function BillDetailPage() {
                                     <DialogTitle>Record Vendor Payment</DialogTitle>
                                 </DialogHeader>
                                 <Form {...paymentForm}>
-                                    <form onSubmit={paymentForm.handleSubmit((data) => recordPaymentMutation.mutate(data))} className="space-y-4">
+                                    <form onSubmit={paymentForm.handleSubmit(handleRecordPayment)} className="space-y-4">
                                         <FormField control={paymentForm.control} name="amount" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Amount</FormLabel>
@@ -373,7 +425,17 @@ export default function BillDetailPage() {
                                         <FormField control={paymentForm.control} name="payment_method" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Payment Method</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        field.onChange(value);
+                                                        if (value !== "cash") {
+                                                            paymentForm.setValue("cash_account", "");
+                                                        } else {
+                                                            paymentForm.setValue("bank_account", "");
+                                                        }
+                                                    }}
+                                                    value={field.value}
+                                                >
                                                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                                     <SelectContent>
                                                         <SelectItem value="cash">Cash</SelectItem>
@@ -387,6 +449,50 @@ export default function BillDetailPage() {
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
+                                        {paymentMethod === "cash" && (
+                                            <FormField control={paymentForm.control} name="cash_account" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Cash Account / Till</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={cashAccount || ""} disabled={tillAccountsLoading}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder={tillAccountsLoading ? "Loading cash accounts..." : "Select cash account"} />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {tillAccounts.map((account: Account) => (
+                                                                <SelectItem key={account.id} value={String(account.id)}>
+                                                                    {account.code} - {account.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        )}
+                                        {paymentMethod !== "cash" && (
+                                            <FormField control={paymentForm.control} name="bank_account" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Bank Account</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={bankAccount || ""} disabled={bankAccountsLoading}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder={bankAccountsLoading ? "Loading bank accounts..." : "Select bank account"} />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {bankAccounts.map((account: Account) => (
+                                                                <SelectItem key={account.id} value={String(account.id)}>
+                                                                    {account.code} - {account.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        )}
                                         <FormField control={paymentForm.control} name="reference_number" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Reference</FormLabel>

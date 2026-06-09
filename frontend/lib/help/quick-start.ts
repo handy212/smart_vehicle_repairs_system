@@ -117,7 +117,7 @@ export const quickStartGuides: HelpGuide[] = [
                     {
                         type: "checklist",
                         items: [
-                            "Open **Till Management** and open a till for your shift",
+                            "Open **Accounting → Till Management** and open a till for the cash account",
                             "Review **Invoices** with status **Sent** or **Overdue**",
                             "Invoice completed work orders not yet billed",
                             "Record counter payments and print receipts",
@@ -126,7 +126,7 @@ export const quickStartGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/billing/tills",
+                actionLink: "/accounting/tills",
                 actionLabel: "Open Till",
             },
         ],

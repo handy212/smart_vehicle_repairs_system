@@ -1,32 +1,55 @@
 from django.core.management.base import BaseCommand
 
-from apps.accounting.models import Account
+from apps.accounting.models import Account, AccountingControl
 
 # Codes aligned with AccountingService auto-posting helpers
 DEFAULT_ACCOUNTS = [
-    ('1000', 'Cash/Bank', 'asset', 'debit'),
-    ('1010', 'Cash in Safe', 'asset', 'debit'),
-    ('1020', 'Cash in Drawer', 'asset', 'debit'),
-    ('1200', 'Accounts Receivable', 'asset', 'debit'),
-    ('1500', 'Inventory Asset', 'asset', 'debit'),
-    ('1900', 'Due From Other Branches', 'asset', 'debit'),
-    ('2000', 'Accounts Payable', 'liability', 'credit'),
-    ('2100', 'Sales Tax Payable', 'liability', 'credit'),
-    ('2200', 'Input Sales Tax', 'asset', 'debit'),
-    ('2300', 'PAYE Tax Payable', 'liability', 'credit'),
-    ('2310', 'Payroll Deductions Payable', 'liability', 'credit'),
-    ('2900', 'Due To Other Branches', 'liability', 'credit'),
-    ('3100', 'Owner Equity (Common)', 'equity', 'credit'),
-    ('3200', 'Retained Earnings', 'equity', 'credit'),
-    ('4000', 'Sales Revenue', 'income', 'credit'),
-    ('4100', 'Sales Returns & Allowances', 'income', 'debit'),
-    ('5000', 'Purchases / Operating Expense', 'expense', 'debit'),
-    ('5100', 'Cost of Goods Sold', 'expense', 'debit'),
-    ('5900', 'Inventory Shrinkage Expense', 'expense', 'debit'),
-    ('5950', 'Cash Over/Short Expense', 'expense', 'debit'),
-    ('6000', 'Salary Expense', 'expense', 'debit'),
-    ('6010', 'Overtime Expense', 'expense', 'debit'),
-    ('6020', 'Allowances Expense', 'expense', 'debit'),
+    # code, name, type, balance, subtype, parent_code, till_enabled
+    ('A000', 'Assets', 'asset', 'debit', 'category', None, False),
+    ('A100', 'Current Assets', 'asset', 'debit', 'current_asset', 'A000', False),
+    ('A110', 'Cash on Hand', 'asset', 'debit', 'category', 'A100', False),
+    ('1000', 'Cash/Bank Clearing', 'asset', 'debit', 'cash_equivalent', 'A110', False),
+    ('1010', 'Cash in Safe', 'asset', 'debit', 'cash', 'A110', False),
+    ('1020', 'Cash in Drawer (Legacy)', 'asset', 'debit', 'cash', 'A110', False),
+    ('1111', 'Main Cash', 'asset', 'debit', 'cash', 'A110', True),
+    ('1112', 'Petty Cash', 'asset', 'debit', 'cash', 'A110', True),
+    ('1113', 'LPO Cash', 'asset', 'debit', 'cash', 'A110', True),
+    ('A120', 'Bank Accounts', 'asset', 'debit', 'bank', 'A100', False),
+    ('1100', 'Operating Bank Account', 'asset', 'debit', 'bank', 'A120', False),
+    ('1200', 'Accounts Receivable', 'asset', 'debit', 'accounts_receivable', 'A100', False),
+    ('1500', 'Inventory Asset', 'asset', 'debit', 'inventory', 'A100', False),
+    ('A170', 'Fixed Assets', 'asset', 'debit', 'fixed_asset', 'A000', False),
+    ('1710', 'Vehicles', 'asset', 'debit', 'fixed_asset', 'A170', False),
+    ('1720', 'Equipment', 'asset', 'debit', 'fixed_asset', 'A170', False),
+    ('1900', 'Due From Other Branches', 'asset', 'debit', 'current_asset', 'A100', False),
+    ('L000', 'Liabilities', 'liability', 'credit', 'category', None, False),
+    ('L100', 'Current Liabilities', 'liability', 'credit', 'current_liability', 'L000', False),
+    ('2000', 'Accounts Payable', 'liability', 'credit', 'accounts_payable', 'L100', False),
+    ('2100', 'Sales Tax Payable', 'liability', 'credit', 'tax_payable', 'L100', False),
+    ('2200', 'Input Sales Tax', 'asset', 'debit', 'current_asset', 'A100', False),
+    ('2300', 'PAYE Tax Payable', 'liability', 'credit', 'tax_payable', 'L100', False),
+    ('2310', 'Payroll Deductions Payable', 'liability', 'credit', 'current_liability', 'L100', False),
+    ('2900', 'Due To Other Branches', 'liability', 'credit', 'current_liability', 'L100', False),
+    ('Q000', 'Equity', 'equity', 'credit', 'category', None, False),
+    ('3100', 'Owner Equity (Common)', 'equity', 'credit', 'category', 'Q000', False),
+    ('3200', 'Retained Earnings', 'equity', 'credit', 'category', 'Q000', False),
+    ('I000', 'Income', 'income', 'credit', 'category', None, False),
+    ('4000', 'Sales Revenue', 'income', 'credit', 'revenue', 'I000', False),
+    ('4010', 'Service Revenue', 'income', 'credit', 'revenue', 'I000', False),
+    ('4020', 'Product Sales', 'income', 'credit', 'revenue', 'I000', False),
+    ('4050', 'Shop Supplies Revenue', 'income', 'credit', 'revenue', 'I000', False),
+    ('4060', 'Environmental Fee Revenue', 'income', 'credit', 'revenue', 'I000', False),
+    ('4100', 'Sales Returns & Allowances', 'income', 'debit', 'revenue', 'I000', False),
+    ('E000', 'Expenses', 'expense', 'debit', 'category', None, False),
+    ('5000', 'Purchases / Operating Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('5100', 'Cost of Goods Sold', 'expense', 'debit', 'expense', 'E000', False),
+    ('5900', 'Inventory Shrinkage Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('5950', 'Cash Over/Short Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('6000', 'Salary Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('6010', 'Overtime Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('6020', 'Allowances Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('6100', 'Fuel', 'expense', 'debit', 'expense', 'E000', False),
+    ('6200', 'Office Expenses', 'expense', 'debit', 'expense', 'E000', False),
 ]
 
 
@@ -38,16 +61,22 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         created = 0
-        for code, name, account_type, balance_type in DEFAULT_ACCOUNTS:
+        by_code = {}
+        for code, name, account_type, balance_type, account_subtype, parent_code, till_enabled in DEFAULT_ACCOUNTS:
+            parent = by_code.get(parent_code) if parent_code else None
             account, was_created = Account.objects.get_or_create(
                 code=code,
                 defaults={
                     'name': name,
                     'account_type': account_type,
                     'balance_type': balance_type,
+                    'account_subtype': account_subtype,
+                    'parent': parent,
+                    'is_till_enabled': till_enabled,
                     'is_active': True,
                 },
             )
+            by_code[code] = account
             if was_created:
                 created += 1
             elif (
@@ -60,7 +89,47 @@ class Command(BaseCommand):
                         f'Account {code} exists with different metadata; skipping update.'
                     )
                 )
+            else:
+                changed = False
+                if account.account_subtype != account_subtype:
+                    account.account_subtype = account_subtype
+                    changed = True
+                if parent and account.parent_id != parent.id:
+                    account.parent = parent
+                    changed = True
+                if account.children.exists():
+                    till_enabled = False
+                if account.is_till_enabled != till_enabled:
+                    account.is_till_enabled = till_enabled
+                    changed = True
+                if changed:
+                    account.save(update_fields=['account_subtype', 'parent', 'is_till_enabled', 'updated_at'])
 
         self.stdout.write(
             self.style.SUCCESS(f'Chart seeds processed. New accounts created: {created}.')
         )
+        controls = AccountingControl.get_settings()
+        defaults = {
+            'accounts_receivable_account': '1200',
+            'accounts_payable_account': '2000',
+            'sales_revenue_account': '4000',
+            'sales_discount_account': '4100',
+            'sales_tax_payable_account': '2100',
+            'shop_supplies_revenue_account': '4050',
+            'environmental_fee_revenue_account': '4060',
+            'input_tax_account': '2200',
+            'default_expense_account': '5000',
+            'inventory_asset_account': '1500',
+            'cost_of_goods_sold_account': '5100',
+            'cash_over_short_account': '5950',
+            'till_counterparty_cash_account': '1010',
+            'default_bank_account': '1100',
+        }
+        changed_fields = []
+        for field_name, code in defaults.items():
+            if getattr(controls, f'{field_name}_id') is None and code in by_code:
+                setattr(controls, field_name, by_code[code])
+                changed_fields.append(field_name)
+        if changed_fields:
+            controls.save(update_fields=changed_fields + ['updated_at'])
+            self.stdout.write(self.style.SUCCESS('Accounting controls configured from chart seeds.'))

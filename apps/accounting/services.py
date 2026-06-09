@@ -7,7 +7,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
-from .models import Account, JournalEntry, Transaction
+from .models import Account, AccountingControl, JournalEntry, Transaction
 from apps.billing.models import Invoice, Bill
 
 class AccountingService:
@@ -59,6 +59,50 @@ class AccountingService:
                 'is_active': True
             }
         )
+        return account
+
+    @classmethod
+    def _control_account(cls, field_name, label=None):
+        controls = AccountingControl.get_settings()
+        account = getattr(controls, field_name, None)
+        if account is None:
+            raise ValidationError(
+                f"Accounting control account '{label or field_name}' is not configured."
+            )
+        if not account.is_active:
+            raise ValidationError(
+                f"Accounting control account '{account}' is inactive."
+            )
+        if not account.is_leaf:
+            raise ValidationError(
+                f"Accounting control account '{account}' must be a detail/leaf account."
+            )
+        return account
+
+    @classmethod
+    def _cash_settlement_account(cls, till, source_label):
+        if not till or not getattr(till, 'till_account_id', None):
+            raise ValidationError(
+                f"{source_label} requires an active till with a configured till cash account."
+            )
+        return till.till_account
+
+    @classmethod
+    def _bank_settlement_account(cls, source, source_label):
+        account = getattr(source, 'bank_account', None)
+        if account is None:
+            raise ValidationError(
+                f"{source_label} requires a selected bank or cash-equivalent account."
+            )
+        if (
+            not account.is_active
+            or account.account_type != 'asset'
+            or account.account_subtype not in {'bank', 'cash_equivalent'}
+            or not account.is_leaf
+        ):
+            raise ValidationError(
+                f"{source_label} bank account must be an active leaf Asset account classified as Bank or Cash Equivalent."
+            )
         return account
 
     @classmethod
@@ -272,10 +316,12 @@ class AccountingService:
             return None
 
         with transaction.atomic():
-            # 1. Get Accounts
-            ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
-            sales_account = cls.get_or_create_account('4000', 'Sales Revenue', 'income', 'credit')
-            tax_account = cls.get_or_create_account('2100', 'Sales Tax Payable', 'liability', 'credit')
+            ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
+            sales_account = cls._control_account('sales_revenue_account', 'Sales Revenue')
+            tax_account = cls._control_account('sales_tax_payable_account', 'Sales Tax Payable')
+            discount_account = cls._control_account('sales_discount_account', 'Sales Discount')
+            shop_supplies_account = cls._control_account('shop_supplies_revenue_account', 'Shop Supplies Revenue')
+            environmental_account = cls._control_account('environmental_fee_revenue_account', 'Environmental Fee Revenue')
 
             je = cls._create_posted_journal_header(
                 user=invoice.created_by,
@@ -286,12 +332,22 @@ class AccountingService:
                 content_object=invoice,
             )
 
-            # 3. Create Transactions
-            
             tax_amount = Decimal(str(invoice.tax_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
-            revenue_amount = Decimal(str(invoice.subtotal or Decimal('0'))).quantize(cls.MONEY_QUANT)
-            if revenue_amount == 0 and total_amount > 0:
-                revenue_amount = (total_amount - tax_amount).quantize(cls.MONEY_QUANT)
+            discount_amount = Decimal(str(invoice.discount_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
+            shop_supplies_fee = Decimal(str(getattr(invoice, 'shop_supplies_fee', Decimal('0')) or Decimal('0'))).quantize(cls.MONEY_QUANT)
+            environmental_fee = Decimal(str(getattr(invoice, 'environmental_fee', Decimal('0')) or Decimal('0'))).quantize(cls.MONEY_QUANT)
+            revenue_amount = (
+                total_amount
+                + discount_amount
+                - tax_amount
+                - shop_supplies_fee
+                - environmental_fee
+            ).quantize(cls.MONEY_QUANT)
+
+            if revenue_amount < 0:
+                raise ValidationError(
+                    f"Invoice {invoice_reference} has invalid totals: derived revenue is negative."
+                )
 
             # Debit AR (Total Amount)
             Transaction.objects.create(
@@ -301,6 +357,15 @@ class AccountingService:
                 transaction_type='debit',
                 description='Invoice Total'
             )
+
+            if discount_amount > 0:
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=discount_account,
+                    amount=discount_amount,
+                    transaction_type='debit',
+                    description='Sales Discount'
+                )
 
             # Credit Revenue (Subtotal, or total less tax for legacy invoices)
             if revenue_amount > 0:
@@ -320,6 +385,24 @@ class AccountingService:
                     amount=tax_amount,
                     transaction_type='credit',
                     description='Sales Tax'
+                )
+
+            if shop_supplies_fee > 0:
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=shop_supplies_account,
+                    amount=shop_supplies_fee,
+                    transaction_type='credit',
+                    description='Shop Supplies Fee'
+                )
+
+            if environmental_fee > 0:
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=environmental_account,
+                    amount=environmental_fee,
+                    transaction_type='credit',
+                    description='Environmental Fee'
                 )
 
             # Validate
@@ -372,8 +455,8 @@ class AccountingService:
             return None # No COGS to record
 
         with transaction.atomic():
-            cogs_account = cls.get_or_create_account('5100', 'Cost of Goods Sold', 'expense', 'debit')
-            inventory_account = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
+            cogs_account = cls._control_account('cost_of_goods_sold_account', 'Cost of Goods Sold')
+            inventory_account = cls._control_account('inventory_asset_account', 'Inventory Asset')
 
             # Create Header (Separate JE for COGS, linked to Invoice)
             # Or could be same JE? Usually separate or same. Let's make it separate usually for clarity
@@ -430,11 +513,10 @@ class AccountingService:
             return None
 
         with transaction.atomic():
-            # 1. Get Accounts
-            ap_account = cls.get_or_create_account('2000', 'Accounts Payable', 'liability', 'credit')
-            expense_account = cls.get_or_create_account('5000', 'Purchases/Expense', 'expense', 'debit')
-            inventory_account = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
-            input_tax_account = cls.get_or_create_account('2200', 'Input Sales Tax', 'asset', 'debit') 
+            ap_account = cls._control_account('accounts_payable_account', 'Accounts Payable')
+            expense_account = cls._control_account('default_expense_account', 'Default Expense')
+            inventory_account = cls._control_account('inventory_asset_account', 'Inventory Asset')
+            input_tax_account = cls._control_account('input_tax_account', 'Input Tax')
 
             je = cls._create_posted_journal_header(
                 user=bill.created_by,
@@ -537,11 +619,11 @@ class AccountingService:
         with transaction.atomic():
             from apps.branches.models import Branch
 
-            if payment.payment_method == 'cash' and payment.till_id:
-                cash_account = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+            if payment.payment_method == 'cash':
+                cash_account = cls._cash_settlement_account(payment.till, f"Payment {payment.payment_number}")
             else:
-                cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
-            ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
+                cash_account = cls._bank_settlement_account(payment, f"Payment {payment.payment_number}")
+            ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
 
             allocations = list(
                 payment.allocations.select_related('invoice', 'invoice__branch').order_by('id')
@@ -642,9 +724,11 @@ class AccountingService:
             return None
 
         with transaction.atomic():
-            # 1. Get Accounts
-            cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
-            ap_account = cls.get_or_create_account('2000', 'Accounts Payable', 'liability', 'credit')
+            if bill_payment.payment_method == 'cash':
+                cash_account = cls._cash_settlement_account(bill_payment.till, f"Bill payment {bill_payment.payment_number}")
+            else:
+                cash_account = cls._bank_settlement_account(bill_payment, f"Bill payment {bill_payment.payment_number}")
+            ap_account = cls._control_account('accounts_payable_account', 'Accounts Payable')
 
             je = cls._create_posted_journal_header(
                 user=bill_payment.paid_by,
@@ -703,8 +787,8 @@ class AccountingService:
         if JournalEntry.objects.filter(reference=adj_ref).exists():
             return
 
-        inventory_asset = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
-        shrinkage_expense = cls.get_or_create_account('5900', 'Inventory Shrinkage Expense', 'expense', 'debit')
+        inventory_asset = cls._control_account('inventory_asset_account', 'Inventory Asset')
+        shrinkage_expense = cls._control_account('default_expense_account', 'Default Expense')
 
         quantity = Decimal(str(abs(inventory_transaction.quantity or 0)))
         unit_cost = Decimal(str(inventory_transaction.unit_cost or 0))
@@ -778,33 +862,51 @@ class AccountingService:
         ).exists():
             return
 
-        sales_returns = cls.get_or_create_account('4100', 'Sales Returns & Allowances', 'income', 'debit')
-        ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
+        sales_returns = cls._control_account('sales_discount_account', 'Sales Returns & Allowances')
+        ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
+        tax_account = cls._control_account('sales_tax_payable_account', 'Sales Tax Payable')
 
         amount = Decimal(str(credit_note.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        subtotal = Decimal(str(credit_note.subtotal or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        tax_amount = Decimal(str(credit_note.tax_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
         if amount <= 0:
             return
 
         desc_customer = credit_note.customer.full_name
+        lines = []
+        if subtotal > 0:
+            lines.append({
+                'account_id': sales_returns.id,
+                'type': 'debit',
+                'amount': subtotal,
+                'description': f'Credit Note for {desc_customer}',
+            })
+        if tax_amount > 0:
+            lines.append({
+                'account_id': tax_account.id,
+                'type': 'debit',
+                'amount': tax_amount,
+                'description': f'Tax reversal for {desc_customer}',
+            })
+        if not lines:
+            lines.append({
+                'account_id': sales_returns.id,
+                'type': 'debit',
+                'amount': amount,
+                'description': f'Credit Note for {desc_customer}',
+            })
+        lines.append({
+            'account_id': ar_account.id,
+            'type': 'credit',
+            'amount': amount,
+            'description': f'Credit Note for {desc_customer}',
+        })
         return cls.create_journal_entry(
             user=credit_note.created_by,
             date=credit_note.credit_date,
             description=f"Credit Note {credit_note.credit_note_number}",
             reference=credit_note.credit_note_number,
-            lines=[
-                {
-                    'account_id': sales_returns.id,
-                    'type': 'debit',
-                    'amount': amount,
-                    'description': f'Credit Note for {desc_customer}',
-                },
-                {
-                    'account_id': ar_account.id,
-                    'type': 'credit',
-                    'amount': amount,
-                    'description': f'Credit Note for {desc_customer}',
-                },
-            ],
+            lines=lines,
             posted=True,
             branch=credit_note.branch,
             content_object=credit_note,
@@ -828,11 +930,11 @@ class AccountingService:
         ).exists():
             return
 
-        ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
+        ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
         if refund.till_id:
-            cash_account = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+            cash_account = cls._cash_settlement_account(refund.till, f"Refund {refund.refund_number}")
         else:
-            cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
+            cash_account = cls._bank_settlement_account(refund, f"Refund {refund.refund_number}")
 
         amount = Decimal(str(refund.amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
         if amount <= 0:
@@ -877,7 +979,7 @@ class AccountingService:
         if JournalEntry.objects.filter(reference=src_ref).exists():
             return
 
-        inventory_asset = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
+        inventory_asset = cls._control_account('inventory_asset_account', 'Inventory Asset')
         due_from = cls.get_or_create_account('1900', 'Due From Other Branches', 'asset', 'debit')
         due_to = cls.get_or_create_account('2900', 'Due To Other Branches', 'liability', 'credit')
 
@@ -950,91 +1052,31 @@ class AccountingService:
     @classmethod
     def post_till_open(cls, till):
         """
-        Post GL entry for cashier till opening.
-        Transfers opening float from safe to drawer.
-        Debit: Cash Drawer (1020), Credit: Cash in Safe (1010)
+        Till opening is an operating session marker for a cash account.
+        It records opening cash but does not move money between GL accounts.
         """
-        if till.status != 'open' or till.opening_balance == 0:
-            return
-
-        till_ref_open = f"TILL-{till.id}-OPEN"
-        if till.opened_at and JournalEntry.objects.filter(reference=till_ref_open).exists():
-            return
-
-        cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
-        cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
-
-        je = cls._create_posted_journal_header(
-            user=till.cashier,
-            date=till.opened_at.date() if till.opened_at else timezone.now().date(),
-            description=f"Till Open #{till.id} - {till.cashier.get_full_name()}",
-            reference=till_ref_open,
-            branch=till.branch,
-        )
-        
-        # Debit: Cash Drawer
-        Transaction.objects.create(
-            journal_entry=je,
-            account=cash_drawer,
-            amount=till.opening_balance,
-            transaction_type='debit',
-            description=f"Opening float for {till.cashier.get_full_name()}"
-        )
-        
-        # Credit: Cash in Safe
-        Transaction.objects.create(
-            journal_entry=je,
-            account=cash_safe,
-            amount=till.opening_balance,
-            transaction_type='credit',
-            description=f"Opening float for {till.cashier.get_full_name()}"
-        )
+        return None
 
     @classmethod
     def post_till_close(cls, till):
         """
-        Post GL entry for cashier till closing.
-        Handles deposit back to safe and variance (over/short).
+        Post GL only for till variance. Closing the operating session itself
+        does not move cash between GL accounts.
         """
-        if till.status != 'closed' or not till.closing_balance:
+        if till.status != 'closed':
             return
 
-        cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
-        cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
-        cash_over_short = cls.get_or_create_account('5950', 'Cash Over/Short Expense', 'expense', 'debit')
+        till_cash = cls._cash_settlement_account(till, f"Till {till.id}")
+        cash_over_short = cls._control_account('cash_over_short_account', 'Cash Over/Short')
 
         close_dt = till.closed_at.date() if till.closed_at else timezone.now().date()
-
-        je = cls._create_posted_journal_header(
-            user=till.cashier,
-            date=close_dt,
-            description=f"Till Close #{till.id} - {till.cashier.get_full_name()}",
-            reference=f"TILL-{till.id}-CLOSE",
-            branch=till.branch,
-        )
-        
-        # Debit: Cash in Safe
-        Transaction.objects.create(
-            journal_entry=je,
-            account=cash_safe,
-            amount=till.closing_balance,
-            transaction_type='debit',
-            description=f"Till closing deposit from {till.cashier.get_full_name()}"
-        )
-        
-        # Credit: Cash Drawer
-        Transaction.objects.create(
-            journal_entry=je,
-            account=cash_drawer,
-            amount=till.closing_balance,
-            transaction_type='credit',
-            description=f"Till closing deposit from {till.cashier.get_full_name()}"
-        )
         
         # Handle Variance (Cash Over/Short)
         if till.variance and till.variance != 0:
+            if JournalEntry.objects.filter(reference=f"TILL-{till.id}-VAR").exists():
+                return
             variance_je = cls._create_posted_journal_header(
-                user=till.cashier,
+                user=till.closed_by or till.cashier,
                 date=close_dt,
                 description=f"Till Variance #{till.id} - {till.cashier.get_full_name()}",
                 reference=f"TILL-{till.id}-VAR",
@@ -1052,7 +1094,7 @@ class AccountingService:
                 )
                 Transaction.objects.create(
                     journal_entry=variance_je,
-                    account=cash_safe,
+                    account=till_cash,
                     amount=abs(till.variance),
                     transaction_type='credit',
                     description=f"Cash shortage - Till #{till.id}"
@@ -1061,7 +1103,7 @@ class AccountingService:
                 # Cash Over: Debit Cash in Safe, Credit Cash Over/Short (recovery)
                 Transaction.objects.create(
                     journal_entry=variance_je,
-                    account=cash_safe,
+                    account=till_cash,
                     amount=till.variance,
                     transaction_type='debit',
                     description=f"Cash overage - Till #{till.id}"
@@ -1089,8 +1131,8 @@ class AccountingService:
         if till.status != 'open':
             return
 
-        cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
-        cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
+        till_cash = cls._cash_settlement_account(till, f"Till movement {movement.id}")
+        cash_safe = cls._control_account('till_counterparty_cash_account', 'Till Counterparty Cash')
         amt = movement.amount
         user = movement.recorded_by
         date = movement.created_at.date() if movement.created_at else timezone.now().date()
@@ -1107,7 +1149,7 @@ class AccountingService:
         if movement.movement_type == 'pay_in':
             Transaction.objects.create(
                 journal_entry=je,
-                account=cash_drawer,
+                account=till_cash,
                 amount=amt,
                 transaction_type='debit',
                 description=desc_reason or 'Pay in to drawer',
@@ -1129,7 +1171,7 @@ class AccountingService:
             )
             Transaction.objects.create(
                 journal_entry=je,
-                account=cash_drawer,
+                account=till_cash,
                 amount=amt,
                 transaction_type='credit',
                 description=desc_reason or 'Pay out from drawer',
@@ -1249,7 +1291,7 @@ class AccountingService:
             allowances_expense = cls.get_or_create_account('6020', 'Allowances Expense', 'expense', 'debit')
             tax_payable = cls.get_or_create_account('2300', 'PAYE Tax Payable', 'liability', 'credit')
             deductions_payable = cls.get_or_create_account('2310', 'Payroll Deductions Payable', 'liability', 'credit')
-            cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
+            cash_account = cls._control_account('default_bank_account', 'Default Bank Account')
 
             je = cls._create_posted_journal_header(
                 user=payroll_period.approved_by or payroll_period.created_by,
@@ -1325,35 +1367,46 @@ class ReportingService:
         total_liabilities = Decimal('0.00')
         total_equity = Decimal('0.00')
         
-        # 1. Assets
-        # Optimize: fetch all relevant accounts with balances in one go? 
-        # For simplicity, iterating is fine for < 100 accounts.
-        for account in Account.objects.filter(account_type='asset', is_active=True):
-            bal = cls.get_account_balance(account, date=date, branch_id=branch_id)
-            if bal != 0:
-                assets.append({'code': account.code, 'name': account.name, 'balance': bal})
-                total_assets += bal
-                
-        # 2. Liabilities
-        for account in Account.objects.filter(account_type='liability', is_active=True):
-            bal = cls.get_account_balance(account, date=date, branch_id=branch_id)
-            if bal != 0:
-                liabilities.append({'code': account.code, 'name': account.name, 'balance': bal})
-                total_liabilities += bal
+        def build_nodes(account_type):
+            nodes = []
+            total = Decimal('0.00')
+            roots = Account.objects.filter(
+                account_type=account_type,
+                is_active=True,
+            ).filter(Q(parent__isnull=True) | ~Q(parent__account_type=account_type)).order_by('code')
+            for account in roots:
+                bal = cls.get_account_balance_with_children(account, date=date, branch_id=branch_id)
+                if bal == 0:
+                    continue
+                nodes.append({
+                    'id': account.id,
+                    'code': account.code,
+                    'name': account.name,
+                    'account_type': account.account_type,
+                    'account_subtype': account.account_subtype,
+                    'parent': account.parent_id,
+                    'balance': bal,
+                    'children_count': account.children.count(),
+                })
+                total += bal
+            return nodes, total
 
-        # 3. Equity (Explicit Accounts)
-        for account in Account.objects.filter(account_type='equity', is_active=True):
-            bal = cls.get_account_balance(account, date=date, branch_id=branch_id)
-            if bal != 0:
-                equity.append({'code': account.code, 'name': account.name, 'balance': bal})
-                total_equity += bal
+        assets, total_assets = build_nodes('asset')
+        liabilities, total_liabilities = build_nodes('liability')
+        equity, total_equity = build_nodes('equity')
                 
         # 4. Retained Earnings (Calculated)
         # Income - Expenses (All time up to date)
         # Net Income = Total Income (Credit) - Total Expenses (Debit)
         
-        total_income_lifetime = sum(cls.get_account_balance(a, date=date, branch_id=branch_id) for a in Account.objects.filter(account_type='income'))
-        total_expense_lifetime = sum(cls.get_account_balance(a, date=date, branch_id=branch_id) for a in Account.objects.filter(account_type='expense'))
+        total_income_lifetime = sum(
+            cls.get_account_balance_with_children(a, date=date, branch_id=branch_id)
+            for a in Account.objects.filter(account_type='income', is_active=True).filter(Q(parent__isnull=True) | ~Q(parent__account_type='income'))
+        )
+        total_expense_lifetime = sum(
+            cls.get_account_balance_with_children(a, date=date, branch_id=branch_id)
+            for a in Account.objects.filter(account_type='expense', is_active=True).filter(Q(parent__isnull=True) | ~Q(parent__account_type='expense'))
+        )
         
         retained_earnings = total_income_lifetime - total_expense_lifetime
         
@@ -1415,9 +1468,16 @@ class ReportingService:
 
             # In Trial Balance, we show Debit OR Credit column based on the sign
             row = {
+                'id': account.id,
                 'code': account.code,
                 'name': account.name,
                 'type': account.account_type,
+                'account_subtype': account.account_subtype,
+                'parent': account.parent_id,
+                'parent_code': account.parent.code if account.parent_id else '',
+                'parent_name': account.parent.name if account.parent_id else '',
+                'is_parent': account.children.exists(),
+                'rollup_balance': cls.get_account_balance_with_children(account, date=date, branch_id=branch_id),
                 'debit': Decimal('0.00'),
                 'credit': Decimal('0.00')
             }
@@ -1579,7 +1639,7 @@ class ReportingService:
         invoices = Invoice.objects.filter(
             invoice_date__gte=start_date,
             invoice_date__lte=end_date,
-            status__in=['open', 'partial', 'paid']  # Only finalized invoices
+            status__in=list(AccountingService.FINALIZED_INVOICE_STATUSES)
         )
         
         if branch_id:
@@ -1979,6 +2039,26 @@ class ReportingService:
         elif account.account_type in ['liability', 'equity', 'income']:
             return credits - debits
         return Decimal('0')
+
+    @classmethod
+    def get_account_balance_with_children(cls, account, date=None, start_date=None, end_date=None, branch_id=None):
+        """Return direct account balance plus all descendant balances."""
+        total = cls.get_account_balance(
+            account,
+            date=date,
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=branch_id,
+        )
+        for child in account.children.filter(is_active=True):
+            total += cls.get_account_balance_with_children(
+                child,
+                date=date,
+                start_date=start_date,
+                end_date=end_date,
+                branch_id=branch_id,
+            )
+        return total
 
     @classmethod
     def get_expense_breakdown(cls, start_date, end_date, branch_id=None):

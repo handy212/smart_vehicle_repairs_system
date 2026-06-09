@@ -1412,6 +1412,14 @@ class Payment(models.Model):
         related_name='payments',
         help_text="Open cashier till used for cash payments"
     )
+    bank_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='customer_payments',
+        help_text="Bank or cash-equivalent GL account used for non-cash settlement."
+    )
     
     # Payment details
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
@@ -1461,6 +1469,7 @@ class Payment(models.Model):
             models.Index(fields=['invoice', 'status']),
             models.Index(fields=['customer', 'payment_date']),
             models.Index(fields=['payment_method', 'status']),
+            models.Index(fields=['bank_account', 'payment_date']),
         ]
     
     def __str__(self):
@@ -1561,6 +1570,15 @@ class CashierTill(models.Model):
         ('open', 'Open'),
         ('closed', 'Closed'),
     ]
+
+    VARIANCE_APPROVAL_CHOICES = [
+        ('not_required', 'Not Required'),
+        ('auto_approved', 'Auto Approved'),
+        ('supervisor_required', 'Supervisor Required'),
+        ('approved', 'Approved'),
+    ]
+
+    VARIANCE_AUTO_APPROVAL_LIMIT = Decimal('20.00')
     
     branch = models.ForeignKey(
         'branches.Branch',
@@ -1572,10 +1590,25 @@ class CashierTill(models.Model):
         on_delete=models.PROTECT,
         related_name='tills'
     )
+    till_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='till_sessions',
+        help_text="Till-enabled Cash & Bank account operated by this session."
+    )
     
     # Till times
     opened_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='tills_closed'
+    )
     
     # Balances
     opening_balance = models.DecimalField(
@@ -1603,6 +1636,11 @@ class CashierTill(models.Model):
         blank=True,
         help_text="Difference between expected and actual closing balance"
     )
+    variance_approval_status = models.CharField(
+        max_length=30,
+        choices=VARIANCE_APPROVAL_CHOICES,
+        default='not_required'
+    )
     
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
     notes = models.TextField(blank=True)
@@ -1615,19 +1653,21 @@ class CashierTill(models.Model):
         ordering = ['-opened_at']
         indexes = [
             models.Index(fields=['branch', 'status']),
+            models.Index(fields=['till_account', 'branch', 'status']),
             models.Index(fields=['cashier', 'opened_at']),
             models.Index(fields=['status', 'opened_at']),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['cashier'],
-                condition=models.Q(status='open'),
-                name='unique_open_till_per_cashier'
+                fields=['till_account', 'branch'],
+                condition=models.Q(status='open') & models.Q(till_account__isnull=False),
+                name='unique_open_till_per_account_branch'
             )
         ]
     
     def __str__(self):
-        return f"Till {self.id} - {self.cashier.get_full_name()} ({self.status})"
+        account = f" - {self.till_account.name}" if self.till_account_id else ""
+        return f"Till {self.id}{account} - {self.cashier.get_full_name()} ({self.status})"
     
     @property
     def duration(self):
@@ -1658,6 +1698,12 @@ class CashierTill(models.Model):
             status='completed',
         ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
 
+    def cash_bill_payments_total(self):
+        """Cash paid out from this till for vendor bill payments."""
+        return self.bill_payments.filter(
+            payment_method='cash',
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+
     def till_cash_movements_net(self):
         """Net effect of pay-in / pay-out movements on drawer (positive adds cash)."""
         stats = self.cash_movements.aggregate(
@@ -1673,8 +1719,17 @@ class CashierTill(models.Model):
             self.opening_balance
             + self.cash_payments_total()
             - self.cash_refunds_total()
+            - self.cash_bill_payments_total()
             + self.till_cash_movements_net()
         ).quantize(Decimal('0.01'))
+
+    def set_variance_approval_status(self):
+        if self.variance is None or self.variance == 0:
+            self.variance_approval_status = 'not_required'
+        elif abs(self.variance) <= self.VARIANCE_AUTO_APPROVAL_LIMIT:
+            self.variance_approval_status = 'auto_approved'
+        else:
+            self.variance_approval_status = 'supervisor_required'
 
 
 class CashCount(models.Model):
@@ -1897,6 +1952,14 @@ class Refund(models.Model):
         blank=True,
         related_name='refunds'
     )
+    bank_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='refunds',
+        help_text="Bank or cash-equivalent GL account used for non-cash refund settlement."
+    )
     
     notes = models.TextField(blank=True)
     
@@ -1909,6 +1972,7 @@ class Refund(models.Model):
             models.Index(fields=['status', 'requested_at']),
             models.Index(fields=['customer', 'status']),
             models.Index(fields=['invoice', 'status']),
+            models.Index(fields=['bank_account', 'requested_at']),
         ]
     
     def __str__(self):
@@ -2245,6 +2309,22 @@ class BillPayment(models.Model):
     )
     payment_date = models.DateField(default=timezone.now)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    till = models.ForeignKey(
+        CashierTill,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bill_payments',
+        help_text="Open till used for cash vendor payments"
+    )
+    bank_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='vendor_bill_payments',
+        help_text="Bank or cash-equivalent GL account used for non-cash vendor payments."
+    )
     reference_number = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
     
@@ -2257,6 +2337,7 @@ class BillPayment(models.Model):
         indexes = [
             models.Index(fields=['payment_number']),
             models.Index(fields=['payment_date']),
+            models.Index(fields=['bank_account', 'payment_date']),
         ]
 
     def __str__(self):
