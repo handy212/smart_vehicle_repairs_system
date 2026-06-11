@@ -1477,12 +1477,15 @@ class ClientDemoDataService:
             if created:
                 s.created += 1
             if i % 2 == 0 and not invoice.is_paid:
+                from apps.accounting.models import AccountingControl
+
                 Payment.objects.get_or_create(
                     payment_number=f"CDPAY{i:05d}",
                     defaults={
                         "invoice": invoice,
                         "customer": invoice.customer,
-                        "payment_method": "cash",
+                        "payment_method": "check",
+                        "bank_account": AccountingControl.get_settings().default_bank_account,
                         "status": "completed",
                         "amount": invoice.total,
                         "reference_number": f"CDPAY-REF-{i:05d}",

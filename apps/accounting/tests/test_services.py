@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from decimal import Decimal
 from rest_framework.test import APIClient
-from apps.accounting.models import Account, BankStatement, BankStatementLine, FundTransfer, JournalEntry
+from apps.accounting.models import Account, AccountingControl, BankStatement, BankStatementLine, FundTransfer, JournalEntry
 from apps.accounting.services import AccountingService, ReportingService
 from apps.accounts.models import User
 from apps.billing.models import Invoice, InvoiceLineItem, Payment
@@ -220,7 +220,8 @@ class AccountingServiceTests(TestCase):
         payment = Payment.objects.create(
             invoice=invoice,
             customer=customer,
-            payment_method='cash',
+            payment_method='check',
+            bank_account=AccountingControl.get_settings().default_bank_account,
             amount=Decimal('100.00'),
             status='completed',
             processed_by=self.user,

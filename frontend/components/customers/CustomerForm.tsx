@@ -231,7 +231,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">Primary phone</Label>
+                                    <Label htmlFor="phone">Phone</Label>
                                     <Input id="phone" type="tel" placeholder="(555) 123-4567" {...register("phone")} />
                                 </div>
                                 <div className="space-y-2">
@@ -325,7 +325,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                             {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
                                         </div>
                                         <div className="space-y-2 sm:col-span-2">
-                                            <Label htmlFor="contact_person_name">Contact display name (optional)</Label>
+                                            <Label htmlFor="contact_person_name">Contact display name</Label>
                                             <Input
                                                 id="contact_person_name"
                                                 placeholder="e.g. Jane Smith, Fleet Manager"
@@ -351,7 +351,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 </div>
 
                                 <div className="space-y-4">
-                                    <p className="text-sm font-medium text-foreground">Company contact (optional)</p>
+                                    <p className="text-sm font-medium text-foreground">Company contact</p>
                                     <div className="grid sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="company_email">Billing / company email</Label>
@@ -544,11 +544,11 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                         <SelectValue placeholder="Select method" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="cash">Cash / Physical</SelectItem>
-                                        <SelectItem value="momo">MoMo / Digital</SelectItem>
-                                        <SelectItem value="card">Credit/Debit Card</SelectItem>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="momo">MoMo</SelectItem>
+                                        <SelectItem value="card">Credit</SelectItem>
                                         <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                        <SelectItem value="check">Company Check</SelectItem>
+                                        <SelectItem value="check">Check</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

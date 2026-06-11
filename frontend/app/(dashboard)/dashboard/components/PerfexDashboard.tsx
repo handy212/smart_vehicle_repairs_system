@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
-import { DashboardQuickAccessHub } from "./DashboardQuickAccessHub";
 import {
   type DashboardRoleConfig,
   dashboardShowsSection,
@@ -572,8 +571,6 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
           </Link>
         ))}
       </div>
-
-      <DashboardQuickAccessHub />
 
       {showSection("wo_status_breakdown") && workOrderByStatus.length > 0 && (
         <div className="rounded-md border border-border bg-card px-4 py-3 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">

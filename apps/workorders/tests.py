@@ -11,6 +11,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from model_bakery import baker
 
+from apps.accounting.models import AccountingControl
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder, ServiceTask, WorkOrderPart, TechnicianTimeLog
@@ -262,7 +263,8 @@ class WorkOrderModelTest(TestCase):
         Payment.objects.create(
             invoice=invoice,
             customer=self.customer,
-            payment_method='cash',
+            payment_method='check',
+            bank_account=AccountingControl.get_settings().default_bank_account,
             status='completed',
             amount=Decimal('315.00'),
             processed_by=accountant,

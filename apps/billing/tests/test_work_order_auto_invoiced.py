@@ -6,6 +6,7 @@ pytestmark = pytest.mark.legacy_integration
 from django.test import TestCase
 
 from apps.accounts.models import User
+from apps.accounting.models import AccountingControl
 from apps.billing.models import Invoice, Payment
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -73,7 +74,8 @@ class WorkOrderAutoInvoicedOnPaymentTests(TestCase):
         Payment.objects.create(
             invoice=invoice,
             customer=self.customer,
-            payment_method="cash",
+            payment_method="check",
+            bank_account=AccountingControl.get_settings().default_bank_account,
             status="completed",
             amount=Decimal("200.00"),
             processed_by=self.manager,
@@ -100,7 +102,8 @@ class WorkOrderAutoInvoicedOnPaymentTests(TestCase):
         Payment.objects.create(
             invoice=invoice,
             customer=self.customer,
-            payment_method="cash",
+            payment_method="check",
+            bank_account=AccountingControl.get_settings().default_bank_account,
             status="completed",
             amount=Decimal("50.00"),
             processed_by=self.manager,

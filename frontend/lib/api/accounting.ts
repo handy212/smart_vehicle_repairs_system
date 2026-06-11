@@ -222,6 +222,7 @@ export interface TillCashMovement {
 export interface TillReconciliationRow {
     id: number;
     branch_name: string;
+    till_account_id?: number;
     till_account_code: string;
     till_account_name: string;
     status: string;
@@ -305,6 +306,195 @@ export interface TrialBalanceReport {
         credits: number | string;
     };
     is_balanced: boolean;
+}
+
+export interface AccountingCommandCenterSnapshot {
+    period: { start: string; end: string };
+    branch_id: number | null;
+    role_view: string;
+    financial_position: {
+        total_assets: number;
+        total_liabilities: number;
+        equity: number;
+        current_profit_loss: number;
+        net_worth: number;
+        is_balanced: boolean;
+    };
+    revenue_expenses: {
+        revenue_today: number;
+        revenue_this_month: number;
+        revenue_this_year: number;
+        expenses_this_period: number;
+        gross_profit: number;
+        net_profit: number;
+    };
+    cash_position: {
+        cash_on_hand: number;
+        bank_balance: number;
+        till_balances: number;
+        total_available_cash: number;
+        runway_months: number;
+        negative_cash_accounts: Array<{ name: string; balance: number }>;
+    };
+    working_capital: {
+        accounts_receivable: number;
+        accounts_payable: number;
+        outstanding_customer_balances: number;
+        outstanding_supplier_balances: number;
+        net_working_capital: number;
+    };
+    revenue_analytics: {
+        trend: Array<{ period: string; revenue: number }>;
+        by_branch: Array<{ branch_id: number; branch_name: string; invoiced: number; collected: number; share_percent: number }>;
+        by_service_type: Array<{ product?: string; label: string; invoiced: number; collected: number }>;
+        top_customers: Array<{ customer: string; revenue: number; invoice_count: number; last_invoice_date?: string | null }>;
+    };
+    expense_analytics: {
+        trend: Array<{ date: string; expense: number }>;
+        categories: Array<{ name: string; value: number; percent: number }>;
+        top_categories: Array<{ name: string; amount: number }>;
+    };
+    receivables: {
+        total_outstanding: number;
+        aging_buckets: Record<string, number | string>;
+        top_debtors: Array<{ id: number; number: string; entity: string; amount: number; due_date?: string | null }>;
+        overdue_invoices: Array<{ id: number; number: string; customer: string; amount_due: number; due_date?: string | null }>;
+    };
+    payables: {
+        total_outstanding: number;
+        summary: {
+            total_outstanding: number;
+            due_this_week: number;
+            due_this_week_count: number;
+            due_this_month: number;
+            due_this_month_count: number;
+            overdue_bills: number;
+            overdue_bills_count: number;
+        };
+        aging_buckets: Record<string, number | string>;
+        top_creditors: Array<{ supplier_id: number; supplier_name: string; amount_due: number; expected_payment_date?: string | null }>;
+        upcoming_payments: Array<{ days: number; label: string; amount: number; count: number }>;
+        pending_approvals: number;
+    };
+    cash_bank: {
+        till_accounts: Array<{
+            id: number;
+            code?: string;
+            name: string;
+            balance: number;
+            open_till_status: string;
+            last_till_closure?: string | null;
+            last_reconciliation?: string | null;
+            variance_status?: string;
+            href?: string;
+        }>;
+        bank_accounts: Array<{
+            id: number;
+            bank_name?: string;
+            name: string;
+            account_name?: string;
+            balance: number;
+            ledger_balance?: number;
+            reconciled_balance: number;
+            difference?: number;
+            last_reconciliation_date?: string | null;
+            unreconciled_transactions: number;
+            href?: string;
+        }>;
+    };
+    till_management: {
+        open_tills: Array<{
+            id: number;
+            user: string;
+            branch: string;
+            till_account?: string;
+            opening_balance: number;
+            current_balance: number;
+            open_duration?: string;
+            href?: string;
+        }>;
+        totals: {
+            open_tills?: number;
+            closed_tills_today?: number;
+            pending_closures?: number;
+            shortages: number;
+            excesses: number;
+            pay_ins: number;
+            pay_outs: number;
+            cash_receipts: number;
+            cash_refunds: number;
+            net_movement: number;
+            pending_variance_approvals: number;
+        };
+        pending_supervisor_actions: Array<{
+            id: number;
+            user: string;
+            branch: string;
+            till_account?: string;
+            variance: number;
+            closed_at?: string | null;
+            reason?: string;
+            href?: string;
+            approve_href?: string;
+        }>;
+    };
+    tax: {
+        vat_collected: number;
+        vat_payable: number;
+        input_vat: number;
+        output_vat: number;
+        tax_due: number;
+        tax_credit?: number;
+        net_tax_position?: number;
+        deadlines: Array<{
+            label: string;
+            tax_type?: string;
+            due_date: string;
+            filing_date?: string;
+            days_remaining?: number;
+            severity?: "critical" | "warning" | "info";
+        }>;
+    };
+    statements: {
+        profit_loss: {
+            revenue: number;
+            cost_of_sales: number;
+            gross_profit: number;
+            expenses: number;
+            net_profit: number;
+            trend?: Record<string, "up" | "down" | "stable">;
+        };
+        balance_sheet: {
+            assets: number;
+            liabilities: number;
+            equity: number;
+            trend?: Record<string, "up" | "down" | "stable">;
+        };
+        cash_flow: {
+            operating_cash_flow: number;
+            investing_cash_flow: number;
+            financing_cash_flow: number;
+            closing_balance: number;
+            trend?: Record<string, "up" | "down" | "stable">;
+        };
+    };
+    financial_health?: Record<string, { status: "healthy" | "warning" | "critical"; label: string; message: string }>;
+    alerts: Array<{ severity: "critical" | "warning" | "info"; title: string; message: string; href?: string }>;
+    monitoring?: Array<{
+        id: string;
+        title: string;
+        severity: "critical" | "warning" | "info";
+        items: Array<{
+            id: string;
+            label: string;
+            count: number;
+            amount?: number;
+            href?: string;
+        }>;
+    }>;
+    recent_activity: {
+        journal_entries: Array<{ id: number; reference?: string; description?: string; date?: string | null; posted: boolean }>;
+    };
 }
 
 // ============================================================================
@@ -623,6 +813,11 @@ export const accountingApi = {
     getAnalyticsSnapshot: async (params?: Record<string, string>): Promise<unknown> => {
         const queryParams = new URLSearchParams(params).toString();
         const response = await apiClient.get(`/accounting/analytics/dashboard/?${queryParams}`);
+        return response.data;
+    },
+
+    getCommandCenterSnapshot: async (params?: Record<string, string>): Promise<AccountingCommandCenterSnapshot> => {
+        const response = await apiClient.get("/accounting/dashboard/command-center/", { params });
         return response.data;
     },
 

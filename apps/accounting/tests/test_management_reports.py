@@ -154,6 +154,32 @@ class ManagementReportsAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('kpis', response.data)
 
+    def test_command_center_dashboard_returns_expected_sections(self):
+        today = timezone.now().date()
+        response = self.client.get(
+            '/api/accounting/dashboard/command-center/',
+            {'start_date': today.replace(day=1).isoformat(), 'end_date': today.isoformat()},
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('financial_position', response.data)
+        self.assertIn('revenue_analytics', response.data)
+        self.assertIn('expense_analytics', response.data)
+        self.assertIn('receivables', response.data)
+        self.assertIn('payables', response.data)
+        self.assertIn('cash_bank', response.data)
+        self.assertIn('till_management', response.data)
+        self.assertIn('tax', response.data)
+        self.assertIn('statements', response.data)
+        self.assertIn('alerts', response.data)
+        self.assertIn('monitoring', response.data)
+        self.assertTrue(any(group['id'] == 'critical' for group in response.data['monitoring']))
+        self.assertTrue(any(group['id'] == 'warning' for group in response.data['monitoring']))
+        self.assertTrue(any(group['id'] == 'information' for group in response.data['monitoring']))
+        self.assertIn('open_tills', response.data['till_management']['totals'])
+        self.assertIn('closed_tills_today', response.data['till_management']['totals'])
+        self.assertIn('pending_closures', response.data['till_management']['totals'])
+
     def test_analytics_dashboard_invalid_date_returns_400(self):
         response = self.client.get(
             '/api/accounting/analytics/dashboard/',

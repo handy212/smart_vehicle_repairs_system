@@ -1316,3 +1316,27 @@ class AnalyticsDashboardView(APIView):
         from .analytics import AnalyticsService
         data = AnalyticsService.get_dashboard_snapshot(start_date, end_date, branch_id)
         return Response(data)
+
+
+class AccountingCommandCenterView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        today = timezone.now().date()
+
+        start_date = parse_date(start_date_str) if start_date_str else today.replace(day=1)
+        end_date = parse_date(end_date_str) if end_date_str else today
+
+        if not start_date or not end_date:
+            return Response({'detail': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        branch_id = get_report_branch_id(request)
+        data = DashboardService.get_command_center_snapshot(
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=branch_id,
+            user=request.user,
+        )
+        return Response(data)

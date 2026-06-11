@@ -19,7 +19,6 @@ import { searchApi, type SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useModules } from "@/lib/hooks/useModules";
-import { DASHBOARD_HUB_COMMAND_ACTIONS } from "@/lib/utils/dashboard-quick-access";
 
 interface QuickAction {
   id: string;
@@ -95,15 +94,6 @@ const QUICK_ACTIONS: QuickAction[] = [
     icon: Package,
     permission: "view_parts",
   },
-  ...DASHBOARD_HUB_COMMAND_ACTIONS.map((action) => ({
-    ...action,
-    icon:
-      action.id === "hub-payroll"
-        ? Users
-        : action.id === "hub-chart-of-accounts" || action.id === "hub-bank-reconciliation"
-          ? FileText
-          : Package,
-  })),
 ];
 
 type PaletteEntry =

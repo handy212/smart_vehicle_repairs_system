@@ -2343,6 +2343,683 @@ class DashboardService:
             'branch_performance': branch_performance
         }
 
+    @staticmethod
+    def get_command_center_snapshot(start_date, end_date, branch_id=None, user=None):
+        """
+        Consolidated accounting dashboard payload for the frontend command center.
+        """
+        from datetime import timedelta
+
+        from apps.accounting.analytics import AnalyticsService
+        from apps.accounting.management_reports import ManagementReportingService
+        from apps.billing.models import CashierTill, Payment
+
+        def money(value):
+            if value is None:
+                return 0.0
+            return float(value)
+
+        def account_balance(account):
+            return ReportingService.get_account_balance(account, date=end_date, branch_id=branch_id)
+
+        def status_from(value, warning_at, critical_at, lower_is_worse=False):
+            numeric = money(value)
+            if lower_is_worse:
+                if numeric <= critical_at:
+                    return 'critical'
+                if numeric <= warning_at:
+                    return 'warning'
+                return 'healthy'
+            if numeric >= critical_at:
+                return 'critical'
+            if numeric >= warning_at:
+                return 'warning'
+            return 'healthy'
+
+        def trend(current, previous):
+            current_value = money(current)
+            previous_value = money(previous)
+            if abs(current_value - previous_value) < 0.01:
+                return 'stable'
+            return 'up' if current_value > previous_value else 'down'
+
+        def format_duration(delta):
+            if not delta:
+                return ''
+            total_minutes = max(int(delta.total_seconds() // 60), 0)
+            hours, minutes = divmod(total_minutes, 60)
+            if hours >= 24:
+                days, hours = divmod(hours, 24)
+                return f'{days}d {hours}h'
+            if hours:
+                return f'{hours}h {minutes}m'
+            return f'{minutes}m'
+
+        def role_view():
+            role = getattr(user, 'role', '') if user else ''
+            if role == 'accountant':
+                return 'accountant'
+            if role == 'manager':
+                return 'branch_manager'
+            if role in {'super-admin', 'admin'}:
+                return 'executive'
+            if user and (
+                getattr(user, 'is_superuser', False)
+                or getattr(user, 'role', '') in {'admin', 'super-admin'}
+            ):
+                return 'executive'
+            return 'finance_manager'
+
+        balance_sheet = ReportingService.get_balance_sheet(end_date, branch_id=branch_id)
+        profit_loss = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_id)
+        cash_flow = ReportingService.get_cash_flow_statement(start_date, end_date, branch_id=branch_id)
+        tax_report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
+        ar_aging = ReportingService.get_aging_report('ar', end_date, branch_id=branch_id)
+        ap_aging = ReportingService.get_aging_report('ap', end_date, branch_id=branch_id)
+        supplier_aging = ManagementReportingService.get_supplier_ap_aging(end_date, branch_id=branch_id)
+        revenue_mix = ManagementReportingService.get_revenue_mix(start_date, end_date, branch_id=branch_id)
+        expense_breakdown = ReportingService.get_expense_breakdown(start_date, end_date, branch_id=branch_id)
+        analytics = AnalyticsService.get_dashboard_snapshot(start_date, end_date, branch_id=branch_id)
+        management = DashboardService.get_management_metrics(start_date, end_date, branch_id=branch_id)
+
+        today = timezone.now().date()
+        month_start = today.replace(day=1)
+        year_start = today.replace(month=1, day=1)
+        period_days = max((end_date - start_date).days + 1, 1)
+        previous_end = start_date - timedelta(days=1)
+        previous_start = previous_end - timedelta(days=period_days - 1)
+        previous_profit_loss = ReportingService.get_profit_loss(previous_start, previous_end, branch_id=branch_id)
+        previous_balance_sheet = ReportingService.get_balance_sheet(previous_end, branch_id=branch_id)
+        previous_cash_flow = ReportingService.get_cash_flow_statement(previous_start, previous_end, branch_id=branch_id)
+
+        payments_qs = Payment.objects.filter(status='completed', invoice__isnull=False)
+        invoices_qs = Invoice.objects.exclude(status='void')
+        bills_qs = Bill.objects.all()
+        if branch_id:
+            payments_qs = payments_qs.filter(invoice__branch_id=branch_id)
+            invoices_qs = invoices_qs.filter(branch_id=branch_id)
+            bills_qs = bills_qs.filter(branch_id=branch_id)
+
+        revenue_today = payments_qs.filter(payment_date__date=today).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        revenue_mtd = payments_qs.filter(payment_date__date__gte=month_start, payment_date__date__lte=today).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        revenue_ytd = payments_qs.filter(payment_date__date__gte=year_start, payment_date__date__lte=today).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+        customer_map = {}
+        for invoice in invoices_qs.filter(invoice_date__gte=start_date, invoice_date__lte=end_date).select_related('customer'):
+            customer_name = str(invoice.customer) if invoice.customer_id else 'Walk-in Customer'
+            row = customer_map.setdefault(customer_name, {
+                'customer': customer_name,
+                'revenue': Decimal('0'),
+                'invoice_count': 0,
+                'last_invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+            })
+            row['revenue'] += invoice.total or Decimal('0')
+            row['invoice_count'] += 1
+            if invoice.invoice_date:
+                row['last_invoice_date'] = max(row['last_invoice_date'] or invoice.invoice_date.isoformat(), invoice.invoice_date.isoformat())
+
+        top_customers = [
+            {
+                'customer': row['customer'],
+                'revenue': money(row['revenue']),
+                'invoice_count': row['invoice_count'],
+                'last_invoice_date': row['last_invoice_date'],
+            }
+            for row in sorted(customer_map.values(), key=lambda item: item['revenue'], reverse=True)[:5]
+        ]
+
+        overdue_invoices_qs = invoices_qs.filter(
+            status__in=['sent', 'viewed', 'partial', 'overdue'],
+            due_date__lt=today,
+        ).exclude(amount_due=0).order_by('-amount_due')[:10]
+        overdue_invoices = [
+            {
+                'id': inv.id,
+                'number': inv.invoice_number,
+                'customer': str(inv.customer),
+                'amount_due': money(inv.amount_due),
+                'due_date': inv.due_date.isoformat() if inv.due_date else None,
+            }
+            for inv in overdue_invoices_qs.select_related('customer')
+        ]
+
+        upcoming_windows = []
+        open_bills_qs = bills_qs.filter(status__in=['open', 'partially_paid', 'overdue']).exclude(amount_due=0)
+        overdue_bills_qs = open_bills_qs.filter(due_date__lt=today)
+        due_this_week_qs = open_bills_qs.filter(due_date__gte=today, due_date__lte=today + timedelta(days=7))
+        due_this_month_qs = open_bills_qs.filter(due_date__gte=today, due_date__lte=today + timedelta(days=30))
+        for days in (7, 14, 30):
+            due_limit = today + timedelta(days=days)
+            due_qs = open_bills_qs.filter(due_date__gte=today, due_date__lte=due_limit)
+            upcoming_windows.append({
+                'days': days,
+                'label': f'{days} Days',
+                'amount': money(due_qs.aggregate(total=Sum('amount_due'))['total'] or Decimal('0')),
+                'count': due_qs.count(),
+            })
+
+        till_accounts_qs = Account.objects.filter(is_till_enabled=True, is_active=True)
+        till_accounts = []
+        for account in till_accounts_qs.order_by('code'):
+            latest_till = (
+                CashierTill.objects.filter(till_account=account)
+                .select_related('branch', 'cashier')
+                .order_by('-opened_at', '-id')
+                .first()
+            )
+            last_closed_till = (
+                CashierTill.objects.filter(till_account=account, status='closed')
+                .select_related('branch', 'cashier')
+                .order_by('-closed_at', '-id')
+                .first()
+            )
+            till_accounts.append({
+                'id': account.id,
+                'code': account.code,
+                'name': account.name,
+                'balance': money(account_balance(account)),
+                'open_till_status': latest_till.status if latest_till else 'closed',
+                'last_till_closure': last_closed_till.closed_at.isoformat() if last_closed_till and last_closed_till.closed_at else None,
+                'last_reconciliation': last_closed_till.closed_at.isoformat() if last_closed_till and last_closed_till.closed_at else None,
+                'variance_status': getattr(last_closed_till, 'variance_approval_status', '') if last_closed_till else 'not_required',
+                'href': f'/accounting/reports/general-ledger?account_id={account.id}',
+            })
+
+        bank_accounts_qs = Account.objects.filter(
+            account_type='asset',
+            account_subtype__in=['bank', 'cash_equivalent'],
+            is_active=True,
+        )
+        bank_accounts = []
+        for account in bank_accounts_qs.order_by('code'):
+            latest_statement = account.bank_statements.order_by('-statement_date', '-id').prefetch_related('lines').first()
+            unreconciled = 0
+            reconciled_balance = Decimal('0')
+            if latest_statement:
+                reconciled_balance = latest_statement.closing_balance or Decimal('0')
+                unreconciled = latest_statement.lines.filter(Q(matched=False) | Q(matched_transaction__isnull=True)).count()
+            bank_accounts.append({
+                'id': account.id,
+                'bank_name': account.name,
+                'name': account.name,
+                'account_name': f'{account.code} - {account.name}',
+                'balance': money(account_balance(account)),
+                'ledger_balance': money(account_balance(account)),
+                'reconciled_balance': money(reconciled_balance),
+                'difference': money(account_balance(account) - reconciled_balance),
+                'last_reconciliation_date': latest_statement.statement_date.isoformat() if latest_statement else None,
+                'unreconciled_transactions': unreconciled,
+                'href': f'/accounting/banking/reconciliation?account_id={account.id}',
+            })
+
+        till_qs = CashierTill.objects.select_related('branch', 'cashier', 'till_account').all()
+        if branch_id:
+            till_qs = till_qs.filter(branch_id=branch_id)
+        open_tills_qs = till_qs.filter(status='open').order_by('-opened_at')
+        closed_tills_today = till_qs.filter(status='closed', closed_at__date=end_date).count()
+        pending_till_closures = open_tills_qs.count()
+        open_tills = [
+            {
+                'id': till.id,
+                'user': till.cashier.get_full_name() or till.cashier.username,
+                'branch': till.branch.name if till.branch_id else '',
+                'till_account': str(till.till_account) if till.till_account_id else '',
+                'opening_balance': money(till.opening_balance),
+                'current_balance': money(till.calculate_expected_balance()),
+                'open_duration': format_duration(till.duration),
+                'href': f'/accounting/tills/{till.id}',
+            }
+            for till in open_tills_qs
+        ]
+
+        till_shortage = Decimal('0')
+        till_excess = Decimal('0')
+        till_pay_ins = Decimal('0')
+        till_pay_outs = Decimal('0')
+        till_cash_receipts = Decimal('0')
+        till_cash_refunds = Decimal('0')
+        pending_variance_approvals = 0
+        pending_supervisor_actions = []
+        for till in till_qs.filter(opened_at__date__gte=start_date, opened_at__date__lte=end_date):
+            till_pay_ins += till.cash_movements.filter(movement_type='pay_in').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            till_pay_outs += till.cash_movements.filter(movement_type='pay_out').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            till_cash_receipts += till.cash_payments_total()
+            till_cash_refunds += till.cash_refunds_total()
+            if till.variance and till.variance < 0:
+                till_shortage += abs(till.variance)
+            elif till.variance and till.variance > 0:
+                till_excess += till.variance
+            if till.variance_approval_status == 'supervisor_required':
+                pending_variance_approvals += 1
+                pending_supervisor_actions.append({
+                    'id': till.id,
+                    'user': till.cashier.get_full_name() or till.cashier.username,
+                    'branch': till.branch.name if till.branch_id else '',
+                    'till_account': str(till.till_account) if till.till_account_id else '',
+                    'variance': money(till.variance),
+                    'closed_at': till.closed_at.isoformat() if till.closed_at else None,
+                    'reason': till.notes,
+                    'href': f'/accounting/tills/{till.id}',
+                    'approve_href': f'/accounting/tills/{till.id}',
+                })
+
+        revenue_trend = [
+            {
+                'period': point.get('date'),
+                'revenue': money(point.get('revenue')),
+            }
+            for point in analytics.get('trends', [])
+        ]
+
+        expense_trend = [
+            {
+                'date': point.get('date'),
+                'expense': money(point.get('expense')),
+            }
+            for point in analytics.get('trends', [])
+        ]
+
+        expense_categories = []
+        categories = expense_breakdown.get('categories', {})
+        for key in ('parts', 'labor', 'overhead'):
+            if key in categories:
+                item = categories[key]
+                expense_categories.append({
+                    'name': item.get('label', key.title()),
+                    'value': money(item.get('amount')),
+                    'percent': money(item.get('percent')),
+                })
+
+        top_categories = [
+            {
+                'name': detail.get('name'),
+                'amount': money(detail.get('amount')),
+            }
+            for detail in categories.get('overhead', {}).get('detail', [])[:5]
+        ]
+
+        negative_cash_accounts = [
+            {'name': row['name'], 'balance': row['balance']}
+            for row in till_accounts + bank_accounts
+            if row['balance'] < 0
+        ]
+
+        control = AccountingControl.get_settings()
+        missing_control_accounts = [
+            field for field in AccountingControl.ACCOUNT_FIELD_NAMES
+            if getattr(control, f'{field}_id', None) is None
+        ]
+        unbalanced_journals = 0
+        for journal in JournalEntry.objects.prefetch_related('transactions')[:250]:
+            if not journal.validate_balanced():
+                unbalanced_journals += 1
+        failed_reconciliations = sum(1 for account in bank_accounts if account['unreconciled_transactions'] > 0)
+        overdue_ar_amount = sum(Decimal(str(row['amount_due'])) for row in overdue_invoices)
+        overdue_ap_amount = overdue_bills_qs.aggregate(total=Sum('amount_due'))['total'] or Decimal('0')
+
+        recent_entries = [
+            {
+                'id': je.id,
+                'reference': je.reference,
+                'description': je.description,
+                'date': je.date.isoformat() if je.date else None,
+                'posted': je.posted,
+            }
+            for je in JournalEntry.objects.order_by('-date', '-id')[:8]
+        ]
+        if branch_id:
+            recent_entries = [
+                {
+                    'id': je.id,
+                    'reference': je.reference,
+                    'description': je.description,
+                    'date': je.date.isoformat() if je.date else None,
+                    'posted': je.posted,
+                }
+                for je in JournalEntry.objects.filter(branch_id=branch_id).order_by('-date', '-id')[:8]
+            ]
+
+        alerts = []
+        if negative_cash_accounts:
+            alerts.append({
+                'severity': 'critical',
+                'title': 'Negative cash balance',
+                'message': f"{negative_cash_accounts[0]['name']} is below zero and needs review.",
+                'href': '/accounting/reports/balance-sheet',
+            })
+        if pending_variance_approvals:
+            alerts.append({
+                'severity': 'warning',
+                'title': 'Pending till variance approvals',
+                'message': f'{pending_variance_approvals} till variances require supervisor action.',
+                'href': '/accounting/tills',
+            })
+        if overdue_invoices:
+            alerts.append({
+                'severity': 'warning',
+                'title': 'Overdue receivables',
+                'message': f'{len(overdue_invoices)} overdue invoices need collection follow-up.',
+                'href': '/accounting/reports/aging',
+            })
+        if overdue_bills_qs.exists():
+            alerts.append({
+                'severity': 'warning',
+                'title': 'Overdue supplier bills',
+                'message': f'{overdue_bills_qs.count()} supplier bills are overdue.',
+                'href': '/billing/bills?status=overdue',
+            })
+        if money(tax_report.get('net_tax_liability')) > 0:
+            alerts.append({
+                'severity': 'warning',
+                'title': 'Tax due',
+                'message': 'Net tax liability is currently payable.',
+                'href': '/accounting/reports/tax',
+            })
+        if not balance_sheet.get('is_balanced', True):
+            alerts.append({
+                'severity': 'critical',
+                'title': 'Books out of balance',
+                'message': 'Balance sheet is not balanced for the selected date.',
+                'href': '/accounting/reports/trial-balance',
+            })
+        if missing_control_accounts:
+            alerts.append({
+                'severity': 'critical',
+                'title': 'Missing control accounts',
+                'message': f'{len(missing_control_accounts)} accounting control accounts are not configured.',
+                'href': '/accounting/controls',
+            })
+        if failed_reconciliations:
+            alerts.append({
+                'severity': 'info',
+                'title': 'Bank reconciliation backlog',
+                'message': f'{failed_reconciliations} bank accounts have unreconciled transactions.',
+                'href': '/accounting/banking/reconciliation',
+            })
+
+        monitoring = [
+            {
+                'id': 'critical',
+                'title': 'Critical Controls',
+                'severity': 'critical',
+                'items': [
+                    {
+                        'id': 'books_out_of_balance',
+                        'label': 'Books out of balance',
+                        'count': 0 if balance_sheet.get('is_balanced', True) else 1,
+                        'href': '/accounting/reports/trial-balance',
+                    },
+                    {
+                        'id': 'unbalanced_journals',
+                        'label': 'Unbalanced journals',
+                        'count': unbalanced_journals,
+                        'href': '/accounting/journal-entries?status=unbalanced',
+                    },
+                    {
+                        'id': 'missing_control_accounts',
+                        'label': 'Missing control accounts',
+                        'count': len(missing_control_accounts),
+                        'href': '/accounting/controls',
+                    },
+                    {
+                        'id': 'negative_cash_accounts',
+                        'label': 'Negative cash balances',
+                        'count': len(negative_cash_accounts),
+                        'amount': money(sum(Decimal(str(row['balance'])) for row in negative_cash_accounts)),
+                        'href': '/accounting/reports/balance-sheet',
+                    },
+                ],
+            },
+            {
+                'id': 'warning',
+                'title': 'Operational Exceptions',
+                'severity': 'warning',
+                'items': [
+                    {
+                        'id': 'overdue_receivables',
+                        'label': 'Overdue customer invoices',
+                        'count': len(overdue_invoices),
+                        'amount': money(overdue_ar_amount),
+                        'href': '/accounting/reports/aging',
+                    },
+                    {
+                        'id': 'overdue_payables',
+                        'label': 'Overdue supplier bills',
+                        'count': overdue_bills_qs.count(),
+                        'amount': money(overdue_ap_amount),
+                        'href': '/billing/bills?status=overdue',
+                    },
+                    {
+                        'id': 'till_variance_approvals',
+                        'label': 'Till variance approvals',
+                        'count': pending_variance_approvals,
+                        'amount': money(till_shortage + till_excess),
+                        'href': '/accounting/tills',
+                    },
+                    {
+                        'id': 'bank_reconciliation_backlog',
+                        'label': 'Bank reconciliation queues',
+                        'count': failed_reconciliations,
+                        'href': '/accounting/banking/reconciliation',
+                    },
+                ],
+            },
+            {
+                'id': 'information',
+                'title': 'Upcoming Work',
+                'severity': 'info',
+                'items': [
+                    {
+                        'id': 'pending_bill_approvals',
+                        'label': 'Supplier bill approvals',
+                        'count': bills_qs.filter(status='pending_approval').count(),
+                        'href': '/billing/bills?status=pending_approval',
+                    },
+                    {
+                        'id': 'pending_till_closures',
+                        'label': 'Open tills awaiting closure',
+                        'count': pending_till_closures,
+                        'href': '/accounting/tills',
+                    },
+                    {
+                        'id': 'upcoming_tax_deadlines',
+                        'label': 'Upcoming tax deadlines',
+                        'count': 3,
+                        'href': '/accounting/reports/tax',
+                    },
+                ],
+            },
+        ]
+
+        return {
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'branch_id': branch_id,
+            'role_view': role_view(),
+            'financial_position': {
+                'total_assets': money(balance_sheet['totals']['assets']),
+                'total_liabilities': money(balance_sheet['totals']['liabilities']),
+                'equity': money(balance_sheet['totals']['equity']),
+                'current_profit_loss': money(profit_loss['totals']['net_income']),
+                'net_worth': money(balance_sheet['totals']['assets'] - balance_sheet['totals']['liabilities']),
+                'is_balanced': balance_sheet.get('is_balanced', True),
+            },
+            'revenue_expenses': {
+                'revenue_today': money(revenue_today),
+                'revenue_this_month': money(revenue_mtd),
+                'revenue_this_year': money(revenue_ytd),
+                'expenses_this_period': money(profit_loss['totals']['expenses']),
+                'gross_profit': money(profit_loss['totals']['income'] - profit_loss['totals']['expenses']),
+                'net_profit': money(profit_loss['totals']['net_income']),
+            },
+            'cash_position': {
+                'cash_on_hand': money(analytics['financial_health']['cash_on_hand']),
+                'bank_balance': money(sum(Decimal(str(item['balance'])) for item in bank_accounts) if bank_accounts else Decimal('0')),
+                'till_balances': money(sum(Decimal(str(item['balance'])) for item in till_accounts) if till_accounts else Decimal('0')),
+                'total_available_cash': money(Decimal(str(analytics['financial_health']['cash_on_hand'])) + sum(Decimal(str(item['balance'])) for item in bank_accounts + till_accounts)),
+                'runway_months': money(analytics['financial_health']['runway_months']),
+                'negative_cash_accounts': negative_cash_accounts,
+            },
+            'working_capital': {
+                'accounts_receivable': money(ar_aging['summary']['total']),
+                'accounts_payable': money(ap_aging['summary']['total']),
+                'outstanding_customer_balances': money(ar_aging['summary']['total']),
+                'outstanding_supplier_balances': money(ap_aging['summary']['total']),
+                'net_working_capital': money(ar_aging['summary']['total'] - ap_aging['summary']['total']),
+            },
+            'revenue_analytics': {
+                'trend': revenue_trend,
+                'by_branch': revenue_mix.get('by_branch', []),
+                'by_service_type': revenue_mix.get('by_product', []),
+                'top_customers': top_customers,
+            },
+            'expense_analytics': {
+                'trend': expense_trend,
+                'categories': expense_categories,
+                'top_categories': top_categories,
+            },
+            'receivables': {
+                'total_outstanding': money(ar_aging['summary']['total']),
+                'aging_buckets': ar_aging['summary'],
+                'top_debtors': sorted(
+                    [
+                        {
+                            'id': row['id'],
+                            'number': row['number'],
+                            'entity': row['entity'],
+                            'amount': money(row['amount']),
+                            'due_date': row['due_date'].isoformat() if row.get('due_date') else None,
+                        }
+                        for row in ar_aging.get('details', [])
+                    ],
+                    key=lambda row: row['amount'],
+                    reverse=True,
+                )[:5],
+                'overdue_invoices': overdue_invoices,
+            },
+            'payables': {
+                'total_outstanding': money(ap_aging['summary']['total']),
+                'summary': {
+                    'total_outstanding': money(ap_aging['summary']['total']),
+                    'due_this_week': money(due_this_week_qs.aggregate(total=Sum('amount_due'))['total'] or Decimal('0')),
+                    'due_this_week_count': due_this_week_qs.count(),
+                    'due_this_month': money(due_this_month_qs.aggregate(total=Sum('amount_due'))['total'] or Decimal('0')),
+                    'due_this_month_count': due_this_month_qs.count(),
+                    'overdue_bills': money(overdue_bills_qs.aggregate(total=Sum('amount_due'))['total'] or Decimal('0')),
+                    'overdue_bills_count': overdue_bills_qs.count(),
+                },
+                'aging_buckets': ap_aging['summary'],
+                'top_creditors': supplier_aging.get('suppliers', [])[:5],
+                'upcoming_payments': upcoming_windows,
+                'pending_approvals': bills_qs.filter(status='pending_approval').count(),
+            },
+            'cash_bank': {
+                'till_accounts': till_accounts,
+                'bank_accounts': bank_accounts,
+            },
+            'till_management': {
+                'open_tills': open_tills,
+                'totals': {
+                    'open_tills': pending_till_closures,
+                    'closed_tills_today': closed_tills_today,
+                    'pending_closures': pending_till_closures,
+                    'shortages': money(till_shortage),
+                    'excesses': money(till_excess),
+                    'pay_ins': money(till_pay_ins),
+                    'pay_outs': money(till_pay_outs),
+                    'cash_receipts': money(till_cash_receipts),
+                    'cash_refunds': money(till_cash_refunds),
+                    'net_movement': money(till_cash_receipts - till_cash_refunds + till_pay_ins - till_pay_outs),
+                    'pending_variance_approvals': pending_variance_approvals,
+                },
+                'pending_supervisor_actions': pending_supervisor_actions[:10],
+            },
+            'tax': {
+                'vat_collected': money(tax_report['tax_collected']['vat']),
+                'vat_payable': money(tax_report['net_tax_liability']),
+                'input_vat': money(tax_report['tax_paid']['total']),
+                'output_vat': money(tax_report['tax_collected']['total']),
+                'tax_due': money(tax_report['net_tax_liability']),
+                'tax_credit': money(abs(tax_report['net_tax_liability']) if tax_report['net_tax_liability'] < 0 else Decimal('0')),
+                'net_tax_position': money(tax_report['net_tax_liability']),
+                'deadlines': [
+                    {'label': 'VAT return preparation', 'tax_type': 'VAT', 'due_date': (end_date + timedelta(days=7)).isoformat(), 'filing_date': (end_date + timedelta(days=7)).isoformat(), 'days_remaining': 7, 'severity': 'warning'},
+                    {'label': 'Management review', 'tax_type': 'VAT', 'due_date': (end_date + timedelta(days=14)).isoformat(), 'filing_date': (end_date + timedelta(days=14)).isoformat(), 'days_remaining': 14, 'severity': 'info'},
+                    {'label': 'Filing and payment', 'tax_type': 'VAT', 'due_date': (end_date + timedelta(days=21)).isoformat(), 'filing_date': (end_date + timedelta(days=21)).isoformat(), 'days_remaining': 21, 'severity': 'info'},
+                ],
+            },
+            'statements': {
+                'profit_loss': {
+                    'revenue': money(profit_loss['totals']['income']),
+                    'cost_of_sales': money(profit_loss['totals']['expenses']),
+                    'gross_profit': money(profit_loss['totals']['income'] - profit_loss['totals']['expenses']),
+                    'expenses': money(profit_loss['totals']['expenses']),
+                    'net_profit': money(profit_loss['totals']['net_income']),
+                    'trend': {
+                        'revenue': trend(profit_loss['totals']['income'], previous_profit_loss['totals']['income']),
+                        'gross_profit': trend(profit_loss['totals']['income'] - profit_loss['totals']['expenses'], previous_profit_loss['totals']['income'] - previous_profit_loss['totals']['expenses']),
+                        'net_profit': trend(profit_loss['totals']['net_income'], previous_profit_loss['totals']['net_income']),
+                    },
+                },
+                'balance_sheet': {
+                    'assets': money(balance_sheet['totals']['assets']),
+                    'liabilities': money(balance_sheet['totals']['liabilities']),
+                    'equity': money(balance_sheet['totals']['equity']),
+                    'trend': {
+                        'assets': trend(balance_sheet['totals']['assets'], previous_balance_sheet['totals']['assets']),
+                        'liabilities': trend(balance_sheet['totals']['liabilities'], previous_balance_sheet['totals']['liabilities']),
+                        'equity': trend(balance_sheet['totals']['equity'], previous_balance_sheet['totals']['equity']),
+                    },
+                },
+                'cash_flow': {
+                    'operating_cash_flow': money(cash_flow['operating_activities']['net']),
+                    'investing_cash_flow': money(cash_flow['investing_activities']['net']),
+                    'financing_cash_flow': money(cash_flow['financing_activities']['net']),
+                    'closing_balance': money(cash_flow['closing_balance']),
+                    'trend': {
+                        'operating_cash_flow': trend(cash_flow['operating_activities']['net'], previous_cash_flow['operating_activities']['net']),
+                        'investing_cash_flow': trend(cash_flow['investing_activities']['net'], previous_cash_flow['investing_activities']['net']),
+                        'financing_cash_flow': trend(cash_flow['financing_activities']['net'], previous_cash_flow['financing_activities']['net']),
+                    },
+                },
+            },
+            'financial_health': {
+                'cash': {
+                    'status': status_from(analytics['financial_health']['runway_months'], 3, 1, lower_is_worse=True),
+                    'label': 'Cash Health',
+                    'message': f"{money(analytics['financial_health']['runway_months']):.1f} months runway",
+                },
+                'receivables': {
+                    'status': status_from(overdue_ar_amount, 1, 10000),
+                    'label': 'Receivable Health',
+                    'message': f"{money(overdue_ar_amount):.2f} overdue",
+                },
+                'payables': {
+                    'status': status_from(overdue_ap_amount, 1, 10000),
+                    'label': 'Payable Health',
+                    'message': f"{money(overdue_ap_amount):.2f} overdue",
+                },
+                'tills': {
+                    'status': status_from(pending_variance_approvals + money(till_shortage), 1, 5),
+                    'label': 'Till Health',
+                    'message': f'{pending_variance_approvals} approvals pending',
+                },
+                'accounting': {
+                    'status': 'critical' if missing_control_accounts or unbalanced_journals else ('warning' if failed_reconciliations else 'healthy'),
+                    'label': 'Accounting Health',
+                    'message': f'{len(missing_control_accounts)} missing controls, {failed_reconciliations} reconciliation queues',
+                },
+            },
+            'alerts': alerts,
+            'monitoring': monitoring,
+            'recent_activity': {
+                'journal_entries': recent_entries,
+            },
+            'metadata': {
+                'generated_at': timezone.now().isoformat(),
+                'permissions': getattr(user, 'role', None),
+            },
+        }
+
 class ExportService:
     @staticmethod
     def generate_board_pack(start_date, end_date, branch_id=None):

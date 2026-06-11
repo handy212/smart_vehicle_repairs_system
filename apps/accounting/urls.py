@@ -39,6 +39,7 @@ urlpatterns = [
     path('reports/<slug:report_slug>/print/', report_print_views.AccountingReportPrintView.as_view(), name='accounting-report-print'),
     path('reports/<slug:report_slug>/pdf/', report_print_views.AccountingReportPdfView.as_view(), name='accounting-report-pdf'),
     path('analytics/dashboard/', views.AnalyticsDashboardView.as_view(), name='analytics-dashboard'),
+    path('dashboard/command-center/', views.AccountingCommandCenterView.as_view(), name='command-center-dashboard'),
     
     # Journal Entries
     path('journal-entries/', views.JournalEntryListView.as_view(), name='journal-entries'),

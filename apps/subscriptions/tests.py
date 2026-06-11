@@ -14,6 +14,7 @@ from apps.branches.models import Branch
 from apps.subscriptions.models import Package, Subscription, SubscriptionUsage
 from apps.subscriptions.services import SubscriptionService, SubscriptionUsageService
 from apps.billing.models import Invoice, Payment
+from apps.accounting.models import AccountingControl
 
 class SubscriptionTests(TestCase):
     def setUp(self):
@@ -271,7 +272,8 @@ class SubscriptionTests(TestCase):
         Payment.objects.create(
             invoice=invoice_one,
             customer=self.customer,
-            payment_method='cash',
+            payment_method='check',
+            bank_account=AccountingControl.get_settings().default_bank_account,
             amount=invoice_one.total,
             processed_by=self.admin,
         )

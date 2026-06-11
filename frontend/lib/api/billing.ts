@@ -332,6 +332,16 @@ export interface BillPayment {
   updated_at?: string;
 }
 
+export interface BillPaymentCreatePayload {
+  amount: string;
+  payment_date: string;
+  payment_method: "cash" | "check" | "bank_transfer" | "mobile_money" | "credit_card" | "other";
+  cash_account?: string;
+  bank_account?: string;
+  reference_number?: string;
+  notes?: string;
+}
+
 export interface Bill {
   id: number;
   bill_number: string;
@@ -429,7 +439,7 @@ export const billingApi = {
       return response.data;
     },
 
-    recordPayment: async (id: number, data: Partial<BillPayment>): Promise<BillPayment> => {
+    recordPayment: async (id: number, data: BillPaymentCreatePayload): Promise<BillPayment> => {
       const response = await apiClient.post(`/billing/bills/${id}/record_payment/`, data);
       return response.data;
     },
