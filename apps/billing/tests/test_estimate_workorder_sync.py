@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.test import TestCase
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.billing.models import Estimate, EstimateLineItem
@@ -10,6 +11,7 @@ from apps.billing.serializers import EstimateUpdateSerializer
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder, WorkOrderPart
+from apps.diagnosis.models import Diagnosis, RepairRecommendation
 
 
 class EstimateWorkOrderSyncTests(TestCase):
@@ -44,6 +46,7 @@ class EstimateWorkOrderSyncTests(TestCase):
             status="awaiting_approval",
             odometer_in=45000,
         )
+        self.api_client = APIClient()
 
     def test_updating_labor_line_items_updates_linked_work_order_totals(self):
         estimate = Estimate.objects.create(
@@ -243,3 +246,50 @@ class EstimateWorkOrderSyncTests(TestCase):
 
         estimate.refresh_from_db()
         self.assertEqual(estimate.status, "sent")
+
+    def test_mark_ready_marks_linked_requested_recommendations_as_quoted(self):
+        self.staff_user.role = "manager"
+        self.staff_user.save(update_fields=["role"])
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            status="in_progress",
+            customer_complaint="Battery issue",
+            diagnostic_notes="Waiting for pricing",
+            requires_approval=True,
+        )
+        estimate = Estimate.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=self.work_order,
+            status="draft",
+            valid_until=timezone.now().date() + timedelta(days=7),
+            created_by=self.staff_user,
+        )
+        recommendation = RepairRecommendation.objects.create(
+            diagnosis=diagnosis,
+            description="Replace battery",
+            approval_status="approved",
+            quotation_status="requested",
+            quotation_estimate_id=estimate.id,
+            quotation_estimate_number=estimate.estimate_number,
+        )
+        EstimateLineItem.objects.create(
+            estimate=estimate,
+            item_type="part",
+            description="Battery replacement",
+            part_number="BAT-001",
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("120.00"),
+            notes=f"[DIAG-REC:{recommendation.id}] Battery replacement",
+        )
+        estimate.calculate_totals()
+
+        self.api_client.force_authenticate(self.staff_user)
+        response = self.api_client.post(f"/api/billing/estimates/{estimate.id}/mark_ready/")
+
+        self.assertEqual(response.status_code, 200)
+        recommendation.refresh_from_db()
+        self.work_order.refresh_from_db()
+
+        self.assertEqual(recommendation.quotation_status, "quoted")
+        self.assertEqual(self.work_order.get_current_quote_stage(), "quotation_ready")

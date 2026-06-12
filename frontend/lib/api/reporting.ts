@@ -38,6 +38,15 @@ export interface DashboardOverview {
       customer: string;
       vehicle: string;
       status: string;
+      current_quote_stage?:
+        | "waiting_for_stores_quotation"
+        | "waiting_for_customer_approval"
+        | "quotation_ready"
+        | "approved_waiting_for_parts"
+        | "parts_ready_waiting_for_repairs"
+        | "approved_waiting_for_repairs"
+        | null;
+      current_quote_stage_display?: string | null;
       created_at: string;
       diagnosis_notes?: string | null;
       gate_pass_status?: string | null;

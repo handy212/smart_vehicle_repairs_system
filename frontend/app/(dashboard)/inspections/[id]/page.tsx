@@ -20,8 +20,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
+import { getInspectionApprovalLabel, getInspectionStageLabel, getInspectionStageTone, isInspectionStarted } from "@/lib/utils/inspection-status";
 
 const statusColors: Record<string, string> = {
+  draft: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 border-slate-200 dark:border-slate-700",
   in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
   completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 text-primary border-orange-200 dark:border-orange-800",
   approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
@@ -149,6 +151,10 @@ export default function InspectionDetailPage() {
   }
 
   const vehicle = typeof inspection.vehicle === 'object' ? inspection.vehicle : null;
+  const inspectionStageLabel = getInspectionStageLabel(inspection);
+  const inspectionStageTone = getInspectionStageTone(inspection);
+  const inspectionApprovalLabel = getInspectionApprovalLabel(inspection);
+  const inspectionHasStarted = isInspectionStarted(inspection);
   const customerSignatureRequired =
     typeof inspection.template === "object" && inspection.template.requires_customer_signature;
   const needsCustomerSignature = customerSignatureRequired && !inspection.customer_signature;
@@ -209,9 +215,21 @@ export default function InspectionDetailPage() {
               <h1 className="text-2xl font-bold text-foreground">
                 Inspection #{inspection.inspection_number}
               </h1>
-              <Badge variant="outline" className={cn(statusColors[inspection.status], "border shadow-none")}>
-                {inspection.status_display || inspection.status}
+              <Badge variant="outline" className={cn(statusColors[inspectionStageTone], "border shadow-none")}>
+                {inspectionStageLabel}
               </Badge>
+              {inspectionApprovalLabel ? (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "border shadow-none",
+                    inspection.status === "approved" && "border-green-200 text-green-700 bg-success/10",
+                    inspection.status === "rejected" && "border-destructive/20 text-destructive bg-destructive/10/50",
+                  )}
+                >
+                  {inspectionApprovalLabel}
+                </Badge>
+              ) : null}
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
@@ -253,7 +271,7 @@ export default function InspectionDetailPage() {
               onClick={() => router.push(`/inspections/${inspectionId}/perform`)}
             >
               <CheckCircle className="w-3.5 h-3.5 mr-2" />
-              {inspection.results && inspection.results.length > 0 ? "Resume Inspection" : "Perform Inspection"}
+              {inspectionHasStarted ? "Resume Inspection" : "Start Inspection"}
             </Button>
           )}
 
@@ -415,7 +433,7 @@ export default function InspectionDetailPage() {
                     <p className="text-sm text-muted-foreground">Perform the inspection to see results here.</p>
                     {inspection.status === 'in_progress' && (
                       <Button className="mt-4" onClick={() => router.push(`/inspections/${inspectionId}/perform`)}>
-                        {inspection.results && inspection.results.length > 0 ? "Resume Inspection" : "Start Inspection"}
+                        {inspectionHasStarted ? "Resume Inspection" : "Start Inspection"}
                       </Button>
                     )}
                   </CardContent>

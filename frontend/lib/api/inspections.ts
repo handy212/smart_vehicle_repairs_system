@@ -99,7 +99,7 @@ export interface VehicleInspection {
   odometer_reading?: number;
   odometer_unavailable?: boolean;
   odometer_unavailable_reason?: string;
-  status: "in_progress" | "completed" | "approved" | "rejected";
+  status: "draft" | "in_progress" | "completed" | "approved" | "rejected";
   status_display?: string;
   overall_result?: "pass" | "pass_with_advisory" | "fail" | "needs_attention";
   overall_result_display?: string;

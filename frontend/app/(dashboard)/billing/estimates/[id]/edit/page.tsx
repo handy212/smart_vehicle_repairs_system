@@ -91,6 +91,41 @@ const fieldLabels: Record<string, string> = {
   labor_rate: "Labor rate",
   part: "Part",
   description: "Description",
+  discount_type: "Discount type",
+  discount_reason: "Discount reason",
+};
+
+const discountTypeOptions = ["none", "before_tax", "after_tax"] as const;
+type DiscountType = (typeof discountTypeOptions)[number];
+
+const normalizeDiscountType = (value: unknown): DiscountType => (
+  typeof value === "string" && (discountTypeOptions as readonly string[]).includes(value)
+    ? (value as DiscountType)
+    : "none"
+);
+
+const getFriendlyEstimateError = (error: AxiosError<any>) => {
+  const data = error.response?.data;
+  if (!data) return "We couldn't update the estimate. Please try again.";
+  if (typeof data.detail === "string" && data.detail.trim()) return data.detail;
+  if (typeof data.message === "string" && data.message.trim()) return data.message;
+  if (typeof data.error === "string" && data.error.trim()) return data.error;
+
+  const discountTypeError = Array.isArray(data.discount_type)
+    ? data.discount_type[0]
+    : data.discount_type;
+  if (typeof discountTypeError === "string" && discountTypeError.trim()) {
+    return "Please choose a valid discount type. Use `No Discount` if you don't want to apply one.";
+  }
+
+  for (const [key, value] of Object.entries(data)) {
+    const message = Array.isArray(value) ? value[0] : value;
+    if (typeof message === "string" && message.trim()) {
+      return `${describeFieldPath(key)}: ${message}`;
+    }
+  }
+
+  return "We couldn't update the estimate. Please review the form and try again.";
 };
 
 const describeFieldPath = (path: string) => {
@@ -189,7 +224,7 @@ export default function EditEstimatePage() {
 
   const watchedCustomer = watch("customer");
   const customer = watchedCustomer ? Number(watchedCustomer) : undefined;
-  const discountType = watch("discount_type");
+  const discountType = normalizeDiscountType(watch("discount_type"));
   const discountPercentage = Number(watch("discount_percentage") || 0);
 
   useEffect(() => {
@@ -197,6 +232,17 @@ export default function EditEstimatePage() {
       setSelectedCustomer(customer);
     }
   }, [customer, selectedCustomer, setValue]);
+
+  useEffect(() => {
+    const currentDiscountType = watch("discount_type");
+    if (currentDiscountType !== discountType) {
+      setValue("discount_type", discountType, { shouldValidate: false });
+    }
+    if (discountType === "none") {
+      setValue("discount_percentage", 0, { shouldValidate: false });
+      setValue("discount_reason", "", { shouldValidate: false });
+    }
+  }, [discountType, setValue, watch]);
 
   useEffect(() => {
     if (estimate && !isLoading) {
@@ -252,7 +298,7 @@ export default function EditEstimatePage() {
         sales_agent: salesAgentId || undefined,
         discount_percentage: dPercent,
 
-        discount_type: (estimate as any).discount_type || dType,
+        discount_type: normalizeDiscountType((estimate as any).discount_type || dType),
         discount_reason: estimate.discount_reason || "",
         line_items: loadedLineItems,
         status: estimate.status,
@@ -370,8 +416,9 @@ export default function EditEstimatePage() {
         customer_notes: data.customer_notes || undefined,
         estimate_date: data.estimate_date,
         valid_until: data.valid_until,
-        discount_percentage: data.discount_type !== 'none' ? data.discount_percentage?.toString() : '0',
-        discount_reason: data.discount_reason || undefined,
+        discount_type: discountType,
+        discount_percentage: discountType !== 'none' ? data.discount_percentage?.toString() : '0',
+        discount_reason: discountType === "none" ? undefined : data.discount_reason || undefined,
         status: data.status,
         sales_agent: data.sales_agent,
         line_items: lineItemsForApi,
@@ -386,8 +433,7 @@ export default function EditEstimatePage() {
 
     onError: (error: AxiosError<any>) => {
       // Error handling is done in onSubmit via promise catch or here
-      const message = error.response?.data?.detail || error.response?.data?.message || "Failed to update estimate";
-      setServerError(message);
+      setServerError(getFriendlyEstimateError(error));
     },
   });
 
@@ -665,7 +711,7 @@ export default function EditEstimatePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Discount Type</label>
                 <Select
-                  value={watch("discount_type") || "none"}
+                  value={discountType}
 
                   onValueChange={(val: any) => setValue("discount_type", val, { shouldValidate: true })}
                 >

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, BadgeProps } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle, Copy, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -61,6 +61,8 @@ export default function EstimateDetailPage() {
   });
 
   const canEditEstimate = hasPermission("edit_estimates");
+  const canCreateEstimate = hasPermission("create_estimates");
+  const canDeleteEstimate = hasPermission("manage_billing");
   const canApproveEstimate = hasAnyPermission(["approve_estimates", "edit_estimates"]);
   const canSendEstimate = hasAnyPermission(["edit_estimates", "send_notifications"]);
   const canConvertEstimateToInvoice = hasAnyPermission([
@@ -69,6 +71,7 @@ export default function EstimateDetailPage() {
   ]);
   const canConvertEstimateToWorkOrder = hasPermission("create_workorders");
   const currentStatus = estimate?.status ?? null;
+  const canEditInUi = canEditEstimate && estimate?.status !== "converted";
   const getApiErrorMessage = (error: unknown, fallback: string) => {
     if (typeof error === "object" && error && "response" in error) {
       const response = (error as { response?: { data?: { error?: string; detail?: string } } }).response;
@@ -189,6 +192,68 @@ export default function EstimateDetailPage() {
     },
   });
 
+  const duplicateEstimateMutation = useMutation({
+    mutationFn: () => billingApi.estimates.duplicate(estimateId),
+    onSuccess: (duplicated) => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      toast({
+        title: "Success",
+        description: "Estimate duplicated successfully",
+      });
+      router.push(`/billing/estimates/${duplicated.id}/edit`);
+    },
+
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to duplicate estimate"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEstimateMutation = useMutation({
+    mutationFn: () => billingApi.estimates.delete(estimateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      toast({
+        title: "Success",
+        description: "Estimate deleted successfully",
+      });
+      router.push("/billing/estimates");
+    },
+
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to delete estimate"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markReadyMutation = useMutation({
+    mutationFn: () => billingApi.estimates.markReady(estimateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["workorders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      toast({
+        title: "Success",
+        description: "Quotation marked as ready and the linked work order was updated.",
+      });
+    },
+
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to mark quotation as ready"),
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
     if (newStatus && newStatus !== currentStatus) {
@@ -218,6 +283,22 @@ export default function EstimateDetailPage() {
 
   const handleApproveEstimate = () => {
     setShowApproveDialog(true);
+  };
+
+  const handleDuplicateEstimate = () => {
+    duplicateEstimateMutation.mutate();
+  };
+
+  const handleDeleteEstimate = () => {
+    if (confirm(`Delete estimate "${estimate?.estimate_number}"? This action cannot be undone.`)) {
+      deleteEstimateMutation.mutate();
+    }
+  };
+
+  const handleMarkReady = () => {
+    if (confirm("Mark this quotation as ready? This will update the linked work order stage.")) {
+      markReadyMutation.mutate();
+    }
   };
 
   const confirmApproveEstimate = () => {
@@ -421,7 +502,7 @@ export default function EstimateDetailPage() {
                         {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                       </button>
                     )}
-                    {canEditEstimate && (
+                    {canEditInUi && (
                       <Link href={`/billing/estimates/${estimateId}/edit`}>
                         <button
                           onClick={() => setShowActionsMenu(false)}
@@ -431,6 +512,32 @@ export default function EstimateDetailPage() {
                           Edit
                         </button>
                       </Link>
+                    )}
+                    {canCreateEstimate && (
+                      <button
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          handleDuplicateEstimate();
+                        }}
+                        disabled={duplicateEstimateMutation.isPending}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Copy className="w-4 h-4" />
+                        {duplicateEstimateMutation.isPending ? "Duplicating..." : "Duplicate"}
+                      </button>
+                    )}
+                    {estimate.can_mark_ready && (
+                      <button
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          handleMarkReady();
+                        }}
+                        disabled={markReadyMutation.isPending}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        {markReadyMutation.isPending ? "Marking Ready..." : "Mark Quotation Ready"}
+                      </button>
                     )}
                     {canApproveEstimate && estimate.can_be_approved && estimate.status !== "approved" && (
                       <button
@@ -474,6 +581,22 @@ export default function EstimateDetailPage() {
                             To Work Order
                           </button>
                         )}
+                      </>
+                    )}
+                    {canDeleteEstimate && (
+                      <>
+                        <div className="border-t border-border my-1" />
+                        <button
+                          onClick={() => {
+                            setShowActionsMenu(false);
+                            handleDeleteEstimate();
+                          }}
+                          disabled={deleteEstimateMutation.isPending}
+                          className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {deleteEstimateMutation.isPending ? "Deleting..." : "Delete"}
+                        </button>
                       </>
                     )}
                   </div>

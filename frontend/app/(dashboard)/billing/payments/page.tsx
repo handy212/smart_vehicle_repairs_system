@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi, type Payment } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,20 +9,26 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, Eye, Filter, Download } from "lucide-react";
+import { Plus, Search, Eye, Filter, Download, HandCoins } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { ReceivePaymentDialog } from "./components/ReceivePaymentDialog";
 
 export default function PaymentsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [methodFilter, setMethodFilter] = useState("");
+    const [receivePaymentOpen, setReceivePaymentOpen] = useState(false);
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
+    const { hasAnyPermission } = usePermissions();
+    const queryClient = useQueryClient();
+    const canReceivePayment = hasAnyPermission(["process_payments", "create_payments", "manage_billing"]);
 
     const { data: payments, isLoading } = useQuery({
         queryKey: ['payments', search, statusFilter, methodFilter],
@@ -61,11 +67,10 @@ export default function PaymentsPage() {
     }) || [];
 
     const getStatusVariant = (status: string) => {
-
-        const variants: Record<string, any> = {
+        const variants: Record<string, "success" | "warning" | "danger" | "secondary" | "default"> = {
             completed: 'success',
             pending: 'warning',
-            failed: 'destructive',
+            failed: 'danger',
             refunded: 'secondary',
             partially_refunded: 'warning',
         };
@@ -129,6 +134,12 @@ export default function PaymentsPage() {
                     <h1 className="text-xl font-bold text-foreground tracking-tight">Payments</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    {canReceivePayment ? (
+                        <Button size="sm" onClick={() => setReceivePaymentOpen(true)}>
+                                <HandCoins className="w-4 h-4 mr-2" />
+                                Receive Payment
+                        </Button>
+                    ) : null}
                     <Button variant="outline" size="sm" onClick={() => handleExport()}>
                         <Download className="w-4 h-4 mr-2" />
                         Export Excel
@@ -261,6 +272,17 @@ export default function PaymentsPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {canReceivePayment ? (
+                <ReceivePaymentDialog
+                    open={receivePaymentOpen}
+                    onOpenChange={setReceivePaymentOpen}
+                    onSuccess={() => {
+                        setReceivePaymentOpen(false);
+                        queryClient.invalidateQueries({ queryKey: ["payments"] });
+                    }}
+                />
+            ) : null}
         </div>
     );
 }

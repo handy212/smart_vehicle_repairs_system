@@ -5,6 +5,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
+import { billingApi } from "@/lib/api/billing";
 
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,17 +75,29 @@ export default function WorkOrderDetailPage() {
     });
 
     const approveWorkOrderMutation = useMutation({
-        mutationFn: (data?: { approval_notes?: string }) => {
+        mutationFn: async (data?: { approval_notes?: string }) => {
+            const linkedEstimateId = workOrder?.estimate_summary?.id;
+
+            if (linkedEstimateId) {
+                return billingApi.estimates.approve(linkedEstimateId);
+            }
+
             return workordersApi.approve(workOrderId, data);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["portal", "workorder", workOrderId] });
             queryClient.invalidateQueries({ queryKey: ["portal", "workorders"] });
+            if (workOrder?.estimate_summary?.id) {
+                queryClient.invalidateQueries({ queryKey: ["portal", "estimate", workOrder.estimate_summary.id] });
+                queryClient.invalidateQueries({ queryKey: ["portal", "estimates"] });
+            }
             setShowApproveDialog(false);
             setCustomerSignature(null);
             toast({
                 title: "Work Order Approved",
-                description: "The work order has been successfully approved.",
+                description: workOrder?.estimate_summary?.id
+                    ? "The estimate and linked work order have been successfully approved."
+                    : "The work order has been successfully approved.",
                 variant: "success",
             });
         },

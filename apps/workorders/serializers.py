@@ -21,6 +21,25 @@ User = get_user_model()
 
 # ============= Work Order Serializers =============
 
+def build_customer_display_name(customer):
+    if not customer:
+        return None
+
+    if getattr(customer, "company_name", None):
+        return customer.company_name
+
+    if getattr(customer, "full_name", None):
+        return customer.full_name
+
+    if getattr(customer, "user", None):
+        full_name = customer.user.get_full_name()
+        if full_name:
+            return full_name
+        if getattr(customer.user, "username", None):
+            return customer.user.username
+
+    return None
+
 class WorkOrderListSerializer(serializers.ModelSerializer):
     """List view with nested customer/vehicle info"""
     customer_name = serializers.SerializerMethodField()
@@ -36,6 +55,11 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     estimate_summary = serializers.SerializerMethodField()
     invoice_summary = serializers.SerializerMethodField()
     gate_pass_status = serializers.SerializerMethodField()
+    current_inspection_status = serializers.SerializerMethodField()
+    current_inspection_status_display = serializers.SerializerMethodField()
+    current_inspection_completion_percentage = serializers.SerializerMethodField()
+    current_quote_stage = serializers.SerializerMethodField()
+    current_quote_stage_display = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -49,7 +73,9 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
             'quality_check_required', 'quality_check_completed',
             'task_count', 'parts_count', 'estimate_summary', 'invoice_summary',
-            'gate_pass_status',
+            'gate_pass_status', 'current_inspection_status',
+            'current_inspection_status_display', 'current_inspection_completion_percentage',
+            'current_quote_stage', 'current_quote_stage_display',
         ]
     
     @extend_schema_field(OpenApiTypes.STR)
@@ -61,13 +87,41 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
                     return 'completed'
             return gate_passes[0].status
         return None
+
+    def _get_latest_inspection(self, obj):
+        inspections = getattr(obj, "inspections", None)
+        if inspections is None:
+            return None
+        if hasattr(inspections, "all"):
+            inspections = inspections.all()
+        return inspections[0] if inspections else None
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
-        """Get customer name from user"""
-        if obj.customer and obj.customer.user:
-            return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
-        return "N/A"
+        return build_customer_display_name(obj.customer) or "N/A"
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_inspection_status(self, obj):
+        inspection = self._get_latest_inspection(obj)
+        return getattr(inspection, "status", None)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_inspection_status_display(self, obj):
+        inspection = self._get_latest_inspection(obj)
+        return inspection.get_status_display() if inspection else None
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_current_inspection_completion_percentage(self, obj):
+        inspection = self._get_latest_inspection(obj)
+        return getattr(inspection, "completion_percentage", None) if inspection else None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_quote_stage(self, obj):
+        return obj.get_current_quote_stage()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_quote_stage_display(self, obj):
+        return obj.get_current_quote_stage_display()
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):
@@ -193,6 +247,11 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     invoice_summary = serializers.SerializerMethodField()
     related_invoices = serializers.SerializerMethodField()
     gate_pass_status = serializers.SerializerMethodField()
+    current_inspection_status = serializers.SerializerMethodField()
+    current_inspection_status_display = serializers.SerializerMethodField()
+    current_inspection_completion_percentage = serializers.SerializerMethodField()
+    current_quote_stage = serializers.SerializerMethodField()
+    current_quote_stage_display = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -221,6 +280,9 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'is_overdue', 'days_in_shop', 'is_approved',
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
             'estimate_summary', 'invoice_summary', 'related_invoices', 'gate_pass_status',
+            'current_inspection_status', 'current_inspection_status_display',
+            'current_inspection_completion_percentage',
+            'current_quote_stage', 'current_quote_stage_display',
             'customer_discontinuation_reason', 'customer_discontinuation_notes',
             'customer_discontinued_at', 'customer_discontinued_by',
         ]
@@ -242,12 +304,40 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             return False
         return inspections.filter(status__in=['completed', 'approved']).exists()
 
+    def _get_latest_inspection(self, obj):
+        inspections = getattr(obj, "inspections", None)
+        if inspections is None:
+            return None
+        if hasattr(inspections, "all"):
+            inspections = inspections.all()
+        return inspections[0] if inspections else None
+
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
-        """Get customer name from user"""
-        if obj.customer and obj.customer.user:
-            return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
-        return "N/A"
+        return build_customer_display_name(obj.customer) or "N/A"
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_inspection_status(self, obj):
+        inspection = self._get_latest_inspection(obj)
+        return getattr(inspection, "status", None)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_inspection_status_display(self, obj):
+        inspection = self._get_latest_inspection(obj)
+        return inspection.get_status_display() if inspection else None
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_current_inspection_completion_percentage(self, obj):
+        inspection = self._get_latest_inspection(obj)
+        return getattr(inspection, "completion_percentage", None) if inspection else None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_quote_stage(self, obj):
+        return obj.get_current_quote_stage()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_current_quote_stage_display(self, obj):
+        return obj.get_current_quote_stage_display()
 
     def _get_estimate(self, obj):
         estimate = getattr(obj, 'estimate', None)
@@ -870,9 +960,7 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
-        if obj.work_order.customer and obj.work_order.customer.user:
-            return obj.work_order.customer.user.get_full_name()
-        return "Unknown"
+        return build_customer_display_name(obj.work_order.customer) or "Unknown"
         
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):
@@ -1210,9 +1298,7 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
-        if obj.customer and obj.customer.user:
-            return obj.customer.user.get_full_name() or obj.customer.user.username
-        return "Valued Customer"
+        return build_customer_display_name(obj.customer) or "Valued Customer"
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):

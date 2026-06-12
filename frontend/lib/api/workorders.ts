@@ -94,6 +94,18 @@ export interface WorkOrder {
   is_approved?: boolean;
   is_warranty_rework?: boolean;
   has_completed_inspection?: boolean;
+  current_inspection_status?: "draft" | "in_progress" | "completed" | "approved" | "rejected" | null;
+  current_inspection_status_display?: string | null;
+  current_inspection_completion_percentage?: number | null;
+  current_quote_stage?:
+    | "waiting_for_stores_quotation"
+    | "waiting_for_customer_approval"
+    | "quotation_ready"
+    | "approved_waiting_for_parts"
+    | "parts_ready_waiting_for_repairs"
+    | "approved_waiting_for_repairs"
+    | null;
+  current_quote_stage_display?: string | null;
   related_work_order?: number | {
     id: number;
     work_order_number: string;

@@ -1073,6 +1073,67 @@ class WorkOrder(models.Model):
                 quotation_status='quoted',
             ).count(),
         }
+
+    def get_current_quote_stage(self):
+        """
+        Return the live recommendations quotation stage for dashboard/list
+        presentation while work is still in diagnosis/approval flow.
+        """
+        try:
+            diagnosis = self.diagnosis
+        except Exception:
+            return None
+
+        active_recommendations = diagnosis.repair_recommendations.filter(
+            approval_status__in=['pending_approval', 'approved'],
+            converted_to_task__isnull=True,
+        )
+
+        if active_recommendations.filter(quotation_status='requested').exists():
+            return 'waiting_for_stores_quotation'
+
+        if active_recommendations.filter(
+            approval_status='pending_approval',
+            quotation_status='quoted',
+        ).exists():
+            return 'waiting_for_customer_approval'
+
+        if self.status == 'approved':
+            if self.parts.exists():
+                unresolved_parts = self.parts.exclude(status__in=['ready', 'installed', 'returned'])
+                if unresolved_parts.exists():
+                    return 'approved_waiting_for_parts'
+                return 'parts_ready_waiting_for_repairs'
+
+            if self.tasks.filter(is_workflow_task=False).exists() or active_recommendations.filter(
+                approval_status='approved',
+                quotation_status='quoted',
+            ).exists():
+                return 'approved_waiting_for_repairs'
+
+        if active_recommendations.filter(
+            approval_status='approved',
+            quotation_status='quoted',
+        ).exists():
+            return 'quotation_ready'
+
+        return None
+
+    def get_current_quote_stage_display(self):
+        stage = self.get_current_quote_stage()
+        if stage == 'waiting_for_stores_quotation':
+            return 'Waiting for Stores Quotation'
+        if stage == 'waiting_for_customer_approval':
+            return 'Waiting for Customer Approval'
+        if stage == 'approved_waiting_for_parts':
+            return 'Approved | Waiting for Parts Allocation'
+        if stage == 'parts_ready_waiting_for_repairs':
+            return 'Parts Ready | Waiting for Repairs'
+        if stage == 'approved_waiting_for_repairs':
+            return 'Approved | Ready for Repairs'
+        if stage == 'quotation_ready':
+            return 'Quotation Ready'
+        return None
     
     def can_start_work(self):
         """
@@ -2256,6 +2317,7 @@ class WorkOrderNote(models.Model):
     
     NOTE_TYPE_CHOICES = [
         ('internal', 'Internal Note'),
+        ('status', 'Stage / Status Note'),
         ('customer', 'Customer Communication'),
         ('technician', 'Technician Note'),
         ('parts', 'Parts Note'),

@@ -16,6 +16,7 @@ import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+
 const paymentSchema = z.object({
   payment_method: z.enum([
     "cash",
@@ -74,6 +75,15 @@ const getInvoiceBalanceDue = (invoice: Invoice) => {
   }
 
   return Math.max(parseAmount(invoice.total) - parseAmount(invoice.amount_paid), 0);
+};
+
+const normalizeOptionalNumber = (value?: string) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
 };
 
 export default function RecordPaymentDialog({
@@ -135,6 +145,7 @@ export default function RecordPaymentDialog({
         amount: data.amount.toString(),
         payment_date: `${data.payment_date}T00:00:00`,
         invoice: Number(invoice.id),
+        bank_account: normalizeOptionalNumber(data.bank_account),
       };
       if (data.payment_method !== "cash") {
         delete payload.cash_account;

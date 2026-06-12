@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { getInspectionApprovalLabel, getInspectionStageLabel, getInspectionStageTone } from "@/lib/utils/inspection-status";
 
 // Removed const statusColors and resultColors as they are now handled inline or could be moved to utility
 
@@ -214,18 +215,39 @@ export default function InspectionsPage() {
                         {format(new Date(inspection.inspection_date), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="py-2">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                            inspection.status === 'completed' && "border-green-200 text-green-700 bg-success/10",
-                            inspection.status === 'in_progress' && "border-orange-200 text-primary bg-primary/5",
-                            inspection.status === 'approved' && "border-primary/20 text-primary bg-primary/10/50",
-                            inspection.status === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10/50",
-                          )}
-                        >
-                          {inspection.status_display || inspection.status}
-                        </Badge>
+                        {(() => {
+                          const stageTone = getInspectionStageTone(inspection);
+                          const stageLabel = getInspectionStageLabel(inspection);
+                          const approvalLabel = getInspectionApprovalLabel(inspection);
+                          return (
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] px-2 py-0.5 font-medium border shadow-none",
+                                  stageTone === 'draft' && "border-slate-200 text-slate-700 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
+                                  stageTone === 'completed' && "border-green-200 text-green-700 bg-success/10",
+                                  stageTone === 'in_progress' && "border-orange-200 text-primary bg-primary/5",
+                                  stageTone === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10/50",
+                                )}
+                              >
+                                {stageLabel}
+                              </Badge>
+                              {approvalLabel ? (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[10px] px-2 py-0.5 font-medium border shadow-none",
+                                    inspection.status === 'approved' && "border-green-200 text-green-700 bg-success/10",
+                                    inspection.status === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10/50",
+                                  )}
+                                >
+                                  {approvalLabel}
+                                </Badge>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="py-2">
                         {inspection.overall_result ? (
@@ -323,4 +345,3 @@ export default function InspectionsPage() {
     </div>
   );
 }
-

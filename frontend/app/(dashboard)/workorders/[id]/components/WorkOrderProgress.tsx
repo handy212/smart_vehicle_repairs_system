@@ -17,15 +17,17 @@ import { cn } from "@/lib/utils/cn";
 
 interface WorkOrderProgressProps {
   status: string;
+  labelOverride?: string;
   className?: string;
 }
 
-export function WorkOrderProgress({ status, className }: WorkOrderProgressProps) {
+export function WorkOrderProgress({ status, labelOverride, className }: WorkOrderProgressProps) {
   const [stepsOpen, setStepsOpen] = useState(false);
   const currentIndex = getWorkflowStepIndex(status);
   const currentStep = WORKFLOW_STEPS[currentIndex] ?? WORKFLOW_STEPS[0];
   const progressPct = Math.round(((currentIndex + 1) / WORKFLOW_STEPS.length) * 100);
   const CurrentIcon = currentStep.icon;
+  const currentLabel = labelOverride || getStatusLabel(status);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -34,11 +36,11 @@ export function WorkOrderProgress({ status, className }: WorkOrderProgressProps)
           <CurrentIcon className="h-4 w-4 shrink-0 text-primary" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">
-              {getStatusLabel(status)}
+              {currentLabel}
             </p>
             <p className="text-xs text-muted-foreground">
               Step {currentIndex + 1} of {WORKFLOW_STEPS.length}
-              <span className="hidden sm:inline"> · {currentStep.label}</span>
+              <span className="hidden sm:inline"> · {labelOverride || currentStep.label}</span>
             </p>
           </div>
         </div>
@@ -79,7 +81,9 @@ export function WorkOrderProgress({ status, className }: WorkOrderProgressProps)
                         <Icon className="h-3 w-3" />
                       )}
                     </span>
-                    <span className="truncate">{step.label}</span>
+                    <span className="truncate">
+                      {current && labelOverride ? labelOverride : step.label}
+                    </span>
                   </li>
                 );
               })}

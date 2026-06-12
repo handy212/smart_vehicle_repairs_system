@@ -29,6 +29,7 @@ import { CustomerForm, CustomerFormData } from "@/components/customers/CustomerF
 import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm";
 import { useToast } from "@/lib/hooks/useToast";
 import { AxiosError } from "axios";
+import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 import {
   Dialog,
   DialogContent,
@@ -127,6 +128,7 @@ export default function NewWorkOrderPage() {
   const [selectedCustomerData, setSelectedCustomerData] = useState<{
     id: number;
     full_name?: string;
+    company_name?: string;
     email?: string;
     phone?: string;
     customer_type?: string;
@@ -334,6 +336,7 @@ export default function NewWorkOrderPage() {
   const applyCustomerSelection = (cust: {
     id: number;
     full_name?: string;
+    company_name?: string;
     email?: string;
     phone?: string;
     customer_type?: string;
@@ -345,6 +348,7 @@ export default function NewWorkOrderPage() {
     setSelectedCustomerData({
       id: cust.id,
       full_name: cust.full_name,
+      company_name: cust.company_name,
       email: cust.email,
       phone: cust.phone,
       customer_type: cust.customer_type,
@@ -387,6 +391,7 @@ export default function NewWorkOrderPage() {
       setSelectedCustomerData({
         id: fetchedCustomer.id,
         full_name: fetchedCustomer.full_name,
+        company_name: fetchedCustomer.company_name,
         email: fetchedCustomer.email,
         phone: fetchedCustomer.phone,
         customer_type: fetchedCustomer.customer_type,
@@ -889,9 +894,9 @@ export default function NewWorkOrderPage() {
               <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <PremiumIcons.Users className="w-5 h-5 text-primary/80" />
-                  Customer & Vehicle
+                  Customer / Business & Vehicle
                 </CardTitle>
-                <CardDescription>Select customer and vehicle</CardDescription>
+                <CardDescription>Select the customer or business account and vehicle</CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
@@ -905,14 +910,14 @@ export default function NewWorkOrderPage() {
                         htmlFor="customer"
                         className="block text-sm font-medium text-card-foreground mb-1"
                       >
-                        Customer *
+                        Customer / Business *
                       </label>
 
                       <div className="flex gap-2">
                         <div className={`flex-1 min-w-0 ${errors.customer ? "[&_button]:border-destructive" : ""}`}>
                           <CustomerSelector
                             selectedCustomerId={customer}
-                            placeholder="Search by name, phone, or customer number..."
+                            placeholder="Search by company, contact, phone, or customer number..."
                             onSelect={(cust) => applyCustomerSelection(cust)}
                           />
                         </div>
@@ -938,6 +943,9 @@ export default function NewWorkOrderPage() {
                     {/* Customer Info Display */}
                     {selectedCustomerData && (
                       <div className="text-xs text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                        <span className="font-medium text-foreground">
+                          {getCustomerDisplayName(selectedCustomerData)}
+                        </span>
                         {selectedCustomerData.phone && <span>📞 {selectedCustomerData.phone}</span>}
                         {selectedCustomerData.email && <span className="truncate max-w-[200px]" title={selectedCustomerData.email}>✉️ {selectedCustomerData.email}</span>}
                         {selectedCustomerData.customer_type && <span className="capitalize">🏷️ {selectedCustomerData.customer_type.replace('_', ' ')}</span>}
@@ -965,7 +973,7 @@ export default function NewWorkOrderPage() {
                           <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-destructive" : ""}`}>
                             <SelectValue placeholder={
                               !selectedCustomer
-                                ? "Select a customer first"
+                                ? "Select a customer or business first"
                                 : !vehiclesData?.results?.length
                                   ? "No vehicles — add one with +"
                                   : "Select a vehicle"

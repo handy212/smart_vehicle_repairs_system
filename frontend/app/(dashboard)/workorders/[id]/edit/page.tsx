@@ -16,6 +16,7 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -92,6 +93,7 @@ export default function EditWorkOrderPage() {
   const [selectedCustomerData, setSelectedCustomerData] = useState<{
     id: number;
     full_name?: string;
+    company_name?: string;
     email?: string;
     phone?: string;
     customer_type?: string;
@@ -161,8 +163,7 @@ export default function EditWorkOrderPage() {
 
     // 1. Add fetched customers
     customersData?.results?.forEach(c => {
-      const name = c.full_name || `${c.user?.first_name || ''} ${c.user?.last_name || ''}`.trim() || 'Unknown';
-      items.set(c.id, name);
+      items.set(c.id, getCustomerDisplayName(c));
     });
 
     // 2. Add current work order customer if not present
@@ -171,7 +172,7 @@ export default function EditWorkOrderPage() {
       // Handle object case
       if (typeof wCustomer === 'object' && wCustomer !== null) {
         if (!items.has(wCustomer.id)) {
-          items.set(wCustomer.id, wCustomer.full_name || 'Current Customer');
+          items.set(wCustomer.id, getCustomerDisplayName(wCustomer));
         }
       }
       // Handle ID case with display name
@@ -265,6 +266,7 @@ export default function EditWorkOrderPage() {
         setSelectedCustomerData({
           id: workOrder.customer.id,
           full_name: workOrder.customer.full_name,
+          company_name: workOrder.customer.company_name,
           email: workOrder.customer.email,
           phone: workOrder.customer.phone,
           customer_type: workOrder.customer.customer_type,
@@ -289,6 +291,7 @@ export default function EditWorkOrderPage() {
         setSelectedCustomerData({
           id: customerInList.id,
           full_name: customerInList.full_name,
+          company_name: customerInList.company_name,
           email: customerInList.email,
           phone: customerInList.phone,
           customer_type: customerInList.customer_type,
@@ -299,6 +302,7 @@ export default function EditWorkOrderPage() {
         setSelectedCustomerData({
           id: workOrder.customer.id,
           full_name: workOrder.customer.full_name,
+          company_name: workOrder.customer.company_name,
           email: workOrder.customer.email,
           phone: workOrder.customer.phone,
           customer_type: workOrder.customer.customer_type,
@@ -319,6 +323,7 @@ export default function EditWorkOrderPage() {
         setSelectedCustomerData({
           id: customerData.id,
           full_name: customerData.full_name,
+          company_name: customerData.company_name,
           email: customerData.email,
           phone: customerData.phone,
           customer_type: customerData.customer_type,
@@ -440,8 +445,8 @@ export default function EditWorkOrderPage() {
             {/* Customer & Vehicle */}
             <Card>
               <CardHeader>
-                <CardTitle>Customer & Vehicle</CardTitle>
-                <CardDescription>Select customer and vehicle</CardDescription>
+                <CardTitle>Customer / Business & Vehicle</CardTitle>
+                <CardDescription>Select the customer or business account and vehicle</CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
@@ -454,7 +459,7 @@ export default function EditWorkOrderPage() {
                         htmlFor="customer"
                         className="block text-sm font-medium text-card-foreground mb-1"
                       >
-                        Customer *
+                        Customer / Business *
                       </label>
 
                       <Select
@@ -472,6 +477,7 @@ export default function EditWorkOrderPage() {
                             setSelectedCustomerData({
                               id: customerData.id,
                               full_name: customerData.full_name,
+                              company_name: customerData.company_name,
                               email: customerData.email,
                               phone: customerData.phone,
                               customer_type: customerData.customer_type,
@@ -483,7 +489,7 @@ export default function EditWorkOrderPage() {
                         }}
                       >
                         <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-destructive" : ""}`}>
-                          <SelectValue placeholder="Select a customer" />
+                          <SelectValue placeholder="Select a customer or business" />
                         </SelectTrigger>
                         <SelectContent>
                           {customerOptions.map((option) => (
@@ -505,9 +511,13 @@ export default function EditWorkOrderPage() {
                     {selectedCustomerData && (
                       <div className="p-3 bg-muted rounded-md border border-border space-y-2">
                         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Customer Information
+                          Customer / Business Information
                         </div>
                         <div className="space-y-2 text-sm">
+                          <div className="flex items-start">
+                            <span className="font-medium text-card-foreground w-20 flex-shrink-0">Name:</span>
+                            <span className="text-foreground">{getCustomerDisplayName(selectedCustomerData)}</span>
+                          </div>
                           {selectedCustomerData.phone && (
                             <div className="flex items-start">
                               <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>

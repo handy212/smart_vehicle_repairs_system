@@ -1516,39 +1516,33 @@ function RecommendationsTab({
       }),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["workorder-parts", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "quotation-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["parts-requests-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["stores-workbench", "parts-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
       onRefresh();
+      const estimateText = response.quotation_estimate_number
+        ? ` Estimate ${response.quotation_estimate_number} is linked to this work order.`
+        : "";
+      const partsText =
+        typeof response.parts_synced === "number"
+          ? ` ${response.parts_synced} part request(s) sent to stores.`
+          : "";
+      const laborText =
+        typeof response.labor_lines_synced === "number"
+          ? ` ${response.labor_lines_synced} labor line(s) added to the estimate.`
+          : "";
       toast({
         title: "Sent to stores",
-        description: response.message,
+        description: `${response.message}${estimateText}${partsText}${laborText}`,
         variant: "default",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Failed to send recommendations",
-        description: error.response?.data?.message || error.response?.data?.error || error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const markQuotedMutation = useMutation({
-    mutationFn: (recommendationIds: number[]) =>
-      diagnosisApi.markRecommendationsQuoted(diagnosis.id, {
-        recommendation_ids: recommendationIds,
-      }),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-      onRefresh();
-      toast({
-        title: "Quotation ready",
-        description: response.message,
-        variant: "default",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to update quotation status",
         description: error.response?.data?.message || error.response?.data?.error || error.message,
         variant: "destructive",
       });
@@ -1620,6 +1614,33 @@ function RecommendationsTab({
     );
   };
 
+  const renderPartsHandoff = (rec: any) => {
+    const parts = Array.isArray(rec.parts_needed)
+      ? rec.parts_needed.filter((part: any) => part?.part_name || part?.part_number)
+      : [];
+
+    if (!parts.length) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 rounded-md border bg-muted/20 p-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parts for stores</p>
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {parts.map((part: any, index: number) => (
+            <div key={`${part.part_id || part.part_number || part.part_name}-${index}`} className="rounded-md bg-background px-3 py-2 text-xs">
+              <p className="font-medium text-foreground">{part.part_name || part.part_number}</p>
+              <p className="mt-0.5 text-muted-foreground">
+                Qty {part.quantity || 1}
+                {part.part_number ? ` • ${part.part_number}` : ""}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderRecommendationCard = (rec: any) => (
     <div key={rec.id} className="rounded-lg border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1645,13 +1666,17 @@ function RecommendationsTab({
 
       <div className="mt-3">{renderMeta(rec)}</div>
 
-      {rec.quotation_estimate_number && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          <span>
-            Estimate: <span className="font-medium text-foreground">{rec.quotation_estimate_number}</span>
-          </span>
+      {renderPartsHandoff(rec)}
+
+      {rec.quotation_status === "quoted" && rec.quotation_estimate_number && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <div>
+            <p className="font-medium text-foreground">Stores estimate {rec.quotation_estimate_number}</p>
+            <p>Includes work-order labor stages, diagnosis context, and parts requested from stores.</p>
+          </div>
           {rec.quotation_estimate_id && (
-            <Link href={`/billing/estimates/${rec.quotation_estimate_id}`} className="font-medium text-primary hover:underline">
+            <Link href={`/billing/estimates/${rec.quotation_estimate_id}`} className="inline-flex items-center rounded-md border bg-background px-2.5 py-1.5 font-medium text-primary hover:bg-muted">
+              <FileText className="mr-1.5 h-3.5 w-3.5" />
               Open estimate
             </Link>
           )}
@@ -1694,13 +1719,6 @@ function RecommendationsTab({
           <Button size="sm" className="h-8" onClick={() => requestQuoteMutation.mutate([rec.id])} disabled={requestQuoteMutation.isPending || isDisabled}>
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Send to Stores for Estimate
-          </Button>
-        )}
-
-        {["pending_approval", "approved"].includes(rec.approval_status || "pending_approval") && rec.quotation_status === "requested" && (
-          <Button size="sm" className="h-8" onClick={() => markQuotedMutation.mutate([rec.id])} disabled={markQuotedMutation.isPending || isDisabled}>
-            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-            Mark Quoted
           </Button>
         )}
 
@@ -1786,14 +1804,6 @@ function RecommendationsTab({
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            {quoteRequestedRecommendations.length > 0 && (
-              <Link href="/inventory/quotation-requests">
-                <Button size="sm" variant="outline" className="h-8">
-                  <FileText className="w-3.5 h-3.5 mr-1.5" />
-                  Stores Queue
-                </Button>
-              </Link>
-            )}
             <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add

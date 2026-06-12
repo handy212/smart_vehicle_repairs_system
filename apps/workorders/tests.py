@@ -278,7 +278,86 @@ class WorkOrderModelTest(TestCase):
         self.assertEqual(serializer.data['invoice_summary']['invoice_number'], 'HQ-INV000120')
         self.assertEqual(serializer.data['invoice_summary']['status'], 'paid')
         self.assertEqual(serializer.data['invoice_summary']['amount_paid'], '315.00')
+
+    def test_workorder_quote_stage_tracks_waiting_for_stores_and_quote_ready(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='diagnosis',
+        )
+        diagnosis = baker.make(
+            Diagnosis,
+            work_order=workorder,
+            status='in_progress',
+        )
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='requested',
+            converted_to_task=None,
+        )
+
+        serializer = WorkOrderDetailSerializer(workorder)
+        self.assertEqual(workorder.get_current_quote_stage(), 'waiting_for_stores_quotation')
+        self.assertEqual(serializer.data['current_quote_stage'], 'waiting_for_stores_quotation')
+        self.assertEqual(serializer.data['current_quote_stage_display'], 'Waiting for Stores Quotation')
+
+        recommendation.quotation_status = 'quoted'
+        recommendation.save(update_fields=['quotation_status'])
+
+        serializer = WorkOrderDetailSerializer(workorder)
+        self.assertEqual(workorder.get_current_quote_stage(), 'waiting_for_customer_approval')
+        self.assertEqual(serializer.data['current_quote_stage'], 'waiting_for_customer_approval')
+        self.assertEqual(serializer.data['current_quote_stage_display'], 'Waiting for Customer Approval')
+
+        recommendation.approval_status = 'approved'
+        recommendation.save(update_fields=['approval_status'])
+
+        serializer = WorkOrderDetailSerializer(workorder)
+        self.assertEqual(workorder.get_current_quote_stage(), 'quotation_ready')
+        self.assertEqual(serializer.data['current_quote_stage'], 'quotation_ready')
+        self.assertEqual(serializer.data['current_quote_stage_display'], 'Quotation Ready')
         self.assertIsNotNone(serializer.data['invoice_summary']['paid_at'])
+
+    def test_workorder_quote_stage_tracks_approved_parts_flow(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='approved',
+            approved_by_customer=True,
+        )
+        diagnosis = baker.make(
+            Diagnosis,
+            work_order=workorder,
+            status='completed',
+        )
+        baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='quoted',
+            converted_to_task=None,
+        )
+
+        baker.make(
+            WorkOrderPart,
+            work_order=workorder,
+            part_name='Brake Pad Set',
+            quantity=1,
+            status='pending',
+        )
+
+        serializer = WorkOrderDetailSerializer(workorder)
+        self.assertEqual(workorder.get_current_quote_stage(), 'approved_waiting_for_parts')
+        self.assertEqual(serializer.data['current_quote_stage_display'], 'Approved | Waiting for Parts Allocation')
+
+        workorder.parts.update(status='ready')
+        serializer = WorkOrderDetailSerializer(workorder)
+        self.assertEqual(workorder.get_current_quote_stage(), 'parts_ready_waiting_for_repairs')
+        self.assertEqual(serializer.data['current_quote_stage_display'], 'Parts Ready | Waiting for Repairs')
 
     def test_workorder_cannot_complete_with_allocated_part_not_installed(self):
         workorder = baker.make(

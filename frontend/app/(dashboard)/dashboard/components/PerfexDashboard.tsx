@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { DashboardShortcutBar } from "./DashboardShortcutBar";
+import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import {
   type DashboardRoleConfig,
   dashboardShowsSection,
@@ -36,7 +38,19 @@ interface WorkOrderSummary {
 
 interface RecentWorkOrder {
   id: number; wo_number: string; status: string; created_at: string;
-  diagnosis_notes?: string; customer?: string; vehicle?: string; gate_pass_status?: string;
+  diagnosis_notes?: string;
+  customer?: string;
+  vehicle?: string;
+  gate_pass_status?: string;
+  current_quote_stage?:
+    | "waiting_for_stores_quotation"
+    | "waiting_for_customer_approval"
+    | "quotation_ready"
+    | "approved_waiting_for_parts"
+    | "parts_ready_waiting_for_repairs"
+    | "approved_waiting_for_repairs"
+    | null;
+  current_quote_stage_display?: string | null;
 }
 
 interface TodayAppointment {
@@ -572,6 +586,8 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
         ))}
       </div>
 
+      <DashboardShortcutBar />
+
       {showSection("wo_status_breakdown") && workOrderByStatus.length > 0 && (
         <div className="rounded-md border border-border bg-card px-4 py-3 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
           <div className="mb-2 flex items-center justify-between">
@@ -718,14 +734,27 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                       <td className="px-4 py-2.5 text-xs text-foreground">{wo.customer || "—"}</td>
                       <td className="px-4 py-2.5 text-xs text-foreground">{wo.vehicle   || "—"}</td>
                       <td className="px-4 py-2.5">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <StatusPill status={wo.status} map={WO_STATUS_COLORS} />
-                          {wo.gate_pass_status === 'completed' && (
-                            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium border border-success/30 text-success bg-success/5" title="Vehicle Picked Up">
-                              <Truck className="w-2.5 h-2.5" /> Picked Up
-                            </span>
-                          )}
-                        </div>
+                        {(() => {
+                          const stagePresentation = getWorkOrderStagePresentation(wo);
+                          return (
+                            <div className="flex flex-wrap items-center gap-1">
+                              <StatusPill
+                                status={wo.status}
+                                map={WO_STATUS_COLORS}
+                              />
+                              {stagePresentation.label ? (
+                                <span className="inline-flex items-center rounded border border-border/80 bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                                  {stagePresentation.label}
+                                </span>
+                              ) : null}
+                              {wo.gate_pass_status === 'completed' && (
+                                <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium border border-success/30 text-success bg-success/5" title="Vehicle Picked Up">
+                                  <Truck className="w-2.5 h-2.5" /> Picked Up
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-xs text-muted-foreground">{format(new Date(wo.created_at), "MMM d")}</td>
                       <td className="px-4 py-2.5">

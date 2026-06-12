@@ -436,7 +436,7 @@ export default function RepairsPage() {
             {workOrder.vehicle_info || "Vehicle repair"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {workOrder.customer_name || "Customer"} - {workOrder.primary_technician_name || "Technician not assigned"}
+            {workOrder.customer_name || "Customer / Business"} - {workOrder.primary_technician_name || "Technician not assigned"}
           </p>
         </div>
 

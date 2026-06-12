@@ -16,7 +16,7 @@ from apps.accounts.permission_models import Permission, Role
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
-from apps.workorders.models import WorkOrder, WorkOrderPart
+from apps.workorders.models import WorkOrder, WorkOrderPart, ServiceTask
 from apps.branches.models import Branch
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
@@ -1230,6 +1230,71 @@ class TestDiagnosisAPI:
         assert pending.quotation_status == 'requested'
         assert approved.quotation_requested_by == admin_user
         assert pending.quotation_requested_by == admin_user
+
+    def test_submit_recommendations_for_quote_includes_work_order_labor_context(self, api_client, admin_user):
+        """Stores estimate should include workflow and labor tasks from the linked work order."""
+        if not django_apps.is_installed('apps.billing'):
+            pytest.skip('Billing app is not installed in this test settings module.')
+
+        EstimateLineItem = django_apps.get_model('billing', 'EstimateLineItem')
+        diagnosis = baker.make(Diagnosis)
+        work_order = diagnosis.work_order
+        task_names = [
+            ('inspection', 'Initial Inspection', 1),
+            ('inspection', 'Customer Intake', 2),
+            ('coordination', 'Service Coordinator Assigned - Ready for Diagnosis', 3),
+            ('diagnostic', 'Perform Diagnosis', 4),
+            ('repair', 'Additional labor operation', 5),
+        ]
+        for task_type, description, order in task_names:
+            ServiceTask.objects.create(
+                work_order=work_order,
+                task_type=task_type,
+                description=description,
+                sequence_order=order,
+                estimated_hours=Decimal('1.00'),
+                labor_rate=Decimal('80.00'),
+            )
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='pending_approval',
+            quotation_status='not_requested',
+            converted_to_task=None,
+            description='Replace brake pads',
+            parts_needed=[
+                {
+                    'part_name': 'Front Brake Pad Set',
+                    'part_number': 'BP-CONTEXT',
+                    'quantity': 1,
+                }
+            ],
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_recommendations_for_quote/',
+            {
+                'recommendation_ids': [recommendation.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['labor_lines_synced'] == 5
+        estimate_id = response.data['quotation_estimate_id']
+        descriptions = set(
+            EstimateLineItem.objects.filter(
+                estimate_id=estimate_id,
+                notes__contains='[WO-TASK:',
+            ).values_list('description', flat=True)
+        )
+        assert descriptions == {description for _, description, _ in task_names}
+        assert EstimateLineItem.objects.filter(
+            estimate_id=estimate_id,
+            notes__contains=f'[DIAG-REC:{recommendation.id}]',
+            item_type='part',
+        ).exists()
 
     def test_convert_selected_recommendations_requires_quotation_ready(self, api_client, admin_user):
         """Selected recommendations must be quoted before conversion to tasks."""

@@ -244,6 +244,8 @@ export default function DashboardPage() {
         id: wo.id,
         wo_number: wo.wo_number,
         status: wo.status,
+        current_quote_stage: wo.current_quote_stage ?? null,
+        current_quote_stage_display: wo.current_quote_stage_display ?? null,
         created_at: wo.created_at,
         diagnosis_notes: wo.diagnosis_notes ?? undefined,
         customer: wo.customer || undefined,

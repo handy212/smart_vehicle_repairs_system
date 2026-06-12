@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
@@ -31,17 +30,8 @@ import { GatePassBanner } from "./components/GatePassBanner";
 import { CheckInInspectionBanner } from "./components/CheckInInspectionBanner";
 import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
-
-const DiagnosisWorkspace = dynamic(
-  () => import("./diagnosis/DiagnosisWorkspace"),
-  {
-    loading: () => (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    ),
-  }
-);
+import { inspectionsApi } from "@/lib/api/inspections";
+import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 
 const VALID_TABS = new Set([
   "overview",
@@ -60,8 +50,6 @@ export default function WorkOrderDetailPage() {
   const searchParams = useSearchParams();
   const workOrderId = parseInt(params.id as string);
   const requestedTab = searchParams.get("tab");
-  const diagnosisPanel = searchParams.get("panel");
-  const showFullDiagnosis = diagnosisPanel === "full";
   const initialTab =
     requestedTab && VALID_TABS.has(requestedTab) ? requestedTab : "overview";
 
@@ -124,6 +112,12 @@ export default function WorkOrderDetailPage() {
     enabled: !!workOrderId,
   });
 
+  const { data: inspectionsData } = useQuery({
+    queryKey: ["inspections", "workorder", workOrderId],
+    queryFn: () => inspectionsApi.list({ work_order: workOrderId }),
+    enabled: !!workOrderId,
+  });
+
   const unapprovedRecommendations =
     diagnosis?.repair_recommendations?.filter(
       (r) =>
@@ -139,7 +133,7 @@ export default function WorkOrderDetailPage() {
   });
 
   const handleTabChange = useCallback(
-    (tab: string, options?: { panel?: "full" | null }) => {
+    (tab: string) => {
       setActiveTab(tab);
       const params = new URLSearchParams(searchParams.toString());
       if (tab === "overview") {
@@ -147,19 +141,12 @@ export default function WorkOrderDetailPage() {
       } else {
         params.set("tab", tab);
       }
-      if (tab === "diagnosis" && options?.panel === "full") {
-        params.set("panel", "full");
-      } else {
-        params.delete("panel");
-      }
+      params.delete("panel");
       const qs = params.toString();
       router.replace(`/workorders/${workOrderId}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [router, workOrderId, searchParams]
   );
-
-  const showDiagnosisSummary = () => handleTabChange("diagnosis");
-  const showDiagnosisFull = () => handleTabChange("diagnosis", { panel: "full" });
 
   if (isLoading) {
     return <WorkOrderDetailSkeleton />;
@@ -183,6 +170,7 @@ export default function WorkOrderDetailPage() {
 
   const refreshData = () => {
     queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+    queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
     queryClient.invalidateQueries({ queryKey: ["workorder-tasks", workOrderId] });
     queryClient.invalidateQueries({ queryKey: ["workorder-parts", workOrderId] });
     queryClient.invalidateQueries({ queryKey: ["workorder-notes", workOrderId] });
@@ -224,11 +212,16 @@ export default function WorkOrderDetailPage() {
   const showRecommendationsAction =
     workOrder.status === "closed" && unapprovedRecommendations.length > 0;
 
+  const latestInspection = inspectionsData?.results?.[0];
+  const stagePresentation = getWorkOrderStagePresentation(workOrder, latestInspection);
+  const statusLabelOverride = stagePresentation.label || undefined;
+
   return (
     <div className="space-y-4">
       <WorkOrderCommandBar
         workOrder={workOrder}
         workOrderId={workOrderId}
+        statusLabelOverride={statusLabelOverride}
         onStatusChange={refreshData}
         onStartRepairs={() => handleTabChange("tasks")}
         onShowRecommendations={() => setShowUnapprovedRecommendationsDialog(true)}
@@ -249,7 +242,7 @@ export default function WorkOrderDetailPage() {
         isDownloading={isDownloading}
       />
 
-      <WorkOrderProgress status={workOrder.status} />
+      <WorkOrderProgress status={stagePresentation.workflowStatus} labelOverride={statusLabelOverride} />
 
       {(workOrder.customer_rating || workOrder.customer_feedback) && (
         <Card>
@@ -325,22 +318,7 @@ export default function WorkOrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="diagnosis" className="mt-4">
-          {showFullDiagnosis ? (
-            <div className="space-y-4">
-              <Button variant="outline" size="sm" onClick={showDiagnosisSummary}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to summary
-              </Button>
-              <DiagnosisWorkspace />
-            </div>
-          ) : (
-            <DiagnosisTab
-              workOrderId={workOrderId}
-              workOrder={workOrder}
-              onRefresh={refreshData}
-              onOpenFull={showDiagnosisFull}
-            />
-          )}
+          <DiagnosisTab workOrderId={workOrderId} />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">

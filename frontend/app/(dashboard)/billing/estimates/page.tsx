@@ -830,7 +830,7 @@ export default function EstimatesPage() {
                         <Eye className="w-4 h-4" />
                         View
                       </Link>
-                      {estimate.status === 'draft' && (
+                      {estimate.status !== 'converted' && (
                         <PermissionGuard permission="edit_estimates">
                           <Link
                             href={`/billing/estimates/${estimate.id}/edit`}

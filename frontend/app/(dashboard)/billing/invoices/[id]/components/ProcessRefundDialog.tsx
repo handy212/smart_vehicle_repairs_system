@@ -24,7 +24,7 @@ interface ProcessRefundDialogProps {
     payment: {
         id: number;
         invoice: number | { id: number };
-        customer: number | { id: number };
+        customer?: number | { id: number };
         amount: string;
         refund_amount?: string;
         payment_number?: string;
@@ -51,15 +51,25 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
     const [reason, setReason] = useState("");
 
     const refundMutation = useMutation({
-        mutationFn: (data: { refund_amount: string; refund_reason: string }) =>
-            refundApi.create({
+        mutationFn: (data: { refund_amount: string; refund_reason: string }) => {
+            const invoiceId =
+                typeof payment.invoice === "number" ? payment.invoice : payment.invoice?.id;
+            const customerId =
+                typeof payment.customer === "number" ? payment.customer : payment.customer?.id;
+
+            if (!invoiceId || !customerId) {
+                throw new Error("Payment is missing the invoice or customer required for a refund.");
+            }
+
+            return refundApi.create({
                 original_payment: payment.id,
-                invoice: typeof payment.invoice === "number" ? payment.invoice : payment.invoice?.id,
-                customer: typeof payment.customer === "number" ? payment.customer : payment.customer?.id,
+                invoice: invoiceId,
+                customer: customerId,
                 amount: data.refund_amount,
                 reason: data.refund_reason,
                 refund_method: "original_method",
-            }),
+            });
+        },
         onSuccess: () => {
             toast({
                 title: "Refund Requested",

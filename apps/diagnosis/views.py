@@ -279,6 +279,8 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
                 'title', 'description', 'valid_until', 'updated_at'
             ])
 
+        task_lines_synced = self._sync_work_order_task_lines_to_quote_estimate(work_order, estimate)
+
         for recommendation in recommendations:
             marker = f"[DIAG-REC:{recommendation.id}]"
             estimate.line_items.filter(notes__contains=marker).delete()
@@ -365,7 +367,68 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
 
         self._sync_work_order_financials_from_diagnosis_parts(work_order, estimate)
 
+        estimate._diagnosis_task_lines_synced = task_lines_synced
         return estimate, None
+
+    @staticmethod
+    def _sync_work_order_task_lines_to_quote_estimate(work_order, estimate):
+        """
+        Mirror the work-order labor/task context into the stores estimate.
+
+        This keeps the recommendation stores quote aligned with the manual
+        estimate flow, which preloads work-order tasks such as intake,
+        inspection, coordinator assignment, diagnosis, and any extra labor.
+        """
+        EstimateLineItem = django_apps.get_model('billing', 'EstimateLineItem')
+
+        task_marker_prefix = '[WO-TASK:'
+        estimate.line_items.filter(notes__contains=task_marker_prefix).delete()
+
+        synced_count = 0
+        order = estimate.line_items.count()
+        tasks = work_order.tasks.exclude(status='skipped').order_by('sequence_order', 'created_at', 'id')
+
+        for task in tasks:
+            hours = (
+                getattr(task, 'calculated_actual_hours', Decimal('0'))
+                or task.actual_hours
+                or task.estimated_hours
+                or Decimal('1.00')
+            )
+            if hours <= 0:
+                hours = Decimal('1.00')
+
+            rate = task.labor_rate or Decimal('0.00')
+            if rate <= 0 and task.labor_cost and hours > 0:
+                rate = (task.labor_cost / hours).quantize(Decimal('0.01'))
+
+            task_type = task.get_task_type_display() if hasattr(task, 'get_task_type_display') else task.task_type
+            notes = [
+                f"{task_marker_prefix}{task.id}] Work-order labor context for stores estimate.",
+                f"Type: {task_type}",
+                f"Status: {task.get_status_display() if hasattr(task, 'get_status_display') else task.status}",
+            ]
+            if task.workflow_phase:
+                notes.append(f"Workflow phase: {task.workflow_phase}")
+            if task.detailed_notes:
+                notes.append(f"Notes: {task.detailed_notes}")
+
+            EstimateLineItem.objects.create(
+                estimate=estimate,
+                item_type='labor',
+                description=task.description[:500],
+                notes=' '.join(notes),
+                quantity=hours,
+                unit_price=rate,
+                labor_hours=hours,
+                labor_rate=rate,
+                is_taxable=True,
+                order=order,
+            )
+            order += 1
+            synced_count += 1
+
+        return synced_count
 
     @staticmethod
     def _sync_work_order_financials_from_diagnosis_parts(work_order, estimate=None):
@@ -1175,10 +1238,29 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
                 ])
 
         serializer = RepairRecommendationSerializer(recommendations, many=True)
+        estimate_number = getattr(estimate, 'estimate_number', None)
+        estimate_id = getattr(estimate, 'id', None)
+        task_lines_synced = getattr(estimate, '_diagnosis_task_lines_synced', 0)
+        quote_context = {
+            'work_order_id': diagnosis.work_order_id,
+            'work_order_number': getattr(diagnosis.work_order, 'work_order_number', None),
+            'work_order_status': getattr(diagnosis.work_order, 'status', None),
+            'customer_id': getattr(diagnosis.work_order, 'customer_id', None),
+            'vehicle_id': getattr(diagnosis.work_order, 'vehicle_id', None),
+            'diagnosis_id': diagnosis.id,
+            'parts_synced': parts_synced,
+            'labor_lines_synced': task_lines_synced,
+        }
         return Response({
-            'message': f'Submitted {recommendations.count()} recommendation(s) to stores for quotation',
-            'quotation_estimate_id': getattr(estimate, 'id', None),
-            'quotation_estimate_number': getattr(estimate, 'estimate_number', None),
+            'message': (
+                f"Submitted {recommendations.count()} recommendation(s) to stores"
+                + (f" and prepared estimate {estimate_number}" if estimate_number else "")
+                + f". {parts_synced} part request(s) and {task_lines_synced} labor line(s) are now visible to stores."
+            ),
+            'quotation_estimate_id': estimate_id,
+            'quotation_estimate_number': estimate_number,
+            'quote_context': quote_context,
+            'labor_lines_synced': task_lines_synced,
             'parts_synced': parts_synced,
             'recommendations': serializer.data,
         })

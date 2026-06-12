@@ -433,6 +433,73 @@ class EstimateActionMixin:
         }, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
+    def mark_ready(self, request, pk=None):
+        """Mark a linked work-order stores quotation as ready."""
+        estimate = self.get_object()
+        work_order = getattr(estimate, 'work_order', None)
+        if not work_order:
+            return Response(
+                {"error": "Only work-order-linked estimates can be marked as ready."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            diagnosis = work_order.diagnosis
+        except Exception:
+            diagnosis = None
+
+        if diagnosis is None:
+            return Response(
+                {"error": "This work order has no diagnosis record to update."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.diagnosis.views import DiagnosisViewSet, assert_diagnosis_editable
+
+        assert_diagnosis_editable(diagnosis)
+        if not DiagnosisViewSet._user_has_quote_completion_role(request.user):
+            return Response(
+                {"error": "Only parts managers, managers, or admins can mark quotations as ready."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        recommendations = diagnosis.repair_recommendations.filter(
+            approval_status__in=['pending_approval', 'approved'],
+            quotation_status='requested',
+            converted_to_task__isnull=True,
+            quotation_estimate_id=estimate.id,
+        )
+
+        if not recommendations.exists():
+            return Response(
+                {"error": "No pending stores quotation requests are linked to this estimate."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        linked_estimate, estimate_error = DiagnosisViewSet._validate_quote_ready_for_recommendations(recommendations)
+        if estimate_error:
+            return Response({"error": estimate_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        for recommendation in recommendations:
+            DiagnosisViewSet._sync_recommendation_costs_from_quote_estimate(recommendation)
+            recommendation.mark_quoted(quoted_by=request.user)
+
+        estimate.refresh_from_db()
+        work_order.refresh_from_db()
+        return Response({
+            "message": f"Marked {recommendations.count()} quotation request(s) as ready.",
+            "estimate": self.get_serializer(estimate).data,
+            "work_order": {
+                "id": work_order.id,
+                "status": work_order.status,
+                "quote_stage": work_order.get_current_quote_stage(),
+                "quote_stage_display": work_order.get_current_quote_stage_display(),
+            },
+            "quotation_estimate_id": getattr(linked_estimate, "id", None),
+            "quotation_estimate_number": getattr(linked_estimate, "estimate_number", None),
+        })
+
+    @action(detail=True, methods=['post'])
     def convert_to_work_order(self, request, pk=None):
         """Convert estimate to work order"""
         estimate = self.get_object()

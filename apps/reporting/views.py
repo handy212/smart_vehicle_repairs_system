@@ -396,7 +396,7 @@ def dashboard_overview(request):
         
         recent_work_orders = work_orders_qs.select_related(
             'customer', 'vehicle', 'customer__user'
-        ).prefetch_related('gate_passes').order_by('-created_at')[:5]
+        ).prefetch_related('gate_passes', 'diagnosis__repair_recommendations').order_by('-created_at')[:5]
         
         recent_appointments = appointments_qs.select_related(
             'customer', 'vehicle', 'customer__user'
@@ -445,6 +445,8 @@ def dashboard_overview(request):
                     'customer': customer_name,
                     'vehicle': vehicle_info,
                     'status': wo.status,
+                    'current_quote_stage': wo.get_current_quote_stage(),
+                    'current_quote_stage_display': wo.get_current_quote_stage_display(),
                     'created_at': wo.created_at.isoformat(),
                     'diagnosis_notes': wo.diagnosis_notes,
                     'gate_pass_status': gate_pass_status,

@@ -31,6 +31,7 @@ from apps.notifications_app.triggers import notification_triggers
 
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
 from apps.billing.models import Invoice
+from apps.inspections.models import VehicleInspection
 
 from .models import (
     WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart,
@@ -67,6 +68,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     ).prefetch_related(
         'assigned_technicians',
         'gate_passes',
+        'diagnosis__repair_recommendations',
+        Prefetch('inspections', queryset=VehicleInspection.objects.order_by('-created_at')),
         Prefetch('tasks', queryset=ServiceTask.objects.select_related('assigned_to')),
         Prefetch('notes', queryset=WorkOrderNote.objects.select_related('created_by')),
         Prefetch('parts', queryset=WorkOrderPart.objects.select_related(
@@ -81,13 +84,17 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     filterset_class = WorkOrderFilter
 
     search_fields = [
-        'work_order_number', 'customer__user__first_name', 'customer__user__last_name',
+        'work_order_number',
+        'customer__company_name',
+        'customer__full_name',
+        'customer__user__first_name',
+        'customer__user__last_name',
         'vehicle__vin', 'vehicle__license_plate', 'customer_concerns', 'diagnosis_notes'
     ]
     ordering_fields = [
         'created_at', 'estimated_completion', 'priority', 'status',
         'estimated_total', 'actual_total', 'invoice_total', 'work_order_number',
-        'customer__user__last_name', 'customer__user__first_name'
+        'customer__company_name', 'customer__full_name', 'customer__user__last_name', 'customer__user__first_name'
     ]
     ordering = ['-created_at']
 

@@ -590,6 +590,15 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         inspection.status = 'approved'
         inspection.approved_by = request.user
         inspection.save()
+
+        work_order = inspection.work_order
+        if work_order and work_order.status in ['draft', 'inspection']:
+            try:
+                work_order.transition_to('intake', user=request.user)
+            except Exception:
+                # Preserve the approved inspection even if the work order
+                # cannot advance automatically; staff can resolve the job separately.
+                pass
         
         return Response({
             'message': 'Inspection approved',

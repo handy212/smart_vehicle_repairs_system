@@ -53,6 +53,8 @@ import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
+import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
@@ -669,7 +671,9 @@ export default function WorkOrdersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.results.map((workorder) => (
+                  {data.results.map((workorder) => {
+                    const stagePresentation = getWorkOrderStagePresentation(workorder);
+                    return (
                     <TableRow
                       key={workorder.id}
                       className="group hover:bg-muted/80 transition-colors border-b border-border cursor-pointer"
@@ -687,12 +691,14 @@ export default function WorkOrdersPage() {
                       <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary">
                         {workorder.work_order_number || "-"}
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">
+                        {getWorkOrderCustomerDisplayName(workorder)}
+                      </TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5">
                         <div className="flex flex-wrap items-center gap-1">
                           <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">
-                            {getStatusLabel(workorder.status)}
+                            {stagePresentation.label || getStatusLabel(workorder.status)}
                           </Badge>
                           {workorder.gate_pass_status === 'completed' && (
                             <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-success/30 text-success bg-success/5 shadow-none flex items-center gap-0.5" title="Vehicle Picked Up">
@@ -771,7 +777,7 @@ export default function WorkOrdersPage() {
                               <Printer className="mr-2 h-3.5 w-3.5" />
                               Print Job Card
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}?tab=diagnosis&panel=full`)} className="text-xs">
+                            <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}/diagnosis`)} className="text-xs">
                               <FileText className="mr-2 h-3.5 w-3.5" />
                               View Diagnosis
                             </DropdownMenuItem>
@@ -790,7 +796,8 @@ export default function WorkOrdersPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

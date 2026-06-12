@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 import { getStatusLabel } from "@/lib/utils/workorder-status";
+import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
+import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import {
   MOBILE_WO_STATUS_FILTERS,
   getMobileWorkOrderStatusBadgeClass,
@@ -173,7 +175,9 @@ export default function MobileWorkOrdersPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredWorkOrders.map((wo) => (
+          {filteredWorkOrders.map((wo) => {
+            const stagePresentation = getWorkOrderStagePresentation(wo);
+            return (
             <Link
               key={wo.id}
               href={`/mobile/workorders/${wo.id}`}
@@ -194,9 +198,9 @@ export default function MobileWorkOrdersPage() {
                   <div className="text-sm text-muted-foreground mb-1">
                     {wo.vehicle_display || wo.vehicle_info || "Vehicle"}
                   </div>
-                  {wo.customer_name && (
-                    <div className="text-sm text-muted-foreground">{wo.customer_name}</div>
-                  )}
+                  <div className="text-sm text-muted-foreground">
+                    {getWorkOrderCustomerDisplayName(wo)}
+                  </div>
                   {wo.customer_concerns && (
                     <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
                       {wo.customer_concerns}
@@ -210,7 +214,7 @@ export default function MobileWorkOrdersPage() {
                       getMobileWorkOrderStatusBadgeClass(wo.status)
                     )}
                   >
-                    {getStatusLabel(wo.status ?? "")}
+                    {stagePresentation.label || getStatusLabel(wo.status ?? "")}
                   </span>
                   {(() => {
                     const billing = getWorkOrderListBillingDisplay(wo, {
@@ -234,7 +238,8 @@ export default function MobileWorkOrdersPage() {
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

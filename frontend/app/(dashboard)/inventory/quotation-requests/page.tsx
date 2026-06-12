@@ -419,7 +419,7 @@ export default function QuotationRequestsPage() {
                           Open Work Order
                         </Button>
                       </Link>
-                      <Link href={`/workorders/${recommendation.work_order_id}?tab=diagnosis&panel=full`} className="inline-flex">
+                      <Link href={`/workorders/${recommendation.work_order_id}/diagnosis`} className="inline-flex">
                         <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                           <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
                           View Diagnosis

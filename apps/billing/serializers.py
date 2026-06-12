@@ -320,6 +320,9 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     tax_breakdown = serializers.SerializerMethodField()
     work_order_number = serializers.SerializerMethodField()
     work_order_status = serializers.CharField(source='work_order.status', read_only=True)
+    work_order_quote_stage = serializers.SerializerMethodField()
+    work_order_quote_stage_display = serializers.SerializerMethodField()
+    can_mark_ready = serializers.SerializerMethodField()
     latest_invoice_summary = serializers.SerializerMethodField()
     
     is_expired = serializers.BooleanField(read_only=True)
@@ -333,7 +336,9 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'id', 'estimate_number', 'customer', 'customer_name', 
             'customer_email', 'customer_phone',
             'vehicle', 'vehicle_display', 'vehicle_vin',
-            'work_order', 'work_order_number', 'work_order_status', 'status', 'estimate_date', 'valid_until',
+            'work_order', 'work_order_number', 'work_order_status',
+            'work_order_quote_stage', 'work_order_quote_stage_display', 'can_mark_ready',
+            'status', 'estimate_date', 'valid_until',
             'title', 'description', 'reference_number', 'sales_agent', 'sales_agent_name',
             'notes', 'customer_notes',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
@@ -361,6 +366,27 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
         if obj.work_order:
             return obj.work_order.work_order_number
         return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_work_order_quote_stage(self, obj):
+        work_order = getattr(obj, 'work_order', None)
+        if not work_order:
+            return None
+        return work_order.get_current_quote_stage()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_work_order_quote_stage_display(self, obj):
+        work_order = getattr(obj, 'work_order', None)
+        if not work_order:
+            return None
+        return work_order.get_current_quote_stage_display()
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_can_mark_ready(self, obj):
+        work_order = getattr(obj, 'work_order', None)
+        if not work_order:
+            return False
+        return work_order.get_current_quote_stage() == 'waiting_for_stores_quotation'
 
     @extend_schema_field(serializers.DictField())
     def get_latest_invoice_summary(self, obj):

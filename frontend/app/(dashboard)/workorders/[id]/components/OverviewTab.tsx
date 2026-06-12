@@ -12,9 +12,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  User,
-  Car,
-  AlertCircle,
   Link as LinkIcon,
   FileText,
   Edit2,
@@ -36,6 +33,7 @@ import {
   canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
 } from "@/lib/workorders/invoiceSummaryDisplay";
+import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -197,22 +195,20 @@ export default function WorkOrderOverviewTab({
     actualTotal > 0 && displayedEstimatedTotal > 0
       ? actualTotal - displayedEstimatedTotal
       : null;
+  const customerDisplayName = getWorkOrderCustomerDisplayName(wo);
 
   return (
     <div className="space-y-4">
       {/* Summary strip */}
       <Card className="border-border shadow-sm">
         <CardContent className="flex flex-wrap gap-4 px-4 py-3">
-          <SummaryItem label="Customer">
+          <SummaryItem label="Customer / Business">
             {customerId ? (
               <Link href={`/customers/${customerId}`} className="font-medium text-primary hover:underline">
-                {workOrder.customer_name ||
-                  (typeof workOrder.customer === "object"
-                    ? workOrder.customer.full_name
-                    : "View customer")}
+                {customerDisplayName}
               </Link>
             ) : (
-              <span>{workOrder.customer_name || "—"}</span>
+              <span>{customerDisplayName}</span>
             )}
           </SummaryItem>
           <SummaryItem label="Phone">
@@ -269,19 +265,19 @@ export default function WorkOrderOverviewTab({
           {/* Customer & vehicle — definition list */}
           <Card>
             <CardHeader className="px-4 py-3">
-              <CardTitle className="text-sm font-semibold">Customer & vehicle</CardTitle>
+              <CardTitle className="text-sm font-semibold">Customer / business & vehicle</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
               <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Customer</dt>
+                  <dt className="text-xs text-muted-foreground">Customer / Business</dt>
                   <dd className="mt-0.5 font-medium">
                     {customerId ? (
                       <Link href={`/customers/${customerId}`} className="text-primary hover:underline">
-                        {workOrder.customer_name || "View customer"}
+                        {customerDisplayName}
                       </Link>
                     ) : (
-                      workOrder.customer_name || "—"
+                      customerDisplayName
                     )}
                   </dd>
                 </div>

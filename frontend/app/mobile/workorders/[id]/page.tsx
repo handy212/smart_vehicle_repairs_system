@@ -47,6 +47,7 @@ import {
   resolveWorkOrderInvoiceAmount,
 } from "@/lib/workorders/workOrderBillingDisplay";
 import { MobileWorkOrderSections } from "@/components/mobile/workorder/MobileWorkOrderSections";
+import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 
 export default function MobileWorkOrderDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -457,7 +458,7 @@ export default function MobileWorkOrderDetailPage() {
             <User className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div className="flex-1">
               <div className="text-sm font-medium text-foreground">
-                {workOrder.customer_name || "Customer"}
+                {getWorkOrderCustomerDisplayName(workOrder)}
               </div>
               {workOrder.primary_technician_name && (
                 <div className="text-xs text-muted-foreground">

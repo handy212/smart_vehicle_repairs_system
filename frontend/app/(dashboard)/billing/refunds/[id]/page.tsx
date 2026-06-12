@@ -142,11 +142,11 @@ export default function RefundDetailPage() {
 
     const getStatusVariant = (status: string) => {
 
-        const variants: Record<string, "warning" | "default" | "success" | "destructive" | "secondary"> = {
+        const variants: Record<string, "warning" | "default" | "success" | "danger" | "secondary"> = {
             pending: 'warning',
             approved: 'default',
             completed: 'success',
-            rejected: 'destructive',
+            rejected: 'danger',
             cancelled: 'secondary',
         };
         return variants[status] || 'default';

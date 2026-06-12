@@ -514,7 +514,7 @@ export default function WorkflowActions({
       setShowStartDiagnosisDialog(false);
       refreshWorkOrder();
       // Navigate to the diagnosis detail page
-      router.push(`/workorders/${workOrderId}?tab=diagnosis&panel=full`);
+      router.push(`/workorders/${workOrderId}/diagnosis`);
     },
 
     onError: (error: any) => {
@@ -988,7 +988,7 @@ export default function WorkflowActions({
               {
                 label: "View Diagnosis",
                 icon: Eye,
-                onClick: () => router.push(`/workorders/${workOrderId}?tab=diagnosis&panel=full`),
+                onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
                 variant: "outline",
                 description: "View completed diagnosis details",
               }
@@ -999,7 +999,7 @@ export default function WorkflowActions({
               {
                 label: "View Diagnosis",
                 icon: Eye,
-                onClick: () => router.push(`/workorders/${workOrderId}?tab=diagnosis&panel=full`),
+                onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
                 variant: "default",
                 description: "View completed diagnosis details",
               }
@@ -1011,7 +1011,7 @@ export default function WorkflowActions({
             {
               label: "Open Diagnosis",
               icon: Eye,
-              onClick: () => router.push(`/workorders/${workOrderId}?tab=diagnosis&panel=full`),
+              onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
               variant: "default",
               description: "View and manage diagnosis details",
             },

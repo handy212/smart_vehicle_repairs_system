@@ -36,6 +36,7 @@ interface WorkOrderCommandBarProps {
     branch_name?: string;
   };
   workOrderId: number;
+  statusLabelOverride?: string;
   onStatusChange?: () => void;
   onStartRepairs?: () => void;
   onShowRecommendations?: () => void;
@@ -51,6 +52,7 @@ interface WorkOrderCommandBarProps {
 export function WorkOrderCommandBar({
   workOrder,
   workOrderId,
+  statusLabelOverride,
   onStatusChange,
   onStartRepairs,
   onShowRecommendations,
@@ -65,7 +67,7 @@ export function WorkOrderCommandBar({
   const router = useRouter();
 
   const subtitle = [
-    workOrder.customer_name || "Customer",
+    workOrder.customer_name || "Customer / Business",
     workOrder.vehicle_info || "Vehicle",
     workOrder.branch_name,
   ]
@@ -91,7 +93,7 @@ export function WorkOrderCommandBar({
                 #{workOrder.work_order_number}
               </span>
               <Badge variant={getStatusVariant(workOrder.status) as "default"} className="text-[10px]">
-                {getStatusLabel(workOrder.status)}
+                {statusLabelOverride || getStatusLabel(workOrder.status)}
               </Badge>
               {workOrder.priority && workOrder.priority !== "normal" && (
                 <Badge variant="outline" className="text-[10px] capitalize">

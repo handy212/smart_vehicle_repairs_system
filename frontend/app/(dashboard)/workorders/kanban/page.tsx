@@ -47,6 +47,8 @@ import {
   type WorkOrderStatusGroupId,
 } from "@/lib/utils/workorder-status-groups";
 import { getStatusLabel, getStatusVariant } from "@/lib/utils/workorder-status";
+import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
+import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 
 type KanbanGroup = (typeof WORK_ORDER_STATUS_GROUPS)[number];
 
@@ -120,11 +122,8 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
     }
   };
 
-  const customerName =
-    workOrder.customer_name ||
-
-    (typeof workOrder.customer === "object" && workOrder.customer !== null ? (workOrder.customer as any).full_name : null) ||
-    "Customer";
+  const customerName = getWorkOrderCustomerDisplayName(workOrder);
+  const stagePresentation = getWorkOrderStagePresentation(workOrder);
 
   const vehicleInfo = workOrder.vehicle_info || "-";
 
@@ -144,7 +143,7 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
         </Link>
         <div className="flex flex-col items-end gap-1">
           <Badge variant={getStatusVariant(workOrder.status) as any} className="text-[9px] px-1.5 h-4 font-bold tracking-tight capitalize">
-            {getStatusLabel(workOrder.status)}
+            {stagePresentation.label || getStatusLabel(workOrder.status)}
           </Badge>
           <Badge variant={getPriorityVariant(workOrder.priority) as any} className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight">
             {workOrder.priority}
@@ -580,4 +579,3 @@ export default function WorkOrderKanbanPage() {
     </div>
   );
 }
-

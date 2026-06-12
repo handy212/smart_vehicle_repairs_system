@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AxiosError } from "axios";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
@@ -94,6 +94,41 @@ const fieldLabels: Record<string, string> = {
   labor_rate: "Labor rate",
   part: "Part",
   description: "Description",
+  discount_type: "Discount type",
+  discount_reason: "Discount reason",
+};
+
+const discountTypeOptions = ["none", "before_tax", "after_tax"] as const;
+type DiscountType = (typeof discountTypeOptions)[number];
+
+const normalizeDiscountType = (value: unknown): DiscountType => (
+  typeof value === "string" && (discountTypeOptions as readonly string[]).includes(value)
+    ? (value as DiscountType)
+    : "none"
+);
+
+const getFriendlyEstimateError = (error: AxiosError<any>) => {
+  const data = error.response?.data;
+  if (!data) return "We couldn't save the estimate. Please try again.";
+  if (typeof data.detail === "string" && data.detail.trim()) return data.detail;
+  if (typeof data.message === "string" && data.message.trim()) return data.message;
+  if (typeof data.error === "string" && data.error.trim()) return data.error;
+
+  const discountTypeError = Array.isArray(data.discount_type)
+    ? data.discount_type[0]
+    : data.discount_type;
+  if (typeof discountTypeError === "string" && discountTypeError.trim()) {
+    return "Please choose a valid discount type. Use `No Discount` if you don't want to apply one.";
+  }
+
+  for (const [key, value] of Object.entries(data)) {
+    const message = Array.isArray(value) ? value[0] : value;
+    if (typeof message === "string" && message.trim()) {
+      return `${describeFieldPath(key)}: ${message}`;
+    }
+  }
+
+  return "We couldn't save the estimate. Please review the form and try again.";
 };
 
 const describeFieldPath = (path: string) => {
@@ -269,7 +304,18 @@ export default function NewEstimatePage() {
   const watchedCustomer = watch("customer");
   const customer = watchedCustomer ? Number(watchedCustomer) : undefined;
   const discountPercentage = Number(watch("discount_percentage") || 0);
-  const discountType = watch("discount_type");
+  const discountType = normalizeDiscountType(watch("discount_type"));
+
+  useEffect(() => {
+    const currentDiscountType = watch("discount_type");
+    if (currentDiscountType !== discountType) {
+      setValue("discount_type", discountType, { shouldValidate: false });
+    }
+    if (discountType === "none") {
+      setValue("discount_percentage", 0, { shouldValidate: false });
+      setValue("discount_reason", "", { shouldValidate: false });
+    }
+  }, [discountType, setValue, watch]);
 
   // Update selected customer when form value changes
   if (customer && customer !== selectedCustomer) {
@@ -384,9 +430,9 @@ export default function NewEstimatePage() {
     onError: (error) => {
       console.error("Estimate creation error:", error);
       if (error instanceof AxiosError && error.response?.data) {
-        setServerError(error.response.data.detail || "An error occurred.");
+        setServerError(getFriendlyEstimateError(error));
       } else {
-        setServerError("An unexpected error occurred.");
+        setServerError("We couldn't create the estimate right now. Please try again.");
       }
     },
   });
@@ -423,7 +469,9 @@ export default function NewEstimatePage() {
       ...data,
       line_items: lineItemsForApi,
       status: statusAction,
-      discount_percentage: data.discount_type !== 'none' ? data.discount_percentage?.toString() : '0',
+      discount_type: discountType,
+      discount_percentage: discountType !== 'none' ? data.discount_percentage?.toString() : '0',
+      discount_reason: discountType === "none" ? undefined : data.discount_reason || undefined,
     };
 
     await createMutation.mutateAsync(apiData);
@@ -607,10 +655,10 @@ export default function NewEstimatePage() {
 
             {/* Discount Inputs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Discount Type</label>
-                <Select
-                  value={watch("discount_type")}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Discount Type</label>
+                  <Select
+                  value={discountType}
 
                   onValueChange={(val: any) => setValue("discount_type", val, { shouldValidate: true })}
                 >
@@ -624,7 +672,7 @@ export default function NewEstimatePage() {
                   </SelectContent>
                 </Select>
               </div>
-              {watch("discount_type") !== 'none' && (
+              {discountType !== 'none' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Discount (%)</label>
                   <Input
@@ -634,7 +682,7 @@ export default function NewEstimatePage() {
                   />
                 </div>
               )}
-              {watch("discount_type") !== 'none' && (
+              {discountType !== 'none' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Reason</label>
                   <Input {...register("discount_reason")} placeholder="Discount reason..." />

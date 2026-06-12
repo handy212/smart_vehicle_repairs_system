@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download, Mail, Edit, MoreVertical, ChevronDown, Eye, X, Printer, DollarSign, Ban, CreditCard } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useState, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,10 +42,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function InvoicesPage() {
+    const searchParams = useSearchParams();
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
 
-    const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+    const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>(() => {
+        const status = searchParams.get("status");
+        return status ? { status } : {};
+    });
 
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 

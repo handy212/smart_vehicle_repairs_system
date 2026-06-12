@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import type { GatePassCreateData } from "@/lib/api/gatepass";
+import { getCustomerDisplayName, getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 
 type GatePassWorkOrder = WorkOrder & {
   customer_name?: string;
@@ -129,18 +130,10 @@ export default function NewGatePassPage() {
 
   const getCustomerName = (workOrder: GatePassWorkOrder | null): string => {
     if (!workOrder) return "N/A";
-    // Check if customer_name exists (from list serializer)
-    if (workOrder.customer_name) return workOrder.customer_name;
-    // Check if customer is an object with full_name (from detail serializer)
-    if (typeof workOrder.customer === 'object' && workOrder.customer) {
-      if (workOrder.customer.full_name) return workOrder.customer.full_name;
-      if (workOrder.customer.user) {
-        const user = workOrder.customer.user;
-        if (user.first_name || user.last_name) {
-          return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || "N/A";
-        }
-        if (user.email) return user.email;
-      }
+    const displayName = getWorkOrderCustomerDisplayName(workOrder);
+    if (displayName !== "Customer") return displayName;
+    if (typeof workOrder.customer === "object" && workOrder.customer) {
+      return getCustomerDisplayName(workOrder.customer);
     }
     return "N/A";
   };

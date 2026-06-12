@@ -53,11 +53,11 @@ export default function RefundsPage() {
 
     const getStatusBadge = (status: string) => {
 
-        const variants: Record<string, any> = {
+        const variants: Record<string, "warning" | "default" | "success" | "danger" | "secondary"> = {
             pending: 'warning',
             approved: 'default',
             completed: 'success',
-            rejected: 'destructive',
+            rejected: 'danger',
             cancelled: 'secondary',
         };
         return <Badge variant={variants[status] || 'default'}>{status.toUpperCase()}</Badge>;

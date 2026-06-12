@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { getCustomerContactName, getCustomerDisplayName } from "@/lib/utils/customer-display";
 import {
     Popover,
     PopoverContent,
@@ -72,10 +73,12 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
                     {selectedCustomer ? (
                         <div className="flex flex-col items-start overflow-hidden">
                             <span className="font-medium truncate w-full">
-                                {selectedCustomer.full_name || selectedCustomer.company_name}
+                                {getCustomerDisplayName(selectedCustomer)}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                                {selectedCustomer.customer_number} • {selectedCustomer.phone}
+                                {[getCustomerContactName(selectedCustomer), selectedCustomer.customer_number, selectedCustomer.phone]
+                                    .filter(Boolean)
+                                    .join(" • ")}
                             </span>
                         </div>
                     ) : (
@@ -88,7 +91,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
                 <div className="flex items-center border-b px-3 bg-muted/30">
                     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-muted-foreground" />
                     <Input
-                        placeholder="Search by name, phone, or customer number..."
+                        placeholder="Search by company, contact, phone, or customer number..."
                         className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground border-none shadow-none focus-visible:ring-0"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -122,15 +125,17 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
                                     </div>
                                     <div className="flex-1 overflow-hidden">
                                         <div className="flex justify-between items-center mb-0.5">
-                                            <span className="font-semibold truncate">{customer.full_name || customer.company_name}</span>
+                                            <span className="font-semibold truncate">{getCustomerDisplayName(customer)}</span>
                                             <Badge variant="outline" className="text-[10px] font-mono h-4 px-1.5 opacity-70">
                                                 {customer.customer_number}
                                             </Badge>
                                         </div>
                                         <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                            <span>{customer.phone || "No phone"}</span>
-                                            <span>•</span>
-                                            <span className="truncate">{customer.email || "No email"}</span>
+                                            <span className="truncate">
+                                                {getCustomerContactName(customer) || customer.email || "No contact"}
+                                            </span>
+                                            {(customer.phone || customer.email) && <span>•</span>}
+                                            <span className="truncate">{customer.phone || customer.email || "No phone"}</span>
                                         </div>
                                     </div>
                                 </div>

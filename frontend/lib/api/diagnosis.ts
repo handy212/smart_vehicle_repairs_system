@@ -345,7 +345,18 @@ export const diagnosisApi = {
     message: string;
     quotation_estimate_id?: number | null;
     quotation_estimate_number?: string | null;
+    quote_context?: {
+      work_order_id?: number | null;
+      work_order_number?: string | null;
+      work_order_status?: string | null;
+      customer_id?: number | null;
+      vehicle_id?: number | null;
+      diagnosis_id?: number | null;
+      parts_synced?: number;
+      labor_lines_synced?: number;
+    };
     parts_synced?: number;
+    labor_lines_synced?: number;
     recommendations: RepairRecommendation[];
   }> => {
     const response = await apiClient.post(`/diagnosis/diagnoses/${id}/submit_recommendations_for_quote/`, data || {});

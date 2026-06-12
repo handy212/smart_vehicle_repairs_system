@@ -186,6 +186,9 @@ export interface Estimate {
   work_order?: number | { id: number };
   work_order_number?: string;
   work_order_status?: string;
+  work_order_quote_stage?: "waiting_for_stores_quotation" | "quotation_ready" | null;
+  work_order_quote_stage_display?: string | null;
+  can_mark_ready?: boolean;
   status: string;
   title?: string;
   description?: string;
@@ -790,6 +793,20 @@ export const billingApi = {
       const response = await apiClient.post(`/billing/estimates/${id}/duplicate/`);
       // Backend returns { message: "...", estimate: {...} }
       return response.data.estimate || response.data;
+    },
+
+    markReady: async (id: number): Promise<{
+      message: string;
+      estimate: Estimate;
+      work_order?: {
+        id: number;
+        status: string;
+        quote_stage?: string | null;
+        quote_stage_display?: string | null;
+      };
+    }> => {
+      const response = await apiClient.post(`/billing/estimates/${id}/mark_ready/`);
+      return response.data;
     },
 
     pending: async (): Promise<Estimate[]> => {

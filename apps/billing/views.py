@@ -236,6 +236,8 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('reject_estimates')]
         elif self.action == 'duplicate':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_estimates')]
+        elif self.action == 'mark_ready':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action == 'convert_to_invoice':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('convert_estimate_to_invoice')]
         elif self.action == 'convert_to_work_order':
