@@ -9,12 +9,58 @@ type WorkOrderLike = Pick<
   | "current_inspection_completion_percentage"
   | "current_quote_stage"
   | "current_quote_stage_display"
+  | "estimate_summary"
+  | "invoice_summary"
 >;
 
 export type WorkOrderStagePresentation = {
   workflowStatus: string;
   label: string;
 };
+
+function parseMoney(value?: string | null): number {
+  if (!value) return 0;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getBillingStageLabel(workOrder?: WorkOrderLike | null): string | null {
+  const workflowStatus = workOrder?.status;
+  if (!workflowStatus || !["completed", "discontinued_pending_bill", "invoiced", "closed"].includes(workflowStatus)) {
+    return null;
+  }
+
+  if (workflowStatus === "closed") {
+    const due = parseMoney(workOrder.invoice_summary?.amount_due);
+    return due > 0.01 ? "Closed | Payment Outstanding" : "Closed";
+  }
+
+  if (workflowStatus === "invoiced") {
+    return "Ready to Close";
+  }
+
+  const invoice = workOrder.invoice_summary;
+  if (invoice?.id) {
+    switch (invoice.status) {
+      case "draft":
+      case "proforma":
+        return "Invoice Draft";
+      case "paid":
+        return "Billing Complete";
+      case "void":
+      case "refunded":
+        return "Waiting for Invoice";
+      default:
+        return "Awaiting Payment / Handover";
+    }
+  }
+
+  if (workOrder.estimate_summary?.id) {
+    return "Waiting for Invoice";
+  }
+
+  return workflowStatus === "discontinued_pending_bill" ? "Pending Invoice" : "Completed";
+}
 
 function getInspectionProgressValue(inspection?: Pick<VehicleInspection, "completion_percentage"> | null) {
   return inspection?.completion_percentage ?? 0;
@@ -79,6 +125,42 @@ export function getWorkOrderStagePresentation(
     return {
       workflowStatus,
       label: workOrder.current_quote_stage_display,
+    };
+  }
+
+  if (workflowStatus === "in_progress") {
+    return {
+      workflowStatus,
+      label: "Repairs In Progress",
+    };
+  }
+
+  if (workflowStatus === "paused") {
+    return {
+      workflowStatus,
+      label: "Repairs Paused",
+    };
+  }
+
+  if (workflowStatus === "additional_work_found") {
+    return {
+      workflowStatus,
+      label: "Additional Work Review",
+    };
+  }
+
+  if (workflowStatus === "quality_check") {
+    return {
+      workflowStatus,
+      label: "Quality Check",
+    };
+  }
+
+  const billingStageLabel = getBillingStageLabel(workOrder);
+  if (billingStageLabel) {
+    return {
+      workflowStatus,
+      label: billingStageLabel,
     };
   }
 

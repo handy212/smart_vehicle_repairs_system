@@ -45,7 +45,7 @@ export function MarkInvoicedForm({
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
                         <p className="text-sm text-primary">
                             <AlertCircle className="w-4 h-4 inline mr-1.5" />
-                            Odometer reading is required before marking as invoiced.
+                            Odometer reading is required before confirming billing is complete.
                         </p>
                     </div>
 
@@ -76,7 +76,7 @@ export function MarkInvoicedForm({
                     Cancel
                 </Button>
                 <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !odometerOut}>
-                    {isSubmitting ? "Marking..." : "Mark as Invoiced"}
+                    {isSubmitting ? "Saving..." : "Confirm Billing Complete"}
                 </Button>
             </DialogFooter>
         </div>

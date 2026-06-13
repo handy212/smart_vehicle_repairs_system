@@ -30,7 +30,6 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { EstimatedNextServiceCallout } from "./EstimatedNextServiceCallout";
 import {
-  canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
 } from "@/lib/workorders/invoiceSummaryDisplay";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
@@ -73,7 +72,6 @@ export default function WorkOrderOverviewTab({
   const wo = workOrderFresh ?? workOrder;
   const estimateSummary = wo.estimate_summary;
   const invoiceSummary = wo.invoice_summary;
-  const canCreateInvoice = canCreateWorkOrderInvoice(wo);
   const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
   const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, wo.status);
   const displayedEstimatedTotal = parseFloat(wo.estimated_total || "0");
@@ -456,11 +454,11 @@ export default function WorkOrderOverviewTab({
                       <FileText className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
-                ) : canCreateInvoice ? (
-                  <Link href={`/billing/invoices/new?work_order=${workOrderId}`}>
+                ) : estimateSummary?.id ? (
+                  <Link href={`/billing/estimates/${estimateSummary.id}`}>
                     <Button variant="ghost" size="sm" className="h-7 text-xs text-primary">
                       <FileText className="w-3 h-3 mr-1" />
-                      Create Invoice
+                      Open Estimate
                     </Button>
                   </Link>
                 ) : null}
@@ -498,6 +496,20 @@ export default function WorkOrderOverviewTab({
                   {formatCurrency(parseFloat(estimateSummary.total || "0"))}
                 </p>
               )}
+              {!invoiceSummary?.id &&
+              estimateSummary?.id &&
+              ["completed", "discontinued_pending_bill"].includes(wo.status) ? (
+                <p className="text-xs text-muted-foreground">
+                  Invoice should be created from{" "}
+                  <Link
+                    href={`/billing/estimates/${estimateSummary.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {estimateSummary.estimate_number}
+                  </Link>
+                  .
+                </p>
+              ) : null}
               {invoiceSummary?.id && (
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <p>
@@ -532,9 +544,9 @@ export default function WorkOrderOverviewTab({
                     <p>
                       Work order is still <span className="capitalize">{wo.status.replace(/_/g, " ")}</span>
                       {invoicePayment?.paymentLabel.startsWith("Paid")
-                        ? " — when payment is complete, status should move to Invoiced automatically."
+                        ? " — when payment is complete, status should move to Ready to Close automatically."
                         : invoicePayment?.canMarkWorkOrderInvoiced
-                          ? " — paying in full auto-marks Invoiced, or use Mark work order invoiced after issuing."
+                          ? " — once billing is complete, confirm it here to move the work order to Ready to Close."
                           : invoicePayment?.markBlockedReason
                             ? ` — ${invoicePayment.markBlockedReason}`
                             : null}

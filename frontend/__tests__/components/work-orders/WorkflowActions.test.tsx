@@ -233,6 +233,81 @@ describe('WorkflowActions Component', () => {
         });
     });
 
+    describe('Completed Status Billing Actions', () => {
+        it('shows Open estimate instead of Create invoice when invoice must come from the linked estimate', async () => {
+            vi.mocked(workordersApi.get).mockResolvedValue({
+                id: 1,
+                status: 'completed',
+                work_order_number: 'WO-001',
+                estimate_summary: {
+                    id: 12,
+                    estimate_number: 'EST-00012',
+                    status: 'approved',
+                    total: '350.00',
+                },
+                invoice_summary: null,
+            } as any);
+
+            renderComponent({
+                workOrderId: 1,
+                status: 'completed',
+                workOrder: {
+                    id: 1,
+                    status: 'completed',
+                    work_order_number: 'WO-001',
+                    estimate_summary: {
+                        id: 12,
+                        estimate_number: 'EST-00012',
+                        status: 'approved',
+                        total: '350.00',
+                    },
+                    invoice_summary: null,
+                },
+            });
+
+            expect(await screen.findByText(/Open estimate/i)).toBeInTheDocument();
+            expect(screen.queryByText(/Create invoice/i)).not.toBeInTheDocument();
+        });
+
+        it('allows closing a completed work order once the invoice is issued even if payment is still due', async () => {
+            vi.mocked(workordersApi.get).mockResolvedValue({
+                id: 1,
+                status: 'completed',
+                work_order_number: 'WO-001',
+                invoice_summary: {
+                    id: 99,
+                    invoice_number: 'INV-00099',
+                    status: 'sent',
+                    total: '350.00',
+                    amount_due: '350.00',
+                    amount_paid: '0.00',
+                    is_paid: false,
+                },
+            } as any);
+
+            renderComponent({
+                workOrderId: 1,
+                status: 'completed',
+                workOrder: {
+                    id: 1,
+                    status: 'completed',
+                    work_order_number: 'WO-001',
+                    invoice_summary: {
+                        id: 99,
+                        invoice_number: 'INV-00099',
+                        status: 'sent',
+                        total: '350.00',
+                        amount_due: '350.00',
+                        amount_paid: '0.00',
+                        is_paid: false,
+                    },
+                },
+            });
+
+            expect(await screen.findByText(/Close Work Order/i)).toBeInTheDocument();
+        });
+    });
+
     describe('Component Integration', () => {
         it('should render without crashing for different statuses', () => {
             const statuses = ['draft', 'assigned', 'diagnosis', 'awaiting_approval', 'approved', 'in_progress', 'quality_check', 'completed'];

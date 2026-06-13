@@ -464,8 +464,21 @@ class WorkOrderStateTransitionMixin:
         if not can_start:
             error_msg = '; '.join(errors) if errors else "Cannot start work - validation failed"
             logger.warning(f"Start work failed for WO {work_order.work_order_number}: {errors}")
+            unavailable_parts = work_order.check_parts_availability()
             return Response(
-                {'error': error_msg, 'errors': errors},
+                {
+                    'error': error_msg,
+                    'errors': errors,
+                    'next_step': 'Open the Parts tab and allocate or receive the parts needed for the first repair tasks.',
+                    'blocking_parts': [
+                        {
+                            'id': item['part'].id,
+                            'part_name': item['part'].part_name,
+                            'status': item['part'].get_status_display(),
+                        }
+                        for item in unavailable_parts[:10]
+                    ],
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
         

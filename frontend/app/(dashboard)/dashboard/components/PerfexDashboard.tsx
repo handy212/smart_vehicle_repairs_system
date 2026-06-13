@@ -42,6 +42,21 @@ interface RecentWorkOrder {
   customer?: string;
   vehicle?: string;
   gate_pass_status?: string;
+  estimate_summary?: {
+    id: number;
+    estimate_number: string;
+    status: string;
+    total: string;
+  } | null;
+  invoice_summary?: {
+    id: number;
+    invoice_number: string;
+    status: string;
+    total: string;
+    amount_paid?: string;
+    amount_due?: string;
+    is_paid?: boolean;
+  } | null;
   current_quote_stage?:
     | "waiting_for_stores_quotation"
     | "waiting_for_customer_approval"
@@ -160,11 +175,11 @@ type MainTab     = "workorders" | "invoices";
    HELPERS
 ═══════════════════════════════════════════════════════════════════ */
 
-function StatusPill({ status, map }: { status: string; map: Record<string, string> }) {
+function StatusPill({ status, map, label }: { status: string; map: Record<string, string>; label?: string }) {
   const cls = map[status] ?? "bg-gray-100 text-gray-600";
   return (
     <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>
-      {status.replace(/_/g, " ")}
+      {label || status.replace(/_/g, " ")}
     </span>
   );
 }
@@ -736,13 +751,26 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                       <td className="px-4 py-2.5">
                         {(() => {
                           const stagePresentation = getWorkOrderStagePresentation(wo);
+                          const useStageAsPrimary = [
+                            "diagnosis",
+                            "awaiting_approval",
+                            "approved",
+                            "in_progress",
+                            "paused",
+                            "additional_work_found",
+                            "quality_check",
+                            "completed",
+                            "discontinued_pending_bill",
+                            "closed",
+                          ].includes(wo.status) && !!stagePresentation.label;
                           return (
                             <div className="flex flex-wrap items-center gap-1">
                               <StatusPill
                                 status={wo.status}
                                 map={WO_STATUS_COLORS}
+                                label={useStageAsPrimary ? stagePresentation.label : undefined}
                               />
-                              {stagePresentation.label ? (
+                              {stagePresentation.label && !useStageAsPrimary ? (
                                 <span className="inline-flex items-center rounded border border-border/80 bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                                   {stagePresentation.label}
                                 </span>

@@ -178,9 +178,14 @@ export default function WorkflowActions({
 
   const currentWorkOrder = workOrderData ?? workOrder;
   const invoiceSummary = currentWorkOrder?.invoice_summary;
+  const estimateSummary = currentWorkOrder?.estimate_summary;
   const existingInvoiceId = invoiceSummary?.id;
   const hasActiveInvoice =
     !!existingInvoiceId && invoiceSummary?.status !== "void";
+  const hasIssuedInvoice =
+    !!existingInvoiceId &&
+    !["draft", "proforma", "void", "refunded"].includes(invoiceSummary?.status ?? "");
+  const linkedEstimateId = estimateSummary?.id;
   const canCreateNewInvoice = currentWorkOrder
     ? canCreateWorkOrderInvoice(currentWorkOrder)
     : false;
@@ -196,7 +201,28 @@ export default function WorkflowActions({
       router.push(`/billing/invoices/${linkedId}`);
       return;
     }
-    router.push(`/billing/invoices/new?work_order=${workOrderId}`);
+    const estimateId = fresh?.estimate_summary?.id ?? linkedEstimateId;
+    if (estimateId) {
+      router.push(`/billing/estimates/${estimateId}`);
+      return;
+    }
+    toast({
+      title: "Invoice not ready",
+      description: "Create the invoice from the linked estimate first.",
+      variant: "warning",
+    });
+  };
+
+  const openEstimateForInvoice = () => {
+    if (!linkedEstimateId) {
+      toast({
+        title: "Estimate not found",
+        description: "Link or approve an estimate before creating the invoice.",
+        variant: "warning",
+      });
+      return;
+    }
+    router.push(`/billing/estimates/${linkedEstimateId}`);
   };
 
   // Fetch diagnosis to check completion status
@@ -208,7 +234,17 @@ export default function WorkflowActions({
   });
 
   // Check if diagnosis is completed
-  const isDiagnosisCompleted = diagnosisData?.status === "completed" || diagnosisData?.is_completed === true;
+  const isDiagnosisCompleted =
+    diagnosisData?.status === "completed" ||
+    diagnosisData?.is_completed === true ||
+    (diagnosisData?.status === "awaiting_approval" && currentWorkOrder?.approved_by_customer === true);
+  const currentQuoteStage = currentWorkOrder?.current_quote_stage;
+  const waitingForPartsAllocation = currentQuoteStage === "approved_waiting_for_parts";
+  const readyForRepairs =
+    currentQuoteStage === "parts_ready_waiting_for_repairs" ||
+    currentQuoteStage === "approved_waiting_for_repairs" ||
+    currentQuoteStage === "quotation_ready" ||
+    !currentQuoteStage;
 
   // Fetch inspections for this work order
   const { data: inspectionsData } = useQuery({
@@ -663,30 +699,9 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      console.error("Start work error:", error);
-      console.error("Error response:", error.response);
-      console.error("Error response data:", error.response?.data);
-
-      // Extract error message from various possible locations
-      let errorMessage = "Failed to start repairs";
-
-      if (error.response?.data) {
-        const data = error.response.data;
-        errorMessage = data.error || data.detail || data.message || JSON.stringify(data);
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      // If it's still empty or just an object, try to stringify
-      if (!errorMessage || errorMessage === "{}" || errorMessage === "[object Object]") {
-        errorMessage = error.response?.data
-          ? JSON.stringify(error.response.data)
-          : "An unexpected error occurred. Please check the console for details.";
-      }
-
       toast({
         title: "Error",
-        description: errorMessage,
+        description: getWorkflowErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -844,10 +859,10 @@ export default function WorkflowActions({
 
     onError: (error: any) => {
       toast({
-        title: "Cannot mark as invoiced",
+        title: "Cannot confirm billing complete",
         description: extractApiErrorMessage(
           error,
-          "Unable to mark this work order as invoiced. Confirm odometer out is recorded and a finalized invoice exists."
+          "Unable to confirm billing completion. Confirm odometer out is recorded and a finalized invoice exists."
         ),
         variant: "destructive",
       });
@@ -1038,13 +1053,42 @@ export default function WorkflowActions({
         break;
 
       case "approved":
-        actions.push({
-          label: "Start Repairs",
-          icon: Play,
-          onClick: () => startWorkMutation.mutate(),
-          disabled: startWorkMutation.isPending,
-          description: "Begin repair work",
-        });
+        if (waitingForPartsAllocation) {
+          actions.push(
+            {
+              label: "Start Repairs",
+              icon: Play,
+              onClick: () => startWorkMutation.mutate(),
+              disabled: startWorkMutation.isPending,
+              variant: "default",
+              description: "Start the repair work that is ready now while remaining parts are still being allocated",
+            },
+            {
+              label: "Open Parts",
+              icon: Eye,
+              onClick: () => router.push(`/workorders/${workOrderId}/repairs?tab=parts`),
+              variant: "outline",
+              description: "Allocate or receive the remaining parts while ready repair work continues",
+            }
+          );
+        } else if (readyForRepairs) {
+          actions.push(
+            {
+              label: "Start Repairs",
+              icon: Play,
+              onClick: () => startWorkMutation.mutate(),
+              disabled: startWorkMutation.isPending,
+              description: "Begin repair work",
+            },
+            {
+              label: "Open Repairs",
+              icon: Wrench,
+              onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
+              variant: "outline",
+              description: "Review tasks, parts, and readiness before starting",
+            }
+          );
+        }
         break;
 
       // Phase 3: Repair Execution
@@ -1167,32 +1211,30 @@ export default function WorkflowActions({
                 invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
               }`
             : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`;
+          if (hasIssuedInvoice) {
+            actions.push({
+              label: "Close Work Order",
+              icon: Lock,
+              onClick: () => setShowCloseDialog(true),
+              disabled: closeMutation.isPending,
+              description: invoicePayment?.paymentLabel.startsWith("Paid")
+                ? "Invoice is settled. Complete the handover and close the work order."
+                : "Invoice is issued. You can close the job now while Accounts follows up on the outstanding balance.",
+            });
+          }
           actions.push({
             label: "View invoice",
             icon: DollarSign,
             onClick: openInvoice,
+            variant: hasIssuedInvoice ? "outline" : "default",
             description: viewDescription,
           });
-          if (!invoicePayment || invoicePayment.canMarkWorkOrderInvoiced) {
-            actions.push({
-              label: "Mark work order invoiced",
-              icon: CheckCircle,
-              onClick: () => setShowMarkInvoicedDialog(true),
-              disabled: markInvoicedMutation.isPending,
-              variant: "outline",
-              description: invoicePayment?.paymentLabel.startsWith("Paid")
-                ? "Paid in full — work order should be Invoiced now (automatic). Use this if it did not update."
-                : "Paying in full auto-marks Invoiced, or use this after the invoice is issued",
-            });
-          }
-        } else if (canCreateNewInvoice) {
+        } else if (linkedEstimateId) {
           actions.push({
-            label: "Create invoice",
+            label: "Open estimate",
             icon: DollarSign,
-            onClick: openInvoice,
-            description: invoiceSummary?.status === "void"
-              ? "Issue a new invoice (previous invoice was voided)"
-              : "Create an invoice from this work order",
+            onClick: openEstimateForInvoice,
+            description: "Convert the approved estimate to an invoice from the estimate page",
           });
         }
         break;
@@ -1204,24 +1246,24 @@ export default function WorkflowActions({
                 invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
               }`
             : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`;
+          if (hasIssuedInvoice) {
+            actions.push({
+              label: "Close Work Order",
+              icon: Lock,
+              onClick: () => setShowCloseDialog(true),
+              disabled: closeMutation.isPending,
+              description: invoicePayment?.paymentLabel.startsWith("Paid")
+                ? "Invoice is settled. Complete the handover and close the work order."
+                : "Invoice is issued. You can close the job now while Accounts follows up on the outstanding balance.",
+            });
+          }
           actions.push({
             label: "View invoice",
             icon: DollarSign,
             onClick: openInvoice,
+            variant: hasIssuedInvoice ? "outline" : "default",
             description: viewDescriptionDisc,
           });
-          if (!invoicePayment || invoicePayment.canMarkWorkOrderInvoiced) {
-            actions.push({
-              label: "Mark work order invoiced",
-              icon: CheckCircle,
-              onClick: () => setShowMarkInvoicedDialog(true),
-              disabled: markInvoicedMutation.isPending,
-              variant: "outline",
-              description: invoicePayment?.paymentLabel.startsWith("Paid")
-                ? "Paid in full — work order should be Invoiced now (automatic). Use this if it did not update."
-                : "Paying in full auto-marks Invoiced, or use this after the invoice is issued",
-            });
-          }
         } else if (canCreateNewInvoice) {
           actions.push({
             label: "Create invoice",
@@ -1241,7 +1283,7 @@ export default function WorkflowActions({
           icon: Lock,
           onClick: () => setShowCloseDialog(true),
           disabled: closeMutation.isPending,
-          description: "Close work order after customer pickup and payment",
+          description: "Final vehicle handover and closeout after billing is complete",
         });
         break;
 
@@ -1520,9 +1562,7 @@ export default function WorkflowActions({
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Close Work Order</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Confirm customer pickup and close this work order
-            </DialogDescription>
+            
           </DialogHeader>
           <CloseWorkOrderForm
             workOrder={currentWorkOrder}

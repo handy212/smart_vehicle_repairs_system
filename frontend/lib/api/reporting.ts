@@ -38,6 +38,21 @@ export interface DashboardOverview {
       customer: string;
       vehicle: string;
       status: string;
+      estimate_summary?: {
+        id: number;
+        estimate_number: string;
+        status: string;
+        total: string;
+      } | null;
+      invoice_summary?: {
+        id: number;
+        invoice_number: string;
+        status: string;
+        total: string;
+        amount_paid?: string;
+        amount_due?: string;
+        is_paid?: boolean;
+      } | null;
       current_quote_stage?:
         | "waiting_for_stores_quotation"
         | "waiting_for_customer_approval"

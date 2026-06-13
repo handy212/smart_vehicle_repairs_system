@@ -36,8 +36,8 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
     label: "Discontinued (pending invoice)",
     icon: AlertTriangle,
   },
-  { key: "completed", label: "Completed", icon: PartyPopper },
-  { key: "invoiced", label: "Invoiced", icon: Receipt },
+  { key: "completed", label: "Repair Complete", icon: PartyPopper },
+  { key: "invoiced", label: "Ready to Close", icon: Receipt },
   { key: "closed", label: "Closed", icon: Lock },
 ];
 

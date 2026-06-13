@@ -2,9 +2,9 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
@@ -80,9 +80,49 @@ const getTaskHours = (task: ServiceTask) => {
   return 0;
 };
 
+function getTaskExecutionPresentation(task: ServiceTask, parts: WorkOrderPart[]) {
+  const taskParts = parts.filter((part) => part.task === task.id);
+
+  if (task.status !== "pending") {
+    return {
+      badgeVariant: getTaskVariant(task.status),
+      badgeLabel: formatStatus(task.status),
+      canStart: task.status === "pending",
+      helperText: "",
+    };
+  }
+
+  if (taskParts.length === 0) {
+    return {
+      badgeVariant: "warning" as const,
+      badgeLabel: "Pending",
+      canStart: true,
+      helperText: "",
+    };
+  }
+
+  const unresolvedParts = taskParts.filter((part) => !["ready", "installed"].includes(part.status));
+  if (unresolvedParts.length > 0) {
+    return {
+      badgeVariant: "warning" as const,
+      badgeLabel: "Pending | Waiting Allocation",
+      canStart: false,
+      helperText: `Waiting parts: ${unresolvedParts.map((part) => part.part_name).join(", ")}`,
+    };
+  }
+
+  return {
+    badgeVariant: "info" as const,
+    badgeLabel: "Pending | Ready to Start",
+    canStart: true,
+    helperText: "All linked parts are allocated and ready for install.",
+  };
+}
+
 export default function RepairsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const workOrderId = Number(params.id);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -112,6 +152,13 @@ export default function RepairsPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoType, setPhotoType] = useState<"before" | "during" | "after" | "part" | "other">("during");
   const [photoCaption, setPhotoCaption] = useState("");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    if (requestedTab && ["tasks", "parts", "notes", "photos", "readiness"].includes(requestedTab)) {
+      setActiveTab(requestedTab as RepairTab);
+    }
+  }, [searchParams]);
 
   const { data: workOrder, isLoading: workOrderLoading, error: workOrderError } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -415,6 +462,13 @@ export default function RepairsPage() {
   const isApproved = workOrder.status === "approved";
   const isPaused = workOrder.status === "paused";
   const isActive = workOrder.status === "in_progress";
+  const currentQuoteStage = workOrder.current_quote_stage;
+  const waitingForPartsAllocation = currentQuoteStage === "approved_waiting_for_parts";
+  const partsReadyForRepairs =
+    currentQuoteStage === "parts_ready_waiting_for_repairs" ||
+    currentQuoteStage === "approved_waiting_for_repairs" ||
+    currentQuoteStage === "quotation_ready" ||
+    !currentQuoteStage;
   const branchId = typeof workOrder.branch === "object" ? workOrder.branch?.id : workOrder.branch;
   const hasReadinessBlockers = readiness.blockers.length > 0;
 
@@ -431,6 +485,11 @@ export default function RepairsPage() {
             <Badge variant={isActive ? "info" : isPaused ? "warning" : "secondary"} className="capitalize">
               {formatStatus(workOrder.status)}
             </Badge>
+            {workOrder.current_quote_stage_display && isApproved && (
+              <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
+                {workOrder.current_quote_stage_display}
+              </Badge>
+            )}
           </div>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
             {workOrder.vehicle_info || "Vehicle repair"}
@@ -441,7 +500,19 @@ export default function RepairsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {isApproved && (
+          {isApproved && waitingForPartsAllocation && (
+            <>
+              <Button onClick={() => startRepairsMutation.mutate()} disabled={startRepairsMutation.isPending}>
+                <Play className="mr-2 h-4 w-4" />
+                Start Repairs
+              </Button>
+              <Button variant="outline" onClick={() => setActiveTab("parts")}>
+                <Package className="mr-2 h-4 w-4" />
+                Review Parts
+              </Button>
+            </>
+          )}
+          {isApproved && partsReadyForRepairs && (
             <Button onClick={() => startRepairsMutation.mutate()} disabled={startRepairsMutation.isPending}>
               <Play className="mr-2 h-4 w-4" />
               Start Repairs
@@ -495,6 +566,20 @@ export default function RepairsPage() {
         </Card>
       )}
 
+      {isApproved && waitingForPartsAllocation && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="flex items-start gap-3 py-3">
+            <Package className="mt-0.5 h-5 w-5 text-warning" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Some repairs can begin, but some parts are still pending.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Start the ready repair work now. Tasks that still need missing parts will stay blocked until stores allocates or receives them, and the job still cannot be completed until every required part is resolved.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as RepairTab)}>
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="tasks">
@@ -539,6 +624,7 @@ export default function RepairsPage() {
                     <RepairTaskRow
                       key={task.id}
                       task={task}
+                      parts={parts}
                       onStart={() => startTaskMutation.mutate(task.id)}
                       onComplete={() => {
                         setCompleteTask(task);
@@ -942,16 +1028,19 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
 
 function RepairTaskRow({
   task,
+  parts,
   onStart,
   onComplete,
   isBusy,
 }: {
   task: ServiceTask;
+  parts: WorkOrderPart[];
   onStart: () => void;
   onComplete: () => void;
   isBusy: boolean;
 }) {
   const hours = getTaskHours(task);
+  const executionState = getTaskExecutionPresentation(task, parts);
 
   return (
     <div className="rounded-md border border-border p-3">
@@ -959,9 +1048,10 @@ function RepairTaskRow({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-medium text-foreground">{task.description}</h3>
-            <Badge variant={getTaskVariant(task.status)} className="capitalize">{formatStatus(task.status)}</Badge>
+            <Badge variant={executionState.badgeVariant} className="capitalize">{executionState.badgeLabel}</Badge>
           </div>
           {task.detailed_notes && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{task.detailed_notes}</p>}
+          {executionState.helperText && <p className="mt-1 text-xs text-muted-foreground">{executionState.helperText}</p>}
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
             <span>{task.task_type ? formatStatus(task.task_type) : "Repair task"}</span>
             <span>{task.assigned_to_name || "Unassigned"}</span>
@@ -970,9 +1060,9 @@ function RepairTaskRow({
         </div>
         <div className="flex shrink-0 gap-2">
           {task.status === "pending" && (
-            <Button size="sm" variant="outline" onClick={onStart} disabled={isBusy}>
+            <Button size="sm" variant="outline" onClick={onStart} disabled={isBusy || !executionState.canStart}>
               <Play className="mr-2 h-4 w-4" />
-              Start
+              {executionState.canStart ? "Start" : "Waiting Parts"}
             </Button>
           )}
           {task.status === "in_progress" && (

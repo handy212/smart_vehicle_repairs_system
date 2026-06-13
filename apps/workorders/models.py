@@ -963,6 +963,77 @@ class WorkOrder(models.Model):
         
         return unavailable
 
+    def _single_recommendation_part_is_startable(self, part_data):
+        if not isinstance(part_data, dict):
+            return True
+
+        candidate_parts = self.parts.all()
+        part_id = part_data.get('part_id')
+        part_number = part_data.get('part_number')
+        part_name = part_data.get('part_name')
+
+        if part_id:
+            candidate_parts = candidate_parts.filter(inventory_part_id=part_id)
+        elif part_number:
+            candidate_parts = candidate_parts.filter(part_number=part_number)
+        elif part_name:
+            candidate_parts = candidate_parts.filter(part_name__iexact=part_name)
+        else:
+            return False
+
+        return candidate_parts.filter(status__in=['ready', 'installed']).exists()
+
+    def _recommendation_parts_are_startable(self, parts_needed):
+        """
+        Determine whether every required part for a recommendation is ready
+        enough for the linked repair task to begin.
+        """
+        if not parts_needed or not isinstance(parts_needed, list):
+            return True
+
+        for part_data in parts_needed:
+            if not self._single_recommendation_part_is_startable(part_data):
+                return False
+
+        return True
+
+    def has_startable_repair_work(self):
+        """
+        Return True when at least one repair path can genuinely begin now.
+        This allows the work order to start even if some other parts are still
+        pending, while task-level guards continue to block the affected tasks.
+        """
+        for task in self.tasks.filter(is_workflow_task=False).prefetch_related('parts'):
+            task_parts = list(task.parts.all())
+            if not task_parts:
+                return True
+            if all(part.status in ['ready', 'installed'] for part in task_parts):
+                return True
+
+        try:
+            from apps.diagnosis.models import Diagnosis
+            diagnosis = Diagnosis.objects.filter(work_order=self).first()
+        except Exception:
+            diagnosis = None
+
+        if not diagnosis:
+            return False
+
+        recommendations = diagnosis.repair_recommendations.filter(
+            Q(approval_status='approved') | Q(customer_approved=True),
+            quotation_status='quoted',
+            converted_to_task__isnull=True,
+        )
+        for recommendation in recommendations:
+            parts_needed = recommendation.parts_needed if isinstance(recommendation.parts_needed, list) else []
+            if not parts_needed:
+                return True
+            for part_data in parts_needed:
+                if self._single_recommendation_part_is_startable(part_data):
+                    return True
+
+        return False
+
     def approve_pending_recommendations(self, user=None, method='', notes=''):
         """
         Mirror a customer work-order approval onto pending diagnosis recommendations.
@@ -1011,6 +1082,24 @@ class WorkOrder(models.Model):
         self.approval_notes = notes
 
         self.transition_to('approved', user=user)
+
+        try:
+            diagnosis = self.diagnosis
+        except Exception:
+            diagnosis = None
+
+        if (
+            diagnosis
+            and not diagnosis.is_completed
+            and diagnosis.status == 'awaiting_approval'
+        ):
+            diagnosis.complete(requires_approval=True)
+            self.refresh_from_db(fields=[
+                'status',
+                'approved_by_customer',
+                'approved_at',
+                'diagnosis_completed_at',
+            ])
 
         try:
             Estimate = self._meta.apps.get_model('billing', 'Estimate')
@@ -1202,12 +1291,16 @@ class WorkOrder(models.Model):
                 )
         
         unavailable_parts = self.check_parts_availability()
-        if unavailable_parts:
+        if unavailable_parts and not self.has_startable_repair_work():
+            unresolved_names = [item['part'].part_name for item in unavailable_parts[:5]]
+            unresolved_summary = ', '.join(unresolved_names)
+            if len(unavailable_parts) > 5:
+                unresolved_summary += f", +{len(unavailable_parts) - 5} more"
             errors.append(
-                f"{len(unavailable_parts)} required part(s) are not ready for repair. "
-                "Stores must allocate parts before repairs can start."
+                "No repair task can start yet because the first required parts are still pending. "
+                f"Waiting parts: {unresolved_summary}. Allocate or receive at least the parts needed for the first repair tasks."
             )
-        
+
         return len(errors) == 0, errors
     
     def convert_recommendations_to_tasks(self, user=None, recommendation_ids=None, assign_to_technician=True):
@@ -1311,6 +1404,12 @@ class WorkOrder(models.Model):
 
             default_labor_rate = resolve_default_labor_rate()
 
+            def build_task_description(base_description, part_data, total_groups):
+                if total_groups <= 1 or not isinstance(part_data, dict):
+                    return base_description
+                suffix = (part_data.get('part_name') or part_data.get('part_number') or '').strip()
+                return f"{base_description} - {suffix}" if suffix else base_description
+
             def ensure_catalog_part(part_data):
                 inventory_part = None
                 part_id = part_data.get('part_id') or part_data.get('inventory_part')
@@ -1379,164 +1478,128 @@ class WorkOrder(models.Model):
                     'inspect': 'inspection',
                 }
                 task_type = task_type_map.get(rec.recommendation_type, 'repair')
-                
-                # Create ServiceTask from recommendation
-                task = ServiceTask.objects.create(
-                    work_order=self,
-                    task_type=task_type,
-                    description=rec.description,
-                    detailed_notes=f"Converted from repair recommendation: {rec.description}",
-                    status='pending',  # Tasks start as pending, technician will start them
-                    sequence_order=max_sequence + tasks_created + 1,
-                    assigned_to=assigned_user,
-                    estimated_hours=rec.estimated_labor_hours or Decimal('0'),
-                    labor_rate=default_labor_rate,
-                    workflow_phase=None,
-                    is_workflow_task=False,
-                )
-                
-                # Calculate labor cost
-                if task.estimated_hours and task.labor_rate:
-                    task.labor_cost = task.estimated_hours * task.labor_rate
-                    task.save()
-                
-                # Link recommendation to task
-                rec.converted_to_task = task
-                rec.save()
-                
-                tasks_created += 1
-                
-                # Link parts from recommendation to task
-                if rec.parts_needed and isinstance(rec.parts_needed, list):
-                    for part_data in rec.parts_needed:
+                part_groups = [part for part in (rec.parts_needed or []) if isinstance(part, dict)]
+                if not part_groups:
+                    part_groups = [None]
+
+                split_count = len(part_groups)
+                primary_task = None
+
+                for part_data in part_groups:
+                    estimated_hours = rec.estimated_labor_hours or Decimal('0')
+                    if split_count > 1 and estimated_hours:
+                        estimated_hours = (estimated_hours / Decimal(str(split_count))).quantize(Decimal('0.01'))
+
+                    task = ServiceTask.objects.create(
+                        work_order=self,
+                        task_type=task_type,
+                        description=build_task_description(rec.description, part_data, split_count),
+                        detailed_notes=f"Converted from repair recommendation: {rec.description}",
+                        status='pending',
+                        sequence_order=max_sequence + tasks_created + 1,
+                        assigned_to=assigned_user,
+                        estimated_hours=estimated_hours,
+                        labor_rate=default_labor_rate,
+                        workflow_phase=None,
+                        is_workflow_task=False,
+                    )
+
+                    if task.estimated_hours and task.labor_rate:
+                        task.labor_cost = task.estimated_hours * task.labor_rate
+                        task.save()
+
+                    if primary_task is None:
+                        primary_task = task
+
+                    tasks_created += 1
+
+                    if not isinstance(part_data, dict):
+                        continue
+
+                    try:
+                        inventory_part = ensure_catalog_part(part_data)
+                        part_name = part_data.get('part_name', '').strip()
+                        part_number = part_data.get('part_number', '').strip()
+                        if inventory_part:
+                            part_name = inventory_part.name
+                            part_number = inventory_part.part_number
+
                         try:
-                            if not isinstance(part_data, dict):
-                                continue
+                            quantity = Decimal(str(part_data.get('quantity', 1)))
+                        except (ValueError, TypeError, InvalidOperation):
+                            quantity = Decimal('1')
 
-                            inventory_part = ensure_catalog_part(part_data)
-                            part_name = part_data.get('part_name', '').strip()
-                            part_number = part_data.get('part_number', '').strip()
-                            if inventory_part:
-                                part_name = inventory_part.name
-                                part_number = inventory_part.part_number
+                        try:
+                            unit_cost = Decimal(str(part_data.get('unit_cost', 0)))
+                        except (ValueError, TypeError, InvalidOperation):
+                            unit_cost = Decimal('0')
+
+                        if inventory_part and unit_cost <= 0:
+                            unit_cost = inventory_part.cost_price or Decimal('0')
+
+                        if not part_name and not inventory_part:
+                            continue
+
+                        existing_part = None
+                        if inventory_part:
+                            existing_part = self.parts.filter(
+                                inventory_part=inventory_part,
+                                task__isnull=True
+                            ).first()
+
+                        if not existing_part and part_number:
+                            existing_part = self.parts.filter(
+                                part_number=part_number,
+                                task__isnull=True
+                            ).first()
+
+                        if not existing_part:
+                            existing_part = self.parts.filter(
+                                part_name=part_name,
+                                task__isnull=True
+                            ).first()
+
+                        if existing_part:
+                            existing_part.task = task
+                            if inventory_part and not existing_part.inventory_part:
+                                existing_part.inventory_part = inventory_part
+                            if existing_part.status in ['draft', 'pending']:
+                                existing_part.quantity = quantity
+                                existing_part.unit_cost = unit_cost
+                                if not existing_part.part_name:
+                                    existing_part.part_name = part_name
+                                if not existing_part.part_number:
+                                    existing_part.part_number = part_number
+                                if not existing_part.requested_by:
+                                    existing_part.requested_by = user
+                            existing_part.save()
+                            parts_linked += 1
+                        else:
+                            new_part = WorkOrderPart.objects.create(
+                                work_order=self,
+                                task=task,
+                                inventory_part=inventory_part,
+                                part_name=part_name,
+                                part_number=part_number,
+                                quantity=quantity,
+                                unit_cost=unit_cost,
+                                status='pending',
+                                requested_by=user,
+                                description=f"Auto-created from recommendation: {rec.description}"
+                            )
+                            parts_linked += 1
 
                             try:
-                                quantity = Decimal(str(part_data.get('quantity', 1)))
-                            except (ValueError, TypeError, InvalidOperation):
-                                quantity = Decimal('1')
+                                from apps.notifications_app.triggers import notification_triggers
+                                notification_triggers.part_requisition_created(new_part)
+                            except Exception:
+                                pass
+                    except Exception as e:
+                        logger.warning(f"Failed to link part from recommendation {rec.id} to task: {e}")
 
-                            try:
-                                unit_cost = Decimal(str(part_data.get('unit_cost', 0)))
-                            except (ValueError, TypeError, InvalidOperation):
-                                unit_cost = Decimal('0')
-
-                            if inventory_part and unit_cost <= 0:
-                                unit_cost = inventory_part.cost_price or Decimal('0')
-
-                            if not part_name and not inventory_part:
-                                continue
-
-                            # Try to find existing WorkOrderPart by inventory part first, then part number/name.
-                            existing_part = None
-                            if inventory_part:
-                                existing_part = self.parts.filter(
-                                    inventory_part=inventory_part,
-                                    task__isnull=True
-                                ).first()
-
-                                if not existing_part:
-                                    existing_part = self.parts.filter(
-                                        inventory_part=inventory_part
-                                    ).first()
-
-                            if not existing_part and part_number:
-                                existing_part = self.parts.filter(
-                                    part_number=part_number,
-                                    task__isnull=True  # Prefer unlinked parts
-                                ).first()
-                                
-                                if not existing_part:
-                                     existing_part = self.parts.filter(
-                                        part_number=part_number
-                                    ).first()
-                            
-                            if not existing_part:
-                                existing_part = self.parts.filter(
-                                    part_name=part_name,
-                                    task__isnull=True
-                                ).first()
-                                
-                                if not existing_part:
-                                     existing_part = self.parts.filter(
-                                        part_name=part_name
-                                    ).first()
-                            
-                            if existing_part:
-                                # Link existing part to task if not already linked
-                                if not existing_part.task:
-                                    existing_part.task = task
-                                    if inventory_part and not existing_part.inventory_part:
-                                        existing_part.inventory_part = inventory_part
-                                    # If it's a "blank" part (draft/pending), update its specs from recommendation
-                                    if existing_part.status in ['draft', 'pending']:
-                                        existing_part.quantity = quantity
-                                        existing_part.unit_cost = unit_cost
-                                        if not existing_part.part_name:
-                                            existing_part.part_name = part_name
-                                        if not existing_part.part_number:
-                                            existing_part.part_number = part_number
-                                        if not existing_part.requested_by:
-                                            existing_part.requested_by = user
-                                    existing_part.save()
-                                    parts_linked += 1
-                                elif existing_part.task != task:
-                                    # Part is linked to different task - create a NEW part instead
-                                    new_part = WorkOrderPart.objects.create(
-                                        work_order=self,
-                                        task=task,
-                                        inventory_part=inventory_part,
-                                        part_name=part_name,
-                                        part_number=part_number,
-                                        quantity=quantity,
-                                        unit_cost=unit_cost,
-                                        status='pending',
-                                        requested_by=user, # Set requester to user converting task
-                                        description=f"Auto-created from recommendation: {rec.description}"
-                                    )
-                                    parts_linked += 1
-                                    
-                                    # Trigger notification for auto-created part
-                                    try:
-                                        from apps.notifications_app.triggers import notification_triggers
-                                        notification_triggers.part_requisition_created(new_part)
-                                    except Exception:
-                                        pass
-                            else:
-                                # Create NEW part if no existing part found
-                                new_part = WorkOrderPart.objects.create(
-                                    work_order=self,
-                                    task=task,
-                                    inventory_part=inventory_part,
-                                    part_name=part_name,
-                                    part_number=part_number,
-                                    quantity=quantity,
-                                    unit_cost=unit_cost,
-                                    status='pending',
-                                    requested_by=user, # Set requester to user converting task
-                                    description=f"Auto-created from recommendation: {rec.description}"
-                                )
-                                parts_linked += 1
-                                
-                                # Trigger notification for auto-created part
-                                try:
-                                    from apps.notifications_app.triggers import notification_triggers
-                                    notification_triggers.part_requisition_created(new_part)
-                                except Exception:
-                                    pass
-                                
-                        except Exception as e:
-                            # Log error but continue with other parts
-                            logger.warning(f"Failed to link part from recommendation {rec.id} to task: {e}")
+                if primary_task:
+                    rec.converted_to_task = primary_task
+                    rec.save(update_fields=['converted_to_task'])
             
             # Recalculate totals after creating tasks and linking parts
             self.recalculate_totals()

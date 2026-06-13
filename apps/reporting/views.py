@@ -406,6 +406,8 @@ def dashboard_overview(request):
         work_orders_list = []
         for wo in recent_work_orders:
             try:
+                estimate_summary = None
+                invoice_summary = None
                 customer_name = 'Unknown'
                 if wo.customer:
                     if hasattr(wo.customer, 'company_name') and wo.customer.company_name:
@@ -439,12 +441,35 @@ def dashboard_overview(request):
                 except Exception:
                     pass
 
+                try:
+                    estimate = getattr(wo, 'estimate', None)
+                    if estimate:
+                        estimate_summary = {
+                            'id': estimate.id,
+                            'estimate_number': estimate.estimate_number,
+                            'status': estimate.status,
+                            'total': str(estimate.total),
+                        }
+                except Exception:
+                    estimate_summary = None
+
+                try:
+                    from apps.billing.work_order_invoices import get_primary_invoice, invoice_summary_payload
+
+                    invoice = get_primary_invoice(wo)
+                    if invoice:
+                        invoice_summary = invoice_summary_payload(invoice)
+                except Exception:
+                    invoice_summary = None
+
                 work_orders_list.append({
                     'id': wo.id,
                     'wo_number': wo.work_order_number,
                     'customer': customer_name,
                     'vehicle': vehicle_info,
                     'status': wo.status,
+                    'estimate_summary': estimate_summary,
+                    'invoice_summary': invoice_summary,
                     'current_quote_stage': wo.get_current_quote_stage(),
                     'current_quote_stage_display': wo.get_current_quote_stage_display(),
                     'created_at': wo.created_at.isoformat(),

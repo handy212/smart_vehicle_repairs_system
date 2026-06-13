@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
-import { workordersApi } from "@/lib/api/workorders";
 import { reportingApi, type DashboardOverview } from "@/lib/api/reporting";
 import { billingApi } from "@/lib/api/billing";
 import { format } from "date-fns";
@@ -244,6 +243,8 @@ export default function DashboardPage() {
         id: wo.id,
         wo_number: wo.wo_number,
         status: wo.status,
+        estimate_summary: wo.estimate_summary ?? null,
+        invoice_summary: wo.invoice_summary ?? null,
         current_quote_stage: wo.current_quote_stage ?? null,
         current_quote_stage_display: wo.current_quote_stage_display ?? null,
         created_at: wo.created_at,

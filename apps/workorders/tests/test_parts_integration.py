@@ -165,18 +165,19 @@ class PartsIntegrationTests(TestCase):
 
         tasks_created, parts_linked = self.work_order.convert_recommendations_to_tasks(user=self.manager)
 
-        self.assertEqual(tasks_created, 1)
+        self.assertEqual(tasks_created, 2)
         self.assertEqual(parts_linked, 2)
 
-        task = ServiceTask.objects.get(work_order=self.work_order, description='Replace front brakes')
+        brake_task = ServiceTask.objects.get(work_order=self.work_order, description='Replace front brakes - New Brake Pad')
+        rotor_task = ServiceTask.objects.get(work_order=self.work_order, description='Replace front brakes - New Rotor')
         recommendation.refresh_from_db()
-        self.assertEqual(recommendation.converted_to_task_id, task.id)
+        self.assertEqual(recommendation.converted_to_task_id, brake_task.id)
 
         brake_pad = WorkOrderPart.objects.get(work_order=self.work_order, part_number='BP-001')
         rotor = WorkOrderPart.objects.get(work_order=self.work_order, part_number='RT-001')
 
-        self.assertEqual(brake_pad.task, task)
-        self.assertEqual(rotor.task, task)
+        self.assertEqual(brake_pad.task, brake_task)
+        self.assertEqual(rotor.task, rotor_task)
         self.assertEqual(brake_pad.requested_by, self.manager)
         self.assertEqual(brake_pad.status, 'pending')
         self.assertIsNotNone(brake_pad.inventory_part)
@@ -230,7 +231,7 @@ class PartsIntegrationTests(TestCase):
 
         can_start, errors = self.work_order.can_start_work()
         self.assertFalse(can_start)
-        self.assertIn('required part(s) are not ready', '; '.join(errors))
+        self.assertIn('No repair task can start yet', '; '.join(errors))
 
         WorkOrderPart.objects.filter(work_order=self.work_order, part_number='BP-READY').update(status='ready')
 
@@ -328,6 +329,55 @@ class PartsIntegrationTests(TestCase):
             HTTP_X_BRANCH_ID=str(self.branch.id),
         )
         self.assertEqual(start_response.status_code, status.HTTP_200_OK)
+
+    def test_partial_parts_readiness_allows_work_start_but_blocks_affected_task(self):
+        bundled_recommendation = self.create_recommendation(
+            'Service bundle',
+            [
+                {'part_id': self.catalog_part.id, 'part_name': self.catalog_part.name, 'part_number': 'CAT-001', 'quantity': 1},
+                {'part_name': 'Brake Pad Set', 'part_number': 'BP-PENDING', 'quantity': 1, 'unit_cost': 50.0},
+            ],
+            recommendation_type='service',
+        )
+
+        self.work_order.status = 'approved'
+        self.work_order.requires_approval = True
+        self.work_order.approved_by_customer = True
+        self.work_order.approved_at = timezone.now()
+        self.work_order.save()
+
+        self.work_order.convert_recommendations_to_tasks(user=self.manager)
+        WorkOrderPart.objects.filter(work_order=self.work_order, part_number='CAT-001').update(status='ready')
+
+        start_response = self.client.post(
+            reverse('api_workorders:workorder-start-work', args=[self.work_order.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(start_response.status_code, status.HTTP_200_OK)
+
+        ready_task = ServiceTask.objects.get(work_order=self.work_order, description='Service bundle - Catalog Oil Filter')
+        blocked_task = ServiceTask.objects.get(work_order=self.work_order, description='Service bundle - Brake Pad Set')
+
+        ready_task_response = self.client.post(
+            reverse('api_workorders:servicetask-start', args=[ready_task.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(ready_task_response.status_code, status.HTTP_200_OK)
+
+        blocked_task_response = self.client.post(
+            reverse('api_workorders:servicetask-start', args=[blocked_task.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(blocked_task_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Parts must be allocated', blocked_task_response.data['error'])
+        bundled_recommendation.refresh_from_db()
+        self.assertEqual(bundled_recommendation.converted_to_task_id, ready_task.id)
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'in_progress')
 
