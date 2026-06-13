@@ -50,6 +50,8 @@ type TechnicianPerformanceItem = {
   };
 };
 
+const DASHBOARD_TOP_TECHNICIANS_LIMIT = 12;
+
 export default function DashboardPage() {
   const { formatCurrency } = useCurrency();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
@@ -227,6 +229,27 @@ export default function DashboardPage() {
     }));
   }, [lowStockData]);
 
+  const topTechnicianData = useMemo(
+    () =>
+      ((techPerfData?.technicians as TechnicianPerformanceItem[] | undefined) ?? [])
+        .slice(0, DASHBOARD_TOP_TECHNICIANS_LIMIT)
+        .map((t) => ({
+          name: t.technician?.name,
+          role: t.technician?.role,
+          total_jobs: t.metrics?.total_work_orders,
+          completed_jobs: t.metrics?.completed,
+          in_progress_jobs: t.metrics?.in_progress,
+          completion_rate: t.metrics?.total_work_orders
+            ? ((t.metrics.completed ?? 0) / t.metrics.total_work_orders) * 100
+            : 0,
+          avg_completion_days: t.metrics?.average_completion_hours != null
+            ? t.metrics.average_completion_hours / 24
+            : undefined,
+          total_revenue: t.metrics?.revenue,
+        })),
+    [techPerfData]
+  );
+
   const todayLabel = format(
     dashboardData?.today?.date ? new Date(dashboardData.today.date) : new Date(),
     "EEEE, MMMM d"
@@ -274,20 +297,7 @@ export default function DashboardPage() {
         due_date: inv.due_date,
         invoice_date: inv.invoice_date,
       }))}
-      technicianData={(techPerfData?.technicians as TechnicianPerformanceItem[] | undefined)?.map((t) => ({
-        name: t.technician?.name,
-        role: t.technician?.role,
-        total_jobs: t.metrics?.total_work_orders,
-        completed_jobs: t.metrics?.completed,
-        in_progress_jobs: t.metrics?.in_progress,
-        completion_rate: t.metrics?.total_work_orders
-          ? ((t.metrics.completed ?? 0) / t.metrics.total_work_orders) * 100
-          : 0,
-        avg_completion_days: t.metrics?.average_completion_hours != null
-          ? t.metrics.average_completion_hours / 24
-          : undefined,
-        total_revenue: t.metrics?.revenue,
-      }))}
+      technicianData={topTechnicianData}
       revenueChartData={revenueChartRaw?.daily ?? revenueChartRaw}
       onRefresh={handleRefresh}
       todayLabel={todayLabel}

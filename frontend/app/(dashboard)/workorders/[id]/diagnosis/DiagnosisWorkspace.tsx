@@ -896,10 +896,25 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
               {diagnosis.time_logs.map((log: any) => (
                 <div
                   key={log.id}
-                  className="flex items-center justify-between p-3 bg-muted rounded-md border"
+                  className={`flex items-center justify-between rounded-md border p-3 ${
+                    log.stage === "completed"
+                      ? "border-green-200 bg-green-50"
+                      : log.duration_formatted === "In progress"
+                        ? "border-blue-200 bg-blue-50"
+                        : "bg-muted"
+                  }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs ${
+                        log.stage === "completed"
+                          ? "bg-green-100 text-green-700"
+                          : log.duration_formatted === "In progress"
+                            ? "bg-blue-100 text-blue-700"
+                            : ""
+                      }`}
+                    >
                       {log.stage_display || log.stage}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
@@ -921,8 +936,22 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   </div>
                   <div className="flex items-center space-x-2">
                     {log.duration_formatted && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs ${
+                          log.duration_formatted === "In progress"
+                            ? "bg-blue-100 text-blue-700"
+                            : log.stage === "completed"
+                              ? "bg-green-100 text-green-700"
+                              : ""
+                        }`}
+                      >
                         {log.duration_formatted}
+                      </Badge>
+                    )}
+                    {log.stage === "completed" && (
+                      <Badge className="text-xs bg-green-600 hover:bg-green-600">
+                        Completed
                       </Badge>
                     )}
                     {log.notes && (

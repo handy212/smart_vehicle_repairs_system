@@ -791,20 +791,20 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         if work_order and work_order.branch_id and technician.branch_id != work_order.branch_id:
             raise serializers.ValidationError({field_name: "Assigned technician must belong to the same branch as the work order."})
 
-    def validate(self, data):
-        work_order = self.instance
-        primary_technician = data.get('primary_technician')
-        assigned_technicians = data.get('assigned_technicians')
+    def _validate_branch_service_coordinator(self, coordinator, work_order):
+        if not coordinator or not work_order or not work_order.branch_id:
+            return
 
-        if primary_technician:
-            self._validate_branch_technician(primary_technician, work_order, 'primary_technician')
+        if coordinator.role == 'service_coordinator' and coordinator.branch_id != work_order.branch_id:
+            raise serializers.ValidationError({
+                'service_coordinator': "Service Coordinator must belong to the same branch as the work order."
+            })
 
-        if assigned_technicians is not None:
-            for technician in assigned_technicians:
-                self._validate_branch_technician(technician, work_order, 'assigned_technicians')
+        if coordinator.role == 'manager' and not coordinator.has_branch_access(work_order.branch):
+            raise serializers.ValidationError({
+                'service_coordinator': "Selected manager does not have access to this work order branch."
+            })
 
-        return data
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Override the queryset for service_coordinator to include all users
@@ -831,10 +831,26 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         return user
         
     def validate(self, data):
+        work_order = self.instance
+
         if self.instance and self.instance.status == 'closed':
             raise serializers.ValidationError(
                 "Closed work orders cannot be edited."
             )
+
+        primary_technician = data.get('primary_technician')
+        assigned_technicians = data.get('assigned_technicians')
+        service_coordinator = data.get('service_coordinator')
+
+        if primary_technician:
+            self._validate_branch_technician(primary_technician, work_order, 'primary_technician')
+
+        if assigned_technicians is not None:
+            for technician in assigned_technicians:
+                self._validate_branch_technician(technician, work_order, 'assigned_technicians')
+
+        if service_coordinator:
+            self._validate_branch_service_coordinator(service_coordinator, work_order)
 
         # Validate odometer reading
         odometer_out = data.get('odometer_out')
@@ -859,10 +875,13 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         if assigned_technicians is not None:
             for technician in assigned_technicians:
                 self._validate_branch_technician(technician, instance, 'assigned_technicians')
+
+        new_service_coordinator = validated_data.get('service_coordinator')
+        if new_service_coordinator:
+            self._validate_branch_service_coordinator(new_service_coordinator, instance)
         
         # Check if service_coordinator is being assigned/changed (before updating)
         old_service_coordinator_id = instance.service_coordinator.id if instance.service_coordinator else None
-        new_service_coordinator = validated_data.get('service_coordinator')
         # After validation, service_coordinator will be a User instance
         new_service_coordinator_id = new_service_coordinator.id if new_service_coordinator and hasattr(new_service_coordinator, 'id') else None
         

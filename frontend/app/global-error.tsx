@@ -17,8 +17,7 @@ export default function GlobalError({
       return;
     }
 
-    const moduleName = "@sentry/nextjs";
-    void import(moduleName).then((Sentry) => {
+    void import("@sentry/nextjs").then((Sentry) => {
       Sentry.captureException(error);
     });
   }, [error]);

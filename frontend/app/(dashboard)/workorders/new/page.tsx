@@ -58,7 +58,7 @@ const workOrderSchema = z.object({
   service_bundle: z.number().optional(),
 });
 
-type WorkOrderFormData = z.infer<typeof workOrderSchema>;
+type WorkOrderFormData = z.input<typeof workOrderSchema>;
 
 // Predefined common vehicle concerns
 const COMMON_CONCERNS = [

@@ -872,6 +872,12 @@ class RepairRecommendation(models.Model):
             self.quoted_by = None
 
         self.estimated_total_cost = self.estimated_parts_cost + self.estimated_labor_cost
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None:
+            kwargs['update_fields'] = list(set(update_fields) | {
+                'customer_approved',
+                'estimated_total_cost',
+            })
         super().save(*args, **kwargs)
     
     def approve(self):

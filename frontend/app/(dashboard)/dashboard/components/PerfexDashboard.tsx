@@ -1031,7 +1031,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
             className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30 print:hidden">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <UserCheck className="h-4 w-4 text-primary" />
-              Technician Performance
+              Top Technician Performance
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                 {technicianData.length}
               </span>

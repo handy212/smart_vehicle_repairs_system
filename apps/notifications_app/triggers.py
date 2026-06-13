@@ -44,6 +44,16 @@ class NotificationTriggers:
         elif vehicle:
             return str(vehicle)
         return "N/A"
+
+    def _user_has_branch_access(self, user, branch):
+        """Check whether a user should receive a branch-scoped staff notification."""
+        if not user:
+            return False
+        if branch is None:
+            return True
+        if hasattr(user, 'has_branch_access'):
+            return user.has_branch_access(branch)
+        return False
     
     def _get_company_name(self):
         """Get company name from settings"""
@@ -74,6 +84,43 @@ class NotificationTriggers:
         base = self._get_default_context()
         base.update(context)
         return enrich_money_context(base)
+
+    def _create_notification_for_channels(
+        self,
+        *,
+        recipient,
+        notification_type,
+        channels,
+        priority,
+        title,
+        message,
+        data,
+        related_object_type,
+        related_object_id,
+        template_type=None,
+    ):
+        """Create and send one notification per channel."""
+        if not recipient:
+            return []
+
+        notifications = []
+        for channel in channels:
+            template = self._get_template(template_type, channel) if template_type else None
+            notification = Notification.objects.create(
+                recipient=recipient,
+                notification_type=notification_type,
+                channel=channel,
+                priority=priority,
+                template=template,
+                title=title,
+                message=message,
+                data=data,
+                related_object_type=related_object_type,
+                related_object_id=related_object_id,
+            )
+            self.service.send_notification(notification)
+            notifications.append(notification)
+        return notifications
     
     # ==================== APPOINTMENT NOTIFICATIONS ====================
     
@@ -83,7 +130,10 @@ class NotificationTriggers:
         if appointment.created_by == appointment.customer.user:
             # Notify admins/managers for now
             from apps.accounts.models import User
-            recipients = User.objects.filter(role__in=['admin', 'manager', 'receptionist'])
+            recipients = [
+                user for user in User.objects.filter(role__in=['admin', 'manager', 'receptionist'])
+                if self._user_has_branch_access(user, appointment.branch)
+            ]
             
             customer_name = self._build_customer_name(appointment.customer)
             vehicle_display = self._build_vehicle_display(appointment.vehicle)
@@ -397,61 +447,59 @@ We'll keep you updated on the progress.'''
         if template and template.body:
             message = self.service._render_template(template.body, context)
         
-        notification = Notification.objects.create(
+        self._create_notification_for_channels(
             recipient=work_order.customer.user,
             notification_type='work_order',
-            channel='email',
+            channels=['email', 'in_app'],
             priority='normal',
-            template=template,
             title=title,
             message=message,
             data=context,
             related_object_type='work_order',
-            related_object_id=work_order.id
+            related_object_id=work_order.id,
+            template_type='work_order_created',
         )
-        self.service.send_notification(notification)
     
     def work_order_approved(self, work_order):
         """Notify staff when work order is approved by customer"""
-        # Notify primary technician
-        if work_order.primary_technician:
-            template = self._get_template('work_order_approved', 'in_app')
-            customer_name = self._build_customer_name(work_order.customer)
-            vehicle_display = self._build_vehicle_display(work_order.vehicle)
-            
-            title = f'Work Order Approved - {work_order.work_order_number}'
-            message = f'''Customer has approved work order {work_order.work_order_number}.
+        customer_name = self._build_customer_name(work_order.customer)
+        vehicle_display = self._build_vehicle_display(work_order.vehicle)
+        context = self._get_default_context()
+        context.update({
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'customer_name': customer_name,
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'status': work_order.get_status_display(),
+        })
+
+        title = f'Work Order Approved - {work_order.work_order_number}'
+        message = f'''Customer has approved work order {work_order.work_order_number}.
 
 Vehicle: {vehicle_display}
 Customer: {customer_name}
 
 You can now start work.'''
-            # In-app notifications typically don't use email templates, but we can prepare message
-            if template and template.body:
-                message = self.service._render_template(template.body, {
-                    'work_order_number': work_order.work_order_number,
-                    'vehicle_display': vehicle_display,
-                    'customer_name': customer_name,
-                })
-            
-            notification = Notification.objects.create(
-                recipient=work_order.primary_technician,
+
+        for recipient in {
+            work_order.primary_technician,
+            work_order.service_coordinator,
+        } | set(work_order.assigned_technicians.all()):
+            if not recipient:
+                continue
+            self._create_notification_for_channels(
+                recipient=recipient,
                 notification_type='work_order',
-                channel='in_app',
+                channels=['email', 'in_app'],
                 priority='high',
-                template=None,  # In-app notifications don't typically use email templates
                 title=title,
                 message=message,
-                data={
-                    'work_order_id': work_order.id,
-                    'work_order_number': work_order.work_order_number,
-                    'customer_name': customer_name,
-                    'vehicle_display': vehicle_display,
-                },
+                data=context,
                 related_object_type='work_order',
-                related_object_id=work_order.id
+                related_object_id=work_order.id,
+                template_type='work_order_approved',
             )
-            self.service.send_notification(notification)
     
     def work_order_completed(self, work_order):
         """Notify customer when work order is completed"""
@@ -482,19 +530,18 @@ You can now start work.'''
         if template and template.body:
             message = self.service._render_template(template.body, context)
         
-        notification = Notification.objects.create(
+        self._create_notification_for_channels(
             recipient=work_order.customer.user,
             notification_type='work_order',
-            channel='email',
+            channels=['email', 'in_app'],
             priority='normal',
-            template=template,
             title=title,
             message=message,
             data=context,
             related_object_type='work_order',
-            related_object_id=work_order.id
+            related_object_id=work_order.id,
+            template_type='work_order_completed',
         )
-        self.service.send_notification(notification)
     
     def work_order_requires_approval(self, work_order):
         """Notify customer that work order requires their approval"""
@@ -536,19 +583,18 @@ Please review and approve to proceed with repairs.'''
             except:
                 pass  # Fall back to default message if template rendering fails
         
-        notification = Notification.objects.create(
+        self._create_notification_for_channels(
             recipient=work_order.customer.user,
             notification_type='work_order',
-            channel='email',
+            channels=['email', 'in_app'],
             priority='high',
-            template=template,  # Use template if available
             title=title,
             message=message,
             data=context,
             related_object_type='work_order',
-            related_object_id=work_order.id
+            related_object_id=work_order.id,
+            template_type='work_order_created',
         )
-        self.service.send_notification(notification)
     
     def work_order_started(self, work_order):
         """Notify technicians when work order starts"""
@@ -559,10 +605,10 @@ Please review and approve to proceed with repairs.'''
         technicians.extend(work_order.assigned_technicians.all())
         
         for tech in set(technicians):  # Remove duplicates
-            notification = Notification.objects.create(
+            self._create_notification_for_channels(
                 recipient=tech,
                 notification_type='work_order',
-                channel='in_app',
+                channels=['email', 'in_app'],
                 priority='normal',
                 title=f'Work Started - {work_order.work_order_number}',
                 message=f'''Work order {work_order.work_order_number} has started.
@@ -576,18 +622,17 @@ You can now begin work on this order.''',
                     'work_order_number': work_order.work_order_number,
                 },
                 related_object_type='work_order',
-                related_object_id=work_order.id
+                related_object_id=work_order.id,
             )
-            self.service.send_notification(notification)
     
     def work_order_paused(self, work_order, reason=''):
         """Notify when work order is paused"""
         # Notify customer if they're waiting
         if work_order.is_customer_waiting and work_order.customer.user:
-            notification = Notification.objects.create(
+            self._create_notification_for_channels(
                 recipient=work_order.customer.user,
                 notification_type='work_order',
-                channel='email',
+                channels=['email', 'in_app'],
                 priority='normal',
                 title=f'Work Order Paused - {work_order.work_order_number}',
                 message=f'''Work on your vehicle has been temporarily paused.
@@ -602,9 +647,8 @@ We'll resume work shortly.''',
                     'work_order_number': work_order.work_order_number,
                 },
                 related_object_type='work_order',
-                related_object_id=work_order.id
+                related_object_id=work_order.id,
             )
-            self.service.send_notification(notification)
     
     def work_order_quality_check_failed(self, work_order):
         """Notify when quality check fails"""
@@ -615,10 +659,10 @@ We'll resume work shortly.''',
         technicians.extend(work_order.assigned_technicians.all())
         
         for tech in set(technicians):
-            notification = Notification.objects.create(
+            self._create_notification_for_channels(
                 recipient=tech,
                 notification_type='work_order',
-                channel='in_app',
+                channels=['email', 'in_app'],
                 priority='high',
                 title=f'Quality Check Failed - {work_order.work_order_number}',
                 message=f'''Quality check failed for work order {work_order.work_order_number}.
@@ -632,9 +676,8 @@ Please review and make necessary corrections.''',
                     'work_order_number': work_order.work_order_number,
                 },
                 related_object_type='work_order',
-                related_object_id=work_order.id
+                related_object_id=work_order.id,
             )
-            self.service.send_notification(notification)
     
     def work_order_invoiced(self, work_order):
         """Notify customer when work order is invoiced"""
@@ -694,7 +737,7 @@ Please review and make payment when ready.'''
         
         
         # Determine enabled channels
-        channels = ['email']
+        channels = ['email', 'in_app']
         
         # Check if WhatsApp is enabled globally and for the user
         whatsapp_settings = get_whatsapp_settings()
@@ -728,7 +771,10 @@ Please review and make payment when ready.'''
         # Notify manager and assigned technicians
         from apps.accounts.models import User
         
-        managers = User.objects.filter(role='manager')
+        managers = [
+            user for user in User.objects.filter(role='manager')
+            if self._user_has_branch_access(user, work_order.branch)
+        ]
         technicians = []
         if work_order.primary_technician:
             technicians.append(work_order.primary_technician)
@@ -737,10 +783,10 @@ Please review and make payment when ready.'''
         recipients = list(managers) + list(set(technicians))
         
         for recipient in recipients:
-            notification = Notification.objects.create(
+            self._create_notification_for_channels(
                 recipient=recipient,
                 notification_type='work_order',
-                channel='in_app',
+                channels=['email', 'in_app'],
                 priority='high',
                 title=f'Work Order Overdue - {work_order.work_order_number}',
                 message=f'''Work order {work_order.work_order_number} is overdue.
@@ -755,9 +801,8 @@ Please review and update status.''',
                     'work_order_number': work_order.work_order_number,
                 },
                 related_object_type='work_order',
-                related_object_id=work_order.id
+                related_object_id=work_order.id,
             )
-            self.service.send_notification(notification)
     
     def work_order_service_coordinator_assigned(self, work_order, service_coordinator):
         """Notify service coordinator when assigned to a work order"""
@@ -770,11 +815,10 @@ Please review and update status.''',
         # Get vehicle info
         vehicle_info = f"{work_order.vehicle.year} {work_order.vehicle.make} {work_order.vehicle.model}" if work_order.vehicle else "N/A"
         
-        # Create email notification
-        email_notification = Notification.objects.create(
+        self._create_notification_for_channels(
             recipient=service_coordinator,
             notification_type='work_order',
-            channel='email',
+            channels=['email', 'in_app'],
             priority='normal',
             title=f'Assigned as Service Coordinator - {work_order.work_order_number}',
             message=f'''You have been assigned as the Service Coordinator for work order {work_order.work_order_number}.
@@ -794,9 +838,8 @@ Please review the work order and coordinate the diagnosis process.''',
                 'status': work_order.status,
             },
             related_object_type='work_order',
-            related_object_id=work_order.id
+            related_object_id=work_order.id,
         )
-        self.service.send_notification(email_notification)
 
     # ==================== VEHICLE/SERVICE NOTIFICATIONS ====================
 
@@ -2886,12 +2929,11 @@ Please bring your identification and payment method when picking up your vehicle
                 'company_name': self._get_company_name(),
             })
         
-        notification = Notification.objects.create(
+        self._create_notification_for_channels(
             recipient=gate_pass.customer.user,
             notification_type='gatepass',
-            channel='email',
+            channels=['email', 'in_app'],
             priority='high',
-            template=template,
             title=title,
             message=message,
             data={
@@ -2906,9 +2948,9 @@ Please bring your identification and payment method when picking up your vehicle
                 'branch_name': branch_name,
             },
             related_object_type='gatepass',
-            related_object_id=gate_pass.id
+            related_object_id=gate_pass.id,
+            template_type='gate_pass_created',
         )
-        self.service.send_notification(notification)
     
     def gate_pass_issued(self, gate_pass):
         """Notify customer when gate pass is officially issued"""
@@ -2970,12 +3012,11 @@ Please bring your identification and payment method when picking up your vehicle
                 'company_name': self._get_company_name(),
             })
         
-        notification = Notification.objects.create(
+        self._create_notification_for_channels(
             recipient=gate_pass.customer.user,
             notification_type='gatepass',
-            channel='email',
+            channels=['email', 'in_app'],
             priority='high',
-            template=template,
             title=title,
             message=message,
             data={
@@ -2992,9 +3033,9 @@ Please bring your identification and payment method when picking up your vehicle
                 'issued_by_name': issued_by_name,
             },
             related_object_type='gatepass',
-            related_object_id=gate_pass.id
+            related_object_id=gate_pass.id,
+            template_type='gate_pass_issued',
         )
-        self.service.send_notification(notification)
 
     # ==================== FIXED ASSET ACQUISITIONS ====================
 

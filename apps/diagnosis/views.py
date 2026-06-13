@@ -877,16 +877,6 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
         except ValueError as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            notification_triggers.work_order_requires_approval(work_order)
-        except Exception as exc:
-            import logging
-            logging.getLogger(__name__).warning(
-                "Failed to send diagnosis approval notification: %s",
-                exc,
-                exc_info=True,
-            )
-
         serializer = self.get_serializer(diagnosis)
         return Response({
             'message': 'Diagnosis sent for customer approval',

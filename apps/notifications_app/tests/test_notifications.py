@@ -9,7 +9,6 @@ from django.test import TestCase
 from django.test import override_settings
 from django.contrib.auth import get_user_model
 from apps.notifications_app.triggers import NotificationTriggers
-from apps.notifications_app.triggers import NotificationTriggers
 from apps.notifications_app.models import Notification, NotificationTemplate
 from apps.inventory.models import PurchaseOrder, Transfer, Part, Supplier, PartCategory
 from apps.branches.models import Branch
@@ -19,6 +18,8 @@ from apps.vehicles.models import Vehicle
 from apps.vehicles.models import VehicleServiceSchedule, ServiceType
 from apps.billing.models import Invoice
 from apps.notifications_app.models import NotificationPreference
+from apps.workorders.models import WorkOrder
+from apps.gatepass.models import GatePass
 
 User = get_user_model()
 
@@ -328,3 +329,181 @@ class InvoiceReminderTriggerTest(TestCase):
         self.assertEqual(notification.notification_type, 'invoice')
         self.assertIn('OVERDUE', notification.message)
         mock_send_notification.assert_called_once()
+
+
+class WorkOrderStageNotificationTest(TestCase):
+    def setUp(self):
+        self.manager = User.objects.create_user(
+            username='wo_manager',
+            email='wo.manager@example.com',
+            password='password123',
+            role='manager',
+        )
+        self.technician = User.objects.create_user(
+            username='wo_tech',
+            email='wo.tech@example.com',
+            password='password123',
+            role='technician',
+        )
+        self.customer_user = User.objects.create_user(
+            username='wo_customer',
+            email='wo.customer@example.com',
+            password='password123',
+            role='customer',
+            phone='233244000111',
+        )
+        self.branch = Branch.objects.create(
+            name='Notifications Branch',
+            code='NBR',
+            created_by=self.manager,
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Honda',
+            model='Civic',
+            year=2022,
+            vin='2HGEJ6674YH123456',
+            license_plate='NOT123',
+            current_mileage=21000,
+            engine_type='gasoline',
+            transmission_type='automatic',
+        )
+        self.work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            created_by=self.manager,
+            primary_technician=self.technician,
+            odometer_in=21000,
+            customer_concerns='Brake noise',
+            status='draft',
+            work_order_number='WO-NOTIFY-001',
+        )
+        Notification.objects.all().delete()
+        self.triggers = NotificationTriggers()
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_work_order_requires_approval_creates_email_and_in_app(self, mock_send):
+        mock_send.return_value = True
+
+        self.triggers.work_order_requires_approval(self.work_order)
+
+        notifications = Notification.objects.filter(
+            recipient=self.customer_user,
+            related_object_type='work_order',
+            related_object_id=self.work_order.id,
+        )
+        self.assertEqual(notifications.count(), 2)
+        self.assertSetEqual(set(notifications.values_list('channel', flat=True)), {'email', 'in_app'})
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_work_order_approved_creates_email_and_in_app_for_technician(self, mock_send):
+        mock_send.return_value = True
+
+        self.triggers.work_order_approved(self.work_order)
+
+        notifications = Notification.objects.filter(
+            recipient=self.technician,
+            related_object_type='work_order',
+            related_object_id=self.work_order.id,
+        )
+        self.assertEqual(notifications.count(), 2)
+        self.assertSetEqual(set(notifications.values_list('channel', flat=True)), {'email', 'in_app'})
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_status_transition_to_awaiting_approval_creates_single_pair(self, mock_send):
+        mock_send.return_value = True
+
+        self.work_order.status = 'awaiting_approval'
+        self.work_order.save(update_fields=['status'])
+
+        notifications = Notification.objects.filter(
+            recipient=self.customer_user,
+            related_object_type='work_order',
+            related_object_id=self.work_order.id,
+        )
+        self.assertEqual(notifications.count(), 2)
+        self.assertSetEqual(set(notifications.values_list('channel', flat=True)), {'email', 'in_app'})
+
+
+class GatePassNotificationTest(TestCase):
+    def setUp(self):
+        self.manager = User.objects.create_user(
+            username='gp_manager',
+            email='gp.manager@example.com',
+            password='password123',
+            role='manager',
+        )
+        self.customer_user = User.objects.create_user(
+            username='gp_customer',
+            email='gp.customer@example.com',
+            password='password123',
+            role='customer',
+            phone='233244000222',
+        )
+        self.branch = Branch.objects.create(
+            name='Gate Pass Branch',
+            code='GPN',
+            created_by=self.manager,
+        )
+        self.customer = Customer.objects.create(user=self.customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='RAV4',
+            year=2023,
+            vin='JTMY1RFV7PD123456',
+            license_plate='GPN123',
+            current_mileage=9000,
+            engine_type='gasoline',
+            transmission_type='automatic',
+        )
+        self.work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            created_by=self.manager,
+            odometer_in=9000,
+            status='closed',
+            work_order_number='WO-GATE-001',
+        )
+        self.gate_pass = GatePass.objects.create(
+            work_order=self.work_order,
+            branch=self.branch,
+            vehicle=self.vehicle,
+            customer=self.customer,
+            issued_by=self.manager,
+            picked_up_by_customer=True,
+        )
+        Notification.objects.all().delete()
+        self.triggers = NotificationTriggers()
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_gate_pass_created_creates_email_and_in_app(self, mock_send):
+        mock_send.return_value = True
+
+        self.triggers.gate_pass_created(self.gate_pass)
+
+        notifications = Notification.objects.filter(
+            recipient=self.customer_user,
+            related_object_type='gatepass',
+            related_object_id=self.gate_pass.id,
+        )
+        self.assertEqual(notifications.count(), 2)
+        self.assertSetEqual(set(notifications.values_list('channel', flat=True)), {'email', 'in_app'})
+
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_gate_pass_issued_creates_email_and_in_app(self, mock_send):
+        mock_send.return_value = True
+
+        self.gate_pass.issue(user=self.manager)
+        self.triggers.gate_pass_issued(self.gate_pass)
+
+        notifications = Notification.objects.filter(
+            recipient=self.customer_user,
+            related_object_type='gatepass',
+            related_object_id=self.gate_pass.id,
+        )
+        self.assertEqual(notifications.count(), 2)
+        self.assertSetEqual(set(notifications.values_list('channel', flat=True)), {'email', 'in_app'})

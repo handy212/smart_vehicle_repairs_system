@@ -1369,16 +1369,6 @@ def request_approval(request, pk):
             created_by=request.user
         )
         
-        # Send notification to customer for approval
-        try:
-            from apps.notifications_app.triggers import notification_triggers
-            notification_triggers.work_order_requires_approval(workorder)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(
-                "Failed to send approval request notification: %s", e, exc_info=True
-            )
-
         return JsonResponse({
             'success': True,
             'message': f'Estimate #{estimate.estimate_number} submitted for customer approval'

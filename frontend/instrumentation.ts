@@ -5,14 +5,12 @@ export async function register() {
     return;
   }
 
-  const sentryServerConfigModule = "./sentry.server.config";
-
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import(sentryServerConfigModule);
+    await import("./sentry.server.config");
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {
-    await import(sentryServerConfigModule);
+    await import("./sentry.server.config");
   }
 }
 
@@ -23,7 +21,6 @@ export async function onRequestError(
     return;
   }
 
-  const moduleName = "@sentry/nextjs";
-  const Sentry = await import(moduleName);
+  const Sentry = await import("@sentry/nextjs");
   return (Sentry.captureRequestError as (...params: unknown[]) => unknown)(...args);
 }

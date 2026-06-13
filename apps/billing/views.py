@@ -277,7 +277,8 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
             queryset, 
             self.request.user, 
             request=self.request, 
-            use_active_branch=not show_all
+            use_active_branch=not show_all,
+            include_unassigned=True,
         )
         
         # Date range filtering for estimates

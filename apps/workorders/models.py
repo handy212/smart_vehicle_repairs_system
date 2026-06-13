@@ -870,24 +870,8 @@ class WorkOrder(models.Model):
         return True
     
     def _send_status_notification(self, new_status, old_status):
-        """Send appropriate notification based on status change"""
-        try:
-            from apps.notifications_app.triggers import notification_triggers
-            
-            if new_status == 'in_progress' and old_status != 'in_progress':
-                notification_triggers.work_order_started(self)
-            elif new_status == 'paused':
-                notification_triggers.work_order_paused(self)
-            elif new_status == 'quality_check':
-                # Quality check notification will be sent when QC is performed
-                pass
-            elif new_status == 'completed' and old_status != 'completed':
-                notification_triggers.work_order_completed(self)
-            elif new_status == 'invoiced':
-                notification_triggers.work_order_invoiced(self)
-        except Exception as e:
-            # Don't fail the transition if notification fails
-            logger.error(f"Failed to send notification for work order {self.id}: {e}")
+        """Work order stage notifications are handled centrally by post-save signals."""
+        return
     
     def _update_service_schedules(self):
         """
@@ -1221,8 +1205,8 @@ class WorkOrder(models.Model):
             return 'waiting_for_stores_quotation'
 
         if active_recommendations.filter(
-            approval_status='pending_approval',
             quotation_status='quoted',
+            customer_approved=False,
         ).exists():
             return 'waiting_for_customer_approval'
 
@@ -1336,6 +1320,7 @@ class WorkOrder(models.Model):
             if len(unavailable_parts) > 5:
                 unresolved_summary += f", +{len(unavailable_parts) - 5} more"
             errors.append(
+                f"{len(unavailable_parts)} required part(s) are not ready. "
                 "No repair task can start yet because the first required parts are still pending. "
                 f"Waiting parts: {unresolved_summary}. Allocate or receive at least the parts needed for the first repair tasks."
             )

@@ -2172,12 +2172,6 @@ class PublicWorkOrderViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
                 notes=approval_notes,
             )
 
-            # Notify
-            try:
-                notification_triggers.work_order_approved(work_order)
-            except Exception:
-                 pass # Log error
-
             return Response({'status': 'approved'})
             
         except ValidationError as e:

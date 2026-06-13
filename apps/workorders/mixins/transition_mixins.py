@@ -559,15 +559,6 @@ class WorkOrderStateTransitionMixin:
             )
             recommendations_approved = 0
             
-            # Send approval notification to technician
-            try:
-                notification_triggers.work_order_approved(work_order)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(
-                    "Failed to send work order approved notification: %s", e, exc_info=True
-                )
-            
             serializer = self.get_serializer(work_order)
             response_data = serializer.data
             response_data['recommendations_approved'] = recommendations_approved
@@ -657,15 +648,6 @@ class WorkOrderStateTransitionMixin:
             
             # Transition work order status
             work_order.transition_to('awaiting_approval', user=request.user)
-            
-            # Send approval request notification
-            try:
-                notification_triggers.work_order_requires_approval(work_order)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(
-                    "Failed to send approval request notification: %s", e, exc_info=True
-                )
             
             serializer = self.get_serializer(work_order)
             return Response({
