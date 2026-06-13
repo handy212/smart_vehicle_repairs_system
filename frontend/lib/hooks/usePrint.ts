@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { isAxiosError } from 'axios';
 import apiClient from '@/lib/api/client';
-import { getAccessToken } from '@/lib/utils/token';
-import { useBranchStore } from '@/store/branchStore';
 
 interface PrintOptions {
     documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt' | 'gate_pass' | 'credit_note' | 'bill';
@@ -114,27 +112,11 @@ export function usePrint() {
                     endpoint = `/billing/${documentType}s/${documentId}/pdf/`;
             }
 
-            const token = getAccessToken();
-            const headers: Record<string, string> = {
-                'X-Branch-ID': useBranchStore.getState().activeBranchId?.toString() || '',
-            };
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${endpoint}`,
-                {
-                    credentials: 'include',
-                    headers,
-                }
-            );
+            const response = await apiClient.get<Blob>(endpoint, {
+                responseType: 'blob',
+            });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                throw new Error(errorData.error || 'Failed to generate PDF');
-            }
-
-            const blob = await response.blob();
+            const blob = response.data;
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -144,9 +126,28 @@ export function usePrint() {
             URL.revokeObjectURL(url);
             document.body.removeChild(a);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to download PDF';
+            let errorMessage = 'Failed to download PDF';
+            if (isAxiosError(err) && err.response) {
+                const data = err.response.data;
+                if (data instanceof Blob) {
+                    try {
+                        const text = await data.text();
+                        const parsed = JSON.parse(text) as { error?: string; detail?: string };
+                        errorMessage = parsed.error || parsed.detail || errorMessage;
+                    } catch {
+                        errorMessage = err.message || errorMessage;
+                    }
+                } else if (data && typeof data === 'object') {
+                    const body = data as { error?: string; detail?: string };
+                    errorMessage = body.error || body.detail || err.message || errorMessage;
+                } else {
+                    errorMessage = err.message || errorMessage;
+                }
+            } else if (err instanceof Error) {
+                errorMessage = err.message;
+            }
             setError(errorMessage);
-            throw err;
+            throw new Error(errorMessage);
         } finally {
             setIsDownloading(false);
         }

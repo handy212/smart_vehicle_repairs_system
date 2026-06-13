@@ -205,14 +205,16 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
           >
             <PremiumIcons.Eye className="w-3 h-3" />
           </Link>
-          <Link
-            href={`/workorders/${workOrder.id}/edit`}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center justify-center w-6 h-6 border border-border text-muted-foreground rounded hover:border-primary hover:text-primary transition-all"
-            title="Edit"
-          >
-            <PremiumIcons.Edit className="w-3 h-3" />
-          </Link>
+          {workOrder.status !== "closed" && (
+            <Link
+              href={`/workorders/${workOrder.id}/edit`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center justify-center w-6 h-6 border border-border text-muted-foreground rounded hover:border-primary hover:text-primary transition-all"
+              title="Edit"
+            >
+              <PremiumIcons.Edit className="w-3 h-3" />
+            </Link>
+          )}
         </div>
       </div>
     </div>

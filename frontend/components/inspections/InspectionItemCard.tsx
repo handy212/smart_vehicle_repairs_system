@@ -19,6 +19,7 @@ import {
     AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMediaUrl } from "@/lib/api/utils";
 import Image from "next/image";
 import { useRef } from "react";
 
@@ -275,7 +276,7 @@ export function InspectionItemCard({
                         {result.photos.map((photo: InspectionPhoto) => (
                             <div key={photo.id} className="relative group w-16 h-16 rounded overflow-hidden border border-border">
                                 <Image
-                                    src={photo.image}
+                                    src={getMediaUrl(photo.image)}
                                     alt="Inspection"
                                     fill
                                     className="object-cover"

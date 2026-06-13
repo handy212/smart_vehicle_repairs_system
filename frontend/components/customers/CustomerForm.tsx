@@ -301,7 +301,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                         Primary contact
                                     </p>
                                     <p className="text-xs text-muted-foreground -mt-2">
-                                        Account login and notifications use this person&apos;s details.
+                                        Account login and notifications use this person&apos;s details, and this person is saved automatically under Contacts.
                                     </p>
                                     <div className="grid sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
@@ -325,10 +325,10 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                             {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
                                         </div>
                                         <div className="space-y-2 sm:col-span-2">
-                                            <Label htmlFor="contact_person_name">Contact display name</Label>
+                                            <Label htmlFor="contact_person_name">Contact display name (optional)</Label>
                                             <Input
                                                 id="contact_person_name"
-                                                placeholder="e.g. Jane Smith, Fleet Manager"
+                                                placeholder="Defaults to the contact's full name if left blank"
                                                 {...register("contact_person_name")}
                                             />
                                         </div>

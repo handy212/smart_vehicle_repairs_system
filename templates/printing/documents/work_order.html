@@ -8,317 +8,679 @@
 
 {% block document_number %}{{ document.work_order_number }}{% endblock %}
 
+{% block extra_styles %}
+<style>
+    .wo-banner {
+        border: 1px solid #dbe3ef;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: #f8fafc;
+    }
+
+    .wo-banner-grid {
+        display: table;
+        width: 100%;
+    }
+
+    .wo-banner-left,
+    .wo-banner-right {
+        display: table-cell;
+        vertical-align: top;
+    }
+
+    .wo-banner-right {
+        width: 34%;
+        padding-left: 16px;
+    }
+
+    .wo-flag-row {
+        margin-top: 6px;
+        font-size: 8px;
+        color: #4b5563;
+    }
+
+    .wo-pill {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #111827;
+    }
+
+    .wo-pill-success {
+        background: #dcfce7;
+        color: #166534;
+        border-color: #86efac;
+    }
+
+    .wo-pill-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border-color: #fcd34d;
+    }
+
+    .wo-pill-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+
+    .wo-pill-info {
+        background: #dbeafe;
+        color: #1d4ed8;
+        border-color: #93c5fd;
+    }
+
+    .wo-summary-grid {
+        display: table;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 12px 0;
+        table-layout: fixed;
+    }
+
+    .wo-summary-card {
+        display: table-cell;
+        vertical-align: top;
+        border: 1px solid #dbe3ef;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px 12px;
+    }
+
+    .wo-card-title {
+        font-size: 8px;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+    }
+
+    .wo-metric-grid {
+        display: table;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 12px 0;
+        table-layout: fixed;
+    }
+
+    .wo-metric-main,
+    .wo-metric-side {
+        display: table-cell;
+        vertical-align: top;
+    }
+
+    .wo-metric-side {
+        width: 31%;
+    }
+
+    .wo-panel {
+        border: 1px solid #dbe3ef;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px 12px;
+    }
+
+    .wo-panel + .wo-panel {
+        margin-top: 10px;
+    }
+
+    .wo-note-block {
+        border-left: 3px solid #cbd5e1;
+        background: #f8fafc;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+    }
+
+    .wo-note-meta {
+        font-size: 8px;
+        color: #6b7280;
+        margin-bottom: 3px;
+    }
+
+    .wo-timeline {
+        border: 1px solid #dbe3ef;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: #fff;
+    }
+
+    .wo-timeline-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .wo-timeline-table td {
+        vertical-align: top;
+        text-align: center;
+        padding: 6px 4px 0;
+    }
+
+    .wo-timeline-label {
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 2px;
+    }
+
+    .wo-timeline-time {
+        font-size: 8px;
+        color: #4b5563;
+    }
+
+    .wo-timeline-info {
+        color: #1d4ed8;
+    }
+
+    .wo-timeline-success {
+        color: #15803d;
+    }
+
+    .wo-timeline-warning {
+        color: #b45309;
+    }
+
+    .wo-timeline-neutral {
+        color: #111827;
+    }
+
+    .wo-money-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .wo-money-table td {
+        padding: 4px 0;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 8px;
+    }
+
+    .wo-money-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .wo-money-label {
+        color: #4b5563;
+    }
+
+    .wo-money-value {
+        text-align: right;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .wo-money-total td {
+        border-top: 2px solid #111827;
+        padding-top: 6px;
+        font-size: 9px;
+        font-weight: 700;
+    }
+
+    .wo-status-line {
+        margin-top: 6px;
+        font-size: 8px;
+        color: #4b5563;
+    }
+
+    .wo-empty {
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    .wo-signature-box {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px 14px;
+        min-height: 92px;
+        background: #fff;
+    }
+
+    .wo-stats-row {
+        margin-top: 8px;
+    }
+
+    .wo-stats-row .wo-pill {
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+</style>
+{% endblock %}
+
 {% block document_meta %}
-<div>Created: {{ document.created_at|date:"M d, Y H:i" }}{% if document.created_by %} by {{ document.created_by.get_full_name }}{% endif %}</div>
-<div>Status: <span class="font-bold uppercase {% if document.status == 'completed' %}text-success{% elif document.status == 'paused' %}text-danger{% endif %}">{{ document.get_status_display }}</span></div>
+<div><span class="font-semibold">Created:</span> {{ document.created_at|date:"M d, Y H:i" }}</div>
+<div class="mt-1">
+    <span class="font-semibold">Job Status:</span>
+    <span class="wo-pill {% if document.status == 'closed' or document.status == 'completed' or document.status == 'invoiced' %}wo-pill-success{% elif document.status == 'awaiting_approval' or document.status == 'quality_check' or document.status == 'discontinued_pending_bill' %}wo-pill-warning{% elif document.status == 'paused' %}wo-pill-danger{% else %}wo-pill-info{% endif %}">
+        {{ document.get_status_display }}
+    </span>
+</div>
+{% if document.created_by %}
+<div>Opened by {{ document.created_by.get_full_name }}</div>
+{% endif %}
 {% if document.service_coordinator %}
 <div>Coordinator: {{ document.service_coordinator.get_full_name }}</div>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<!-- Priority & Timeline Bar -->
-<div class="bg-gray-100 p-4 mb-6 rounded"
-    style="border-left: 4px solid {% if document.priority == 'urgent' %}#dc2626{% elif document.priority == 'high' %}#f59e0b{% else %}#3b82f6{% endif %};">
-    <div class="grid-2-col text-sm">
-        <div>
-            <span class="font-bold">Priority:</span>
-            <span
-                class="uppercase font-semibold {% if document.priority == 'urgent' or document.priority == 'high' %}text-danger{% endif %}">
-                {{ document.get_priority_display }}
-            </span>
-            {% if document.primary_technician %}
-            | <span class="font-bold">Lead Tech:</span> {{ document.primary_technician.get_full_name }}
-            {% endif %}
-            {% if document.assigned_technicians.exists %}
-            | <span class="font-bold">Team:</span> {% for t in document.assigned_technicians.all %}{{ t.get_full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-            {% endif %}
-            {% if document.is_warranty or document.is_recall or document.is_customer_waiting %}
-            | <span class="font-bold">Flags:</span>
-            {% if document.is_warranty %}<span class="text-primary">Warranty</span>{% endif %}
-            {% if document.is_recall %}<span class="text-primary">Recall</span>{% endif %}
-            {% if document.is_customer_waiting %}<span class="text-primary">Customer Waiting</span>{% endif %}
+<div class="wo-banner mb-6 avoid-break"
+    style="border-left: 4px solid {% if document.priority == 'urgent' %}#dc2626{% elif document.priority == 'high' %}#d97706{% else %}#2563eb{% endif %};">
+    <div class="wo-banner-grid">
+        <div class="wo-banner-left">
+            <div class="text-sm">
+                <span class="font-bold">Priority:</span>
+                <span class="font-bold {% if document.priority == 'urgent' %}text-danger{% elif document.priority == 'high' %}text-warning{% else %}text-primary{% endif %}">
+                    {{ document.get_priority_display }}
+                </span>
+                {% if document.primary_technician %}
+                | <span class="font-bold">Lead Tech:</span> {{ document.primary_technician.get_full_name }}
+                {% endif %}
+            </div>
+            <div class="wo-status-line">
+                <span class="font-bold">Vehicle in shop:</span> {{ document.days_in_shop }} day{{ document.days_in_shop|pluralize }}
+                {% if document.estimated_completion %}
+                | <span class="font-bold">Target finish:</span> {{ document.estimated_completion|date:"M d, Y H:i" }}
+                {% endif %}
+                {% if document.started_at %}
+                | <span class="font-bold">Repairs started:</span> {{ document.started_at|date:"M d, Y H:i" }}
+                {% endif %}
+            </div>
+            <div class="wo-flag-row">
+                {% if document.service_type %}<span><span class="font-bold">Service:</span> {{ document.service_type.name }}</span>{% endif %}
+                {% if document.service_bundle %}<span> | <span class="font-bold">Bundle:</span> {{ document.service_bundle.name }}</span>{% endif %}
+                {% if document.assigned_technicians.exists %}<span> | <span class="font-bold">Team:</span> {% for t in document.assigned_technicians.all %}{{ t.get_full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+            </div>
+            {% if document.is_warranty or document.is_recall or document.is_customer_waiting or document.is_warranty_rework %}
+            <div class="wo-flag-row">
+                <span class="font-bold">Flags:</span>
+                {% if document.is_warranty %} Warranty{% endif %}
+                {% if document.is_recall %} | Recall{% endif %}
+                {% if document.is_customer_waiting %} | Customer Waiting{% endif %}
+                {% if document.is_warranty_rework %} | Rework{% endif %}
+            </div>
             {% endif %}
         </div>
-        <div class="text-right">
-            {% if document.estimated_completion %}
-            <span class="font-bold">Est. Completion:</span> {{ document.estimated_completion|date:"M d, Y" }}
-            {% endif %}
-            {% if document.started_at %}
-            | <span class="font-bold">Started:</span> {{ document.started_at|date:"M d H:i" }}
-            {% endif %}
+        <div class="wo-banner-right">
+            <div class="text-sm">
+                <span class="font-bold">Invoice:</span>
+                {% if invoice_summary %}
+                    {{ invoice_summary.invoice_number }} ({{ invoice_summary.get_status_display }})
+                {% else %}
+                    <span class="wo-empty">Not created</span>
+                {% endif %}
+            </div>
+            <div class="wo-status-line">
+                <span class="font-bold">Approval:</span>
+                {% if document.requires_approval %}
+                    {% if document.approved_by_customer %}Approved{% else %}Pending{% endif %}
+                {% else %}
+                    Not required
+                {% endif %}
+            </div>
+            <div class="wo-status-line">
+                <span class="font-bold">Gate Pass:</span>
+                {% if gate_pass_summary %}
+                    {{ gate_pass_summary.gate_pass_number }} ({{ gate_pass_summary.get_status_display }})
+                {% else %}
+                    <span class="wo-empty">Not started</span>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Maintenance Type / Service Package -->
-{% if document.maintenance_type != 'general' or document.service_type or document.service_bundle %}
-<div class="mb-4 text-sm">
-    {% if document.maintenance_type == 'routine' %}<span class="font-semibold">Routine Maintenance</span>{% endif %}
-    {% if document.service_type %}— {{ document.service_type.name }}{% endif %}
-    {% if document.service_bundle %}— Bundle: {{ document.service_bundle.name }}{% endif %}
-</div>
-{% endif %}
-
-<!-- Warranty Rework Notice -->
-{% if document.is_warranty_rework and document.related_work_order %}
-<div class="mb-4 p-3 bg-amber-50 border-l-4 border-amber-500 rounded text-sm">
-    <span class="font-bold">Warranty Rework</span> — Related WO: {{ document.related_work_order.work_order_number }}
-    {% if document.warranty_reason %}<br><span class="text-gray-600">{{ document.warranty_reason }}</span>{% endif %}
-</div>
-{% endif %}
-
-<!-- Customer & Vehicle Info -->
-<div class="grid-2-col mb-6">
-    <!-- Customer -->
-    <div class="col-1-2">
-        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Customer</div>
+<div class="wo-summary-grid mb-6 avoid-break">
+    <div class="wo-summary-card">
+        <div class="wo-card-title">Customer Account</div>
         {% with customer=document.customer %}
         {% include 'printing/base/components/customer_info.html' %}
         {% endwith %}
     </div>
-
-    <!-- Vehicle -->
-    <div class="col-1-2">
-        {% if document.vehicle %}
-        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Vehicle Details</div>
+    <div class="wo-summary-card">
+        <div class="wo-card-title">Vehicle Details</div>
         <div class="info-card">
             <div class="info-item border-b mb-2 pb-2">
                 <div class="info-label">Vehicle</div>
-                <div class="info-value font-bold">
-                    {{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}
-                </div>
+                <div class="info-value font-bold">{{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}</div>
             </div>
-            {% if document.vehicle.vin %}
+            <div class="info-item">
+                <div class="info-label">Registration</div>
+                <div class="info-value">{{ document.vehicle.license_plate|default:"—" }}</div>
+            </div>
             <div class="info-item">
                 <div class="info-label">VIN</div>
-                <div class="info-value">{{ document.vehicle.vin }}</div>
+                <div class="info-value">{{ document.vehicle.vin|default:"—" }}</div>
             </div>
-            {% endif %}
-            {% if document.vehicle.license_plate %}
-            <div class="info-item">
-                <div class="info-label">License</div>
-                <div class="info-value">{{ document.vehicle.license_plate }}</div>
-            </div>
-            {% endif %}
             <div class="info-item">
                 <div class="info-label">Odometer In</div>
                 <div class="info-value font-semibold">{{ document.odometer_in|default:"—" }}</div>
             </div>
-            {% if document.odometer_out %}
             <div class="info-item">
                 <div class="info-label">Odometer Out</div>
-                <div class="info-value font-semibold">{{ document.odometer_out }}</div>
+                <div class="info-value font-semibold">{{ document.odometer_out|default:"—" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="wo-summary-card">
+        <div class="wo-card-title">Vehicle Delivered By</div>
+        <div class="info-card">
+            <div class="info-item border-b mb-2 pb-2">
+                <div class="info-label">Delivered By</div>
+                <div class="info-value font-bold">{{ delivery_contact.name|default:"—" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Role / Relationship</div>
+                <div class="info-value">{{ delivery_contact.role|default:"—" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Phone</div>
+                <div class="info-value">{{ delivery_contact.phone|default:"—" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Email</div>
+                <div class="info-value">{{ delivery_contact.email|default:"—" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if work_order_timeline %}
+<div class="wo-timeline mb-6 avoid-break">
+    <div class="wo-card-title" style="margin-bottom: 2px;">Service Journey</div>
+    <table class="wo-timeline-table">
+        <tr>
+            {% for step in work_order_timeline %}
+            <td>
+                <div class="wo-timeline-label wo-timeline-{{ step.tone }}">{{ step.label }}</div>
+                <div class="wo-timeline-time">{{ step.when|date:"M d, Y H:i" }}</div>
+            </td>
+            {% endfor %}
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+<div class="wo-metric-grid mb-6">
+    <div class="wo-metric-main">
+        <div class="wo-panel mb-4">
+            <div class="wo-card-title">Reported Concern</div>
+            <div class="text-sm text-gray-700 leading-relaxed">
+                {{ document.customer_concerns|linebreaks|default:"No concern recorded." }}
+            </div>
+        </div>
+
+        {% if document.diagnosis_notes %}
+        <div class="wo-panel mb-4">
+            <div class="wo-card-title">Technical Findings</div>
+            {% if document.diagnosis_by or document.diagnosis_completed_at %}
+            <div class="wo-note-meta">
+                {% if document.diagnosis_by %}By {{ document.diagnosis_by.get_full_name }}{% endif %}
+                {% if document.diagnosis_by and document.diagnosis_completed_at %} | {% endif %}
+                {% if document.diagnosis_completed_at %}{{ document.diagnosis_completed_at|date:"M d, Y H:i" }}{% endif %}
+            </div>
+            {% endif %}
+            <div class="text-sm text-gray-700 leading-relaxed">
+                {{ document.diagnosis_notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if diagnosis_summary and diagnosis_summary.total %}
+        <div class="wo-panel mb-4">
+            <div class="wo-card-title">Diagnosis Recommendations</div>
+            <div class="wo-note-meta">
+                {% if diagnosis_record.technician %}Prepared by {{ diagnosis_record.technician.get_full_name }}{% endif %}
+                {% if diagnosis_record.technician and diagnosis_record.completed_at %} | {% endif %}
+                {% if diagnosis_record.completed_at %}{{ diagnosis_record.completed_at|date:"M d, Y H:i" }}{% endif %}
+            </div>
+            <div class="wo-stats-row">
+                <span class="wo-pill">Total {{ diagnosis_summary.total }}</span>
+                <span class="wo-pill wo-pill-success">Approved {{ diagnosis_summary.approved }}</span>
+                <span class="wo-pill wo-pill-warning">Pending {{ diagnosis_summary.pending }}</span>
+                {% if diagnosis_summary.deferred %}
+                <span class="wo-pill">Deferred {{ diagnosis_summary.deferred }}</span>
+                {% endif %}
+                {% if diagnosis_summary.declined %}
+                <span class="wo-pill wo-pill-danger">Declined {{ diagnosis_summary.declined }}</span>
+                {% endif %}
+                {% if diagnosis_summary.requested %}
+                <span class="wo-pill wo-pill-info">Stores Requested {{ diagnosis_summary.requested }}</span>
+                {% endif %}
+                {% if diagnosis_summary.quoted %}
+                <span class="wo-pill wo-pill-success">Quoted {{ diagnosis_summary.quoted }}</span>
+                {% endif %}
+            </div>
+            <table class="data-table mt-2">
+                <thead>
+                    <tr>
+                        <th style="width: 9%;">Priority</th>
+                        <th style="width: 35%;">Recommendation</th>
+                        <th style="width: 18%;">Supporting Findings</th>
+                        <th style="width: 14%;">Approval</th>
+                        <th style="width: 14%;">Stores Quote</th>
+                        <th style="width: 10%; text-align:right;">Est. Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in diagnosis_recommendations %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="capitalize {% if item.record.priority == 'critical' %}text-danger font-bold{% elif item.record.priority == 'necessary' %}text-warning font-bold{% else %}text-gray-700{% endif %}">
+                                {{ item.record.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="font-medium text-gray-900">
+                                {{ item.record.get_recommendation_type_display }}: {{ item.record.description }}
+                            </div>
+                            {% if item.parts_text %}
+                            <div class="row-notes">Parts: {{ item.parts_text }}</div>
+                            {% endif %}
+                            {% if item.record.decision_notes %}
+                            <div class="row-notes">Decision notes: {{ item.record.decision_notes }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs">
+                            {% if item.findings_text %}
+                                {{ item.findings_text }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="capitalize {% if item.record.approval_status == 'approved' %}text-success font-bold{% elif item.record.approval_status == 'declined' %}text-danger font-bold{% elif item.record.approval_status == 'deferred' %}text-gray-700 font-bold{% else %}text-warning font-bold{% endif %}">
+                                {{ item.record.get_approval_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="capitalize {% if item.record.quotation_status == 'quoted' %}text-success font-bold{% elif item.record.quotation_status == 'requested' %}text-primary font-bold{% else %}text-gray-700{% endif %}">
+                                {{ item.record.get_quotation_status_display }}
+                            </span>
+                            {% if item.record.quotation_estimate_number %}
+                            <div class="row-notes">{{ item.record.quotation_estimate_number }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">{{ currency_symbol|default:"" }}{{ item.record.estimated_total_cost|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if document.special_instructions %}
+        <div class="wo-panel mb-4" style="background:#fff7ed;border-color:#fed7aa;">
+            <div class="wo-card-title" style="color:#9a3412;">Handling Instructions</div>
+            <div class="text-sm text-gray-700 leading-relaxed">{{ document.special_instructions|linebreaks }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="wo-metric-side">
+        <div class="wo-panel">
+            <div class="wo-card-title">Cost Position</div>
+            <table class="wo-money-table">
+                <tr>
+                    <td class="wo-money-label">Estimated Labor</td>
+                    <td class="wo-money-value">{{ currency_symbol|default:"" }}{{ document.estimated_labor_cost|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="wo-money-label">Estimated Parts</td>
+                    <td class="wo-money-value">{{ currency_symbol|default:"" }}{{ document.estimated_parts_cost|floatformat:2 }}</td>
+                </tr>
+                <tr class="wo-money-total">
+                    <td>Total Estimate</td>
+                    <td class="wo-money-value">{{ currency_symbol|default:"" }}{{ document.estimated_total|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="wo-money-label">Actual Labor</td>
+                    <td class="wo-money-value">{{ currency_symbol|default:"" }}{{ document.actual_labor_cost|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="wo-money-label">Actual Parts</td>
+                    <td class="wo-money-value">{{ currency_symbol|default:"" }}{{ document.actual_parts_cost|floatformat:2 }}</td>
+                </tr>
+                <tr class="wo-money-total">
+                    <td>Total Actual</td>
+                    <td class="wo-money-value">{{ currency_symbol|default:"" }}{{ document.actual_total|floatformat:2 }}</td>
+                </tr>
+            </table>
+            <div class="wo-status-line">
+                <span class="font-bold">Variance:</span>
+                {% if document.cost_variance > 0 %}+{% endif %}{{ currency_symbol|default:"" }}{{ document.cost_variance|floatformat:2 }}
+                {% if document.estimated_total %}
+                ({{ document.cost_variance_percentage|floatformat:1 }}%)
+                {% endif %}
+            </div>
+            <div class="wo-status-line">
+                <span class="font-bold">Labor Hours:</span>
+                Estimated {{ document.estimated_labor_hours|floatformat:2 }} hrs | Actual {{ document.actual_labor_hours|floatformat:2 }} hrs
+            </div>
+        </div>
+
+        <div class="wo-panel">
+            <div class="wo-card-title">Approval & Final Control</div>
+            <div class="info-item">
+                <div class="info-label">Customer Approval</div>
+                <div class="info-value">
+                    {% if document.requires_approval %}
+                        {% if document.approved_by_customer %}
+                            <span class="wo-pill wo-pill-success">Approved</span>
+                        {% else %}
+                            <span class="wo-pill wo-pill-warning">Pending</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="wo-pill">Not Required</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if document.approved_at %}
+            <div class="info-item">
+                <div class="info-label">Approved At</div>
+                <div class="info-value">{{ document.approved_at|date:"M d, Y H:i" }}</div>
+            </div>
+            {% endif %}
+            {% if document.approval_method %}
+            <div class="info-item">
+                <div class="info-label">Approval Method</div>
+                <div class="info-value">{{ document.get_approval_method_display }}</div>
+            </div>
+            {% endif %}
+            <div class="info-item" style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+                <div class="info-label">Quality Check</div>
+                <div class="info-value">
+                    {% if document.quality_check_completed %}
+                        <span class="wo-pill {% if document.quality_check_passed %}wo-pill-success{% else %}wo-pill-danger{% endif %}">
+                            {% if document.quality_check_passed %}Passed{% else %}Not Passed{% endif %}
+                        </span>
+                    {% elif document.quality_check_required %}
+                        <span class="wo-pill wo-pill-warning">Pending</span>
+                    {% else %}
+                        <span class="wo-pill">Not Required</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if document.quality_check_by %}
+            <div class="info-item">
+                <div class="info-label">Checked By</div>
+                <div class="info-value">{{ document.quality_check_by.get_full_name }}</div>
+            </div>
+            {% endif %}
+            {% if document.quality_check_at %}
+            <div class="info-item">
+                <div class="info-label">Checked At</div>
+                <div class="info-value">{{ document.quality_check_at|date:"M d, Y H:i" }}</div>
             </div>
             {% endif %}
         </div>
-        {% endif %}
-    </div>
-</div>
 
-<!-- Service Timeline -->
-{% if document.started_at or document.completed_at or document.diagnosis_completed_at %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Service Timeline</div>
-    <div class="flex justify-between text-xs p-3 bg-gray-50 rounded" style="gap: 10px;">
-        <div class="text-center flex-1">
-            <div class="font-bold text-gray-700">Created</div>
-            <div class="text-gray-600">{{ document.created_at|date:"M d, H:i" }}</div>
-        </div>
-        {% if document.diagnosis_completed_at %}
-        <div class="text-center flex-1">
-            <div class="font-bold text-gray-700">Diagnosis</div>
-            <div class="text-gray-600">{{ document.diagnosis_completed_at|date:"M d, H:i" }}</div>
-        </div>
-        {% endif %}
-        {% if document.approved_at %}
-        <div class="text-center flex-1">
-            <div class="font-bold text-success">Approved</div>
-            <div class="text-gray-600">{{ document.approved_at|date:"M d, H:i" }}</div>
-        </div>
-        {% endif %}
-        {% if document.started_at %}
-        <div class="text-center flex-1">
-            <div class="font-bold text-primary">Started</div>
-            <div class="text-gray-600">{{ document.started_at|date:"M d, H:i" }}</div>
-        </div>
-        {% endif %}
-        {% if document.completed_at %}
-        <div class="text-center flex-1">
-            <div class="font-bold text-success">Completed</div>
-            <div class="text-gray-600">{{ document.completed_at|date:"M d, H:i" }}</div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-
-<!-- Cost Estimate Summary (Right Aligned) -->
-{% if document.estimated_labor_cost or document.estimated_parts_cost or document.estimated_total %}
-<div class="mb-6">
-    <div class="financial-summary" style="max-width: 300px;">
-        <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Cost Estimate</div>
-        {% if document.estimated_labor_hours %}
-        <div class="summary-item">
-            <div class="summary-label">Labor ({{ document.estimated_labor_hours }} hrs)</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.estimated_labor_cost|floatformat:2|default:"0.00" }}</div>
-        </div>
-        {% endif %}
-        <div class="summary-item">
-            <div class="summary-label">Parts & Materials</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.estimated_parts_cost|floatformat:2|default:"0.00" }}</div>
-        </div>
-        <div class="summary-item total">
-            <div class="summary-label">Total Estimate</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.estimated_total|floatformat:2|default:"0.00" }}</div>
-        </div>
-    </div>
-    <div class="clearfix"></div>
-</div>
-{% endif %}
-
-<!-- Actual Costs (when work completed) -->
-{% if document.actual_labor_cost or document.actual_parts_cost or document.actual_total %}
-<div class="mb-6">
-    <div class="financial-summary" style="max-width: 300px;">
-        <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Actual Costs</div>
-        {% if document.actual_labor_hours %}
-        <div class="summary-item">
-            <div class="summary-label">Labor ({{ document.actual_labor_hours }} hrs)</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.actual_labor_cost|floatformat:2|default:"0.00" }}</div>
-        </div>
-        {% endif %}
-        <div class="summary-item">
-            <div class="summary-label">Parts & Materials</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.actual_parts_cost|floatformat:2|default:"0.00" }}</div>
-        </div>
-        <div class="summary-item total">
-            <div class="summary-label">Total Actual</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.actual_total|floatformat:2|default:"0.00" }}</div>
-        </div>
-    </div>
-    <div class="clearfix"></div>
-</div>
-{% endif %}
-
-<!-- Customer Concerns -->
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Customer Concerns</div>
-    <div class="text-sm text-gray-700 leading-relaxed p-2 bg-gray-50 rounded">
-        {{ document.customer_concerns|linebreaks|default:"No concerns recorded." }}
-    </div>
-</div>
-
-<!-- Special Instructions -->
-{% if document.special_instructions %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">⚠️ Special Instructions</div>
-    <div class="text-sm text-gray-700 leading-relaxed p-2"
-        style="background-color: #fef3c7; border-left: 3px solid #f59e0b;">
-        {{ document.special_instructions|linebreaks }}
-    </div>
-</div>
-{% endif %}
-
-<!-- Diagnosis -->
-{% if document.diagnosis_notes %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">
-        Diagnosis
-        {% if document.diagnosis_by %}
-        <span class="font-normal text-xs text-gray-500">by {{ document.diagnosis_by.get_full_name }}</span>
-        {% endif %}
-    </div>
-    <div class="text-sm text-gray-700 leading-relaxed p-2 bg-gray-50 rounded">
-        {{ document.diagnosis_notes|linebreaks }}
-    </div>
-</div>
-{% endif %}
-
-<!-- Approval Status -->
-{% if document.requires_approval %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Customer Approval</div>
-    <div class="info-card {% if document.approved_by_customer %}bg-green-50{% else %}bg-yellow-50{% endif %}">
-        <div class="info-item">
-            <div class="info-label">Status</div>
-            <div
-                class="info-value font-bold {% if document.approved_by_customer %}text-success{% else %}text-danger{% endif %}">
-                {% if document.approved_by_customer %}✓ Approved{% else %}⏳ Pending Approval{% endif %}
+        <div class="wo-panel">
+            <div class="wo-card-title">Billing & Vehicle Release</div>
+            <div class="info-item">
+                <div class="info-label">Invoice</div>
+                <div class="info-value">
+                    {% if invoice_summary %}
+                        {{ invoice_summary.invoice_number }}<br>
+                        <span class="text-gray-600">{{ invoice_summary.get_status_display }}</span>
+                    {% else %}
+                        <span class="wo-empty">Invoice pending</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if invoice_summary %}
+            <div class="info-item">
+                <div class="info-label">Invoice Total</div>
+                <div class="info-value">{{ currency_symbol|default:"" }}{{ invoice_summary.total|floatformat:2 }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Outstanding</div>
+                <div class="info-value">{{ currency_symbol|default:"" }}{{ invoice_summary.amount_due|floatformat:2 }}</div>
+            </div>
+            {% if invoice_summary.paid_at %}
+            <div class="info-item">
+                <div class="info-label">Paid At</div>
+                <div class="info-value">{{ invoice_summary.paid_at|date:"M d, Y H:i" }}</div>
+            </div>
+            {% endif %}
+            {% endif %}
+            <div class="info-item" style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+                <div class="info-label">Gate Pass</div>
+                <div class="info-value">
+                    {% if gate_pass_summary %}
+                        {{ gate_pass_summary.gate_pass_number }}<br>
+                        <span class="text-gray-600">{{ gate_pass_summary.get_status_display }}</span>
+                    {% else %}
+                        <span class="wo-empty">Release not started</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        {% if document.approved_at %}
-        <div class="info-item">
-            <div class="info-label">Approved Date</div>
-            <div class="info-value">{{ document.approved_at|date:"F d, Y H:i" }}</div>
-        </div>
-        {% endif %}
-        {% if document.approval_method %}
-        <div class="info-item">
-            <div class="info-label">Method</div>
-            <div class="info-value capitalize">{{ document.get_approval_method_display }}</div>
-        </div>
-        {% endif %}
-        {% if document.approval_notes %}
-        <div class="info-item mt-2 pt-2 border-t">
-            <div class="text-xs text-gray-700">{{ document.approval_notes }}</div>
-        </div>
-        {% endif %}
     </div>
 </div>
-{% endif %}
 
-<!-- Quality Check -->
-{% if document.quality_check_required or document.quality_check_completed %}
 <div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Quality Check</div>
-    <div class="info-card {% if document.quality_check_passed %}bg-green-50{% else %}bg-gray-50{% endif %}">
-        <div class="info-item">
-            <div class="info-label">Status</div>
-            <div class="info-value font-bold {% if document.quality_check_completed %}{% if document.quality_check_passed %}text-success{% else %}text-danger{% endif %}{% else %}text-gray-600{% endif %}">
-                {% if document.quality_check_completed %}
-                    {% if document.quality_check_passed %}✓ Passed{% else %}✗ Not Passed{% endif %}
-                {% else %}
-                    Pending
-                {% endif %}
-            </div>
-        </div>
-        {% if document.quality_check_by %}
-        <div class="info-item">
-            <div class="info-label">Checked By</div>
-            <div class="info-value">{{ document.quality_check_by.get_full_name }}</div>
-        </div>
-        {% endif %}
-        {% if document.quality_check_at %}
-        <div class="info-item">
-            <div class="info-label">Date</div>
-            <div class="info-value">{{ document.quality_check_at|date:"M d, Y H:i" }}</div>
-        </div>
-        {% endif %}
-        {% if document.quality_check_notes %}
-        <div class="info-item mt-2 pt-2 border-t">
-            <div class="text-xs text-gray-700">{{ document.quality_check_notes }}</div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-
-<!-- Service Tasks -->
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Service Tasks</div>
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Repair Operations</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 45%;">Task Description</th>
-                <th style="width: 18%;">Technician</th>
-                <th style="width: 12%; text-align: center;">Status</th>
+                <th style="width: 44%;">Task Description</th>
+                <th style="width: 17%;">Technician</th>
+                <th style="width: 13%; text-align: center;">Status</th>
                 <th style="width: 10%; text-align: right;">Est. Hrs</th>
-                <th style="width: 15%; text-align: right;">Completed</th>
+                <th style="width: 10%; text-align: right;">Actual Hrs</th>
+                <th style="width: 16%; text-align: right;">Completed</th>
             </tr>
         </thead>
         <tbody>
-            {% for task in document.tasks.all %}
+            {% for task in repair_tasks %}
             <tr>
                 <td>
                     <div class="font-medium text-gray-900">{{ task.description }}</div>
@@ -328,58 +690,55 @@
                 </td>
                 <td>{{ task.assigned_to.get_full_name|default:"Unassigned" }}</td>
                 <td class="text-center">
-                    <span class="capitalize {% if task.status == 'completed' %}text-success font-bold{% endif %}">
+                    <span class="capitalize {% if task.status == 'completed' %}text-success font-bold{% elif task.status == 'in_progress' %}text-primary font-bold{% elif task.status == 'pending' %}text-warning font-bold{% endif %}">
                         {{ task.get_status_display }}
                     </span>
                 </td>
                 <td class="text-right">{{ task.estimated_hours|floatformat:1 }}</td>
-                <td class="text-right text-xs">
-                    {% if task.completed_at %}{{ task.completed_at|date:"M d, H:i" }}{% else %}—{% endif %}
-                </td>
+                <td class="text-right">{{ task.calculated_actual_hours|floatformat:2 }}</td>
+                <td class="text-right text-xs">{% if task.completed_at %}{{ task.completed_at|date:"M d, H:i" }}{% else %}—{% endif %}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" class="text-center text-gray-400 py-4">No service tasks assigned</td>
+                <td colspan="6" class="text-center text-gray-400 py-4">No repair operations have been recorded yet.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Parts & Materials -->
-{% if document.parts.exists %}
+{% if work_order_parts %}
 <div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Parts & Materials</div>
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Parts Allocation & Usage</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 15%;">Part #</th>
-                <th style="width: 40%;">Description</th>
-                <th style="width: 12%; text-align: center;">Qty</th>
-                <th style="width: 18%; text-align: center;">Status</th>
-                <th style="width: 15%; text-align: center;">ETA</th>
+                <th style="width: 35%;">Description</th>
+                <th style="width: 10%; text-align: center;">Qty</th>
+                <th style="width: 15%; text-align: center;">Status</th>
+                <th style="width: 13%; text-align: center;">Supplier</th>
+                <th style="width: 12%; text-align: center;">ETA</th>
             </tr>
         </thead>
         <tbody>
-            {% for part in document.parts.all %}
+            {% for part in work_order_parts %}
             <tr>
-                <td>{{ part.part_number }}</td>
+                <td>{{ part.part_number|default:"—" }}</td>
                 <td>
                     <div class="font-medium text-gray-900">{{ part.part_name }}</div>
-                    {% if part.supplier %}
-                    <div class="row-notes">Supplier: {{ part.supplier }}</div>
+                    {% if part.resolution_notes %}
+                    <div class="row-notes">{{ part.resolution_notes }}</div>
                     {% endif %}
                 </td>
                 <td class="text-center">{{ part.quantity|floatformat:0 }}</td>
                 <td class="text-center">
-                    <span
-                        class="capitalize {% if part.status == 'installed' %}text-success font-bold{% elif part.status == 'pending' or part.status == 'po_created' or part.status == 'awaiting_stock' %}text-primary{% endif %}">
+                    <span class="capitalize {% if part.status == 'installed' %}text-success font-bold{% elif part.status == 'returned' %}text-gray-700 font-bold{% elif part.status == 'ready_for_install' or part.status == 'allocated' %}text-primary font-bold{% else %}text-warning font-bold{% endif %}">
                         {{ part.get_status_display }}
                     </span>
                 </td>
-                <td class="text-center text-xs">
-                    {% if part.eta %}{{ part.eta|date:"M d" }}{% else %}—{% endif %}
-                </td>
+                <td class="text-center">{{ part.supplier|default:"—" }}</td>
+                <td class="text-center text-xs">{% if part.eta %}{{ part.eta|date:"M d, Y" }}{% else %}—{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -387,40 +746,60 @@
 </div>
 {% endif %}
 
-<!-- Internal Notes -->
-{% if document.notes.exists %}
+{% if document.quality_check_notes %}
+<div class="wo-panel mb-6">
+    <div class="wo-card-title">Quality Control Notes</div>
+    <div class="text-sm text-gray-700 leading-relaxed">{{ document.quality_check_notes|linebreaks }}</div>
+</div>
+{% endif %}
+
+{% if visible_work_order_notes %}
 <div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Internal Notes</div>
-    {% for note in document.notes.all %}
-    <div class="text-xs p-2 mb-2 border-l-2 border-gray-400 bg-gray-50">
-        <div class="font-bold">{{ note.created_by.get_full_name }} - {{ note.created_at|date:"M d, Y H:i" }}</div>
-        <div class="text-gray-700 mt-1">{{ note.note|linebreaks }}</div>
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Operational Notes & Exceptions</div>
+    {% for note in visible_work_order_notes %}
+    <div class="wo-note-block">
+        <div class="wo-note-meta">
+            {{ note.get_note_type_display }}{% if note.created_by %} | {{ note.created_by.get_full_name }}{% endif %} | {{ note.created_at|date:"M d, Y H:i" }}
+        </div>
+        <div class="text-sm text-gray-700">{{ note.note|linebreaks }}</div>
     </div>
     {% endfor %}
 </div>
 {% endif %}
 
-<!-- Signatures -->
-<div class="grid-2-col mt-12 pt-8" style="page-break-inside: avoid;">
+{% if workflow_notes and not visible_work_order_notes %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Recent Workflow Notes</div>
+    {% for note in workflow_notes %}
+    <div class="wo-note-block">
+        <div class="wo-note-meta">
+            {{ note.get_note_type_display }}{% if note.created_by %} | {{ note.created_by.get_full_name }}{% endif %} | {{ note.created_at|date:"M d, Y H:i" }}
+        </div>
+        <div class="text-sm text-gray-700">{{ note.note|linebreaks }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid-2-col mt-12 pt-8 avoid-break">
     <div class="col-1-2 pr-4">
-        <div class="border-t-2 border-gray-400 pt-2">
+        <div class="wo-signature-box">
             <div class="font-bold text-sm">Service Advisor / Manager</div>
-            <div class="text-xs text-gray-500 mt-1">Signature: _____________________________</div>
-            <div class="text-xs text-gray-500 mt-1">Date: _________________</div>
+            <div class="text-xs text-gray-500 mt-4">Signature: _____________________________</div>
+            <div class="text-xs text-gray-500 mt-2">Date: _________________</div>
         </div>
     </div>
     <div class="col-1-2 pl-4">
-        <div class="border-t-2 border-gray-400 pt-2">
+        <div class="wo-signature-box">
             <div class="font-bold text-sm">Lead Technician Completion</div>
-            <div class="text-xs text-gray-500 mt-1">Signature: _____________________________</div>
-            <div class="text-xs text-gray-500 mt-1">Date: _________________</div>
+            <div class="text-xs text-gray-500 mt-4">Signature: _____________________________</div>
+            <div class="text-xs text-gray-500 mt-2">Date: _________________</div>
         </div>
     </div>
 </div>
 
-<!-- Footer Notes -->
 <div class="clear-both mt-8 text-xs text-gray-500 text-center border-t pt-4">
-    <strong>INTERNAL DOCUMENT</strong> - This work order is for shop use only. Not valid as customer invoice.
+    <strong>INTERNAL WORK ORDER</strong> - Operational record for diagnosis, repairs, quality control, invoicing, and release follow-up.
     {% if document.branch %}| Branch: {{ document.branch.name }}{% endif %}
 </div>
 {% endblock %}

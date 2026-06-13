@@ -3,7 +3,8 @@ Serializers for customers app
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Customer, CustomerNote
+from django.db import transaction
+from .models import Customer, CustomerNote, CustomerContact, CustomerReminder, CustomerDocument, CustomerContract
 
 User = get_user_model()
 
@@ -151,6 +152,31 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             })
         
         return attrs
+
+    def _build_primary_contact_display_name(self, first_name, last_name, contact_person_name):
+        display_name = (contact_person_name or '').strip()
+        if display_name:
+            return display_name
+        return f"{first_name} {last_name}".strip()
+
+    def _create_primary_contact(self, customer, first_name, last_name, email, phone, occupation):
+        if customer.customer_type not in ['business', 'fleet']:
+            return
+
+        contact_first_name = (first_name or '').strip()
+        contact_last_name = (last_name or '').strip()
+        if not contact_first_name and not contact_last_name:
+            return
+
+        CustomerContact.objects.create(
+            customer=customer,
+            first_name=contact_first_name or customer.contact_person_name or customer.company_name,
+            last_name=contact_last_name,
+            email=(email or '').strip(),
+            phone=(phone or '').strip(),
+            job_title=(occupation or '').strip(),
+            is_primary=True,
+        )
     
     def create(self, validated_data):
         # Extract user data
@@ -162,14 +188,23 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         phone = validated_data.pop('phone', '')
         gender = validated_data.pop('gender', None)
         date_of_birth = validated_data.pop('date_of_birth', None)
+        occupation = validated_data.get('occupation', '')
         grant_portal_access = validated_data.pop('grant_portal_access', False)
         send_welcome_email = validated_data.pop('send_welcome_email', False)
+        contact_person_name = validated_data.get('contact_person_name')
+        customer_type = validated_data.get('customer_type', 'individual')
 
         # Normalize empty strings coming from clients
         if username == '':
             username = email.split('@')[0]
         if password == '':
             password = None
+        if customer_type in ['business', 'fleet']:
+            validated_data['contact_person_name'] = self._build_primary_contact_display_name(
+                first_name,
+                last_name,
+                contact_person_name,
+            )
         
         # If portal access is granted, password is required
         if grant_portal_access and not password:
@@ -179,26 +214,28 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             alphabet = string.ascii_letters + string.digits + string.punctuation
             password = ''.join(secrets.choice(alphabet) for i in range(16))
         
-        # Create user account
-        user = User.objects.create_user(
-            email=email,
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            phone=phone,
-            role='customer',
-            is_active=grant_portal_access,  # Only active if portal access is granted
-            gender=gender,
-            date_of_birth=date_of_birth
-        )
-        
-        # Set password if provided
-        if password:
-            user.set_password(password)
-            user.save()
-        
-        # Create customer profile
-        customer = Customer.objects.create(user=user, **validated_data)
+        with transaction.atomic():
+            # Create user account
+            user = User.objects.create_user(
+                email=email,
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                role='customer',
+                is_active=grant_portal_access,  # Only active if portal access is granted
+                gender=gender,
+                date_of_birth=date_of_birth
+            )
+
+            # Set password if provided
+            if password:
+                user.set_password(password)
+                user.save()
+
+            # Create customer profile
+            customer = Customer.objects.create(user=user, **validated_data)
+            self._create_primary_contact(customer, first_name, last_name, email, phone, occupation)
         
         # Send welcome email if requested
         if send_welcome_email and grant_portal_access and password:
@@ -272,6 +309,45 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with this email already exists.")
         return value
 
+    def _build_primary_contact_display_name(self, first_name, last_name, contact_person_name):
+        display_name = (contact_person_name or '').strip()
+        if display_name:
+            return display_name
+        return f"{first_name} {last_name}".strip()
+
+    def _sync_primary_contact(self, customer):
+        if customer.customer_type not in ['business', 'fleet']:
+            return
+
+        first_name = (customer.user.first_name or '').strip()
+        last_name = (customer.user.last_name or '').strip()
+        if not first_name and not last_name:
+            return
+
+        primary_contact = customer.contacts.filter(is_primary=True).order_by('created_at').first()
+        if primary_contact is None:
+            primary_contact = customer.contacts.order_by('created_at').first()
+
+        contact_defaults = {
+            'first_name': first_name or customer.contact_person_name or customer.company_name,
+            'last_name': last_name,
+            'email': (customer.user.email or '').strip(),
+            'phone': (customer.user.phone or '').strip(),
+            'job_title': (customer.occupation or '').strip(),
+            'is_primary': True,
+        }
+
+        if primary_contact is None:
+            CustomerContact.objects.create(
+                customer=customer,
+                **contact_defaults,
+            )
+            return
+
+        for field, value in contact_defaults.items():
+            setattr(primary_contact, field, value)
+        primary_contact.save()
+
     def update(self, instance, validated_data):
         # Update user fields if present (they are in nested 'user' dict due to source)
         user_data = validated_data.pop('user', {})
@@ -280,9 +356,22 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             for key, value in user_data.items():
                 setattr(user, key, value)
             user.save()
-            
+
+        incoming_customer_type = validated_data.get('customer_type', instance.customer_type)
+        if incoming_customer_type in ['business', 'fleet']:
+            first_name = user_data.get('first_name', instance.user.first_name)
+            last_name = user_data.get('last_name', instance.user.last_name)
+            contact_person_name = validated_data.get('contact_person_name', instance.contact_person_name)
+            validated_data['contact_person_name'] = self._build_primary_contact_display_name(
+                first_name,
+                last_name,
+                contact_person_name,
+            )
+
         # Update customer fields
-        return super().update(instance, validated_data)
+        customer = super().update(instance, validated_data)
+        self._sync_primary_contact(customer)
+        return customer
 
 
 class CustomerNoteSerializer(serializers.ModelSerializer):
@@ -309,8 +398,6 @@ class CustomerStatsSerializer(serializers.Serializer):
     average_invoice = serializers.DecimalField(max_digits=10, decimal_places=2)
     vehicles_serviced = serializers.IntegerField()
 
-from .models import CustomerContact, CustomerReminder
-
 class CustomerContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerContact
@@ -324,9 +411,6 @@ class CustomerReminderSerializer(serializers.ModelSerializer):
         model = CustomerReminder
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by']
-
-
-from .models import CustomerDocument, CustomerContract
 
 class CustomerDocumentSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)

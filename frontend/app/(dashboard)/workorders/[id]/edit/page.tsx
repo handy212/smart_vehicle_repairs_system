@@ -405,6 +405,32 @@ export default function EditWorkOrderPage() {
     );
   }
 
+  if (workOrder.status === "closed") {
+    return (
+      <div className="space-y-4">
+        <Link href={`/workorders/${workOrderId}`}>
+          <Button variant="secondary">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        <Card>
+          <CardHeader>
+            <CardTitle>Work Order Locked</CardTitle>
+            <CardDescription>
+              Closed work orders cannot be edited.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Work order <span className="font-mono text-foreground">{workOrder.work_order_number}</span> is already closed. Open the job card to review the final record.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">

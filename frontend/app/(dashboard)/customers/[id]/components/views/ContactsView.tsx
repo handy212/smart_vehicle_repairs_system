@@ -56,7 +56,11 @@ export function ContactsView({ customerId }: ContactsViewProps) {
     });
 
     const updateMutation = useMutation({
-        mutationFn: (data: ContactFormData) => customersApi.contacts.update(editingContact.id, data),
+        mutationFn: (data: ContactFormData) =>
+            customersApi.contacts.update(editingContact.id, {
+                ...data,
+                customer: editingContact.customer ?? customerId,
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["customer-contacts", customerId] });
             toast({ title: "Success", description: "Contact updated successfully" });

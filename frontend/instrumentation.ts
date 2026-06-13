@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { sentryEnabled } from "./sentry.shared.config";
 
 export async function register() {
@@ -6,20 +5,25 @@ export async function register() {
     return;
   }
 
+  const sentryServerConfigModule = "./sentry.server.config";
+
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("./sentry.server.config");
+    await import(sentryServerConfigModule);
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {
-    await import("./sentry.server.config");
+    await import(sentryServerConfigModule);
   }
 }
 
 export async function onRequestError(
-  ...args: Parameters<typeof Sentry.captureRequestError>
+  ...args: unknown[]
 ) {
   if (!sentryEnabled) {
     return;
   }
-  return Sentry.captureRequestError(...args);
+
+  const moduleName = "@sentry/nextjs";
+  const Sentry = await import(moduleName);
+  return (Sentry.captureRequestError as (...params: unknown[]) => unknown)(...args);
 }

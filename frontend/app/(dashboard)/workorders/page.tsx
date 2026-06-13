@@ -766,12 +766,14 @@ export default function WorkOrdersPage() {
                               <Eye className="mr-2 h-3.5 w-3.5" />
                               View Details
                             </DropdownMenuItem>
-                            <PermissionGuard permission="edit_workorders">
-                              <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}/edit`)} className="text-xs">
-                                <Edit className="mr-2 h-3.5 w-3.5" />
-                                Edit Work Order
-                              </DropdownMenuItem>
-                            </PermissionGuard>
+                            {workorder.status !== "closed" && (
+                              <PermissionGuard permission="edit_workorders">
+                                <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}/edit`)} className="text-xs">
+                                  <Edit className="mr-2 h-3.5 w-3.5" />
+                                  Edit Work Order
+                                </DropdownMenuItem>
+                              </PermissionGuard>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => openPrintWindow({ documentType: 'work_order', documentId: workorder.id })} className="text-xs">
                               <Printer className="mr-2 h-3.5 w-3.5" />

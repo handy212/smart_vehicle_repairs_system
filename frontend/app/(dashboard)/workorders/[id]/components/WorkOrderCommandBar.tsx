@@ -73,6 +73,7 @@ export function WorkOrderCommandBar({
   ]
     .filter(Boolean)
     .join(" · ");
+  const canEditWorkOrder = workOrder.status !== "closed";
 
   return (
     <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6">
@@ -157,14 +158,16 @@ export function WorkOrderCommandBar({
                 <PremiumIcons.MessageSquare className="mr-2 h-4 w-4" />
                 Chat
               </DropdownMenuItem>
-              <PermissionGuard permission="edit_workorders">
-                <DropdownMenuItem asChild>
-                  <Link href={`/workorders/${workOrderId}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit order
-                  </Link>
-                </DropdownMenuItem>
-              </PermissionGuard>
+              {canEditWorkOrder && (
+                <PermissionGuard permission="edit_workorders">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/workorders/${workOrderId}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit order
+                    </Link>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

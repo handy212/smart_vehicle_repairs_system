@@ -26,6 +26,7 @@ DJANGO_BIND_ADDRESS="${DJANGO_BIND_ADDRESS:-127.0.0.1}"
 # Listen on all interfaces so Windows/host can reach WSL via 172.x (API still reached via Next proxy).
 NEXTJS_BIND_ADDRESS="${NEXTJS_BIND_ADDRESS:-0.0.0.0}"
 PUBLIC_HOST="${PUBLIC_HOST:-${DJANGO_HOST:-localhost}}"
+FRONTEND_PREWARM_ROUTES="${FRONTEND_PREWARM_ROUTES:-/ /login}"
 
 # Virtualenv settings
 # Use a dedicated dev venv so we don't conflict with the production venv under /var/www/svr
@@ -329,7 +330,13 @@ sleep 3
 # Start Next.js development server
 echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
 cd "$FRONTEND_DIR"
-NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT" > /tmp/nextjs-dev.log 2>&1 &
+NEXT_DEV_ARGS=(dev --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+if [ "${USE_TURBOPACK:-0}" = "1" ]; then
+    NEXT_DEV_ARGS=(dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+else
+    NEXT_DEV_ARGS=(dev --webpack --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+fi
+NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next "${NEXT_DEV_ARGS[@]}" > /tmp/nextjs-dev.log 2>&1 &
 NEXTJS_PID=$!
 
 # Start Celery Worker
@@ -343,6 +350,28 @@ CELERY_WORKER_PID=$!
 echo -e "${GREEN}Starting Celery Beat...${NC}"
 celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler > /tmp/celery-beat.log 2>&1 &
 CELERY_BEAT_PID=$!
+
+prewarm_frontend() {
+    local base_url="http://127.0.0.1:$NEXTJS_PORT"
+    local route
+
+    echo -e "${YELLOW}Pre-warming frontend routes...${NC}"
+
+    for _ in $(seq 1 60); do
+        if curl -fsS -o /dev/null "$base_url/login" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
+
+    for route in $FRONTEND_PREWARM_ROUTES; do
+        curl -fsS -o /dev/null "$base_url$route" >/dev/null 2>&1 || true
+    done
+
+    echo -e "${GREEN}✓ Frontend warm-up complete${NC}"
+}
+
+prewarm_frontend
 
 echo ""
 echo -e "${BLUE}========================================${NC}"

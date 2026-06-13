@@ -70,6 +70,291 @@ def _get_document_watermark(document_type: str, document: Any = None, explicit: 
         return None
     return explicit or _get_default_watermark(document_type, document)
 
+
+def _normalize_inspection_damage_marks(vehicle_damage: Any) -> list[dict[str, Any]]:
+    """Normalize inspection damage marks for print/PDF templates."""
+    if not isinstance(vehicle_damage, list):
+        return []
+
+    type_colors = {
+        'scratch': '#6366f1',
+        'dent': '#dc2626',
+        'chip': '#eab308',
+        'crack': '#ea580c',
+        'rust': '#92400e',
+        'other': '#4b5563',
+    }
+    severity_sizes = {
+        'minor': 10,
+        'moderate': 14,
+        'major': 18,
+    }
+    severity_badges = {
+        'minor': 'badge-minor',
+        'moderate': 'badge-moderate',
+        'major': 'badge-major',
+    }
+
+    normalized: list[dict[str, Any]] = []
+    for index, mark in enumerate(vehicle_damage, start=1):
+        if not isinstance(mark, dict):
+            continue
+
+        raw_type = str(mark.get('type') or 'other').strip().lower()
+        raw_severity = str(mark.get('severity') or 'minor').strip().lower()
+        type_key = raw_type if raw_type in type_colors else 'other'
+        severity_key = raw_severity if raw_severity in severity_sizes else 'minor'
+
+        try:
+            x = float(mark.get('x', 0))
+            y = float(mark.get('y', 0))
+        except (TypeError, ValueError):
+            continue
+
+        if 0 <= x <= 1:
+            x *= 100
+        if 0 <= y <= 1:
+            y *= 100
+
+        normalized.append({
+            'index': index,
+            'type': type_key,
+            'severity': severity_key,
+            'description': str(mark.get('description') or '').strip(),
+            'x_pct': max(0, min(100, x)),
+            'y_pct': max(0, min(100, y)),
+            'marker_color': type_colors[type_key],
+            'marker_size': severity_sizes[severity_key],
+            'badge_class': severity_badges[severity_key],
+        })
+
+    return normalized
+
+
+def _get_static_asset_url(relative_path: str, *, base_url: Optional[str] = None, prefer_file: bool = False) -> str:
+    normalized = relative_path.lstrip('/')
+    static_root = Path(getattr(settings, 'STATIC_ROOT', ''))
+    static_dirs = [Path(p) for p in getattr(settings, 'STATICFILES_DIRS', [])]
+    search_roots = [root for root in [static_root, *static_dirs] if str(root)]
+
+    for root in search_roots:
+        candidate = root / normalized
+        if candidate.exists():
+            if prefer_file:
+                return candidate.resolve().as_uri()
+            if base_url:
+                return f"{base_url.rstrip('/')}/static/{normalized.replace('static/', '', 1)}"
+
+    if base_url:
+        return f"{base_url.rstrip('/')}/static/{normalized.replace('static/', '', 1)}"
+    return f"/static/{normalized.replace('static/', '', 1)}"
+
+
+def _suppress_pdf_library_logs() -> None:
+    """Reduce noisy third-party PDF/font logs during document generation."""
+    for logger_name in (
+        'fontTools',
+        'fontTools.subset',
+        'fontTools.ttLib',
+        'fontTools.misc',
+    ):
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
+
+
+def _build_work_order_delivery_contact(work_order: Any) -> Dict[str, str]:
+    customer = getattr(work_order, 'customer', None)
+    contact = getattr(work_order, 'brought_by_contact', None)
+
+    def _customer_name() -> str:
+        if not customer:
+            return "—"
+        return getattr(customer, 'company_name', '') or getattr(customer, 'full_name', '') or str(customer)
+
+    if work_order.brought_by_type == 'saved_contact' and contact:
+        full_name = f"{contact.first_name} {contact.last_name}".strip()
+        return {
+            'name': full_name or "—",
+            'role': contact.job_title or work_order.brought_by_relationship or "Company Contact",
+            'phone': contact.phone or "",
+            'email': contact.email or "",
+        }
+
+    if work_order.brought_by_type == 'third_party':
+        return {
+            'name': work_order.brought_by_name or "—",
+            'role': work_order.brought_by_relationship or work_order.get_brought_by_type_display(),
+            'phone': work_order.brought_by_phone or "",
+            'email': work_order.brought_by_email or "",
+        }
+
+    return {
+        'name': _customer_name(),
+        'role': 'Account Holder',
+        'phone': getattr(customer, 'phone', '') or "",
+        'email': getattr(customer, 'email', '') or "",
+    }
+
+
+def _build_work_order_stage_timeline(work_order: Any) -> list[dict[str, Any]]:
+    timeline: list[dict[str, Any]] = []
+
+    def add(label: str, when: Any, tone: str = 'muted') -> None:
+        if when:
+            timeline.append({'label': label, 'when': when, 'tone': tone})
+
+    add('Job Opened', work_order.created_at, 'neutral')
+    add('Diagnosis Ready', work_order.diagnosis_completed_at, 'info')
+    add('Approval Requested', work_order.approval_requested_at, 'warning')
+    add('Customer Approved', work_order.approved_at, 'success')
+    add('Repairs Started', work_order.started_at, 'info')
+    if getattr(work_order, 'quality_check_completed', False):
+        add(
+            'Quality Check',
+            work_order.quality_check_at,
+            'success' if getattr(work_order, 'quality_check_passed', False) else 'warning',
+        )
+    add('Work Completed', work_order.completed_at, 'success')
+
+    invoice = getattr(work_order, 'invoice', None)
+    if invoice:
+        add('Invoice Ready', getattr(invoice, 'created_at', None), 'neutral')
+        add('Invoice Paid', getattr(invoice, 'paid_at', None), 'success')
+
+    gate_pass = work_order.gate_passes.exclude(status='cancelled').order_by('-created_at').first()
+    if gate_pass:
+        add('Gate Pass Issued', getattr(gate_pass, 'issued_at', None) or gate_pass.created_at, 'neutral')
+        add('Vehicle Released', getattr(gate_pass, 'completed_at', None), 'success')
+
+    return timeline
+
+
+def _build_diagnosis_recommendation_context(work_order: Any) -> Dict[str, Any]:
+    diagnosis = getattr(work_order, 'diagnosis', None)
+    if not diagnosis:
+        return {
+            'diagnosis_record': None,
+            'diagnosis_summary': None,
+            'diagnosis_recommendations': [],
+        }
+
+    recommendations = list(
+        diagnosis.repair_recommendations.prefetch_related('findings').order_by('order', 'created_at')
+    )
+    if not recommendations:
+        return {
+            'diagnosis_record': diagnosis,
+            'diagnosis_summary': {
+                'total': 0,
+                'approved': 0,
+                'pending': 0,
+                'deferred': 0,
+                'declined': 0,
+                'quoted': 0,
+                'requested': 0,
+            },
+            'diagnosis_recommendations': [],
+        }
+
+    approval_counts = {
+        'approved': 0,
+        'pending': 0,
+        'deferred': 0,
+        'declined': 0,
+    }
+    quotation_counts = {
+        'quoted': 0,
+        'requested': 0,
+    }
+    normalized_recommendations: list[Dict[str, Any]] = []
+
+    for recommendation in recommendations:
+        status_key = recommendation.approval_status
+        if status_key == 'pending_approval':
+            approval_counts['pending'] += 1
+        elif status_key in approval_counts:
+            approval_counts[status_key] += 1
+
+        if recommendation.quotation_status == 'quoted':
+            quotation_counts['quoted'] += 1
+        elif recommendation.quotation_status == 'requested':
+            quotation_counts['requested'] += 1
+
+        parts_list = []
+        for part in recommendation.parts_needed or []:
+            if not isinstance(part, dict):
+                continue
+            name = str(part.get('part_name') or part.get('name') or '').strip()
+            quantity = part.get('quantity')
+            if name:
+                parts_list.append(f"{name}{f' x{quantity}' if quantity not in (None, '', 0) else ''}")
+
+        finding_summaries = [
+            getattr(finding, 'finding_summary', '') or getattr(finding, 'summary', '') or str(finding)
+            for finding in recommendation.findings.all()
+        ]
+
+        normalized_recommendations.append({
+            'record': recommendation,
+            'parts_text': ', '.join(parts_list),
+            'findings_text': '; '.join(filter(None, finding_summaries[:3])),
+            'is_approved': recommendation.approval_status == 'approved',
+            'is_unapproved': recommendation.approval_status in {'pending_approval', 'deferred', 'declined'},
+        })
+
+    return {
+        'diagnosis_record': diagnosis,
+        'diagnosis_summary': {
+            'total': len(recommendations),
+            'approved': approval_counts['approved'],
+            'pending': approval_counts['pending'],
+            'deferred': approval_counts['deferred'],
+            'declined': approval_counts['declined'],
+            'quoted': quotation_counts['quoted'],
+            'requested': quotation_counts['requested'],
+        },
+        'diagnosis_recommendations': normalized_recommendations,
+    }
+
+
+def _build_work_order_print_context(work_order: Any) -> Dict[str, Any]:
+    from django.db.models import Q
+
+    invoice = getattr(work_order, 'invoice', None)
+    gate_pass = work_order.gate_passes.exclude(status='cancelled').order_by('-created_at').first()
+    repair_tasks = work_order.tasks.filter(is_workflow_task=False).select_related('assigned_to').order_by('sequence_order', 'id')
+    parts = work_order.parts.order_by('created_at', 'id')
+
+    visible_notes = list(
+        work_order.notes.select_related('created_by')
+        .exclude(note__startswith='Status changed from ')
+        .exclude(note__startswith='Status changed from')
+        .filter(
+            Q(is_important=True)
+            | Q(note_type__in=['customer', 'technician', 'parts', 'approval', 'quality', 'general'])
+        )
+        .order_by('-created_at')[:8]
+    )
+
+    workflow_notes = list(
+        work_order.notes.select_related('created_by')
+        .filter(note_type='status')
+        .order_by('-created_at')[:5]
+    )
+
+    diagnosis_context = _build_diagnosis_recommendation_context(work_order)
+
+    return {
+        'delivery_contact': _build_work_order_delivery_contact(work_order),
+        'work_order_timeline': _build_work_order_stage_timeline(work_order),
+        'repair_tasks': repair_tasks,
+        'work_order_parts': parts,
+        'visible_work_order_notes': visible_notes,
+        'workflow_notes': workflow_notes,
+        'invoice_summary': invoice,
+        'gate_pass_summary': gate_pass,
+        **diagnosis_context,
+    }
+
 class DocumentPrinter:
     """Unified document printing service"""
     
@@ -169,6 +454,7 @@ class DocumentPrinter:
             pdf_file = None
             try:
                 # Local import so the app can still run when OS libs for WeasyPrint are missing
+                _suppress_pdf_library_logs()
                 from weasyprint import HTML, CSS  # type: ignore
 
                 # Determine base_url for relative paths (images)
@@ -357,6 +643,8 @@ def generate_work_order_pdf(work_order, branch=None):
     context = {
         'document': work_order,
         'branch': branch or work_order.branch,
+        'watermark': _get_document_watermark('work_order', work_order),
+        **_build_work_order_print_context(work_order),
     }
     filename = f"work_order_{work_order.work_order_number}.pdf"
     return printer.generate_pdf(context, filename)
@@ -392,6 +680,11 @@ def generate_inspection_pdf(inspection, branch=None):
         'document': inspection,
         'branch': branch or inspection.branch,
         'grouped_results': grouped_results,
+        'normalized_damage_marks': _normalize_inspection_damage_marks(inspection.vehicle_damage),
+        'inspection_damage_diagram_url': _get_static_asset_url(
+            'images/car_with_markers.png',
+            prefer_file=True,
+        ),
     }
     filename = f"inspection_{inspection.inspection_number}.pdf"
     return printer.generate_pdf(context, filename)
@@ -526,6 +819,7 @@ def render_work_order_print_html(work_order, branch=None, request=None):
         'watermark': _get_document_watermark('work_order', work_order),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
+        **_build_work_order_print_context(work_order),
         **company_info,
         **branding,
     }
@@ -551,6 +845,11 @@ def render_inspection_print_html(inspection, branch=None, request=None):
         'document': inspection,
         'branch': branch or inspection.branch,
         'grouped_results': grouped_results,
+        'normalized_damage_marks': _normalize_inspection_damage_marks(inspection.vehicle_damage),
+        'inspection_damage_diagram_url': _get_static_asset_url(
+            'images/car_with_markers.png',
+            base_url=base_url.rstrip('/'),
+        ),
         'watermark': _get_document_watermark('inspection', inspection),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),

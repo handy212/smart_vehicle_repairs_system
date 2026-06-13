@@ -21,7 +21,10 @@ import { Label } from "@/components/ui/label";
 export const inspectionSchema = z.object({
     vehicle: z.number().min(1, "Vehicle is required"),
     template: z.number().min(1, "Template is required"),
-    work_order: z.number().optional(),
+    work_order: z.preprocess(
+        (value) => (typeof value === "number" && Number.isNaN(value) ? undefined : value),
+        z.number().optional()
+    ),
     inspection_date: z.string().min(1, "Inspection date is required"),
     odometer_reading: z.preprocess(
         (value) => (typeof value === "number" && Number.isNaN(value) ? undefined : value),
@@ -223,7 +226,15 @@ export function InspectionForm({
                                 <Input
                                     id="work_order"
                                     type="number"
-                                    {...register("work_order", { valueAsNumber: true })}
+                                    {...register("work_order", {
+                                        setValueAs: (value) => {
+                                            if (value === "" || value === null || value === undefined) {
+                                                return undefined;
+                                            }
+                                            const parsed = Number(value);
+                                            return Number.isNaN(parsed) ? undefined : parsed;
+                                        },
+                                    })}
                                     placeholder="Work order ID"
                                 />
                                 {errors.work_order && (

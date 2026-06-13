@@ -18,6 +18,7 @@ import {
     ChevronUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMediaUrl } from "@/lib/api/utils";
 import Image from "next/image";
 import { useRef, useState } from "react";
 
@@ -293,7 +294,7 @@ export function InspectionItemRow({
                                 {result.photos.map((photo: InspectionPhoto) => (
                                     <div key={photo.id} className="relative group w-20 h-20 rounded overflow-hidden border border-border">
                                         <Image
-                                            src={photo.image}
+                                            src={getMediaUrl(photo.image)}
                                             alt="Inspection"
                                             fill
                                             className="object-cover"

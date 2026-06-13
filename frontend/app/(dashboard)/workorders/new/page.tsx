@@ -771,7 +771,14 @@ export default function NewWorkOrderPage() {
             <span className="font-semibold text-lg">New Work Order</span>
           </h1>
         </div>
-        <div className="flex shrink-0 gap-2 sm:pt-7">
+        <div className="flex shrink-0 flex-wrap gap-2 sm:pt-7">
+          {!appointment && (
+            <Link href="/check-in">
+              <Button type="button" variant="outline" disabled={isSubmitting}>
+                Walk-in Check-in
+              </Button>
+            </Link>
+          )}
           <Link href="/workorders">
             <Button type="button" variant="outline" disabled={isSubmitting}>
               Cancel
@@ -800,24 +807,6 @@ export default function NewWorkOrderPage() {
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">{serverError}</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!appointment && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Walk-in check-in?</p>
-              <p className="text-xs text-muted-foreground">
-                Use the guided check-in wizard for faster receptionist intake.
-              </p>
-            </div>
-            <Link href="/check-in">
-              <Button type="button" variant="outline" size="sm">
-                Use Check-in Wizard
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       )}
@@ -1078,9 +1067,9 @@ export default function NewWorkOrderPage() {
                 {selectedCustomerData && (
                   <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">Vehicle brought by</h3>
+                      <h3 className="text-sm font-semibold text-foreground">Delivered By</h3>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Record the person who physically brought the vehicle in for this work order.
+                        Record the individual who delivered the vehicle for this work order.
                       </p>
                     </div>
 
@@ -1104,9 +1093,6 @@ export default function NewWorkOrderPage() {
                           />
                           <div>
                             <p className="text-sm font-medium text-foreground">Not in saved business contacts</p>
-                            <p className="text-xs text-muted-foreground">
-                              Turn this on to enter the staff member, driver, or representative manually.
-                            </p>
                           </div>
                         </label>
 

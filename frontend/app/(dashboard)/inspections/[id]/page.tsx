@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { getInspectionApprovalLabel, getInspectionStageLabel, getInspectionStageTone, isInspectionStarted } from "@/lib/utils/inspection-status";
+import { getMediaUrl } from "@/lib/api/utils";
 
 const statusColors: Record<string, string> = {
   draft: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 border-slate-200 dark:border-slate-700",
@@ -47,6 +48,12 @@ export default function InspectionDetailPage() {
   const [showApproveOnBehalfDialog, setShowApproveOnBehalfDialog] = useState(false);
   const [behalfSignature, setBehalfSignature] = useState<string | null>(null);
   const [behalfReason, setBehalfReason] = useState("");
+  const [selectedPhoto, setSelectedPhoto] = useState<{
+    src: string;
+    caption?: string | null;
+    category?: string;
+    itemName?: string;
+  } | null>(null);
 
   const { data: inspection, isLoading } = useQuery({
     queryKey: ["inspection", inspectionId],
@@ -358,6 +365,30 @@ export default function InspectionDetailPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!selectedPhoto} onOpenChange={(open) => !open && setSelectedPhoto(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>{selectedPhoto?.caption || selectedPhoto?.itemName || "Inspection photo"}</DialogTitle>
+            {selectedPhoto?.category || selectedPhoto?.itemName ? (
+              <DialogDescription>
+                {[selectedPhoto.category, selectedPhoto.itemName].filter(Boolean).join(" • ")}
+              </DialogDescription>
+            ) : null}
+          </DialogHeader>
+          {selectedPhoto ? (
+            <div className="px-1 pb-1">
+              <div className="overflow-hidden rounded-lg border border-border bg-muted">
+                <img
+                  src={selectedPhoto.src}
+                  alt={selectedPhoto.caption || selectedPhoto.itemName || "Inspection photo"}
+                  className="max-h-[80vh] w-full object-contain"
+                />
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card>
@@ -476,9 +507,26 @@ export default function InspectionDetailPage() {
                                 {result.photos && result.photos.length > 0 && (
                                   <div className="flex gap-2 mt-2">
                                     {result.photos.map(p => (
-                                      <div key={p.id} className="w-12 h-12 rounded border bg-muted overflow-hidden relative">
-                                        <img src={p.image} className="w-full h-full object-cover" alt="Thumb" />
-                                      </div>
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedPhoto({
+                                            src: getMediaUrl(p.image),
+                                            caption: p.caption,
+                                            category,
+                                            itemName: result.item_name,
+                                          })
+                                        }
+                                        className="relative h-12 w-12 overflow-hidden rounded border border-border bg-muted transition hover:border-primary/50 hover:ring-2 hover:ring-primary/20"
+                                        aria-label={`Open photo for ${result.item_name}`}
+                                      >
+                                        <img
+                                          src={getMediaUrl(p.image)}
+                                          className="h-full w-full object-cover"
+                                          alt={p.caption || result.item_name || "Inspection photo"}
+                                        />
+                                      </button>
                                     ))}
                                   </div>
                                 )}
@@ -500,14 +548,25 @@ export default function InspectionDetailPage() {
                   {allPhotos.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {allPhotos.map((photo) => (
-                        <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden border border-border bg-muted group">
-                          <img src={photo.image} alt={photo.caption || "Inspection"} className="w-full h-full object-cover" />
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() =>
+                            setSelectedPhoto({
+                              src: getMediaUrl(photo.image),
+                              caption: photo.caption,
+                            })
+                          }
+                          className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted text-left transition hover:border-primary/50 hover:ring-2 hover:ring-primary/20"
+                          aria-label={`Open ${photo.caption || "inspection photo"}`}
+                        >
+                          <img src={getMediaUrl(photo.image)} alt={photo.caption || "Inspection"} className="w-full h-full object-cover" />
                           {photo.caption && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-white text-xs truncate">
                               {photo.caption}
                             </div>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   ) : (

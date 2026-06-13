@@ -614,10 +614,23 @@ class DiagnosisTimeLog(models.Model):
     @property
     def duration_formatted(self):
         """Format duration as hours:minutes"""
-        if self.duration_hours:
-            hours = int(self.duration_hours)
-            minutes = int((self.duration_hours - hours) * 60)
+        duration_hours = self.duration_hours
+        if duration_hours is None and self.ended_at and self.started_at:
+            duration = self.ended_at - self.started_at
+            duration_hours = Decimal(str(duration.total_seconds() / 3600))
+
+        if duration_hours is not None:
+            hours = int(duration_hours)
+            minutes = int((duration_hours - hours) * 60)
+            if hours == 0 and minutes == 0:
+                return "0m"
+            if minutes == 0:
+                return f"{hours}h"
+            if hours == 0:
+                return f"{minutes}m"
             return f"{hours}h {minutes}m"
+        if self.stage == 'completed':
+            return ""
         return "In progress"
 
 

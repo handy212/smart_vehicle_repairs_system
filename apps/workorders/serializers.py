@@ -831,6 +831,11 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         return user
         
     def validate(self, data):
+        if self.instance and self.instance.status == 'closed':
+            raise serializers.ValidationError(
+                "Closed work orders cannot be edited."
+            )
+
         # Validate odometer reading
         odometer_out = data.get('odometer_out')
         if odometer_out is not None and self.instance and self.instance.vehicle:
