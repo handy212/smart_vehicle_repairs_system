@@ -353,6 +353,45 @@ class WorkOrder(models.Model):
         related_name='work_orders',
         help_text="Service bundle associated with this work order"
     )
+
+    BROUGHT_BY_TYPE_CHOICES = [
+        ('account_holder', 'Account Holder'),
+        ('saved_contact', 'Saved Contact'),
+        ('third_party', 'Third Party / Driver'),
+    ]
+    brought_by_type = models.CharField(
+        max_length=20,
+        choices=BROUGHT_BY_TYPE_CHOICES,
+        default='account_holder',
+        help_text="Who physically brought the vehicle for this work order"
+    )
+    brought_by_contact = models.ForeignKey(
+        'customers.CustomerContact',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='work_orders_brought_in',
+        help_text="Saved business contact who brought the vehicle"
+    )
+    brought_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Name of the person who brought the vehicle when not using the account holder directly"
+    )
+    brought_by_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Phone number for the person who brought the vehicle"
+    )
+    brought_by_email = models.EmailField(
+        blank=True,
+        help_text="Email for the person who brought the vehicle"
+    )
+    brought_by_relationship = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Relationship to the customer or business, e.g. Driver, Staff, Relative"
+    )
     
     class Meta:
         ordering = ['-created_at']

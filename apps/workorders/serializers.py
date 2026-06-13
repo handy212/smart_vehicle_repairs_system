@@ -66,6 +66,8 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'work_order_number', 'status', 'priority',
             'customer', 'customer_name', 'vehicle', 'vehicle_info', 'vehicle_display',
+            'brought_by_type', 'brought_by_contact', 'brought_by_name',
+            'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'primary_technician', 'primary_technician_name',
             'service_coordinator', 'service_coordinator_name',
             'created_at', 'started_at', 'completed_at', 'estimated_completion',
@@ -258,6 +260,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'work_order_number', 'access_token', 'branch', 'appointment',
             'customer', 'customer_name', 'vehicle', 'status', 'priority',
+            'brought_by_type', 'brought_by_contact', 'brought_by_name',
+            'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'service_coordinator', 'primary_technician', 'assigned_technicians',
             'primary_technician_name', 'service_coordinator_name',
             'vehicle_display', 'technician_names',
@@ -473,6 +477,8 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'id', 'work_order_number',
             'appointment', 'customer', 'vehicle', 'branch',
             'status', 'priority',
+            'brought_by_type', 'brought_by_contact', 'brought_by_name',
+            'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'service_coordinator',
             'primary_technician', 'assigned_technicians',
             'estimated_completion',
@@ -487,6 +493,9 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, data):
+        brought_by_type = data.get('brought_by_type', 'account_holder')
+        brought_by_contact = data.get('brought_by_contact')
+        brought_by_name = (data.get('brought_by_name') or '').strip()
         # Validate vehicle belongs to customer
         if data['vehicle'].owner != data['customer']:
             raise serializers.ValidationError(
@@ -591,6 +600,55 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             if matches:
                 # Store in context for use in create method
                 self.context['repeat_visit_matches'] = matches
+
+        customer = data.get('customer')
+        if customer:
+            customer_type = getattr(customer, 'customer_type', '')
+
+            if brought_by_contact:
+                if brought_by_contact.customer_id != customer.id:
+                    raise serializers.ValidationError({
+                        'brought_by_contact': 'Selected contact does not belong to the chosen customer account.'
+                    })
+                if customer_type not in {'business', 'fleet'}:
+                    raise serializers.ValidationError({
+                        'brought_by_contact': 'Saved contacts can only be used for business or fleet accounts.'
+                    })
+
+            if customer_type in {'business', 'fleet'}:
+                if brought_by_type == 'saved_contact' and not brought_by_contact:
+                    raise serializers.ValidationError({
+                        'brought_by_contact': 'Select the business contact who brought the vehicle.'
+                    })
+                if brought_by_type == 'third_party' and not brought_by_name:
+                    raise serializers.ValidationError({
+                        'brought_by_name': 'Enter the name of the person who brought the vehicle.'
+                    })
+            else:
+                if brought_by_type == 'saved_contact':
+                    raise serializers.ValidationError({
+                        'brought_by_type': 'Individual customers cannot use a saved business contact here.'
+                    })
+                if brought_by_type == 'third_party' and not brought_by_name:
+                    raise serializers.ValidationError({
+                        'brought_by_name': 'Enter the name of the driver or representative who brought the vehicle.'
+                    })
+
+            if brought_by_type == 'account_holder':
+                data['brought_by_contact'] = None
+                data['brought_by_name'] = ''
+                data['brought_by_phone'] = ''
+                data['brought_by_email'] = ''
+                data['brought_by_relationship'] = ''
+            elif brought_by_type == 'saved_contact' and brought_by_contact:
+                data['brought_by_name'] = f"{brought_by_contact.first_name} {brought_by_contact.last_name}".strip()
+                data['brought_by_phone'] = brought_by_contact.phone or data.get('brought_by_phone', '')
+                data['brought_by_email'] = brought_by_contact.email or data.get('brought_by_email', '')
+                data['brought_by_relationship'] = (
+                    data.get('brought_by_relationship')
+                    or brought_by_contact.job_title
+                    or 'Business Contact'
+                )
         
         return data
 
@@ -712,6 +770,8 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'status', 'priority',
             'service_coordinator',
             'primary_technician', 'assigned_technicians',
+            'brought_by_type', 'brought_by_contact', 'brought_by_name',
+            'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'started_at', 'completed_at', 'estimated_completion',
             'customer_concerns', 'special_instructions',
             'diagnosis_notes', 'diagnosis_completed_at', 'diagnosis_by',

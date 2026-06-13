@@ -4,6 +4,7 @@ import type { WorkOrder } from "@/lib/api/workorders";
 type WorkOrderLike = Pick<
   Partial<WorkOrder>,
   | "status"
+  | "gate_pass_status"
   | "current_inspection_status"
   | "current_inspection_status_display"
   | "current_inspection_completion_percentage"
@@ -31,8 +32,20 @@ function getBillingStageLabel(workOrder?: WorkOrderLike | null): string | null {
   }
 
   if (workflowStatus === "closed") {
-    const due = parseMoney(workOrder.invoice_summary?.amount_due);
-    return due > 0.01 ? "Closed | Payment Outstanding" : "Closed";
+    switch (workOrder.gate_pass_status) {
+      case "pending":
+        return "Gate Pass Pending";
+      case "issued":
+        return "Gate Pass Issued";
+      case "completed":
+        return "Vehicle Picked Up";
+      case "cancelled":
+        return "Gate Pass Cancelled";
+      default: {
+        const due = parseMoney(workOrder.invoice_summary?.amount_due);
+        return due > 0.01 ? "Closed | Payment Outstanding" : "Closed";
+      }
+    }
   }
 
   if (workflowStatus === "invoiced") {

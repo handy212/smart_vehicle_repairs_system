@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, User, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle, Plus } from "lucide-react";
+import { AlertCircle, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle, Plus } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -45,6 +45,12 @@ const workOrderSchema = z.object({
   appointment: z.number().optional(),
   priority: z.enum(["low", "normal", "high", "urgent"]),
   status: z.enum(["draft", "pending", "in_progress", "completed"]),
+  brought_by_type: z.enum(["account_holder", "saved_contact", "third_party"]).default("account_holder"),
+  brought_by_contact: z.number().optional(),
+  brought_by_name: z.string().optional(),
+  brought_by_phone: z.string().optional(),
+  brought_by_email: z.string().optional(),
+  brought_by_relationship: z.string().optional(),
   customer_concerns: z.string().min(1, "Customer concerns are required"),
   odometer_in: z.number().min(0),
   maintenance_type: z.enum(["general", "routine"]),
@@ -135,6 +141,8 @@ export default function NewWorkOrderPage() {
     customer_number?: string;
   } | null>(null);
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>([]);
+  const [businessUseManualContact, setBusinessUseManualContact] = useState(false);
+  const [individualUseThirdParty, setIndividualUseThirdParty] = useState(false);
 
   // Fetch vehicle if vehicleId is provided in URL
   const { data: vehicleFromUrl } = useQuery({
@@ -263,6 +271,12 @@ export default function NewWorkOrderPage() {
       vehicle: vehicleId ? parseInt(vehicleId) : (undefined as any),
       appointment: appointmentId ? parseInt(appointmentId) : undefined,
       odometer_in: 0,
+      brought_by_type: "account_holder",
+      brought_by_contact: undefined,
+      brought_by_name: "",
+      brought_by_phone: "",
+      brought_by_email: "",
+      brought_by_relationship: "",
       customer_concerns: "",
       maintenance_type: "general",
       service_bundle: undefined,
@@ -273,11 +287,18 @@ export default function NewWorkOrderPage() {
   const vehicle = watch("vehicle");
   const odometerIn = watch("odometer_in");
   const customerConcerns = watch("customer_concerns");
+  const broughtByContact = watch("brought_by_contact");
 
   const { data: fetchedCustomer } = useQuery({
     queryKey: ["customer", customer],
     queryFn: () => customersApi.get(customer!),
     enabled: !!customer,
+  });
+
+  const { data: customerContacts } = useQuery({
+    queryKey: ["customer-contacts", selectedCustomer],
+    queryFn: () => customersApi.contacts.list(selectedCustomer!),
+    enabled: !!selectedCustomer,
   });
 
   const createCustomerMutation = useMutation({
@@ -354,6 +375,8 @@ export default function NewWorkOrderPage() {
       customer_type: cust.customer_type,
       customer_number: cust.customer_number,
     });
+    setBusinessUseManualContact(false);
+    setIndividualUseThirdParty(false);
     if (!isInitialSyncRef.current) {
       setValue("vehicle", undefined as any);
       setValue("odometer_in", 0);
@@ -385,6 +408,17 @@ export default function NewWorkOrderPage() {
   const selectedVehicle = vehicle && vehiclesData?.results
     ? vehiclesData.results.find((v) => v.id === vehicle) || null
     : null;
+  const isBusinessAccount =
+    selectedCustomerData?.customer_type === "business" || selectedCustomerData?.customer_type === "fleet";
+  const availableContacts = Array.isArray(customerContacts) ? customerContacts : [];
+  const selectedBusinessContact = availableContacts.find((contact) => contact.id === broughtByContact) || null;
+
+  useEffect(() => {
+    if (!isBusinessAccount) return;
+    if (availableContacts.length > 0) return;
+    setBusinessUseManualContact(true);
+    setValue("brought_by_type", "third_party");
+  }, [availableContacts.length, isBusinessAccount, setValue]);
 
   useEffect(() => {
     if (fetchedCustomer) {
@@ -399,6 +433,27 @@ export default function NewWorkOrderPage() {
       });
     }
   }, [fetchedCustomer]);
+
+  useEffect(() => {
+    const customerType = selectedCustomerData?.customer_type;
+    const isBusiness = customerType === "business" || customerType === "fleet";
+
+    setValue("brought_by_contact", undefined as any);
+    setValue("brought_by_name", "");
+    setValue("brought_by_phone", "");
+    setValue("brought_by_email", "");
+    setValue("brought_by_relationship", "");
+
+    if (isBusiness) {
+      setBusinessUseManualContact(false);
+      setIndividualUseThirdParty(false);
+      setValue("brought_by_type", "saved_contact");
+    } else {
+      setBusinessUseManualContact(false);
+      setIndividualUseThirdParty(false);
+      setValue("brought_by_type", "account_holder");
+    }
+  }, [selectedCustomerData?.id, selectedCustomerData?.customer_type, setValue]);
 
   // Update selected customer when form value changes
   useEffect(() => {
@@ -1019,6 +1074,174 @@ export default function NewWorkOrderPage() {
                   </div>
 
                 </div>
+
+                {selectedCustomerData && (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Vehicle brought by</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Record the person who physically brought the vehicle in for this work order.
+                      </p>
+                    </div>
+
+                    {isBusinessAccount ? (
+                      <div className="space-y-4">
+                        <label className="flex items-start gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={businessUseManualContact}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setBusinessUseManualContact(checked);
+                              setValue("brought_by_contact", undefined as any);
+                              setValue("brought_by_name", "");
+                              setValue("brought_by_phone", "");
+                              setValue("brought_by_email", "");
+                              setValue("brought_by_relationship", "");
+                              setValue("brought_by_type", checked ? "third_party" : "saved_contact");
+                            }}
+                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Not in saved business contacts</p>
+                            <p className="text-xs text-muted-foreground">
+                              Turn this on to enter the staff member, driver, or representative manually.
+                            </p>
+                          </div>
+                        </label>
+
+                        {!businessUseManualContact ? (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-card-foreground">
+                              Business contact *
+                            </label>
+                            <Select
+                              value={broughtByContact?.toString() || ""}
+                              onValueChange={(val) => {
+                                const selectedId = parseInt(val);
+                                const contact = availableContacts.find((item) => item.id === selectedId);
+                                setValue("brought_by_type", "saved_contact");
+                                setValue("brought_by_contact", selectedId);
+                                setValue("brought_by_name", contact ? `${contact.first_name} ${contact.last_name}`.trim() : "");
+                                setValue("brought_by_phone", contact?.phone || "");
+                                setValue("brought_by_email", contact?.email || "");
+                                setValue("brought_by_relationship", contact?.job_title || "Business Contact");
+                              }}
+                            >
+                              <SelectTrigger className={errors.brought_by_contact ? "border-destructive" : ""}>
+                                <SelectValue placeholder={availableContacts.length ? "Select contact person" : "No saved contacts found"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableContacts.map((contact) => (
+                                  <SelectItem key={contact.id} value={contact.id.toString()}>
+                                    {contact.first_name} {contact.last_name}
+                                    {contact.job_title ? ` — ${contact.job_title}` : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {errors.brought_by_contact && (
+                              <p className="text-sm text-destructive">{errors.brought_by_contact.message}</p>
+                            )}
+                            {selectedBusinessContact && (
+                              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                                {selectedBusinessContact.phone && <span>📞 {selectedBusinessContact.phone}</span>}
+                                {selectedBusinessContact.email && <span>✉️ {selectedBusinessContact.email}</span>}
+                                {selectedBusinessContact.job_title && <span>Role: {selectedBusinessContact.job_title}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Person name *
+                              </label>
+                              <Input {...register("brought_by_name")} placeholder="Enter full name" />
+                              {errors.brought_by_name && <p className="mt-1 text-sm text-destructive">{errors.brought_by_name.message}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Relationship / role
+                              </label>
+                              <Input {...register("brought_by_relationship")} placeholder="Driver, staff, representative..." />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Phone
+                              </label>
+                              <Input {...register("brought_by_phone")} placeholder="Phone number" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Email
+                              </label>
+                              <Input {...register("brought_by_email")} type="email" placeholder="Email address" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <label className="flex items-start gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={individualUseThirdParty}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setIndividualUseThirdParty(checked);
+                              setValue("brought_by_type", checked ? "third_party" : "account_holder");
+                              setValue("brought_by_contact", undefined as any);
+                              if (!checked) {
+                                setValue("brought_by_name", "");
+                                setValue("brought_by_phone", "");
+                                setValue("brought_by_email", "");
+                                setValue("brought_by_relationship", "");
+                              }
+                            }}
+                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Brought by driver or another person</p>
+                            <p className="text-xs text-muted-foreground">
+                              Turn this on if someone other than the customer/account holder brought the vehicle.
+                            </p>
+                          </div>
+                        </label>
+
+                        {individualUseThirdParty && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Person name *
+                              </label>
+                              <Input {...register("brought_by_name")} placeholder="Enter full name" />
+                              {errors.brought_by_name && <p className="mt-1 text-sm text-destructive">{errors.brought_by_name.message}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Relationship
+                              </label>
+                              <Input {...register("brought_by_relationship")} placeholder="Driver, spouse, staff, friend..." />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Phone
+                              </label>
+                              <Input {...register("brought_by_phone")} placeholder="Phone number" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Email
+                              </label>
+                              <Input {...register("brought_by_email")} type="email" placeholder="Email address" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

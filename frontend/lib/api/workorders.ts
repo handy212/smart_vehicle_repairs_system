@@ -2,6 +2,17 @@ import apiClient from "./client";
 import { Customer } from "./customers";
 import { Vehicle } from "./vehicles";
 
+export interface CustomerContactSummary {
+  id: number;
+  customer: number;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  job_title?: string;
+  is_primary?: boolean;
+}
+
 export interface WorkOrder {
   id: number;
   work_order_number: string;
@@ -42,6 +53,12 @@ export interface WorkOrder {
   assigned_technicians_detail?: Array<{ id: number; name: string; email?: string; role?: string }>;
   service_coordinator?: number | { id: number; first_name: string; last_name: string };
   service_coordinator_name?: string;
+  brought_by_type?: "account_holder" | "saved_contact" | "third_party";
+  brought_by_contact?: number | CustomerContactSummary | null;
+  brought_by_name?: string;
+  brought_by_phone?: string;
+  brought_by_email?: string;
+  brought_by_relationship?: string;
   requires_approval?: boolean;
   estimate_summary?: {
     id: number;
