@@ -97,6 +97,7 @@ def seed_accounting_controls(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('accounting', '0010_account_account_subtype_account_is_till_enabled_and_more'),
