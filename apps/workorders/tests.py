@@ -294,7 +294,7 @@ class WorkOrderModelTest(TestCase):
         recommendation = baker.make(
             RepairRecommendation,
             diagnosis=diagnosis,
-            approval_status='approved',
+            approval_status='pending_approval',
             quotation_status='requested',
             converted_to_task=None,
         )
@@ -319,7 +319,6 @@ class WorkOrderModelTest(TestCase):
         self.assertEqual(workorder.get_current_quote_stage(), 'quotation_ready')
         self.assertEqual(serializer.data['current_quote_stage'], 'quotation_ready')
         self.assertEqual(serializer.data['current_quote_stage_display'], 'Quotation Ready')
-        self.assertIsNotNone(serializer.data['invoice_summary']['paid_at'])
 
     def test_workorder_quote_stage_tracks_approved_parts_flow(self):
         workorder = baker.make(

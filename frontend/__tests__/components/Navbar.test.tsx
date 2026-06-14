@@ -3,7 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navbar } from '@/components/layout/Navbar';
 import { useAuthStore } from '@/store/authStore';
-import type { Mock } from 'vitest';
 
 // Mock the auth store
 vi.mock('@/store/authStore', () => ({
@@ -77,10 +76,11 @@ describe('Navbar Component', () => {
                 role: 'admin',
             },
             isAuthenticated: true,
+            setUser: vi.fn(),
             logout: vi.fn(),
         };
 
-        (useAuthStore as Mock).mockImplementation((selector?: (state: typeof authState) => unknown) =>
+        vi.mocked(useAuthStore).mockImplementation((selector?: (state: typeof authState) => unknown) =>
             selector ? selector(authState) : authState
         );
     });
