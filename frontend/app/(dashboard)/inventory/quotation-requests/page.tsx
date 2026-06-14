@@ -15,7 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
-import { useAuthStore } from "@/store/authStore";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
+import {
+  STORES_QUOTATION_COMPLETE_PERMISSIONS,
+  STORES_QUOTATION_VIEW_PERMISSIONS,
+} from "@/lib/utils/permissions";
 import { PartRequestDetailDialog } from "../parts-requests/components/PartRequestDetailDialog";
 import { getUserFacingError } from "@/lib/api/errors";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
@@ -55,20 +59,9 @@ export default function QuotationRequestsPage() {
   const [selectedWoId, setSelectedWoId] = useState<number | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { hasAnyPermission } = usePermissions();
-  const { user } = useAuthStore();
 
-  const canViewQuotationQueue = hasAnyPermission([
-    "view_inventory",
-    "edit_estimates",
-    "manage_inventory",
-    "view_billing",
-  ]);
-  const canCompleteQuotes = hasAnyPermission([
-    "edit_estimates",
-    "manage_inventory",
-    "approve_estimates",
-    "manage_diagnosis",
-  ]);
+  const canViewQuotationQueue = hasAnyPermission([...STORES_QUOTATION_VIEW_PERMISSIONS]);
+  const canCompleteQuotes = hasAnyPermission([...STORES_QUOTATION_COMPLETE_PERMISSIONS]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["diagnosis", "quotation-queue", search],
@@ -206,20 +199,12 @@ export default function QuotationRequestsPage() {
     queryClient.invalidateQueries({ queryKey: ["parts-requests-stats"] });
   };
 
-  if (!canViewQuotationQueue) {
-    return (
-      <Card className="border-destructive/20">
-        <CardContent className="py-12 text-center">
-          <h2 className="text-sm font-medium text-foreground">Stores quotation access required</h2>
-          <p className="mt-2 text-xs text-muted-foreground">
-            This workspace is for stores, inventory, or billing staff handling quotation handoff.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
+    <PermissionPageGuard
+      permissions={[...STORES_QUOTATION_VIEW_PERMISSIONS]}
+      deniedTitle="Stores quotation access required"
+      deniedDescription="This workspace is for stores, inventory, or billing staff handling quotation handoff."
+    >
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -685,5 +670,6 @@ export default function QuotationRequestsPage() {
         onRefresh={refreshStoresWorkbench}
       />
     </div>
+    </PermissionPageGuard>
   );
 }

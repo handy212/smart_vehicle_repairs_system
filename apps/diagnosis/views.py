@@ -7,6 +7,9 @@ from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_p
 from apps.diagnosis.permission_utils import (
     DiagnosisCodeLibraryPermissionMixin,
     DiagnosisPermissionMixin,
+    quotation_complete_permissions,
+    quotation_queue_read_permissions,
+    user_can_complete_quotation,
 )
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
@@ -210,11 +213,7 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
 
     @staticmethod
     def _user_has_quote_completion_role(user):
-        return (
-            user_has_permission(user, 'manage_diagnosis')
-            or user_has_permission(user, 'manage_inventory')
-            or user_has_permission(user, 'approve_part_requests')
-        )
+        return user_can_complete_quotation(user)
 
     def _build_or_refresh_quote_estimate(self, diagnosis, recommendations, user):
         """
@@ -1545,6 +1544,14 @@ class RepairRecommendationViewSet(
         if self.action in ['create', 'update', 'partial_update']:
             return RepairRecommendationCreateSerializer
         return RepairRecommendationSerializer
+
+    def get_permissions(self):
+        action = getattr(self, 'action', None)
+        if action == 'quotation_queue':
+            return quotation_queue_read_permissions()
+        if action == 'mark_quoted':
+            return quotation_complete_permissions()
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         diagnosis = serializer.validated_data.get('diagnosis')

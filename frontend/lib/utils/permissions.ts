@@ -177,9 +177,40 @@ export const PERMISSIONS = {
   VIEW_FINANCIAL_REPORTS: "view_financial_reports",
   APPROVE_PURCHASE_ORDERS: "approve_purchase_orders",
   APPROVE_ESTIMATES: "approve_estimates",
+  EDIT_ESTIMATES: "edit_estimates",
+  APPROVE_PART_REQUESTS: "approve_part_requests",
+  REQUEST_PARTS: "request_parts",
+  VIEW_DIAGNOSIS: "view_diagnosis",
+  MANAGE_DIAGNOSIS: "manage_diagnosis",
   REFUND_PAYMENTS: "refund_payments",
   MANAGE_BILLING: "manage_billing",
 } as const;
+
+/** Stores Workbench (/inventory/quotation-requests) — view quotation queue. */
+export const STORES_QUOTATION_VIEW_PERMISSIONS = [
+  PERMISSIONS.VIEW_DIAGNOSIS,
+  PERMISSIONS.VIEW_INVENTORY,
+  PERMISSIONS.MANAGE_INVENTORY,
+  PERMISSIONS.APPROVE_PART_REQUESTS,
+  PERMISSIONS.EDIT_ESTIMATES,
+  PERMISSIONS.APPROVE_ESTIMATES,
+] as const;
+
+/** Stores Workbench — mark recommendations as quotation-ready. */
+export const STORES_QUOTATION_COMPLETE_PERMISSIONS = [
+  PERMISSIONS.MANAGE_DIAGNOSIS,
+  PERMISSIONS.MANAGE_INVENTORY,
+  PERMISSIONS.APPROVE_PART_REQUESTS,
+] as const;
+
+/** Parts Requests page — list and fulfill work-order part requisitions. */
+export const PARTS_REQUESTS_VIEW_PERMISSIONS = [
+  PERMISSIONS.VIEW_WORKORDERS,
+  PERMISSIONS.VIEW_OWN_WORKORDERS,
+  PERMISSIONS.APPROVE_PART_REQUESTS,
+  PERMISSIONS.MANAGE_INVENTORY,
+  PERMISSIONS.REQUEST_PARTS,
+] as const;
 
 /** Super-admin role still used only for module bypass; capabilities come from permissions list. */
 export function isSuperAdminRole(role?: string | null): boolean {

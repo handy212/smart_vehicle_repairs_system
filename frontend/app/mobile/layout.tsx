@@ -11,6 +11,8 @@ import { Home, Wrench, Truck, MoreHorizontal, Calendar } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
+import { shouldUseMobileApp } from "@/lib/utils/device-context";
+import { isMobileShellRole } from "@/lib/utils/post-login-redirect";
 
 export default function MobileLayout({
   children,
@@ -19,7 +21,7 @@ export default function MobileLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, setUser, isAuthenticated, logout } = useAuthStore();
+  const { user, setUser, isAuthenticated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -34,9 +36,13 @@ export default function MobileLayout({
         try {
           const currentUser = await authApi.getCurrentUser();
           if (isMounted) {
+            if (isMobileShellRole(currentUser.role) && !shouldUseMobileApp()) {
+              router.push("/dashboard");
+              return;
+            }
+
             const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
             if (!allowedRoles.has(currentUser.role)) {
-              logout();
               router.push("/dashboard");
               return;
             }
@@ -49,12 +55,14 @@ export default function MobileLayout({
         }
       }
       if (user) {
+        if (isMobileShellRole(user.role) && !shouldUseMobileApp()) {
+          if (isMounted) router.push("/dashboard");
+          return;
+        }
+
         const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
         if (!allowedRoles.has(user.role)) {
-          if (isMounted) {
-            logout();
-            router.push("/dashboard");
-          }
+          if (isMounted) router.push("/dashboard");
         }
       }
     };

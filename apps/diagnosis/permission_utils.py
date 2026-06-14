@@ -6,7 +6,53 @@ from apps.accounts.permissions import (
     HasPermission,
     IsModuleEnabled,
     WORKORDER_VIEW_PERMISSIONS,
+    user_has_permission,
 )
+
+# Stores workbench: quotation queue read access (broader than full diagnosis CRUD).
+QUOTATION_QUEUE_VIEW_PERMISSIONS = (
+    'view_diagnosis',
+    'view_inventory',
+    'manage_inventory',
+    'approve_part_requests',
+    'edit_estimates',
+    'approve_estimates',
+)
+
+# Stores workbench: mark recommendations as quotation-ready.
+QUOTATION_COMPLETE_PERMISSIONS = (
+    'manage_diagnosis',
+    'manage_inventory',
+    'approve_part_requests',
+)
+
+
+def user_can_view_quotation_queue(user):
+    """Whether the user may read the stores quotation queue."""
+    return any(
+        user_has_permission(user, permission_code)
+        for permission_code in QUOTATION_QUEUE_VIEW_PERMISSIONS
+    )
+
+
+def user_can_complete_quotation(user):
+    """Whether the user may mark stores quotations as ready."""
+    return any(
+        user_has_permission(user, permission_code)
+        for permission_code in QUOTATION_COMPLETE_PERMISSIONS
+    )
+
+
+def quotation_queue_read_permissions():
+    return diagnosis_module_permissions() + [
+        HasAnyPermission(list(QUOTATION_QUEUE_VIEW_PERMISSIONS))(),
+    ]
+
+
+def quotation_complete_permissions():
+    return diagnosis_module_permissions() + [
+        HasAnyPermission(list(QUOTATION_COMPLETE_PERMISSIONS))(),
+    ]
 
 
 def diagnosis_module_permissions():

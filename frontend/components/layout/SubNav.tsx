@@ -55,6 +55,7 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { STORES_QUOTATION_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 import { useBranding } from "@/lib/hooks/useBranding";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
@@ -64,6 +65,7 @@ interface SubNavItem {
   name: string;
   href: string;
   permission?: string;
+  permissions?: string[];
   superAdminOnly?: boolean;
   icon?: LucideIcon;
   module?: string;
@@ -230,6 +232,9 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
       </Link>
     );
 
+    if (item.permissions && item.permissions.length > 0) {
+      return <PermissionGuard key={item.name} permissions={[...item.permissions]}>{link}</PermissionGuard>;
+    }
     if (item.permission) {
       return <PermissionGuard key={item.name} permission={item.permission}>{link}</PermissionGuard>;
     }
@@ -318,7 +323,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
 // Define sub-navigation items for each module
 export const subNavConfig: Record<string, SubNavItem[]> = {
   inventory: [
-    { name: "Stores Workbench", href: "/inventory/quotation-requests", permission: "view_inventory", icon: ListChecks },
+    { name: "Stores Workbench", href: "/inventory/quotation-requests", permissions: [...STORES_QUOTATION_VIEW_PERMISSIONS], icon: ListChecks },
     { name: "Parts", href: "/inventory", permission: "view_inventory", icon: Package },
     { name: "Categories", href: "/inventory/categories", permission: "view_inventory", icon: Tags },
     { name: "Suppliers", href: "/inventory/suppliers", permission: "view_inventory", icon: Truck },

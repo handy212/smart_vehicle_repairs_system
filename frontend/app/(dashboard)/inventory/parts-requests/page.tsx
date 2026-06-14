@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowRight, Package, Search, AlertCircle, CheckCircle, Clock, X, ChevronDown, Download } from "lucide-react";
 import Link from "next/link";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
+import { PARTS_REQUESTS_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 import { Input } from "@/components/ui/input";
 import { PartRequestDetailDialog } from "./components/PartRequestDetailDialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -168,7 +169,11 @@ export default function PartsRequestsPage() {
 
 
     return (
-        <PermissionPageGuard permissions={['view_workorder']}>
+        <PermissionPageGuard
+            permissions={[...PARTS_REQUESTS_VIEW_PERMISSIONS]}
+            deniedTitle="Parts requests access required"
+            deniedDescription="You need work order or inventory permissions to view and fulfill parts requests."
+        >
             <div className="space-y-6">
                 {/* Header Block */}
                 <div className="flex flex-col space-y-4">

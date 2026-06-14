@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDashboardRoleConfig, dashboardShowsSection } from "@/lib/utils/dashboard-role-config";
+import { getPostLoginPath } from "@/lib/utils/post-login-redirect";
 
 describe("getDashboardRoleConfig", () => {
   it("maps receptionist to front desk variant with check-in", () => {
@@ -20,7 +21,9 @@ describe("getDashboardRoleConfig", () => {
   });
 
   it("maps technician login path via post-login redirect utility contract", () => {
-    // Technician staff dashboard is mobile; config falls back to default if ever shown
+    expect(getPostLoginPath("technician", { useMobileApp: false })).toBe("/dashboard");
+    expect(getPostLoginPath("technician", { useMobileApp: true })).toBe("/mobile/dashboard");
+
     const config = getDashboardRoleConfig("technician");
     expect(config.variant).toBe("default");
   });

@@ -3,13 +3,16 @@
 import { WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import { getPostLoginPath } from "@/lib/utils/post-login-redirect";
 
 export default function OfflinePage() {
   const router = useRouter();
+  const { user } = useAuthStore();
 
   const handleRetry = () => {
     if (navigator.onLine) {
-      router.push("/mobile/dashboard");
+      router.push(getPostLoginPath(user?.role));
     } else {
       router.refresh();
     }

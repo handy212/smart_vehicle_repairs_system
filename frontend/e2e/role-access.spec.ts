@@ -26,8 +26,7 @@ const ROLE_SCENARIOS: RoleScenario[] = [
     },
     {
         role: 'technician',
-        allowedRoutes: ['/mobile/dashboard', '/mobile/workorders'],
-        redirect: /\/mobile\//,
+        allowedRoutes: ['/dashboard', '/workorders', '/mobile/dashboard', '/mobile/workorders'],
     },
     {
         role: 'service_coordinator',

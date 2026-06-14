@@ -1590,6 +1590,123 @@ class TestDiagnosisAPI:
         assert len(results) == 1
         assert results[0]['id'] == queued.id
 
+    def test_parts_manager_can_access_quotation_queue(self, api_client):
+        """Parts managers should read the stores queue without full diagnosis access."""
+        SystemModule.objects.get_or_create(
+            slug='diagnosis',
+            defaults={'name': 'Diagnosis', 'is_enabled': True},
+        )
+        branch = baker.make(Branch, name='Stores Branch', code='STB', is_active=True)
+        parts_manager = User.objects.create_user(
+            email='parts_mgr_q@test.com',
+            username='parts_mgr_q',
+            password='test123',
+            role='parts_manager',
+            is_staff=True,
+            is_active=True,
+            branch=branch,
+        )
+        diagnosis = baker.make(Diagnosis, work_order__branch=branch)
+        queued = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='pending_approval',
+            quotation_status='requested',
+        )
+        api_client.force_authenticate(user=parts_manager)
+
+        response = api_client.get(
+            '/api/diagnosis/recommendations/quotation_queue/',
+            HTTP_X_BRANCH_ID=str(branch.id),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        results = response.data.get('results', response.data)
+        assert len(results) == 1
+        assert results[0]['id'] == queued.id
+
+    def test_receptionist_cannot_access_quotation_queue(self, api_client):
+        """Front-desk staff without stores/diagnosis permissions should be denied."""
+        SystemModule.objects.get_or_create(
+            slug='diagnosis',
+            defaults={'name': 'Diagnosis', 'is_enabled': True},
+        )
+        receptionist = User.objects.create_user(
+            email='recep_q@test.com',
+            username='recep_q',
+            password='test123',
+            role='receptionist',
+            is_staff=True,
+            is_active=True,
+        )
+        api_client.force_authenticate(user=receptionist)
+
+        response = api_client.get('/api/diagnosis/recommendations/quotation_queue/')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_parts_manager_can_attempt_mark_quoted(self, api_client):
+        """Parts managers may complete stores quotations (validation may still fail)."""
+        SystemModule.objects.get_or_create(
+            slug='diagnosis',
+            defaults={'name': 'Diagnosis', 'is_enabled': True},
+        )
+        parts_manager = User.objects.create_user(
+            email='parts_mgr_mq@test.com',
+            username='parts_mgr_mq',
+            password='test123',
+            role='parts_manager',
+            is_staff=True,
+            is_active=True,
+        )
+        diagnosis = baker.make(Diagnosis)
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='requested',
+        )
+        api_client.force_authenticate(user=parts_manager)
+
+        response = api_client.post(
+            f'/api/diagnosis/recommendations/{recommendation.id}/mark_quoted/',
+            format='json',
+        )
+
+        assert response.status_code != status.HTTP_403_FORBIDDEN
+
+    def test_accountant_can_view_but_not_complete_quotation_queue(self, api_client):
+        """Billing staff may monitor the queue but cannot mark items quoted."""
+        SystemModule.objects.get_or_create(
+            slug='diagnosis',
+            defaults={'name': 'Diagnosis', 'is_enabled': True},
+        )
+        accountant = User.objects.create_user(
+            email='acct_q@test.com',
+            username='acct_q',
+            password='test123',
+            role='accountant',
+            is_staff=True,
+            is_active=True,
+        )
+        diagnosis = baker.make(Diagnosis)
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='requested',
+        )
+        api_client.force_authenticate(user=accountant)
+
+        list_response = api_client.get('/api/diagnosis/recommendations/quotation_queue/')
+        assert list_response.status_code == status.HTTP_200_OK
+
+        mark_response = api_client.post(
+            f'/api/diagnosis/recommendations/{recommendation.id}/mark_quoted/',
+            format='json',
+        )
+        assert mark_response.status_code == status.HTTP_403_FORBIDDEN
+
     def test_test_procedure_search_auto_seeds_baseline_library(self, api_client, admin_user):
         """Searching the procedure library should bootstrap baseline templates when empty."""
         ProcedureLibrary.objects.all().delete()

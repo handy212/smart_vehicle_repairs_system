@@ -8,6 +8,8 @@ import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { authApi } from "@/lib/api/auth";
 import { ensureApiSession } from "@/lib/auth/session";
 import { useModules } from "@/lib/hooks/useModules";
+import { shouldUseMobileApp } from "@/lib/utils/device-context";
+import { isMobileShellRole } from "@/lib/utils/post-login-redirect";
 
 export default function DashboardLayoutWrapper({
   children,
@@ -34,12 +36,12 @@ export default function DashboardLayoutWrapper({
           const currentUser = await authApi.getCurrentUser();
           if (isMounted) setUser(currentUser);
 
-          // Redirect customers to portal; technicians to mobile app
+          // Redirect customers to portal; technicians on phones to mobile app
           if (currentUser.role === "customer") {
             if (isMounted) router.push("/portal");
             return;
           }
-          if (currentUser.role === "technician") {
+          if (isMobileShellRole(currentUser.role) && shouldUseMobileApp()) {
             if (isMounted) router.push("/mobile/dashboard");
             return;
           }
@@ -54,7 +56,7 @@ export default function DashboardLayoutWrapper({
           if (isMounted) router.push("/portal");
           return;
         }
-        if (user.role === "technician") {
+        if (isMobileShellRole(user.role) && shouldUseMobileApp()) {
           if (isMounted) router.push("/mobile/dashboard");
           return;
         }
@@ -97,7 +99,7 @@ export default function DashboardLayoutWrapper({
     return <AppShellSkeleton />;
   }
 
-  if (user?.role === "customer" || user?.role === "technician") {
+  if (user?.role === "customer") {
     return null;
   }
 
