@@ -321,7 +321,7 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: Create
     const { toast } = useToast();
     const { data: accounts } = useQuery({
         queryKey: ["accounts"],
-        queryFn: accountingApi.getAccounts
+        queryFn: () => accountingApi.getAccounts(),
     });
 
     // Determine default account type based on Candidate
