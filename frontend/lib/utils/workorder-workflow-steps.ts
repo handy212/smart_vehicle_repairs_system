@@ -59,6 +59,12 @@ export const WORKFLOW_STATUS_ORDER: Record<string, number> = {
   closed: 12,
 };
 
-export function getWorkflowStepIndex(status: string): number {
+export function getWorkflowStepIndex(
+  status: string,
+  context?: { diagnosisStatus?: string | null }
+): number {
+  if (status === "paused" && context?.diagnosisStatus === "paused") {
+    return WORKFLOW_STATUS_ORDER.diagnosis;
+  }
   return WORKFLOW_STATUS_ORDER[status] ?? 0;
 }

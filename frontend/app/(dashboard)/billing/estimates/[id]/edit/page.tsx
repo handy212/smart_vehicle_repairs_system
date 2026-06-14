@@ -213,6 +213,8 @@ export default function EditEstimatePage() {
 
   const watchedCustomer = watch("customer");
   const customer = watchedCustomer ? Number(watchedCustomer) : undefined;
+  const watchedVehicle = watch("vehicle");
+  const vehicle = watchedVehicle ? Number(watchedVehicle) : undefined;
   const discountType = normalizeDiscountType(watch("discount_type"));
   const discountPercentage = Number(watch("discount_percentage") || 0);
 
@@ -538,7 +540,7 @@ export default function EditEstimatePage() {
                   Customer *
                 </label>
                 <CustomerSelector
-                  selectedCustomerId={typeof watch("customer") === "number" ? watch("customer") : undefined}
+                  selectedCustomerId={customer}
                   onSelect={(selected) => {
                     setValue("customer", selected.id, { shouldValidate: true });
                     setValue("vehicle", undefined, { shouldValidate: true });
@@ -557,7 +559,7 @@ export default function EditEstimatePage() {
                   Vehicle
                 </label>
                 <VehicleSelector
-                  selectedVehicleId={typeof watch("vehicle") === "number" ? watch("vehicle") : undefined}
+                  selectedVehicleId={vehicle}
                   ownerId={selectedCustomer}
                   disabled={!selectedCustomer}
                   onSelect={(selected) => setValue("vehicle", selected.id, { shouldValidate: true })}

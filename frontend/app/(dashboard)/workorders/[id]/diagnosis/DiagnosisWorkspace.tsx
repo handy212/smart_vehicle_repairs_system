@@ -65,6 +65,7 @@ import {
   runDiagnosisMutation,
 } from "@/lib/offline/diagnosis";
 import { cn } from "@/lib/utils";
+import { getWorkOrderAssignees } from "@/lib/workorders/assignees";
 
 
 type DiagnosisWorkspaceProps = {
@@ -190,7 +191,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
             : "Diagnosis workflow has been started.",
         variant: "default"
       });
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      refreshWorkOrderViews();
     },
 
     onError: (error: any) => {
@@ -213,7 +214,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
         description: "Diagnosis has been paused. Time has been logged.",
         variant: "default"
       });
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      refreshWorkOrderViews();
     },
 
     onError: (error: any) => {
@@ -236,7 +237,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
         description: "Diagnosis has been resumed. Time tracking continues.",
         variant: "default"
       });
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      refreshWorkOrderViews();
     },
 
     onError: (error: any) => {
@@ -259,8 +260,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
         description: "The customer has been notified. You can revise the diagnosis if they request changes.",
         variant: "default"
       });
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      refreshWorkOrderViews();
     },
     onError: (error: any) => {
       toast({
@@ -294,8 +294,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
       });
 
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      refreshWorkOrderViews();
       queryClient.invalidateQueries({ queryKey: ["diagnosis"] });
 
       // Redirect to work order page to see updated status
@@ -322,8 +321,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
         description: "You can now update the diagnosis, findings, recommendations, and parts before resubmitting.",
         variant: "default"
       });
-      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      refreshWorkOrderViews();
     },
     onError: (error: any) => {
       toast({
@@ -440,6 +438,16 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     && ["awaiting_approval", "diagnosis"].includes(workOrder.status);
   const canCompleteDiagnosis = diagnosis.status === "awaiting_approval" && !!workOrder.approved_by_customer;
   const shouldSendForApproval = diagnosis.requires_approval && !workOrder.approved_by_customer;
+  const assignedPeople = getWorkOrderAssignees(workOrder);
+
+  const refreshWorkOrderViews = () => {
+    queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+    queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+    queryClient.invalidateQueries({ queryKey: ["workorders"] });
+    queryClient.invalidateQueries({ queryKey: ["workorder-stats"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard", "workorder-stats"] });
+  };
 
   // Get status color and icon
   const getStatusConfig = (status: string) => {
@@ -665,7 +673,25 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
               </Badge>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {diagnosis.technician_name && (
+                {assignedPeople.length > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5" />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Assigned to
+                      </span>
+                      {assignedPeople.map((person) => (
+                        <Badge
+                          key={`${person.role}-${person.id}`}
+                          variant="secondary"
+                          className="h-6 rounded-full px-2.5 text-[11px] font-medium"
+                        >
+                          {person.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : diagnosis.technician_name && (
                   <div className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5" />
                     <span>{diagnosis.technician_name}</span>
@@ -893,15 +919,25 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
           <CardContent>
             <div className="space-y-3">
               { }
-              {diagnosis.time_logs.map((log: any) => (
+              {diagnosis.time_logs.map((log: any) => {
+                const durationLabel =
+                  log.stage === "paused" && !log.ended_at
+                    ? "Paused"
+                    : log.duration_formatted;
+                const isActiveDuration = durationLabel === "In progress";
+                const isOpenPause = durationLabel === "Paused";
+
+                return (
                 <div
                   key={log.id}
                   className={`flex items-center justify-between rounded-md border p-3 ${
                     log.stage === "completed"
                       ? "border-green-200 bg-green-50"
-                      : log.duration_formatted === "In progress"
+                      : isActiveDuration
                         ? "border-blue-200 bg-blue-50"
-                        : "bg-muted"
+                        : isOpenPause
+                          ? "border-amber-200 bg-amber-50"
+                          : "bg-muted"
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -910,8 +946,10 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                       className={`text-xs ${
                         log.stage === "completed"
                           ? "bg-green-100 text-green-700"
-                          : log.duration_formatted === "In progress"
+                          : isActiveDuration
                             ? "bg-blue-100 text-blue-700"
+                            : isOpenPause
+                              ? "bg-amber-100 text-amber-700"
                             : ""
                       }`}
                     >
@@ -935,18 +973,20 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
-                    {log.duration_formatted && (
+                    {durationLabel && (
                       <Badge
                         variant="secondary"
                         className={`text-xs ${
-                          log.duration_formatted === "In progress"
+                          isActiveDuration
                             ? "bg-blue-100 text-blue-700"
+                            : isOpenPause
+                              ? "bg-amber-100 text-amber-700"
                             : log.stage === "completed"
                               ? "bg-green-100 text-green-700"
                               : ""
                         }`}
                       >
-                        {log.duration_formatted}
+                        {durationLabel}
                       </Badge>
                     )}
                     {log.stage === "completed" && (
@@ -961,7 +1001,8 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

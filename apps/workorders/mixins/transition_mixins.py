@@ -381,9 +381,22 @@ class WorkOrderStateTransitionMixin:
 
     @action(detail=True, methods=['post'])
     def resume(self, request, pk=None):
-        """Resume paused work order"""
+        """Resume a paused work order or diagnosis session."""
         work_order = self.get_object()
-        
+
+        if work_order.is_diagnosis_paused:
+            diagnosis = work_order.get_linked_diagnosis()
+            if not diagnosis.resume(user=request.user):
+                return Response(
+                    {'error': 'Unable to resume diagnosis.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            work_order.refresh_from_db()
+            serializer = self.get_serializer(work_order)
+            response_data = serializer.data
+            response_data['workflow_message'] = 'Diagnosis resumed.'
+            return Response(response_data)
+
         try:
             work_order.transition_to('in_progress', user=request.user)
             serializer = self.get_serializer(work_order)
@@ -392,6 +405,31 @@ class WorkOrderStateTransitionMixin:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'])
+    def flag_additional_work(self, request, pk=None):
+        """Flag additional work discovered during repairs."""
+        work_order = self.get_object()
+        reason = (request.data.get('reason') or request.data.get('notes') or '').strip()
+
+        try:
+            work_order.transition_to('additional_work_found', user=request.user)
+            if reason:
+                WorkOrderNote.objects.create(
+                    work_order=work_order,
+                    note_type='internal',
+                    note=f"Additional work discovered: {reason}",
+                    created_by=request.user,
+                    is_important=True,
+                    is_customer_visible=False,
+                )
+            serializer = self.get_serializer(work_order)
+            return Response(serializer.data)
+        except ValidationError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     @action(detail=True, methods=['post'])

@@ -48,6 +48,7 @@ import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { workOrderPhotosApi, WorkOrderPhoto } from "@/lib/api/workorder-photos";
 import AddTaskDialog from "../components/AddTaskDialog";
 import AddPartDialog from "../components/AddPartDialog";
+import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
 
 type RepairTab = "tasks" | "parts" | "notes" | "photos" | "readiness";
 
@@ -355,17 +356,7 @@ export default function RepairsPage() {
         additionalWorkCustomerNote.trim() ? `Customer approval note: ${additionalWorkCustomerNote.trim()}` : "",
       ].filter(Boolean);
       const notes = sections.join("\n");
-      const updated = await workordersApi.updateStatus(workOrderId, "additional_work_found");
-      if (notes) {
-        await workOrderNotesApi.create({
-          work_order: workOrderId,
-          note_type: "internal",
-          note: `Additional work discovered\n\n${notes}`,
-          is_important: true,
-          is_customer_visible: false,
-        });
-      }
-      return updated;
+      return workordersApi.flagAdditionalWork(workOrderId, { reason: notes });
     },
     onSuccess: () => {
       setShowAdditionalWorkDialog(false);
@@ -458,6 +449,38 @@ export default function RepairsPage() {
     );
   }
 
+  if (isDiagnosisPausedWorkOrder(workOrder)) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => router.push(`/workorders/${workOrderId}`)} className="-ml-2">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Work order
+        </Button>
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="flex flex-col gap-4 py-8">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
+              <div className="space-y-2">
+                <p className="font-medium text-foreground">Diagnosis is paused</p>
+                <p className="text-sm text-muted-foreground">
+                  Repairs cannot start until diagnosis is completed and approved. Resume the diagnosis session first.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => router.push(`/workorders/${workOrderId}/diagnosis`)}>
+                Open Diagnosis
+              </Button>
+              <Button variant="outline" onClick={() => router.push(`/workorders/${workOrderId}`)}>
+                Back to Work Order
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const canManageRepairs = repairStatuses.has(workOrder.status);
   const isApproved = workOrder.status === "approved";
   const isPaused = workOrder.status === "paused";
@@ -518,10 +541,10 @@ export default function RepairsPage() {
               Start Repairs
             </Button>
           )}
-          {isPaused && (
+          {isPaused && !isDiagnosisPausedWorkOrder(workOrder) && (
             <Button onClick={() => resumeMutation.mutate()} disabled={resumeMutation.isPending}>
               <Play className="mr-2 h-4 w-4" />
-              Resume
+              Resume Repairs
             </Button>
           )}
           {isActive && (

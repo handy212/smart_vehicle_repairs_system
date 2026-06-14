@@ -266,6 +266,8 @@ export default function DashboardPage() {
         id: wo.id,
         wo_number: wo.wo_number,
         status: wo.status,
+        diagnosis_status: wo.diagnosis_status ?? null,
+        has_technician_assignment: wo.has_technician_assignment ?? false,
         estimate_summary: wo.estimate_summary ?? null,
         invoice_summary: wo.invoice_summary ?? null,
         current_quote_stage: wo.current_quote_stage ?? null,

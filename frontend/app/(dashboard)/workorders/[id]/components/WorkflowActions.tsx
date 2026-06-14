@@ -225,11 +225,16 @@ export default function WorkflowActions({
     router.push(`/billing/estimates/${linkedEstimateId}`);
   };
 
-  // Fetch diagnosis to check completion status
+  // Fetch diagnosis to check completion status (also needed when diagnosis is paused)
+  const isDiagnosisPaused =
+    status === "paused" && currentWorkOrder?.diagnosis_status === "paused";
   const { data: diagnosisData } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId && !isNaN(workOrderId) && status === "diagnosis",
+    enabled:
+      !!workOrderId &&
+      !isNaN(workOrderId) &&
+      (status === "diagnosis" || isDiagnosisPaused),
     retry: false, // Don't retry if diagnosis doesn't exist yet
   });
 
@@ -709,26 +714,7 @@ export default function WorkflowActions({
 
   // Additional Work Found (Phase 3: New Problems Discovered)
   const additionalWorkFoundMutation = useMutation({
-    mutationFn: async (notes: string) => {
-      // First update status
-      const workOrder = await workordersApi.updateStatus(workOrderId, "additional_work_found");
-      // Then create a note with the specific additional work details
-      if (notes && notes.trim()) {
-        try {
-          await workOrderNotesApi.create({
-            work_order: workOrderId,
-            note_type: "internal",
-            note: `Additional work discovered: ${notes.trim()}`,
-            is_important: true,
-            is_customer_visible: false,
-          });
-        } catch (noteError) {
-          // Log but don't fail the mutation if note creation fails
-          console.error("Failed to create additional work note:", noteError);
-        }
-      }
-      return workOrder;
-    },
+    mutationFn: (notes: string) => workordersApi.flagAdditionalWork(workOrderId, { reason: notes }),
     onSuccess: () => {
       toast({ title: "Success", description: "Additional work flagged - customer approval required." });
       setShowAdditionalWorkDialog(false);
@@ -762,11 +748,16 @@ export default function WorkflowActions({
     },
   });
 
-  // Resume (Phase 3: Work Resumed)
+  // Resume (Phase 3: Work Resumed or Diagnosis Resumed)
   const resumeMutation = useMutation({
     mutationFn: () => workordersApi.resume(workOrderId),
     onSuccess: () => {
-      toast({ title: "Success", description: "Work order resumed." });
+      toast({
+        title: "Success",
+        description: isDiagnosisPaused
+          ? "Diagnosis resumed."
+          : "Work order resumed.",
+      });
       refreshWorkOrder();
     },
 
@@ -1147,51 +1138,46 @@ export default function WorkflowActions({
             onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
             variant: "outline",
             description: "Review the active repair workspace",
-          },
-          {
-            label: "Continue Without Approval",
-            icon: Play,
-            onClick: async () => {
-              try {
-                await workordersApi.updateStatus(workOrderId, "in_progress");
-                refreshWorkOrder();
-                toast({
-                  title: "Warning",
-                  description: "Work continued without approval",
-                  variant: "default",
-                });
-
-              } catch (error: any) {
-                toast({
-                  title: "Error",
-                  description: error.response?.data?.error || error.response?.data?.detail || "Failed to continue work",
-                  variant: "destructive",
-                });
-              }
-            },
-            variant: "outline",
-            description: "Continue work without approval (not recommended)",
           }
         );
         break;
 
       case "paused":
-        actions.push(
-          {
-            label: "Resume",
-            icon: Play,
-            onClick: () => resumeMutation.mutate(),
-            disabled: resumeMutation.isPending,
-            description: "Resume paused work",
-          },
-          {
-            label: "Open Repairs",
-            icon: Wrench,
-            onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
-            variant: "outline",
-            description: "Review the repair execution workspace",
-          }
-        );
+        if (isDiagnosisPaused) {
+          actions.push(
+            {
+              label: "Resume Diagnosis",
+              icon: Play,
+              onClick: () => resumeMutation.mutate(),
+              disabled: resumeMutation.isPending,
+              description: "Return to the paused diagnosis session",
+            },
+            {
+              label: "Open Diagnosis",
+              icon: Eye,
+              onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
+              variant: "outline",
+              description: "Review and continue diagnosis details",
+            }
+          );
+        } else {
+          actions.push(
+            {
+              label: "Resume Repairs",
+              icon: Play,
+              onClick: () => resumeMutation.mutate(),
+              disabled: resumeMutation.isPending,
+              description: "Resume paused repair work",
+            },
+            {
+              label: "Open Repairs",
+              icon: Wrench,
+              onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
+              variant: "outline",
+              description: "Review the repair execution workspace",
+            }
+          );
+        }
         break;
 
       // Phase 4: Quality Control & Billing

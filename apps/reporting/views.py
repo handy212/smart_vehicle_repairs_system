@@ -395,8 +395,12 @@ def dashboard_overview(request):
             arr = Decimal('0')
         
         recent_work_orders = work_orders_qs.select_related(
-            'customer', 'vehicle', 'customer__user'
-        ).prefetch_related('gate_passes', 'diagnosis__repair_recommendations').order_by('-created_at')[:5]
+            'customer', 'vehicle', 'customer__user', 'diagnosis'
+        ).prefetch_related(
+            'assigned_technicians',
+            'gate_passes',
+            'diagnosis__repair_recommendations',
+        ).order_by('-created_at')[:5]
         
         recent_appointments = appointments_qs.select_related(
             'customer', 'vehicle', 'customer__user'
@@ -468,6 +472,8 @@ def dashboard_overview(request):
                     'customer': customer_name,
                     'vehicle': vehicle_info,
                     'status': wo.status,
+                    'diagnosis_status': getattr(getattr(wo, 'diagnosis', None), 'status', None),
+                    'has_technician_assignment': bool(wo.primary_technician_id or wo.assigned_technicians.exists()),
                     'estimate_summary': estimate_summary,
                     'invoice_summary': invoice_summary,
                     'current_quote_stage': wo.get_current_quote_stage(),
@@ -839,16 +845,62 @@ def work_order_statistics(request):
         'closed': 14,
     }
     
-    by_status_raw = work_orders.values('status').annotate(
+    by_status_raw = work_orders.exclude(status__in=['diagnosis', 'paused']).values('status').annotate(
         count=Count('id')
     )
-    
-    # Convert to list and sort by status order, then by count
+
+    diagnosis_draft_count = work_orders.filter(status='diagnosis').filter(
+        Q(diagnosis__isnull=True) | Q(diagnosis__status='not_started'),
+        primary_technician__isnull=True,
+        assigned_technicians__isnull=True,
+    ).distinct().count()
+    diagnosis_assigned_count = work_orders.filter(status='diagnosis').filter(
+        Q(diagnosis__isnull=True) | Q(diagnosis__status='not_started'),
+    ).exclude(
+        primary_technician__isnull=True,
+        assigned_technicians__isnull=True,
+    ).distinct().count()
+    diagnosis_in_progress_count = work_orders.filter(
+        status='diagnosis',
+        diagnosis__status='in_progress',
+    ).count()
+    diagnosis_on_hold_count = work_orders.filter(
+        status='diagnosis',
+        diagnosis__status='on_hold',
+    ).count()
+    diagnosis_completed_count = work_orders.filter(
+        status='diagnosis',
+        diagnosis__status='completed',
+    ).count()
+    diagnosis_paused_count = work_orders.filter(
+        status='paused',
+        diagnosis__status='paused',
+    ).count()
+    repairs_paused_count = work_orders.filter(status='paused').exclude(
+        diagnosis__status='paused',
+    ).count()
+
     by_status_list = list(by_status_raw)
+    diagnosis_rows = [
+        {'status': 'diagnosis', 'count': diagnosis_draft_count, 'label': 'Diagnosis | Draft', 'sub_order': 1},
+        {'status': 'diagnosis', 'count': diagnosis_assigned_count, 'label': 'Diagnosis | Assigned', 'sub_order': 2},
+        {'status': 'diagnosis', 'count': diagnosis_in_progress_count, 'label': 'Diagnosis | In Progress', 'sub_order': 3},
+        {'status': 'diagnosis', 'count': diagnosis_on_hold_count, 'label': 'Diagnosis | On Hold', 'sub_order': 4},
+        {'status': 'diagnosis', 'count': diagnosis_completed_count, 'label': 'Diagnosis | Completed', 'sub_order': 5},
+        {'status': 'paused', 'count': diagnosis_paused_count, 'label': 'Diagnosis | Paused', 'sub_order': 1},
+        {'status': 'paused', 'count': repairs_paused_count, 'label': 'Repairs Paused', 'sub_order': 2},
+    ]
+    by_status_list.extend([row for row in diagnosis_rows if row['count'] > 0])
+
+    for row in by_status_list:
+        if row['status'] == 'awaiting_approval' and 'label' not in row:
+            row['label'] = 'Diagnosis | Awaiting Approval'
     by_status = sorted(
         by_status_list,
-        key=lambda x: (STATUS_ORDER.get(x['status'], 99), -x['count'])
+        key=lambda x: (STATUS_ORDER.get(x['status'], 99), x.get('sub_order', 0), -x['count'])
     )
+    for row in by_status:
+        row.pop('sub_order', None)
     
     # Priority breakdown
     by_priority = work_orders.values('priority').annotate(

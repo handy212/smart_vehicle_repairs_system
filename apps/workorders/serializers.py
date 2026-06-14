@@ -47,6 +47,8 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     vehicle_display = serializers.SerializerMethodField()
     primary_technician_name = serializers.SerializerMethodField()
     service_coordinator_name = serializers.SerializerMethodField()
+    diagnosis_status = serializers.SerializerMethodField()
+    has_technician_assignment = serializers.SerializerMethodField()
     is_overdue = serializers.BooleanField(read_only=True)
     days_in_shop = serializers.IntegerField(read_only=True)
     task_count = serializers.SerializerMethodField()
@@ -64,12 +66,13 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkOrder
         fields = [
-            'id', 'work_order_number', 'status', 'priority',
+            'id', 'work_order_number', 'status', 'paused_from_status', 'priority',
             'customer', 'customer_name', 'vehicle', 'vehicle_info', 'vehicle_display',
             'brought_by_type', 'brought_by_contact', 'brought_by_name',
             'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'primary_technician', 'primary_technician_name',
             'service_coordinator', 'service_coordinator_name',
+            'diagnosis_status', 'has_technician_assignment',
             'created_at', 'started_at', 'completed_at', 'estimated_completion',
             'estimated_total', 'actual_total', 'total_cost', 'is_overdue', 'days_in_shop',
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
@@ -154,6 +157,15 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         if obj.service_coordinator:
             return f"{obj.service_coordinator.first_name} {obj.service_coordinator.last_name}".strip()
         return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_diagnosis_status(self, obj):
+        diagnosis = obj.get_linked_diagnosis() if hasattr(obj, 'get_linked_diagnosis') else getattr(obj, 'diagnosis', None)
+        return getattr(diagnosis, 'status', None)
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_technician_assignment(self, obj):
+        return bool(obj.primary_technician_id or obj.assigned_technicians.exists())
     
     @extend_schema_field(OpenApiTypes.INT)
     def get_task_count(self, obj):
@@ -226,6 +238,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
 
     primary_technician_name = serializers.SerializerMethodField()
     service_coordinator_name = serializers.SerializerMethodField()
+    diagnosis_status = serializers.SerializerMethodField()
+    has_technician_assignment = serializers.SerializerMethodField()
     vehicle_display = serializers.SerializerMethodField()
     technician_names = serializers.CharField(read_only=True)
     assigned_technicians_detail = serializers.SerializerMethodField()
@@ -259,11 +273,12 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         model = WorkOrder
         fields = [
             'id', 'work_order_number', 'access_token', 'branch', 'appointment',
-            'customer', 'customer_name', 'vehicle', 'status', 'priority',
+            'customer', 'customer_name', 'vehicle', 'status', 'paused_from_status', 'priority',
             'brought_by_type', 'brought_by_contact', 'brought_by_name',
             'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'service_coordinator', 'primary_technician', 'assigned_technicians',
             'primary_technician_name', 'service_coordinator_name',
+            'diagnosis_status', 'has_technician_assignment',
             'vehicle_display', 'technician_names',
             'assigned_technicians_detail', 'created_at', 'updated_at',
             'started_at', 'completed_at', 'estimated_completion',
@@ -423,6 +438,15 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         if obj.service_coordinator:
             return f"{obj.service_coordinator.first_name} {obj.service_coordinator.last_name}".strip()
         return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_diagnosis_status(self, obj):
+        diagnosis = obj.get_linked_diagnosis() if hasattr(obj, 'get_linked_diagnosis') else getattr(obj, 'diagnosis', None)
+        return getattr(diagnosis, 'status', None)
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_technician_assignment(self, obj):
+        return bool(obj.primary_technician_id or obj.assigned_technicians.exists())
     
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_assigned_technicians_detail(self, obj):
@@ -699,6 +723,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                 validated_data['warranty_reason'] = warranty_reason
         
         # Create work order
+        validated_data.setdefault('requires_approval', True)
         work_order = WorkOrder.objects.create(**validated_data)
         
         # Add assigned technicians
@@ -914,6 +939,23 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         
         # Handle status transition if status is being changed
         if new_status and new_status != instance.status:
+            dedicated_endpoint_transitions = {
+                ('approved', 'in_progress'),
+                ('additional_work_found', 'in_progress'),
+                ('diagnosis', 'in_progress'),
+                ('assigned', 'in_progress'),
+                ('paused', 'in_progress'),
+            }
+            if (instance.status, new_status) in dedicated_endpoint_transitions:
+                from rest_framework.exceptions import ValidationError as DRFValidationError
+                raise DRFValidationError({
+                    'status': (
+                        'This transition must use the workflow action endpoint '
+                        '(start_work, resume, or request_approval) instead of a direct status update.'
+                    ),
+                })
+
+            # Status changes must go through the same transition guards as workflow actions.
             try:
                 user = self.context.get('request').user if self.context.get('request') else None
                 instance.transition_to(new_status, user=user)

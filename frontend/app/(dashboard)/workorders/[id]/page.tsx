@@ -271,7 +271,11 @@ export default function WorkOrderDetailPage() {
         isDownloading={isDownloading}
       />
 
-      <WorkOrderProgress status={stagePresentation.workflowStatus} labelOverride={statusLabelOverride} />
+      <WorkOrderProgress
+        status={stagePresentation.workflowStatus}
+        labelOverride={statusLabelOverride}
+        diagnosisStatus={workOrder.diagnosis_status}
+      />
 
       {(workOrder.customer_rating || workOrder.customer_feedback) && (
         <Card>

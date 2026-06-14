@@ -38,6 +38,8 @@ export interface DashboardOverview {
       customer: string;
       vehicle: string;
       status: string;
+      diagnosis_status?: "not_started" | "in_progress" | "paused" | "awaiting_approval" | "completed" | "on_hold" | null;
+      has_technician_assignment?: boolean;
       estimate_summary?: {
         id: number;
         estimate_number: string;

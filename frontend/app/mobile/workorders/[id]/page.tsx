@@ -12,6 +12,7 @@ import { queueRequest } from "@/lib/offline/queue";
 import { useToast } from "@/lib/hooks/useToast";
 import apiClient from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/api/apiErrors";
+import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
 import { timeLogsApi } from "@/lib/api/timeLogs";
 import {
   ArrowLeft,
@@ -118,55 +119,55 @@ export default function MobileWorkOrderDetailPage() {
     }
   };
 
-  const handleStatusChangeAction = async (action: 'startWork' | 'pause' | 'resume' | 'requestQualityCheck' | 'complete' | 'updateStatus', status?: string) => {
+  const handleStatusChangeAction = async (
+    action: "startWork" | "pause" | "resume" | "requestQualityCheck" | "complete"
+  ) => {
     if (!workOrder) return;
+
+    const diagnosisPaused = isDiagnosisPausedWorkOrder(workOrder);
 
     try {
       if (isOnline) {
-        let updatedWO;
-        if (action === 'startWork') updatedWO = await workordersApi.startWork(workOrder.id);
-        else if (action === 'pause') updatedWO = await workordersApi.pause(workOrder.id);
-        else if (action === 'resume') updatedWO = await workordersApi.resume(workOrder.id);
-        else if (action === 'requestQualityCheck') updatedWO = await workordersApi.requestQualityCheck(workOrder.id);
-        else if (action === 'complete') updatedWO = await workordersApi.complete(workOrder.id);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        else if (action === 'updateStatus' && status) updatedWO = await workordersApi.updateStatus(workOrder.id, status);
+        if (action === "startWork") await workordersApi.startWork(workOrder.id);
+        else if (action === "pause") await workordersApi.pause(workOrder.id);
+        else if (action === "resume") await workordersApi.resume(workOrder.id);
+        else if (action === "requestQualityCheck") await workordersApi.requestQualityCheck(workOrder.id);
+        else if (action === "complete") await workordersApi.complete(workOrder.id);
 
         await loadWorkOrder();
         toast({
           title: "Success",
-          description: "Status updated successfully",
+          description:
+            action === "resume" && diagnosisPaused
+              ? "Diagnosis resumed."
+              : "Status updated successfully",
         });
       } else {
-        // Fallback for offline (approximate)
-        const newStatus = status || (action === 'startWork' ? 'in_progress' : action === 'pause' ? 'paused' : action === 'resume' ? 'in_progress' : action === 'requestQualityCheck' ? 'quality_check' : action === 'complete' ? 'completed' : workOrder.status);
-        const updated = { ...workOrder, status: newStatus };
-        await workOrdersDB.set(workOrder.id, updated, false);
-
-
-        const pathMap: any = {
-          startWork: 'start_work',
-          pause: 'pause',
-          resume: 'resume',
-          requestQualityCheck: 'request_quality_check',
-          complete: 'complete',
+        const pathMap: Record<string, string> = {
+          startWork: "start_work",
+          pause: "pause",
+          resume: "resume",
+          requestQualityCheck: "request_quality_check",
+          complete: "complete",
         };
 
-        if (action === 'updateStatus') {
-          await queueRequest(
-            "update",
-            `/workorders/work-orders/${workOrder.id}/`,
-            "PATCH",
-            { status: newStatus }
-          );
-        } else {
-          await queueRequest(
-            "create", // specialized actions are POST
-            `/workorders/work-orders/${workOrder.id}/${pathMap[action]}/`,
-            "POST",
-            {}
-          );
-        }
+        const offlineStatusMap: Record<string, string> = {
+          startWork: "in_progress",
+          pause: "paused",
+          resume: diagnosisPaused ? "diagnosis" : "in_progress",
+          requestQualityCheck: "quality_check",
+          complete: "completed",
+        };
+
+        const newStatus = offlineStatusMap[action] ?? workOrder.status;
+        const updated = { ...workOrder, status: newStatus };
+        await workOrdersDB.set(workOrder.id, updated, false);
+        await queueRequest(
+          "create",
+          `/workorders/work-orders/${workOrder.id}/${pathMap[action]}/`,
+          "POST",
+          {}
+        );
 
         setWorkOrder(updated);
         toast({
@@ -174,7 +175,6 @@ export default function MobileWorkOrderDetailPage() {
           description: "Status change will sync when online",
         });
       }
-
     } catch (error: any) {
       console.error(`Failed to update status via ${action}:`, error);
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update status";
@@ -229,9 +229,6 @@ export default function MobileWorkOrderDetailPage() {
           "Started work via Mobile detail"
         );
         setActiveLog(log);
-        if (workOrder.status === 'assigned') {
-          await handleStatusChangeAction('startWork');
-        }
         toast({ title: "Clocked In", description: `Started time for WO #${workOrder.work_order_number}` });
       }
     } catch (error) {
@@ -269,17 +266,9 @@ export default function MobileWorkOrderDetailPage() {
 
     try {
       if (isOnline) {
-        await workordersApi.updateStatus(workOrder.id, "additional_work_found");
-        // Create note if provided
-        if (additionalWorkNotes.trim()) {
-          await workOrderNotesApi.create({
-            work_order: workOrder.id,
-            note: additionalWorkNotes,
-            note_type: 'technician',
-            is_important: true,
-            is_customer_visible: false
-          });
-        }
+        await workordersApi.flagAdditionalWork(workOrder.id, {
+          reason: additionalWorkNotes.trim() || undefined,
+        });
         await loadWorkOrder();
         setShowAdditionalWorkDialog(false);
         setAdditionalWorkNotes("");
@@ -291,26 +280,11 @@ export default function MobileWorkOrderDetailPage() {
         const updated = { ...workOrder, status: "additional_work_found" };
         await workOrdersDB.set(workOrder.id, updated, false);
         await queueRequest(
-          "update",
-          `/workorders/work-orders/${workOrder.id}/`,
-          "PATCH",
-          { status: "additional_work_found" }
+          "create",
+          `/workorders/work-orders/${workOrder.id}/flag_additional_work/`,
+          "POST",
+          { reason: additionalWorkNotes.trim() || undefined }
         );
-        // Queue note
-        if (additionalWorkNotes.trim()) {
-          await queueRequest(
-            "create",
-            "/workorders/notes/",
-            "POST",
-            {
-              work_order: workOrder.id,
-              note: additionalWorkNotes,
-              note_type: 'technician',
-              is_important: true,
-              is_customer_visible: false
-            }
-          );
-        }
         setWorkOrder(updated);
         setShowAdditionalWorkDialog(false);
         setAdditionalWorkNotes("");
@@ -389,13 +363,15 @@ export default function MobileWorkOrderDetailPage() {
     );
   }
 
-  // Use actual backend statuses
-  const canStart = ["assigned", "approved"].includes(workOrder.status);
+  const canStart = workOrder.status === "approved";
   const canPause = workOrder.status === "in_progress";
   const canRequestQC = workOrder.status === "in_progress";
   const canComplete = workOrder.status === "quality_check";
   const canResume = workOrder.status === "paused";
-  const canFlagAdditionalWork = workOrder.status === "in_progress";
+  const isDiagnosisPaused = isDiagnosisPausedWorkOrder(workOrder);
+  const canOpenDiagnosis =
+    workOrder.status === "diagnosis" || isDiagnosisPaused;
+  const canFlagAdditionalWork = workOrder.status === "in_progress" && !isDiagnosisPaused;
 
   const getPartStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -574,6 +550,15 @@ export default function MobileWorkOrderDetailPage() {
             </Button>
           )}
 
+          {canOpenDiagnosis && (
+            <Button className="w-full" variant="outline" asChild>
+              <Link href={`/mobile/workorders/${workOrderId}/diagnosis`}>
+                <FileText className="h-4 w-4 mr-2" />
+                {isDiagnosisPaused ? "Resume in Diagnosis" : "Open Diagnosis"}
+              </Link>
+            </Button>
+          )}
+
           {canStart && (
             <Button
               className="w-full"
@@ -581,7 +566,7 @@ export default function MobileWorkOrderDetailPage() {
               onClick={() => handleStatusChangeAction("startWork")}
             >
               <Play className="h-4 w-4 mr-2" />
-              Start Work
+              Start Repairs
             </Button>
           )}
 
@@ -592,7 +577,7 @@ export default function MobileWorkOrderDetailPage() {
               onClick={() => handleStatusChangeAction("resume")}
             >
               <Play className="h-4 w-4 mr-2" />
-              Resume Work
+              {isDiagnosisPaused ? "Resume Diagnosis" : "Resume Work"}
             </Button>
           )}
 

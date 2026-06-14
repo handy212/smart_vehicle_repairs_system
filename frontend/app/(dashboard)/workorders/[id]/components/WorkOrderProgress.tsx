@@ -18,12 +18,18 @@ import { cn } from "@/lib/utils/cn";
 interface WorkOrderProgressProps {
   status: string;
   labelOverride?: string;
+  diagnosisStatus?: string | null;
   className?: string;
 }
 
-export function WorkOrderProgress({ status, labelOverride, className }: WorkOrderProgressProps) {
+export function WorkOrderProgress({
+  status,
+  labelOverride,
+  diagnosisStatus,
+  className,
+}: WorkOrderProgressProps) {
   const [stepsOpen, setStepsOpen] = useState(false);
-  const currentIndex = getWorkflowStepIndex(status);
+  const currentIndex = getWorkflowStepIndex(status, { diagnosisStatus });
   const currentStep = WORKFLOW_STEPS[currentIndex] ?? WORKFLOW_STEPS[0];
   const progressPct = Math.round(((currentIndex + 1) / WORKFLOW_STEPS.length) * 100);
   const CurrentIcon = currentStep.icon;

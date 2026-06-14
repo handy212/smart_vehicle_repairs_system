@@ -77,6 +77,7 @@ WORK_ORDER_TRANSITIONS = [
     ('assigned', 'diagnosis', 'Start Diagnosis', 'Start Diagnosis'),
     ('assigned', 'intake', 'Return to Intake', 'Return to Intake'),
     ('diagnosis', 'awaiting_approval', 'Request Approval', 'Request Approval'),
+    ('diagnosis', 'paused', 'Pause Diagnosis', 'Pause Diagnosis'),
     ('awaiting_approval', 'approved', 'Approve Work Order', 'Approve'),
     ('awaiting_approval', 'diagnosis', 'Return to Diagnosis', 'Return to Diagnosis'),
     ('approved', 'in_progress', 'Start Repairs', 'Start Repairs'),
@@ -84,6 +85,7 @@ WORK_ORDER_TRANSITIONS = [
     ('in_progress', 'quality_check', 'Request Quality Check', 'Request QC'),
     ('in_progress', 'additional_work_found', 'Additional Work Found', 'Additional Work'),
     ('additional_work_found', 'awaiting_approval', 'Request Additional Approval', 'Request Approval'),
+    ('paused', 'diagnosis', 'Resume Diagnosis', 'Resume Diagnosis'),
     ('paused', 'in_progress', 'Resume Work', 'Resume'),
     ('quality_check', 'completed', 'Complete Work Order', 'Complete'),
     ('quality_check', 'in_progress', 'Return to Repairs', 'Return to Repairs'),
@@ -100,8 +102,17 @@ WORK_ORDER_GUARDS = {
         ('required_field', 'diagnosis_notes', 'Diagnosis notes are required before requesting approval.'),
     ],
     ('approved', 'in_progress'): [
-        ('required_field', 'approved_by_customer', 'Work order must be approved before starting repairs.'),
-        ('required_relation', 'primary_technician_or_assigned_technicians', 'At least one technician must be assigned before starting repairs.'),
+        ('custom', 'work_order_is_approved', 'Work order must be approved before starting repairs.'),
+        ('custom', 'primary_technician_or_assigned_technicians', 'At least one technician must be assigned before starting repairs.'),
+    ],
+    ('paused', 'in_progress'): [
+        ('custom', 'not_diagnosis_paused', 'Diagnosis is paused. Resume the diagnosis session before starting repairs.'),
+        ('custom', 'diagnosis_completed_for_repairs', 'Complete diagnosis before starting or resuming repair work.'),
+        ('custom', 'work_order_is_approved', 'Work order must be approved before starting repairs.'),
+        ('custom', 'primary_technician_or_assigned_technicians', 'At least one technician must be assigned before starting repairs.'),
+    ],
+    ('paused', 'diagnosis'): [
+        ('custom', 'diagnosis_session_paused', 'Work order is not in a paused diagnosis session.'),
     ],
     ('in_progress', 'quality_check'): [
         ('min_count', 'tasks', 'At least one mechanical task must exist before quality check.'),
@@ -473,6 +484,15 @@ def _run_custom_guard(obj, guard):
         return not incomplete.exists()
     if key == 'primary_technician_or_assigned_technicians':
         return bool(getattr(obj, 'primary_technician', None)) or obj.assigned_technicians.exists()
+    if key == 'work_order_is_approved' and hasattr(obj, 'is_approved'):
+        return bool(obj.is_approved)
+    if key == 'not_diagnosis_paused' and hasattr(obj, 'is_diagnosis_paused'):
+        return not obj.is_diagnosis_paused
+    if key == 'diagnosis_completed_for_repairs' and hasattr(obj, 'get_linked_diagnosis'):
+        diagnosis = obj.get_linked_diagnosis()
+        return diagnosis is None or diagnosis.status == 'completed'
+    if key == 'diagnosis_session_paused' and hasattr(obj, 'is_diagnosis_paused'):
+        return obj.is_diagnosis_paused
     return True
 
 

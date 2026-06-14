@@ -290,6 +290,8 @@ export default function NewEstimatePage() {
 
   const watchedCustomer = watch("customer");
   const customer = watchedCustomer ? Number(watchedCustomer) : undefined;
+  const watchedVehicle = watch("vehicle");
+  const vehicle = watchedVehicle ? Number(watchedVehicle) : undefined;
   const discountPercentage = Number(watch("discount_percentage") || 0);
   const discountType = normalizeDiscountType(watch("discount_type"));
 
@@ -514,7 +516,7 @@ export default function NewEstimatePage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Vehicle</label>
                   <VehicleSelector
-                    selectedVehicleId={typeof watch("vehicle") === "number" ? watch("vehicle") : undefined}
+                    selectedVehicleId={vehicle}
                     ownerId={selectedCustomer}
                     disabled={!selectedCustomer}
                     onSelect={(selected) => setValue("vehicle", selected.id, { shouldValidate: true })}

@@ -33,6 +33,7 @@ import {
   getInvoicePaymentDisplay,
 } from "@/lib/workorders/invoiceSummaryDisplay";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
+import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -194,6 +195,7 @@ export default function WorkOrderOverviewTab({
       ? actualTotal - displayedEstimatedTotal
       : null;
   const customerDisplayName = getWorkOrderCustomerDisplayName(wo);
+  const assignedTechnicians = getWorkOrderTechnicianAssignees(wo);
 
   return (
     <div className="space-y-4">
@@ -582,10 +584,16 @@ export default function WorkOrderOverviewTab({
               <CardTitle className="text-sm font-semibold">Assignment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-4 pb-4 pt-0 text-sm">
-              {workOrder.primary_technician_name && (
+              {assignedTechnicians.length > 0 && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Technician</p>
-                  <p>{workOrder.primary_technician_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {assignedTechnicians.length > 1 ? "Technicians" : "Technician"}
+                  </p>
+                  <div className="space-y-1">
+                    {assignedTechnicians.map((technician) => (
+                      <p key={`${technician.role}-${technician.id}`}>{technician.name}</p>
+                    ))}
+                  </div>
                 </div>
               )}
               <div>

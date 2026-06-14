@@ -38,6 +38,7 @@ interface WorkOrderSummary {
 
 interface RecentWorkOrder {
   id: number; wo_number: string; status: string; created_at: string;
+  diagnosis_status?: "not_started" | "in_progress" | "paused" | "awaiting_approval" | "completed" | "on_hold" | null;
   diagnosis_notes?: string;
   customer?: string;
   vehicle?: string;
@@ -104,7 +105,7 @@ interface RecentInvoice {
   due_date?: string; invoice_date?: string;
 }
 
-type WorkOrderStatusCount = { status: string; count: number };
+type WorkOrderStatusCount = { status: string; count: number; label?: string };
 
 export interface PerfexDashboardProps {
   stats: Stats;
@@ -133,6 +134,7 @@ export interface PerfexDashboardProps {
 const WO_STATUS_COLORS: Record<string, string> = {
   intake: "bg-blue-100 text-blue-700", diagnosis: "bg-amber-100 text-amber-700",
   in_progress: "bg-indigo-100 text-primary", repair: "bg-indigo-100 text-primary",
+  paused: "bg-orange-100 text-orange-700",
   qc: "bg-teal-100 text-teal-700", ready: "bg-green-100 text-green-700",
   completed: "bg-gray-100 text-gray-600", cancelled: "bg-red-100 text-destructive",
   pending: "bg-orange-100 text-orange-700", confirmed: "bg-green-100 text-green-700",
@@ -616,11 +618,15 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
           <div className="flex flex-wrap gap-2">
             {workOrderByStatus.map((row) => (
               <Link
-                key={row.status}
+                key={`${row.status}-${"label" in row ? row.label : ""}`}
                 href={`/workorders?status=${encodeURIComponent(row.status)}`}
                 className="inline-flex items-center gap-2 rounded-md border border-border/80 bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/30 hover:bg-muted/60"
               >
-                <StatusPill status={row.status} map={WO_STATUS_COLORS} />
+                <StatusPill
+                  status={row.status}
+                  map={WO_STATUS_COLORS}
+                  label={"label" in row && typeof row.label === "string" ? row.label : undefined}
+                />
                 <span className="font-semibold tabular-nums text-foreground">{row.count}</span>
               </Link>
             ))}

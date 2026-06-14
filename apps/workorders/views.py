@@ -64,7 +64,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     queryset = WorkOrder.objects.all().select_related(
         'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by',
         'branch', 'service_coordinator', 'diagnosis_by', 'quality_check_by', 'related_work_order',
-        'service_type', 'service_bundle', 'estimate',
+        'service_type', 'service_bundle', 'estimate', 'diagnosis',
     ).prefetch_related(
         'assigned_technicians',
         'gate_passes',

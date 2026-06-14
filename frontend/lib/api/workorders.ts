@@ -33,6 +33,9 @@ export interface WorkOrder {
   customer_concerns?: string;
   diagnosis_notes?: string;
   special_instructions?: string;
+  diagnosis_status?: "not_started" | "in_progress" | "paused" | "awaiting_approval" | "completed" | "on_hold" | null;
+  paused_from_status?: string | null;
+  has_technician_assignment?: boolean;
   estimated_labor_hours?: number | string;
   estimated_labor_cost?: string;
   estimated_parts_cost?: string;
@@ -378,6 +381,11 @@ export const workordersApi = {
 
   resume: async (id: number): Promise<WorkOrder> => {
     const response = await apiClient.post(`/workorders/work-orders/${id}/resume/`);
+    return response.data;
+  },
+
+  flagAdditionalWork: async (id: number, data?: { reason?: string; notes?: string }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/flag_additional_work/`, data || {});
     return response.data;
   },
 

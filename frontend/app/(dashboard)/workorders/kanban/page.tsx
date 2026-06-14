@@ -41,7 +41,6 @@ import { useInView } from "react-intersection-observer";
 
 import {
   WORK_ORDER_STATUS_GROUPS,
-  getDefaultStatusForGroup,
   getStatusGroupForStatus,
   groupWorkOrdersByStatusGroup,
   type WorkOrderStatusGroupId,
@@ -49,6 +48,7 @@ import {
 import { getStatusLabel, getStatusVariant } from "@/lib/utils/workorder-status";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
+import { resolveKanbanDropStatus } from "@/lib/utils/workorder-transitions";
 
 type KanbanGroup = (typeof WORK_ORDER_STATUS_GROUPS)[number];
 
@@ -397,8 +397,18 @@ export default function WorkOrderKanbanPage() {
     const currentGroup = getStatusGroupForStatus(workOrder.status);
     if (currentGroup === targetGroupId) return;
 
-    const newStatus = getDefaultStatusForGroup(targetGroupId);
-    if (workOrder.status === newStatus) return;
+    const newStatus = resolveKanbanDropStatus(workOrder, targetGroupId);
+    if (!newStatus || workOrder.status === newStatus) {
+      if (newStatus === null) {
+        toast({
+          title: "Move blocked",
+          description:
+            "This work order cannot skip to that stage. Open the work order and use the workflow actions instead.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
 
     updateStatusMutation.mutate({ id: workOrderId, status: newStatus });
   };

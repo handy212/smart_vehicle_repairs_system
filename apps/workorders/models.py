@@ -112,6 +112,13 @@ class WorkOrder(models.Model):
     
     # Status and Priority
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='draft', db_index=True)
+    paused_from_status = models.CharField(
+        max_length=25,
+        choices=STATUS_CHOICES,
+        blank=True,
+        null=True,
+        help_text='Work order status before entering paused (diagnosis vs repairs).',
+    )
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
 
     # Customer discontinued job (bill for work performed, then invoice + close)
@@ -196,7 +203,7 @@ class WorkOrder(models.Model):
     )
     
     # Approval
-    requires_approval = models.BooleanField(default=False)
+    requires_approval = models.BooleanField(default=True)
     approval_requested_at = models.DateTimeField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     approved_by_customer = models.BooleanField(default=False)
@@ -465,6 +472,23 @@ class WorkOrder(models.Model):
     def is_approved(self):
         """Check if approved or doesn't require approval"""
         return not self.requires_approval or self.approved_by_customer
+
+    def get_linked_diagnosis(self):
+        """Return the linked diagnosis record, if one exists."""
+        try:
+            return self.diagnosis
+        except Exception:
+            return None
+
+    @property
+    def is_diagnosis_paused(self):
+        """True when the work order is paused during an active diagnosis session."""
+        if self.status != 'paused':
+            return False
+        if self.paused_from_status == 'diagnosis':
+            return True
+        diagnosis = self.get_linked_diagnosis()
+        return diagnosis is not None and diagnosis.status == 'paused'
     
     @property
     def technician_names(self):
@@ -503,12 +527,12 @@ class WorkOrder(models.Model):
         'inspection': ['intake', 'draft', 'discontinued_pending_bill'],
         'intake': ['assigned', 'discontinued_pending_bill'],
         'assigned': ['diagnosis', 'intake', 'discontinued_pending_bill'],
-        'diagnosis': ['awaiting_approval', 'discontinued_pending_bill'],
+        'diagnosis': ['awaiting_approval', 'paused', 'discontinued_pending_bill'],
         'awaiting_approval': ['approved', 'diagnosis', 'discontinued_pending_bill'],
         'approved': ['in_progress', 'additional_work_found', 'discontinued_pending_bill'],
         'in_progress': ['paused', 'quality_check', 'additional_work_found', 'discontinued_pending_bill'],
         'additional_work_found': ['awaiting_approval', 'discontinued_pending_bill'],
-        'paused': ['in_progress', 'additional_work_found', 'discontinued_pending_bill'],
+        'paused': ['diagnosis', 'in_progress', 'additional_work_found', 'discontinued_pending_bill'],
         'quality_check': ['completed', 'in_progress', 'discontinued_pending_bill'],
         'discontinued_pending_bill': ['invoiced'],
         'completed': ['invoiced', 'closed'],
@@ -582,16 +606,23 @@ class WorkOrder(models.Model):
         Validate if status transition is allowed.
         Returns (can_transition: bool, error_message: str or None)
         """
-        # The workflow builder app is intentionally parked for now. Work orders
-        # use this explicit transition map until the repair flow is fully stable.
-        valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
-
         blocked_message = self.STRICTLY_BLOCKED_DIRECT_TRANSITIONS.get((self.status, new_status))
         if blocked_message:
             return False, blocked_message
 
-        if new_status not in valid_next_statuses:
-            return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
+        # Validate transition graph. When the workflow builder app is enabled, its
+        # default definition becomes the allowed edge list; otherwise use the
+        # explicit map below until the repair flow is fully stable.
+        from .workflow_bridge import get_workflow_allowed_targets
+
+        workflow_allowed = get_workflow_allowed_targets(self)
+        if workflow_allowed is not None:
+            if new_status not in workflow_allowed:
+                return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
+        else:
+            valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
+            if new_status not in valid_next_statuses:
+                return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
 
         # Discontinued — pending invoice (customer stops job; bill then close via invoiced → closed)
         if new_status == 'discontinued_pending_bill':
@@ -601,7 +632,7 @@ class WorkOrder(models.Model):
                 return False, 'Invalid discontinuation reason.'
         
         # Validate Service Coordinator is assigned before diagnosis
-        if new_status == 'diagnosis' and not self.service_coordinator:
+        if new_status == 'diagnosis' and self.status != 'paused' and not self.service_coordinator:
             return (False, 'A Service Coordinator must be assigned before diagnosis can be carried out.')
         
         # Validate Service Coordinator is assigned when transitioning to assigned status
@@ -622,10 +653,23 @@ class WorkOrder(models.Model):
             if not self.requires_approval:
                 return False, "Work order does not require approval"
         
+        if new_status == 'diagnosis' and self.status == 'paused':
+            diagnosis = self.get_linked_diagnosis()
+            if not diagnosis or diagnosis.status != 'paused':
+                return False, "Work order is not in a paused diagnosis session."
+
         if new_status == 'in_progress':
             # Special case: If transitioning from quality_check, this means QC failed
             # Work order should already be approved and have technicians, so bypass strict checks
             current_status = self.status  # Current status before transition (old_status)
+            if current_status == 'paused':
+                if self.paused_from_status == 'diagnosis':
+                    return False, "Diagnosis is paused. Resume the diagnosis session before starting repairs."
+                diagnosis = self.get_linked_diagnosis()
+                if diagnosis and diagnosis.status == 'paused':
+                    return False, "Diagnosis is paused. Resume the diagnosis session before starting repairs."
+                if diagnosis and diagnosis.status != 'completed':
+                    return False, "Complete diagnosis before starting or resuming repair work."
             if current_status != 'quality_check':
                 # Only check approval for new transitions to in_progress (not returning from QC)
                 if not self.is_approved:
@@ -773,6 +817,11 @@ class WorkOrder(models.Model):
         can_transition, error = self.can_transition_to(new_status)
         if not can_transition:
             raise ValidationError(error)
+
+        from .workflow_bridge import evaluate_workflow_guards_for_transition
+        guard_error = evaluate_workflow_guards_for_transition(self, new_status, user=user)
+        if guard_error:
+            raise ValidationError(guard_error)
         
         # Validate required fields
         field_errors = self.validate_before_status_change(new_status)
@@ -781,6 +830,11 @@ class WorkOrder(models.Model):
         
         old_status = self.status
         self.status = new_status
+
+        if new_status == 'paused':
+            self.paused_from_status = old_status
+        elif old_status == 'paused':
+            self.paused_from_status = None
         
         # Handle additional_work_found: reset approval and require new approval
         if new_status == 'additional_work_found':
@@ -1206,7 +1260,7 @@ class WorkOrder(models.Model):
 
         if active_recommendations.filter(
             quotation_status='quoted',
-            customer_approved=False,
+            approval_status='pending_approval',
         ).exists():
             return 'waiting_for_customer_approval'
 

@@ -167,6 +167,57 @@ class DiagnosisModelTest(TestCase):
         self.assertEqual(self.work_order.status, 'awaiting_approval')
         self.assertIsNotNone(self.work_order.approval_requested_at)
 
+    def test_pause_and_resume_sync_work_order_status_and_time_log(self):
+        """Pausing diagnosis should show as a paused work order and close active time."""
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            technician=self.technician_user,
+            customer_complaint='Car won\'t start',
+        )
+        self.assertTrue(diagnosis.start(user=self.technician_user))
+
+        self.assertTrue(diagnosis.pause(user=self.technician_user, reason='Waiting on scan tool.'))
+        diagnosis.refresh_from_db()
+        self.work_order.refresh_from_db()
+
+        self.assertEqual(diagnosis.status, 'paused')
+        self.assertEqual(self.work_order.status, 'paused')
+        self.assertEqual(self.work_order.paused_from_status, 'diagnosis')
+        started_log = diagnosis.time_logs.filter(stage='started').latest('started_at')
+        pause_log = diagnosis.time_logs.filter(stage='paused').latest('started_at')
+        self.assertIsNotNone(started_log.ended_at)
+        self.assertIsNone(pause_log.ended_at)
+
+        self.assertTrue(diagnosis.resume(user=self.technician_user))
+        diagnosis.refresh_from_db()
+        self.work_order.refresh_from_db()
+        pause_log.refresh_from_db()
+
+        self.assertEqual(diagnosis.status, 'in_progress')
+        self.assertEqual(self.work_order.status, 'diagnosis')
+        self.assertIsNone(self.work_order.paused_from_status)
+        self.assertIsNotNone(pause_log.ended_at)
+
+    def test_paused_work_order_cannot_resume_repairs_while_diagnosis_paused(self):
+        """Repair resume must stay blocked until diagnosis is completed."""
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            technician=self.technician_user,
+            customer_complaint='Car won\'t start',
+        )
+        self.assertTrue(diagnosis.start(user=self.technician_user))
+        self.assertTrue(diagnosis.pause(user=self.technician_user, reason='Waiting on scan tool.'))
+
+        self.work_order.refresh_from_db()
+        self.assertTrue(self.work_order.is_diagnosis_paused)
+
+        can_transition, error = self.work_order.can_transition_to('in_progress')
+        self.assertFalse(can_transition)
+        self.assertIn('Diagnosis is paused', error)
+
+        can_transition, error = self.work_order.can_transition_to('diagnosis')
+        self.assertTrue(can_transition)
+
     def test_complete_approval_diagnosis_requires_customer_approval_first(self):
         diagnosis = Diagnosis.objects.create(
             work_order=self.work_order,

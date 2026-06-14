@@ -1,10 +1,13 @@
 import type { VehicleInspection } from "@/lib/api/inspections";
 import type { WorkOrder } from "@/lib/api/workorders";
 
-type WorkOrderLike = Pick<
+export type WorkOrderLike = Pick<
   Partial<WorkOrder>,
   | "status"
   | "gate_pass_status"
+  | "diagnosis_status"
+  | "paused_from_status"
+  | "has_technician_assignment"
   | "current_inspection_status"
   | "current_inspection_status_display"
   | "current_inspection_completion_percentage"
@@ -18,6 +21,30 @@ export type WorkOrderStagePresentation = {
   workflowStatus: string;
   label: string;
 };
+
+export function isDiagnosisPausedWorkOrder(workOrder?: WorkOrderLike | null): boolean {
+  if (workOrder?.status !== "paused") return false;
+  if (workOrder?.paused_from_status === "diagnosis") return true;
+  return workOrder?.diagnosis_status === "paused";
+}
+
+function getDiagnosisLifecycleLabel(workOrder?: WorkOrderLike | null): string {
+  switch (workOrder?.diagnosis_status) {
+    case "in_progress":
+      return "Diagnosis | In Progress";
+    case "paused":
+      return "Diagnosis | Paused";
+    case "awaiting_approval":
+      return "Diagnosis | Awaiting Approval";
+    case "completed":
+      return "Diagnosis | Completed";
+    case "on_hold":
+      return "Diagnosis | On Hold";
+    case "not_started":
+    default:
+      return workOrder?.has_technician_assignment ? "Diagnosis | Assigned" : "Diagnosis | Draft";
+  }
+}
 
 function parseMoney(value?: string | null): number {
   if (!value) return 0;
@@ -129,12 +156,28 @@ export function getWorkOrderStagePresentation(
 ): WorkOrderStagePresentation {
   const workflowStatus = workOrder?.status || "draft";
 
-  if (
-    (workflowStatus === "diagnosis" ||
-      workflowStatus === "awaiting_approval" ||
-      workflowStatus === "approved") &&
-    workOrder?.current_quote_stage_display
-  ) {
+  if (workflowStatus === "diagnosis") {
+    return {
+      workflowStatus,
+      label: getDiagnosisLifecycleLabel(workOrder),
+    };
+  }
+
+  if (workflowStatus === "paused" && workOrder?.diagnosis_status === "paused") {
+    return {
+      workflowStatus,
+      label: getDiagnosisLifecycleLabel(workOrder),
+    };
+  }
+
+  if (workflowStatus === "awaiting_approval") {
+    return {
+      workflowStatus,
+      label: "Diagnosis | Awaiting Approval",
+    };
+  }
+
+  if (workflowStatus === "approved" && workOrder?.current_quote_stage_display) {
     return {
       workflowStatus,
       label: workOrder.current_quote_stage_display,

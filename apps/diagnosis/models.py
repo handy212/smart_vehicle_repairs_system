@@ -160,11 +160,15 @@ class Diagnosis(models.Model):
                 self.status = 'paused'
                 self.paused_at = timezone.now()
                 self.save(update_fields=['status', 'paused_at', 'diagnostic_time_hours'])
+
+                work_order = self.work_order
+                if work_order and work_order.status == 'diagnosis':
+                    work_order.transition_to('paused', user=user)
                 
                 # Update last time log entry or create new one
                 last_log = DiagnosisTimeLog.objects.filter(
                     diagnosis=self,
-                    stage='resumed'
+                    stage__in=['started', 'resumed']
                 ).order_by('-started_at').first()
                 
                 if last_log and not last_log.ended_at:
@@ -190,6 +194,10 @@ class Diagnosis(models.Model):
         
         if self.status == 'paused':
             with transaction.atomic():
+                work_order = self.work_order
+                if work_order and work_order.status == 'paused':
+                    work_order.transition_to('diagnosis', user=user)
+
                 self.status = 'in_progress'
                 self.resumed_at = timezone.now()
                 self.save(update_fields=['status', 'resumed_at'])

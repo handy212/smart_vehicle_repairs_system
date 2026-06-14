@@ -36,23 +36,8 @@ const workOrderSchema = z.object({
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
 type ServiceTypeOption = { id: number; name: string };
 
-// Valid status transitions based on backend logic
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  'draft': ['inspection'],
-  'inspection': ['intake', 'draft'],
-  'intake': ['assigned'],
-  'assigned': ['diagnosis', 'intake'],
-  'diagnosis': ['awaiting_approval'],
-  'awaiting_approval': ['approved', 'diagnosis'],
-  'approved': ['in_progress'],
-  'in_progress': ['paused', 'quality_check', 'additional_work_found'],
-  'additional_work_found': ['awaiting_approval'],
-  'paused': ['in_progress'],
-  'quality_check': ['completed', 'in_progress'],
-  'completed': ['invoiced', 'closed'],
-  'invoiced': ['closed'],
-  'closed': [],
-};
+import { getValidNextStatuses } from "@/lib/utils/workorder-transitions";
+import { isDiagnosisPausedWorkOrder, type WorkOrderLike } from "@/lib/utils/workorder-inspection-stage";
 
 // Status display labels
 const STATUS_LABELS: Record<string, string> = {
@@ -72,15 +57,16 @@ const STATUS_LABELS: Record<string, string> = {
   'closed': 'Closed',
 };
 
-function getValidStatuses(currentStatus: string): string[] {
-  // Always include current status
+function getValidStatuses(currentStatus: string, workOrder?: Pick<WorkOrderLike, "diagnosis_status" | "paused_from_status">): string[] {
   const validStatuses = [currentStatus];
+  let transitions = getValidNextStatuses(currentStatus);
 
-  // Add valid transitions
-  const transitions = VALID_TRANSITIONS[currentStatus] || [];
+  if (currentStatus === "paused" && workOrder && isDiagnosisPausedWorkOrder({ status: "paused", ...workOrder })) {
+    transitions = transitions.filter((status) => status !== "in_progress");
+  }
+
   validStatuses.push(...transitions);
-
-  return [...new Set(validStatuses)]; // Remove duplicates
+  return [...new Set(validStatuses)];
 }
 
 export default function EditWorkOrderPage() {
@@ -750,7 +736,7 @@ export default function EditWorkOrderPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {workOrder ? (() => {
-                          const validStatuses = getValidStatuses(workOrder.status);
+                          const validStatuses = getValidStatuses(workOrder.status, workOrder);
                           return validStatuses.map((status) => (
                             <SelectItem key={status} value={status}>
                               {STATUS_LABELS[status] || status}
