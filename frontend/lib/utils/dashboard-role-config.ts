@@ -5,6 +5,7 @@ export type DashboardRoleVariant =
   | "receptionist"
   | "parts_manager"
   | "accountant"
+  | "technician"
   | "default";
 
 export type DashboardSection =
@@ -76,6 +77,16 @@ export function getDashboardRoleConfig(role: string | undefined | null): Dashboa
         kpiLabels: ["Revenue Today", "Overdue Invoices", "Pending Estimates", "Month Revenue"],
         sections: ["kpi", "main_table", "bottom_summary"],
         defaultMainTab: "invoices",
+      };
+    case "technician":
+      return {
+        variant: "technician",
+        title: "My Workshop",
+        subtitle: "Assigned jobs and today's schedule",
+        kpiLabels: ["Active Jobs", "Appointments", "Customers"],
+        sections: ["kpi", "main_table", "appointments"],
+        defaultMainTab: "workorders",
+        defaultWoFilter: "active",
       };
     case "manager":
     case "admin":

@@ -26,6 +26,7 @@ from apps.branches.utils import (
     resolve_branch,
 )
 from apps.accounts.permissions import (
+    DASHBOARD_VIEW_PERMISSIONS,
     HasAnyPermission,
     IsModuleEnabled,
     REPORTS_VIEW_PERMISSIONS,
@@ -36,6 +37,12 @@ REPORTS_PERMISSION_CLASSES = [
     IsAuthenticated,
     IsModuleEnabled('reports'),
     HasAnyPermission(list(REPORTS_VIEW_PERMISSIONS)),
+]
+
+DASHBOARD_PERMISSION_CLASSES = [
+    IsAuthenticated,
+    IsModuleEnabled('dashboard'),
+    HasAnyPermission(list(DASHBOARD_VIEW_PERMISSIONS)),
 ]
 from .models import ReportExportLog, ReportSchedule, SavedReport
 from .serializers import ReportExportLogSerializer, ReportScheduleSerializer, SavedReportSerializer
@@ -249,7 +256,7 @@ def report_catalog(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes(REPORTS_PERMISSION_CLASSES)
+@permission_classes(DASHBOARD_PERMISSION_CLASSES)
 def dashboard_overview(request):
     """
     Get comprehensive dashboard overview with key metrics

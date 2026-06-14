@@ -223,3 +223,55 @@ class ReportingEndpointTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['controls']['branch_scoped'])
         self.assertGreaterEqual(len(response.data['reports']), 10)
+
+    def test_receptionist_can_load_dashboard_overview_with_view_dashboard(self):
+        from django.core.management import call_command
+
+        call_command('init_permissions', verbosity=0)
+        SystemModule.objects.get_or_create(
+            slug='dashboard',
+            defaults={'name': 'Dashboard', 'is_enabled': True},
+        )
+        receptionist = User.objects.create_user(
+            username='recep-dash',
+            email='recep-dash@example.com',
+            password='password',
+            role='receptionist',
+            is_staff=True,
+            branch=self.branch,
+        )
+        self.client.force_authenticate(receptionist)
+
+        response = self.client.get('/api/reporting/dashboard-overview/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('today', response.data)
+        self.assertIn('alerts', response.data)
+
+    def test_staff_without_dashboard_or_report_access_is_denied_overview(self):
+        from django.core.management import call_command
+        from apps.accounts.permission_models import Role
+
+        call_command('init_permissions', verbosity=0)
+        SystemModule.objects.get_or_create(
+            slug='dashboard',
+            defaults={'name': 'Dashboard', 'is_enabled': True},
+        )
+        limited_role, _ = Role.objects.get_or_create(
+            code='limited_staff',
+            defaults={'name': 'Limited Staff', 'is_active': True},
+        )
+        limited_role.permissions.clear()
+        limited_user = User.objects.create_user(
+            username='limited-dash',
+            email='limited-dash@example.com',
+            password='password',
+            role='limited_staff',
+            is_staff=True,
+            branch=self.branch,
+        )
+        self.client.force_authenticate(limited_user)
+
+        response = self.client.get('/api/reporting/dashboard-overview/')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

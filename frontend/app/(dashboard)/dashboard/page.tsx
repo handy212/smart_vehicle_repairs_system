@@ -6,6 +6,8 @@ import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { reportingApi, type DashboardOverview } from "@/lib/api/reporting";
 import { billingApi } from "@/lib/api/billing";
+import { workordersApi } from "@/lib/api/workorders";
+import { inventoryApi } from "@/lib/api/inventory";
 import { format } from "date-fns";
 import { useMemo, useCallback } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -14,6 +16,13 @@ import { useBranchStore } from "@/store/branchStore";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardRoleConfig } from "@/lib/utils/dashboard-role-config";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { DASHBOARD_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
+import {
+  buildStatusCountsFromDashboardStats,
+  buildSummaryFromDashboardStats,
+  mapInventoryLowStock,
+  mapWorkOrderToDashboardRecent,
+} from "@/lib/utils/dashboard-data";
 
 type DashboardAppointment = {
   id: number;
@@ -59,6 +68,8 @@ export default function DashboardPage() {
   const userRole = useAuthStore((s) => s.user?.role);
   const roleConfig = useMemo(() => getDashboardRoleConfig(userRole), [userRole]);
   const { hasPermission, hasAnyPermission } = usePermissions();
+
+  const canViewDashboardOverview = hasAnyPermission([...DASHBOARD_VIEW_PERMISSIONS]);
   const canViewReports = hasAnyPermission(["view_reports", "view_all_reports"]);
   const canViewAppointments = hasAnyPermission(["view_appointments", "view_own_appointments"]);
   const canViewBilling = hasPermission("view_billing");
@@ -66,6 +77,10 @@ export default function DashboardPage() {
   const canViewVehicles = hasPermission("view_vehicles");
   const canViewInventory = hasPermission("view_inventory");
   const canViewWorkOrders = hasAnyPermission(["view_workorders", "view_own_workorders"]);
+
+  const useReportingOverview = canViewDashboardOverview;
+  const useReportingWorkOrderStats = canViewReports && canViewWorkOrders;
+  const useWorkOrderFallback = canViewWorkOrders && !useReportingWorkOrderStats;
 
   const {
     data: dashboardData,
@@ -75,7 +90,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboard", "overview", activeBranchId],
     queryFn: () => reportingApi.dashboard(),
-    enabled: canViewReports,
+    enabled: useReportingOverview,
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000,
@@ -96,10 +111,33 @@ export default function DashboardPage() {
         end_date: format(today, "yyyy-MM-dd"),
       });
     },
-    enabled: canViewReports && canViewWorkOrders,
+    enabled: useReportingWorkOrderStats,
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 10 * 60 * 1000,
+  });
+
+  const {
+    data: workOrderDashboardStats,
+    isLoading: workOrderDashboardStatsLoading,
+    isError: workOrderDashboardStatsError,
+    refetch: refetchWorkOrderDashboardStats,
+  } = useQuery({
+    queryKey: ["dashboard", "workorder-dashboard-stats", activeBranchId],
+    queryFn: () => workordersApi.dashboardStats(),
+    enabled: useWorkOrderFallback,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const {
+    data: recentWorkOrdersData,
+    isLoading: recentWorkOrdersLoading,
+    refetch: refetchRecentWorkOrders,
+  } = useQuery({
+    queryKey: ["dashboard", "recent-workorders", activeBranchId],
+    queryFn: () => workordersApi.list({ ordering: "-created_at", page: 1 }),
+    enabled: canViewWorkOrders && !useReportingOverview,
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: serviceDueData, refetch: refetchServiceDue } = useQuery({
@@ -112,7 +150,17 @@ export default function DashboardPage() {
   const { data: lowStockData, refetch: refetchLowStock } = useQuery({
     queryKey: ["dashboard", "low-stock", activeBranchId],
     queryFn: () => reportingApi.lowStock(),
-    enabled: canViewInventory && (dashboardData?.alerts?.low_stock_items ?? 0) > 0,
+    enabled:
+      canViewInventory &&
+      canViewReports &&
+      (dashboardData?.alerts?.low_stock_items ?? 0) > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: inventoryLowStock, refetch: refetchInventoryLowStock } = useQuery({
+    queryKey: ["dashboard", "inventory-low-stock", activeBranchId],
+    queryFn: () => inventoryApi.lowStock(),
+    enabled: canViewInventory && !canViewReports,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -131,6 +179,13 @@ export default function DashboardPage() {
     queryKey: ["dashboard", "invoice-stats", activeBranchId],
     queryFn: () => billingApi.invoices.stats(),
     enabled: canViewBilling,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: estimateStatsData, refetch: refetchEstimateStats } = useQuery({
+    queryKey: ["dashboard", "estimate-stats", activeBranchId],
+    queryFn: () => billingApi.estimates.stats(),
+    enabled: canViewBilling && !useReportingOverview,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -189,20 +244,28 @@ export default function DashboardPage() {
   const handleRefresh = useCallback(() => {
     void refetchDashboard();
     void refetchWOStats();
+    void refetchWorkOrderDashboardStats();
+    void refetchRecentWorkOrders();
     void refetchServiceDue();
     void refetchLowStock();
+    void refetchInventoryLowStock();
     void refetchAppointments();
     void refetchInvoiceStats();
+    void refetchEstimateStats();
     void refetchRecentInvoices();
     void refetchTechPerf();
     void refetchRevenueChart();
   }, [
     refetchDashboard,
     refetchWOStats,
+    refetchWorkOrderDashboardStats,
+    refetchRecentWorkOrders,
     refetchServiceDue,
     refetchLowStock,
+    refetchInventoryLowStock,
     refetchAppointments,
     refetchInvoiceStats,
+    refetchEstimateStats,
     refetchRecentInvoices,
     refetchTechPerf,
     refetchRevenueChart,
@@ -212,9 +275,23 @@ export default function DashboardPage() {
     const errors: string[] = [];
     if (dashboardError) errors.push("Dashboard overview");
     if (workOrderStatsError) errors.push("Work order statistics");
+    if (workOrderDashboardStatsError) errors.push("Work order summary");
     if (appointmentsError) errors.push("Today's appointments");
     return errors;
-  }, [dashboardError, workOrderStatsError, appointmentsError]);
+  }, [dashboardError, workOrderStatsError, workOrderDashboardStatsError, appointmentsError]);
+
+  const workOrderSummary = useMemo(
+    () => workOrderStats?.summary ?? buildSummaryFromDashboardStats(workOrderDashboardStats),
+    [workOrderStats, workOrderDashboardStats]
+  );
+
+  const workOrderByStatus = useMemo(
+    () => workOrderStats?.by_status ?? buildStatusCountsFromDashboardStats(workOrderDashboardStats),
+    [workOrderStats, workOrderDashboardStats]
+  );
+
+  const pendingEstimatesFallback =
+    (estimateStatsData?.counts?.draft ?? 0) + (estimateStatsData?.counts?.sent ?? 0);
 
   const stats = useMemo(
     () => ({
@@ -224,29 +301,55 @@ export default function DashboardPage() {
       today_revenue: dashboardData?.today?.revenue || 0,
       week_revenue: dashboardData?.week?.revenue || 0,
       month_revenue: dashboardData?.month?.revenue || 0,
-      active_work_orders: dashboardData?.alerts?.active_work_orders || 0,
-      overdue_invoices: dashboardData?.alerts?.overdue_invoices?.count || 0,
-      overdue_amount: dashboardData?.alerts?.overdue_invoices?.total || 0,
-      low_stock_items: dashboardData?.alerts?.low_stock_items || 0,
-      pending_estimates: dashboardData?.alerts?.pending_estimates || 0,
+      active_work_orders:
+        dashboardData?.alerts?.active_work_orders ||
+        ((workOrderDashboardStats?.in_progress ?? 0) + (workOrderDashboardStats?.pending ?? 0)),
+      overdue_invoices:
+        dashboardData?.alerts?.overdue_invoices?.count ||
+        invoiceStatsData?.counts?.overdue ||
+        0,
+      overdue_amount:
+        dashboardData?.alerts?.overdue_invoices?.total ||
+        invoiceStatsData?.financials?.past_due_total ||
+        0,
+      low_stock_items:
+        dashboardData?.alerts?.low_stock_items ||
+        inventoryLowStock?.length ||
+        0,
+      pending_estimates:
+        dashboardData?.alerts?.pending_estimates ||
+        pendingEstimatesFallback ||
+        0,
       active_subscriptions: dashboardData?.subscriptions?.active_count || 0,
       active_roadside: dashboardData?.today?.roadside_requests || 0,
       roadside_completed_today: dashboardData?.today?.roadside_completed || 0,
       mrr: dashboardData?.subscriptions?.mrr || 0,
     }),
-    [dashboardData, todayAppointments, customerStats, vehicleStats]
+    [
+      dashboardData,
+      todayAppointments,
+      customerStats,
+      vehicleStats,
+      workOrderDashboardStats,
+      invoiceStatsData,
+      inventoryLowStock,
+      pendingEstimatesFallback,
+    ]
   );
 
   const lowStockItems = useMemo(() => {
-    const items = (lowStockData?.items as LowStockReportItem[] | undefined) ?? [];
-    return items.map((item) => ({
-      id: item.part?.id ?? 0,
-      name: item.part?.name ?? "Unknown part",
-      part_number: item.part?.part_number,
-      quantity: item.stock?.current ?? 0,
-      reorder_point: item.stock?.reorder_point ?? 0,
-    }));
-  }, [lowStockData]);
+    if (lowStockData?.items) {
+      const items = (lowStockData.items as LowStockReportItem[]) ?? [];
+      return items.map((item) => ({
+        id: item.part?.id ?? 0,
+        name: item.part?.name ?? "Unknown part",
+        part_number: item.part?.part_number,
+        quantity: item.stock?.current ?? 0,
+        reorder_point: item.stock?.reorder_point ?? 0,
+      }));
+    }
+    return mapInventoryLowStock(inventoryLowStock ?? []);
+  }, [lowStockData, inventoryLowStock]);
 
   const topTechnicianData = useMemo(
     () =>
@@ -269,6 +372,35 @@ export default function DashboardPage() {
     [techPerfData]
   );
 
+  const recentWorkOrders = useMemo(() => {
+    if (dashboardData?.recent_activity?.work_orders?.length) {
+      return dashboardData.recent_activity.work_orders.map(
+        (wo: DashboardOverview["recent_activity"]["work_orders"][number]) => ({
+          id: wo.id,
+          wo_number: wo.wo_number,
+          status: wo.status,
+          diagnosis_status: wo.diagnosis_status ?? null,
+          has_technician_assignment: wo.has_technician_assignment ?? false,
+          estimate_summary: wo.estimate_summary ?? null,
+          invoice_summary: wo.invoice_summary ?? null,
+          current_quote_stage: wo.current_quote_stage ?? null,
+          current_quote_stage_display: wo.current_quote_stage_display ?? null,
+          created_at: wo.created_at,
+          diagnosis_notes: wo.diagnosis_notes ?? undefined,
+          customer: wo.customer || undefined,
+          vehicle: wo.vehicle || undefined,
+          gate_pass_status: wo.gate_pass_status ?? undefined,
+        })
+      );
+    }
+
+    return (recentWorkOrdersData?.results ?? []).map(mapWorkOrderToDashboardRecent);
+  }, [dashboardData, recentWorkOrdersData]);
+
+  const isLoading = useReportingOverview
+    ? dashboardLoading
+    : workOrderDashboardStatsLoading || recentWorkOrdersLoading;
+
   const todayLabel = format(
     dashboardData?.today?.date ? new Date(dashboardData.today.date) : new Date(),
     "EEEE, MMMM d"
@@ -276,27 +408,12 @@ export default function DashboardPage() {
 
   return (
     <PerfexDashboard
-      isLoading={dashboardLoading}
+      isLoading={isLoading}
       queryErrors={queryErrors}
       stats={stats}
-      workOrderSummary={workOrderStats?.summary}
-      workOrderByStatus={workOrderStats?.by_status}
-      recentWorkOrders={dashboardData?.recent_activity?.work_orders?.map((wo: DashboardOverview["recent_activity"]["work_orders"][number]) => ({
-        id: wo.id,
-        wo_number: wo.wo_number,
-        status: wo.status,
-        diagnosis_status: wo.diagnosis_status ?? null,
-        has_technician_assignment: wo.has_technician_assignment ?? false,
-        estimate_summary: wo.estimate_summary ?? null,
-        invoice_summary: wo.invoice_summary ?? null,
-        current_quote_stage: wo.current_quote_stage ?? null,
-        current_quote_stage_display: wo.current_quote_stage_display ?? null,
-        created_at: wo.created_at,
-        diagnosis_notes: wo.diagnosis_notes ?? undefined,
-        customer: wo.customer || undefined,
-        vehicle: wo.vehicle || undefined,
-        gate_pass_status: wo.gate_pass_status ?? undefined,
-      }))}
+      workOrderSummary={workOrderSummary}
+      workOrderByStatus={workOrderByStatus}
+      recentWorkOrders={recentWorkOrders}
       todayAppointments={(todayAppointments as DashboardAppointment[] | undefined)?.map((appt) => ({
         id: appt.id,
         status: appt.status,

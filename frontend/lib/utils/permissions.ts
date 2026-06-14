@@ -134,6 +134,9 @@ export const PERMISSIONS = {
   VIEW_PAYROLL: "view_payroll",
   MANAGE_PAYROLL: "manage_payroll",
 
+  // Dashboard
+  VIEW_DASHBOARD: "view_dashboard",
+
   // Reports
   VIEW_REPORTS: "view_reports",
   VIEW_ALL_REPORTS: "view_all_reports",
@@ -185,6 +188,13 @@ export const PERMISSIONS = {
   REFUND_PAYMENTS: "refund_payments",
   MANAGE_BILLING: "manage_billing",
 } as const;
+
+/** Staff landing dashboard overview API and nav link. */
+export const DASHBOARD_VIEW_PERMISSIONS = [
+  PERMISSIONS.VIEW_DASHBOARD,
+  PERMISSIONS.VIEW_REPORTS,
+  PERMISSIONS.VIEW_ALL_REPORTS,
+] as const;
 
 /** Stores Workbench (/inventory/quotation-requests) — view quotation queue. */
 export const STORES_QUOTATION_VIEW_PERMISSIONS = [

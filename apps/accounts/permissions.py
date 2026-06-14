@@ -14,6 +14,7 @@ User = get_user_model()
 WORKORDER_VIEW_PERMISSIONS = ('view_workorders', 'view_own_workorders')
 WORKORDER_STATUS_PERMISSIONS = ('update_workorder_status', 'edit_workorders', 'manage_workorders')
 REPORTS_VIEW_PERMISSIONS = ('view_reports', 'view_all_reports')
+DASHBOARD_VIEW_PERMISSIONS = ('view_dashboard', *REPORTS_VIEW_PERMISSIONS)
 
 
 class HasPermission(BasePermission):

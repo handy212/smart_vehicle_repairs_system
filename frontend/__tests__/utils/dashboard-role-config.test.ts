@@ -20,11 +20,17 @@ describe("getDashboardRoleConfig", () => {
     expect(dashboardShowsSection(config, "appointments")).toBe(false);
   });
 
+  it("maps technician to workshop-focused dashboard", () => {
+    const config = getDashboardRoleConfig("technician");
+    expect(config.variant).toBe("technician");
+    expect(config.title).toBe("My Workshop");
+    expect(config.defaultWoFilter).toBe("active");
+    expect(dashboardShowsSection(config, "appointments")).toBe(true);
+    expect(dashboardShowsSection(config, "technician_perf")).toBe(false);
+  });
+
   it("maps technician login path via post-login redirect utility contract", () => {
     expect(getPostLoginPath("technician", { useMobileApp: false })).toBe("/dashboard");
     expect(getPostLoginPath("technician", { useMobileApp: true })).toBe("/mobile/dashboard");
-
-    const config = getDashboardRoleConfig("technician");
-    expect(config.variant).toBe("default");
   });
 });
