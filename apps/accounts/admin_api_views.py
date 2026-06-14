@@ -163,9 +163,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             
     def perform_destroy(self, instance):
         key = instance.key
+        category = instance.category
         instance.delete()
-        from .settings_utils import clear_setting_cache
+        from .settings_utils import clear_public_branding_cache, clear_setting_cache
         clear_setting_cache(key)
+        if category in ('branding', 'company'):
+            clear_public_branding_cache()
     
     @action(detail=False, methods=['get'])
     def by_category(self, request):

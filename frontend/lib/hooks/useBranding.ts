@@ -7,6 +7,7 @@ import { adminApi, type SystemSetting } from "@/lib/api/admin";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { getAccessToken } from "@/lib/utils/token";
 import { getMediaUrl as resolveMediaUrl } from "@/lib/api/utils";
+import { brandingMediaVersion, withCacheBuster } from "@/lib/branding/parse";
 
 interface BrandingResult {
     siteName: string;
@@ -19,6 +20,10 @@ interface BrandingResult {
     loginBackground: string | null;
     selfRegistrationEnabled: boolean;
     faviconPath: string | null;
+    /** Resolved favicon URL with cache-busting, or null. */
+    faviconSrc: string | null;
+    /** Resolved login background URL with cache-busting, or null. */
+    loginBackgroundSrc: string | null;
     /** The resolved logo URL (theme-aware) or null. */
     logoSrc: string | null;
     /** Helper to convert a relative media path to a full URL. */
@@ -116,6 +121,18 @@ export function useBranding(
             logoDarkPath,
             loginBackground,
             faviconPath,
+            faviconSrc: faviconPath
+                ? withCacheBuster(
+                    getMediaUrl(faviconPath) || "",
+                    brandingMediaVersion(brandingSettings, "favicon_path"),
+                ) || null
+                : null,
+            loginBackgroundSrc: loginBackground
+                ? withCacheBuster(
+                    getMediaUrl(loginBackground) || "",
+                    brandingMediaVersion(brandingSettings, "login_background"),
+                ) || null
+                : null,
             selfRegistrationEnabled,
             logoSrc,
             getMediaUrl,

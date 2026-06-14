@@ -157,3 +157,37 @@ class CustomerPrimaryContactCreationTest(TestCase):
         self.assertTrue(primary_contact.is_primary)
         self.assertEqual(primary_contact.first_name, 'Legacy')
         self.assertEqual(primary_contact.last_name, 'Coordinator')
+
+    def test_backfill_command_creates_missing_primary_contacts(self):
+        user = User.objects.create_user(
+            username='legacy-fleet',
+            email='legacy-fleet@example.com',
+            password='password123',
+            first_name='Alex',
+            last_name='Morgan',
+            phone='+233200000222',
+            role='customer',
+        )
+        customer = Customer.objects.create(
+            user=user,
+            customer_number='CUST-LEGACY-001',
+            customer_type='fleet',
+            company_name='Legacy Fleet Ltd',
+            occupation='Fleet Supervisor',
+            status='active',
+        )
+
+        from django.core.management import call_command
+
+        call_command('sync_business_customer_contacts')
+
+        customer.refresh_from_db()
+        self.assertEqual(customer.contact_person_name, 'Alex Morgan')
+        self.assertEqual(customer.contacts.count(), 1)
+        contact = customer.contacts.get()
+        self.assertTrue(contact.is_primary)
+        self.assertEqual(contact.first_name, 'Alex')
+        self.assertEqual(contact.last_name, 'Morgan')
+        self.assertEqual(contact.email, 'legacy-fleet@example.com')
+        self.assertEqual(contact.phone, '+233200000222')
+        self.assertEqual(contact.job_title, 'Fleet Supervisor')

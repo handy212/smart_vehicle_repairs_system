@@ -5,6 +5,10 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from .models import Customer, CustomerNote, CustomerContact, CustomerReminder, CustomerDocument, CustomerContract
+from .contact_services import (
+    build_primary_contact_display_name,
+    sync_primary_contact,
+)
 
 User = get_user_model()
 
@@ -153,31 +157,6 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         
         return attrs
 
-    def _build_primary_contact_display_name(self, first_name, last_name, contact_person_name):
-        display_name = (contact_person_name or '').strip()
-        if display_name:
-            return display_name
-        return f"{first_name} {last_name}".strip()
-
-    def _create_primary_contact(self, customer, first_name, last_name, email, phone, occupation):
-        if customer.customer_type not in ['business', 'fleet']:
-            return
-
-        contact_first_name = (first_name or '').strip()
-        contact_last_name = (last_name or '').strip()
-        if not contact_first_name and not contact_last_name:
-            return
-
-        CustomerContact.objects.create(
-            customer=customer,
-            first_name=contact_first_name or customer.contact_person_name or customer.company_name,
-            last_name=contact_last_name,
-            email=(email or '').strip(),
-            phone=(phone or '').strip(),
-            job_title=(occupation or '').strip(),
-            is_primary=True,
-        )
-    
     def create(self, validated_data):
         # Extract user data
         email = validated_data.pop('email')
@@ -200,7 +179,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         if password == '':
             password = None
         if customer_type in ['business', 'fleet']:
-            validated_data['contact_person_name'] = self._build_primary_contact_display_name(
+            validated_data['contact_person_name'] = build_primary_contact_display_name(
                 first_name,
                 last_name,
                 contact_person_name,
@@ -235,7 +214,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
 
             # Create customer profile
             customer = Customer.objects.create(user=user, **validated_data)
-            self._create_primary_contact(customer, first_name, last_name, email, phone, occupation)
+            sync_primary_contact(customer)
         
         # Send welcome email if requested
         if send_welcome_email and grant_portal_access and password:
@@ -309,45 +288,6 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with this email already exists.")
         return value
 
-    def _build_primary_contact_display_name(self, first_name, last_name, contact_person_name):
-        display_name = (contact_person_name or '').strip()
-        if display_name:
-            return display_name
-        return f"{first_name} {last_name}".strip()
-
-    def _sync_primary_contact(self, customer):
-        if customer.customer_type not in ['business', 'fleet']:
-            return
-
-        first_name = (customer.user.first_name or '').strip()
-        last_name = (customer.user.last_name or '').strip()
-        if not first_name and not last_name:
-            return
-
-        primary_contact = customer.contacts.filter(is_primary=True).order_by('created_at').first()
-        if primary_contact is None:
-            primary_contact = customer.contacts.order_by('created_at').first()
-
-        contact_defaults = {
-            'first_name': first_name or customer.contact_person_name or customer.company_name,
-            'last_name': last_name,
-            'email': (customer.user.email or '').strip(),
-            'phone': (customer.user.phone or '').strip(),
-            'job_title': (customer.occupation or '').strip(),
-            'is_primary': True,
-        }
-
-        if primary_contact is None:
-            CustomerContact.objects.create(
-                customer=customer,
-                **contact_defaults,
-            )
-            return
-
-        for field, value in contact_defaults.items():
-            setattr(primary_contact, field, value)
-        primary_contact.save()
-
     def update(self, instance, validated_data):
         # Update user fields if present (they are in nested 'user' dict due to source)
         user_data = validated_data.pop('user', {})
@@ -362,7 +302,7 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             first_name = user_data.get('first_name', instance.user.first_name)
             last_name = user_data.get('last_name', instance.user.last_name)
             contact_person_name = validated_data.get('contact_person_name', instance.contact_person_name)
-            validated_data['contact_person_name'] = self._build_primary_contact_display_name(
+            validated_data['contact_person_name'] = build_primary_contact_display_name(
                 first_name,
                 last_name,
                 contact_person_name,
@@ -370,7 +310,7 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
 
         # Update customer fields
         customer = super().update(instance, validated_data)
-        self._sync_primary_contact(customer)
+        sync_primary_contact(customer)
         return customer
 
 

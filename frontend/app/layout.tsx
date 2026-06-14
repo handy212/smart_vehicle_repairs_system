@@ -3,10 +3,17 @@ import "./globals.css";
 import "../styles/print.css";
 import { Providers } from "./providers";
 import { ThemeScript } from "./theme-script";
+import { Toaster } from "@/components/ui/toaster";
 
 import { APP_CONFIG } from "@/lib/config";
 
 import { adminApi } from "@/lib/api/admin";
+import { getMediaUrl } from "@/lib/api/utils";
+import {
+  brandingMediaVersion,
+  brandingSettingValue,
+  withCacheBuster,
+} from "@/lib/branding/parse";
 import { unstable_cache } from "next/cache";
 
 const getCachedPublicBranding = unstable_cache(
@@ -18,17 +25,35 @@ const getCachedPublicBranding = unstable_cache(
     }
   },
   ["root-public-branding"],
-  { revalidate: 300 }
+  { revalidate: 60, tags: ["branding"] }
 );
 
 export async function generateMetadata(): Promise<Metadata> {
   let companyName = APP_CONFIG.name;
+  let icons: Metadata["icons"];
 
   try {
     const settings = await getCachedPublicBranding();
-    const setting = settings.find((s) => s.key === "company_name" || s.key === "site_name");
-    if (setting && setting.value) {
-      companyName = setting.value;
+    const siteName = brandingSettingValue(settings, "site_name");
+    const nameFromCompany = brandingSettingValue(settings, "company_name");
+    companyName = nameFromCompany || siteName || companyName;
+
+    const faviconPath = brandingSettingValue(settings, "favicon_path");
+    const logoPath = brandingSettingValue(settings, "logo_path");
+    const iconPath = faviconPath || logoPath;
+
+    if (iconPath) {
+      const iconUrl = withCacheBuster(
+        getMediaUrl(iconPath),
+        brandingMediaVersion(settings, faviconPath ? "favicon_path" : "logo_path"),
+      );
+      if (iconUrl) {
+        icons = {
+          icon: iconUrl,
+          shortcut: iconUrl,
+          apple: iconUrl,
+        };
+      }
     }
   } catch (error) {
     console.warn("Failed to fetch branding for metadata:", error);
@@ -40,21 +65,28 @@ export async function generateMetadata(): Promise<Metadata> {
       default: companyName,
     },
     description: APP_CONFIG.description,
-    manifest: "/manifest.json",
-    icons: {
-      apple: "/icons/icon-192x192.png?v=2",
-    },
+    manifest: "/manifest.webmanifest",
+    ...(icons ? { icons } : {}),
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: "#4f46e5",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+export async function generateViewport(): Promise<Viewport> {
+  let themeColor = "#6366f1";
 
-import { Toaster } from "@/components/ui/toaster";
+  try {
+    const settings = await getCachedPublicBranding();
+    themeColor = brandingSettingValue(settings, "primary_color", themeColor);
+  } catch {
+    // keep default
+  }
+
+  return {
+    themeColor,
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
 
 export default function RootLayout({
   children,

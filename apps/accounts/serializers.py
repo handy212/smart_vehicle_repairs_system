@@ -646,13 +646,20 @@ class ManualRegistrationVerifySerializer(serializers.Serializer):
             )
             
             # Create Customer Profile
-            Customer.objects.create(
+            customer = Customer.objects.create(
                 user=user,
                 customer_type=validated_data['customer_type'],
                 company_name=validated_data.get('company_name', ''),
                 business_type=validated_data.get('business_type', ''),
                 tax_id=validated_data.get('tax_id', ''),
             )
+            from apps.customers.contact_services import (
+                apply_business_contact_person_name,
+                sync_primary_contact,
+            )
+            apply_business_contact_person_name(customer)
+            customer.save(update_fields=['contact_person_name'])
+            sync_primary_contact(customer)
             
         # Generate Tokens
         refresh = RefreshToken.for_user(user)

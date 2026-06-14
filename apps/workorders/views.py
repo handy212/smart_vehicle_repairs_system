@@ -264,6 +264,81 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             return WorkOrderUpdateSerializer
         return WorkOrderDetailSerializer
 
+    NON_DELETABLE_WORK_ORDER_STATUSES = frozenset({'closed', 'invoiced'})
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a work order and return user-facing errors instead of opaque 500s."""
+        from django.db.models.deletion import ProtectedError
+
+        work_order = self.get_object()
+
+        if work_order.status in self.NON_DELETABLE_WORK_ORDER_STATUSES:
+            message = self._work_order_delete_block_message(work_order)
+            return Response({'detail': message, 'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError as exc:
+            message = self._work_order_delete_block_message(work_order, exc.protected_objects)
+            return Response({'detail': message, 'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+    def _work_order_delete_block_message(self, work_order, protected_objects=None):
+        """Build a clear message when a work order cannot be deleted."""
+        blockers = []
+
+        invoices = [
+            obj for obj in (protected_objects or [])
+            if hasattr(obj, 'invoice_number')
+        ]
+        if not invoices:
+            invoices = list(work_order.invoices.exclude(status='void')[:5])
+
+        if invoices:
+            numbers = ', '.join(inv.invoice_number for inv in invoices[:4])
+            extra = f' (+{len(invoices) - 4} more)' if len(invoices) > 4 else ''
+            blockers.append(f'invoice(s): {numbers}{extra}')
+
+        gate_passes = [
+            obj for obj in (protected_objects or [])
+            if hasattr(obj, 'gate_pass_number')
+        ]
+        if not gate_passes:
+            gate_passes = list(work_order.gate_passes.exclude(status='cancelled')[:5])
+
+        if gate_passes:
+            numbers = ', '.join(gp.gate_pass_number for gp in gate_passes[:4])
+            extra = f' (+{len(gate_passes) - 4} more)' if len(gate_passes) > 4 else ''
+            blockers.append(f'gate pass(es): {numbers}{extra}')
+
+        if protected_objects:
+            other_types = {
+                obj._meta.verbose_name
+                for obj in protected_objects
+                if not hasattr(obj, 'invoice_number') and not hasattr(obj, 'gate_pass_number')
+            }
+            if other_types:
+                blockers.append(f'other linked record(s): {", ".join(sorted(other_types))}')
+
+        status_label = work_order.get_status_display().lower()
+        wo_ref = work_order.work_order_number
+
+        if blockers:
+            return (
+                f'Cannot delete work order {wo_ref} because it is {status_label} and linked to '
+                f'{", and ".join(blockers)}. Void or remove those records first.'
+            )
+
+        if work_order.status in self.NON_DELETABLE_WORK_ORDER_STATUSES:
+            return (
+                f'Cannot delete work order {wo_ref} because it is {status_label}. '
+                'Completed and billed work orders cannot be deleted.'
+            )
+
+        return (
+            f'Cannot delete work order {wo_ref} because it is referenced by other records. '
+            'Remove or reassign linked records first.'
+        )
+
     def perform_create(self, serializer):
         request = self.request
         branch_id = request.data.get('branch') or request.data.get('branch_id')

@@ -234,7 +234,7 @@ class GoogleRegistrationCompleteSerializer(serializers.Serializer):
             )
             
             # 3. Create or update Customer Profile
-            Customer.objects.update_or_create(
+            customer, _created = Customer.objects.update_or_create(
                 user=user,
                 defaults={
                     'customer_type': validated_data['customer_type'],
@@ -243,6 +243,13 @@ class GoogleRegistrationCompleteSerializer(serializers.Serializer):
                     'tax_id': validated_data.get('tax_id', ''),
                 }
             )
+            from apps.customers.contact_services import (
+                apply_business_contact_person_name,
+                sync_primary_contact,
+            )
+            apply_business_contact_person_name(customer)
+            customer.save(update_fields=['contact_person_name'])
+            sync_primary_contact(customer)
             
         # 4. Generate Tokens
         refresh = RefreshToken.for_user(user)

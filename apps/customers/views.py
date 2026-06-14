@@ -328,7 +328,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                             role='customer'
                         )
                         
-                        Customer.objects.create(
+                        customer = Customer.objects.create(
                             user=user,
                             company_name=row.get('company_name', '').strip(),
                             customer_type=row.get('customer_type', 'individual').strip() or 'individual',
@@ -344,6 +344,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
                             payment_terms=row.get('payment_terms', 'due_on_receipt').strip() or 'due_on_receipt',
                             preferred_contact_method=row.get('preferred_contact_method', 'email').strip() or 'email',
                         )
+                        from apps.customers.contact_services import (
+                            apply_business_contact_person_name,
+                            sync_primary_contact,
+                        )
+                        apply_business_contact_person_name(customer)
+                        customer.save(update_fields=['contact_person_name'])
+                        sync_primary_contact(customer)
                         
                         imported_count += 1
                         

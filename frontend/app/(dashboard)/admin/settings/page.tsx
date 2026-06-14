@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getUserFacingError } from "@/lib/api/errors";
+import { getMediaUrl } from "@/lib/api/utils";
 
 const CATEGORIES = [
   { value: "company", label: "Company" },
@@ -176,9 +177,7 @@ function isNumberSetting(key: string) {
 }
 
 function imageUrl(value: string) {
-  if (!value) return "";
-  if (/^https?:\/\//.test(value)) return value;
-  return value.startsWith("/") ? value : `/media/${value}`;
+  return getMediaUrl(value);
 }
 
 function cleanupLabel(moduleName: string) {
@@ -229,6 +228,7 @@ export default function SystemSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
       queryClient.invalidateQueries({ queryKey: ["settings", "branding"] });
       queryClient.refetchQueries({ queryKey: ["settings", "branding"] });
+      void fetch("/api/revalidate-branding", { method: "POST" }).catch(() => undefined);
       toast({ title: "Saved", description: "Settings updated successfully" });
     },
     onError: (error: unknown) => {
@@ -247,6 +247,7 @@ export default function SystemSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
       queryClient.invalidateQueries({ queryKey: ["settings", "branding"] });
       queryClient.refetchQueries({ queryKey: ["settings", "branding"] });
+      void fetch("/api/revalidate-branding", { method: "POST" }).catch(() => undefined);
       toast({ title: "Uploaded", description: "Image updated successfully" });
     },
     onError: (error: unknown) => {

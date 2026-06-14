@@ -10,19 +10,32 @@ import { sameOriginMediaPath } from "@/lib/utils/media";
  * In the browser, always uses same-origin `/media/...` so Next.js proxies to Django
  * (avoids broken images when the API returns http://127.0.0.1:8001/media/...).
  */
+/** Bare setting keys stored before an admin uploads a real file. */
+const PLACEHOLDER_SETTING_KEYS = new Set([
+  "favicon_path",
+  "logo_path",
+  "logo_dark_path",
+  "login_background",
+  "customer_login_background",
+  "staff_login_background",
+]);
+
 /** Settings sometimes store the field key as a filename before a real file is uploaded. */
 function isPlaceholderMediaPath(path: string): boolean {
-  const base = path.split("/").pop()?.toLowerCase() ?? "";
-  const placeholderNames = new Set([
-    "favicon_path",
-    "logo_path",
-    "logo_dark_path",
-    "login_background",
-    "customer_login_background",
-    "staff_login_background",
-  ]);
-  const nameWithoutExtension = base.replace(/\.[^.]+$/, "");
-  return placeholderNames.has(base) || placeholderNames.has(nameWithoutExtension);
+  const trimmed = path.trim();
+  if (!trimmed) return true;
+
+  let normalized = trimmed.replace(/^\/+/, "");
+  if (normalized.startsWith("media/")) {
+    normalized = normalized.slice("media/".length);
+  }
+
+  // Uploads are saved as branding/{setting_key}.{ext} — never treat those as placeholders.
+  if (normalized.startsWith("branding/")) {
+    return false;
+  }
+
+  return PLACEHOLDER_SETTING_KEYS.has(normalized.toLowerCase());
 }
 
 export function getMediaUrl(path: string | null | undefined): string {

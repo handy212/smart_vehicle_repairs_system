@@ -204,7 +204,7 @@ def get_branding_settings():
         'theme_mode': 'perfex',
         'login_background_overlay': '0.85',  # Default 85% opacity
         'document_watermark_enabled': 'true',
-    })
+    }, db_first=True)
 
 
 def get_email_settings():
