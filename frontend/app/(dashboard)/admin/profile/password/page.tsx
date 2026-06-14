@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -62,13 +63,10 @@ export default function ChangePasswordPage() {
             router.push("/admin/profile");
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Password Change Failed",
-                description:
-                    error.response?.data?.detail ||
-                    error.response?.data?.current_password?.[0] ||
-                    "Failed to change password. Please check your current password and try again.",
+                description: getUserFacingError(error, "Failed to change password. Please check your current password and try again."),
                 variant: "destructive",
             });
         },

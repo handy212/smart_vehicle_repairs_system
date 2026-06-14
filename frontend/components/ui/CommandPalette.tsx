@@ -84,7 +84,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     subtitle: "Quotes awaiting approval",
     url: "/billing/estimates",
     icon: FileText,
-    permission: "view_estimates",
+    permission: "view_billing",
   },
   {
     id: "inventory",
@@ -92,7 +92,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     subtitle: "Parts and stock",
     url: "/inventory",
     icon: Package,
-    permission: "view_parts",
+    permission: "view_inventory",
   },
 ];
 

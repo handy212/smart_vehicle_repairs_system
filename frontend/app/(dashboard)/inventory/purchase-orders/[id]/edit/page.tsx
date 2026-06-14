@@ -23,7 +23,7 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const formSchema = z.object({
     supplier: z.string().min(1, "Supplier is required"),
@@ -93,7 +93,7 @@ export default function EditPurchaseOrderPage() {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to update purchase order"),
+                description: getUserFacingError(error, "Failed to update purchase order"),
                 variant: "destructive",
             });
         },

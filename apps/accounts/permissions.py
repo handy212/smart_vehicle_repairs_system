@@ -21,6 +21,8 @@ class HasPermission(BasePermission):
     Custom permission class that checks if user's role has a specific permission
     Usage: permission_classes = [IsAuthenticated, HasPermission('view_customers')]
     """
+    message = "You don't have permission to perform this action. Contact your administrator if you need access."
+
     def __init__(self, permission_code):
         self.permission_code = permission_code
         super().__init__()
@@ -42,6 +44,8 @@ class HasAnyPermission(BasePermission):
     Custom permission class that checks if user has ANY of the specified permissions
     Usage: permission_classes = [IsAuthenticated, HasAnyPermission(['view_customers', 'manage_customers'])]
     """
+    message = "You don't have permission to perform this action. Contact your administrator if you need access."
+
     def __init__(self, permission_codes):
         self.permission_codes = permission_codes if isinstance(permission_codes, list) else [permission_codes]
         super().__init__()
@@ -65,6 +69,8 @@ class HasAllPermissions(BasePermission):
     Custom permission class that checks if user has ALL of the specified permissions
     Usage: permission_classes = [IsAuthenticated, HasAllPermissions(['view_customers', 'edit_customers'])]
     """
+    message = "You don't have permission to perform this action. Contact your administrator if you need access."
+
     def __init__(self, permission_codes):
         self.permission_codes = permission_codes if isinstance(permission_codes, list) else [permission_codes]
         super().__init__()

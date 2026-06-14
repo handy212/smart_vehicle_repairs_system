@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { TaxRulesDialog } from "./TaxRulesDialog";
 import { Calculator } from "lucide-react";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = {
     response?: {
@@ -48,19 +49,6 @@ type ApiError = {
         } | Record<string, unknown>;
     };
 };
-
-function getErrorMessage(error: unknown, fallback: string) {
-    const data = (error as ApiError)?.response?.data;
-    if (!data) return fallback;
-    if ("detail" in data && typeof data.detail === "string") return data.detail;
-    if ("error" in data && typeof data.error === "string") return data.error;
-    if ("message" in data && typeof data.message === "string") return data.message;
-    if ("non_field_errors" in data && Array.isArray(data.non_field_errors)) return data.non_field_errors.join(" ");
-    const firstValue = Object.values(data)[0];
-    if (Array.isArray(firstValue)) return String(firstValue[0]);
-    if (typeof firstValue === "string") return firstValue;
-    return fallback;
-}
 
 export default function PayrollPage() {
     return (
@@ -96,7 +84,7 @@ function PayrollContent() {
             toast.success("Payroll processing started");
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to process payroll")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to process payroll")),
     });
 
     const approveMutation = useMutation({
@@ -105,7 +93,7 @@ function PayrollContent() {
             toast.success("Payroll approved");
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to approve payroll")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to approve payroll")),
     });
 
     const markPaidMutation = useMutation({
@@ -116,7 +104,7 @@ function PayrollContent() {
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
             setPaymentPeriod(null);
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to mark payroll as paid")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to mark payroll as paid")),
     });
 
     const reverseMutation = useMutation({
@@ -126,7 +114,7 @@ function PayrollContent() {
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
             setReversingPeriod(null);
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to reverse payroll")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to reverse payroll")),
     });
 
     const getStatusConfig = (status: string) => {

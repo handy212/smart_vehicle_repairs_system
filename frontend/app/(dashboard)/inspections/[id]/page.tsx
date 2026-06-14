@@ -14,7 +14,7 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -81,7 +81,7 @@ export default function InspectionDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Approval Failed",
-        description: getApiErrorMessage(error, "Failed to approve inspection"),
+        description: getUserFacingError(error, "Failed to approve inspection"),
         variant: "destructive",
       });
     },
@@ -96,7 +96,7 @@ export default function InspectionDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Rejection Failed",
-        description: getApiErrorMessage(error, "Failed to reject inspection"),
+        description: getUserFacingError(error, "Failed to reject inspection"),
         variant: "destructive",
       });
     },
@@ -117,7 +117,7 @@ export default function InspectionDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to send inspection"),
+        description: getUserFacingError(error, "Failed to send inspection"),
         variant: "destructive",
       });
     }
@@ -132,7 +132,7 @@ export default function InspectionDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to generate AI summary"),
+        description: getUserFacingError(error, "Failed to generate AI summary"),
         variant: "destructive",
       });
     }

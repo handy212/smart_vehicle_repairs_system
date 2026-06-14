@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = {
   response?: {
@@ -52,7 +53,7 @@ export default function EstimateDetailPage() {
     onError: (error: ApiError) => {
       toast({
         title: "Approval Failed",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve estimate. Please try again.",
+        description: getUserFacingError(error, "Failed to approve estimate. Please try again."),
         variant: "destructive",
       });
     },
@@ -72,7 +73,7 @@ export default function EstimateDetailPage() {
     onError: (error: ApiError) => {
       toast({
         title: "Decline Failed",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to decline estimate. Please try again.",
+        description: getUserFacingError(error, "Failed to decline estimate. Please try again."),
         variant: "destructive",
       });
     },

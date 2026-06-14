@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import type { ComponentProps } from "react";
 
 function getStatusVariant(status: string): ComponentProps<typeof Badge>["variant"] {
@@ -63,7 +63,7 @@ export default function GatePassDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to issue gate pass"),
+        description: getUserFacingError(error, "Failed to issue gate pass"),
         variant: "destructive",
       });
     },
@@ -81,7 +81,7 @@ export default function GatePassDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to complete gate pass"),
+        description: getUserFacingError(error, "Failed to complete gate pass"),
         variant: "destructive",
       });
     },
@@ -99,7 +99,7 @@ export default function GatePassDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to cancel gate pass"),
+        description: getUserFacingError(error, "Failed to cancel gate pass"),
         variant: "destructive",
       });
     },

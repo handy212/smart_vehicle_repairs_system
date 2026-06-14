@@ -17,7 +17,7 @@ import { VehicleDamageMarker, DamageMark } from "@/components/inspections/Vehicl
 import { InspectionItemRow } from "@/components/inspections/InspectionItemRow";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | undefined | null;
 
@@ -136,7 +136,7 @@ export default function PerformInspectionPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to save results"),
+        description: getUserFacingError(error, "Failed to save results"),
         variant: "destructive",
       });
     },
@@ -170,7 +170,7 @@ export default function PerformInspectionPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to complete inspection"),
+        description: getUserFacingError(error, "Failed to complete inspection"),
         variant: "destructive",
       });
     },
@@ -215,7 +215,7 @@ export default function PerformInspectionPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to save vehicle damage"),
+        description: getUserFacingError(error, "Failed to save vehicle damage"),
         variant: "destructive",
       });
     },
@@ -322,7 +322,7 @@ export default function PerformInspectionPage() {
       console.error("Save error:", error);
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to save changes"),
+        description: getUserFacingError(error, "Failed to save changes"),
         variant: "destructive",
       });
     }

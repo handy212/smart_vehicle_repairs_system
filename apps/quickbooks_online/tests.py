@@ -1,7 +1,3 @@
-import pytest
-
-pytestmark = pytest.mark.legacy_integration
-
 from django.test import TestCase, override_settings
 from unittest.mock import patch, MagicMock
 from django.urls import reverse

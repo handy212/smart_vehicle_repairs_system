@@ -17,14 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = { response?: { data?: { error?: string; detail?: string; payment_method?: string[] } }; message?: string };
 const DENOMINATIONS = ["200", "100", "50", "20", "10", "5", "2", "1", "0.50", "0.20", "0.10"];
-
-function getErrorMessage(error: unknown, fallback: string) {
-    const data = (error as ApiError)?.response?.data;
-    return data?.error || data?.detail || data?.payment_method?.join(" ") || (error as ApiError)?.message || fallback;
-}
 
 export default function AccountingTillManagementPage() {
     const { formatCurrency } = useCurrency();
@@ -71,7 +67,7 @@ export default function AccountingTillManagementPage() {
             setOpeningBalance("");
             success("Till opened.");
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to open till")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to open till")),
     });
 
     const closeMutation = useMutation({
@@ -98,7 +94,7 @@ export default function AccountingTillManagementPage() {
             setUseDenominationCount(false);
             setDenominationQuantities({});
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to close till")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to close till")),
     });
 
     const movementMutation = useMutation({
@@ -115,7 +111,7 @@ export default function AccountingTillManagementPage() {
             setMovementReason("");
             setMovementType("pay_in");
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to record cash movement")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to record cash movement")),
     });
 
     const approveVarianceMutation = useMutation({
@@ -124,7 +120,7 @@ export default function AccountingTillManagementPage() {
             invalidateTillQueries();
             success("Till variance approved.");
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to approve variance")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to approve variance")),
     });
 
     function invalidateTillQueries() {

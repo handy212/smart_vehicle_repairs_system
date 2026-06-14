@@ -28,6 +28,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type JournalLineField = "account_id" | "description" | "debit" | "credit";
 
@@ -76,7 +77,7 @@ export default function NewJournalEntryPage() {
         onError: (error: ApiError) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to create journal entry.",
+                description: getUserFacingError(error, "Failed to create journal entry."),
                 variant: "destructive",
             });
         },

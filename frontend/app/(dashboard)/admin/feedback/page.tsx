@@ -45,6 +45,7 @@ import {
     SelectValue
 } from '@/components/ui/select';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getUserFacingError } from '@/lib/api/errors';
 
 export default function AdminFeedbackPage() {
     const queryClient = useQueryClient();
@@ -99,8 +100,8 @@ export default function AdminFeedbackPage() {
             setIsDetailOpen(false);
         },
 
-        onError: (error: any) => {
-            toast.error(error.response?.data?.detail || 'Failed to update feedback');
+        onError: (error: unknown) => {
+            toast.error(getUserFacingError(error, 'Failed to update feedback'));
         }
     });
 

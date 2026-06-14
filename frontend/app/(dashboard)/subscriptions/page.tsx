@@ -35,7 +35,7 @@ import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 import { CreateSubscriptionDialog } from "./components/CreateSubscriptionDialog";
 import { SubscriptionDetailsDialog } from "./components/SubscriptionDetailsDialog";
@@ -101,7 +101,7 @@ export default function SubscriptionsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to cancel subscription"),
+        description: getUserFacingError(error, "Failed to cancel subscription"),
         variant: "destructive",
       });
     },
@@ -119,7 +119,7 @@ export default function SubscriptionsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete subscription"),
+        description: getUserFacingError(error, "Failed to delete subscription"),
         variant: "destructive",
       });
     },
@@ -139,7 +139,7 @@ export default function SubscriptionsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to change plan"),
+        description: getUserFacingError(error, "Failed to change plan"),
         variant: "destructive",
       });
     },
@@ -159,7 +159,7 @@ export default function SubscriptionsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to renew subscription"),
+        description: getUserFacingError(error, "Failed to renew subscription"),
         variant: "destructive",
       });
     },
@@ -204,7 +204,7 @@ export default function SubscriptionsPage() {
     } catch (error: unknown) {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to load subscription details"),
+        description: getUserFacingError(error, "Failed to load subscription details"),
         variant: "destructive",
       });
     }

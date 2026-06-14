@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/tooltip";
 import { inventoryApi, Part } from "@/lib/api/inventory";
 import { ChevronsUpDown } from "lucide-react";
+import { getUserFacingError } from "@/lib/api/errors";
 
 // Debounce hook for search
 function useDebounce<T>(value: T, delay: number): T {
@@ -101,7 +102,7 @@ export function PartsRequiredTab({
         onError: (error: any) => {
             toast({
                 title: "Failed to remove part",
-                description: error.response?.data?.message || error.message,
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -151,7 +152,7 @@ export function PartsRequiredTab({
         } catch (error: any) {
             toast({
                 title: "Failed to submit request",
-                description: error.response?.data?.error || error.message,
+                description: getUserFacingError(error, "Something went wrong."),
                 variant: "destructive",
             });
         } finally {
@@ -450,7 +451,7 @@ function PartFormDialog({
         onError: (error: any) => {
             toast({
                 title: "Failed to save part",
-                description: error.response?.data?.message || error.message,
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },

@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck, MoreVertical, Trash2, Star } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -61,7 +62,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to confirm appointment",
+        description: getUserFacingError(error, "Failed to confirm appointment"),
         variant: "destructive",
       });
     },
@@ -78,7 +79,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to check in customer",
+        description: getUserFacingError(error, "Failed to check in customer"),
         variant: "destructive",
       });
     },
@@ -95,7 +96,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to complete appointment",
+        description: getUserFacingError(error, "Failed to complete appointment"),
         variant: "destructive",
       });
     },
@@ -111,7 +112,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Delete Failed",
-        description: error.response?.data?.detail || "Failed to delete appointment",
+        description: getUserFacingError(error, "Failed to delete appointment"),
         variant: "destructive",
       });
     },
@@ -130,7 +131,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to cancel appointment",
+        description: getUserFacingError(error, "Failed to cancel appointment"),
         variant: "destructive",
       });
     },
@@ -157,7 +158,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any, variables) => {
       toast({
         title: variables.method === "email" ? "Email Failed" : "SMS Failed",
-        description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
+        description: getUserFacingError(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
         variant: "destructive"
       });
     }

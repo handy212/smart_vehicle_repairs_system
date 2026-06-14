@@ -16,6 +16,7 @@ import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface PhotosTabProps {
   workOrderId: number;
@@ -67,7 +68,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to upload photo",
+        description: getUserFacingError(error, "Failed to upload photo"),
         variant: "destructive",
       });
     },
@@ -88,7 +89,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete photo",
+        description: getUserFacingError(error, "Failed to delete photo"),
         variant: "destructive",
       });
     },
@@ -107,7 +108,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
     onError: (error: any) => {
       toast({
         title: "Analysis Failed",
-        description: error.response?.data?.error || "Failed to analyze photo",
+        description: getUserFacingError(error, "Failed to analyze photo"),
         variant: "destructive",
       });
     },

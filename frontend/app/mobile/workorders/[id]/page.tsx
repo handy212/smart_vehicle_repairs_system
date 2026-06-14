@@ -11,8 +11,7 @@ import { workOrdersDB } from "@/lib/offline/db";
 import { queueRequest } from "@/lib/offline/queue";
 import { useToast } from "@/lib/hooks/useToast";
 import apiClient from "@/lib/api/client";
-import { getApiErrorMessage } from "@/lib/api/apiErrors";
-import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
+import { getUserFacingError } from "@/lib/api/apiErrors";
 import { timeLogsApi } from "@/lib/api/timeLogs";
 import {
   ArrowLeft,
@@ -177,7 +176,7 @@ export default function MobileWorkOrderDetailPage() {
       }
     } catch (error: any) {
       console.error(`Failed to update status via ${action}:`, error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update status";
+      const errorMessage = getUserFacingError(error, "Failed to update status");
       toast({
         title: "Error",
         description: errorMessage,
@@ -235,7 +234,7 @@ export default function MobileWorkOrderDetailPage() {
       console.error("Failed to clock in:", error);
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to clock in"),
+        description: getUserFacingError(error, "Failed to clock in"),
         variant: "destructive",
       });
     } finally {
@@ -296,7 +295,7 @@ export default function MobileWorkOrderDetailPage() {
 
     } catch (error: any) {
       console.error("Failed to flag additional work:", error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to flag additional work";
+      const errorMessage = getUserFacingError(error, "Failed to flag additional work");
       toast({
         title: "Error",
         description: errorMessage,
@@ -334,7 +333,7 @@ export default function MobileWorkOrderDetailPage() {
       console.error("Failed to update task:", error);
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update task"),
+        description: getUserFacingError(error, "Failed to update task"),
         variant: "destructive",
       });
     }

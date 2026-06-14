@@ -12,6 +12,7 @@ import { FileText, Plus, Trash2, Download, Mic, Sparkles, Wand2 } from "lucide-r
 import { useToast } from "@/lib/hooks/useToast";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { format } from "date-fns";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface DocumentsTabProps {
     workOrderId: number;
@@ -45,7 +46,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
         onError: (error: any) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to upload document",
+                description: getUserFacingError(error, "Failed to upload document"),
                 variant: "destructive",
             });
         },
@@ -64,7 +65,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
         onError: (error: any) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to delete document",
+                description: getUserFacingError(error, "Failed to delete document"),
                 variant: "destructive",
             });
         },
@@ -84,7 +85,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
         onError: (error: any) => {
             toast({
                 title: "AI Analysis Failed",
-                description: error.response?.data?.error || "Failed to process voice note",
+                description: getUserFacingError(error, "Failed to process voice note"),
                 variant: "destructive",
             });
             setProcessingId(null);

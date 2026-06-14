@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function getStatusVariant(status: string): ComponentProps<typeof Badge>["variant"] {
   switch (status) {
@@ -148,7 +148,7 @@ export default function GatePassPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete gate pass"),
+        description: getUserFacingError(error, "Failed to delete gate pass"),
         variant: "destructive",
       });
     },

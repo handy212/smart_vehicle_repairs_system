@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const StatsGrid = ({ stats, loading }: { stats?: SupplierStats, loading: boolean }) => {
@@ -101,7 +101,7 @@ export default function SuppliersPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete supplier"),
+        description: getUserFacingError(error, "Failed to delete supplier"),
         variant: "destructive",
       });
     },

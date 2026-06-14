@@ -29,6 +29,7 @@ import { branchesApi } from "@/lib/api/branches";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const staffSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -158,7 +159,7 @@ export default function NewStaffPage() {
             addToast({
                 type: "error",
                 title: "Error",
-                message: error.response?.data?.detail || "Failed to create staff member. Please check required fields.",
+                message: getUserFacingError(error, "Failed to create staff member. Please check required fields."),
             });
         } finally {
             setIsSubmitting(false);

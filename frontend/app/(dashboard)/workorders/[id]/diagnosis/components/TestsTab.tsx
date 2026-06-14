@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
     Tooltip,
     TooltipContent,
@@ -73,7 +74,7 @@ export function TestsTab({
         onError: (error: any) => {
             toast({
                 title: "Failed to add test",
-                description: error.response?.data?.message || error.message,
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -92,7 +93,7 @@ export function TestsTab({
         onError: (error: any) => {
             toast({
                 title: "Failed to update test",
-                description: error.response?.data?.message || error.message,
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -109,7 +110,7 @@ export function TestsTab({
         onError: (error: any) => {
             toast({
                 title: "Failed to delete test",
-                description: error.response?.data?.message || error.message,
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -396,7 +397,7 @@ function TestDialog({
         } catch (error: any) {
             toast({
                 title: "Failed to load template",
-                description: error.response?.data?.error || "Could not load template",
+                description: getUserFacingError(error, "Could not load template"),
                 variant: "destructive",
             });
         }

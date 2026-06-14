@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search, AlertCircle, CheckCircle } from "lucide-react";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface VINDecoderButtonProps {
   vin: string;
@@ -170,11 +171,12 @@ export function VINDecoderButton({ vin, onDecode, disabled }: VINDecoderButtonPr
         typeof error?.message === "string" && error.message.toLowerCase().includes("timeout");
       toast({
         title: "Error",
-        description:
-          error.response?.data?.error ||
-          (isTimeout
+        description: getUserFacingError(
+          error,
+          isTimeout
             ? "VIN decode timed out (NHTSA may be unreachable from this server). You can enter details manually."
-            : "Failed to decode VIN. Please try again."),
+            : "Failed to decode VIN. Please try again.",
+        ),
         variant: "destructive",
       });
     } finally {

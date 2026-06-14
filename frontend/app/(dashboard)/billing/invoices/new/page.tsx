@@ -23,6 +23,7 @@ import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef, startTransition } from "react";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
@@ -392,12 +393,10 @@ export default function NewInvoicePage() {
     },
 
     onError: (error: AxiosError<any>) => {
-      const message = error.response?.data?.detail || error.response?.data?.message || "Failed to create invoice";
-      setServerError(message);
+      setServerError(getUserFacingError(error, "We couldn't create the invoice. Please review the form and try again."));
       if (error.response?.data) {
         Object.entries(error.response.data).forEach(([field, errors]) => {
           if (Array.isArray(errors) && field !== 'detail' && field !== 'message') {
-
             setError(field as any, { message: errors[0] });
           }
         });

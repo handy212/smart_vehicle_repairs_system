@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Play, Pause, CheckCircle, Clock, AlertCircle, Camera,
@@ -58,10 +59,10 @@ export default function TechnicianWorkOrderPage() {
             toast({ title: "Status updated", variant: "default" });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Action failed",
-                description: error.response?.data?.message || "Could not update status",
+                description: getUserFacingError(error, "Could not update status"),
                 variant: "destructive"
             });
         }

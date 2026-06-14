@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useToast } from "@/lib/hooks/useToast";
 import { CustomerForm, CustomerFormData } from "@/components/customers/CustomerForm";
 import { DuplicateCustomerBanner } from "@/components/customers/DuplicateCustomerBanner";
@@ -30,10 +30,8 @@ export default function NewCustomerPage() {
     onError: (error: unknown) => {
       console.error("Error creating customer:", error);
       toast({
-        title: "Error",
-        description:
-          (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-          "Failed to create customer",
+        title: "Couldn't create customer",
+        description: getUserFacingError(error, "Please check the form and try again."),
         variant: "destructive",
       });
     },
@@ -67,28 +65,7 @@ export default function NewCustomerPage() {
       router.push(`/customers/${customer.id}`);
     } catch (error) {
       console.error("Error creating customer:", error);
-
-      if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-
-        if (errorData.non_field_errors) {
-          setServerError(
-            Array.isArray(errorData.non_field_errors)
-              ? errorData.non_field_errors[0]
-              : errorData.non_field_errors
-          );
-        } else if (typeof errorData === "string") {
-          setServerError(errorData);
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
-        } else {
-          setServerError(
-            "An error occurred. Partial details: " + JSON.stringify(errorData).slice(0, 100)
-          );
-        }
-      } else {
-        setServerError("An unexpected error occurred. Please try again.");
-      }
+      setServerError(getUserFacingError(error, "We couldn't create this customer. Please check the form and try again."));
     }
   };
 

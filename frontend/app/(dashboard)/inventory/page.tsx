@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import { getMediaUrl } from "@/lib/api/utils";
+import { getUserFacingError } from "@/lib/api/errors";
 
 // Stats Grid Component
 const StatsGrid = ({ stats, loading }: { stats: any; loading: boolean }) => {
@@ -158,7 +159,7 @@ export default function InventoryPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete part",
+        description: getUserFacingError(error, "Failed to delete part"),
         variant: "destructive",
       });
     },
@@ -183,7 +184,7 @@ export default function InventoryPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete parts",
+        description: getUserFacingError(error, "Failed to delete parts"),
         variant: "destructive",
       });
     },

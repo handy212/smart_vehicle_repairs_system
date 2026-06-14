@@ -46,6 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -89,7 +90,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Cancellation Failed",
-        description: error.response?.data?.error || "Failed to cancel appointment. Please try again.",
+        description: getUserFacingError(error, "Failed to cancel appointment. Please try again."),
         variant: "destructive",
       });
     },
@@ -114,7 +115,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Reschedule Failed",
-        description: error.response?.data?.error || "Failed to reschedule appointment. Please try again.",
+        description: getUserFacingError(error, "Failed to reschedule appointment. Please try again."),
         variant: "destructive",
       });
     },
@@ -134,7 +135,7 @@ export default function AppointmentDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Submission Failed",
-        description: error.response?.data?.error || "Failed to submit feedback.",
+        description: getUserFacingError(error, "Failed to submit feedback."),
         variant: "destructive",
       });
     },

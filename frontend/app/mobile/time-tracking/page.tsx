@@ -9,12 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import apiClient from "@/lib/api/client";
-import { getApiErrorMessage } from "@/lib/api/apiErrors";
-import { timeLogsApi } from "@/lib/api/timeLogs";
-import { useAuthStore } from "@/store/authStore";
-import { workordersApi, WorkOrder } from "@/lib/api/workorders";
-import { toast } from "sonner";
-import Link from "next/link";
+import { getUserFacingError } from "@/lib/api/apiErrors";
 
 interface TimeLog {
   id?: number;
@@ -129,7 +124,7 @@ export default function TimeTrackingPage() {
       toast.success("Clocked in");
       await loadRecentLogs();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to clock in"));
+      toast.error(getUserFacingError(error, "Failed to clock in"));
     } finally {
       setLoading(false);
     }
@@ -159,7 +154,7 @@ export default function TimeTrackingPage() {
       toast.success("Clocked out");
       await loadRecentLogs();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to clock out"));
+      toast.error(getUserFacingError(error, "Failed to clock out"));
     } finally {
       setLoading(false);
     }

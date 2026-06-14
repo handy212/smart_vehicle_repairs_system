@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface PartRequestDetailDialogProps {
     open: boolean;
@@ -44,11 +45,6 @@ type ApiError = {
         };
     };
     message?: string;
-};
-
-const getApiErrorMessage = (error: unknown) => {
-    const apiError = error as ApiError;
-    return apiError.response?.data?.error || apiError.message || "Something went wrong";
 };
 
 export function PartRequestDetailDialog({
@@ -89,7 +85,7 @@ export function PartRequestDetailDialog({
         onError: (error: unknown) => {
             toast({
                 title: "Allocation Failed",
-                description: getApiErrorMessage(error),
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -111,7 +107,7 @@ export function PartRequestDetailDialog({
             } else {
                 toast({
                     title: "Order Failed",
-                    description: getApiErrorMessage(error),
+                    description: getUserFacingError(error),
                     variant: "destructive",
                 });
             }
@@ -136,7 +132,7 @@ export function PartRequestDetailDialog({
         onError: (error: unknown) => {
             toast({
                 title: "Creation Failed",
-                description: getApiErrorMessage(error),
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -171,7 +167,7 @@ export function PartRequestDetailDialog({
         onError: (error: unknown) => {
             toast({
                 title: "Bulk Order Failed",
-                description: getApiErrorMessage(error),
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -190,7 +186,7 @@ export function PartRequestDetailDialog({
         onError: (error: unknown) => {
             toast({
                 title: "Update Failed",
-                description: getApiErrorMessage(error),
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -207,7 +203,7 @@ export function PartRequestDetailDialog({
         onError: (error: unknown) => {
             toast({
                 title: "Remove Failed",
-                description: getApiErrorMessage(error),
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },
@@ -223,7 +219,7 @@ export function PartRequestDetailDialog({
         onError: (error: unknown) => {
             toast({
                 title: "Approval Failed",
-                description: getApiErrorMessage(error),
+                description: getUserFacingError(error),
                 variant: "destructive",
             });
         },

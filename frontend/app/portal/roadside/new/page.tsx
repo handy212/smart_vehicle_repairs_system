@@ -35,7 +35,7 @@ import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils/cn";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { RoadsideBranchSelect } from "@/components/roadside/RoadsideBranchSelect";
 import { PortalPageHeader } from "../../components/PortalPageHeader";
 import { captureCurrentPosition, getGeolocationErrorMessage } from "@/lib/utils/geolocation";
@@ -203,7 +203,7 @@ export default function NewRoadsideRequestPage() {
       router.push(`/portal/roadside/${data.id}`);
     },
     onError: (error: unknown) => {
-      const errorMessage = getApiErrorMessage(error, "Failed to submit request. Please try again.");
+      const errorMessage = getUserFacingError(error, "Failed to submit request. Please try again.");
       setServerError(errorMessage);
       toast({ title: "Error", description: errorMessage, variant: "destructive" });
     },

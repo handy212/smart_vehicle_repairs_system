@@ -17,7 +17,7 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import type { GatePassCreateData } from "@/lib/api/gatepass";
 import { getCustomerDisplayName, getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 
@@ -173,7 +173,7 @@ export default function NewGatePassPage() {
       router.push(`/gatepass/${gatePass.id}`);
     },
     onError: (error: unknown) => {
-      const message = getApiErrorMessage(error, "Could not create gate pass.");
+      const message = getUserFacingError(error, "Could not create gate pass.");
       if (message.toLowerCase().includes("gate pass already exists")) {
         setServerError("This work order already has a gate pass. Open the existing gate pass instead.");
       } else {

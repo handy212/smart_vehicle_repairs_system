@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getPermissionDeniedMessage } from "@/lib/api/errors";
 
 interface PermissionDeniedProps {
   permission?: string;
@@ -12,22 +13,10 @@ interface PermissionDeniedProps {
   description?: string;
 }
 
-function formatPermissionLabel(value: string): string {
-  return value.replace(/_/g, " ");
-}
-
 export function PermissionDenied({
-  permission,
-  permissions,
   title = "Access restricted",
   description,
 }: PermissionDeniedProps) {
-  const required = permissions?.length
-    ? permissions.map(formatPermissionLabel).join(", ")
-    : permission
-      ? formatPermissionLabel(permission)
-      : "the required permission";
-
   return (
     <Card className="max-w-lg mx-auto mt-8 border-border shadow-sm">
       <CardContent className="pt-8 pb-8 text-center space-y-4">
@@ -37,8 +26,7 @@ export function PermissionDenied({
         <div className="space-y-2">
           <h1 className="text-lg font-semibold text-foreground">{title}</h1>
           <p className="text-sm text-muted-foreground">
-            {description ??
-              `You don't have permission to view this page. Required: ${required}. Contact your administrator if you need access.`}
+            {description ?? getPermissionDeniedMessage("view this page")}
           </p>
         </div>
         <Button asChild variant="outline" size="sm">

@@ -19,6 +19,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { AlertCircle, DollarSign } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface ProcessRefundDialogProps {
     payment: {
@@ -83,7 +84,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
         onError: (error: ApiError) => {
             toast({
                 title: "Refund Failed",
-                description: error.response?.data?.error || "Error processing refund.",
+                description: getUserFacingError(error, "Error processing refund."),
                 variant: "destructive",
             });
         },

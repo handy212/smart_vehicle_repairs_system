@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const noteSchema = z.object({
   note_type: z.enum(["internal", "customer_visible", "phone_call", "email", "meeting"]),
@@ -78,8 +79,12 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
         if (errorData.non_field_errors) {
           setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
         } else if (errorData.detail) {
-          setServerError(errorData.detail);
+          setServerError(String(errorData.detail));
+        } else {
+          setServerError(getUserFacingError(error, "Couldn't save this note. Please check the form."));
         }
+      } else {
+        setServerError(getUserFacingError(error, "Couldn't save this note. Please try again."));
       }
     },
   });

@@ -28,7 +28,7 @@ import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 
 type BranchOption = {
@@ -169,7 +169,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to update fixed asset"),
+                description: getUserFacingError(error, "Failed to update fixed asset"),
                 variant: "destructive",
             });
         },
@@ -194,7 +194,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
         onError: (error: unknown) => {
             toast({
                 title: "Upload failed",
-                description: getApiErrorMessage(error, "Could not upload document"),
+                description: getUserFacingError(error, "Could not upload document"),
                 variant: "destructive",
             });
         },
@@ -209,7 +209,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
         onError: (error: unknown) => {
             toast({
                 title: "Delete failed",
-                description: getApiErrorMessage(error, "Could not delete document"),
+                description: getUserFacingError(error, "Could not delete document"),
                 variant: "destructive",
             });
         },

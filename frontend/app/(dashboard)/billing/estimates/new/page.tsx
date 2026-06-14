@@ -23,6 +23,7 @@ import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -106,30 +107,6 @@ const normalizeDiscountType = (value: unknown): DiscountType => (
     ? (value as DiscountType)
     : "none"
 );
-
-const getFriendlyEstimateError = (error: AxiosError<any>) => {
-  const data = error.response?.data;
-  if (!data) return "We couldn't save the estimate. Please try again.";
-  if (typeof data.detail === "string" && data.detail.trim()) return data.detail;
-  if (typeof data.message === "string" && data.message.trim()) return data.message;
-  if (typeof data.error === "string" && data.error.trim()) return data.error;
-
-  const discountTypeError = Array.isArray(data.discount_type)
-    ? data.discount_type[0]
-    : data.discount_type;
-  if (typeof discountTypeError === "string" && discountTypeError.trim()) {
-    return "Please choose a valid discount type. Use `No Discount` if you don't want to apply one.";
-  }
-
-  for (const [key, value] of Object.entries(data)) {
-    const message = Array.isArray(value) ? value[0] : value;
-    if (typeof message === "string" && message.trim()) {
-      return `${describeFieldPath(key)}: ${message}`;
-    }
-  }
-
-  return "We couldn't save the estimate. Please review the form and try again.";
-};
 
 const describeFieldPath = (path: string) => {
   const parts = path.split(".").filter(Boolean);
@@ -418,11 +395,7 @@ export default function NewEstimatePage() {
     },
     onError: (error) => {
       console.error("Estimate creation error:", error);
-      if (error instanceof AxiosError && error.response?.data) {
-        setServerError(getFriendlyEstimateError(error));
-      } else {
-        setServerError("We couldn't create the estimate right now. Please try again.");
-      }
+      setServerError(getUserFacingError(error, "We couldn't save the estimate. Please review the form and try again."));
     },
   });
 

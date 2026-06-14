@@ -39,6 +39,7 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { CreditCard, Ban } from "lucide-react"; // Added missing icons
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 export default function EstimatesPage() {
   const { hasPermission } = usePermissions();
   const { formatCurrency } = useCurrency();
@@ -156,7 +157,7 @@ export default function EstimatesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete estimate",
+        description: getUserFacingError(error, "Failed to delete estimate"),
         variant: "destructive",
       });
     },
@@ -182,7 +183,7 @@ export default function EstimatesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete estimates",
+        description: getUserFacingError(error, "Failed to delete estimates"),
         variant: "destructive",
       });
     },
@@ -207,7 +208,7 @@ export default function EstimatesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to send estimates",
+        description: getUserFacingError(error, "Failed to send estimates"),
         variant: "destructive",
       });
     },
@@ -232,7 +233,7 @@ export default function EstimatesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to update estimates",
+        description: getUserFacingError(error, "Failed to update estimates"),
         variant: "destructive",
       });
     },
@@ -783,7 +784,7 @@ export default function EstimatesPage() {
                                     } catch (error: any) {
                                       toast({
                                         title: "Error",
-                                        description: error.response?.data?.error || error.response?.data?.detail || "Failed to duplicate estimate",
+                                        description: getUserFacingError(error, "Failed to duplicate estimate"),
                                         variant: "destructive",
                                       });
                                     }
@@ -805,7 +806,7 @@ export default function EstimatesPage() {
                                       } catch (error: any) {
                                         toast({
                                           title: "Error",
-                                          description: error.response?.data?.error || "Failed to send estimate",
+                                          description: getUserFacingError(error, "Failed to send estimate"),
                                           variant: "destructive",
                                         });
                                       }

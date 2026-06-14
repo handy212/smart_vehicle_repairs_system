@@ -15,7 +15,7 @@ import { Loader2, Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Combobox } from "@/components/ui/combobox";
 import { PartSelector } from "@/components/inventory/PartSelector";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function NewTransferPage() {
     const router = useRouter();
@@ -101,7 +101,7 @@ export default function NewTransferPage() {
             router.push(`/inventory/transfers/${transfer.id}`);
 
         } catch (error: unknown) {
-            toast({ title: "Error", description: getApiErrorMessage(error, "Failed to create transfer"), variant: "destructive" });
+            toast({ title: "Error", description: getUserFacingError(error, "Failed to create transfer"), variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }

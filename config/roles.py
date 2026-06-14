@@ -255,6 +255,16 @@ class Admin(AbstractUserRole):
         'manage_compliance': True,
         'view_training': True,
         'manage_training': True,
+
+        # Subscriptions
+        'view_subscriptions': True,
+        'manage_subscriptions': True,
+        'create_subscriptions': True,
+        'cancel_subscriptions': True,
+        'record_usage': True,
+
+        # Dashboard
+        'view_dashboard': True,
     }
 
 
@@ -425,6 +435,9 @@ class Manager(AbstractUserRole):
         
         # Settings
         'view_settings': True,
+
+        # Dashboard
+        'view_dashboard': True,
         
         # System
         'view_branches': True,
@@ -528,6 +541,9 @@ class ServiceCoordinator(AbstractUserRole):
         'view_documents': True,
         'upload_documents': True,
         'download_documents': True,
+
+        # Dashboard
+        'view_dashboard': True,
     }
 
 
@@ -581,6 +597,9 @@ class Receptionist(AbstractUserRole):
         'view_documents': True,
         'upload_documents': True,
         'download_documents': True,
+
+        # Dashboard
+        'view_dashboard': True,
     }
 
 
@@ -635,6 +654,9 @@ class Technician(AbstractUserRole):
 
         # Appointments (own schedule only via my_schedule API)
         'view_own_appointments': True,
+
+        # Dashboard (mobile app uses separate route; staff dashboard fallback)
+        'view_dashboard': True,
     }
 
 
@@ -669,6 +691,9 @@ class PartsManager(AbstractUserRole):
         'view_documents': True,
         'upload_documents': True,
         'download_documents': True,
+
+        # Dashboard
+        'view_dashboard': True,
     }
 
 
@@ -741,6 +766,9 @@ class Accountant(AbstractUserRole):
         'view_asset_maintenance': True,
         'approve_asset_acquisitions': True,
         'receive_asset_acquisitions': True,
+
+        # Dashboard
+        'view_dashboard': True,
     }
 
 

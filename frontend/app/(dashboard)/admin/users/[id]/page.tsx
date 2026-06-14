@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 const userUpdateSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
@@ -216,7 +217,7 @@ export default function UserDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to reset password",
+        description: getUserFacingError(error, "Failed to reset password"),
         variant: "destructive",
       });
     },
@@ -234,7 +235,7 @@ export default function UserDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to send password reset link",
+        description: getUserFacingError(error, "Failed to send password reset link"),
         variant: "destructive",
       });
     },
@@ -253,7 +254,7 @@ export default function UserDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to reset 2FA",
+        description: getUserFacingError(error, "Failed to reset 2FA"),
         variant: "destructive",
       });
     },

@@ -16,7 +16,7 @@ import { inspectionsApi } from "@/lib/api/inspections";
 import { workordersApi, WorkOrder } from "@/lib/api/workorders";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface CheckInInspectionBannerProps {
   workOrder: WorkOrder;
@@ -98,7 +98,7 @@ export function CheckInInspectionBanner({
     onError: (error: unknown) => {
       toast({
         title: "Could not start inspection",
-        description: getApiErrorMessage(error, "Please try again."),
+        description: getUserFacingError(error, "Please try again."),
         variant: "destructive",
       });
     },

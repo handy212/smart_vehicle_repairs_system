@@ -19,7 +19,7 @@ import { authApi } from "@/lib/api/auth";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PortalPageHeader } from "../components/PortalPageHeader";
 import { cn } from "@/lib/utils/cn";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function MySubscriptionsPage() {
   const { toast } = useToast();
@@ -72,7 +72,7 @@ export default function MySubscriptionsPage() {
       setViewMode("my-subscriptions");
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to purchase subscription"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to purchase subscription"), variant: "destructive" });
     },
   });
 
@@ -86,7 +86,7 @@ export default function MySubscriptionsPage() {
       });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to renew subscription"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to renew subscription"), variant: "destructive" });
     },
   });
 
@@ -220,7 +220,7 @@ export default function MySubscriptionsPage() {
                                       toast({ title: "Payment Unavailable", description: "Invoice is being processed. Please try again.", variant: "destructive" });
                                     }
                                   } catch (error: any) {
-                                    toast({ title: "Error", description: error.response?.data?.detail || "Failed to load payment details", variant: "destructive" });
+                                    toast({ title: "Error", description: getUserFacingError(error, "Failed to load payment details"), variant: "destructive" });
                                   }
                                 }
                               }}

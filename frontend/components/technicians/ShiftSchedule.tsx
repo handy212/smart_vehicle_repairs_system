@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, PlayCircle, StopCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface ShiftScheduleProps {
     shifts: Shift[];
@@ -40,7 +40,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to clock in"),
+                description: getUserFacingError(error, "Failed to clock in"),
                 variant: "destructive",
             });
         },
@@ -56,7 +56,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to clock out"),
+                description: getUserFacingError(error, "Failed to clock out"),
                 variant: "destructive",
             });
         },

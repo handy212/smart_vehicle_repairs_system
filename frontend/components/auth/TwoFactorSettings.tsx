@@ -17,6 +17,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuthStore } from "@/store/authStore";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export function TwoFactorSettings() {
     const { user, setUser } = useAuthStore();
@@ -67,8 +68,7 @@ export function TwoFactorSettings() {
             }
         } catch (error: any) {
             console.error(error);
-            const msg = error.response?.data?.code?.[0] || error.response?.data?.detail || "Invalid verification code";
-            toast.error(msg);
+            toast.error(getUserFacingError(error, "Invalid verification code"));
         } finally {
             setIsLoading(false);
         }
@@ -93,8 +93,7 @@ export function TwoFactorSettings() {
             }
         } catch (error: any) {
             console.error(error);
-            const msg = error.response?.data?.password?.[0] || error.response?.data?.detail || "Failed to disable 2FA";
-            toast.error(msg);
+            toast.error(getUserFacingError(error, "Failed to disable 2FA"));
         } finally {
             setIsLoading(false);
         }

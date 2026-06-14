@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface Photo {
     id?: number;
@@ -133,7 +134,7 @@ export default function WorkOrderPhotosPage() {
             console.error("Failed to add photo:", error);
             toast({
                 title: "Error",
-                description: error.message || "Failed to add photo",
+                description: getUserFacingError(error) || "Failed to add photo",
                 variant: "destructive",
             });
         } finally {

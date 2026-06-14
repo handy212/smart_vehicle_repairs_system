@@ -19,6 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface Skill {
   id: number;
@@ -32,11 +33,6 @@ type SkillForm = {
   description: string;
   is_active: boolean;
 };
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { detail?: string; error?: string; name?: string[] } } })?.response?.data;
-  return data?.detail || data?.error || data?.name?.[0] || fallback;
-}
 
 const emptyForm: SkillForm = {
   name: "",
@@ -70,7 +66,7 @@ export default function SkillsManagementPage() {
       closeDialog();
     },
     onError: (error: unknown) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to create skill"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to create skill"), variant: "destructive" });
     },
   });
 
@@ -82,7 +78,7 @@ export default function SkillsManagementPage() {
       closeDialog();
     },
     onError: (error: unknown) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to update skill"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to update skill"), variant: "destructive" });
     },
   });
 
@@ -93,7 +89,7 @@ export default function SkillsManagementPage() {
       toast({ title: "Deleted", description: "Skill removed" });
     },
     onError: (error: unknown) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to delete skill"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to delete skill"), variant: "destructive" });
     },
   });
 

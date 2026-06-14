@@ -41,7 +41,7 @@ import { RevenueForecastChart } from "@/components/reporting/RevenueForecastChar
 import { TechnicianProductivityHeatmap } from "@/components/reporting/TechnicianProductivityHeatmap";
 import { InventoryTurnoverChart } from "@/components/reporting/InventoryTurnoverChart";
 import { useTheme } from "@/lib/hooks/useTheme";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { downloadCsv } from "@/lib/utils/csvExport";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
 import { ChartAccessibleTable } from "@/components/reporting/ChartAccessibleTable";
@@ -262,7 +262,7 @@ export function ReportsHubClient({ section }: { section: string }) {
       setSavedReportDescription("");
     },
     onError: (error) => {
-      toast({ title: "Save Failed", description: getApiErrorMessage(error, "Could not save report view."), variant: "destructive" });
+      toast({ title: "Save Failed", description: getUserFacingError(error, "Could not save report view."), variant: "destructive" });
     },
   });
 
@@ -285,7 +285,7 @@ export function ReportsHubClient({ section }: { section: string }) {
       setScheduleFrequency("weekly");
     },
     onError: (error) => {
-      toast({ title: "Schedule Failed", description: getApiErrorMessage(error, "Could not schedule report."), variant: "destructive" });
+      toast({ title: "Schedule Failed", description: getUserFacingError(error, "Could not schedule report."), variant: "destructive" });
     },
   });
 
@@ -390,13 +390,13 @@ export function ReportsHubClient({ section }: { section: string }) {
         export_format: "pdf",
         status: "failed",
         parameters: currentReportParams,
-        error_message: getApiErrorMessage(error, "Export failed"),
+        error_message: getUserFacingError(error, "Export failed"),
       }).then(() => {
         queryClient.invalidateQueries({ queryKey: ["reporting", "export-logs"] });
       }).catch(() => undefined);
       toast({
         title: "Download Failed",
-        description: getApiErrorMessage(error, "Failed to download the report. Please try again."),
+        description: getUserFacingError(error, "Failed to download the report. Please try again."),
         variant: "destructive",
       });
     }

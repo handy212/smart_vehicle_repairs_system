@@ -36,7 +36,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CircleDollarSign, Clock, Database, FileText, ReceiptText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import {
   DropdownMenu,
@@ -107,7 +107,7 @@ export default function PurchaseOrderDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to submit purchase order for approval"),
+        description: getUserFacingError(error, "Failed to submit purchase order for approval"),
         variant: "destructive",
       });
     },
@@ -140,7 +140,7 @@ export default function PurchaseOrderDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to approve purchase order"),
+        description: getUserFacingError(error, "Failed to approve purchase order"),
         variant: "destructive",
       });
     },
@@ -160,7 +160,7 @@ export default function PurchaseOrderDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to reject purchase order"),
+        description: getUserFacingError(error, "Failed to reject purchase order"),
         variant: "destructive",
       });
     },
@@ -180,7 +180,7 @@ export default function PurchaseOrderDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to confirm purchase order"),
+        description: getUserFacingError(error, "Failed to confirm purchase order"),
         variant: "destructive",
       });
     },
@@ -200,7 +200,7 @@ export default function PurchaseOrderDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to cancel purchase order"),
+        description: getUserFacingError(error, "Failed to cancel purchase order"),
         variant: "destructive",
       });
     },
@@ -219,7 +219,7 @@ export default function PurchaseOrderDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete purchase order"),
+        description: getUserFacingError(error, "Failed to delete purchase order"),
         variant: "destructive",
       });
     },

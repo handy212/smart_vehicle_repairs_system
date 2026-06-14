@@ -22,7 +22,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function NewAcquisitionPage() {
     return (
@@ -90,7 +90,7 @@ function NewAcquisitionContent() {
         onError: (err: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(err, "Could not create request"),
+                description: getUserFacingError(err, "Could not create request"),
                 variant: "destructive",
             });
         },

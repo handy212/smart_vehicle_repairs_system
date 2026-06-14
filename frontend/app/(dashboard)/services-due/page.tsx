@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function getDueStatusBadge(schedule: VehicleServiceSchedule) {
   if (!schedule.is_due) {
@@ -116,7 +117,7 @@ export default function ServicesDuePage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to send reminder",
+        description: getUserFacingError(error, "Failed to send reminder"),
         variant: "destructive",
       });
     },

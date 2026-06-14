@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function RoadsideRequestDetailPage() {
   const params = useParams();
@@ -79,7 +79,7 @@ export default function RoadsideRequestDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Cancellation Failed",
-        description: getApiErrorMessage(error, "Failed to cancel request. Please try again."),
+        description: getUserFacingError(error, "Failed to cancel request. Please try again."),
         variant: "destructive",
       });
     },
@@ -98,7 +98,7 @@ export default function RoadsideRequestDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Submission Failed",
-        description: getApiErrorMessage(error, "Failed to submit feedback"),
+        description: getUserFacingError(error, "Failed to submit feedback"),
         variant: "destructive",
       });
     },

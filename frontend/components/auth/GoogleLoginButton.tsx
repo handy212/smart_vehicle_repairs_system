@@ -17,6 +17,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/api/auth';
+import { getUserFacingError } from '@/lib/api/errors';
 
 interface GoogleLoginButtonProps {
 
@@ -94,14 +95,14 @@ export default function GoogleLoginButton({
                     } else {
                         console.error('No code returned from Google');
                         setLoading(false);
-                        if (onError) onError('Login failed: No code returned');
+                        if (onError) onError('Sign-in was cancelled or failed. Please try again.');
                     }
                 },
 
                 error_callback: (error: any) => {
                     console.error('Google OAuth Error:', error);
                     setLoading(false);
-                    if (onError) onError(`Google login error: ${error.message || 'Unknown error'}`);
+                    if (onError) onError(getUserFacingError(error, 'Google sign-in failed. Please try again.'));
                 },
             });
 
@@ -110,7 +111,7 @@ export default function GoogleLoginButton({
 
         } catch (error: any) {
             console.error('Google login error:', error);
-            if (onError) onError(error.message);
+            if (onError) onError(getUserFacingError(error, 'Google sign-in is not available. Please refresh and try again.'));
             setLoading(false);
         }
     };
@@ -130,7 +131,7 @@ export default function GoogleLoginButton({
 
             if (!apiResponse.ok) {
                 const errorData = await apiResponse.json();
-                throw new Error(errorData.detail || 'Authentication failed');
+                throw new Error(getUserFacingError({ response: { data: errorData } }, 'Authentication failed'));
             }
 
             const data = await apiResponse.json();
@@ -160,7 +161,7 @@ export default function GoogleLoginButton({
 
         } catch (error: any) {
             console.error('[GoogleLogin] Authentication error:', error);
-            if (onError) onError(error.message || 'Authentication failed');
+            if (onError) onError(getUserFacingError(error, 'Authentication failed'));
         } finally {
             setLoading(false);
         }

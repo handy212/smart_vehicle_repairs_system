@@ -47,6 +47,7 @@ import { PauseForm } from "./forms/PauseForm";
 import { StartDiagnosisForm } from "./forms/StartDiagnosisForm";
 import { AssignServiceCoordinatorForm } from "./forms/AssignServiceCoordinatorForm";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
   canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
@@ -75,73 +76,6 @@ const DISCONTINUE_ELIGIBLE_STATUSES = new Set([
   "additional_work_found",
   "quality_check",
 ]);
-
-const getWorkflowErrorMessage = (error: any) => {
-  const data = error.response?.data;
-  const taskNames = Array.isArray(data?.blocking_tasks)
-    ? data.blocking_tasks.map((task: any) => task.description).filter(Boolean)
-    : [];
-  const partNames = Array.isArray(data?.blocking_parts)
-    ? data.blocking_parts.map((part: any) => part.part_name).filter(Boolean)
-    : [];
-
-  if (taskNames.length) {
-    const list = taskNames.slice(0, 4).join(", ");
-    const more = taskNames.length > 4 ? `, +${taskNames.length - 4} more` : "";
-    return `${data?.next_step || "Open the Tasks tab and resolve the blocking tasks."} Blocking tasks: ${list}${more}.`;
-  }
-  if (partNames.length) {
-    const list = partNames.slice(0, 4).join(", ");
-    const more = partNames.length > 4 ? `, +${partNames.length - 4} more` : "";
-    return `${data?.next_step || "Open the Parts tab and resolve the blocking parts."} Blocking parts: ${list}${more}.`;
-  }
-  return data?.error || data?.errors?.join("; ") || error.message;
-};
-
-const extractApiErrorMessage = (error: any, fallback: string) => {
-  if (error?.isOffline || error?.queued || error?.response?.data?.queued) {
-    return error?.response?.data?.message || error?.message || "Request queued for offline sync.";
-  }
-
-  const data = error?.response?.data;
-  if (typeof data === "string" && data.trim()) {
-    return data;
-  }
-
-  if (data && typeof data === "object") {
-    const directMessage =
-      data.next_step ||
-      data.error ||
-      data.detail ||
-      data.message ||
-      (Array.isArray(data.errors) ? data.errors.filter(Boolean).join("; ") : "");
-
-    if (directMessage) {
-      return directMessage;
-    }
-
-    const fieldMessages = Object.entries(data)
-      .flatMap(([field, value]) => {
-        if (["blocking_tasks", "blocking_parts"].includes(field)) return [];
-        const label = field.replace(/_/g, " ");
-        if (Array.isArray(value)) return value.map((item) => `${label}: ${String(item)}`);
-        if (typeof value === "string" && value.trim()) return [`${label}: ${value}`];
-        return [];
-      })
-      .filter(Boolean);
-
-    if (fieldMessages.length) {
-      return fieldMessages.join("; ");
-    }
-  }
-
-  if (error?.message && error.message !== "[object Object]") {
-    return error.message;
-  }
-
-  const status = error?.response?.status;
-  return status ? `${fallback}. Server returned HTTP ${status}.` : fallback;
-};
 
 export default function WorkflowActions({
   workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
@@ -375,67 +309,31 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Inspection creation onError caught:", {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data ? JSON.parse(JSON.stringify(error.response.data)) : null
+      if (process.env.NODE_ENV === "development") {
+        console.error("Inspection creation failed:", error);
+      }
+
+      const data = error.response?.data;
+      const newFieldErrors: Record<string, string> = {};
+
+      if (typeof data === "object" && data !== null && !Array.isArray(data)) {
+        Object.entries(data).forEach(([field, fieldData]) => {
+          if (["non_field_errors", "detail", "error", "message"].includes(field)) return;
+          if (Array.isArray(fieldData)) {
+            newFieldErrors[field] = String(fieldData[0] ?? "");
+          } else if (fieldData !== null && fieldData !== undefined) {
+            newFieldErrors[field] = String(fieldData);
+          }
         });
       }
 
-      let errorMessage = "Failed to create inspection";
-
-      if (error.response?.data) {
-        const data = error.response.data;
-
-        // Handle field-level errors
-        const newFieldErrors: Record<string, string> = {};
-        let hasFieldErrors = false;
-
-        // Ensure data is an object before iterating
-        if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-          Object.keys(data).forEach((field) => {
-            if (field !== 'non_field_errors' && field !== 'detail' && field !== 'error' && field !== 'message') {
-              const fieldData = data[field];
-              let fieldError = "";
-
-              if (Array.isArray(fieldData)) {
-                // If it's an array of strings or objects, get the first one
-                const first = fieldData[0];
-                fieldError = typeof first === 'object' ? (first.message || JSON.stringify(first)) : String(first);
-              } else {
-                fieldError = typeof fieldData === 'object' ? (fieldData.message || JSON.stringify(fieldData)) : String(fieldData);
-              }
-
-              newFieldErrors[field] = fieldError;
-              hasFieldErrors = true;
-            }
-          });
-        }
-
-        if (hasFieldErrors) {
-          setInspectionFieldErrors(newFieldErrors);
-          errorMessage = "Please correct the errors in the form below.";
-        } else if (typeof data === 'string' && data.length > 0) {
-          errorMessage = data;
-        } else if (data.error) {
-          errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-        } else if (data.detail) {
-          errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-        } else if (data.message) {
-          errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
-        } else if (Array.isArray(data) && data.length > 0) {
-          errorMessage = data.join(', ');
-        } else if (Object.keys(data).length > 0) {
-          errorMessage = JSON.stringify(data);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (Object.keys(newFieldErrors).length > 0) {
+        setInspectionFieldErrors(newFieldErrors);
       }
 
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Couldn't create inspection",
+        description: getUserFacingError(error, "Please check the inspection form and try again."),
         variant: "destructive",
       });
     },
@@ -462,7 +360,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to assign Service Coordinator",
+        description: getUserFacingError(error, "Failed to assign Service Coordinator"),
         variant: "destructive",
       });
     },
@@ -477,7 +375,7 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to start intake";
+      const errorMessage = getUserFacingError(error, "Failed to start intake");
 
       // Check if error is about missing inspection
       if (errorMessage.includes("inspection") || !hasApprovedInspection) {
@@ -562,7 +460,7 @@ export default function WorkflowActions({
       console.error("Start diagnosis error:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to start diagnosis",
+        description: getUserFacingError(error, "Failed to start diagnosis"),
         variant: "destructive",
       });
     },
@@ -579,39 +477,9 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      console.error("Complete diagnosis error - Full error object:", error);
-      console.error("Complete diagnosis error - Response:", error.response);
-      console.error("Complete diagnosis error - Response data:", error.response?.data);
-
-      let errorMessage = "Failed to complete diagnosis";
-
-      if (error.response?.data) {
-        const data = error.response.data;
-        if (typeof data === 'string') {
-          errorMessage = data;
-        } else if (data.error) {
-          errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-        } else if (data.detail) {
-          errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-        } else if (data.message) {
-          errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
-        } else if (Array.isArray(data)) {
-          errorMessage = data.join(', ');
-        } else {
-          const errorValues = Object.values(data).filter(v => v);
-          if (errorValues.length > 0) {
-            errorMessage = errorValues.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(', ');
-          } else {
-            errorMessage = JSON.stringify(data);
-          }
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Couldn't complete diagnosis",
+        description: getUserFacingError(error, "Please review the diagnosis details and try again."),
         variant: "destructive",
       });
     },
@@ -636,7 +504,7 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || error.response?.data?.detail || error.message || "Failed to request approval";
+      const errorMessage = getUserFacingError(error) || "Failed to request approval";
 
       // Provide helpful error messages for common validation failures
       let description = errorMessage;
@@ -672,7 +540,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to approve work order",
+        description: getUserFacingError(error, "Failed to approve work order"),
         variant: "destructive",
       });
     },
@@ -706,7 +574,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: getWorkflowErrorMessage(error),
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -724,7 +592,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to flag additional work",
+        description: getUserFacingError(error, "Failed to flag additional work"),
         variant: "destructive",
       });
     },
@@ -742,7 +610,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to pause work order",
+        description: getUserFacingError(error, "Failed to pause work order"),
         variant: "destructive",
       });
     },
@@ -764,7 +632,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to resume work order",
+        description: getUserFacingError(error, "Failed to resume work order"),
         variant: "destructive",
       });
     },
@@ -781,7 +649,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Quality check blocked",
-        description: getWorkflowErrorMessage(error) || "Failed to request quality check",
+        description: getUserFacingError(error) || "Failed to request quality check",
         variant: "destructive",
       });
     },
@@ -814,7 +682,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to complete quality check",
+        description: getUserFacingError(error, "Failed to complete quality check"),
         variant: "destructive",
       });
     },
@@ -833,7 +701,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Completion blocked",
-        description: getWorkflowErrorMessage(error) || "Failed to complete work order",
+        description: getUserFacingError(error) || "Failed to complete work order",
         variant: "destructive",
       });
     },
@@ -851,7 +719,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Cannot confirm billing complete",
-        description: extractApiErrorMessage(
+        description: getUserFacingError(
           error,
           "Unable to confirm billing completion. Confirm odometer out is recorded and a finalized invoice exists."
         ),
@@ -877,7 +745,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to close work order",
+        description: getUserFacingError(error, "Failed to close work order"),
         variant: "destructive",
       });
     },
@@ -900,7 +768,7 @@ export default function WorkflowActions({
     onError: (error: any) => {
       toast({
         title: "Could not discontinue",
-        description: extractApiErrorMessage(error, "Failed to discontinue job"),
+        description: getUserFacingError(error, "Failed to discontinue job"),
         variant: "destructive",
       });
     },

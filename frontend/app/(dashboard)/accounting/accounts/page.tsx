@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type AccountFormData = {
     code: string;
@@ -84,15 +85,6 @@ const emptyForm: AccountFormData = {
     is_till_enabled: false,
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-    const data = (error as ApiError)?.response?.data;
-    if (!data) return fallback;
-    const first = Object.values(data)[0];
-    if (typeof first === "string") return first;
-    if (Array.isArray(first)) return first.join(" ");
-    return fallback;
-}
-
 function buildTreeRows(accounts: Account[], expanded: Set<number>, searchTerm: string): AccountNode[] {
     const q = searchTerm.trim().toLowerCase();
     const children = new Map<number | null, Account[]>();
@@ -151,7 +143,7 @@ export default function ChartOfAccountsPage() {
             resetForm();
             success("Account created.");
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to create account")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to create account")),
     });
 
     const updateMutation = useMutation({
@@ -166,7 +158,7 @@ export default function ChartOfAccountsPage() {
             resetForm();
             success("Account updated.");
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to update account")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to update account")),
     });
 
     const statusMutation = useMutation({
@@ -188,7 +180,7 @@ export default function ChartOfAccountsPage() {
             queryClient.invalidateQueries({ queryKey: ["accounting", "accounts"] });
             success(variables.is_active ? "Account activated." : "Account deactivated.");
         },
-        onError: (error: unknown) => toastError(getErrorMessage(error, "Failed to update account status")),
+        onError: (error: unknown) => toastError(getUserFacingError(error, "Failed to update account status")),
     });
 
     function normalizePayload(data: AccountFormData) {

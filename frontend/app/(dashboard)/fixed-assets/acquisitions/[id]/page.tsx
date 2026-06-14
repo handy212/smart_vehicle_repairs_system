@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, FileUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useAuthStore } from "@/store/authStore";
 import {
     canApproveOrRejectAcquisition,
@@ -103,7 +103,7 @@ function AcquisitionDetailContent() {
         onError: (err: unknown) =>
             toast({
                 title: "Submit failed",
-                description: getApiErrorMessage(err, "Could not submit"),
+                description: getUserFacingError(err, "Could not submit"),
                 variant: "destructive",
             }),
     });
@@ -118,7 +118,7 @@ function AcquisitionDetailContent() {
         onError: (err: unknown) =>
             toast({
                 title: "Approve failed",
-                description: getApiErrorMessage(err, "Could not approve"),
+                description: getUserFacingError(err, "Could not approve"),
                 variant: "destructive",
             }),
     });
@@ -134,7 +134,7 @@ function AcquisitionDetailContent() {
         onError: (err: unknown) =>
             toast({
                 title: "Reject failed",
-                description: getApiErrorMessage(err, "Could not reject"),
+                description: getUserFacingError(err, "Could not reject"),
                 variant: "destructive",
             }),
     });
@@ -160,7 +160,7 @@ function AcquisitionDetailContent() {
         onError: (err: unknown) =>
             toast({
                 title: "Receive failed",
-                description: getApiErrorMessage(err, "Could not receive"),
+                description: getUserFacingError(err, "Could not receive"),
                 variant: "destructive",
             }),
     });
@@ -181,7 +181,7 @@ function AcquisitionDetailContent() {
         onError: (err: unknown) =>
             toast({
                 title: "Upload failed",
-                description: getApiErrorMessage(err, "Could not upload"),
+                description: getUserFacingError(err, "Could not upload"),
                 variant: "destructive",
             }),
     });

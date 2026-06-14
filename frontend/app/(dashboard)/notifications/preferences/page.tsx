@@ -11,7 +11,7 @@ import { ArrowLeft, Save, Mail, MessageSquare, Bell, Smartphone, Volume2, Calend
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -49,7 +49,7 @@ export default function NotificationPreferencesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update preferences"),
+        description: getUserFacingError(error, "Failed to update preferences"),
         variant: "destructive",
       });
     },
@@ -101,7 +101,7 @@ export default function NotificationPreferencesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Push setup failed",
-        description: error instanceof Error ? error.message : getApiErrorMessage(error, "Failed to enable push notifications."),
+        description: error instanceof Error ? error.message : getUserFacingError(error, "Failed to enable push notifications."),
         variant: "destructive",
       });
     },
@@ -128,7 +128,7 @@ export default function NotificationPreferencesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Push setup failed",
-        description: getApiErrorMessage(error, "Failed to disable push notifications."),
+        description: getUserFacingError(error, "Failed to disable push notifications."),
         variant: "destructive",
       });
     },

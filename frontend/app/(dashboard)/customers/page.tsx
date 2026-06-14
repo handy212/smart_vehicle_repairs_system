@@ -47,6 +47,7 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { CustomerStats } from "./components/CustomerStats";
 import { CustomerTable } from "./components/CustomerTable";
+import { getUserFacingError } from "@/lib/api/errors";
 
 // Customer List Page
 
@@ -208,7 +209,7 @@ export default function CustomersPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete customer",
+        description: getUserFacingError(error, "Failed to delete customer"),
         variant: "destructive",
       });
     },

@@ -33,6 +33,7 @@ import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const VALID_TABS = new Set([
   "overview",
@@ -147,7 +148,7 @@ export default function WorkOrderDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Delete Failed",
-        description: error.response?.data?.detail || "Failed to delete work order",
+        description: getUserFacingError(error, "Failed to delete work order"),
         variant: "destructive",
       });
     },
@@ -216,7 +217,7 @@ export default function WorkOrderDetailPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to print recommendations",
+        description: getUserFacingError(error, "Failed to print recommendations"),
         variant: "destructive",
       });
     }

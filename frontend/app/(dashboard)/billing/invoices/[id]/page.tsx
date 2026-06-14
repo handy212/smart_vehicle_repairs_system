@@ -35,6 +35,7 @@ import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const parseAmount = (value?: string | number | null) => {
   if (value === null || value === undefined) {
@@ -223,7 +224,7 @@ export default function InvoiceDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to convert proforma. Please try again."),
+        description: getUserFacingError(error, "Failed to convert proforma. Please try again."),
         variant: "destructive",
       });
     },
@@ -244,7 +245,7 @@ export default function InvoiceDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Delete Failed",
-        description: getApiErrorMessage(error, "Failed to delete invoice. Please try again."),
+        description: getUserFacingError(error, "Failed to delete invoice. Please try again."),
         variant: "destructive",
       });
     },
@@ -270,7 +271,7 @@ export default function InvoiceDetailPage() {
     onError: (error: unknown, variables) => {
       toast({
         title: variables.method === "email" ? "Email Failed" : "SMS Failed",
-        description: getApiErrorMessage(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
+        description: getUserFacingError(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
         variant: "destructive"
       });
     }

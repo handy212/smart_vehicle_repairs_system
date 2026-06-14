@@ -18,7 +18,7 @@ import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { useState, useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { usePrint } from "@/lib/hooks/usePrint";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function InspectionDetailPage() {
   const params = useParams();
@@ -58,7 +58,7 @@ export default function InspectionDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Approval Failed",
-        description: getApiErrorMessage(error, "Failed to approve inspection. Please try again."),
+        description: getUserFacingError(error, "Failed to approve inspection. Please try again."),
         variant: "destructive",
       });
     },
@@ -81,7 +81,7 @@ export default function InspectionDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Rejection Failed",
-        description: getApiErrorMessage(error, "Failed to reject inspection. Please try again."),
+        description: getUserFacingError(error, "Failed to reject inspection. Please try again."),
         variant: "destructive",
       });
     },

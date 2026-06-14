@@ -21,7 +21,7 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { techniciansApi, CreateTechnicianData, skillsApi } from "@/lib/api/technicians";
 import { branchesApi } from "@/lib/api/admin";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
@@ -101,7 +101,7 @@ export default function NewTechnicianPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to create technician"),
+                description: getUserFacingError(error, "Failed to create technician"),
                 variant: "destructive",
             });
         } finally {

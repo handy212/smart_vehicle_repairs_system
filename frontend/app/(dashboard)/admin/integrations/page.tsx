@@ -23,17 +23,13 @@ import {
   sortHubtelSmsSettings,
 } from "@/lib/integrations/fieldLabels";
 import { cn } from "@/lib/utils/cn";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const CATEGORIES = [
   { id: "accounting", label: "Accounting", icon: Calculator },
   { id: "communication", label: "Communication", icon: MessageSquare },
   { id: "security", label: "Security", icon: ShieldCheck },
 ];
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { detail?: string; error?: string } } })?.response?.data;
-  return data?.detail || data?.error || fallback;
-}
 
 export default function IntegrationsPage() {
   const router = useRouter();
@@ -76,7 +72,7 @@ export default function IntegrationsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Update failed"),
+        description: getUserFacingError(error, "Update failed"),
         variant: "destructive",
       });
     },
@@ -92,7 +88,7 @@ export default function IntegrationsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update integrations"),
+        description: getUserFacingError(error, "Failed to update integrations"),
         variant: "destructive",
       });
     },

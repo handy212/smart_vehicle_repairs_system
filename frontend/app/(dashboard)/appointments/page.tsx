@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
   Tooltip,
   TooltipContent,
@@ -176,7 +177,7 @@ export default function AppointmentsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete appointment",
+        description: getUserFacingError(error, "Failed to delete appointment"),
         variant: "destructive",
       });
     },
@@ -206,7 +207,7 @@ export default function AppointmentsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete appointments",
+        description: getUserFacingError(error, "Failed to delete appointments"),
         variant: "destructive",
       });
     },
@@ -236,7 +237,7 @@ export default function AppointmentsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update status",
+        description: getUserFacingError(error, "Failed to update status"),
         variant: "destructive",
       });
     },

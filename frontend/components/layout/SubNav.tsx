@@ -345,7 +345,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Branches", href: "/admin/branches", permission: "view_branches", icon: Building2 },
     { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
     { name: "Demo Data", href: "/admin/demo-data", permission: "manage_settings", icon: Database },
-    { name: "Settings", href: "/admin/settings", permission: "view_settings", icon: Settings },
+    { name: "Settings", href: "/admin/settings", permission: "manage_settings", icon: Settings },
     { name: "Modules", href: "/admin/modules", superAdminOnly: true, icon: Puzzle },
     { name: "Email Templates", href: "/admin/settings/email-templates", permission: "manage_notification_templates", icon: Mail },
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_logs", icon: History },

@@ -13,6 +13,7 @@ import { PerfexDashboard } from "./components/PerfexDashboard";
 import { useBranchStore } from "@/store/branchStore";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardRoleConfig } from "@/lib/utils/dashboard-role-config";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 type DashboardAppointment = {
   id: number;
@@ -57,6 +58,14 @@ export default function DashboardPage() {
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const userRole = useAuthStore((s) => s.user?.role);
   const roleConfig = useMemo(() => getDashboardRoleConfig(userRole), [userRole]);
+  const { hasPermission, hasAnyPermission } = usePermissions();
+  const canViewReports = hasAnyPermission(["view_reports", "view_all_reports"]);
+  const canViewAppointments = hasAnyPermission(["view_appointments", "view_own_appointments"]);
+  const canViewBilling = hasPermission("view_billing");
+  const canViewCustomers = hasPermission("view_customers");
+  const canViewVehicles = hasPermission("view_vehicles");
+  const canViewInventory = hasPermission("view_inventory");
+  const canViewWorkOrders = hasAnyPermission(["view_workorders", "view_own_workorders"]);
 
   const {
     data: dashboardData,
@@ -66,6 +75,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboard", "overview", activeBranchId],
     queryFn: () => reportingApi.dashboard(),
+    enabled: canViewReports,
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000,
@@ -86,6 +96,7 @@ export default function DashboardPage() {
         end_date: format(today, "yyyy-MM-dd"),
       });
     },
+    enabled: canViewReports && canViewWorkOrders,
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 10 * 60 * 1000,
@@ -94,13 +105,14 @@ export default function DashboardPage() {
   const { data: serviceDueData, refetch: refetchServiceDue } = useQuery({
     queryKey: ["dashboard", "service-due", activeBranchId],
     queryFn: () => reportingApi.serviceDue(),
+    enabled: canViewReports,
     staleTime: 15 * 60 * 1000,
   });
 
   const { data: lowStockData, refetch: refetchLowStock } = useQuery({
     queryKey: ["dashboard", "low-stock", activeBranchId],
     queryFn: () => reportingApi.lowStock(),
-    enabled: (dashboardData?.alerts?.low_stock_items ?? 0) > 0,
+    enabled: canViewInventory && (dashboardData?.alerts?.low_stock_items ?? 0) > 0,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -111,18 +123,21 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["appointments", "today", activeBranchId],
     queryFn: () => appointmentsApi.today(),
+    enabled: canViewAppointments,
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: invoiceStatsData, refetch: refetchInvoiceStats } = useQuery({
     queryKey: ["dashboard", "invoice-stats", activeBranchId],
     queryFn: () => billingApi.invoices.stats(),
+    enabled: canViewBilling,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: recentInvoicesData, refetch: refetchRecentInvoices } = useQuery({
     queryKey: ["dashboard", "recent-invoices", activeBranchId],
     queryFn: () => billingApi.invoices.list({ ordering: "-invoice_date", page: 1 }),
+    enabled: canViewBilling,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -137,6 +152,7 @@ export default function DashboardPage() {
         end_date: format(today, "yyyy-MM-dd"),
       });
     },
+    enabled: canViewReports,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -152,18 +168,21 @@ export default function DashboardPage() {
         period: "daily",
       });
     },
+    enabled: canViewReports && canViewBilling,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: customerStats } = useQuery({
     queryKey: ["customers", "dashboard-stats", activeBranchId],
     queryFn: () => customersApi.dashboardStats(),
+    enabled: canViewCustomers,
     staleTime: 10 * 60 * 1000,
   });
 
   const { data: vehicleStats } = useQuery({
     queryKey: ["vehicles", "dashboard-stats", activeBranchId],
     queryFn: () => vehiclesApi.dashboardStats(),
+    enabled: canViewVehicles,
     staleTime: 10 * 60 * 1000,
   });
 

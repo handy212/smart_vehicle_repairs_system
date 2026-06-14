@@ -15,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import React from "react";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -36,16 +37,6 @@ const branchSchema = z.object({
 });
 
 type BranchFormData = z.infer<typeof branchSchema>;
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
-  if (!data) return fallback;
-  if (typeof data.detail === "string") return data.detail;
-  const fieldErrors = Object.values(data)
-    .flatMap((value) => Array.isArray(value) ? value : [value])
-    .filter((value): value is string => typeof value === "string");
-  return fieldErrors.join(", ") || fallback;
-}
 
 export default function BranchEditPage() {
   const router = useRouter();
@@ -130,7 +121,7 @@ export default function BranchEditPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update branch"),
+        description: getUserFacingError(error, "Failed to update branch"),
         variant: "destructive",
       });
     },

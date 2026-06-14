@@ -20,6 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface AssetCategory {
   id: number;
@@ -37,11 +38,6 @@ type AssetCategoryForm = {
   default_depreciation_method: string;
   is_active: boolean;
 };
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { detail?: string; error?: string; name?: string[] } } })?.response?.data;
-  return data?.detail || data?.error || data?.name?.[0] || fallback;
-}
 
 const emptyForm: AssetCategoryForm = {
   name: "",
@@ -88,7 +84,7 @@ export default function AssetCategoriesPage() {
       closeDialog();
     },
     onError: (error: unknown) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to create category"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to create category"), variant: "destructive" });
     },
   });
 
@@ -101,7 +97,7 @@ export default function AssetCategoriesPage() {
       closeDialog();
     },
     onError: (error: unknown) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to update category"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to update category"), variant: "destructive" });
     },
   });
 
@@ -113,7 +109,7 @@ export default function AssetCategoriesPage() {
       toast({ title: "Deleted", description: "Asset category removed" });
     },
     onError: (error: unknown) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to delete category"), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to delete category"), variant: "destructive" });
     },
   });
 

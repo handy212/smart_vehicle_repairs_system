@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useMutation } from '@tanstack/react-query';
 import smsApi from '@/services/sms';
 import { useToast } from '@/lib/hooks/useToast';
-import { getApiErrorMessage } from '@/lib/api/errors';
+import { getUserFacingError } from '@/lib/api/errors';
 import { isAxiosError } from 'axios';
 
 interface Message {
@@ -88,7 +88,7 @@ export function AIAssistDialog({
             const httpStatus = isAxiosError(err) ? err.response?.status : undefined;
             const description = httpStatus === 429
                 ? 'AI quota exceeded — please try again in a moment.'
-                : getApiErrorMessage(err, 'Failed to get AI response.');
+                : getUserFacingError(err, 'Failed to get AI response.');
             toast({ title: 'AI Error', description, variant: 'destructive' });
         },
     });

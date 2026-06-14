@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle, DollarSign } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 interface PaymentAllocationModalProps {
     paymentId: number;
     paymentAmount: string;
@@ -95,7 +96,7 @@ export function PaymentAllocationModal({
         onError: (error: any) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to allocate payment",
+                description: getUserFacingError(error, "Failed to allocate payment"),
                 variant: "destructive",
             });
         },
@@ -123,7 +124,7 @@ export function PaymentAllocationModal({
         onError: (error: any) => {
             toast({
                 title: "Auto-Allocation Failed",
-                description: error.response?.data?.error || "Failed to auto-allocate payment",
+                description: getUserFacingError(error, "Failed to auto-allocate payment"),
                 variant: "destructive",
             });
         },

@@ -24,7 +24,7 @@ import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { cn } from "@/lib/utils/cn";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const USAGE_TYPE_LABELS: Record<string, string> = {
   kilometer: "Kilometer",
@@ -67,7 +67,7 @@ export default function SubscriptionDetailPage() {
       });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to renew."), variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to renew."), variant: "destructive" });
     },
   });
 

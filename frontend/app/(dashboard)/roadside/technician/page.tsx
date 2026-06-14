@@ -14,7 +14,7 @@ import {
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import Link from "next/link";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function TechnicianRoadsideDashboard() {
     const queryClient = useQueryClient();
@@ -56,7 +56,7 @@ export default function TechnicianRoadsideDashboard() {
         onError: (error: unknown) => {
             toast({
                 title: "Update Failed",
-                description: getApiErrorMessage(error, "Failed to update status"),
+                description: getUserFacingError(error, "Failed to update status"),
                 variant: "destructive"
             });
         }

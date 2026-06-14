@@ -49,6 +49,7 @@ import {
     type ApiError,
 } from "@/lib/api/accounting"
 import { useCurrency } from "@/lib/hooks/useCurrency"
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function AccrualsPage() {
     const { formatCurrency } = useCurrency()
@@ -83,7 +84,7 @@ export default function AccrualsPage() {
         },
 
         onError: (err: ApiError) => {
-            error("Failed to create accrual", err.response?.data?.error || err.message)
+            error("Failed to create accrual", getUserFacingError(err))
         }
     })
 
@@ -95,7 +96,7 @@ export default function AccrualsPage() {
         },
 
         onError: (err: ApiError) => {
-            error("Failed to reverse accrual", err.response?.data?.error || err.message)
+            error("Failed to reverse accrual", getUserFacingError(err))
         }
     })
 

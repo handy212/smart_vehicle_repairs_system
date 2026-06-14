@@ -21,6 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function ServiceBundlesPage() {
     const { toast } = useToast();
@@ -50,7 +51,7 @@ export default function ServiceBundlesPage() {
         onError: (error: any) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to delete bundle",
+                description: getUserFacingError(error, "Failed to delete bundle"),
                 variant: "destructive",
             });
         },

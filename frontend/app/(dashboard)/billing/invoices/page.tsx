@@ -34,6 +34,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -172,7 +173,7 @@ export default function InvoicesPage() {
         onError: (error: any) => {
             toast({
                 title: "Error Sending Invoices",
-                description: error.response?.data?.error || "Failed to send invoices",
+                description: getUserFacingError(error, "Failed to send invoices"),
                 variant: "destructive",
             });
         }
@@ -196,7 +197,7 @@ export default function InvoicesPage() {
         onError: (error: any) => {
             toast({
                 title: "Error Updating Status",
-                description: error.response?.data?.error || "Failed to update status",
+                description: getUserFacingError(error, "Failed to update status"),
                 variant: "destructive",
             });
         }
@@ -228,7 +229,7 @@ export default function InvoicesPage() {
         onError: (error: Error) => {
             toast({
                 title: "Bulk Delete Incomplete",
-                description: error.message || "Some invoices could not be deleted.",
+                description: getUserFacingError(error) || "Some invoices could not be deleted.",
                 variant: "destructive",
             });
             bulkSelection.clearSelection();

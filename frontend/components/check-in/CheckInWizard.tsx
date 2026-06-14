@@ -25,7 +25,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -109,7 +109,7 @@ export function CheckInWizard() {
     onError: (error: unknown) => {
       toast({
         title: "Could not create customer",
-        description: getApiErrorMessage(error, "Please check the form and try again."),
+        description: getUserFacingError(error, "Please check the form and try again."),
         variant: "destructive",
       });
     },
@@ -138,7 +138,7 @@ export function CheckInWizard() {
       }
       toast({
         title: "Could not register vehicle",
-        description: getApiErrorMessage(error, "Please check the form and try again."),
+        description: getUserFacingError(error, "Please check the form and try again."),
         variant: "destructive",
       });
     },
@@ -232,7 +232,7 @@ export function CheckInWizard() {
     onError: (error: unknown) => {
       toast({
         title: "Check-in failed",
-        description: getApiErrorMessage(error, "Could not complete check-in."),
+        description: getUserFacingError(error, "Could not complete check-in."),
         variant: "destructive",
       });
     },

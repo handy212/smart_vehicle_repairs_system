@@ -10,14 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function labelFor(moduleName: string) {
   return moduleName.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { detail?: string; error?: string } } })?.response?.data;
-  return data?.detail || data?.error || fallback;
 }
 
 export default function DemoDataPage() {
@@ -62,7 +58,7 @@ export default function DemoDataPage() {
       toast({ title: "Demo data loaded", description: `${result.modules.length} module(s) processed.` });
     },
     onError: (error: unknown) => {
-      toast({ title: "Load failed", description: getApiErrorMessage(error, "Unable to load demo data"), variant: "destructive" });
+      toast({ title: "Load failed", description: getUserFacingError(error, "Unable to load demo data"), variant: "destructive" });
     },
   });
 
@@ -73,7 +69,7 @@ export default function DemoDataPage() {
       toast({ title: "Demo data refreshed", description: `${result.modules.length} module(s) rebuilt.` });
     },
     onError: (error: unknown) => {
-      toast({ title: "Refresh failed", description: getApiErrorMessage(error, "Unable to refresh demo data"), variant: "destructive" });
+      toast({ title: "Refresh failed", description: getUserFacingError(error, "Unable to refresh demo data"), variant: "destructive" });
     },
   });
 
@@ -85,7 +81,7 @@ export default function DemoDataPage() {
       toast({ title: "Demo data purged", description: `${result.modules.length} module(s) processed.` });
     },
     onError: (error: unknown) => {
-      toast({ title: "Purge failed", description: getApiErrorMessage(error, "Unable to purge demo data"), variant: "destructive" });
+      toast({ title: "Purge failed", description: getUserFacingError(error, "Unable to purge demo data"), variant: "destructive" });
     },
   });
 

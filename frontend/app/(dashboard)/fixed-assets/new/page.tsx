@@ -25,7 +25,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type BranchOption = {
     id: number;
@@ -128,7 +128,7 @@ function NewFixedAssetContent() {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to create fixed asset"),
+                description: getUserFacingError(error, "Failed to create fixed asset"),
                 variant: "destructive",
             });
         },

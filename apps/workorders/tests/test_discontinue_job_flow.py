@@ -1,7 +1,4 @@
-import pytest
 from decimal import Decimal
-
-pytestmark = pytest.mark.legacy_integration
 
 from django.test import TestCase
 from django.urls import reverse

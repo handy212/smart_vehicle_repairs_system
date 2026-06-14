@@ -39,7 +39,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const packageSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -118,7 +118,7 @@ export default function PackagesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete package"),
+        description: getUserFacingError(error, "Failed to delete package"),
         variant: "destructive",
       });
     },
@@ -175,7 +175,7 @@ export default function PackagesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to create package"),
+        description: getUserFacingError(error, "Failed to create package"),
         variant: "destructive",
       });
     },
@@ -195,7 +195,7 @@ export default function PackagesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update package"),
+        description: getUserFacingError(error, "Failed to update package"),
         variant: "destructive",
       });
     },

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { CustomerForm, type CustomerFormData } from "@/components/customers/CustomerForm";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function EditCustomerForm({ customer, customerId }: { customer: any; customerId: number }) {
   const router = useRouter();
@@ -44,7 +45,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to reset password",
+        description: getUserFacingError(error, "Failed to reset password"),
         variant: "destructive",
       });
     },
@@ -61,7 +62,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to send password reset link",
+        description: getUserFacingError(error, "Failed to send password reset link"),
         variant: "destructive",
       });
     },
@@ -86,7 +87,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to grant portal access",
+        description: getUserFacingError(error, "Failed to grant portal access"),
         variant: "destructive",
       });
     },
@@ -104,7 +105,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to revoke portal access",
+        description: getUserFacingError(error, "Failed to revoke portal access"),
         variant: "destructive",
       });
     },
@@ -125,7 +126,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
       console.error("Error updating customer:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update customer",
+        description: getUserFacingError(error, "Failed to update customer"),
         variant: "destructive",
       });
     },

@@ -53,7 +53,7 @@ jobs:
         run: PYTHONPATH=. python scripts/validate_celery_beat.py
 
       - name: Run backend tests
-        run: pytest -c pytest.ci.ini -m "not legacy_integration" -q
+        run: pytest -c pytest.ci.ini -q
 
       - name: Validate production compose config
         run: |

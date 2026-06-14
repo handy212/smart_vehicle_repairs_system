@@ -1,10 +1,11 @@
-import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosRequestConfig, InternalAxiosRequestConfig, AxiosError } from "axios";
 import { useBranchStore } from "@/store/branchStore";
 import { queueRequest } from "@/lib/offline/queue";
 import { getApiBaseUrl } from "@/lib/api/base-url";
 import { refreshAccessToken } from "@/lib/auth/refresh-access-token";
 import { getAccessToken, clearTokens } from "@/lib/utils/token";
 import { authApi } from "@/lib/api/auth";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export type ApiRequestConfig = AxiosRequestConfig & {
   skipAuth?: boolean;
@@ -243,11 +244,12 @@ apiClient.interceptors.response.use(
       console.warn(
         `[API] 403 Forbidden: ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
       );
-      // Components should handle 403 in their own catch blocks to show
-      // contextual "Access Denied" messages. We just log here.
     }
 
-    return Promise.reject(error);
+    const axiosError = error as AxiosError & { userMessage?: string };
+    axiosError.userMessage = getUserFacingError(error);
+
+    return Promise.reject(axiosError);
   }
 );
 

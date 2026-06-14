@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
 import type { RoadsideDashboardStats } from "@/lib/api/roadside";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type RoadsideFilterValue = string | boolean | undefined;
 type RoadsideFilters = Record<string, RoadsideFilterValue>;
@@ -201,7 +201,7 @@ export default function RoadsidePage() {
         onError: (error: unknown) => {
             toast({
                 title: "Delete Failed",
-                description: getApiErrorMessage(error, "Could not delete this roadside request."),
+                description: getUserFacingError(error, "Could not delete this roadside request."),
                 variant: "destructive",
             });
         },

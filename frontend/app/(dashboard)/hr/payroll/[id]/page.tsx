@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import { PayslipDetailDialog } from "./PayslipDetailDialog";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = {
     response?: {
@@ -42,19 +43,6 @@ type ApiError = {
         } | Record<string, unknown>;
     };
 };
-
-function getErrorMessage(error: unknown, fallback: string) {
-    const data = (error as ApiError)?.response?.data;
-    if (!data) return fallback;
-    if ("detail" in data && typeof data.detail === "string") return data.detail;
-    if ("error" in data && typeof data.error === "string") return data.error;
-    if ("message" in data && typeof data.message === "string") return data.message;
-    if ("non_field_errors" in data && Array.isArray(data.non_field_errors)) return data.non_field_errors.join(" ");
-    const firstValue = Object.values(data)[0];
-    if (Array.isArray(firstValue)) return String(firstValue[0]);
-    if (typeof firstValue === "string") return firstValue;
-    return fallback;
-}
 
 function money(value?: string | number | null) {
     const parsed = typeof value === "number" ? value : parseFloat(value || "0");
@@ -115,7 +103,7 @@ function PayrollPeriodDetail() {
             toast.success("Payroll processed");
             invalidate();
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to process payroll")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to process payroll")),
     });
 
     const approveMutation = useMutation({
@@ -124,7 +112,7 @@ function PayrollPeriodDetail() {
             toast.success("Payroll approved and payslips locked");
             invalidate();
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to approve payroll")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to approve payroll")),
     });
 
     const markPaidMutation = useMutation({
@@ -135,7 +123,7 @@ function PayrollPeriodDetail() {
             setShowPaymentDialog(false);
             invalidate();
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to mark payroll as paid")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to mark payroll as paid")),
     });
 
     const reverseMutation = useMutation({
@@ -145,7 +133,7 @@ function PayrollPeriodDetail() {
             setShowReverseDialog(false);
             invalidate();
         },
-        onError: (error) => toast.error(getErrorMessage(error, "Failed to reverse payroll")),
+        onError: (error) => toast.error(getUserFacingError(error, "Failed to reverse payroll")),
     });
 
     const payslips = payslipsData?.results ?? [];

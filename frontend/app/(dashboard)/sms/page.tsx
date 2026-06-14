@@ -42,7 +42,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils/cn';
-import { getApiErrorMessage } from '@/lib/api/errors';
+import { getUserFacingError } from '@/lib/api/errors';
 
 
 interface Customer {
@@ -123,7 +123,7 @@ export default function SMSConsolePage() {
         onError: (error: unknown) => {
             toast({
                 title: 'Resend failed',
-                description: getApiErrorMessage(error, 'Could not resend SMS.'),
+                description: getUserFacingError(error, 'Could not resend SMS.'),
                 variant: 'destructive'
             });
             refreshSmsHistory();
@@ -141,7 +141,7 @@ export default function SMSConsolePage() {
         onError: (error: unknown) => {
             toast({
                 title: 'Delete failed',
-                description: getApiErrorMessage(error, 'Could not delete SMS log.'),
+                description: getUserFacingError(error, 'Could not delete SMS log.'),
                 variant: 'destructive'
             });
         }
@@ -214,7 +214,7 @@ export default function SMSConsolePage() {
         } catch (error: unknown) {
             toast({
                 title: 'Error',
-                description: getApiErrorMessage(error, 'Failed to send SMS.'),
+                description: getUserFacingError(error, 'Failed to send SMS.'),
                 variant: 'destructive'
             });
         } finally {

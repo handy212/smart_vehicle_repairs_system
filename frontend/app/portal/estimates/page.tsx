@@ -17,6 +17,7 @@ import { Estimate } from "@/lib/api/portal";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function MyEstimatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -58,7 +59,7 @@ export default function MyEstimatesPage() {
     },
     onError: (error: { response?: { data?: { error?: string; detail?: string } } }) => {
       toast.error("Error", {
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve estimate",
+        description: getUserFacingError(error, "Failed to approve estimate"),
       });
     },
   });
@@ -74,7 +75,7 @@ export default function MyEstimatesPage() {
     },
     onError: (error: { response?: { data?: { error?: string; detail?: string } } }) => {
       toast.error("Error", {
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to decline estimate",
+        description: getUserFacingError(error, "Failed to decline estimate"),
       });
     },
   });

@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useToastStore } from "@/store/useToastStore";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function StaffDetailPage() {
     const params = useParams();
@@ -118,7 +119,7 @@ export default function StaffDetailPage() {
         } catch (err: any) {
             addToast({
                 title: "Error",
-                message: err.response?.data?.detail || "Failed to delete staff member.",
+                message: getUserFacingError(err, "Failed to delete staff member."),
                 type: "error",
             });
         } finally {

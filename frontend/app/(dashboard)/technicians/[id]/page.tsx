@@ -41,6 +41,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function TechnicianProfilePage() {
     return (
@@ -77,7 +78,7 @@ function TechnicianProfileContent() {
         onError: (error: any) => {
             toast({
                 title: "Delete Failed",
-                description: error.response?.data?.detail || "Failed to delete technician",
+                description: getUserFacingError(error, "Failed to delete technician"),
                 variant: "destructive",
             });
         },

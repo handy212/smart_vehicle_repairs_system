@@ -76,7 +76,7 @@ jobs:
         run: python scripts/validate_celery_beat.py
 
       - name: Run tests with coverage
-        run: pytest -c pytest.ci.ini -m "not legacy_integration"
+        run: pytest -c pytest.ci.ini
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4

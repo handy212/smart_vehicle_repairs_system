@@ -8,6 +8,7 @@ import { Link2, RefreshCcw, Unplug, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export function QuickBooksOnlineCard() {
   const { toast } = useToast();
@@ -29,10 +30,10 @@ export function QuickBooksOnlineCard() {
         description: "Disconnected from QuickBooks Online",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to disconnect",
+        description: getUserFacingError(error, "Failed to disconnect from QuickBooks"),
         variant: "destructive",
       });
     },
@@ -50,10 +51,10 @@ export function QuickBooksOnlineCard() {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["qbo", "status"] });
       }, 5000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Sync Failed",
-        description: error.response?.data?.message || "Could not trigger sync",
+        description: getUserFacingError(error, "Could not trigger sync"),
         variant: "destructive",
       });
     } finally {

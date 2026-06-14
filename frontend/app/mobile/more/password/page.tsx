@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function MobileChangePasswordPage() {
   const { toast } = useToast();
@@ -37,7 +37,7 @@ export default function MobileChangePasswordPage() {
     } catch (error) {
       toast({
         title: "Failed to change password",
-        description: getApiErrorMessage(error),
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     } finally {

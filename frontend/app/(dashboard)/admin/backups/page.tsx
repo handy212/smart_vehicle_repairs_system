@@ -15,13 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "secondary" | "outline";
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { detail?: string; error?: string } } })?.response?.data;
-  return data?.detail || data?.error || fallback;
-}
 
 export default function BackupsPage() {
   const queryClient = useQueryClient();
@@ -76,7 +72,7 @@ export default function BackupsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to create backup"),
+        description: getUserFacingError(error, "Failed to create backup"),
         variant: "destructive",
       });
     },
@@ -92,7 +88,7 @@ export default function BackupsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete backup"),
+        description: getUserFacingError(error, "Failed to delete backup"),
         variant: "destructive",
       });
     },
@@ -121,7 +117,7 @@ export default function BackupsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to download backup"),
+        description: getUserFacingError(error, "Failed to download backup"),
         variant: "destructive",
       });
     },

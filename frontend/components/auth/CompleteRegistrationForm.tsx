@@ -18,6 +18,7 @@ import {
 import { User, Phone } from 'lucide-react';
 import { useBranding } from '@/lib/hooks/useBranding';
 import { cn } from '@/lib/utils/cn';
+import { getUserFacingError } from '@/lib/api/errors';
 
 interface CompleteRegistrationFormProps {
     userData: {
@@ -135,8 +136,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
             if (!apiResponse.ok) {
                 const errorData = (await apiResponse.json()) as ApiErrorResponse;
-                const firstError = Object.values(errorData).flat().find((value): value is string => typeof value === 'string');
-                throw new Error(errorData.detail || firstError || 'Registration failed');
+                throw new Error(getUserFacingError({ response: { data: errorData } }, 'Registration failed'));
             }
 
             const authData = (await apiResponse.json()) as CompleteRegistrationSuccess;
@@ -149,7 +149,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
         } catch (err: unknown) {
             console.error('Registration error:', err);
-            setError(err instanceof Error ? err.message : 'Registration failed');
+            setError(getUserFacingError(err, 'Registration failed'));
         } finally {
             setSubmitting(false);
         }

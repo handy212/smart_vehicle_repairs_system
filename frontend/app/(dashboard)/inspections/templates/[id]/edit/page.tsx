@@ -15,7 +15,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { useEffect } from "react";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
@@ -107,7 +107,7 @@ export default function EditTemplatePage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update template"),
+        description: getUserFacingError(error, "Failed to update template"),
         variant: "destructive",
       });
     },

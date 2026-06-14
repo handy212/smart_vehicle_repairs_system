@@ -42,6 +42,7 @@ import {
 
 import { useEffect, useState } from "react";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -142,7 +143,7 @@ export default function VehicleDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to reassign vehicle ownership",
+        description: getUserFacingError(error, "Failed to reassign vehicle ownership"),
         variant: "destructive",
       });
     },
@@ -161,7 +162,7 @@ export default function VehicleDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Delete Failed",
-        description: error.response?.data?.detail || "Failed to delete vehicle.",
+        description: getUserFacingError(error, "Failed to delete vehicle."),
         variant: "destructive",
       });
     },

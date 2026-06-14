@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { RoadsideBranchSelect } from "@/components/roadside/RoadsideBranchSelect";
 import { useBranchStore } from "@/store/branchStore";
 import { captureCurrentPosition, getGeolocationErrorMessage } from "@/lib/utils/geolocation";
@@ -195,7 +195,7 @@ export default function NewRoadsideRequestDashboardPage() {
         },
 
         onError: (error: unknown) => {
-            const errorMessage = getApiErrorMessage(error, "Failed to create request");
+            const errorMessage = getUserFacingError(error, "Failed to create request");
             const payAsYouGoAvailable = Boolean((error as ApiErrorResponse)?.response?.data?.pay_as_you_go_available);
             setServerError(errorMessage);
             if (!payAsYouGoAvailable) {

@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 interface PurchaseOrderItemsManagerProps {
     purchaseOrder: PurchaseOrder;
 }
@@ -73,7 +73,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to add item"),
+                description: getUserFacingError(error, "Failed to add item"),
                 variant: "destructive",
             });
         },
@@ -90,7 +90,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to remove item"),
+                description: getUserFacingError(error, "Failed to remove item"),
                 variant: "destructive",
             });
         },
@@ -108,7 +108,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to update item"),
+                description: getUserFacingError(error, "Failed to update item"),
                 variant: "destructive",
             });
         },

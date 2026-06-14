@@ -18,6 +18,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function ProformaDetailPage() {
     const { formatCurrency } = useCurrency();
@@ -64,7 +65,7 @@ export default function ProformaDetailPage() {
         onError: (error: any) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to convert proforma.",
+                description: getUserFacingError(error, "Failed to convert proforma."),
                 variant: "destructive",
             });
         },
@@ -85,7 +86,7 @@ export default function ProformaDetailPage() {
         onError: (error: any) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to send proforma. Please try again.",
+                description: getUserFacingError(error, "Failed to send proforma. Please try again."),
                 variant: "destructive",
             });
         },

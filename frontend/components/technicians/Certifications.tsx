@@ -21,7 +21,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface CertificationsProps {
     technicianId: number;
@@ -75,7 +75,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to add certification"),
+                description: getUserFacingError(error, "Failed to add certification"),
                 variant: "destructive",
             });
         },
@@ -96,7 +96,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to update certification"),
+                description: getUserFacingError(error, "Failed to update certification"),
                 variant: "destructive",
             });
         },
@@ -115,7 +115,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to delete certification"),
+                description: getUserFacingError(error, "Failed to delete certification"),
                 variant: "destructive",
             });
         },

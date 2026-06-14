@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -66,7 +67,7 @@ export default function PartDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Delete Failed",
-        description: error.response?.data?.detail || "Failed to delete part",
+        description: getUserFacingError(error, "Failed to delete part"),
         variant: "destructive",
       });
     },

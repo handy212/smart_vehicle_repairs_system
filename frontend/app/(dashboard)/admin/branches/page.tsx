@@ -46,16 +46,7 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
-  if (!data) return fallback;
-  if (typeof data.detail === "string") return data.detail;
-  const fieldErrors = Object.values(data)
-    .flatMap((value) => Array.isArray(value) ? value : [value])
-    .filter((value): value is string => typeof value === "string");
-  return fieldErrors.join(", ") || fallback;
-}
+import { getUserFacingError } from "@/lib/api/errors";
 
 const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -131,7 +122,7 @@ export default function BranchesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to archive branch"),
+        description: getUserFacingError(error, "Failed to archive branch"),
         variant: "destructive",
       });
     },
@@ -543,7 +534,7 @@ function BranchDialog({
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to create branch"),
+        description: getUserFacingError(error, "Failed to create branch"),
         variant: "destructive",
       });
     },
@@ -559,7 +550,7 @@ function BranchDialog({
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update branch"),
+        description: getUserFacingError(error, "Failed to update branch"),
         variant: "destructive",
       });
     },

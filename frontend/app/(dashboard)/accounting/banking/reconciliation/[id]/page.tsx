@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = {
     response?: {
@@ -66,11 +67,6 @@ type AccountOption = {
 type CreatedJournalEntry = {
     transactions: SystemTransaction[];
 };
-
-function getErrorMessage(error: unknown, fallback: string) {
-    const data = (error as ApiError)?.response?.data;
-    return data?.error || data?.detail || fallback;
-}
 
 export default function ReconciliationDetailPage() {
     const params = useParams();
@@ -187,7 +183,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: getErrorMessage(error, "Failed to match transaction"),
+                description: getUserFacingError(error, "Failed to match transaction"),
                 variant: "destructive"
             });
         } finally {
@@ -213,7 +209,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: getErrorMessage(error, "Failed to unmatch transaction"),
+                description: getUserFacingError(error, "Failed to unmatch transaction"),
                 variant: "destructive"
             });
         } finally {
@@ -244,7 +240,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: getErrorMessage(error, "Failed to complete reconciliation"),
+                description: getUserFacingError(error, "Failed to complete reconciliation"),
                 variant: "destructive"
             });
         } finally {
@@ -273,7 +269,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: getErrorMessage(error, "Failed to upload statement"),
+                description: getUserFacingError(error, "Failed to upload statement"),
                 variant: "destructive"
             });
         }
@@ -345,7 +341,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: getErrorMessage(error, "Failed to create transaction"),
+                description: getUserFacingError(error, "Failed to create transaction"),
                 variant: 'destructive'
             });
             console.error(error);

@@ -15,6 +15,7 @@ import { ArrowLeft, Database, Eye, EyeOff, Image as ImageIcon, Mail, RefreshCw, 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const CATEGORIES = [
   { value: "company", label: "Company" },
@@ -121,11 +122,6 @@ const CATEGORY_KEY_PREFIXES: Record<string, string[]> = {
   tax: ["tax_"],
   maintenance: ["backup_", "maintenance_"],
 };
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { detail?: string; error?: string; value?: string[] } } })?.response?.data;
-  return data?.detail || data?.error || data?.value?.[0] || fallback;
-}
 
 function humanizeKey(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -238,7 +234,7 @@ export default function SystemSettingsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to update settings"),
+        description: getUserFacingError(error, "Failed to update settings"),
         variant: "destructive",
       });
     },
@@ -256,7 +252,7 @@ export default function SystemSettingsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Upload failed",
-        description: getApiErrorMessage(error, "Failed to upload image"),
+        description: getUserFacingError(error, "Failed to upload image"),
         variant: "destructive",
       });
     },
@@ -279,7 +275,7 @@ export default function SystemSettingsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Purge failed",
-        description: getApiErrorMessage(error, "Failed to purge demo data"),
+        description: getUserFacingError(error, "Failed to purge demo data"),
         variant: "destructive",
       });
     },
@@ -300,7 +296,7 @@ export default function SystemSettingsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Cleanup failed",
-        description: getApiErrorMessage(error, "Failed to clean permanent data"),
+        description: getUserFacingError(error, "Failed to clean permanent data"),
         variant: "destructive",
       });
     },

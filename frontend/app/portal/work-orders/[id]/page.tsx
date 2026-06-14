@@ -28,6 +28,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { Textarea } from "@/components/ui/textarea";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function WorkOrderDetailPage() {
     const params = useParams();
@@ -105,7 +106,7 @@ export default function WorkOrderDetailPage() {
         onError: (error: any) => {
             toast({
                 title: "Approval Failed",
-                description: error.response?.data?.error || "Failed to approve work order.",
+                description: getUserFacingError(error, "Failed to approve work order."),
                 variant: "destructive",
             });
         },
@@ -131,7 +132,7 @@ export default function WorkOrderDetailPage() {
         onError: (error: any) => {
             toast({
                 title: "Update Failed",
-                description: error.response?.data?.error || "Failed to update recommendations.",
+                description: getUserFacingError(error, "Failed to update recommendations."),
                 variant: "destructive",
             });
         }

@@ -31,6 +31,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = {
     response?: {
@@ -64,11 +65,6 @@ type JournalEntryDetail = {
     transactions?: JournalTransaction[];
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-    const data = (error as ApiError)?.response?.data;
-    return data?.error || data?.detail || fallback;
-}
-
 export default function JournalEntryDetailPage() {
 
     const router = useRouter();
@@ -100,7 +96,7 @@ export default function JournalEntryDetailPage() {
             router.push(`/accounting/journal-entries/${reversal.id}`);
         },
         onError: (error: unknown) => {
-            toastError(getErrorMessage(error, "Failed to reverse journal entry"));
+            toastError(getUserFacingError(error, "Failed to reverse journal entry"));
         },
     });
 

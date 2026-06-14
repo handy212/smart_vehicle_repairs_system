@@ -46,6 +46,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function CustomerDetailPage() {
   const params = useParams();
@@ -115,7 +116,7 @@ export default function CustomerDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Delete Failed",
-        description: error.response?.data?.detail || "Failed to delete customer.",
+        description: getUserFacingError(error, "Failed to delete customer."),
         variant: "destructive",
       });
     },

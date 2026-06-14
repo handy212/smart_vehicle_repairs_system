@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ArrowLeft } from "lucide-react";
+import { getUserFacingError } from "@/lib/api/errors";
 
 // Category display names mapping
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
@@ -110,7 +111,7 @@ export default function RolesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete role",
+        description: getUserFacingError(error, "Failed to delete role"),
         variant: "destructive",
       });
     },
@@ -509,7 +510,7 @@ function RoleDialog({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to create role",
+        description: getUserFacingError(error, "Failed to create role"),
         variant: "destructive",
       });
     },
@@ -526,7 +527,7 @@ function RoleDialog({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update role",
+        description: getUserFacingError(error, "Failed to update role"),
         variant: "destructive",
       });
     },
@@ -683,7 +684,7 @@ function PermissionsDialog({
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update permissions",
+        description: getUserFacingError(error, "Failed to update permissions"),
         variant: "destructive",
       });
     },

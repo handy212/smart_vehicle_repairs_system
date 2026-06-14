@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { AppointmentForm, AppointmentFormData } from "@/components/appointments/AppointmentForm";
 
 export default function NewAppointmentPage() {
@@ -26,21 +26,7 @@ export default function NewAppointmentPage() {
     },
     onError: (error) => {
       console.error("Error creating appointment:", error);
-      if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-
-        if (errorData.non_field_errors) {
-          setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
-        } else if (typeof errorData === 'string') {
-          setServerError(errorData);
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
-        } else {
-          setServerError("Validation error: " + JSON.stringify(errorData));
-        }
-      } else {
-        setServerError("An unexpected error occurred. Please try again.");
-      }
+      setServerError(getUserFacingError(error, "We couldn't schedule this appointment. Please check the details and try again."));
     }
   });
 

@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { techniciansApi, skillsApi, Skill } from "@/lib/api/technicians";
 import { branchesApi } from "@/lib/api/admin";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -159,7 +159,7 @@ export default function EditTechnicianPage() {
         } catch (error) {
             toast({
                 title: "Error updating technician",
-                description: getApiErrorMessage(error, "There was a problem updating the technician."),
+                description: getUserFacingError(error, "There was a problem updating the technician."),
                 variant: "destructive",
             });
         } finally {

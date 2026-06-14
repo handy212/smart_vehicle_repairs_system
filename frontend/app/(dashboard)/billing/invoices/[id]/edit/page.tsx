@@ -21,6 +21,7 @@ import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
@@ -332,12 +333,10 @@ export default function EditInvoicePage() {
     },
 
     onError: (error: AxiosError<any>) => {
-      const message = error.response?.data?.detail || error.response?.data?.message || "Failed to update invoice";
-      setServerError(message);
+      setServerError(getUserFacingError(error, "We couldn't update the invoice. Please review the form and try again."));
       if (error.response?.data) {
         Object.entries(error.response.data).forEach(([field, errors]) => {
           if (Array.isArray(errors) && field !== 'detail' && field !== 'message') {
-
             setError(field as any, { message: errors[0] });
           }
         });

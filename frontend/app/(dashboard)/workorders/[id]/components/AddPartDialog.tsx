@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import InventoryPartSearch from "./InventoryPartSearch";
 import { Part } from "@/lib/api/inventory";
 
@@ -93,8 +94,12 @@ export default function AddPartDialog({
         if (errorData.non_field_errors) {
           setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
         } else if (errorData.detail) {
-          setServerError(errorData.detail);
+          setServerError(String(errorData.detail));
+        } else {
+          setServerError(getUserFacingError(error, "Couldn't add this part. Please check the form."));
         }
+      } else {
+        setServerError(getUserFacingError(error, "Couldn't add this part. Please try again."));
       }
     },
   });

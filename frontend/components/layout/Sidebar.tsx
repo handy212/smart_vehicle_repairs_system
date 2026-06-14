@@ -16,6 +16,7 @@ interface NavigationItem {
   href: string;
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   permission?: string;
+  permissions?: string[];
   module?: string;
 }
 
@@ -65,14 +66,14 @@ const navigationGroups: NavigationGroup[] = [
         name: "Appointments",
         href: "/appointments",
         icon: PremiumIcons.Calendar,
-        permission: "view_appointments",
+        permissions: ["view_appointments", "view_own_appointments"],
         module: "appointments",
       },
       {
         name: "Work Orders",
         href: "/workorders",
         icon: PremiumIcons.Wrench,
-        permission: "view_workorders",
+        permissions: ["view_workorders", "view_own_workorders"],
         module: "workorders",
       },
       {
@@ -166,7 +167,7 @@ const navigationGroups: NavigationGroup[] = [
         name: "Reports",
         href: "/reports",
         icon: PremiumIcons.BarChart,
-        permission: "view_reports",
+        permissions: ["view_reports", "view_all_reports"],
         module: "reports",
       },
     ],
@@ -190,7 +191,7 @@ const navigationGroups: NavigationGroup[] = [
         name: "Configurations",
         href: "/admin/settings",
         icon: PremiumIcons.Settings,
-        permission: "view_settings",
+        permission: "manage_settings",
         module: "settings",
       },
     ],
@@ -341,6 +342,17 @@ export function Sidebar({
                       )}
                     </Link>
                   );
+
+                  if (item.permissions?.length) {
+                    return (
+                      <PermissionGuard
+                        key={item.name}
+                        permissions={item.permissions}
+                      >
+                        {navItem}
+                      </PermissionGuard>
+                    );
+                  }
 
                   if (item.permission) {
                     return (

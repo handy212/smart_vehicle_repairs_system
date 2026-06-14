@@ -27,6 +27,7 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const parseAmount = (value?: string | number | null) => {
   if (value === null || value === undefined) {
@@ -72,13 +73,6 @@ export default function EstimateDetailPage() {
   const canConvertEstimateToWorkOrder = hasPermission("create_workorders");
   const currentStatus = estimate?.status ?? null;
   const canEditInUi = canEditEstimate && estimate?.status !== "converted";
-  const getApiErrorMessage = (error: unknown, fallback: string) => {
-    if (typeof error === "object" && error && "response" in error) {
-      const response = (error as { response?: { data?: { error?: string; detail?: string } } }).response;
-      return response?.data?.error || response?.data?.detail || fallback;
-    }
-    return fallback;
-  };
 
   const statusChangeMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -142,7 +136,7 @@ export default function EstimateDetailPage() {
       setIsConverting(false);
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to convert estimate"),
+        description: getUserFacingError(error, "Failed to convert estimate"),
         variant: "destructive",
       });
     },
@@ -166,7 +160,7 @@ export default function EstimateDetailPage() {
       setIsConverting(false);
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to convert estimate"),
+        description: getUserFacingError(error, "Failed to convert estimate"),
         variant: "destructive",
       });
     },
@@ -186,7 +180,7 @@ export default function EstimateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to approve estimate"),
+        description: getUserFacingError(error, "Failed to approve estimate"),
         variant: "destructive",
       });
     },
@@ -206,7 +200,7 @@ export default function EstimateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to duplicate estimate"),
+        description: getUserFacingError(error, "Failed to duplicate estimate"),
         variant: "destructive",
       });
     },
@@ -226,7 +220,7 @@ export default function EstimateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete estimate"),
+        description: getUserFacingError(error, "Failed to delete estimate"),
         variant: "destructive",
       });
     },
@@ -248,7 +242,7 @@ export default function EstimateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to mark quotation as ready"),
+        description: getUserFacingError(error, "Failed to mark quotation as ready"),
         variant: "destructive",
       });
     },

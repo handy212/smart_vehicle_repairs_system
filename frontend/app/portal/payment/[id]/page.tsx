@@ -14,6 +14,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useState } from "react";
 import apiClient from "@/lib/api/client";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function PaymentPage() {
   const params = useParams();
@@ -60,7 +61,7 @@ export default function PaymentPage() {
     onError: (error: any) => {
       toast({
         title: "Payment Failed",
-        description: error.response?.data?.detail || "Failed to initiate payment. Please try again.",
+        description: getUserFacingError(error, "Failed to initiate payment. Please try again."),
         variant: "destructive",
       });
       setIsProcessing(false);

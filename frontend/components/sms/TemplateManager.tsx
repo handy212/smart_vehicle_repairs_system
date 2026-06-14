@@ -22,7 +22,7 @@ import { AIAssistDialog } from "./AIAssistDialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { cn } from "@/lib/utils/cn";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
   Dialog,
   DialogContent,
@@ -104,7 +104,7 @@ export function TemplateManager() {
     onError: (err: unknown) =>
       toast({
         title: "Error",
-        description: getApiErrorMessage(err, "Failed to create"),
+        description: getUserFacingError(err, "Failed to create"),
         variant: "destructive",
       }),
   });
@@ -124,7 +124,7 @@ export function TemplateManager() {
     onError: (err: unknown) =>
       toast({
         title: "Error",
-        description: getApiErrorMessage(err, "Failed to save"),
+        description: getUserFacingError(err, "Failed to save"),
         variant: "destructive",
       }),
   });
@@ -144,7 +144,7 @@ export function TemplateManager() {
     onError: (err: unknown) =>
       toast({
         title: "Error",
-        description: getApiErrorMessage(err, "Failed to delete"),
+        description: getUserFacingError(err, "Failed to delete"),
         variant: "destructive",
       }),
   });

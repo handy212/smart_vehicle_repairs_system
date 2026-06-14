@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import { notificationsApi } from "@/lib/api/notifications";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 
 interface WhatsAppButtonProps {
@@ -73,17 +74,12 @@ export function WhatsAppButton({
             window.open(url, '_blank');
 
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("WhatsApp Error:", error);
-
-            let errorMsg = "Failed to prepare WhatsApp message.";
-            if (error.response?.data?.error) {
-                errorMsg = error.response.data.error;
-            }
 
             toast({
                 title: "Error",
-                description: errorMsg,
+                description: getUserFacingError(error, "Failed to prepare WhatsApp message."),
                 variant: "destructive"
             });
         } finally {

@@ -16,6 +16,7 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 
 const workOrderSchema = z.object({
@@ -329,34 +330,7 @@ export default function EditWorkOrderPage() {
     },
     onError: (error: unknown) => {
       console.error("Error updating work order:", error);
-      if (axios.isAxiosError(error) && error.response?.data) {
-        const errorData = error.response.data;
-        // Handle status transition errors
-        if (errorData.status) {
-          let statusError = Array.isArray(errorData.status)
-            ? errorData.status[0]
-            : errorData.status;
-          // Handle case where error might be a string representation of an array
-          if (typeof statusError === 'string' && statusError.startsWith('[') && statusError.endsWith(']')) {
-            try {
-              const parsed = JSON.parse(statusError);
-              statusError = Array.isArray(parsed) ? parsed[0] : parsed;
-            } catch {
-              // If parsing fails, remove brackets and quotes
-              statusError = statusError.replace(/^\[|\]$/g, '').replace(/^'|'$/g, '');
-            }
-          }
-          setErrorMessage(statusError);
-        } else if (errorData.detail) {
-          setErrorMessage(errorData.detail);
-        } else if (errorData.message) {
-          setErrorMessage(errorData.message);
-        } else {
-          setErrorMessage("Failed to update work order. Please try again.");
-        }
-      } else {
-        setErrorMessage("Failed to update work order. Please try again.");
-      }
+      setErrorMessage(getUserFacingError(error, "Failed to update work order. Please try again."));
     },
   });
 

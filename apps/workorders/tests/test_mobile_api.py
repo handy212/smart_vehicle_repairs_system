@@ -1,7 +1,3 @@
-import pytest
-
-pytestmark = pytest.mark.legacy_integration
-
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -127,7 +123,9 @@ class MobileAPITestCase(TestCase):
             priority='normal',
             primary_technician=self.technician,
             customer_concerns='Oil change',
-            created_by=self.advisor
+            created_by=self.advisor,
+            requires_approval=True,
+            approved_by_customer=True,
         )
         
         # Create a task

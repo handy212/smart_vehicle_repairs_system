@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const taskSchema = z.object({
   task_type: z.string().min(1, "Task type is required"),
@@ -94,8 +95,12 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
         if (errorData.non_field_errors) {
           setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
         } else if (errorData.detail) {
-          setServerError(errorData.detail);
+          setServerError(String(errorData.detail));
+        } else {
+          setServerError(getUserFacingError(error, "Couldn't add this task. Please check the form."));
         }
+      } else {
+        setServerError(getUserFacingError(error, "Couldn't add this task. Please try again."));
       }
     },
   });

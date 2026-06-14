@@ -55,6 +55,7 @@ import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillin
 import { usePrint } from "@/lib/hooks/usePrint";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
@@ -196,7 +197,7 @@ export default function WorkOrdersPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete work order",
+        description: getUserFacingError(error, "Failed to delete work order"),
         variant: "destructive",
       });
     },
@@ -226,7 +227,7 @@ export default function WorkOrdersPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete work orders",
+        description: getUserFacingError(error, "Failed to delete work orders"),
         variant: "destructive",
       });
     },
@@ -247,7 +248,7 @@ export default function WorkOrdersPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update status",
+        description: getUserFacingError(error, "Failed to update status"),
         variant: "destructive",
       });
     },
@@ -326,12 +327,9 @@ export default function WorkOrdersPage() {
 
       toast({ title: "Success", description: "Work orders exported successfully" });
     } catch (error: unknown) {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.detail
-        : undefined;
       toast({
         title: "Export failed",
-        description: message || "Failed to export work orders",
+        description: getUserFacingError(error, "Failed to export work orders"),
         variant: "destructive",
       });
     }

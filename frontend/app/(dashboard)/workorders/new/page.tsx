@@ -29,6 +29,7 @@ import { CustomerForm, CustomerFormData } from "@/components/customers/CustomerF
 import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm";
 import { useToast } from "@/lib/hooks/useToast";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 import {
   Dialog,
@@ -311,11 +312,7 @@ export default function NewWorkOrderPage() {
       toast({ title: "Customer created", description: "Customer has been added and selected." });
     },
     onError: (error: unknown) => {
-      const message =
-        error instanceof AxiosError
-          ? (error.response?.data as { detail?: string })?.detail || "Failed to create customer"
-          : "Failed to create customer";
-      toast({ title: "Error", description: message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to create customer"), variant: "destructive" });
     },
   });
 
@@ -350,7 +347,7 @@ export default function NewWorkOrderPage() {
           return;
         }
       }
-      toast({ title: "Error", description: "Failed to create vehicle", variant: "destructive" });
+      toast({ title: "Error", description: getUserFacingError(error, "Failed to create vehicle"), variant: "destructive" });
     },
   });
 
@@ -671,22 +668,10 @@ export default function NewWorkOrderPage() {
       }
 
       // Extract error message from various possible locations
-      let errorMessage = '';
-
-      if (errorData.non_field_errors) {
-        errorMessage = Array.isArray(errorData.non_field_errors)
-          ? errorData.non_field_errors[0]
-          : errorData.non_field_errors;
-      } else if (errorData.detail) {
-        errorMessage = typeof errorData.detail === 'string'
-          ? errorData.detail
-          : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
-      } else if (typeof errorData === 'string') {
-        errorMessage = errorData;
-      }
+      const errorMessage = getUserFacingError(error, "An error occurred while creating the work order. Please check the form and try again.");
 
       // Check if this is an active work order error
-      if (errorMessage && errorMessage.toLowerCase().includes('active work order')) {
+      if (errorMessage.toLowerCase().includes('active work order')) {
         // Extract branch name from error message
         // Format: "This vehicle has an active work order (WO-123) at Branch Name. A new..."
         const branchMatch = errorMessage.match(/at ([^.]+)\./);
@@ -712,11 +697,7 @@ export default function NewWorkOrderPage() {
       });
 
       // Set general error message
-      if (errorMessage) {
-        setServerError(errorMessage);
-      } else {
-        setServerError("An error occurred while creating the work order. Please check the form and try again.");
-      }
+      setServerError(errorMessage);
     },
   });
 

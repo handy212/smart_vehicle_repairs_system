@@ -33,6 +33,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -317,32 +318,10 @@ export default function WorkOrderKanbanPage() {
       });
     },
 
-    onError: (error: any) => {
-      let errorMessage = "Failed to update status";
-      const errorData = error.response?.data;
-
-      if (errorData) {
-        if (typeof errorData === 'string') {
-          errorMessage = errorData;
-        } else if (Array.isArray(errorData)) {
-          errorMessage = errorData[0];
-        } else if (errorData.detail) {
-          errorMessage = typeof errorData.detail === 'string' ? errorData.detail : (Array.isArray(errorData.detail) ? errorData.detail[0] : JSON.stringify(errorData.detail));
-        } else if (errorData.non_field_errors) {
-          errorMessage = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
-        } else {
-          // Flatten any other object errors
-          const firstKey = Object.keys(errorData)[0];
-          if (firstKey) {
-            const firstError = errorData[firstKey];
-            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
-          }
-        }
-      }
-
+    onError: (error: unknown) => {
       toast({
-        title: "Transition Failed",
-        description: errorMessage,
+        title: "Couldn't update status",
+        description: getUserFacingError(error, "This work order couldn't be moved. Please try again."),
         variant: "destructive",
       });
     },

@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useState, useEffect, Fragment } from "react";
 
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -298,7 +299,7 @@ export default function NewProformaPage() {
         },
 
         onError: (error: AxiosError<any>) => {
-            const message = error.response?.data?.detail || error.response?.data?.message || "Failed to create proforma";
+            const message = getUserFacingError(error, "We couldn't create the proforma. Please review the form and try again.");
             setServerError(message);
             toast({
                 title: "Error",

@@ -20,6 +20,7 @@ import { Plus, CheckCircle2, Clock, Play, Workflow, User, Info, Wrench, MoreVert
 import { format } from "date-fns";
 import AddTaskDialog from "./AddTaskDialog";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface TasksTabProps {
   workOrderId: number;
@@ -96,10 +97,9 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
       onRefresh();
     },
     onError: (error: TaskCompletionError) => {
-      const data = error.response?.data;
       toast({
         title: "Task completion blocked",
-        description: data?.next_step || data?.error || "Unable to complete task.",
+        description: getUserFacingError(error, "Unable to complete task."),
         variant: "destructive",
       });
     },

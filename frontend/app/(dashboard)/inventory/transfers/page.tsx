@@ -24,7 +24,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function TransfersPage() {
     const router = useRouter();
@@ -58,7 +58,7 @@ export default function TransfersPage() {
         onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: getApiErrorMessage(error, "Failed to delete transfer"),
+                description: getUserFacingError(error, "Failed to delete transfer"),
                 variant: "destructive",
             });
         },

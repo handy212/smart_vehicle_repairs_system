@@ -49,7 +49,7 @@ jobs:
 
       - run: pip install -r requirements.txt
       - run: PYTHONPATH=. python scripts/validate_celery_beat.py
-      - run: pytest -c pytest.ci.ini -m "not legacy_integration" -q
+      - run: pytest -c pytest.ci.ini -q
 
   deploy:
     name: Deploy staging server

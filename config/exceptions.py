@@ -78,4 +78,15 @@ def custom_exception_handler(exc, context):
                     exc,
                 )
 
+        if response.status_code == 403 and isinstance(response.data, dict):
+            friendly = (
+                "You don't have permission to perform this action. "
+                "Contact your administrator if you need access."
+            )
+            detail = response.data.get('detail') or response.data.get('error')
+            if not detail:
+                response.data['detail'] = friendly
+            if 'error' not in response.data:
+                response.data['error'] = response.data.get('detail', friendly)
+
     return response

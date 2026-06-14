@@ -31,6 +31,7 @@ import { branchesApi } from "@/lib/api/branches";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const staffSchema = z.object({
     // User fields (Write-only to backend, but editable here)
@@ -204,7 +205,7 @@ export default function EditStaffPage() {
             addToast({
                 type: "error",
                 title: "Error",
-                message: error.response?.data?.detail || "Failed to update staff member.",
+                message: getUserFacingError(error, "Failed to update staff member."),
             });
         } finally {
             setIsSaving(false);

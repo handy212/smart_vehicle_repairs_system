@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { branchesApi } from "@/lib/api/branches";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { fixedAssetsApi, type FixedAsset } from "@/lib/api/fixed-assets";
 import { hrApi } from "@/lib/api/hr";
 import { useToast } from "@/lib/hooks/useToast";
@@ -99,7 +99,7 @@ function AssetTransfersContent() {
     onError: (error: unknown) => {
       toast({
         title: "Transfer failed",
-        description: getApiErrorMessage(error, "Could not update the asset transfer."),
+        description: getUserFacingError(error, "Could not update the asset transfer."),
         variant: "destructive",
       });
     },

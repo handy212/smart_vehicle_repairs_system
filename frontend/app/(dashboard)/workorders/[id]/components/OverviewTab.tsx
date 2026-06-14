@@ -34,6 +34,7 @@ import {
 } from "@/lib/workorders/invoiceSummaryDisplay";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -120,9 +121,7 @@ export default function WorkOrderOverviewTab({
       toast({
         title: "Error",
         description:
-          error.response?.data?.error ||
-          error.response?.data?.detail ||
-          "Failed to assign Service Coordinator",
+          getUserFacingError(error, "Failed to assign Service Coordinator"),
         variant: "destructive",
       });
     },

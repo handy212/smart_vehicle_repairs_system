@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fixedAssetsApi, type FixedAsset } from "@/lib/api/fixed-assets";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
 
@@ -78,7 +78,7 @@ function AssetDisposalsContent() {
     onError: (error: unknown) => {
       toast({
         title: "Disposal failed",
-        description: getApiErrorMessage(error, "Could not record the asset disposal."),
+        description: getUserFacingError(error, "Could not record the asset disposal."),
         variant: "destructive",
       });
     },

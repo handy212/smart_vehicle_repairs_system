@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 import { workordersApi } from "@/lib/api/workorders";
 import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
 import { workOrderPartsApi, WorkOrderPart } from "@/lib/api/workorder-parts";
@@ -252,7 +253,7 @@ export default function RepairsPage() {
     onError: (error: any) => {
       toast({
         title: "Failed to start repairs",
-        description: error.response?.data?.error || error.response?.data?.detail || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -275,7 +276,7 @@ export default function RepairsPage() {
     onError: (error: any) => {
       toast({
         title: "Task completion blocked",
-        description: error.response?.data?.next_step || error.response?.data?.error || "Unable to complete task.",
+        description: getUserFacingError(error, "Unable to complete task."),
         variant: "destructive",
       });
     },
@@ -337,7 +338,7 @@ export default function RepairsPage() {
     onError: (error: any) => {
       toast({
         title: "Photo upload failed",
-        description: error.response?.data?.error || error.message,
+        description: getUserFacingError(error, "Something went wrong."),
         variant: "destructive",
       });
     },
@@ -374,7 +375,7 @@ export default function RepairsPage() {
     onError: (error: any) => {
       toast({
         title: "Failed to flag additional work",
-        description: error.response?.data?.error || error.response?.data?.detail || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -405,11 +406,10 @@ export default function RepairsPage() {
       toast({ title: "Quality check requested" });
       router.push(`/workorders/${workOrderId}`);
     },
-    onError: (error: any) => {
-      const data = error.response?.data;
+    onError: (error: unknown) => {
       toast({
         title: "Quality check blocked",
-        description: data?.next_step || data?.error || data?.detail || "Resolve the listed blockers first.",
+        description: getUserFacingError(error, "Resolve the listed blockers first."),
         variant: "destructive",
       });
     },

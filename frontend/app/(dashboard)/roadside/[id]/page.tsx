@@ -40,7 +40,7 @@ import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 import { RoadsideBranchSelect } from "@/components/roadside/RoadsideBranchSelect";
 function resolveEntityId(value: number | { id: number } | undefined): number | undefined {
@@ -135,7 +135,7 @@ export default function RoadsideDetailPage() {
         onError: (error: unknown) => {
             toast({
                 title: "Dispatch Failed",
-                description: getApiErrorMessage(error, "Technician could not be dispatched"),
+                description: getUserFacingError(error, "Technician could not be dispatched"),
                 variant: "destructive",
             });
         }
@@ -152,7 +152,7 @@ export default function RoadsideDetailPage() {
         onError: (error: unknown) => {
             toast({
                 title: "Failed",
-                description: getApiErrorMessage(error, "Could not add technician"),
+                description: getUserFacingError(error, "Could not add technician"),
                 variant: "destructive",
             });
         }
@@ -167,7 +167,7 @@ export default function RoadsideDetailPage() {
         onError: (error: unknown) => {
             toast({
                 title: "Failed",
-                description: getApiErrorMessage(error, "Could not remove technician"),
+                description: getUserFacingError(error, "Could not remove technician"),
                 variant: "destructive",
             });
         }
@@ -184,7 +184,7 @@ export default function RoadsideDetailPage() {
         onError: (error: unknown) => {
             toast({
                 title: "Update Failed",
-                description: getApiErrorMessage(error, "Failed to update request"),
+                description: getUserFacingError(error, "Failed to update request"),
                 variant: "destructive"
             });
         }
@@ -221,7 +221,7 @@ export default function RoadsideDetailPage() {
         onError: (error: unknown, action) => {
             toast({
                 title: "Action Failed",
-                description: getApiErrorMessage(error, `Could not ${action.replace("_", " ")} this request`),
+                description: getUserFacingError(error, `Could not ${action.replace("_", " ")} this request`),
                 variant: "destructive",
             });
         }
@@ -247,7 +247,7 @@ export default function RoadsideDetailPage() {
         onError: (error: unknown, variables) => {
             toast({
                 title: variables.method === "email" ? "Email Failed" : "SMS Failed",
-                description: getApiErrorMessage(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
+                description: getUserFacingError(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
                 variant: "destructive"
             });
         }

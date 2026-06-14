@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getUserFacingError } from "@/lib/api/errors";
 interface VehicleServicesViewProps {
   vehicleId: number;
 }
@@ -90,7 +91,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to create service schedule",
+        description: getUserFacingError(error, "Failed to create service schedule"),
         variant: "destructive",
       });
     },
@@ -109,7 +110,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update service schedule",
+        description: getUserFacingError(error, "Failed to update service schedule"),
         variant: "destructive",
       });
     },
@@ -127,7 +128,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete service schedule",
+        description: getUserFacingError(error, "Failed to delete service schedule"),
         variant: "destructive",
       });
     },
@@ -146,7 +147,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to mark service as completed",
+        description: getUserFacingError(error, "Failed to mark service as completed"),
         variant: "destructive",
       });
     },

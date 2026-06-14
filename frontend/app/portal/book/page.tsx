@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PortalPageHeader } from "../components/PortalPageHeader";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const appointmentSchema = z.object({
   vehicle_id: z.string().min(1, "Vehicle is required"),
@@ -145,7 +146,7 @@ export default function BookAppointmentPage() {
       console.error("Booking failed:", error);
       toast({
         title: "Booking Failed",
-        description: error.response?.data?.detail || "Please check your inputs and try again.",
+        description: getUserFacingError(error, "Please check your inputs and try again."),
         variant: "destructive",
       });
     },

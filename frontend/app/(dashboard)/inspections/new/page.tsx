@@ -11,7 +11,7 @@ import { useState } from "react";
 import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
 import { InspectionForm, InspectionFormData } from "@/components/inspections/InspectionForm";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiValidationData = Record<string, unknown> & {
   detail?: string;
@@ -103,12 +103,12 @@ export default function NewInspectionPage() {
           setFieldErrors(newFieldErrors);
           setServerError("Please correct the errors in the form below.");
         } else if (errorMessage) {
-          setServerError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+          setServerError(getUserFacingError(error, "We couldn't create this inspection. Please check the form and try again."));
         } else {
           setServerError("An error occurred. Check the form for details.");
         }
       } else {
-        setServerError(getApiErrorMessage(error, "An unexpected error occurred. Please try again."));
+        setServerError(getUserFacingError(error, "An unexpected error occurred. Please try again."));
       }
     },
   });

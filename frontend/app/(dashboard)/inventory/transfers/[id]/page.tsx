@@ -24,7 +24,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 
@@ -113,7 +113,7 @@ export default function TransferDetailPage() {
             setSelectedApproverIds([]);
         },
 
-        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to submit transfer"), variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getUserFacingError(err, "Failed to submit transfer"), variant: "destructive" }),
     });
 
     const approveMutation = useMutation({
@@ -123,7 +123,7 @@ export default function TransferDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
         },
 
-        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to approve transfer"), variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getUserFacingError(err, "Failed to approve transfer"), variant: "destructive" }),
     });
 
     const rejectMutation = useMutation({
@@ -134,7 +134,7 @@ export default function TransferDetailPage() {
             setIsRejectDialogOpen(false);
         },
 
-        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to reject transfer"), variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getUserFacingError(err, "Failed to reject transfer"), variant: "destructive" }),
     });
 
     const shipMutation = useMutation({
@@ -144,7 +144,7 @@ export default function TransferDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
         },
 
-        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to ship transfer"), variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getUserFacingError(err, "Failed to ship transfer"), variant: "destructive" }),
     });
 
     const receiveMutation = useMutation({
@@ -154,7 +154,7 @@ export default function TransferDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
         },
 
-        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to receive transfer"), variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getUserFacingError(err, "Failed to receive transfer"), variant: "destructive" }),
     });
 
     if (isLoading) return <div className="p-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" /></div>;

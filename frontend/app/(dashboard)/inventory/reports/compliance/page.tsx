@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import { AxiosError } from "axios";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function ReportTable({
   headers,
@@ -57,11 +58,7 @@ function formatPartLabel(partNumber?: string, partName?: string, fallback?: stri
 }
 
 function queryErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const data = error.response?.data as { detail?: string; error?: string } | undefined;
-    return data?.detail || data?.error || error.message;
-  }
-  return error instanceof Error ? error.message : "Failed to load report";
+  return getUserFacingError(error, "Failed to load report");
 }
 
 /** Tabs that filter by start_date / end_date query params */

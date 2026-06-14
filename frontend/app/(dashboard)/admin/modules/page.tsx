@@ -14,12 +14,11 @@ import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type PremiumIconName = keyof typeof PremiumIcons;
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong.";
-}
+// error messages handled by getUserFacingError
 
 function isPremiumIconName(icon: string): icon is PremiumIconName {
   return icon in PremiumIcons;
@@ -51,7 +50,7 @@ export default function ModuleControlPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error updating module",
-        description: getErrorMessage(error),
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -83,7 +82,7 @@ export default function ModuleControlPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-muted-foreground text-center">
           Failed to load modules<br />
-          {getErrorMessage(error)}
+          {getUserFacingError(error)}
         </p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="mr-2 h-4 w-4" />

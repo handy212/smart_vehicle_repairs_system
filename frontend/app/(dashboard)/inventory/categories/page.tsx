@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserFacingError } from "@/lib/api/errors";
 
 // Stats Grid Component
 
@@ -83,7 +84,7 @@ export default function PartCategoriesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete category",
+        description: getUserFacingError(error, "Failed to delete category"),
         variant: "destructive",
       });
     },

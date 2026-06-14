@@ -17,6 +17,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useAuthStore } from "@/store/authStore";
 import { PartRequestDetailDialog } from "../parts-requests/components/PartRequestDetailDialog";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface PartsRequestStats {
   draft_requests?: number;
@@ -42,19 +43,6 @@ const fulfillmentStatusOptions = [
 ] as const;
 
 type FulfillmentView = "list" | "grid";
-
-const getErrorMessage = (error: unknown) => {
-  if (typeof error === "object" && error && "response" in error) {
-    const response = (error as { response?: { data?: { error?: string } } }).response;
-    if (response?.data?.error) {
-      return response.data.error;
-    }
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Something went wrong.";
-};
 
 export default function QuotationRequestsPage() {
   const { toast } = useToast();
@@ -131,7 +119,7 @@ export default function QuotationRequestsPage() {
     onError: (error: unknown) => {
       toast({
         title: "Failed to update quotation",
-        description: getErrorMessage(error),
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -304,7 +292,7 @@ export default function QuotationRequestsPage() {
             <Card className="border-destructive/20">
               <CardContent className="py-12 text-center">
                 <h2 className="text-sm font-medium text-destructive">Unable to load quotation queue</h2>
-                <p className="mt-2 text-xs text-muted-foreground">{getErrorMessage(error)}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{getUserFacingError(error)}</p>
                 <Button variant="outline" className="mt-4" onClick={() => refetch()}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Retry

@@ -33,7 +33,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type EditableItemType = "pass_fail" | "measurement" | "percentage" | "rating" | "condition" | "text";
 
@@ -99,7 +99,7 @@ export default function TemplateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to save category"),
+        description: getUserFacingError(error, "Failed to save category"),
         variant: "destructive",
       });
     },
@@ -119,7 +119,7 @@ export default function TemplateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to duplicate template"),
+        description: getUserFacingError(error, "Failed to duplicate template"),
         variant: "destructive",
       });
     },
@@ -161,7 +161,7 @@ export default function TemplateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to save item"),
+        description: getUserFacingError(error, "Failed to save item"),
         variant: "destructive",
       });
     },
@@ -196,7 +196,7 @@ export default function TemplateDetailPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getApiErrorMessage(error, "Failed to copy item"),
+        description: getUserFacingError(error, "Failed to copy item"),
         variant: "destructive",
       });
     },

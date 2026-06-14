@@ -1,9 +1,5 @@
 from decimal import Decimal
 
-import pytest
-
-pytestmark = pytest.mark.legacy_integration
-
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse

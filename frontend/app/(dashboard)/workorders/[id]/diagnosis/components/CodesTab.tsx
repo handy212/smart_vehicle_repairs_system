@@ -16,6 +16,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { Plus, Edit, Trash2, Search, X, AlertTriangle, Info, AlertCircle as AlertCircleIcon, Code } from "lucide-react";
 import { format } from "date-fns";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
   Tooltip,
   TooltipContent,
@@ -80,7 +81,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       // Handle duplicate code error specifically
       const errorMessage = error.response?.data;
       let errorTitle = "Failed to add code";
-      let errorDescription = error.response?.data?.message || error.message;
+      let errorDescription = getUserFacingError(error);
 
       if (error.response?.status === 400) {
         // Check for duplicate code error
@@ -118,7 +119,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
     onError: (error: any) => {
       toast({
         title: "Failed to update code",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -135,7 +136,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
     onError: (error: any) => {
       toast({
         title: "Failed to delete code",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -410,7 +411,7 @@ function CodeDialog({
     } catch (error: any) {
       toast({
         title: "Lookup failed",
-        description: error.response?.data?.error || error.message || "Could not decode code",
+        description: getUserFacingError(error, "Could not decode code"),
         variant: "destructive",
       });
     } finally {

@@ -66,6 +66,7 @@ import {
 } from "@/lib/offline/diagnosis";
 import { cn } from "@/lib/utils";
 import { getWorkOrderAssignees } from "@/lib/workorders/assignees";
+import { getUserFacingError } from "@/lib/api/errors";
 
 
 type DiagnosisWorkspaceProps = {
@@ -121,7 +122,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to create diagnosis",
-        description: error.response?.data?.detail || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -162,7 +163,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to update diagnosis",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -197,7 +198,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to start diagnosis",
-        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -220,7 +221,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to pause diagnosis",
-        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -243,7 +244,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to resume diagnosis",
-        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -265,7 +266,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to send for approval",
-        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -304,7 +305,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to complete diagnosis",
-        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -326,7 +327,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onError: (error: any) => {
       toast({
         title: "Failed to reopen diagnosis",
-        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1079,7 +1080,7 @@ function FindingsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to add finding",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1098,7 +1099,7 @@ function FindingsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to update finding",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1114,7 +1115,7 @@ function FindingsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to delete finding",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1513,7 +1514,7 @@ function RecommendationsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to add recommendation",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1532,7 +1533,7 @@ function RecommendationsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to update recommendation",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1549,7 +1550,7 @@ function RecommendationsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to delete recommendation",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1573,7 +1574,7 @@ function RecommendationsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to update recommendation",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1613,7 +1614,7 @@ function RecommendationsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to send recommendations",
-        description: error.response?.data?.message || error.response?.data?.error || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1640,7 +1641,7 @@ function RecommendationsTab({
     onError: (error: any) => {
       toast({
         title: "Failed to create task",
-        description: error.response?.data?.message || error.response?.data?.error || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -1963,7 +1964,7 @@ function PhotosTab({
     onError: (error: any) => {
       toast({
         title: "Failed to delete photo",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },
@@ -2141,7 +2142,7 @@ function PhotoUploadDialog({
     onError: (error: any) => {
       toast({
         title: "Failed to upload photo",
-        description: error.response?.data?.message || error.message,
+        description: getUserFacingError(error),
         variant: "destructive",
       });
     },

@@ -13,7 +13,7 @@ import { useBranchStore } from "@/store/branchStore";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { getUserFacingError } from "@/lib/api/errors";
 
 interface ReceiveItemsDialogProps {
     purchaseOrder: PurchaseOrder;
@@ -93,7 +93,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
         },
 
         onError: (error: unknown) => {
-            let errorMessage = getApiErrorMessage(error, "Failed to receive item");
+            let errorMessage = getUserFacingError(error, "Failed to receive item");
 
             if (errorMessage.toLowerCase().includes('branch')) {
                 errorMessage = `${errorMessage} Please ensure the purchase order has a branch assigned.`;

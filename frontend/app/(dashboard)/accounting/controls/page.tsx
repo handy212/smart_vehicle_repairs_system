@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = {
   response?: {
@@ -30,11 +31,6 @@ type ApiError = {
     };
   };
 };
-
-function getErrorMessage(error: unknown, fallback: string) {
-  const data = (error as ApiError)?.response?.data;
-  return data?.error || data?.detail || fallback;
-}
 
 function actionBadgeVariant(action: string): "success" | "info" | "danger" | "outline" {
   switch (action) {
@@ -90,7 +86,7 @@ export default function ControlPanelPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getErrorMessage(error, "Failed to update lock date."),
+        description: getUserFacingError(error, "Failed to update lock date."),
         variant: "destructive",
       });
     },
@@ -114,7 +110,7 @@ export default function ControlPanelPage() {
     onError: (error: unknown) => {
       toast({
         title: "Close failed",
-        description: getErrorMessage(error, "Failed to close period."),
+        description: getUserFacingError(error, "Failed to close period."),
         variant: "destructive",
       });
     },
