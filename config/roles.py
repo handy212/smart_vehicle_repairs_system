@@ -393,6 +393,13 @@ class Manager(AbstractUserRole):
         'create_subscriptions': True,
         'cancel_subscriptions': True,
         'record_usage': True,
+
+        # Gate Pass
+        'view_gatepass': True,
+        'create_gatepass': True,
+        'change_gatepass': True,
+        'issue_gatepass': True,
+        'complete_gatepass': True,
         
         # Reports
         'view_reports': True,

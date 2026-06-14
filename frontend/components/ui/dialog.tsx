@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/utils/body-scroll-lock";
 import { Button } from "./button";
 
 interface DialogProps {
@@ -24,13 +25,36 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
     return () => setMounted(false);
   }, []);
 
+  React.useEffect(() => {
+    if (!open) return;
+
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onOpenChange(false);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, onOpenChange]);
+
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-3 sm:p-6">
       <div
         className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
+        aria-hidden="true"
+        onWheel={(event) => event.preventDefault()}
+        onTouchMove={(event) => event.preventDefault()}
       />
       <div className="pointer-events-none relative z-[100] flex w-full justify-center animate-in fade-in zoom-in-95 duration-200">{children}</div>
     </div>,
@@ -44,7 +68,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div
         ref={ref}
         className={cn(
-          "pointer-events-auto relative bg-card rounded-lg shadow-lg w-full max-w-lg border border-border max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] overflow-y-auto flex flex-col gap-4 p-4 sm:p-6",
+          "pointer-events-auto relative bg-card rounded-lg shadow-lg w-full max-w-lg border border-border max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain flex flex-col gap-4 p-4 sm:p-6",
           className
         )}
         {...props}
