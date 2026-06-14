@@ -1,93 +1,134 @@
 #!/bin/bash
 ###############################################################################
-# Smart Vehicle Repairs System - Production Update Script
-# Run with: sudo bash deploy/update-production.sh
+# Legacy systemd production update (/opt -> /var/www/svr).
+#
+# Routine release (no data re-seeding):
+#   sudo bash deploy/update-production.sh
+#
+# Pin a ref:
+#   sudo bash deploy/update-production.sh --ref v1.2.3
+#
+# First install / explicit re-seed (run once, or only when needed):
+#   sudo bash deploy/update-production.sh --bootstrap
+#
+# New deployments should use Docker: deploy/release.sh
 ###############################################################################
 
-set -e
+set -euo pipefail
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${GREEN}=========================================="
-echo "Smart Vehicle Repairs - Production Update"
-echo -e "==========================================${NC}"
-echo ""
+SOURCE_DIR="/opt/smart_vehicle_repairs_system"
+TARGET_DIR="/var/www/svr"
+GIT_REF="main"
+RUN_BOOTSTRAP=false
 
-# Check if running as root
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --ref)
+            GIT_REF="${2:?--ref requires a value}"
+            shift 2
+            ;;
+        --bootstrap)
+            RUN_BOOTSTRAP=true
+            shift
+            ;;
+        *)
+            echo -e "${RED}Unknown option: $1${NC}"
+            echo "Usage: $0 [--ref <branch-or-tag>] [--bootstrap]"
+            exit 1
+            ;;
+    esac
+done
+
 if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}Please run as root (use sudo)${NC}"
     exit 1
 fi
 
-# Navigate to project directory
-if [ -d "/opt/smart_vehicle_repairs_system" ]; then
-    cd /opt/smart_vehicle_repairs_system
-else
-    echo -e "${RED}Project directory not found: /opt/smart_vehicle_repairs_system${NC}"
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo -e "${RED}Source directory not found: $SOURCE_DIR${NC}"
     exit 1
 fi
 
-echo -e "${YELLOW}[1/9] Pulling latest changes from GitHub...${NC}"
-git pull origin main
+if [ ! -d "$TARGET_DIR" ]; then
+    echo -e "${RED}Target directory not found: $TARGET_DIR${NC}"
+    exit 1
+fi
 
-echo -e "${YELLOW}[2/9] Updating Python dependencies...${NC}"
-sudo -u svr /var/www/svr/venv/bin/pip install -r requirements.txt
-
-echo -e "${YELLOW}[3/9] Running database migrations...${NC}"
-sudo -u svr /var/www/svr/venv/bin/python manage.py migrate
-
-echo -e "${YELLOW}[4/9] Collecting static files...${NC}"
-sudo -u svr /var/www/svr/venv/bin/python manage.py collectstatic --noinput
-
-echo -e "${YELLOW}[5/9] Initializing and seeding system data...${NC}"
-# Core initialization
-sudo -u svr /var/www/svr/venv/bin/python manage.py init_permissions
-sudo -u svr /var/www/svr/venv/bin/python manage.py init_settings
-sudo -u svr /var/www/svr/venv/bin/python manage.py seed_modules
-sudo -u svr /var/www/svr/venv/bin/python manage.py create_super_admin
-
-# Module-specific data
-sudo -u svr /var/www/svr/venv/bin/python manage.py init_service_types
-sudo -u svr /var/www/svr/venv/bin/python manage.py seed_aa_membership
-sudo -u svr /var/www/svr/venv/bin/python manage.py seed_leave_types
-sudo -u svr /var/www/svr/venv/bin/python manage.py populate_comprehensive_code_library
-sudo -u svr /var/www/svr/venv/bin/python manage.py sync_code_library --limit 50
-# Non-destructive: only creates missing templates (see migration 0020 for default content refresh)
-sudo -u svr /var/www/svr/venv/bin/python manage.py create_all_email_templates
-sudo -u svr /var/www/svr/venv/bin/python manage.py setup_invoice_email_templates
-sudo -u svr /var/www/svr/venv/bin/python manage.py create_inspection_templates
-
-echo -e "${YELLOW}[6/9] Updating frontend dependencies...${NC}"
-cd /var/www/svr/frontend
-sudo -u svr npm install
-
-echo -e "${YELLOW}[7/9] Building frontend...${NC}"
-sudo -u svr npm run build
-cd /opt/smart_vehicle_repairs_system
-
-echo -e "${YELLOW}[8/9] Restarting services...${NC}"
-sudo systemctl restart svr
-sudo systemctl restart svr-celery
-sudo systemctl restart svr-celerybeat
-sudo systemctl restart svr-nextjs
-sudo systemctl restart nginx
-
-echo -e "${YELLOW}[9/9] Checking service status...${NC}"
+echo -e "${GREEN}=========================================="
+echo "Smart Vehicle Repairs - Production Update"
+echo -e "==========================================${NC}"
 echo ""
-echo -e "${GREEN}Service Status:${NC}"
-sudo systemctl status svr svr-celery svr-celerybeat svr-nextjs nginx --no-pager -l
+echo -e "${BLUE}Source:${NC} $SOURCE_DIR"
+echo -e "${BLUE}Target:${NC} $TARGET_DIR"
+echo -e "${BLUE}Ref:${NC}   $GIT_REF"
+echo ""
+
+echo -e "${YELLOW}[1/4] Fetching and checking out $GIT_REF...${NC}"
+cd "$SOURCE_DIR"
+git fetch --tags origin
+git checkout "$GIT_REF"
+if git rev-parse --verify "origin/$GIT_REF" >/dev/null 2>&1; then
+    git pull --ff-only origin "$GIT_REF"
+fi
+
+if [ -x "$SOURCE_DIR/scripts/validate-env.sh" ] && [ -f "$TARGET_DIR/.env" ]; then
+    echo -e "${YELLOW}[2/4] Validating production environment...${NC}"
+    bash "$SOURCE_DIR/scripts/validate-env.sh" "$TARGET_DIR/.env"
+else
+    echo -e "${YELLOW}[2/4] Skipping env validation (script or .env not found)${NC}"
+fi
+
+DEPLOY_ARGS=(--rebuild-frontend --rebuild-backend --restart)
+if [ "$RUN_BOOTSTRAP" = true ]; then
+    DEPLOY_ARGS+=(--bootstrap)
+fi
+
+echo -e "${YELLOW}[3/4] Syncing, building, and restarting via deploy.sh...${NC}"
+bash "$SOURCE_DIR/deploy/deploy.sh" "${DEPLOY_ARGS[@]}"
+
+echo -e "${YELLOW}[4/4] Waiting for API readiness...${NC}"
+READY=false
+for _ in $(seq 1 30); do
+    if curl -sf http://localhost:8000/api/health/ready/ >/dev/null 2>&1 \
+        || curl -sf http://localhost/api/health/ready/ >/dev/null 2>&1; then
+        READY=true
+        break
+    fi
+    sleep 3
+done
+
+echo ""
+if [ "$READY" = true ]; then
+    echo -e "${GREEN}✓ API readiness check passed${NC}"
+else
+    echo -e "${RED}✗ API readiness check failed — inspect service logs${NC}"
+    systemctl status svr svr-celery svr-celerybeat svr-nextjs nginx --no-pager -l || true
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}=========================================="
 echo "Production Update Complete!"
 echo -e "==========================================${NC}"
 echo ""
-echo "Update completed successfully!"
-echo "Check your application at: https://workshop.aapgh.com"
+
+APP_URL="${APP_URL:-}"
+if [ -z "$APP_URL" ] && [ -f "$TARGET_DIR/.env" ]; then
+    APP_URL="$(grep -E '^FRONTEND_URL=' "$TARGET_DIR/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)"
+fi
+if [ -n "$APP_URL" ]; then
+    echo "Application URL: $APP_URL"
+else
+    echo "Check your configured frontend URL in $TARGET_DIR/.env"
+fi
+
 echo ""
 echo "Monitor logs with:"
-echo "  sudo tail -f /var/www/svr/logs/production.log"
+echo "  sudo tail -f $TARGET_DIR/logs/production.log"
 echo "  sudo journalctl -u svr -f"
