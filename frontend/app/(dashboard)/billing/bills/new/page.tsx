@@ -46,6 +46,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { billingApi, Bill } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
 import { branchesApi } from "@/lib/api/branches";
+import { useBranchStore } from "@/store/branchStore";
 import Link from "next/link";
 
 const lineItemSchema = z.object({
@@ -57,8 +58,8 @@ const lineItemSchema = z.object({
 });
 
 const formSchema = z.object({
-    vendor: z.string().min(1, "Vendor is required"),
-    branch: z.string().min(1, "Branch is required"),
+    vendor: z.string().optional(),
+    branch: z.string().optional(),
     purchase_order: z.string().optional(),
     reference_number: z.string().optional(),
     bill_date: z.string().min(1, "Bill date is required"),
@@ -74,6 +75,28 @@ type FormValues = z.infer<typeof formSchema>;
 const initialBillDate = format(new Date(), "yyyy-MM-dd");
 const initialDueDate = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
+function getEntityId(value: unknown): number | undefined {
+    if (typeof value === "number") return value;
+    if (typeof value === "string" && value.trim()) {
+        const parsed = Number.parseInt(value, 10);
+        return Number.isNaN(parsed) ? undefined : parsed;
+    }
+    if (value && typeof value === "object" && "id" in value) {
+        const id = (value as { id?: unknown }).id;
+        return typeof id === "number" ? id : getEntityId(id);
+    }
+    return undefined;
+}
+
+function getEntityName(value: unknown, fallback?: string): string | undefined {
+    if (value && typeof value === "object") {
+        const entity = value as { name?: unknown; po_number?: unknown };
+        if (typeof entity.name === "string" && entity.name.trim()) return entity.name;
+        if (typeof entity.po_number === "string" && entity.po_number.trim()) return entity.po_number;
+    }
+    return fallback;
+}
+
 export default function NewBillPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -81,6 +104,9 @@ export default function NewBillPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { currency: configuredCurrency, formatCurrency } = useCurrency();
+    const activeBranchId = useBranchStore((state) => state.activeBranchId);
+    const activeBranch = useBranchStore((state) => state.activeBranch);
+    const isPurchaseOrderPrefill = Boolean(initialPurchaseOrderId);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -105,7 +131,7 @@ export default function NewBillPage() {
         }
     }, [configuredCurrency, form]);
 
-    const { fields, append, remove, replace } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control: form.control,
         name: "line_items",
     });
@@ -170,7 +196,7 @@ export default function NewBillPage() {
         po.status === "received"
     );
 
-    const { data: purchaseOrderDetail } = useQuery({
+    const { data: purchaseOrderDetail, isLoading: isPurchaseOrderDetailLoading } = useQuery({
         queryKey: ["purchase-order", selectedPurchaseOrder],
         queryFn: () => inventoryApi.getPurchaseOrder(parseInt(selectedPurchaseOrder || "0")),
         enabled: Boolean(selectedPurchaseOrder),
@@ -179,23 +205,20 @@ export default function NewBillPage() {
     useEffect(() => {
         if (!purchaseOrderDetail) return;
 
-        const supplierId = typeof purchaseOrderDetail.supplier === "object"
-            ? purchaseOrderDetail.supplier.id
-            : purchaseOrderDetail.supplier;
-        const branchId = typeof purchaseOrderDetail.branch === "object"
-            ? purchaseOrderDetail.branch?.id
-            : purchaseOrderDetail.branch;
-
-        if (supplierId) {
-            form.setValue("vendor", supplierId.toString());
-        }
-        if (branchId) {
-            form.setValue("branch", branchId.toString());
-        }
-        if (purchaseOrderDetail.due_date) {
-            form.setValue("due_date", purchaseOrderDetail.due_date);
-        }
-
+        const supplierId = getEntityId(purchaseOrderDetail.supplier);
+        const supplier = typeof purchaseOrderDetail.supplier === "object"
+            ? purchaseOrderDetail.supplier
+            : null;
+        const branchId = getEntityId(purchaseOrderDetail.branch) ?? activeBranchId ?? undefined;
+        const resolvedBillDate =
+            purchaseOrderDetail.received_date ||
+            purchaseOrderDetail.received_at?.slice(0, 10) ||
+            purchaseOrderDetail.order_date ||
+            initialBillDate;
+        const resolvedDueDate =
+            purchaseOrderDetail.due_date ||
+            purchaseOrderDetail.expected_delivery_date ||
+            resolvedBillDate;
         const importedItems = (purchaseOrderDetail.items || []).map((item) => {
             const part = typeof item.part === "object" ? item.part : null;
             const partName = item.part_name || part?.name || item.part_number || "Inventory item";
@@ -209,11 +232,36 @@ export default function NewBillPage() {
                 inventory_item: part?.id || (typeof item.part === "number" ? item.part : undefined),
             };
         });
+        const currentValues = form.getValues();
 
-        if (importedItems.length > 0) {
-            replace(importedItems);
-        }
-    }, [form, purchaseOrderDetail, replace]);
+        form.reset({
+            ...currentValues,
+            vendor: supplierId ? supplierId.toString() : currentValues.vendor,
+            branch: branchId ? branchId.toString() : currentValues.branch,
+            purchase_order: purchaseOrderDetail.id ? purchaseOrderDetail.id.toString() : currentValues.purchase_order,
+            bill_date: resolvedBillDate,
+            due_date: resolvedDueDate,
+            terms: supplier?.payment_terms || currentValues.terms,
+            notes: currentValues.notes || `Created from purchase order ${purchaseOrderDetail.po_number}.`,
+            line_items: importedItems.length > 0 ? importedItems : currentValues.line_items,
+        });
+    }, [activeBranchId, form, purchaseOrderDetail]);
+
+    const isPurchaseOrderPrefillReady =
+        !isPurchaseOrderPrefill ||
+        (Boolean(purchaseOrderDetail) &&
+            Boolean(getEntityId(purchaseOrderDetail?.supplier) || selectedVendor) &&
+            Boolean(selectedPurchaseOrder));
+    const prefilledSupplierId = purchaseOrderDetail ? getEntityId(purchaseOrderDetail.supplier) : undefined;
+    const prefilledBranchId = purchaseOrderDetail
+        ? getEntityId(purchaseOrderDetail.branch) ?? activeBranchId ?? undefined
+        : undefined;
+    const prefilledSupplierName = purchaseOrderDetail
+        ? getEntityName(purchaseOrderDetail.supplier, purchaseOrderDetail.supplier_name)
+        : undefined;
+    const prefilledBranchName = purchaseOrderDetail
+        ? getEntityName(purchaseOrderDetail.branch, activeBranch?.name)
+        : undefined;
 
     // Create Mutation
     const createMutation = useMutation({
@@ -241,11 +289,47 @@ export default function NewBillPage() {
     });
 
     const onSubmit = (data: FormValues) => {
+        const purchaseOrderSupplierId = purchaseOrderDetail
+            ? getEntityId(purchaseOrderDetail.supplier)
+            : undefined;
+        const purchaseOrderBranchId = purchaseOrderDetail
+            ? getEntityId(purchaseOrderDetail.branch)
+            : undefined;
+        const resolvedVendor = isPurchaseOrderPrefill ? purchaseOrderSupplierId : parseInt(data.vendor || "0", 10);
+        const resolvedBranch = isPurchaseOrderPrefill
+            ? purchaseOrderBranchId ?? activeBranchId ?? undefined
+            : parseInt(data.branch || "0", 10);
+        const resolvedPurchaseOrder = isPurchaseOrderPrefill
+            ? parseInt(initialPurchaseOrderId, 10)
+            : data.purchase_order
+                ? parseInt(data.purchase_order, 10)
+                : null;
+
+        if (!resolvedVendor || Number.isNaN(resolvedVendor)) {
+            form.setError("vendor", { type: "manual", message: "Vendor is required" });
+            toast({
+                title: "Vendor Required",
+                description: "The purchase order did not provide a vendor. Please refresh the page or open the bill from the purchase order again.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!resolvedBranch || Number.isNaN(resolvedBranch)) {
+            form.setError("branch", { type: "manual", message: "Branch is required" });
+            toast({
+                title: "Branch Required",
+                description: "Select an active branch and try creating the bill again.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         createMutation.mutate({
-            vendor: parseInt(data.vendor),
-            branch: parseInt(data.branch),
-            purchase_order: data.purchase_order ? parseInt(data.purchase_order) : null,
-            status: data.purchase_order ? "open" : "draft",
+            vendor: resolvedVendor,
+            branch: resolvedBranch,
+            purchase_order: resolvedPurchaseOrder,
+            status: resolvedPurchaseOrder ? "open" : "draft",
             reference_number: data.reference_number,
             bill_date: data.bill_date,
             due_date: data.due_date,
@@ -283,7 +367,6 @@ export default function NewBillPage() {
                             <CardTitle className="text-base font-semibold">Bill Details</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
                             <FormField
                                 control={form.control}
                                 name="vendor"
@@ -297,6 +380,7 @@ export default function NewBillPage() {
                                             }}
                                             defaultValue={field.value}
                                             value={field.value}
+                                            disabled={isPurchaseOrderPrefill}
                                         >
                                             <FormControl>
                                                 <SelectTrigger>
@@ -304,6 +388,11 @@ export default function NewBillPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
+                                                {isPurchaseOrderPrefill && prefilledSupplierId && !suppliers.some(s => s.id === prefilledSupplierId) && (
+                                                    <SelectItem value={prefilledSupplierId.toString()}>
+                                                        {prefilledSupplierName || `Vendor #${prefilledSupplierId}`}
+                                                    </SelectItem>
+                                                )}
                                                 {suppliers.map(s => (
                                                     <SelectItem key={s.id} value={s.id.toString()}>
                                                         {s.name}
@@ -326,6 +415,7 @@ export default function NewBillPage() {
                                             onValueChange={field.onChange}
                                             defaultValue={field.value}
                                             value={field.value}
+                                            disabled={isPurchaseOrderPrefill}
                                         >
                                             <FormControl>
                                                 <SelectTrigger>
@@ -333,6 +423,11 @@ export default function NewBillPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
+                                                {isPurchaseOrderPrefill && prefilledBranchId && !branches.some(b => b.id === prefilledBranchId) && (
+                                                    <SelectItem value={prefilledBranchId.toString()}>
+                                                        {prefilledBranchName || `Branch #${prefilledBranchId}`}
+                                                    </SelectItem>
+                                                )}
                                                 {branches.map(b => (
                                                     <SelectItem key={b.id} value={b.id.toString()}>
                                                         {b.name}
@@ -354,7 +449,7 @@ export default function NewBillPage() {
                                         <Select
                                             onValueChange={field.onChange}
                                             value={field.value}
-                                            disabled={!selectedVendor || billablePurchaseOrders.length === 0}
+                                            disabled={isPurchaseOrderPrefill || !selectedVendor || billablePurchaseOrders.length === 0}
                                         >
                                             <FormControl>
                                                 <SelectTrigger>
@@ -362,7 +457,14 @@ export default function NewBillPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {billablePurchaseOrders.map((po) => (
+                                                {isPurchaseOrderPrefill && purchaseOrderDetail && (
+                                                    <SelectItem value={purchaseOrderDetail.id.toString()}>
+                                                        {purchaseOrderDetail.po_number} - {formatCurrency(parseFloat(purchaseOrderDetail.total || "0"))}
+                                                    </SelectItem>
+                                                )}
+                                                {billablePurchaseOrders
+                                                    .filter((po) => !isPurchaseOrderPrefill || po.id !== purchaseOrderDetail?.id)
+                                                    .map((po) => (
                                                     <SelectItem key={po.id} value={po.id.toString()}>
                                                         {po.po_number} - {formatCurrency(parseFloat(po.total || "0"))}
                                                     </SelectItem>
@@ -593,9 +695,16 @@ export default function NewBillPage() {
                         <Button variant="outline" type="button" onClick={() => router.back()}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={createMutation.isPending}>
+                        <Button
+                            type="submit"
+                            disabled={createMutation.isPending || (isPurchaseOrderPrefill && (!isPurchaseOrderPrefillReady || isPurchaseOrderDetailLoading))}
+                        >
                             <Save className="mr-2 h-4 w-4" />
-                            {createMutation.isPending ? "Creating Bill..." : "Create Bill"}
+                            {createMutation.isPending
+                                ? "Creating Bill..."
+                                : isPurchaseOrderPrefill && (!isPurchaseOrderPrefillReady || isPurchaseOrderDetailLoading)
+                                    ? "Loading PO..."
+                                    : "Create Bill"}
                         </Button>
                     </div>
 

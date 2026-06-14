@@ -512,7 +512,7 @@ export default function BillDetailPage() {
                             <DialogTrigger asChild>
                                 <Button size="sm">
                                     <CreditCard className="mr-2 h-4 w-4" />
-                                    Record Payment
+                                    Pay Bill
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>
@@ -790,7 +790,15 @@ export default function BillDetailPage() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-base">Payment Summary</CardTitle>
+                            <div className="flex items-center justify-between gap-3">
+                                <CardTitle className="text-base">Payment Summary</CardTitle>
+                                {canRecordPayment && (
+                                    <Button size="sm" variant="outline" onClick={() => setIsPaymentDialogOpen(true)}>
+                                        <CreditCard className="mr-2 h-4 w-4" />
+                                        Pay Bill
+                                    </Button>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             <div className="flex justify-between text-sm">

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { Trash2, Plus, Search, DollarSign, Package, Pencil, CheckCircle, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -118,73 +118,75 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
                 <h3 className="text-lg font-bold text-foreground tracking-tight">Order Items</h3>
-                <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+                <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                </Button>
+            </div>
+
+            <Dialog
+                open={isAddDialogOpen}
+                onOpenChange={(open) => {
                     setIsAddDialogOpen(open);
                     if (!open) {
                         setSearchResults([]);
                         setSearchQuery("");
                     }
-                }}>
-                    <DialogTrigger asChild>
-                        <Button size="sm">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Item
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
-                        <div className="p-4 border-b">
-                            <DialogHeader>
-                                <DialogTitle>Add Items to Order</DialogTitle>
-                            </DialogHeader>
-                            <div className="mt-4 relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                                <Input
-                                    placeholder="Search by part name, number, or description..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    className="pl-9 bg-muted focus:bg-card transition-colors"
-                                    autoFocus
+                }}
+            >
+                <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+                    <div className="p-4 border-b">
+                        <DialogHeader>
+                            <DialogTitle>Add Items to Order</DialogTitle>
+                        </DialogHeader>
+                        <div className="mt-4 relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <Input
+                                placeholder="Search by part name, number, or description..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                className="pl-9 pr-24 bg-muted focus:bg-card transition-colors"
+                                autoFocus
+                            />
+                            <div className="absolute right-2 top-1.5">
+                                <Button size="sm" onClick={handleSearch} disabled={isSearching} className="h-7 px-3 text-xs">
+                                    {isSearching ? "Searching..." : "Search"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto bg-muted/30 p-4">
+                        {searchResults.length === 0 && !isSearching && !searchQuery && (
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8">
+                                <Package className="w-12 h-12 mb-3 opacity-20" />
+                                <p className="text-sm font-medium">Search for parts to add to the purchase order</p>
+                            </div>
+                        )}
+
+                        {searchResults.length === 0 && !isSearching && searchQuery && (
+                            <div className="text-center py-12 text-muted-foreground">
+                                No parts found matching &quot;{searchQuery}&quot;
+                            </div>
+                        )}
+
+                        <div className="space-y-3">
+                            {searchResults.map(part => (
+                                <SearchResultItem
+                                    key={part.id}
+                                    part={part}
+                                    onAdd={(data) => addItemMutation.mutate(data)}
+                                    isAdding={addItemMutation.isPending}
                                 />
-                                <div className="absolute right-2 top-1.5">
-                                    <Button size="sm" onClick={handleSearch} disabled={isSearching} className="h-7 px-3 text-xs">
-                                        {isSearching ? "Searching..." : "Search"}
-                                    </Button>
-                                </div>
-                            </div>
+                            ))}
                         </div>
-
-                        <div className="flex-1 overflow-y-auto bg-muted/30 p-4">
-                            {searchResults.length === 0 && !isSearching && !searchQuery && (
-                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8">
-                                    <Package className="w-12 h-12 mb-3 opacity-20" />
-                                    <p className="text-sm font-medium">Search for parts to add to the purchase order</p>
-                                </div>
-                            )}
-
-                            {searchResults.length === 0 && !isSearching && searchQuery && (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    No parts found matching &quot;{searchQuery}&quot;
-                                </div>
-                            )}
-
-                            <div className="space-y-3">
-                                {searchResults.map(part => (
-                                    <SearchResultItem
-                                        key={part.id}
-                                        part={part}
-                                        onAdd={(data) => addItemMutation.mutate(data)}
-                                        isAdding={addItemMutation.isPending}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <div className="p-4 border-t bg-muted flex justify-end">
-                            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Done</Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            </div>
+                    </div>
+                    <div className="p-4 border-t bg-muted flex justify-end">
+                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Done</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <div className="border rounded-md shadow-sm bg-card overflow-hidden">
                 <Table>
