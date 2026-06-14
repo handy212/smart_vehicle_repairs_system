@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 const statusOptions = [
     { value: undefined, label: "All Status" },
@@ -62,6 +64,11 @@ function TechniciansContent() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
     const [branchFilter, setBranchFilter] = useState<string>("all");
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: branchesData } = useQuery({
         queryKey: ["branches", "active"],
@@ -70,11 +77,12 @@ function TechniciansContent() {
     const branches = branchesData ?? [];
 
     const { data, isLoading } = useQuery({
-        queryKey: ["technicians", searchQuery, statusFilter, branchFilter],
+        queryKey: ["technicians", searchQuery, statusFilter, branchFilter, sortConfig],
         queryFn: () => techniciansApi.list({
             search: searchQuery,
             status: statusFilter,
             branch: branchFilter !== "all" ? Number(branchFilter) : undefined,
+            ordering: sortOrderingParam(sortConfig) || "user__last_name",
         }),
     });
 
@@ -351,11 +359,19 @@ function TechniciansContent() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-muted/20 hover:bg-muted/20">
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Technician</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</TableHead>
+                                            <SortableHeader field="user__last_name" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                                Technician
+                                            </SortableHeader>
+                                            <SortableHeader field="user__email" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                                Contact
+                                            </SortableHeader>
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Skills</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Experience</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                            <SortableHeader field="years_of_experience" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                                Experience
+                                            </SortableHeader>
+                                            <SortableHeader field="current_status" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                                Status
+                                            </SortableHeader>
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>

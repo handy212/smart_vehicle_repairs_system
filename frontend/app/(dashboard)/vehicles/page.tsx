@@ -22,6 +22,7 @@ import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { toggleSortConfig } from "@/lib/utils/table-sort";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import {
@@ -133,6 +134,11 @@ export default function VehiclesPage() {
     { label: "Active", value: "active", filters: { status: "active" } },
     { label: "In Service", value: "in_service", filters: { status: "in_service" } },
   ];
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["vehicle-dashboard-stats"],
@@ -326,26 +332,14 @@ export default function VehiclesPage() {
             <ServiceDueTable
               vehicles={data?.results || []}
               sortConfig={sortConfig}
-              onSort={(field) => {
-                setSortConfig(prev => ({
-                  field,
-                  direction: prev?.field === field && prev.direction === "asc" ? "desc" : "asc"
-                }));
-                setPage(1);
-              }}
+              onSort={handleSort}
             />
           ) : (
             <VehicleTable
               vehicles={data?.results || []}
               onDelete={handleDelete}
               sortConfig={sortConfig}
-              onSort={(field) => {
-                setSortConfig(prev => ({
-                  field,
-                  direction: prev?.field === field && prev.direction === "asc" ? "desc" : "asc"
-                }));
-                setPage(1);
-              }}
+              onSort={handleSort}
             />
           )}
 

@@ -79,6 +79,7 @@ export const branchesApi = {
     is_active?: boolean;
     is_headquarters?: boolean;
     search?: string;
+    ordering?: string;
   }): Promise<Branch[]> => {
     const response = await apiClient.get("/branches/", { params });
     return normalizeBranchList(response.data);

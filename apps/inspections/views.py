@@ -85,7 +85,7 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_default']
     search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
+    ordering_fields = ['name', 'is_active', 'is_default', 'created_at', 'created_by__last_name']
     ordering = ['name']
     
     def get_serializer_class(self):
@@ -320,7 +320,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'overall_result', 'vehicle', 'work_order', 'template', 'performed_by']
     search_fields = ['inspection_number', 'vehicle__vin', 'vehicle__license_plate', 'notes']
-    ordering_fields = ['inspection_date', 'created_at', 'inspection_number']
+    ordering_fields = ['inspection_date', 'created_at', 'inspection_number', 'status', 'overall_result', 'template__name', 'vehicle__make', 'vehicle__license_plate']
     ordering = ['-inspection_date']
     
     def get_queryset(self):

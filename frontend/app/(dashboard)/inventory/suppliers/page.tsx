@@ -22,6 +22,8 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 const StatsGrid = ({ stats, loading }: { stats?: SupplierStats, loading: boolean }) => {
   if (loading) {
@@ -66,6 +68,7 @@ export default function SuppliersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission, hasAnyPermission } = usePermissions();
@@ -73,19 +76,25 @@ export default function SuppliersPage() {
   const canEditSupplier = hasPermission("edit_inventory") || hasPermission("manage_inventory");
   const canDeleteSupplier = hasAnyPermission(["delete_inventory", "manage_inventory"]);
 
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
+
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["supplier-stats"],
     queryFn: () => inventoryApi.suppliersDashboardStats(),
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["suppliers", page, searchQuery, advancedFilters],
+    queryKey: ["suppliers", page, searchQuery, advancedFilters, sortConfig],
     queryFn: () =>
       inventoryApi.listSuppliers({
         page,
         search: searchQuery || undefined,
         is_active: advancedFilters.is_active === 'true' ? true : advancedFilters.is_active === 'false' ? false : undefined,
         supplier_type: advancedFilters.supplier_type || undefined,
+        ordering: sortOrderingParam(sortConfig) || "name",
       }),
   });
 
@@ -283,13 +292,23 @@ export default function SuppliersPage() {
               <Table>
                 <TableHeader className="bg-muted/50 border-y border-border">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Code</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Type</TableHead>
+                    <SortableHeader field="supplier_code" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Code
+                    </SortableHeader>
+                    <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Name
+                    </SortableHeader>
+                    <SortableHeader field="supplier_type" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Type
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Contact</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Location</TableHead>
+                    <SortableHeader field="city" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Location
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Parts</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Status
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

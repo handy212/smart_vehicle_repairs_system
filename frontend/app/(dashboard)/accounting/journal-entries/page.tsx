@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -47,10 +50,17 @@ export default function JournalEntriesPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const { success, error: toastError } = useToast();
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: entries, isLoading } = useQuery({
-        queryKey: ["accounting", "journal-entries"],
-        queryFn: () => accountingApi.getJournalEntries(),
+        queryKey: ["accounting", "journal-entries", sortConfig],
+        queryFn: () => accountingApi.getJournalEntries({
+            ordering: sortOrderingParam(sortConfig) || "-date",
+        }),
     });
 
     const journalEntries: JournalEntrySummary[] = Array.isArray(entries)
@@ -98,11 +108,11 @@ export default function JournalEntriesPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Reference</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <SortableHeader field="date" sortConfig={sortConfig} onSort={handleSort}>Date</SortableHeader>
+                                    <SortableHeader field="id" sortConfig={sortConfig} onSort={handleSort}>ID</SortableHeader>
+                                    <SortableHeader field="description" sortConfig={sortConfig} onSort={handleSort}>Description</SortableHeader>
+                                    <SortableHeader field="reference" sortConfig={sortConfig} onSort={handleSort}>Reference</SortableHeader>
+                                    <SortableHeader field="posted" sortConfig={sortConfig} onSort={handleSort}>Status</SortableHeader>
                                     <TableHead>Transactions</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>

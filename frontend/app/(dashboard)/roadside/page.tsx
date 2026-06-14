@@ -373,7 +373,14 @@ export default function RoadsidePage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
+                                        <SortableHeader
+                                            field="branch__name"
+                                            sortConfig={sortConfig}
+                                            onSort={handleSort}
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                        >
+                                            Branch
+                                        </SortableHeader>
                                         <SortableHeader
                                             field="request_number"
                                             sortConfig={sortConfig}
@@ -390,8 +397,22 @@ export default function RoadsidePage() {
                                         >
                                             Customer
                                         </SortableHeader>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Service</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Location</TableHead>
+                                        <SortableHeader
+                                            field="service_type"
+                                            sortConfig={sortConfig}
+                                            onSort={handleSort}
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                        >
+                                            Service
+                                        </SortableHeader>
+                                        <SortableHeader
+                                            field="breakdown_location"
+                                            sortConfig={sortConfig}
+                                            onSort={handleSort}
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                        >
+                                            Location
+                                        </SortableHeader>
                                         <SortableHeader
                                             field="requested_at"
                                             sortConfig={sortConfig}

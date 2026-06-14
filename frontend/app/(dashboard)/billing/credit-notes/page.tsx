@@ -38,6 +38,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter } from "next/navigation";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 export default function CreditNotesPage() {
     const { formatCurrency } = useCurrency();
     const router = useRouter();
@@ -47,16 +49,22 @@ export default function CreditNotesPage() {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>({ field: "credit_date", direction: "desc" });
     const debouncedSearch = useDebounce(search, 500);
 
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+        setPage(1);
+    };
+
     const { data, isLoading, error } = useQuery({
-        queryKey: ["creditNotes", page, debouncedSearch, statusFilter],
+        queryKey: ["creditNotes", page, debouncedSearch, statusFilter, sortConfig],
         queryFn: () =>
             billingApi.creditNotes.list({
                 page,
                 search: debouncedSearch,
                 status: statusFilter === "all" ? undefined : statusFilter,
-                ordering: "-credit_date",
+                ordering: sortOrderingParam(sortConfig) || "-credit_date",
             }),
     });
 
@@ -148,12 +156,22 @@ export default function CreditNotesPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Number</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Customer</TableHead>
+                                        <SortableHeader field="credit_note_number" sortConfig={sortConfig} onSort={handleSort}>
+                                            Number
+                                        </SortableHeader>
+                                        <SortableHeader field="credit_date" sortConfig={sortConfig} onSort={handleSort}>
+                                            Date
+                                        </SortableHeader>
+                                        <SortableHeader field="customer__user__last_name" sortConfig={sortConfig} onSort={handleSort}>
+                                            Customer
+                                        </SortableHeader>
                                         <TableHead>Original Invoice</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort}>
+                                            Status
+                                        </SortableHeader>
+                                        <SortableHeader field="amount" sortConfig={sortConfig} onSort={handleSort} className="text-right">
+                                            Amount
+                                        </SortableHeader>
                                         <TableHead className="text-right">Unused</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>

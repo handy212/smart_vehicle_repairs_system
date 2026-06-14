@@ -16,23 +16,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Loader2, Check, X, TrendingUp, Eye, Edit } from "lucide-react";
 import { format } from "date-fns";
 import apiClient from "@/lib/api/client";
+import { accountingApi, type Budget } from "@/lib/api/accounting";
 import Link from "next/link";
 import { useBranchStore } from "@/store/branchStore";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 interface BranchOption {
     id: number;
     name: string;
-}
-
-interface Budget {
-    id: number;
-    name: string;
-    fiscal_year: number;
-    start_date: string;
-    end_date: string;
-    branch_name?: string | null;
-    status: string;
 }
 
 interface BudgetFormData {
@@ -56,14 +49,18 @@ export default function BudgetsPage() {
         description: "",
         branch: activeBranchId || ""
     });
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     // Fetch budgets
     const { data: budgets, isLoading, isError, refetch } = useQuery({
-        queryKey: ["budgets", activeBranchId],
-        queryFn: async () => {
-            const response = await apiClient.get("/accounting/budgets/");
-            return response.data.results || response.data;
-        }
+        queryKey: ["budgets", activeBranchId, sortConfig],
+        queryFn: () => accountingApi.getBudgets({
+            ordering: sortOrderingParam(sortConfig) || "-fiscal_year",
+        }),
     });
 
     // Fetch branches
@@ -264,22 +261,22 @@ export default function BudgetsPage() {
                                 Retry
                             </button>
                         </div>
-                    ) : budgets?.length > 0 ? (
+                    ) : (budgets ?? []).length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Name</TableHead>
-                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Fiscal Year</TableHead>
-                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Period</TableHead>
-                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Branch</TableHead>
-                                        <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</TableHead>
+                                        <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Name</SortableHeader>
+                                        <SortableHeader field="fiscal_year" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Fiscal Year</SortableHeader>
+                                        <SortableHeader field="start_date" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Period</SortableHeader>
+                                        <SortableHeader field="branch__name" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Branch</SortableHeader>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</SortableHeader>
                                         <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
 
-                                    {budgets.map((budget: Budget) => (
+                                    {(budgets ?? []).map((budget: Budget) => (
                                         <TableRow key={budget.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {budget.name}

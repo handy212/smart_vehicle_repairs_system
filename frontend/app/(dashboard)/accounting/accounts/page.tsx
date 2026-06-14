@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 import { getUserFacingError } from "@/lib/api/errors";
 
 type AccountFormData = {
@@ -123,10 +125,17 @@ export default function ChartOfAccountsPage() {
     const [editingAccount, setEditingAccount] = useState<Account | null>(null);
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
     const [formData, setFormData] = useState<AccountFormData>(emptyForm);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: accounts = [], isLoading } = useQuery({
-        queryKey: ["accounting", "accounts"],
-        queryFn: () => accountingApi.getAccounts() as Promise<Account[]>,
+        queryKey: ["accounting", "accounts", sortConfig],
+        queryFn: () => accountingApi.getAccounts({
+            ordering: sortOrderingParam(sortConfig) || "code",
+        }) as Promise<Account[]>,
     });
 
     const accountRows = useMemo(() => buildTreeRows(accounts, expanded, searchTerm), [accounts, expanded, searchTerm]);
@@ -327,11 +336,11 @@ export default function ChartOfAccountsPage() {
                         <Table>
                             <TableHeader className="bg-muted/10">
                                 <TableRow className="border-none hover:bg-transparent">
-                                    <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Account</TableHead>
-                                    <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Subtype</TableHead>
-                                    <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Type</TableHead>
+                                    <SortableHeader field="code" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Account</SortableHeader>
+                                    <SortableHeader field="account_subtype" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Subtype</SortableHeader>
+                                    <SortableHeader field="account_type" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Type</SortableHeader>
                                     <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Balance</TableHead>
-                                    <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</TableHead>
+                                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</SortableHeader>
                                     <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>

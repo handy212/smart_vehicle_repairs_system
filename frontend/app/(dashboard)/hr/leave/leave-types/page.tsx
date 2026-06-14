@@ -20,6 +20,8 @@ import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function LeaveTypesPage() {
     return (
@@ -35,10 +37,17 @@ function LeaveTypesContent() {
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState<LeaveType | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<LeaveType | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "leave-types"],
-        queryFn: async () => (await hrApi.leaveTypes.list()).data,
+        queryKey: ["hr", "leave-types", sortConfig],
+        queryFn: async () => (await hrApi.leaveTypes.list({
+            ordering: sortOrderingParam(sortConfig) || "name",
+        })).data,
     });
 
     const leaveTypes = data?.results ?? [];
@@ -93,13 +102,37 @@ function LeaveTypesContent() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Days Allowed</TableHead>
-                                <TableHead>Paid</TableHead>
+                                <SortableHeader
+                                    field="name"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Name
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="days_allowed"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Days Allowed
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="is_paid"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Paid
+                                </SortableHeader>
                                 <TableHead>Carry Forward</TableHead>
                                 <TableHead>Max Carry</TableHead>
                                 <TableHead>Requires Doc</TableHead>
-                                <TableHead>Status</TableHead>
+                                <SortableHeader
+                                    field="is_active"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Status
+                                </SortableHeader>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>

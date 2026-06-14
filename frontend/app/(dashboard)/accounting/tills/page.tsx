@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortClientRecords, toggleSortConfig } from "@/lib/utils/table-sort";
 import { getUserFacingError } from "@/lib/api/errors";
 
 type ApiError = { response?: { data?: { error?: string; detail?: string; payment_method?: string[] } }; message?: string };
@@ -40,6 +42,11 @@ export default function AccountingTillManagementPage() {
     const [movementAmount, setMovementAmount] = useState("");
     const [movementReason, setMovementReason] = useState("");
     const [reportDate, setReportDate] = useState(today);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: accounts = [] } = useQuery({
         queryKey: ["accounting", "till-enabled-accounts"],
@@ -57,6 +64,17 @@ export default function AccountingTillManagementPage() {
     });
 
     const openTills = useMemo(() => tills.filter((till) => till.status === "open"), [tills]);
+
+    const sortedTills = useMemo(
+        () => sortClientRecords(tills, sortConfig, {
+            till_account__name: (till) => till.till_account_name ?? "",
+            cashier__last_name: (till) => till.cashier_name ?? "",
+            opened_at: (till) => till.opened_at,
+            expected_balance: (till) => Number(till.current_expected_balance || till.expected_balance || till.opening_balance || 0),
+            status: (till) => till.status,
+        }),
+        [tills, sortConfig],
+    );
 
     const openMutation = useMutation({
         mutationFn: () => accountingApi.openTill({ till_account: selectedAccount, opening_balance: openingBalance || "0.00" }),
@@ -175,20 +193,20 @@ export default function AccountingTillManagementPage() {
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow>
-                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Till Account</TableHead>
-                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Responsible</TableHead>
-                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Opened</TableHead>
-                                <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Expected</TableHead>
-                                <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</TableHead>
+                                <SortableHeader field="till_account__name" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Till Account</SortableHeader>
+                                <SortableHeader field="cashier__last_name" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Responsible</SortableHeader>
+                                <SortableHeader field="opened_at" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Opened</SortableHeader>
+                                <SortableHeader field="expected_balance" sortConfig={sortConfig} onSort={handleSort} className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Expected</SortableHeader>
+                                <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className={ACCOUNTING_TABLE_HEAD_CLASS}>Status</SortableHeader>
                                 <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {tillsLoading ? (
                                 <TableRow><TableCell colSpan={6} className="py-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></TableCell></TableRow>
-                            ) : tills.length === 0 ? (
+                            ) : sortedTills.length === 0 ? (
                                 <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">No till sessions found.</TableCell></TableRow>
-                            ) : tills.map((till) => (
+                            ) : sortedTills.map((till) => (
                                 <TableRow key={till.id}>
                                     <TableCell className="px-4 py-2">
                                         <div className="font-medium">{till.till_account_code} - {till.till_account_name}</div>

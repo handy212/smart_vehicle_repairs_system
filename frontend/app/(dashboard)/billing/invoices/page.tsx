@@ -20,7 +20,8 @@ import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
-import { SortConfig } from "@/components/ui/sortable-header";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { toggleSortConfig } from "@/lib/utils/table-sort";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -53,6 +54,11 @@ export default function InvoicesPage() {
     });
 
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+        setPage(1);
+    };
 
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
@@ -737,14 +743,30 @@ export default function InvoicesPage() {
                                                 className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                                             />
                                         </TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Invoice #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Due Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Total</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Paid</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Due</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                        <SortableHeader field="invoice_number" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Invoice #
+                                        </SortableHeader>
+                                        <SortableHeader field="customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Customer
+                                        </SortableHeader>
+                                        <SortableHeader field="invoice_date" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Date
+                                        </SortableHeader>
+                                        <SortableHeader field="due_date" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Due Date
+                                        </SortableHeader>
+                                        <SortableHeader field="total" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                                            Total
+                                        </SortableHeader>
+                                        <SortableHeader field="amount_paid" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                                            Paid
+                                        </SortableHeader>
+                                        <SortableHeader field="amount_due" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                                            Due
+                                        </SortableHeader>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Status
+                                        </SortableHeader>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>

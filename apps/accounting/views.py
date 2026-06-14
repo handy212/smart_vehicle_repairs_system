@@ -288,6 +288,8 @@ class ExpenseBreakdownView(APIView):
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import BankStatement, BankStatementLine, FundTransfer
 from .serializers import BankStatementSerializer, BankStatementLineSerializer, FundTransferSerializer, TransactionSerializer
 from apps.billing.models import CashierTill
@@ -698,6 +700,12 @@ class FundTransferViewSet(viewsets.ModelViewSet):
             permission_classes.append(HasPermission('manage_transfers'))
         return [permission() for permission in permission_classes]
     filterset_fields = ['status', 'from_account', 'to_account']
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = [
+        'transfer_number', 'transfer_date', 'amount', 'status', 'created_at',
+        'from_account__name', 'to_account__name',
+    ]
+    ordering = ['-transfer_date']
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -793,6 +801,9 @@ class BudgetViewSet(viewsets.ModelViewSet):
             permission_classes.append(HasPermission('manage_budgets'))
         return [permission() for permission in permission_classes]
     filterset_fields = ['fiscal_year', 'status', 'branch']
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ['name', 'fiscal_year', 'start_date', 'end_date', 'status', 'branch__name', 'created_at']
+    ordering = ['-fiscal_year', '-start_date']
 
     def get_queryset(self):
         return scope_budgets(super().get_queryset(), self.request)
@@ -937,6 +948,14 @@ class JournalEntryListView(ListAPIView):
         if end_date:
             qs = qs.filter(date__lte=end_date)
 
+        ordering = self.request.query_params.get('ordering')
+        allowed = {
+            'date', '-date', 'id', '-id', 'description', '-description',
+            'reference', '-reference', 'posted', '-posted', 'created_at', '-created_at',
+        }
+        if ordering in allowed:
+            return qs.order_by(ordering)
+
         return qs
 
 class JournalEntryDetailView(RetrieveAPIView):
@@ -1062,6 +1081,13 @@ class AccountListView(ListCreateAPIView):
         till_enabled = self.request.query_params.get('is_till_enabled')
         if till_enabled is not None:
             queryset = queryset.filter(is_till_enabled=till_enabled.lower() == 'true')
+        ordering = self.request.query_params.get('ordering')
+        allowed = {
+            'code', '-code', 'name', '-name', 'account_type', '-account_type',
+            'account_subtype', '-account_subtype', 'is_active', '-is_active',
+        }
+        if ordering in allowed:
+            return queryset.order_by(ordering)
         return queryset
 
     def perform_create(self, serializer):

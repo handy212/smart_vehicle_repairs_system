@@ -18,29 +18,32 @@ import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { ReceivePaymentDialog } from "./components/ReceivePaymentDialog";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function PaymentsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [methodFilter, setMethodFilter] = useState("");
     const [receivePaymentOpen, setReceivePaymentOpen] = useState(false);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
     const { hasAnyPermission } = usePermissions();
     const queryClient = useQueryClient();
     const canReceivePayment = hasAnyPermission(["process_payments", "create_payments", "manage_billing"]);
 
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
+
     const { data: payments, isLoading } = useQuery({
-        queryKey: ['payments', search, statusFilter, methodFilter],
+        queryKey: ['payments', search, statusFilter, methodFilter, sortConfig],
         queryFn: () => billingApi.payments.list({
             status: statusFilter || undefined,
             payment_method: methodFilter || undefined,
-            // Note: Search implementation depends on backend support. 
-            // Assuming backend might not support generic 'search' param on list endpoint yet based on types,
-            // but we'll try implementing client side filtering if needed or assume backend search.
-            // Looking at types: list params has no 'search'. 
-            // We will filter client side if backend doesn't support it, or update backend later.
-            // Ideally we'd update billing.ts to include search if backend supports it.
+            search: search || undefined,
+            ordering: sortOrderingParam(sortConfig) || "-payment_date",
         }),
     });
 
@@ -55,16 +58,7 @@ export default function PaymentsPage() {
     // checking if I can pass extra params. 
     // `billingApi.payments.list` takes specific params.
 
-    const filteredPayments = payments?.filter((p: Payment) => {
-        if (!search) return true;
-        const searchLower = search.toLowerCase();
-        return (
-            p.payment_number?.toLowerCase().includes(searchLower) ||
-            p.customer_name?.toLowerCase().includes(searchLower) ||
-            p.invoice_number?.toLowerCase().includes(searchLower) ||
-            p.reference_number?.toLowerCase().includes(searchLower)
-        );
-    }) || [];
+    const filteredPayments = payments || [];
 
     const getStatusVariant = (status: string) => {
         const variants: Record<string, "success" | "warning" | "danger" | "secondary" | "default"> = {
@@ -207,13 +201,27 @@ export default function PaymentsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Payment #</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Invoice</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Method</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Amount</TableHead>
+                                <SortableHeader field="payment_number" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                    Payment #
+                                </SortableHeader>
+                                <SortableHeader field="payment_date" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                    Date
+                                </SortableHeader>
+                                <SortableHeader field="customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                    Customer
+                                </SortableHeader>
+                                <SortableHeader field="invoice__invoice_number" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                    Invoice
+                                </SortableHeader>
+                                <SortableHeader field="payment_method" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                    Method
+                                </SortableHeader>
+                                <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                    Status
+                                </SortableHeader>
+                                <SortableHeader field="amount" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                                    Amount
+                                </SortableHeader>
                                 <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>

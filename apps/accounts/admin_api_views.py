@@ -512,7 +512,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = []
     search_fields = ['object_repr', 'actor__email', 'actor__username', 'remote_addr']
-    ordering_fields = ['timestamp', 'action']
+    ordering_fields = ['timestamp', 'action', 'user__last_name', 'model_name', 'ip_address']
     ordering = ['-timestamp']
 
     def get_permissions(self):

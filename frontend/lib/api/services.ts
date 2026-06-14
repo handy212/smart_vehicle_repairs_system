@@ -154,6 +154,7 @@ export const servicesApi = {
     service_type?: number;
     vehicle?: number;
     customer?: number;
+    ordering?: string;
   }): Promise<ServicesDueResponse> => {
     const response = await apiClient.get("/vehicles/service-schedules/services_due/", { params });
     return response.data;

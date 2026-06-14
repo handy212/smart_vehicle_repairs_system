@@ -23,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 // Stats Grid Component
 
@@ -53,13 +55,19 @@ export default function PartCategoriesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
 
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
+
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ["part-categories", searchQuery, advancedFilters],
+    queryKey: ["part-categories", searchQuery, advancedFilters, sortConfig],
     queryFn: () => inventoryApi.listCategories({
       search: searchQuery || undefined,
+      ordering: sortOrderingParam(sortConfig) || "name",
       // Assuming listCategories supports filtering by status if needed
       // is_active: advancedFilters.is_active === 'true' ? true : advancedFilters.is_active === 'false' ? false : undefined,
     }),
@@ -193,11 +201,15 @@ export default function PartCategoriesPage() {
               <Table>
                 <TableHeader className="bg-muted/50 border-y border-border">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
+                    <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Name
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Full Path</TableHead>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Subcategories</TableHead>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Parts</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Status
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

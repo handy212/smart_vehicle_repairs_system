@@ -26,6 +26,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { getInspectionApprovalLabel, getInspectionStageLabel, getInspectionStageTone } from "@/lib/utils/inspection-status";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 // Removed const statusColors and resultColors as they are now handled inline or could be moved to utility
 
@@ -35,19 +37,26 @@ export default function InspectionsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [resultFilter, setResultFilter] = useState<string>("");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPermission } = usePermissions();
   const { openPrintWindow } = usePrint();
   const router = useRouter();
 
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: ["inspections", "list", page, search, statusFilter, resultFilter],
+    queryKey: ["inspections", "list", page, search, statusFilter, resultFilter, sortConfig],
     queryFn: () =>
       inspectionsApi.list({
         page,
         search: search || undefined,
         status: statusFilter || undefined,
         overall_result: resultFilter || undefined,
+        ordering: sortOrderingParam(sortConfig) || "-inspection_date",
       }),
   });
 
@@ -60,6 +69,7 @@ export default function InspectionsPage() {
   }
 
   const inspections = data?.results || [];
+  const headerClass = "h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground";
 
   return (
     <div className="space-y-4">
@@ -183,13 +193,25 @@ export default function InspectionsPage() {
               <Table>
                 <TableHeader className="bg-muted/50 hover:bg-muted/50">
                   <TableRow>
-                    <TableHead className="w-[100px] h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Number</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Template</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Result</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Progress</TableHead>
+                    <SortableHeader field="inspection_number" sortConfig={sortConfig} onSort={handleSort} className={`w-[100px] ${headerClass}`}>
+                      Number
+                    </SortableHeader>
+                    <SortableHeader field="vehicle__make" sortConfig={sortConfig} onSort={handleSort} className={headerClass}>
+                      Vehicle
+                    </SortableHeader>
+                    <SortableHeader field="template__name" sortConfig={sortConfig} onSort={handleSort} className={headerClass}>
+                      Template
+                    </SortableHeader>
+                    <SortableHeader field="inspection_date" sortConfig={sortConfig} onSort={handleSort} className={headerClass}>
+                      Date
+                    </SortableHeader>
+                    <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className={headerClass}>
+                      Status
+                    </SortableHeader>
+                    <SortableHeader field="overall_result" sortConfig={sortConfig} onSort={handleSort} className={headerClass}>
+                      Result
+                    </SortableHeader>
+                    <TableHead className={headerClass}>Progress</TableHead>
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

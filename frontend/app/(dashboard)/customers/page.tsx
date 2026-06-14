@@ -24,6 +24,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { toggleSortConfig } from "@/lib/utils/table-sort";
 import {
   Tooltip,
   TooltipContent,
@@ -145,6 +146,11 @@ export default function CustomersPage() {
     ];
   }, []);
 
+  const handleSort = useCallback((field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  }, []);
+
   // Fetch Dashboard Stats for KPIs
   const { data: dashboardOverview } = useQuery({
     queryKey: ["dashboard-overview"],
@@ -232,6 +238,7 @@ export default function CustomersPage() {
     type: customer.customer_type || "",
     status: customer.status || "",
     balance: Number(customer.current_balance || 0),
+    vehicles: customer.vehicle_count ?? 0,
     last_visit: customer.last_visit_date ? new Date(customer.last_visit_date).toLocaleDateString() : "",
   }));
 
@@ -247,8 +254,8 @@ export default function CustomersPage() {
     if (format === "xlsx") {
       exportToExcel(
         [
-          ["Name", "Email", "Phone", "Type", "Status", "Balance", "Last Visit"],
-          ...rows.map((row) => [row.name, row.email, row.phone, row.type, row.status, row.balance, row.last_visit]),
+          ["Name", "Email", "Phone", "Type", "Vehicles", "Status", "Balance", "Last Visit"],
+          ...rows.map((row) => [row.name, row.email, row.phone, row.type, row.vehicles, row.status, row.balance, row.last_visit]),
         ],
         `customers_${dateStamp}.xlsx`,
         {
@@ -256,14 +263,14 @@ export default function CustomersPage() {
           reportTitle: "Customers",
           dateInfo: `Exported records: ${rows.length}`,
           boldRows: [0],
-          currencyColumns: [5],
+          currencyColumns: [6],
           freezePane: { row: 1, col: 0 },
         }
       );
     } else {
       const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const headers = ["Name", "Email", "Phone", "Type", "Status", "Balance", "Last Visit"];
-      const widths = [150, 170, 95, 70, 70, 80, 80];
+      const headers = ["Name", "Email", "Phone", "Type", "Vehicles", "Status", "Balance", "Last Visit"];
+      const widths = [140, 160, 90, 70, 55, 70, 80, 80];
       let y = 72;
 
       pdf.setFontSize(14);
@@ -297,6 +304,7 @@ export default function CustomersPage() {
           row.email,
           row.phone,
           row.type,
+          String(row.vehicles),
           row.status,
           formatCurrency(row.balance),
           row.last_visit,
@@ -405,21 +413,6 @@ export default function CustomersPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="h-9 text-[9px] font-black uppercase tracking-widest gap-2">
-                <ChevronDown className="w-3 h-3" />
-                Sort
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setSortConfig({ field: "user__last_name", direction: "asc" })}>Name (A-Z)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortConfig({ field: "user__last_name", direction: "desc" })}>Name (Z-A)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortConfig({ field: "current_balance", direction: "desc" })}>High Balance</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortConfig({ field: "created_at", direction: "desc" })}>Recently Joined</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-9 text-[9px] font-black uppercase tracking-widest gap-2">
                 Actions
                 <ChevronDown className="w-3 h-3" />
               </Button>
@@ -461,6 +454,8 @@ export default function CustomersPage() {
         customers={customers}
         isLoading={customersLoading}
         formatCurrency={formatCurrency}
+        sortConfig={sortConfig}
+        onSort={handleSort}
         onDelete={canDeleteCustomers ? handleDelete : undefined}
         canEdit={canEditCustomers}
         canDelete={canDeleteCustomers}

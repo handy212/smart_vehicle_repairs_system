@@ -403,8 +403,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
             try:
                 from django.core.mail import send_mail
                 from django.conf import settings as django_settings
-                from apps.accounts.settings_utils import get_setting
-                site_url = get_setting('site_url', 'http://localhost:3000')
+                from apps.accounts.settings_utils import get_site_url
+                site_url = get_site_url()
                 share_url = f"{site_url}/portal/documents/{share.share_token}"
                 company_name = get_setting('company_name', 'Vehicle Repairs')
                 send_mail(
@@ -453,8 +453,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
             try:
                 from django.core.mail import send_mail
                 from django.conf import settings as django_settings
-                from apps.accounts.settings_utils import get_setting
-                site_url = get_setting('site_url', 'http://localhost:3000')
+                from apps.accounts.settings_utils import get_site_url
+                site_url = get_site_url()
                 sign_url = f"{site_url}/portal/sign/{signature.request_token}"
                 company_name = get_setting('company_name', 'Vehicle Repairs')
                 send_mail(

@@ -33,6 +33,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { toggleSortConfig } from "@/lib/utils/table-sort";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -109,16 +110,7 @@ export default function EstimatesPage() {
 
 
   const handleSort = (field: string) => {
-    setSortConfig((current) => {
-      if (current?.field === field) {
-        if (current.direction === "asc") {
-          return { field, direction: "desc" };
-        } else if (current.direction === "desc") {
-          return null;
-        }
-      }
-      return { field, direction: "asc" };
-    });
+    setSortConfig((current) => toggleSortConfig(current, field));
     setPage(1);
   };
 
@@ -669,12 +661,22 @@ export default function EstimatesPage() {
                         className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                       />
                     </TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Estimate #</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
+                    <SortableHeader field="estimate_number" sortConfig={sortConfig} onSort={handleSort} className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Estimate #
+                    </SortableHeader>
+                    <SortableHeader field="customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Customer
+                    </SortableHeader>
                     <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Dates</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">Total</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <SortableHeader field="estimate_date" sortConfig={sortConfig} onSort={handleSort} className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Dates
+                    </SortableHeader>
+                    <SortableHeader field="total" sortConfig={sortConfig} onSort={handleSort} className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">
+                      Total
+                    </SortableHeader>
+                    <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Status
+                    </SortableHeader>
                     <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

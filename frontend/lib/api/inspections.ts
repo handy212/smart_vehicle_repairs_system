@@ -169,6 +169,7 @@ export const inspectionsApi = {
       is_active?: boolean;
       is_default?: boolean;
       search?: string;
+      ordering?: string;
     }): Promise<TemplateListResponse> => {
       const response = await apiClient.get("/inspections/templates/", { params });
       return response.data;

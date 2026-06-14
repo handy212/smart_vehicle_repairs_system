@@ -34,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 const ACTION_CHOICES = [
   { value: "create", label: "Create" },
@@ -71,6 +73,12 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
 
   const listParams = {
     page,
@@ -80,6 +88,7 @@ export default function AuditLogPage() {
     search: debouncedSearch || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
+    ordering: sortOrderingParam(sortConfig) || "-timestamp",
   };
 
   const statsParams = {
@@ -122,6 +131,7 @@ export default function AuditLogPage() {
       dateFrom,
       dateTo,
       page,
+      sortConfig,
     ],
     queryFn: () => adminApi.auditLogs.list(listParams),
   });
@@ -165,6 +175,7 @@ export default function AuditLogPage() {
     setDateFrom("");
     setDateTo("");
     setPage(1);
+    setSortConfig(null);
   };
 
   const handleExport = async (fileFormat: "xlsx" | "json") => {
@@ -428,11 +439,21 @@ export default function AuditLogPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="py-2 h-9 text-xs font-semibold">Time</TableHead>
-                  <TableHead className="py-2 h-9 text-xs font-semibold">User</TableHead>
-                  <TableHead className="py-2 h-9 text-xs font-semibold">Action</TableHead>
-                  <TableHead className="py-2 h-9 text-xs font-semibold">Entity</TableHead>
-                  <TableHead className="py-2 h-9 text-xs font-semibold">IP</TableHead>
+                  <SortableHeader field="timestamp" sortConfig={sortConfig} onSort={handleSort} className="py-2 h-9 text-xs font-semibold">
+                    Time
+                  </SortableHeader>
+                  <SortableHeader field="user__last_name" sortConfig={sortConfig} onSort={handleSort} className="py-2 h-9 text-xs font-semibold">
+                    User
+                  </SortableHeader>
+                  <SortableHeader field="action" sortConfig={sortConfig} onSort={handleSort} className="py-2 h-9 text-xs font-semibold">
+                    Action
+                  </SortableHeader>
+                  <SortableHeader field="model_name" sortConfig={sortConfig} onSort={handleSort} className="py-2 h-9 text-xs font-semibold">
+                    Entity
+                  </SortableHeader>
+                  <SortableHeader field="ip_address" sortConfig={sortConfig} onSort={handleSort} className="py-2 h-9 text-xs font-semibold">
+                    IP
+                  </SortableHeader>
                   <TableHead className="py-2 h-9 text-xs font-semibold text-right">Info</TableHead>
                 </TableRow>
               </TableHeader>

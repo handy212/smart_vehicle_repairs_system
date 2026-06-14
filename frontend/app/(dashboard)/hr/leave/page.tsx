@@ -33,6 +33,8 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { useEffect } from "react";
 import Link from "next/link";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function LeavePage() {
     return (
@@ -49,11 +51,19 @@ function LeaveContent() {
     const [showApply, setShowApply] = useState(false);
     const [editingRequest, setEditingRequest] = useState<LeaveRequest | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "leave-requests", statusFilter],
+        queryKey: ["hr", "leave-requests", statusFilter, sortConfig],
         queryFn: async () => {
-            const res = await hrApi.leaveRequests.list({ status: statusFilter });
+            const res = await hrApi.leaveRequests.list({
+                status: statusFilter,
+                ordering: sortOrderingParam(sortConfig) || "-start_date",
+            });
             return res.data;
         },
     });
@@ -185,11 +195,39 @@ function LeaveContent() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Staff</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Leave Type</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Dates</TableHead>
+                                    <SortableHeader
+                                        field="employee__user__last_name"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Staff
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="leave_type__name"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Leave Type
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="start_date"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Dates
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Days</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                    <SortableHeader
+                                        field="status"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Status
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>

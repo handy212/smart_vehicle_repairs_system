@@ -36,6 +36,8 @@ import {
 import Image from "next/image";
 import { getMediaUrl } from "@/lib/api/utils";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 // Stats Grid Component
 const StatsGrid = ({ stats, loading }: { stats: any; loading: boolean }) => {
@@ -98,10 +100,15 @@ export default function InventoryPage() {
   // Unified Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
 
   // Fetch Lists
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery<PartListResponse>({
-    queryKey: ["inventory", searchQuery, advancedFilters],
+    queryKey: ["inventory", searchQuery, advancedFilters, sortConfig],
     queryFn: ({ pageParam = 1 }) =>
       inventoryApi.list({
         page: pageParam as number,
@@ -112,6 +119,7 @@ export default function InventoryPage() {
         out_of_stock: advancedFilters.stock_status === 'out_of_stock' ? true : undefined,
         needs_reorder: advancedFilters.stock_status === 'needs_reorder' ? true : undefined,
         branch: advancedFilters.branch ? parseInt(advancedFilters.branch) : undefined,
+        ordering: sortOrderingParam(sortConfig) || "part_number",
       }),
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.next) {
@@ -470,13 +478,27 @@ export default function InventoryPage() {
                       />
                     </TableHead>
                     <TableHead className="h-9 w-12 px-2"></TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Part #</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Category</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Stock</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Cost</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Sell</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                    <SortableHeader field="part_number" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Part #
+                    </SortableHeader>
+                    <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Name
+                    </SortableHeader>
+                    <SortableHeader field="category__name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Category
+                    </SortableHeader>
+                    <SortableHeader field="quantity_in_stock" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">
+                      Stock
+                    </SortableHeader>
+                    <SortableHeader field="cost_price" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">
+                      Cost
+                    </SortableHeader>
+                    <SortableHeader field="selling_price" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">
+                      Sell
+                    </SortableHeader>
+                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Status
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

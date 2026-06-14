@@ -68,7 +68,7 @@ class PartCategoryViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'parent']
     search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
+    ordering_fields = ['name', 'is_active', 'created_at']
     ordering = ['name']
 
     @action(detail=False, methods=['get'])
@@ -133,7 +133,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['supplier_type', 'is_active', 'is_preferred']
     search_fields = ['name', 'supplier_code', 'contact_person', 'email', 'city']
-    ordering_fields = ['name', 'supplier_code', 'created_at']
+    ordering_fields = ['name', 'supplier_code', 'supplier_type', 'is_active', 'city', 'created_at']
     ordering = ['name']
 
     def get_queryset(self):
@@ -250,7 +250,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
     ]
     ordering_fields = [
         'part_number', 'name', 'quantity_in_stock', 'cost_price',
-        'selling_price', 'reorder_point', 'created_at'
+        'selling_price', 'reorder_point', 'category__name', 'is_active', 'created_at'
     ]
     ordering = ['part_number']
 
@@ -1381,7 +1381,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'supplier', 'order_date']
     search_fields = ['po_number', 'supplier__name', 'notes']
-    ordering_fields = ['po_number', 'order_date', 'expected_delivery_date', 'total', 'created_at']
+    ordering_fields = ['po_number', 'order_date', 'expected_delivery_date', 'total', 'status', 'supplier__name', 'created_at']
     ordering = ['-created_at']
 
     @action(detail=False, methods=['get'])
@@ -2219,6 +2219,10 @@ class TransferViewSet(viewsets.ModelViewSet):
         )
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'source_branch', 'destination_branch']
+    ordering_fields = [
+        'transfer_number', 'requested_date', 'status', 'created_at',
+        'source_branch__name', 'destination_branch__name',
+    ]
     ordering = ['-created_at']
     
     def get_serializer_class(self):
@@ -2560,7 +2564,7 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'branch', 'count_date']
-    ordering_fields = ['created_at', 'count_date', 'status']
+    ordering_fields = ['created_at', 'count_date', 'status', 'session_number', 'branch__name']
     ordering = ['-created_at']
     
     def get_serializer_class(self):
@@ -2826,7 +2830,7 @@ class ServiceBundleViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'service_type']
     search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
+    ordering_fields = ['name', 'is_active', 'created_at', 'service_type__name']
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:

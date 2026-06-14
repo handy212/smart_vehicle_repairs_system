@@ -14,15 +14,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 
 interface CustomerTableProps {
   customers: any[];
   isLoading: boolean;
   formatCurrency: (amount: number) => string;
+  sortConfig: SortConfig | null;
+  onSort: (field: string) => void;
   onDelete?: (customer: any) => void;
   canEdit?: boolean;
   canDelete?: boolean;
 }
+
+const headerClass =
+  "px-4 py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground";
 
 const CustomerRow = memo(function CustomerRow({
   customer,
@@ -76,6 +82,10 @@ const CustomerRow = memo(function CustomerRow({
         <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-muted-foreground/20 text-muted-foreground">
           {customer.customer_type || "Individual"}
         </Badge>
+      </TableCell>
+
+      <TableCell className="text-sm text-muted-foreground text-center" onClick={() => router.push(`/customers/${customer.id}`)}>
+        {customer.vehicle_count ?? 0}
       </TableCell>
 
       <TableCell className="text-right font-bold text-sm" onClick={() => router.push(`/customers/${customer.id}`)}>
@@ -198,28 +208,51 @@ const CustomerRow = memo(function CustomerRow({
   );
 });
 
-export function CustomerTable({ customers, isLoading, formatCurrency, onDelete, canEdit, canDelete }: CustomerTableProps) {
+export function CustomerTable({
+  customers,
+  isLoading,
+  formatCurrency,
+  sortConfig,
+  onSort,
+  onDelete,
+  canEdit,
+  canDelete,
+}: CustomerTableProps) {
   const router = useRouter();
+  const columnCount = 8;
 
   return (
     <div className="precision-card overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-b border-border bg-muted/30">
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4">Customer Name</TableHead>
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4">Email</TableHead>
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4">Type</TableHead>
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4 text-right">Balance</TableHead>
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4">Last Visit</TableHead>
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4">Status</TableHead>
-            <TableHead className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground py-4 text-right">Actions</TableHead>
+            <SortableHeader field="user__last_name" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Customer Name
+            </SortableHeader>
+            <SortableHeader field="user__email" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Email
+            </SortableHeader>
+            <SortableHeader field="customer_type" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Type
+            </SortableHeader>
+            <SortableHeader field="vehicle_count" sortConfig={sortConfig} onSort={onSort} className={cn(headerClass, "text-center")}>
+              Vehicles
+            </SortableHeader>
+            <SortableHeader field="current_balance" sortConfig={sortConfig} onSort={onSort} className={cn(headerClass, "text-right")}>
+              Balance
+            </SortableHeader>
+            <TableHead className={headerClass}>Last Visit</TableHead>
+            <SortableHeader field="status" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Status
+            </SortableHeader>
+            <TableHead className={cn(headerClass, "text-right")}>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
-                {Array.from({ length: 7 }).map((_, j) => (
+                {Array.from({ length: columnCount }).map((_, j) => (
                   <TableCell key={j} className="py-4">
                     <div className="h-4 bg-muted animate-pulse rounded" />
                   </TableCell>
@@ -228,7 +261,7 @@ export function CustomerTable({ customers, isLoading, formatCurrency, onDelete, 
             ))
           ) : customers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+              <TableCell colSpan={columnCount} className="text-center py-12 text-muted-foreground">
                 No customers found.
               </TableCell>
             </TableRow>

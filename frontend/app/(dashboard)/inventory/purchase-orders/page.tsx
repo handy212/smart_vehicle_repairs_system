@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 // Stats Grid Component
 // Stats Grid Component
@@ -91,7 +93,13 @@ export default function PurchaseOrdersPage() {
 
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [page, setPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { toast } = useToast();
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["purchase-orders-stats"],
@@ -99,12 +107,13 @@ export default function PurchaseOrdersPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["purchase-orders", page, searchQuery, advancedFilters],
+    queryKey: ["purchase-orders", page, searchQuery, advancedFilters, sortConfig],
     queryFn: () =>
       inventoryApi.listPurchaseOrders({
         page,
         search: searchQuery || undefined,
         status: advancedFilters.status || undefined,
+        ordering: sortOrderingParam(sortConfig) || "-order_date",
       }),
   });
 
@@ -300,12 +309,24 @@ export default function PurchaseOrdersPage() {
               <Table>
                 <TableHeader className="bg-muted/50 border-y border-border">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">PO Number</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Supplier</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Order Date</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Expected Delivery</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Total</TableHead>
+                    <SortableHeader field="po_number" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      PO Number
+                    </SortableHeader>
+                    <SortableHeader field="supplier__name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Supplier
+                    </SortableHeader>
+                    <SortableHeader field="order_date" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Order Date
+                    </SortableHeader>
+                    <SortableHeader field="expected_delivery_date" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Expected Delivery
+                    </SortableHeader>
+                    <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                      Status
+                    </SortableHeader>
+                    <SortableHeader field="total" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">
+                      Total
+                    </SortableHeader>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

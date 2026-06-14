@@ -191,7 +191,7 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
         'work_order__work_order_number', 'customer_complaint',
         'root_cause', 'diagnostic_notes'
     ]
-    ordering_fields = ['started_at', 'completed_at', 'created_at', 'diagnostic_fee']
+    ordering_fields = ['started_at', 'completed_at', 'created_at', 'diagnostic_fee', 'status', 'id']
     ordering = ['-started_at']
     
     def get_queryset(self):

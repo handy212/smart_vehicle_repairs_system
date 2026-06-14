@@ -380,6 +380,7 @@ export const inventoryApi = {
     needs_reorder?: boolean;
     is_active?: boolean;
     branch?: number;
+    ordering?: string;
   }): Promise<PartListResponse> => {
     const response = await apiClient.get("/inventory/parts/", { params });
     return response.data;
@@ -440,6 +441,7 @@ export const inventoryApi = {
     is_active?: boolean;
     parent?: number;
     search?: string;
+    ordering?: string;
   }): Promise<PartCategory[]> => {
     const response = await apiClient.get("/inventory/categories/", { params });
     return response.data.results || response.data;
@@ -486,6 +488,7 @@ export const inventoryApi = {
     supplier_type?: string;
     is_active?: boolean;
     is_preferred?: boolean;
+    ordering?: string;
   }): Promise<{ count: number; next: string | null; previous: string | null; results: Supplier[] } | Supplier[]> => {
     const response = await apiClient.get("/inventory/suppliers/", { params });
     return response.data;
@@ -532,6 +535,7 @@ export const inventoryApi = {
     status?: string;
     supplier?: number;
     order_date?: string;
+    ordering?: string;
   }): Promise<{ count: number; next: string | null; previous: string | null; results: PurchaseOrder[] } | PurchaseOrder[]> => {
     const response = await apiClient.get("/inventory/purchase-orders/", { params });
     return response.data;
@@ -659,6 +663,7 @@ export const inventoryApi = {
     status?: string;
     source_branch?: number;
     destination_branch?: number;
+    ordering?: string;
   }): Promise<{ count: number; next: string | null; previous: string | null; results: Transfer[] }> => {
     const response = await apiClient.get("/inventory/transfers/", { params });
     return response.data;
@@ -721,6 +726,7 @@ export const inventoryApi = {
     search?: string;
     is_active?: boolean;
     service_type?: number;
+    ordering?: string;
   }): Promise<ServiceBundle[] | { count: number; results: ServiceBundle[] }> => {
     const response = await apiClient.get("/inventory/service-bundles/", { params });
     return response.data;
@@ -785,7 +791,7 @@ export const inventoryApi = {
     return response.data;
   },
 
-  listPhysicalCounts: async (params?: { status?: string; branch?: number }) => {
+  listPhysicalCounts: async (params?: { status?: string; branch?: number; ordering?: string }) => {
     const response = await apiClient.get("/inventory/physical-counts/", { params });
     return response.data;
   },

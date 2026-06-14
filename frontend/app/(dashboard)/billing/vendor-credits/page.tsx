@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi, type PurchaseOrder, type Supplier } from "@/lib/api/inventory";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortClientRecords, toggleSortConfig } from "@/lib/utils/table-sort";
 
 function normalizeResults<T>(value: { results?: T[] } | T[] | undefined): T[] {
   if (!value) return [];
@@ -30,7 +32,12 @@ export default function VendorCreditsPage() {
 
 function VendorCreditsContent() {
   const [search, setSearch] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { formatCurrency } = useCurrency();
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
 
   const { data: suppliersData, isLoading: suppliersLoading } = useQuery({
     queryKey: ["vendor-credits-suppliers", search],
@@ -56,7 +63,8 @@ function VendorCreditsContent() {
 
   const supplierSummaries = useMemo(
     () =>
-      suppliers.map((supplier) => {
+      sortClientRecords(
+        suppliers.map((supplier) => {
         const openBills = bills.filter((bill) => bill.vendor === supplier.id || bill.vendor_name === supplier.name);
         const relatedPurchaseOrders = purchaseOrders.filter((purchaseOrder) => {
           const supplierId =
@@ -76,7 +84,10 @@ function VendorCreditsContent() {
           outstandingAmount,
         };
       }),
-    [suppliers, bills, purchaseOrders]
+        sortConfig,
+        { name: (row) => row.supplier.name },
+      ),
+    [suppliers, bills, purchaseOrders, sortConfig]
   );
 
   return (
@@ -153,7 +164,9 @@ function VendorCreditsContent() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Supplier</TableHead>
+                  <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort}>
+                    Supplier
+                  </SortableHeader>
                   <TableHead>Open Bills</TableHead>
                   <TableHead>Related POs</TableHead>
                   <TableHead className="text-right">Outstanding</TableHead>

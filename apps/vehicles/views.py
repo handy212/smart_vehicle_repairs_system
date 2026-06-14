@@ -64,7 +64,12 @@ class VehicleViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status', 'make', 'model', 'year', 'engine_type', 'transmission_type', 'owner']
     search_fields = ['vin', 'license_plate', 'make', 'model', 'owner__user__first_name', 
                      'owner__user__last_name', 'owner__company_name']
-    ordering_fields = ['year', 'make', 'model', 'current_mileage', 'created_at']
+    ordering_fields = [
+        'year', 'make', 'model', 'vin', 'license_plate', 'status',
+        'current_mileage', 'created_at',
+        'owner__user__last_name', 'owner__user__first_name', 'owner__company_name',
+        'service_schedules__next_service_due_date',
+    ]
     ordering = ['-created_at']
     
     def get_queryset(self):
@@ -1174,8 +1179,19 @@ class VehicleServiceScheduleViewSet(viewsets.ModelViewSet):
         #     # branch_lookup='vehicle__branch'
         # )
         
-        # Order by due date
-        queryset = queryset.order_by('next_service_due_date', 'next_service_due_mileage')
+        # Order by due date (supports ?ordering= from list tables)
+        ordering = request.query_params.get('ordering', 'next_service_due_date')
+        allowed_ordering = {
+            'next_service_due_date', '-next_service_due_date',
+            'next_service_due_mileage', '-next_service_due_mileage',
+            'last_service_date', '-last_service_date',
+            'vehicle__make', '-vehicle__make',
+            'vehicle__owner__user__last_name', '-vehicle__owner__user__last_name',
+            'service_type__name', '-service_type__name',
+        }
+        if ordering not in allowed_ordering:
+            ordering = 'next_service_due_date'
+        queryset = queryset.order_by(ordering)
         
         # Serialize results
         serializer = VehicleServiceScheduleSerializer(queryset, many=True)

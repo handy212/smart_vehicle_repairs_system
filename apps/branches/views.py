@@ -1,5 +1,7 @@
 import logging
-from rest_framework import viewsets, status, permissions
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, status, permissions, filters
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -27,8 +29,11 @@ class BranchViewSet(viewsets.ModelViewSet):
     """
     queryset = Branch.objects.all()
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'is_headquarters']
     search_fields = ['name', 'code', 'city', 'state']
+    ordering_fields = ['name', 'code', 'city', 'state', 'is_active', 'created_at']
+    ordering = ['name']
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""

@@ -25,17 +25,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function TransfersPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
     const [page, setPage] = useState(1);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+        setPage(1);
+    };
+
     const { data, isLoading } = useQuery({
-        queryKey: ["transfers", page, searchQuery, advancedFilters],
+        queryKey: ["transfers", page, searchQuery, advancedFilters, sortConfig],
         queryFn: () =>
             inventoryApi.listTransfers({
                 page,
@@ -43,6 +51,7 @@ export default function TransfersPage() {
                 status: advancedFilters.status || undefined,
                 source_branch: advancedFilters.source_branch ? Number(advancedFilters.source_branch) : undefined,
                 destination_branch: advancedFilters.destination_branch ? Number(advancedFilters.destination_branch) : undefined,
+                ordering: sortOrderingParam(sortConfig) || "-requested_date",
             }),
     });
 
@@ -249,10 +258,18 @@ export default function TransfersPage() {
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Transfer #</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Source & Destination</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Requested Date</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                                        <SortableHeader field="transfer_number" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Transfer #
+                                        </SortableHeader>
+                                        <SortableHeader field="source_branch__name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Source & Destination
+                                        </SortableHeader>
+                                        <SortableHeader field="requested_date" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Requested Date
+                                        </SortableHeader>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Status
+                                        </SortableHeader>
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Items</TableHead>
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                                     </TableRow>

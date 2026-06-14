@@ -44,6 +44,7 @@ export interface Customer {
   created_at: string;
   updated_at: string;
   status: string;
+  vehicle_count?: number;
   last_visit_date?: string | null;
   days_since_last_visit?: number | null;
   is_inactive?: boolean | null;
@@ -228,7 +229,7 @@ export const customersApi = {
       return response.data.results || response.data;
     },
 
-    listAll: async (params?: { search?: string; page?: number; is_active?: boolean }): Promise<any> => {
+    listAll: async (params?: { search?: string; page?: number; is_active?: boolean; ordering?: string }): Promise<any> => {
       const response = await apiClient.get("/customers/customer-contacts/", { params });
       return response.data;
     },

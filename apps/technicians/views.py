@@ -1,4 +1,5 @@
-from rest_framework import viewsets, permissions, status, parsers
+from rest_framework import viewsets, permissions, status, parsers, filters
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -17,6 +18,13 @@ class TechnicianViewSet(viewsets.ModelViewSet):
     queryset = Technician.objects.all()
     serializer_class = TechnicianSerializer
     permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('technicians')]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'employee_id']
+    ordering_fields = [
+        'user__last_name', 'user__first_name', 'user__email',
+        'years_of_experience', 'current_status', 'created_at',
+    ]
+    ordering = ['user__last_name']
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""

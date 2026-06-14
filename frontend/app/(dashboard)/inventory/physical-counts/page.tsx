@@ -14,6 +14,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 type CountSession = {
   id: number;
@@ -30,13 +32,19 @@ export default function PhysicalCountsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [countDate, setCountDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["physical-counts", activeBranchId],
+    queryKey: ["physical-counts", activeBranchId, sortConfig],
     queryFn: async () => {
-      const res = await inventoryApi.listPhysicalCounts(
-        activeBranchId ? { branch: activeBranchId } : undefined
-      );
+      const res = await inventoryApi.listPhysicalCounts({
+        ...(activeBranchId ? { branch: activeBranchId } : {}),
+        ordering: sortOrderingParam(sortConfig) || "-count_date",
+      });
       return Array.isArray(res) ? res : res.results ?? [];
     },
   });
@@ -115,10 +123,18 @@ export default function PhysicalCountsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Session</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableHeader field="session_number" sortConfig={sortConfig} onSort={handleSort}>
+                    Session
+                  </SortableHeader>
+                  <SortableHeader field="branch__name" sortConfig={sortConfig} onSort={handleSort}>
+                    Branch
+                  </SortableHeader>
+                  <SortableHeader field="count_date" sortConfig={sortConfig} onSort={handleSort}>
+                    Date
+                  </SortableHeader>
+                  <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort}>
+                    Status
+                  </SortableHeader>
                   <TableHead>Discrepancies</TableHead>
                 </TableRow>
               </TableHeader>

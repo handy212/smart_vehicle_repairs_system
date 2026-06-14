@@ -12,7 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Loader2, Check, X, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
 import apiClient from "@/lib/api/client";
-import { type Account, type ApiError, type FundTransfer } from "@/lib/api/accounting";
+import { accountingApi, type Account, type ApiError, type FundTransfer } from "@/lib/api/accounting";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 type BadgeVariant = "default" | "secondary" | "danger" | "outline" | "success";
 
@@ -36,6 +38,11 @@ export default function FundTransfersPage() {
         description: "",
         reference: ""
     });
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     // Helper function for currency formatting
     const formatCurrency = (amount: number | string) => {
@@ -47,12 +54,13 @@ export default function FundTransfersPage() {
 
     // Fetch transfers
     const { data: transfers, isLoading } = useQuery({
-        queryKey: ["fund-transfers"],
-        queryFn: async () => {
-            const response = await apiClient.get("/accounting/fund-transfers/");
-            return response.data.results || response.data;
-        }
+        queryKey: ["fund-transfers", sortConfig],
+        queryFn: () => accountingApi.getFundTransfers({
+            ordering: sortOrderingParam(sortConfig) || "-transfer_date",
+        }),
     });
+
+    const transferRows = transfers ?? [];
 
     // Fetch accounts for dropdown
     const { data: accounts } = useQuery({
@@ -262,18 +270,18 @@ export default function FundTransfersPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Number</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>From</TableHead>
-                                    <TableHead>To</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <SortableHeader field="transfer_number" sortConfig={sortConfig} onSort={handleSort}>Number</SortableHeader>
+                                    <SortableHeader field="transfer_date" sortConfig={sortConfig} onSort={handleSort}>Date</SortableHeader>
+                                    <SortableHeader field="from_account__name" sortConfig={sortConfig} onSort={handleSort}>From</SortableHeader>
+                                    <SortableHeader field="to_account__name" sortConfig={sortConfig} onSort={handleSort}>To</SortableHeader>
+                                    <SortableHeader field="amount" sortConfig={sortConfig} onSort={handleSort}>Amount</SortableHeader>
+                                    <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort}>Status</SortableHeader>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
 
-                                {((Array.isArray(transfers) ? transfers : transfers?.results) || []).map((transfer: FundTransfer & { journal_entry?: number | null }) => (
+                                {transferRows.map((transfer: FundTransfer & { journal_entry?: number | null }) => (
                                     <TableRow key={transfer.id}>
                                         <TableCell className="font-medium">{transfer.transfer_number}</TableCell>
                                         <TableCell>{format(new Date(transfer.transfer_date), "MMM d, yyyy")}</TableCell>
@@ -323,7 +331,7 @@ export default function FundTransfersPage() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {(!transfers || (Array.isArray(transfers) && transfers.length === 0) || (transfers.results && transfers.results.length === 0)) && (
+                                {transferRows.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                                             No fund transfers found. Create your first transfer to get started.

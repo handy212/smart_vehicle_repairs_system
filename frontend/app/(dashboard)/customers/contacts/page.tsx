@@ -14,6 +14,8 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils/cn";
 import { format, parseISO } from "date-fns";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 function formatDate(dateStr?: string | null): string {
   if (!dateStr) return "—";
@@ -27,16 +29,23 @@ function formatDate(dateStr?: string | null): string {
 export default function ContactsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const debouncedSearch = useDebounce(search, 400);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: ["all-contacts", debouncedSearch, page],
+    queryKey: ["all-contacts", debouncedSearch, page, sortConfig],
     queryFn: () =>
       customersApi.contacts.listAll({
         search: debouncedSearch || undefined,
         page,
+        ordering: sortOrderingParam(sortConfig) || "last_name",
       }),
   });
 
@@ -108,12 +117,24 @@ export default function ContactsPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="w-[140px] font-semibold text-xs uppercase tracking-wider">First Name</TableHead>
-              <TableHead className="w-[140px] font-semibold text-xs uppercase tracking-wider">Last Name</TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider">Email</TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider">Company</TableHead>
-              <TableHead className="w-[140px] font-semibold text-xs uppercase tracking-wider">Phone Number</TableHead>
-              <TableHead className="w-[130px] font-semibold text-xs uppercase tracking-wider">Last Login</TableHead>
+              <SortableHeader field="first_name" sortConfig={sortConfig} onSort={handleSort} className="w-[140px] font-semibold text-xs uppercase tracking-wider">
+                First Name
+              </SortableHeader>
+              <SortableHeader field="last_name" sortConfig={sortConfig} onSort={handleSort} className="w-[140px] font-semibold text-xs uppercase tracking-wider">
+                Last Name
+              </SortableHeader>
+              <SortableHeader field="email" sortConfig={sortConfig} onSort={handleSort} className="font-semibold text-xs uppercase tracking-wider">
+                Email
+              </SortableHeader>
+              <SortableHeader field="customer__company_name" sortConfig={sortConfig} onSort={handleSort} className="font-semibold text-xs uppercase tracking-wider">
+                Company
+              </SortableHeader>
+              <SortableHeader field="phone" sortConfig={sortConfig} onSort={handleSort} className="w-[140px] font-semibold text-xs uppercase tracking-wider">
+                Phone Number
+              </SortableHeader>
+              <SortableHeader field="last_login" sortConfig={sortConfig} onSort={handleSort} className="w-[130px] font-semibold text-xs uppercase tracking-wider">
+                Last Login
+              </SortableHeader>
               <TableHead className="w-[90px] text-center font-semibold text-xs uppercase tracking-wider">Active</TableHead>
             </TableRow>
           </TableHeader>

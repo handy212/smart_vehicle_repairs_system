@@ -329,6 +329,7 @@ export const adminApi = {
       is_active?: boolean;
       search?: string;
       branch?: number;
+      ordering?: string;
     }): Promise<UserListResponse> => {
       const response = await apiClient.get("/accounts/users/", { params });
       return response.data;
@@ -518,6 +519,7 @@ export const adminApi = {
       search?: string;
       date_from?: string;
       date_to?: string;
+      ordering?: string;
     }): Promise<AuditLogListResponse> => {
       const response = await apiClient.get("/accounts/admin/audit-logs/", { params });
       return response.data;

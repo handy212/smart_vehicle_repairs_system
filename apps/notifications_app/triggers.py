@@ -5,7 +5,7 @@ This module provides functions to send notifications for key events.
 from django.utils import timezone
 from .services import NotificationService, NotificationHelper
 from .models import Notification, NotificationTemplate
-from apps.accounts.settings_utils import get_setting, get_company_info, get_whatsapp_settings
+from apps.accounts.settings_utils import get_setting, get_company_info, get_whatsapp_settings, get_site_url
 from .currency import format_money, enrich_money_context, get_currency_symbol
 
 
@@ -65,7 +65,7 @@ class NotificationTriggers:
     
     def _get_base_url(self):
         """Get base URL from settings"""
-        return get_setting('site_url', 'http://localhost:3000')
+        return get_site_url()
     
     def _get_default_context(self):
         """Get default context variables for templates"""
@@ -75,7 +75,7 @@ class NotificationTriggers:
             'company_email': company_info.get('company_email', ''),
             'company_phone': company_info.get('company_phone', ''),
             'company_address': company_info.get('company_address', ''),
-            'site_url': get_setting('site_url', 'http://localhost:3000'),
+            'site_url': get_site_url(),
             'currency_symbol': get_currency_symbol(),
         }
 
@@ -1638,15 +1638,12 @@ Please review and approve.'''
         if not inspection.vehicle.owner.user:
             return
         
-        from django.conf import settings
-        
         template = self._get_template('inspection_completed', 'email')
         customer_name = self._build_customer_name(inspection.vehicle.owner)
         vehicle_display = self._build_vehicle_display(inspection.vehicle)
-        
+
         # Build portal link
-        frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3001')
-        portal_link = f"{frontend_url}/portal/inspections/{inspection.id}/"
+        portal_link = f"{self._get_base_url()}/portal/inspections/{inspection.id}/"
         
         # Prepare context data
         context_data = self._get_default_context()

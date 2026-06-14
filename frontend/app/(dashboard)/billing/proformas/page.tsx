@@ -18,7 +18,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AdvancedFilters, FilterOption } from "@/components/ui/advanced-filters";
-import { SortConfig } from "@/components/ui/sortable-header";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { toggleSortConfig } from "@/lib/utils/table-sort";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
@@ -33,7 +34,11 @@ export default function ProformasPage() {
     {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+        setPage(1);
+    };
+
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const router = useRouter();
@@ -180,11 +185,21 @@ export default function ProformasPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Number</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Customer</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground text-right">Total</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Status</TableHead>
+                                        <SortableHeader field="invoice_number" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">
+                                            Number
+                                        </SortableHeader>
+                                        <SortableHeader field="customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">
+                                            Customer
+                                        </SortableHeader>
+                                        <SortableHeader field="invoice_date" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">
+                                            Date
+                                        </SortableHeader>
+                                        <SortableHeader field="total" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground text-right">
+                                            Total
+                                        </SortableHeader>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">
+                                            Status
+                                        </SortableHeader>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>

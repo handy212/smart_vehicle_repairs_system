@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils/cn";
 import { useRouter } from "next/navigation";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { getMediaUrl } from "@/lib/api/utils";
+import { SortableHeader } from "@/components/ui/sortable-header";
 
 interface VehicleTableProps {
   vehicles: any[];
@@ -206,18 +207,30 @@ const VehicleRow = memo(function VehicleRow({
 
 export function VehicleTable({ vehicles, onDelete, sortConfig, onSort }: VehicleTableProps) {
   const router = useRouter();
+  const headerClass =
+    "text-[10px] font-black uppercase tracking-widest h-10 px-4 text-muted-foreground";
 
   return (
     <div className="precision-card overflow-hidden">
       <Table>
         <TableHeader className="bg-muted/30">
           <TableRow className="hover:bg-transparent border-border/50">
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Vehicle</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">VIN</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Owner</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Status</TableHead>
-            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-10">Year</TableHead>
-            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-10">Actions</TableHead>
+            <SortableHeader field="make" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Vehicle
+            </SortableHeader>
+            <SortableHeader field="vin" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              VIN
+            </SortableHeader>
+            <SortableHeader field="owner__user__last_name" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Owner
+            </SortableHeader>
+            <SortableHeader field="status" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Status
+            </SortableHeader>
+            <SortableHeader field="year" sortConfig={sortConfig} onSort={onSort} className={cn(headerClass, "text-right")}>
+              Year
+            </SortableHeader>
+            <TableHead className={cn(headerClass, "text-right")}>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

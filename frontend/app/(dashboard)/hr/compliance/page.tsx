@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function CompliancePage() {
     return (
@@ -40,12 +42,18 @@ function ComplianceContent() {
     const [searchTerm, setSearchTerm] = useState("");
     const [editingDoc, setEditingDoc] = useState<ComplianceDocument | null>(null);
     const [deletingDoc, setDeletingDoc] = useState<ComplianceDocument | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: documentsData, isLoading } = useQuery({
-        queryKey: ["hr", "compliance-documents", filterStatus, searchTerm],
+        queryKey: ["hr", "compliance-documents", filterStatus, searchTerm, sortConfig],
         queryFn: async () => (await hrApi.complianceDocuments.list({
             status: filterStatus === "all" ? undefined : filterStatus,
-            search: searchTerm || undefined
+            search: searchTerm || undefined,
+            ordering: sortOrderingParam(sortConfig) || "expiry_date",
         })).data,
     });
 
@@ -119,9 +127,27 @@ function ComplianceContent() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Document Name</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Staff</TableHead>
-                                <TableHead>Expiry Date</TableHead>
+                                <SortableHeader
+                                    field="document_type"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Type
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="employee__user__last_name"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Staff
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="expiry_date"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Expiry Date
+                                </SortableHeader>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>

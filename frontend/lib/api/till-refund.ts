@@ -50,6 +50,7 @@ export const refundApi = {
         status?: string;
         customer?: number;
         search?: string;
+        ordering?: string;
     }) => {
         const response = await apiClient.get('/billing/refunds/', { params });
         return response.data;

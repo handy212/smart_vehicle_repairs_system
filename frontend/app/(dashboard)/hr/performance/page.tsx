@@ -26,6 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function PerformancePage() {
     return (
@@ -42,17 +44,18 @@ function PerformanceContent() {
     const [activeTab, setActiveTab] = useState("my_reviews");
     const [showCreate, setShowCreate] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const queryClient = useQueryClient();
 
-    // Fetch my reviews (where staff = current user) - Assuming backend handles filtering by user if no param
-    // Actually API client takes 'staff' ID. I need current user's staff ID.
-    // For now I'll just list all for HR/Admin, and maybe backend filters for normal users.
-    // Ideally we have an endpoint `my-reviews` or similar, but the list endpoint probably supports filtering.
-    // I will assume `list()` with no params returns what the user is allowed to see.
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "performance-reviews"],
-        queryFn: async () => (await hrApi.performanceReviews.list()).data,
+        queryKey: ["hr", "performance-reviews", sortConfig],
+        queryFn: async () => (await hrApi.performanceReviews.list({
+            ordering: sortOrderingParam(sortConfig) || "-review_period_end",
+        })).data,
     });
 
     const reviews = data?.results ?? [];
@@ -77,11 +80,35 @@ function PerformanceContent() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Staff</TableHead>
+                                <SortableHeader
+                                    field="employee__user__last_name"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Staff
+                                </SortableHeader>
                                 <TableHead>Reviewer</TableHead>
-                                <TableHead>Period</TableHead>
-                                <TableHead>Rating</TableHead>
-                                <TableHead>Status</TableHead>
+                                <SortableHeader
+                                    field="review_period_end"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Period
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="overall_rating"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Rating
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="status"
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                >
+                                    Status
+                                </SortableHeader>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>

@@ -22,16 +22,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function ServiceBundlesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data, isLoading } = useQuery({
-        queryKey: ["service-bundles", searchQuery],
+        queryKey: ["service-bundles", searchQuery, sortConfig],
         queryFn: () => inventoryApi.listBundles({
             search: searchQuery || undefined,
+            ordering: sortOrderingParam(sortConfig) || "name",
         }),
     });
 
@@ -119,10 +127,16 @@ export default function ServiceBundlesPage() {
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Service Type</TableHead>
+                                        <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Name
+                                        </SortableHeader>
+                                        <SortableHeader field="service_type__name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Service Type
+                                        </SortableHeader>
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Parts Count</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                                        <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                            Status
+                                        </SortableHeader>
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>

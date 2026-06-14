@@ -4,14 +4,14 @@ Sample context for admin email template preview.
 from datetime import date, timedelta
 from typing import Any, Dict
 
-from apps.accounts.settings_utils import get_company_info, get_setting
+from apps.accounts.settings_utils import get_company_info, get_site_url
 from .currency import enrich_money_context, format_money
 from .template_variables import get_variables_for_type
 
 
 def _sample_values() -> Dict[str, Any]:
     company = get_company_info()
-    base_url = get_setting('site_url', 'http://localhost:3000')
+    base_url = get_site_url()
     today = date.today()
     due = today + timedelta(days=14)
 

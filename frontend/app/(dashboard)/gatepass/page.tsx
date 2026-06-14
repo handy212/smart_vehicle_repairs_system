@@ -271,9 +271,30 @@ export default function GatePassPage() {
                     >
                       Work Order
                     </SortableHeader>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Pickup Person</TableHead>
+                    <SortableHeader
+                      field="customer__user__last_name"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                    >
+                      Customer
+                    </SortableHeader>
+                    <SortableHeader
+                      field="vehicle__license_plate"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                    >
+                      Vehicle
+                    </SortableHeader>
+                    <SortableHeader
+                      field="pickup_person_name"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                    >
+                      Pickup Person
+                    </SortableHeader>
                     <SortableHeader
                       field="status"
                       sortConfig={sortConfig}

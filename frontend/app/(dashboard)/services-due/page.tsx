@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, X, Phone, Mail, Send, ExternalLink, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -25,6 +25,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortClientRecords, toggleSortConfig } from "@/lib/utils/table-sort";
 import { getUserFacingError } from "@/lib/api/errors";
 
 function getDueStatusBadge(schedule: VehicleServiceSchedule) {
@@ -51,6 +53,11 @@ export default function ServicesDuePage() {
   const [selectedSchedules, setSelectedSchedules] = useState<number[]>([]);
   const [sendReminderDialog, setSendReminderDialog] = useState(false);
   const [reminderChannel, setReminderChannel] = useState<"email" | "sms" | "call">("email");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -61,7 +68,7 @@ export default function ServicesDuePage() {
   dateTo.setDate(today.getDate() + daysAhead);
 
   const { data: servicesDueData, isLoading } = useQuery({
-    queryKey: ["services-due", daysAhead, serviceTypeFilter, debouncedSearch],
+    queryKey: ["services-due", daysAhead, serviceTypeFilter, debouncedSearch, sortConfig],
     queryFn: () => {
       return servicesApi.getServicesDue({
         days_ahead: daysAhead,
@@ -78,16 +85,29 @@ export default function ServicesDuePage() {
   const servicesDue = servicesDueData?.results || [];
 
   // Filter by search
-  const filteredServices = servicesDue.filter((schedule) => {
-    if (!debouncedSearch) return true;
-    const searchLower = debouncedSearch.toLowerCase();
-    return (
-      schedule.vehicle_display?.toLowerCase().includes(searchLower) ||
-      schedule.service_type_name?.toLowerCase().includes(searchLower) ||
-      schedule.customer_name?.toLowerCase().includes(searchLower) ||
-      (typeof schedule.vehicle === 'object' && schedule.vehicle?.vin?.toLowerCase().includes(searchLower))
-    );
-  });
+  const filteredServices = useMemo(() => {
+    const filtered = servicesDue.filter((schedule) => {
+      if (!debouncedSearch) return true;
+      const searchLower = debouncedSearch.toLowerCase();
+      return (
+        schedule.vehicle_display?.toLowerCase().includes(searchLower) ||
+        schedule.service_type_name?.toLowerCase().includes(searchLower) ||
+        schedule.customer_name?.toLowerCase().includes(searchLower) ||
+        (typeof schedule.vehicle === "object" && schedule.vehicle?.vin?.toLowerCase().includes(searchLower))
+      );
+    });
+
+    return sortClientRecords(filtered, sortConfig, {
+      customer_name: (schedule) => schedule.customer_name,
+      vehicle_display: (schedule) => schedule.vehicle_display,
+      service_type_name: (schedule) => schedule.service_type_name,
+      next_service_due_date: (schedule) => schedule.next_service_due_date,
+      next_service_due_mileage: (schedule) => schedule.next_service_due_mileage,
+      current_mileage: (schedule) => schedule.current_mileage,
+      days_until_due: (schedule) => schedule.days_until_due,
+      last_service_date: (schedule) => schedule.last_service_date,
+    });
+  }, [servicesDue, debouncedSearch, sortConfig]);
 
   const sendReminderMutation = useMutation({
     mutationFn: async ({ scheduleIds, channel }: { scheduleIds: number[]; channel: string }) => {
@@ -258,14 +278,30 @@ export default function ServicesDuePage() {
                         className="rounded border-border"
                       />
                     </TableHead>
-                    <TableHead className="text-xs font-semibold">Customer</TableHead>
-                    <TableHead className="text-xs font-semibold">Vehicle</TableHead>
-                    <TableHead className="text-xs font-semibold">Service Type</TableHead>
-                    <TableHead className="text-xs font-semibold">Due Date</TableHead>
-                    <TableHead className="text-xs font-semibold">Due Mileage</TableHead>
-                    <TableHead className="text-xs font-semibold">Current Mileage</TableHead>
-                    <TableHead className="text-xs font-semibold">Days Until Due</TableHead>
-                    <TableHead className="text-xs font-semibold">Last Service</TableHead>
+                    <SortableHeader field="customer_name" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Customer
+                    </SortableHeader>
+                    <SortableHeader field="vehicle_display" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Vehicle
+                    </SortableHeader>
+                    <SortableHeader field="service_type_name" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Service Type
+                    </SortableHeader>
+                    <SortableHeader field="next_service_due_date" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Due Date
+                    </SortableHeader>
+                    <SortableHeader field="next_service_due_mileage" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Due Mileage
+                    </SortableHeader>
+                    <SortableHeader field="current_mileage" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Current Mileage
+                    </SortableHeader>
+                    <SortableHeader field="days_until_due" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Days Until Due
+                    </SortableHeader>
+                    <SortableHeader field="last_service_date" sortConfig={sortConfig} onSort={handleSort} className="text-xs font-semibold">
+                      Last Service
+                    </SortableHeader>
                     <TableHead className="text-xs font-semibold">Status</TableHead>
                     <TableHead className="text-xs font-semibold">Actions</TableHead>
                   </TableRow>

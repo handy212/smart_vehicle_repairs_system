@@ -24,6 +24,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortClientRecords, sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 interface PartsRequestStats {
     draft_requests?: number;
@@ -91,6 +93,11 @@ export default function PartsRequestsPage() {
     const { toast } = useToast();
 
     const [activeStatus, setActiveStatus] = useState<string>("all");
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -100,11 +107,12 @@ export default function PartsRequestsPage() {
 
     // Fetch parts list
     const { data: parts = [], isLoading, refetch } = useQuery({
-        queryKey: ["parts-requests", activeStatus, workOrderFilterId],
+        queryKey: ["parts-requests", activeStatus, workOrderFilterId, sortConfig],
         queryFn: async () => {
             const response = await workordersApi.parts.list({
                 status: activeStatus === "all" ? undefined : activeStatus,
                 work_order: workOrderFilterId || undefined,
+                ordering: sortOrderingParam(sortConfig) || "-work_order__work_order_number",
             });
 
             return Array.isArray(response) ? response : (response as PaginatedPartsResponse).results || [];
@@ -137,6 +145,18 @@ export default function PartsRequestsPage() {
             (firstPart.vehicle_info?.toLowerCase().includes(searchLower))
         );
     });
+
+    const sortedWoIds = useMemo(() => {
+        const rows = filteredWoIds.map((woId) => ({
+            woId,
+            part: groupedParts[woId][0],
+        }));
+        return sortClientRecords(rows, sortConfig, {
+            work_order__work_order_number: (row) => row.part.work_order_number ?? "",
+            work_order__customer__user__last_name: (row) => row.part.customer_name ?? "",
+            work_order__vehicle__license_plate: (row) => row.part.vehicle_info ?? "",
+        }).map((row) => row.woId);
+    }, [filteredWoIds, groupedParts, sortConfig]);
 
     const handleViewDetails = (woId: number) => {
         setSelectedWoId(woId);
@@ -262,7 +282,7 @@ export default function PartsRequestsPage() {
                     <div className="p-0">
                         {isLoading ? (
                             <div className="p-6"><TableSkeleton rows={8} columns={5} /></div>
-                        ) : filteredWoIds.length === 0 ? (
+                        ) : sortedWoIds.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-center">
                                 <Package className="w-12 h-12 text-gray-300 text-muted-foreground mb-4" />
                                 <h3 className="text-lg font-medium text-foreground">No requests found</h3>
@@ -275,15 +295,21 @@ export default function PartsRequestsPage() {
                                 <Table>
                                     <TableHeader className="bg-muted/50 border-y border-border">
                                         <TableRow className="hover:bg-transparent border-none">
-                                            <TableHead className="w-[180px] h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Work Order</TableHead>
-                                            <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Customer</TableHead>
-                                            <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Vehicle</TableHead>
+                                            <SortableHeader field="work_order__work_order_number" sortConfig={sortConfig} onSort={handleSort} className="w-[180px] h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                                Work Order
+                                            </SortableHeader>
+                                            <SortableHeader field="work_order__customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                                Customer
+                                            </SortableHeader>
+                                            <SortableHeader field="work_order__vehicle__license_plate" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                                                Vehicle
+                                            </SortableHeader>
                                             <TableHead className="text-center h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Requested Parts</TableHead>
                                             <TableHead className="text-right h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredWoIds.map(woId => {
+                                        {sortedWoIds.map(woId => {
                                             const woParts = groupedParts[woId];
                                             const firstPart = woParts[0];
                                             const woNumber = firstPart.work_order_number || `WO #${woId}`;

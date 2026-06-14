@@ -118,6 +118,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     ordering_fields = [
         'appointment_date', 'appointment_time', 'priority', 'created_at',
         'appointment_number', 'customer__user__last_name', 'customer__user__first_name',
+        'vehicle__license_plate', 'vehicle__vin',
         'service_type', 'status'
     ]
     ordering = ['appointment_date', 'appointment_time']

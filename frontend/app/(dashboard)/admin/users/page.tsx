@@ -27,6 +27,8 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 function getErrorDetail(error: unknown, fallback: string) {
   const data = (error as { response?: { data?: { detail?: string } } })?.response?.data;
@@ -50,6 +52,12 @@ export default function UsersManagementPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
+  };
 
   // Fetch branches for filter
   const { data: branchesData } = useQuery({
@@ -60,13 +68,14 @@ export default function UsersManagementPage() {
   const branches = branchesData ?? [];
 
   const { data: usersData, isLoading } = useQuery({
-    queryKey: ["admin", "users", roleFilter, statusFilter, branchFilter, page],
+    queryKey: ["admin", "users", roleFilter, statusFilter, branchFilter, page, sortConfig],
     queryFn: () =>
       adminApi.users.list({
         page,
         role: roleFilter !== "all" ? roleFilter : undefined,
         is_active: statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined,
         branch: branchFilter !== "all" ? parseInt(branchFilter) : undefined,
+        ordering: sortOrderingParam(sortConfig) || "-created_at",
       }),
   });
 
@@ -293,12 +302,20 @@ export default function UsersManagementPage() {
               <Table>
                 <TableHeader className="bg-muted/50 hover:bg-muted/50">
                   <TableRow>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">User</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Role</TableHead>
+                    <SortableHeader field="last_name" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      User
+                    </SortableHeader>
+                    <SortableHeader field="role" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Role
+                    </SortableHeader>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Status
+                    </SortableHeader>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">2FA</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created</TableHead>
+                    <SortableHeader field="created_at" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Created
+                    </SortableHeader>
                     <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

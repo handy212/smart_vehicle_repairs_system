@@ -30,6 +30,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { useEffect } from "react";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function AttendancePage() {
     return (
@@ -47,6 +49,11 @@ function AttendanceContent() {
     const [showManual, setShowManual] = useState(false);
     const [editingRec, setEditingRec] = useState<AttendanceRecord | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: summary, isLoading: loadingSummary } = useQuery({
         queryKey: ["hr", "attendance-today-summary"],
@@ -57,11 +64,12 @@ function AttendanceContent() {
     });
 
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "attendance", searchQuery, statusFilter],
+        queryKey: ["hr", "attendance", searchQuery, statusFilter, sortConfig],
         queryFn: async () => {
             const res = await hrApi.attendance.list({
                 search: searchQuery,
                 status: statusFilter,
+                ordering: sortOrderingParam(sortConfig) || "-date",
             });
             return res.data;
         },
@@ -226,8 +234,22 @@ function AttendanceContent() {
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Staff</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Clock In</TableHead>
+                                    <SortableHeader
+                                        field="date"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Date
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="clock_in"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Clock In
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Clock Out</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Hours</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Overtime</TableHead>

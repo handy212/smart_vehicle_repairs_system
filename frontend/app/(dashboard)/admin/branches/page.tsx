@@ -47,6 +47,8 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -85,15 +87,21 @@ export default function BranchesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
   const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const debouncedSearch = useDebounce(search, 500);
 
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
+
   const { data: branchesData, isLoading } = useQuery({
-    queryKey: ["branches", debouncedSearch, statusFilter],
+    queryKey: ["branches", debouncedSearch, statusFilter, sortConfig],
     queryFn: () =>
       branchesApi.list({
         is_active: statusFilter === "all" ? undefined : statusFilter === "active",
         search: debouncedSearch || undefined,
+        ordering: sortOrderingParam(sortConfig) || "name",
       }),
   });
 
@@ -249,12 +257,20 @@ export default function BranchesPage() {
               <table className="w-full">
                 <thead className="bg-muted border-b border-border">
                   <tr>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Code</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contact</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Staff</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Name
+                    </SortableHeader>
+                    <SortableHeader field="code" sortConfig={sortConfig} onSort={handleSort} className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Code
+                    </SortableHeader>
+                    <SortableHeader field="city" sortConfig={sortConfig} onSort={handleSort} className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Location
+                    </SortableHeader>
+                    <TableHead className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contact</TableHead>
+                    <TableHead className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Staff</TableHead>
+                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Status
+                    </SortableHeader>
                     <th className="px-4 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>

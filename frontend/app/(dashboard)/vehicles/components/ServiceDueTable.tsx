@@ -33,12 +33,15 @@ import { useRouter } from "next/navigation";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { getMediaUrl } from "@/lib/api/utils";
 import { format } from "date-fns";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 
 interface ServiceDueTableProps {
   vehicles: any[];
-  sortConfig: any;
+  sortConfig: SortConfig | null;
   onSort: (field: string) => void;
 }
+
+const headerClass = "text-[10px] font-black uppercase tracking-widest h-10";
 
 const ServiceDueRow = memo(function ServiceDueRow({ 
   vehicle, 
@@ -179,10 +182,16 @@ export function ServiceDueTable({ vehicles, sortConfig, onSort }: ServiceDueTabl
       <Table>
         <TableHeader className="bg-muted/30">
           <TableRow className="hover:bg-transparent border-border/50">
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Vehicle</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Services Due</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Schedule Detail</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-10">Owner</TableHead>
+            <SortableHeader field="make" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Vehicle
+            </SortableHeader>
+            <TableHead className={headerClass}>Services Due</TableHead>
+            <SortableHeader field="service_schedules__next_service_due_date" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Schedule Detail
+            </SortableHeader>
+            <SortableHeader field="owner__user__last_name" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
+              Owner
+            </SortableHeader>
             <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-10">Actions</TableHead>
           </TableRow>
         </TableHeader>

@@ -842,7 +842,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         'customer__user__first_name', 'customer__user__last_name',
         'customer__user__email',
     ]
-    ordering_fields = ['payment_number', 'payment_date', 'amount', 'created_at']
+    ordering_fields = ['payment_number', 'payment_date', 'amount', 'created_at', 'status', 'payment_method', 'customer__user__last_name', 'invoice__invoice_number']
     ordering = ['-payment_date']
     
     def get_queryset(self):
@@ -1581,7 +1581,7 @@ class RefundViewSet(viewsets.ModelViewSet):
     queryset = Refund.objects.all()
     serializer_class = RefundSerializer
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
-    filter_backends = [SearchFilter]
+    filter_backends = [SearchFilter, OrderingFilter]
 
     def get_permissions(self):
         base = [IsAuthenticated(), IsModuleEnabled('billing')]
@@ -1593,6 +1593,11 @@ class RefundViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('view_billing')()]
         return base + [HasPermission('process_payments')()]
     search_fields = ['refund_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__company_name', 'reference_number']
+    ordering_fields = [
+        'refund_number', 'amount', 'status', 'refund_method', 'requested_at', 'created_at',
+        'customer__user__last_name', 'customer__company_name',
+    ]
+    ordering = ['-requested_at']
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -2074,7 +2079,7 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
         'customer__user__first_name', 'customer__user__last_name',
         'customer__user__email',
     ]
-    ordering_fields = ['credit_date', 'credit_note_number', 'amount', 'created_at']
+    ordering_fields = ['credit_date', 'credit_note_number', 'amount', 'status', 'customer__user__last_name', 'created_at']
     ordering = ['-credit_date']
     
     def get_queryset(self):
@@ -2281,7 +2286,7 @@ class BillViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'vendor', 'branch', 'purchase_order', 'due_date']
     search_fields = ['bill_number', 'vendor__name', 'purchase_order__po_number', 'reference_number', 'notes']
-    ordering_fields = ['bill_date', 'due_date', 'total', 'created_at']
+    ordering_fields = ['bill_number', 'bill_date', 'due_date', 'total', 'amount_due', 'status', 'created_at']
     ordering = ['-bill_date']
 
     def get_queryset(self):

@@ -94,6 +94,67 @@ def get_setting(key, default='', use_cache=True, db_first=False):
     return get_db_value()
 
 
+def _normalize_site_url(url):
+    if not url:
+        return ''
+    return str(url).strip().rstrip('/')
+
+
+def _is_localhost_site_url(url):
+    normalized = _normalize_site_url(url).lower()
+    if not normalized:
+        return False
+    for host in ('localhost', '127.0.0.1', '0.0.0.0'):
+        if f'://{host}' in normalized or normalized.startswith(f'{host}:'):
+            return True
+    return False
+
+
+def _first_public_cors_origin():
+    from django.conf import settings
+
+    origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', None) or []
+    for origin in origins:
+        normalized = _normalize_site_url(origin)
+        if normalized and not _is_localhost_site_url(normalized):
+            return normalized
+    return ''
+
+
+def get_site_url(default=''):
+    """
+    Resolve the public frontend URL used in emails and portal links.
+
+    Priority:
+    1. Admin DB setting `site_url` (localhost values ignored outside DEBUG)
+    2. FRONTEND_URL / FRONTEND_BASE_URL Django settings
+    3. First non-localhost entry in CORS_ALLOWED_ORIGINS
+    4. localhost default only when DEBUG is True
+    """
+    from django.conf import settings
+
+    debug = getattr(settings, 'DEBUG', False)
+    dev_default = _normalize_site_url(default) or 'http://localhost:3000'
+
+    db_url = _normalize_site_url(get_setting('site_url', ''))
+    if db_url and (debug or not _is_localhost_site_url(db_url)):
+        return db_url
+
+    for attr in ('FRONTEND_URL', 'FRONTEND_BASE_URL'):
+        url = _normalize_site_url(getattr(settings, attr, None))
+        if url and (debug or not _is_localhost_site_url(url)):
+            return url
+
+    cors_origin = _first_public_cors_origin()
+    if cors_origin:
+        return cors_origin
+
+    if debug:
+        return dev_default
+
+    return _normalize_site_url(default)
+
+
 def get_settings(keys, defaults=None, use_cache=True, db_first=False):
     """
     Get multiple settings at once
@@ -178,7 +239,7 @@ def get_company_info():
         'currency_symbol',
     ]
     
-    return get_settings(keys, {'currency_symbol': '$'})
+    return get_settings(keys, {'currency_symbol': '$'}) | {'site_url': get_site_url()}
 
 
 def get_branding_settings():

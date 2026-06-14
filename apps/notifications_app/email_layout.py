@@ -6,7 +6,7 @@ from typing import Optional
 
 from django.conf import settings
 
-from apps.accounts.settings_utils import get_branding_settings, get_company_info
+from apps.accounts.settings_utils import get_branding_settings, get_company_info, get_site_url
 
 
 def _logo_url() -> str:
@@ -14,7 +14,7 @@ def _logo_url() -> str:
     logo_path = branding.get('logo_path', '')
     if not logo_path:
         return ''
-    site_url = get_company_info().get('site_url') or ''
+    site_url = get_site_url()
     media_url = getattr(settings, 'MEDIA_URL', '/media/')
     if site_url:
         base = site_url.rstrip('/')

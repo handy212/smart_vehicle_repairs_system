@@ -59,6 +59,7 @@ REDIS_PASSWORD=<STRONG_REDIS_PASSWORD>
 REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
 
 API_URL=https://api.safetracksystems.com/api
+FRONTEND_BASE_URL=https://aap.safetracksystems.com
 CORS_ALLOWED_ORIGINS=https://aap.safetracksystems.com
 CSRF_TRUSTED_ORIGINS=https://aap.safetracksystems.com,https://api.safetracksystems.com
 

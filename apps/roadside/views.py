@@ -122,7 +122,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'service_type', 'customer', 'vehicle', 'branch', 'is_covered_by_subscription', 'assigned_technician']
     search_fields = ['request_number', 'customer__user__first_name', 'customer__user__last_name', 'vehicle__license_plate', 'breakdown_location']
-    ordering_fields = ['requested_at', 'dispatched_at', 'completed_at', 'status']
+    ordering_fields = [
+        'request_number', 'requested_at', 'dispatched_at', 'completed_at', 'status',
+        'service_type', 'breakdown_location',
+        'customer__user__last_name', 'customer__company_name',
+        'branch__name',
+    ]
     ordering = ['-requested_at']
 
     @action(detail=False, methods=['get'])

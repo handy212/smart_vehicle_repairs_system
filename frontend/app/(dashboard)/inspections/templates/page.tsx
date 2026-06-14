@@ -11,9 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Plus, ArrowLeft, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,9 +23,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function InspectionTemplatesPage() {
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: ["inspection-templates", "list"],
-    queryFn: () => inspectionsApi.templates.list({ page: 1 }),
+    queryKey: ["inspection-templates", "list", sortConfig],
+    queryFn: () => inspectionsApi.templates.list({
+      page: 1,
+      ordering: sortOrderingParam(sortConfig) || "name",
+    }),
   });
 
   if (isLoading) {
@@ -89,12 +99,20 @@ export default function InspectionTemplatesPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Name</TableHead>
+                    <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Name
+                    </SortableHeader>
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Description</TableHead>
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Categories</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created By</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created</TableHead>
+                    <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Status
+                    </SortableHeader>
+                    <SortableHeader field="created_by__last_name" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Created By
+                    </SortableHeader>
+                    <SortableHeader field="created_at" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Created
+                    </SortableHeader>
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

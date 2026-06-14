@@ -38,6 +38,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { TaxRulesDialog } from "./TaxRulesDialog";
 import { Calculator } from "lucide-react";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 type ApiError = {
     response?: {
@@ -69,11 +71,19 @@ function PayrollContent() {
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [paymentPeriod, setPaymentPeriod] = useState<PayrollPeriod | null>(null);
     const [reversingPeriod, setReversingPeriod] = useState<PayrollPeriod | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "payroll-periods", statusFilter],
+        queryKey: ["hr", "payroll-periods", statusFilter, sortConfig],
         queryFn: async () => {
-            const res = await hrApi.payrollPeriods.list({ status: statusFilter });
+            const res = await hrApi.payrollPeriods.list({
+                status: statusFilter,
+                ordering: sortOrderingParam(sortConfig) || "-start_date",
+            });
             return res.data;
         },
     });
@@ -245,12 +255,40 @@ function PayrollContent() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Period Name</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Dates</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
+                                    <SortableHeader
+                                        field="name"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Period Name
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="start_date"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Dates
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="branch__name"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Branch
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Payslips</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Net Pay</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                    <SortableHeader
+                                        field="status"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Status
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>

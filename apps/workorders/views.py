@@ -1340,9 +1340,16 @@ class ServiceTaskTypeViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelView
 class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Part management"""
     queryset = WorkOrderPart.objects.all().select_related('work_order', 'task', 'installed_by')
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['work_order', 'status']
     search_fields = ['part_number', 'part_name', 'description']
+    ordering_fields = [
+        'status', 'part_name', 'part_number', 'created_at',
+        'work_order__work_order_number',
+        'work_order__customer__user__last_name', 'work_order__customer__company_name',
+        'work_order__vehicle__license_plate', 'work_order__vehicle__make',
+    ]
+    ordering = ['-created_at']
 
     def get_permissions(self):
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):

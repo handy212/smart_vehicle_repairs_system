@@ -35,6 +35,8 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function StaffPage() {
     return (
@@ -54,6 +56,11 @@ function StaffContent() {
     const [branchFilter, setBranchFilter] = useState<string>("all");
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
 
     const { data: branchesData } = useQuery({
         queryKey: ["branches", "active"],
@@ -62,12 +69,13 @@ function StaffContent() {
     const branches = branchesData ?? [];
 
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "staff", searchQuery, statusFilter, branchFilter],
+        queryKey: ["hr", "staff", searchQuery, statusFilter, branchFilter, sortConfig],
         queryFn: async () => {
             const res = await hrApi.staff.list({
                 search: searchQuery,
                 employment_status: statusFilter,
                 branch: branchFilter !== "all" ? Number(branchFilter) : undefined,
+                ordering: sortOrderingParam(sortConfig) || "user__last_name",
             });
             return res.data;
         },
@@ -404,12 +412,40 @@ function StaffContent() {
                                             onCheckedChange={toggleSelectAll}
                                         />
                                     </TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Staff Member</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Department</TableHead>
+                                    <SortableHeader
+                                        field="user__last_name"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Staff Member
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="department__name"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Department
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Role</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Position</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                    <SortableHeader
+                                        field="position__title"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Position
+                                    </SortableHeader>
+                                    <SortableHeader
+                                        field="employment_status"
+                                        sortConfig={sortConfig}
+                                        onSort={handleSort}
+                                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                                    >
+                                        Status
+                                    </SortableHeader>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>

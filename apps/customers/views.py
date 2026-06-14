@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, inline_serializer
 from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Count, Sum, Avg
+from django.db.models import Count, Sum, Avg
 from django.utils import timezone
 from datetime import timedelta
 
@@ -57,7 +57,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     ordering_fields = [
         'customer_number', 'customer_since', 'current_balance', 'loyalty_points',
         'user__last_name', 'user__first_name', 'user__email', 'customer_type', 'status',
-        'created_at', 'company_name'
+        'created_at', 'company_name', 'vehicle_count',
     ]
     ordering = ['-created_at']
     
@@ -134,6 +134,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 if customers_with_recent_visits:
                     queryset = queryset.exclude(id__in=customers_with_recent_visits)
                 # If no customers have recent visits, the queryset already contains all inactive customers
+
+        if self.action == 'list':
+            queryset = queryset.annotate(vehicle_count=Count('vehicles', distinct=True))
         
         return queryset
     
@@ -830,6 +833,10 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'is_primary', 'is_billing']
+    ordering_fields = [
+        'first_name', 'last_name', 'email', 'phone', 'is_active', 'last_login',
+        'customer__company_name', 'is_primary',
+    ]
     ordering = ['-is_primary', 'first_name']
 
     def get_queryset(self):

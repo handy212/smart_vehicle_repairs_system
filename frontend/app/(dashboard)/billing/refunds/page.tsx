@@ -15,20 +15,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function RefundsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const queryClient = useQueryClient();
     const router = useRouter();
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
 
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
+
     const { data, isLoading } = useQuery({
-        queryKey: ['refunds', statusFilter, search],
+        queryKey: ['refunds', statusFilter, search, sortConfig],
         queryFn: () => refundApi.list({
             status: statusFilter || undefined,
-            search: search || undefined
+            search: search || undefined,
+            ordering: sortOrderingParam(sortConfig) || "-requested_at",
         }),
     });
 
@@ -159,12 +167,24 @@ export default function RefundsPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Refund #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Amount</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Method</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Requested</TableHead>
+                                        <SortableHeader field="refund_number" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Refund #
+                                        </SortableHeader>
+                                        <SortableHeader field="customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Customer
+                                        </SortableHeader>
+                                        <SortableHeader field="amount" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Amount
+                                        </SortableHeader>
+                                        <SortableHeader field="refund_method" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Method
+                                        </SortableHeader>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Status
+                                        </SortableHeader>
+                                        <SortableHeader field="requested_at" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Requested
+                                        </SortableHeader>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>

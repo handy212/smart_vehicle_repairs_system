@@ -16,7 +16,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AdvancedFilters, FilterOption } from "@/components/ui/advanced-filters";
-import { SortConfig } from "@/components/ui/sortable-header";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { toggleSortConfig } from "@/lib/utils/table-sort";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { BadgeProps } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,7 +46,13 @@ export default function BillsPage() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, unknown>>({});
-    const [sortConfig] = useState<SortConfig | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+        setPage(1);
+    };
+
     const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
     const router = useRouter();
@@ -395,14 +402,26 @@ export default function BillsPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bill #</TableHead>
+                                        <SortableHeader field="bill_number" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Bill #
+                                        </SortableHeader>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vendor</TableHead>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Ref #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bill Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Due Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Total</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Due</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                        <SortableHeader field="bill_date" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Bill Date
+                                        </SortableHeader>
+                                        <SortableHeader field="due_date" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Due Date
+                                        </SortableHeader>
+                                        <SortableHeader field="total" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                                            Total
+                                        </SortableHeader>
+                                        <SortableHeader field="amount_due" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                                            Due
+                                        </SortableHeader>
+                                        <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                                            Status
+                                        </SortableHeader>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Approval</TableHead>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>

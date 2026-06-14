@@ -27,6 +27,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function RecruitmentPage() {
     return (
@@ -266,11 +268,17 @@ function ApplicantsList() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [deletingAppId, setDeletingAppId] = useState<number | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
+
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "applicants"],
-        queryFn: async () => (await hrApi.applicants.list()).data,
+        queryKey: ["hr", "applicants", sortConfig],
+        queryFn: async () => (await hrApi.applicants.list({
+            ordering: sortOrderingParam(sortConfig) || "-applied_date",
+        })).data,
     });
 
     const applicants = data?.results ?? [];
@@ -293,10 +301,28 @@ function ApplicantsList() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Applicant</TableHead>
+                            <SortableHeader
+                                field="last_name"
+                                sortConfig={sortConfig}
+                                onSort={handleSort}
+                            >
+                                Applicant
+                            </SortableHeader>
                             <TableHead>Applied For</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
+                            <SortableHeader
+                                field="applied_date"
+                                sortConfig={sortConfig}
+                                onSort={handleSort}
+                            >
+                                Date
+                            </SortableHeader>
+                            <SortableHeader
+                                field="status"
+                                sortConfig={sortConfig}
+                                onSort={handleSort}
+                            >
+                                Status
+                            </SortableHeader>
                             <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                     </TableHeader>

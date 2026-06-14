@@ -39,7 +39,10 @@ class GatePassViewSet(viewsets.ModelViewSet):
         'vehicle__vin', 'vehicle__license_plate', 'pickup_person_name'
     ]
     ordering_fields = [
-        'created_at', 'issued_at', 'completed_at', 'status', 'gate_pass_number'
+        'created_at', 'issued_at', 'completed_at', 'status', 'gate_pass_number',
+        'work_order__work_order_number',
+        'customer__user__last_name', 'customer__company_name',
+        'vehicle__license_plate', 'pickup_person_name',
     ]
     ordering = ['-created_at']
 

@@ -625,13 +625,14 @@ export const billingApi = {
     },
   },
 
-  payments: {
+    payments: {
     list: async (params?: {
       page?: number;
       invoice?: number;
       customer?: number;
       status?: string;
       payment_method?: string;
+      search?: string;
       ordering?: string;
     }): Promise<Payment[]> => {
       const response = await apiClient.get("/billing/payments/", { params });

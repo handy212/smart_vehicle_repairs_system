@@ -26,6 +26,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function DepartmentsPage() {
     return (
@@ -160,9 +162,17 @@ function DepartmentsList({ onEdit, onDelete }: { onEdit: (d: Department) => void
 }
 
 function PositionsList({ onEdit, onDelete }: { onEdit: (p: Position) => void, onDelete: (id: number) => void }) {
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    const handleSort = (field: string) => {
+        setSortConfig((current) => toggleSortConfig(current, field));
+    };
+
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "positions"],
-        queryFn: async () => (await hrApi.positions.list()).data,
+        queryKey: ["hr", "positions", sortConfig],
+        queryFn: async () => (await hrApi.positions.list({
+            ordering: sortOrderingParam(sortConfig) || "title",
+        })).data,
     });
 
     const positions = data?.results ?? [];
@@ -174,7 +184,13 @@ function PositionsList({ onEdit, onDelete }: { onEdit: (p: Position) => void, on
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Title</TableHead>
+                        <SortableHeader
+                            field="title"
+                            sortConfig={sortConfig}
+                            onSort={handleSort}
+                        >
+                            Title
+                        </SortableHeader>
                         <TableHead>Department</TableHead>
                         <TableHead>Salary Range</TableHead>
                         <TableHead>Status</TableHead>

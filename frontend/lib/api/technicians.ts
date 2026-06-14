@@ -64,6 +64,7 @@ export const techniciansApi = {
         status?: string;
         branch?: number;
         skills?: string; // Comma separated IDs
+        ordering?: string;
     }): Promise<TechnicianListResponse> => {
         const response = await apiClient.get("/technicians/technicians/", { params });
         return response.data;

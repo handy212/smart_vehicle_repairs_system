@@ -190,6 +190,7 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
     ]
     ordering_fields = [
         'user__first_name', 'user__last_name', 'start_date', 'created_at',
+        'department__name', 'position__title', 'employment_status',
     ]
     ordering = ['user__first_name']
 
@@ -346,8 +347,10 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
         else:
             permission_classes.append(HasPermission('manage_leave'))
         return [permission() for permission in permission_classes]
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name']
+    ordering_fields = ['name', 'days_allowed', 'is_paid', 'is_active', 'created_at']
+    ordering = ['name']
 
 
 class LeaveBalanceFilter(DjangoFilterBackend):
@@ -412,7 +415,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     filter_backends = [LeaveRequestFilter, DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['employee', 'leave_type', 'status']
-    ordering_fields = ['created_at', 'start_date']
+    ordering_fields = ['created_at', 'start_date', 'status', 'leave_type__name', 'employee__user__last_name']
     ordering = ['-created_at']
 
     def get_queryset(self):
@@ -918,7 +921,7 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['branch', 'status']
-    ordering_fields = ['start_date', 'created_at']
+    ordering_fields = ['start_date', 'created_at', 'status', 'branch__name', 'name']
     ordering = ['-start_date']
 
     def get_queryset(self):
@@ -1285,6 +1288,7 @@ class ApplicantViewSet(viewsets.ModelViewSet):
     search_fields = ['first_name', 'last_name', 'email']
     filterset_fields = ['job_opening', 'status', 'source']
     ordering = ['-applied_date']
+    ordering_fields = ['applied_date', 'status', 'last_name', 'first_name', 'email']
 
     def get_queryset(self):
         qs = Applicant.objects.select_related(
@@ -1435,6 +1439,7 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
     filter_backends = [PerformanceReviewFilter, DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee', 'status']
     ordering = ['-review_period_end']
+    ordering_fields = ['review_period_end', 'review_period_start', 'status', 'overall_rating', 'employee__user__last_name']
 
     def get_queryset(self):
         qs = PerformanceReview.objects.select_related('employee__user', 'reviewer')

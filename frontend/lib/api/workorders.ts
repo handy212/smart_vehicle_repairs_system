@@ -542,7 +542,7 @@ export const workordersApi = {
   },
 
   parts: {
-    list: async (params: number | { work_order?: number; status?: string }): Promise<WorkOrderPart[]> => {
+    list: async (params: number | { work_order?: number; status?: string; ordering?: string }): Promise<WorkOrderPart[]> => {
       const queryParams = typeof params === 'number' ? { work_order: params } : params;
       const response = await apiClient.get('/workorders/parts/', { params: queryParams });
       return response.data;

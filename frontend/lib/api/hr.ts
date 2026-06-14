@@ -470,7 +470,7 @@ export const hrApi = {
 
     // ------- Positions -------
     positions: {
-        list: (params?: { department?: number; is_active?: boolean; search?: string }) =>
+        list: (params?: { department?: number; is_active?: boolean; search?: string; ordering?: string }) =>
             apiClient.get<PaginatedResponse<Position>>(`${BASE}/positions/`, { params }),
         get: (id: number) =>
             apiClient.get<Position>(`${BASE}/positions/${id}/`),
@@ -491,6 +491,7 @@ export const hrApi = {
             employment_status?: string;
             employment_type?: string;
             branch?: number;
+            ordering?: string;
         }) =>
             apiClient.get<PaginatedResponse<StaffListItem>>(`${BASE}/staff/`, { params }),
         get: (id: number) =>
@@ -530,7 +531,7 @@ export const hrApi = {
 
     // ------- Leave Types -------
     leaveTypes: {
-        list: (params?: { search?: string }) =>
+        list: (params?: { search?: string; ordering?: string }) =>
             apiClient.get<PaginatedResponse<LeaveType>>(`${BASE}/leave-types/`, { params }),
         get: (id: number) =>
             apiClient.get<LeaveType>(`${BASE}/leave-types/${id}/`),
@@ -557,6 +558,7 @@ export const hrApi = {
             staff?: number;
             status?: string;
             leave_type?: number;
+            ordering?: string;
         }) =>
             apiClient.get<PaginatedResponse<LeaveRequest>>(`${BASE}/leave-requests/`, { params }),
         get: (id: number) =>
@@ -588,6 +590,7 @@ export const hrApi = {
             status?: string;
             branch?: number;
             search?: string;
+            ordering?: string;
         }) =>
             apiClient.get<PaginatedResponse<AttendanceRecord>>(`${BASE}/attendance/`, { params }),
         get: (id: number) =>
@@ -624,7 +627,7 @@ export const hrApi = {
 
     // ------- Payroll -------
     payrollPeriods: {
-        list: (params?: { branch?: number; status?: string; page?: number }) =>
+        list: (params?: { branch?: number; status?: string; page?: number; ordering?: string }) =>
             apiClient.get<PaginatedResponse<PayrollPeriod>>(`${BASE}/payroll-periods/`, { params }),
         get: (id: number) =>
             apiClient.get<PayrollPeriod>(`${BASE}/payroll-periods/${id}/`),
@@ -727,7 +730,7 @@ export const hrApi = {
     applicants: {
         list: (params?: {
             page?: number; search?: string; status?: string;
-            job_opening?: number; source?: string;
+            job_opening?: number; source?: string; ordering?: string;
         }) =>
             apiClient.get<PaginatedResponse<Applicant>>(`${BASE}/applicants/`, { params }),
         get: (id: number) =>
@@ -759,7 +762,7 @@ export const hrApi = {
 
     // ------- Performance -------
     performanceReviews: {
-        list: (params?: { page?: number; staff?: number; status?: string }) =>
+        list: (params?: { page?: number; staff?: number; status?: string; ordering?: string }) =>
             apiClient.get<PaginatedResponse<PerformanceReview>>(`${BASE}/performance-reviews/`, { params }),
         get: (id: number) =>
             apiClient.get<PerformanceReview>(`${BASE}/performance-reviews/${id}/`),
@@ -806,7 +809,7 @@ export const hrApi = {
     complianceDocuments: {
         list: (params?: {
             page?: number; staff?: number;
-            document_type?: string; status?: string; search?: string;
+            document_type?: string; status?: string; search?: string; ordering?: string;
         }) =>
             apiClient.get<PaginatedResponse<ComplianceDocument>>(`${BASE}/compliance-documents/`, { params }),
         get: (id: number) =>

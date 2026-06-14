@@ -158,6 +158,16 @@ export interface AccrualCreatePayload {
     source_reference?: string;
 }
 
+export interface Budget {
+    id: number;
+    name: string;
+    fiscal_year: number;
+    start_date: string;
+    end_date: string;
+    branch_name?: string | null;
+    status: string;
+}
+
 export interface FundTransfer {
     id: number;
     transfer_number: string;
@@ -527,8 +537,8 @@ export const accountingApi = {
     },
 
 
-    getAccounts: async (): Promise<Account[]> => {
-        const response = await apiClient.get("/accounting/accounts/");
+    getAccounts: async (params?: QueryParams): Promise<Account[]> => {
+        const response = await apiClient.get("/accounting/accounts/", { params });
         return response.data.results || response.data;
     },
 
@@ -608,8 +618,18 @@ export const accountingApi = {
     },
 
 
-    getJournalEntries: async (): Promise<JournalEntry[]> => {
-        const response = await apiClient.get("/accounting/journal-entries/");
+    getJournalEntries: async (params?: QueryParams): Promise<JournalEntry[]> => {
+        const response = await apiClient.get("/accounting/journal-entries/", { params });
+        return response.data.results || response.data;
+    },
+
+    getBudgets: async (params?: QueryParams): Promise<Budget[]> => {
+        const response = await apiClient.get("/accounting/budgets/", { params });
+        return response.data.results || response.data;
+    },
+
+    getFundTransfers: async (params?: QueryParams): Promise<FundTransfer[]> => {
+        const response = await apiClient.get("/accounting/fund-transfers/", { params });
         return response.data.results || response.data;
     },
 

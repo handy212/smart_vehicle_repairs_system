@@ -18,6 +18,8 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useAuthStore } from "@/store/authStore";
 import { PartRequestDetailDialog } from "../parts-requests/components/PartRequestDetailDialog";
 import { getUserFacingError } from "@/lib/api/errors";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortClientRecords, sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 interface PartsRequestStats {
   draft_requests?: number;
@@ -51,6 +53,7 @@ export default function QuotationRequestsPage() {
   const [activeStatus, setActiveStatus] = useState("all");
   const [fulfillmentView, setFulfillmentView] = useState<FulfillmentView>("list");
   const [selectedWoId, setSelectedWoId] = useState<number | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { hasAnyPermission } = usePermissions();
   const { user } = useAuthStore();
 
@@ -79,14 +82,22 @@ export default function QuotationRequestsPage() {
     enabled: canViewQuotationQueue,
   });
 
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
+
   const { data: parts = [], isLoading: partsLoading, refetch: refetchParts } = useQuery({
-    queryKey: ["stores-workbench", "parts-requests"],
+    queryKey: ["stores-workbench", "parts-requests", sortConfig],
     queryFn: async () => {
       const collectedParts: WorkOrderPart[] = [];
       let page = 1;
+      const ordering = sortOrderingParam(sortConfig) || "-work_order__work_order_number";
 
       while (true) {
-        const response = await workordersApi.parts.list({ page } as unknown as { work_order?: number; status?: string });
+        const response = await workordersApi.parts.list({
+          page,
+          ordering,
+        } as { page?: number; ordering?: string });
 
         if (Array.isArray(response)) {
           return response;
@@ -172,6 +183,18 @@ export default function QuotationRequestsPage() {
       }),
     [groupedParts, search]
   );
+  const sortedWorkOrderIds = useMemo(() => {
+    const rows = filteredWorkOrderIds.map((woId) => ({
+      woId,
+      part: groupedParts[woId][0],
+    }));
+    return sortClientRecords(rows, sortConfig, {
+      work_order__work_order_number: (row) => row.part.work_order_number ?? "",
+      work_order__customer__user__last_name: (row) => row.part.customer_name ?? "",
+      work_order__vehicle__license_plate: (row) => row.part.vehicle_info ?? "",
+      status: (row) => row.part.status ?? "",
+    }).map((row) => row.woId);
+  }, [filteredWorkOrderIds, groupedParts, sortConfig]);
   const pendingFulfillmentCount = Number(partsStats?.pending_requests || 0)
     + Number(partsStats?.po_created_requests || 0)
     + Number(partsStats?.awaiting_stock_requests || 0)
@@ -476,22 +499,30 @@ export default function QuotationRequestsPage() {
             <div className="flex items-center justify-center py-20">
               <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
             </div>
-          ) : filteredWorkOrderIds.length > 0 && fulfillmentView === "list" ? (
+          ) : sortedWorkOrderIds.length > 0 && fulfillmentView === "list" ? (
             <div className="overflow-hidden rounded-md border bg-card">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-muted/50">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Work Order</TableHead>
-                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Customer</TableHead>
-                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Vehicle</TableHead>
+                      <SortableHeader field="work_order__work_order_number" sortConfig={sortConfig} onSort={handleSort} className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">
+                        Work Order
+                      </SortableHeader>
+                      <SortableHeader field="work_order__customer__user__last_name" sortConfig={sortConfig} onSort={handleSort} className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">
+                        Customer
+                      </SortableHeader>
+                      <SortableHeader field="work_order__vehicle__license_plate" sortConfig={sortConfig} onSort={handleSort} className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">
+                        Vehicle
+                      </SortableHeader>
                       <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Parts</TableHead>
-                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Status</TableHead>
+                      <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">
+                        Status
+                      </SortableHeader>
                       <TableHead className="h-9 px-3 text-right text-[10px] font-semibold uppercase text-muted-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredWorkOrderIds.map((workOrderId) => {
+                    {sortedWorkOrderIds.map((workOrderId) => {
                       const workOrderParts = groupedParts[workOrderId] || [];
                       const firstPart = workOrderParts[0];
                       const statusCounts = workOrderParts.reduce((acc: Record<string, number>, part) => {
@@ -562,9 +593,9 @@ export default function QuotationRequestsPage() {
                 </Table>
               </div>
             </div>
-          ) : filteredWorkOrderIds.length > 0 ? (
+          ) : sortedWorkOrderIds.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-              {filteredWorkOrderIds.map((workOrderId) => {
+              {sortedWorkOrderIds.map((workOrderId) => {
                 const workOrderParts = groupedParts[workOrderId] || [];
                 const firstPart = workOrderParts[0];
                 const statusCounts = workOrderParts.reduce((acc: Record<string, number>, part) => {

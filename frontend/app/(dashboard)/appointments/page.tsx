@@ -575,7 +575,14 @@ export default function AppointmentsPage() {
                     >
                       Customer
                     </SortableHeader>
-                    <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
+                    <SortableHeader
+                      field="vehicle__license_plate"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
+                    >
+                      Vehicle
+                    </SortableHeader>
                     <SortableHeader
                       field="appointment_date"
                       sortConfig={sortConfig}

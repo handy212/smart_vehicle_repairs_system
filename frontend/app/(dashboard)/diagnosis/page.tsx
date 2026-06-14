@@ -42,6 +42,8 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
@@ -103,22 +105,20 @@ export default function DiagnosisListPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("newest");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>({ field: "started_at", direction: "desc" });
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => toggleSortConfig(current, field));
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["diagnoses", { search: searchQuery, status: statusFilter, sort: sortBy }],
-    queryFn: () => {
-      let ordering = "-created_at";
-      if (sortBy === "oldest") ordering = "created_at";
-      else if (sortBy === "fee_high") ordering = "-diagnostic_fee";
-      else if (sortBy === "fee_low") ordering = "diagnostic_fee";
-
-      return diagnosisApi.list({
+    queryKey: ["diagnoses", { search: searchQuery, status: statusFilter, sortConfig }],
+    queryFn: () =>
+      diagnosisApi.list({
         search: searchQuery || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
-        ordering,
-      });
-    },
+        ordering: sortOrderingParam(sortConfig) || "-started_at",
+      }),
   });
 
   const diagnoses = useMemo(() => data?.results || [], [data?.results]);
@@ -259,17 +259,6 @@ export default function DiagnosisListPage() {
                 <option value="completed">Completed</option>
                 <option value="on_hold">On Hold</option>
               </select>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="h-9 w-36 rounded-md border border-border bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="fee_high">Fee: High to Low</option>
-                <option value="fee_low">Fee: Low to High</option>
-              </select>
             </div>
           </div>
         </CardContent>
@@ -295,12 +284,12 @@ export default function DiagnosisListPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  <SortableHeader field="id" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     ID / WO#
-                  </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  </SortableHeader>
+                  <SortableHeader field="started_at" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Date Started
-                  </TableHead>
+                  </SortableHeader>
                   <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Vehicle
                   </TableHead>
@@ -310,12 +299,12 @@ export default function DiagnosisListPage() {
                   <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Technician
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  <SortableHeader field="status" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Status
-                  </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
+                  </SortableHeader>
+                  <SortableHeader field="diagnostic_fee" sortConfig={sortConfig} onSort={handleSort} className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
                     Fee
-                  </TableHead>
+                  </SortableHeader>
                   <TableHead className="h-10 w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
