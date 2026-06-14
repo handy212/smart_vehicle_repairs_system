@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { useAuthStore } from "@/store/authStore";
 import { useOfflineStore } from "@/store/offlineStore";
+import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
 import { timeLogsDB } from "@/lib/offline/db";
 import { queueRequest } from "@/lib/offline/queue";
 import { Clock, Play, Square, RefreshCw } from "lucide-react";
@@ -9,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import apiClient from "@/lib/api/client";
+import { timeLogsApi } from "@/lib/api/timeLogs";
 import { getUserFacingError } from "@/lib/api/apiErrors";
 
 interface TimeLog {

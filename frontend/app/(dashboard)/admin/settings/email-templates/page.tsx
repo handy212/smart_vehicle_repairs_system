@@ -19,7 +19,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
-import { getUserFacingError } from "@/lib/api/errors";
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as {
+    response?: {
+      data?: {
+        detail?: string;
+        error?: string;
+        non_field_errors?: string[];
+        name?: string[];
+        subject?: string[];
+        body?: string[];
+        template_type?: string[];
+        channel?: string[];
+      };
+    };
+  })?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  if (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) return data.non_field_errors[0];
+  return (
+    data.error ||
+    data.name?.[0] ||
+    data.template_type?.[0] ||
+    data.channel?.[0] ||
+    data.subject?.[0] ||
+    data.body?.[0] ||
+    fallback
+  );
+}
 
 export default function EmailTemplatesPage() {
   const { toast } = useToast();
@@ -87,7 +115,7 @@ export default function EmailTemplatesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getUserFacingError(error, "Failed to create template"),
+        description: getApiErrorMessage(error, "Failed to create template"),
         variant: "destructive",
       });
     },
@@ -109,7 +137,7 @@ export default function EmailTemplatesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getUserFacingError(error, "Failed to update template"),
+        description: getApiErrorMessage(error, "Failed to update template"),
         variant: "destructive",
       });
     },
@@ -129,7 +157,7 @@ export default function EmailTemplatesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getUserFacingError(error, "Failed to update template"),
+        description: getApiErrorMessage(error, "Failed to update template"),
         variant: "destructive",
       });
     },
@@ -149,7 +177,7 @@ export default function EmailTemplatesPage() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: getUserFacingError(error, "Failed to delete template"),
+        description: getApiErrorMessage(error, "Failed to delete template"),
         variant: "destructive",
       });
     },
@@ -197,7 +225,7 @@ export default function EmailTemplatesPage() {
     } catch (error: unknown) {
       toast({
         title: "Preview failed",
-        description: getUserFacingError(error, "Could not render template preview"),
+        description: getApiErrorMessage(error, "Could not render template preview"),
         variant: "destructive",
       });
       setPreviewRendered({
@@ -315,7 +343,7 @@ export default function EmailTemplatesPage() {
     } catch (error: unknown) {
       toast({
         title: "Preview failed",
-        description: getUserFacingError(error, "Could not render preview"),
+        description: getApiErrorMessage(error, "Could not render preview"),
         variant: "destructive",
       });
     } finally {
@@ -336,7 +364,7 @@ export default function EmailTemplatesPage() {
       <div className="px-4 py-12 text-center">
         <p className="text-sm text-destructive font-medium">Failed to load email templates</p>
         <p className="text-xs text-muted-foreground mt-1">
-          {getUserFacingError(error, "Check your permissions or try again.")}
+          {getApiErrorMessage(error, "Check your permissions or try again.")}
         </p>
       </div>
     );

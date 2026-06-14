@@ -103,3 +103,4 @@ Attached_image.png
 # Firebase credentials (sensitive)
 firebase/*.json
 !firebase/.gitkeep
+frontend/public/sw.js
