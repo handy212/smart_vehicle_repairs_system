@@ -2,15 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { useAuthStore } from '@/store/authStore';
+import type { User } from '@/lib/api/auth';
 
 vi.mock('@/store/authStore', () => ({
   useAuthStore: vi.fn(),
 }));
 
+type MockAuthState = {
+  user: User | null;
+  isAuthenticated: boolean;
+  setUser: (user: User | null) => void;
+  logout: () => void;
+};
+
 describe('PermissionGuard', () => {
   beforeEach(() => {
-    vi.mocked(useAuthStore).mockImplementation((selector?: (state: unknown) => unknown) => {
-      const state = {
+    vi.mocked(useAuthStore).mockImplementation(((selector?: (state: MockAuthState) => unknown) => {
+      const state: MockAuthState = {
         user: {
           id: 1,
           email: 'staff@test.com',
@@ -18,13 +26,13 @@ describe('PermissionGuard', () => {
           last_name: 'User',
           role: 'technician',
           permissions: ['view_workorders', 'view_own_workorders'],
-        },
+        } as User,
         isAuthenticated: true,
         setUser: vi.fn(),
         logout: vi.fn(),
       };
       return selector ? selector(state) : state;
-    });
+    }) as typeof useAuthStore);
   });
 
   it('renders children when permission is granted', () => {

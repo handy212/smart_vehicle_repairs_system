@@ -48,6 +48,7 @@ import {
 } from "@/lib/workorders/workOrderBillingDisplay";
 import { MobileWorkOrderSections } from "@/components/mobile/workorder/MobileWorkOrderSections";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
+import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
 
 export default function MobileWorkOrderDetailPage() {
   const { formatCurrency } = useCurrency();
