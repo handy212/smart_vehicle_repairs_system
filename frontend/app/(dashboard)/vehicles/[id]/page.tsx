@@ -9,7 +9,7 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { roadsideApi } from "@/lib/api/roadside";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, UserCog } from "lucide-react";
+import { ArrowLeft, Edit, MoreVertical, Trash2, UserCog } from "lucide-react";
 import Link from "next/link";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { VehicleSidebar } from "./components/VehicleSidebar";
@@ -31,6 +31,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { useEffect, useState } from "react";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
@@ -49,6 +57,7 @@ export default function VehicleDetailPage() {
   const { addRecentItem } = useRecentItems();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission, hasAnyPermission } = usePermissions();
 
   // Update URL and state when view changes
   useEffect(() => {
@@ -139,6 +148,25 @@ export default function VehicleDetailPage() {
     },
   });
 
+  const deleteVehicleMutation = useMutation({
+    mutationFn: () => vehiclesApi.delete(vehicleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      toast({
+        title: "Vehicle Deleted",
+        description: "The vehicle was deleted successfully.",
+      });
+      router.push("/vehicles");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.response?.data?.detail || "Failed to delete vehicle.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleReassignOwner = () => {
     if (!newOwnerId) {
       toast({
@@ -211,6 +239,8 @@ export default function VehicleDetailPage() {
         return "default";
     }
   };
+  const canEditVehicle = hasPermission("edit_vehicles");
+  const canDeleteVehicle = hasAnyPermission(["delete_vehicles", "manage_vehicles"]);
 
   const renderContent = () => {
     switch (activeView) {
@@ -276,13 +306,40 @@ export default function VehicleDetailPage() {
               <UserCog className="w-4 h-4 mr-2" />
               Reassign Owner
             </Button>
-            <Link href={`/vehicles/${vehicleId}/edit`}>
-              <Button variant="outline" size="sm">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Vehicle
-              </Button>
-            </Link>
           </PermissionGuard>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreVertical className="w-4 h-4 mr-2" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {canEditVehicle && (
+                <DropdownMenuItem onClick={() => router.push(`/vehicles/${vehicleId}/edit`)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Vehicle
+                </DropdownMenuItem>
+              )}
+              {canDeleteVehicle && (
+                <>
+                  {canEditVehicle && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      if (confirm(`Delete ${vehicle.make} ${vehicle.model} ${vehicle.year}?`)) {
+                        deleteVehicleMutation.mutate();
+                      }
+                    }}
+                    disabled={deleteVehicleMutation.isPending}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deleteVehicleMutation.isPending ? "Deleting..." : "Delete"}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

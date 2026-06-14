@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { inventoryApi } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2, User, Hash, FileText } from "lucide-react";
+import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2, User, Hash, FileText, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import StockAdjustmentDialog from "./components/StockAdjustmentDialog";
@@ -18,12 +18,24 @@ import Image from "next/image";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import { getMediaUrl } from "@/lib/api/utils";
+import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
   const { activeBranch } = useBranchStore();
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const partId = parseInt(params.id as string);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -38,6 +50,26 @@ export default function PartDetailPage() {
     queryKey: ["part-transactions", partId],
     queryFn: () => inventoryApi.getTransactions(partId),
     enabled: !!partId,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => inventoryApi.delete(partId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["parts"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-parts"] });
+      toast({
+        title: "Part Deleted",
+        description: "The inventory part was deleted successfully.",
+      });
+      router.push("/inventory");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.response?.data?.detail || "Failed to delete part",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -72,6 +104,8 @@ export default function PartDetailPage() {
 
   const stockStatus = getStockStatus();
   const partImageUrl = part.image ? getMediaUrl(part.image) : "";
+  const canEditPart = hasPermission("edit_inventory") || hasPermission("manage_inventory");
+  const canDeletePart = hasAnyPermission(["delete_parts", "manage_inventory"]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -96,16 +130,54 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Adjust Stock
-          </Button>
-          <Link href={`/inventory/${partId}/edit`}>
-            <Button>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Part
+          {canEditPart && (
+            <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Adjust Stock
             </Button>
-          </Link>
+          )}
+          {canEditPart && (
+            <Link href={`/inventory/${partId}/edit`}>
+              <Button>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Part
+              </Button>
+            </Link>
+          )}
+          {(canEditPart || canDeletePart) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Part actions">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {canEditPart && (
+                  <DropdownMenuItem onClick={() => router.push(`/inventory/${partId}/edit`)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit part
+                  </DropdownMenuItem>
+                )}
+                {canDeletePart && (
+                  <>
+                    {canEditPart && <DropdownMenuSeparator />}
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => {
+                        if (confirm(`Delete part "${part.name}"?`)) {
+                          deleteMutation.mutate();
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {deleteMutation.isPending ? "Deleting..." : "Delete part"}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 

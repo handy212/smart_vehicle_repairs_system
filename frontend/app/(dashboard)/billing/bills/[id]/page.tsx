@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Calendar, CreditCard, Download, Edit, FileText, Package, ReceiptText, Truck, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Download, Edit, FileText, MoreVertical, Package, ReceiptText, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { billingApi } from "@/lib/api/billing";
@@ -15,11 +15,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,7 +80,7 @@ export default function BillDetailPage() {
     const { formatCurrency } = useCurrency();
     const { downloadPDF, isDownloading } = usePrint();
     const { user } = useAuthStore();
-    const { hasPermission } = usePermissions();
+    const { hasPermission, hasAnyPermission } = usePermissions();
     const id = Number.parseInt(params.id as string, 10);
     const isValidId = Number.isFinite(id) && id > 0;
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -192,6 +200,23 @@ export default function BillDetailPage() {
         },
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: () => billingApi.bills.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["bills"] });
+            toast({ title: "Bill Deleted", description: "The bill was deleted successfully." });
+            router.push("/billing/bills");
+        },
+        onError: (error: unknown) => {
+            const apiError = error as { response?: { data?: { error?: string; detail?: string } } };
+            toast({
+                title: "Delete Failed",
+                description: apiError.response?.data?.error || apiError.response?.data?.detail || "Failed to delete bill.",
+                variant: "destructive",
+            });
+        },
+    });
+
     const submitApprovalMutation = useMutation({
         mutationFn: (approverId: number) => billingApi.bills.submitForApproval(id, approverId),
         onSuccess: () => {
@@ -245,6 +270,26 @@ export default function BillDetailPage() {
         },
     });
 
+    const openDraftMutation = useMutation({
+        mutationFn: () => billingApi.bills.openDraft(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["bill", id] });
+            queryClient.invalidateQueries({ queryKey: ["bills"] });
+            toast({
+                title: "Bill Opened",
+                description: "The purchase-order bill is now open for Accounts Payable and payment processing.",
+            });
+        },
+        onError: (error: unknown) => {
+            const apiError = error as { response?: { data?: { error?: string; detail?: string } } };
+            toast({
+                title: "Open Failed",
+                description: apiError.response?.data?.error || apiError.response?.data?.detail || "Failed to open bill.",
+                variant: "destructive",
+            });
+        },
+    });
+
     if (!isValidId) {
         return (
             <div className="space-y-4 p-8">
@@ -286,10 +331,18 @@ export default function BillDetailPage() {
     const canRecordPayment = hasPermission("edit_bills") && !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) && Number.parseFloat(bill.amount_due || "0") > 0;
     const canEditBill = hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0;
     const isStandaloneBill = !bill.purchase_order;
-    const canSubmitBill = hasPermission("edit_bills");
+    const showSubmitApproval = isStandaloneBill && ["draft", "rejected"].includes(bill.status);
+    const canOpenDraftBill =
+        hasAnyPermission(["create_bills", "edit_bills", "manage_billing"]) &&
+        Boolean(bill.purchase_order) &&
+        bill.status === "draft";
     const canApproveOrRejectBill =
         hasPermission("manage_billing") ||
-        (hasPermission("edit_bills") && bill.assigned_approver === user?.id);
+        (hasAnyPermission(["edit_bills", "manage_billing"]) && bill.assigned_approver === user?.id);
+    const canDeleteBill =
+        hasAnyPermission(["delete_bills", "manage_billing"]) &&
+        ["draft", "rejected"].includes(bill.status) &&
+        Number.parseFloat(bill.amount_paid || "0") === 0;
 
     return (
         <div className="space-y-6 p-6">
@@ -313,38 +366,29 @@ export default function BillDetailPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => downloadPDF({ documentType: "bill", documentId: id, documentNumber: bill.bill_number })}
-                        disabled={isDownloading}
-                    >
-                        <Download className="mr-2 h-4 w-4" />
-                        {isDownloading ? "Downloading..." : "PDF"}
-                    </Button>
-                    {canEditBill && (
-                        <Link href={`/billing/bills/${id}/edit`}>
-                            <Button variant="outline" size="sm">
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                            </Button>
-                        </Link>
-                    )}
-                    {canSubmitBill && isStandaloneBill && ["draft", "rejected"].includes(bill.status) && (
+                    {showSubmitApproval && (
                         <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button size="sm" disabled={submitApprovalMutation.isPending}>
                                     Submit Approval
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-md">
                                 <DialogHeader>
                                     <DialogTitle>Select Bill Approver</DialogTitle>
+                                    <DialogDescription>
+                                        Choose the manager or billing approver who should review and release this vendor bill.
+                                    </DialogDescription>
                                 </DialogHeader>
-                                <div className="space-y-3">
-                                    <FormLabel>Approver</FormLabel>
+                                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium text-foreground">Approver</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            The selected approver will receive the bill for review.
+                                        </p>
+                                    </div>
                                     <Select value={selectedApproverId} onValueChange={setSelectedApproverId}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="bg-background">
                                             <SelectValue placeholder="Choose manager or admin" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -362,6 +406,16 @@ export default function BillDetailPage() {
                                 <DialogFooter>
                                     <Button
                                         type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setIsApprovalDialogOpen(false);
+                                            setSelectedApproverId("");
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
                                         disabled={!selectedApproverId || submitApprovalMutation.isPending}
                                         onClick={() => submitApprovalMutation.mutate(Number.parseInt(selectedApproverId, 10))}
                                     >
@@ -371,6 +425,65 @@ export default function BillDetailPage() {
                             </DialogContent>
                         </Dialog>
                     )}
+                    {canOpenDraftBill && (
+                        <Button
+                            size="sm"
+                            onClick={() => openDraftMutation.mutate()}
+                            disabled={openDraftMutation.isPending}
+                        >
+                            {openDraftMutation.isPending ? "Opening..." : "Open Bill"}
+                        </Button>
+                    )}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <MoreVertical className="mr-2 h-4 w-4" />
+                                Actions
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem
+                                onClick={() => downloadPDF({ documentType: "bill", documentId: id, documentNumber: bill.bill_number })}
+                                disabled={isDownloading}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                {isDownloading ? "Downloading..." : "PDF"}
+                            </DropdownMenuItem>
+                            {canEditBill && (
+                                <DropdownMenuItem onClick={() => router.push(`/billing/bills/${id}/edit`)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                            )}
+                            {(hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0) && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={() => {
+                                            if (confirm("Void this bill?")) voidMutation.mutate();
+                                        }}
+                                        disabled={voidMutation.isPending}
+                                    >
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        {voidMutation.isPending ? "Voiding..." : "Void"}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                            {canDeleteBill && (
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => {
+                                        if (confirm("Delete this bill permanently?")) deleteMutation.mutate();
+                                    }}
+                                    disabled={deleteMutation.isPending}
+                                >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     {canApproveOrRejectBill && isStandaloneBill && bill.status === "pending_approval" && (
                         <>
                             <Button

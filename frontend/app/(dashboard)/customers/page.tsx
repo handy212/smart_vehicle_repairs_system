@@ -69,6 +69,8 @@ export default function CustomersPage() {
   const { hasPermission } = usePermissions();
   const canImportCustomers = hasPermission("create_customers") || hasPermission("manage_customers");
   const canExportCustomers = hasPermission("view_customers") || hasPermission("manage_customers");
+  const canEditCustomers = hasPermission("edit_customers") || hasPermission("manage_customers");
+  const canDeleteCustomers = hasPermission("delete_customers") || hasPermission("manage_customers");
 
   // Advanced filter options
   const filterOptions: FilterOption[] = [
@@ -458,7 +460,9 @@ export default function CustomersPage() {
         customers={customers}
         isLoading={customersLoading}
         formatCurrency={formatCurrency}
-        onDelete={handleDelete}
+        onDelete={canDeleteCustomers ? handleDelete : undefined}
+        canEdit={canEditCustomers}
+        canDelete={canDeleteCustomers}
       />
 
       {/* Import Dialog */}

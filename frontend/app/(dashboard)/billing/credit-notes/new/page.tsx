@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { billingApi, type CreditNote } from "@/lib/api/billing";
-import { customersApi, type Customer } from "@/lib/api/customers";
-import { useDebounce } from "@/lib/hooks/useDebounce";
-import { getCustomerSelectLabel } from "@/lib/utils/customer-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,8 +15,8 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
 const creditNoteSchema = z.object({
     customer: z.number().min(1, "Customer is required"),
     invoice: z.number().optional().nullable(),
@@ -44,8 +40,6 @@ export default function NewCreditNotePage() {
     const searchParams = useSearchParams();
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const [searchTerm, setSearchTerm] = useState("");
-    const debouncedSearch = useDebounce(searchTerm, 350);
 
     // Check for pre-selected customer or invoice from URL
     const customerId = searchParams.get("customer") ? parseInt(searchParams.get("customer")!) : undefined;
@@ -69,16 +63,6 @@ export default function NewCreditNotePage() {
     // Calculate totals
     const lineItems = watch("line_items");
     const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-
-    // Search customers
-    const { data: customers } = useQuery({
-        queryKey: ["customers", "credit-note-new", debouncedSearch],
-        queryFn: () =>
-            customersApi.list({
-                page: 1,
-                search: debouncedSearch || undefined,
-            }),
-    });
 
     // Fetch invoices for selected customer
     const selectedCustomerId = watch("customer");
@@ -157,41 +141,15 @@ export default function NewCreditNotePage() {
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                                    <Label>Customer *</Label>
-                                    <Input
-                                        className="h-8 sm:max-w-[220px]"
-                                        placeholder="Search customers…"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
-                                <Select
-                                    value={
-                                        selectedCustomerId > 0
-                                            ? String(selectedCustomerId)
-                                            : undefined
-                                    }
-                                    onValueChange={(val) => {
-                                        setValue("customer", parseInt(val, 10), {
-                                            shouldValidate: true,
-                                        });
-                                        setValue("invoice", null);
+                                <Label>Customer *</Label>
+                                <CustomerSelector
+                                    selectedCustomerId={selectedCustomerId > 0 ? selectedCustomerId : undefined}
+                                    onSelect={(selected) => {
+                                        setValue("customer", selected.id, { shouldValidate: true });
+                                        setValue("invoice", null, { shouldValidate: true });
                                     }}
-                                >
-                                    <SelectTrigger
-                                        className={errors.customer ? "border-destructive" : ""}
-                                    >
-                                        <SelectValue placeholder="Select customer…" />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-72 z-[200]">
-                                        {(customers?.results ?? []).map((c: Customer) => (
-                                            <SelectItem key={c.id} value={String(c.id)}>
-                                                {getCustomerSelectLabel(c)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    placeholder="Search and select a customer..."
+                                />
                                 {errors.customer && (
                                     <p className="text-sm text-destructive">{errors.customer.message}</p>
                                 )}

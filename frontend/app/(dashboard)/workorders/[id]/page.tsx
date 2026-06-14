@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
 import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
@@ -24,6 +24,7 @@ import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 import { WorkOrderCommandBar } from "./components/WorkOrderCommandBar";
 import { WorkOrderProgress } from "./components/WorkOrderProgress";
 import { GatePassBanner } from "./components/GatePassBanner";
@@ -60,6 +61,7 @@ export default function WorkOrderDetailPage() {
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const { addRecentItem } = useRecentItems();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   const { data: workOrder, isLoading, error } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -130,6 +132,25 @@ export default function WorkOrderDetailPage() {
     queryKey: ["workorder-notes", workOrderId],
     queryFn: () => workOrderNotesApi.list({ work_order: workOrderId }),
     enabled: !!workOrderId,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => workordersApi.delete(workOrderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workorders"] });
+      toast({
+        title: "Work Order Deleted",
+        description: "The work order was deleted successfully.",
+      });
+      router.push("/workorders");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.response?.data?.detail || "Failed to delete work order",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleTabChange = useCallback(
@@ -211,6 +232,7 @@ export default function WorkOrderDetailPage() {
 
   const showRecommendationsAction =
     workOrder.status === "closed" && unapprovedRecommendations.length > 0;
+  const canDeleteWorkOrder = hasPermission("delete_workorders");
 
   const latestInspection = inspectionsData?.results?.[0];
   const stagePresentation = getWorkOrderStagePresentation(workOrder, latestInspection);
@@ -237,6 +259,13 @@ export default function WorkOrderDetailPage() {
             documentNumber: workOrder.work_order_number,
           })
         }
+        onDelete={() => {
+          if (confirm(`Delete work order "${workOrder.work_order_number}"?`)) {
+            deleteMutation.mutate();
+          }
+        }}
+        canDelete={canDeleteWorkOrder}
+        isDeleting={deleteMutation.isPending}
         onPrintRecommendations={handlePrintRecommendations}
         isOpeningPrint={isOpeningPrint}
         isDownloading={isDownloading}

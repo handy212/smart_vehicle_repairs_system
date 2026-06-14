@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { techniciansApi, Technician } from "@/lib/api/technicians";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,12 @@ import {
     Map as MapIcon,
     Loader2,
     Edit,
-    User
+    User,
+    MoreVertical,
+    Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
 import { ShiftSchedule } from "@/components/technicians/ShiftSchedule";
@@ -30,6 +32,15 @@ import { Certifications } from "@/components/technicians/Certifications";
 import { PerformanceMetrics } from "@/components/technicians/PerformanceMetrics";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function TechnicianProfilePage() {
     return (
@@ -41,12 +52,35 @@ export default function TechnicianProfilePage() {
 
 function TechnicianProfileContent() {
     const params = useParams();
+    const router = useRouter();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { hasPermission } = usePermissions();
     const id = Number(params?.id);
 
     const { data: technician, isLoading } = useQuery({
         queryKey: ["technician", id],
         queryFn: () => techniciansApi.get(id),
         enabled: !!id,
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: () => techniciansApi.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["technicians"] });
+            toast({
+                title: "Technician Deleted",
+                description: "The technician profile was deleted successfully.",
+            });
+            router.push("/technicians");
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Delete Failed",
+                description: error.response?.data?.detail || "Failed to delete technician",
+                variant: "destructive",
+            });
+        },
     });
 
     if (isLoading) {
@@ -81,6 +115,7 @@ function TechnicianProfileContent() {
     };
 
     const technicianTabClass = "h-8 px-2.5 text-xs sm:text-sm";
+    const canManageTechnician = hasPermission("manage_technicians");
 
     return (
         <div className="mx-auto max-w-6xl space-y-4">
@@ -143,12 +178,35 @@ function TechnicianProfileContent() {
                             </Link>
                         </Button>
                     )}
-                    <Button size="sm" variant="outline" asChild>
-                        <Link href={`/technicians/${id}/edit`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                        </Link>
-                    </Button>
+                    {canManageTechnician && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline">
+                                    <MoreVertical className="h-4 w-4 mr-2" />
+                                    Actions
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => router.push(`/technicians/${id}/edit`)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit technician
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => {
+                                        if (confirm(`Delete technician "${displayName}"?`)) {
+                                            deleteMutation.mutate();
+                                        }
+                                    }}
+                                    disabled={deleteMutation.isPending}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {deleteMutation.isPending ? "Deleting..." : "Delete technician"}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
             </div>
 

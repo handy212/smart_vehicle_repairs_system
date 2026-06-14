@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { customersApi } from "@/lib/api/customers";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
@@ -33,13 +33,19 @@ import { NotesView } from "./components/views/NotesView";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function CustomerDetailPage() {
   const params = useParams();
@@ -50,6 +56,9 @@ export default function CustomerDetailPage() {
   const [activeView, setActiveView] = useState(initialView);
   const { formatCurrency } = useCurrency();
   const { addRecentItem } = useRecentItems();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { hasPermission, hasAnyPermission } = usePermissions();
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -95,6 +104,25 @@ export default function CustomerDetailPage() {
     reminders: reminders.length,
     contacts: contacts.length,
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: () => customersApi.delete(customerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast({ title: "Customer Deleted", description: "The customer was deleted successfully." });
+      router.push("/customers");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.response?.data?.detail || "Failed to delete customer.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const canEditCustomer = hasPermission("edit_customers");
+  const canDeleteCustomer = hasAnyPermission(["delete_customers", "manage_customers"]);
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading customer...</div>;
   if (error || !customer) return <div className="p-8 text-center text-destructive">Error loading customer</div>;
@@ -207,7 +235,7 @@ export default function CustomerDetailPage() {
                 </Button>
               </Link>
               <Link href={`/customers/${customerId}/edit`}>
-                <Button size="sm">
+                <Button size="sm" disabled={!canEditCustomer}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Customer
                 </Button>
@@ -218,6 +246,39 @@ export default function CustomerDetailPage() {
                 label="WhatsApp"
                 size="sm"
               />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="w-4 h-4 mr-2" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  {canEditCustomer && (
+                    <DropdownMenuItem onClick={() => router.push(`/customers/${customerId}/edit`)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                  )}
+                  {canDeleteCustomer && (
+                    <>
+                      {canEditCustomer && <DropdownMenuSeparator />}
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => {
+                          if (confirm(`Delete ${customer.company_name || customer.full_name || "this customer"}?`)) {
+                            deleteMutation.mutate();
+                          }
+                        }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           }
         />

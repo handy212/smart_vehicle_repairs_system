@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
-from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.permissions import HasAnyPermission, HasPermission, user_has_permission, IsModuleEnabled
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -2269,10 +2269,12 @@ class BillViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_bills')]
         elif self.action in ['create']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_bills')]
-        elif self.action in ['update', 'partial_update', 'record_payment', 'void', 'submit_for_approval', 'approvers']:
+        elif self.action in ['update', 'partial_update', 'record_payment', 'void']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_bills')]
+        elif self.action in ['submit_for_approval', 'approvers', 'open_draft']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasAnyPermission(['create_bills', 'edit_bills', 'manage_billing'])]
         elif self.action in ['approve', 'reject']:
-            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_bills')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasAnyPermission(['edit_bills', 'manage_billing'])]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
         return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_bills')]
@@ -2434,6 +2436,29 @@ class BillViewSet(viewsets.ModelViewSet):
         bill.status = 'open'
         bill.approved_by = request.user
         bill.approved_at = timezone.now()
+        bill.save()
+        return Response(BillSerializer(bill).data)
+
+    @action(detail=True, methods=['post'], url_path='open-draft')
+    def open_draft(self, request, pk=None):
+        """Open a PO-linked draft bill so it can enter AP/payment workflow."""
+        bill = self.get_object()
+        if not bill.purchase_order_id:
+            return Response(
+                {"error": "Only purchase-order-linked bills can be opened directly from draft."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.status != 'draft':
+            return Response(
+                {"error": "Only draft purchase-order bills can be opened."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.total <= 0:
+            return Response(
+                {"error": "Bill total must be greater than zero before opening this bill."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        bill.status = 'open'
         bill.save()
         return Response(BillSerializer(bill).data)
 

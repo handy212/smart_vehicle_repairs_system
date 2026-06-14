@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const StatsGrid = ({ stats, loading }: { stats?: SupplierStats, loading: boolean }) => {
   if (loading) {
@@ -67,6 +68,10 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission, hasAnyPermission } = usePermissions();
+  const canCreateSupplier = hasPermission("create_inventory") || hasPermission("manage_inventory");
+  const canEditSupplier = hasPermission("edit_inventory") || hasPermission("manage_inventory");
+  const canDeleteSupplier = hasAnyPermission(["delete_inventory", "manage_inventory"]);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["supplier-stats"],
@@ -257,12 +262,14 @@ export default function SuppliersPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link href="/inventory/suppliers/new">
-            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Supplier
-            </Button>
-          </Link>
+          {canCreateSupplier && (
+            <Link href="/inventory/suppliers/new">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Supplier
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -350,19 +357,23 @@ export default function SuppliersPage() {
                                 View Details
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/inventory/suppliers/${supplier.id}/edit`} className="flex items-center cursor-pointer">
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Supplier
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Supplier
-                            </DropdownMenuItem>
+                            {canEditSupplier && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/inventory/suppliers/${supplier.id}/edit`} className="flex items-center cursor-pointer">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Supplier
+                                </Link>
+                              </DropdownMenuItem>
+                            )}
+                            {canDeleteSupplier && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Supplier
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

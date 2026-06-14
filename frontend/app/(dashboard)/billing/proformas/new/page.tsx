@@ -8,8 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi, Invoice } from "@/lib/api/billing";
-import { customersApi } from "@/lib/api/customers";
-import { vehiclesApi } from "@/lib/api/vehicles";
 import { workordersApi } from "@/lib/api/workorders";
 import { inventoryApi } from "@/lib/api/inventory";
 import { adminApi } from "@/lib/api/admin";
@@ -32,6 +30,8 @@ import { Badge } from "@/components/ui/badge";
 
 import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
+import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
 
 const lineItemSchema = z.object({
@@ -98,11 +98,6 @@ export default function NewProformaPage() {
         enabled: partSearchTerm.length > 0,
     });
 
-    const { data: customersData } = useQuery({
-        queryKey: ["customers", "list"],
-        queryFn: () => customersApi.list({ page: 1 }),
-    });
-
     const { data: salesAgents } = useQuery({
         queryKey: ["users", "branch-staff", activeBranchId],
         queryFn: async () => {
@@ -133,12 +128,6 @@ export default function NewProformaPage() {
         }
     }, [workOrder]);
 
-
-    const { data: vehiclesData } = useQuery({
-        queryKey: ["vehicles", "customer", selectedCustomer],
-        queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
-        enabled: !!selectedCustomer,
-    });
 
     const { data: taxConfig } = useQuery({
         queryKey: ["tax", "config"],
@@ -401,28 +390,15 @@ export default function NewProformaPage() {
                                     name="customer"
                                     control={control}
                                     render={({ field }) => (
-                                        <Select
-                                            value={field.value?.toString() || ""}
-                                            onValueChange={(val) => {
-                                                const id = parseInt(val);
-                                                if (!isNaN(id)) {
-                                                    field.onChange(id);
-                                                    setSelectedCustomer(id);
-                                                }
+                                        <CustomerSelector
+                                            selectedCustomerId={typeof field.value === "number" ? field.value : undefined}
+                                            onSelect={(selected) => {
+                                                field.onChange(selected.id);
+                                                setValue("vehicle", undefined, { shouldValidate: true });
+                                                setSelectedCustomer(selected.id);
                                             }}
-                                        >
-                                            <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
-                                                <SelectValue placeholder="Select customer..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-
-                                                {customersData?.results.map((c: any) => (
-                                                    <SelectItem key={c.id} value={c.id.toString()}>
-                                                        {c.full_name || c.company_name || c.email}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            placeholder="Search and select a customer..."
+                                        />
                                     )}
                                 />
                                 {errors.customer && <p className="text-sm text-destructive font-medium">{errors.customer.message as string}</p>}
@@ -435,26 +411,13 @@ export default function NewProformaPage() {
                                     name="vehicle"
                                     control={control}
                                     render={({ field }) => (
-                                        <Select
-                                            value={field.value?.toString() || ""}
-                                            onValueChange={(val) => {
-                                                const id = parseInt(val);
-                                                if (!isNaN(id)) field.onChange(id);
-                                            }}
+                                        <VehicleSelector
+                                            selectedVehicleId={typeof field.value === "number" ? field.value : undefined}
+                                            ownerId={selectedCustomer}
                                             disabled={!selectedCustomer}
-                                        >
-                                            <SelectTrigger disabled={!selectedCustomer}>
-                                                <SelectValue placeholder="Select vehicle..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-
-                                                {vehiclesData?.results.map((v: any) => (
-                                                    <SelectItem key={v.id} value={v.id.toString()}>
-                                                        {v.year} {v.make} {v.model}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            onSelect={(selected) => field.onChange(selected.id)}
+                                            placeholder={!selectedCustomer ? "Select a customer first" : "Search and select a vehicle..."}
+                                        />
                                     )}
                                 />
                             </div>

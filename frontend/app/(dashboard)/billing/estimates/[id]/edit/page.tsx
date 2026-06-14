@@ -9,8 +9,6 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
-import { customersApi } from "@/lib/api/customers";
-import { vehiclesApi } from "@/lib/api/vehicles";
 import { adminApi } from "@/lib/api/admin";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { diagnosisApi } from "@/lib/api/diagnosis";
@@ -41,6 +39,8 @@ import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
+import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
 const requiredNumber = (message: string) => z.coerce.number({ message }).min(1, message);
 const optionalNumber = () => z.coerce.number().min(0).optional();
@@ -182,17 +182,6 @@ export default function EditEstimatePage() {
     : null;
 
   const workOrderNumber = estimate?.work_order_number || null;
-
-  const { data: customersData } = useQuery({
-    queryKey: ["customers", "list"],
-    queryFn: () => customersApi.list({ page: 1 }),
-  });
-
-  const { data: vehiclesData } = useQuery({
-    queryKey: ["vehicles", "customer", selectedCustomer],
-    queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
-    enabled: !!selectedCustomer || !!estimate,
-  });
 
   const { data: salesAgents } = useQuery({
     queryKey: ["users", "staff"],
@@ -548,29 +537,15 @@ export default function EditEstimatePage() {
                   <User className="h-4 w-4" />
                   Customer *
                 </label>
-                <Select
-                  value={watch("customer")?.toString() || ""}
-                  onValueChange={(val) => {
-                    const parsed = parseInt(val);
-                    if (!isNaN(parsed)) {
-                      setValue("customer", parsed, { shouldValidate: true });
-                    }
+                <CustomerSelector
+                  selectedCustomerId={typeof watch("customer") === "number" ? watch("customer") : undefined}
+                  onSelect={(selected) => {
+                    setValue("customer", selected.id, { shouldValidate: true });
+                    setValue("vehicle", undefined, { shouldValidate: true });
+                    setSelectedCustomer(selected.id);
                   }}
-                >
-                  <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select customer..." />
-                  </SelectTrigger>
-                  <SelectContent>
-
-                    {customersData?.results.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>
-                        {c.full_name
-                          ? (c.company_name ? `${c.full_name} (${c.company_name})` : c.full_name)
-                          : c.company_name || `Customer #${c.id}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Search and select a customer..."
+                />
                 {errors.customer && (
                   <p className="text-sm text-destructive">{errors.customer.message}</p>
                 )}
@@ -581,28 +556,13 @@ export default function EditEstimatePage() {
                   <Car className="h-4 w-4" />
                   Vehicle
                 </label>
-                <Select
-                  value={watch("vehicle")?.toString() || ""}
-                  onValueChange={(val) => {
-                    const parsed = parseInt(val);
-                    if (!isNaN(parsed)) {
-                      setValue("vehicle", parsed, { shouldValidate: true });
-                    }
-                  }}
+                <VehicleSelector
+                  selectedVehicleId={typeof watch("vehicle") === "number" ? watch("vehicle") : undefined}
+                  ownerId={selectedCustomer}
                   disabled={!selectedCustomer}
-                >
-                  <SelectTrigger className={!selectedCustomer ? "opacity-50" : ""}>
-                    <SelectValue placeholder="Select vehicle..." />
-                  </SelectTrigger>
-                  <SelectContent>
-
-                    {vehiclesData?.results.map((v: any) => (
-                      <SelectItem key={v.id} value={v.id.toString()}>
-                        {v.year} {v.make} {v.model}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onSelect={(selected) => setValue("vehicle", selected.id, { shouldValidate: true })}
+                  placeholder={!selectedCustomer ? "Select a customer first" : "Search and select a vehicle..."}
+                />
               </div>
 
               <div className="space-y-2">

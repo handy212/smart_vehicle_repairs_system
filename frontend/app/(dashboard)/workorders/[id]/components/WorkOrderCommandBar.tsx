@@ -19,6 +19,7 @@ import {
   AlertCircle,
   AlertTriangle,
   MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -44,6 +45,9 @@ interface WorkOrderCommandBarProps {
   canPrintRecommendations?: boolean;
   onPrintWorkOrder: () => void;
   onDownloadPdf: () => void;
+  onDelete?: () => void;
+  canDelete?: boolean;
+  isDeleting?: boolean;
   onPrintRecommendations?: () => void;
   isOpeningPrint?: boolean;
   isDownloading?: boolean;
@@ -60,6 +64,9 @@ export function WorkOrderCommandBar({
   canPrintRecommendations,
   onPrintWorkOrder,
   onDownloadPdf,
+  onDelete,
+  canDelete,
+  isDeleting,
   onPrintRecommendations,
   isOpeningPrint,
   isDownloading,
@@ -167,6 +174,19 @@ export function WorkOrderCommandBar({
                     </Link>
                   </DropdownMenuItem>
                 </PermissionGuard>
+              )}
+              {canDelete && onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={onDelete}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {isDeleting ? "Deleting..." : "Delete order"}
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

@@ -9,12 +9,19 @@ import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Select } from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, FileText, AlertCircle, CheckCircle, XCircle, Clock, Trash2, Download, Mail, Edit, Copy, MoreVertical, ChevronDown, Eye, Filter, X, Printer, DollarSign } from "lucide-react";
+import { Plus, Search, FileText, AlertCircle, CheckCircle, XCircle, Clock, Trash2, Download, Mail, Edit, Copy, MoreVertical, Eye, Filter, X, Printer, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useState, useRef, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
@@ -46,13 +53,7 @@ export default function EstimatesPage() {
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-
   const [showFilters, setShowFilters] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-
-  const menuRefs = useRef<Record<number, HTMLButtonElement>>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
@@ -358,6 +359,7 @@ export default function EstimatesPage() {
   const pendingCount = data?.results?.filter((est) => est.status === "sent" || est.status === "viewed").length || 0;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars 
   const expiredCount = data?.results?.filter((est) => est.is_expired).length || 0;
+  const canExportEstimates = hasPermission("export_estimates");
 
   return (
     <div className="space-y-4 min-h-screen">
@@ -373,53 +375,35 @@ export default function EstimatesPage() {
           <h1 className="text-xl font-bold text-foreground tracking-tight">Estimates</h1>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="h-9 border-border text-foreground"
-            >
-              Actions
-              <ChevronDown className="w-3.5 h-3.5 ml-2" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-md shadow-lg z-20">
-                  <div className="py-1">
-                    <PermissionGuard permission="export_estimates">
-                      <button
-                        onClick={() => {
-                          handleExport();
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export Excel
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleExport("pdf");
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export PDF
-                      </button>
-                    </PermissionGuard>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          {canExportEstimates && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 border-border text-foreground"
+                >
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => handleExport()}
+                  disabled={!data?.results || data.results.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleExport("pdf")}
+                  disabled={!data?.results || data.results.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <PermissionGuard permission="create_estimates">
             <Link href="/billing/estimates/new">
               <Button size="sm" className="h-9">
@@ -755,24 +739,99 @@ export default function EstimatesPage() {
                               </Link>
                             </PermissionGuard>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const button = e.currentTarget;
-                              const rect = button.getBoundingClientRect();
-                              setMenuPosition({
-                                top: rect.bottom + 4,
-                                left: rect.right - 192,
-                              });
-                              setOpenMenuId(openMenuId === estimate.id ? null : estimate.id);
-                            }}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
-                            aria-label={`Actions for estimate ${estimate.estimate_number || estimate.id}`}
-                          >
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                aria-label={`Actions for estimate ${estimate.estimate_number || estimate.id}`}
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem asChild onSelect={(e) => e.stopPropagation()}>
+                                <Link href={`/billing/estimates/${estimate.id}`}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
+                                </Link>
+                              </DropdownMenuItem>
+                              {estimate.status !== "converted" && (
+                                <PermissionGuard permission="edit_estimates">
+                                  <DropdownMenuItem asChild onSelect={(e) => e.stopPropagation()}>
+                                    <Link href={`/billing/estimates/${estimate.id}/edit`}>
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      Edit
+                                    </Link>
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                              )}
+                              <PermissionGuard permission="create_estimates">
+                                <DropdownMenuItem
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      const duplicated = await billingApi.estimates.duplicate(estimate.id);
+                                      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+                                      toast({
+                                        title: "Success",
+                                        description: "Estimate duplicated successfully",
+                                      });
+                                      window.location.href = `/billing/estimates/${duplicated.id}/edit`;
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Error",
+                                        description: error.response?.data?.error || error.response?.data?.detail || "Failed to duplicate estimate",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                              </PermissionGuard>
+                              {(estimate.status === "draft" || estimate.status === "sent") && (
+                                <PermissionGuard permission="edit_estimates">
+                                  <DropdownMenuItem
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        await billingApi.estimates.send(estimate.id);
+                                        queryClient.invalidateQueries({ queryKey: ["estimates"] });
+                                        toast({ title: "Success", description: "Estimate sent successfully" });
+                                      } catch (error: any) {
+                                        toast({
+                                          title: "Error",
+                                          description: error.response?.data?.error || "Failed to send estimate",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Send
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                              )}
+                              <DropdownMenuSeparator />
+                              <PermissionGuard permission="delete_estimates">
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(estimate);
+                                  }}
+                                  disabled={deleteMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                                </DropdownMenuItem>
+                              </PermissionGuard>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -794,133 +853,6 @@ export default function EstimatesPage() {
               </PermissionGuard>
             </div>
           )}
-
-          {/* Floating dropdown menu - rendered outside table */}
-          {openMenuId && menuPosition && data?.results && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => {
-                  setOpenMenuId(null);
-                  setMenuPosition(null);
-                }}
-              />
-              <div
-                className="fixed z-50 w-48 bg-card rounded-md shadow-lg border border-border"
-                style={{
-                  top: `${menuPosition.top}px`,
-                  left: `${menuPosition.left}px`,
-                }}
-              >
-                {(() => {
-
-                  const estimate = data.results.find((e: any) => e.id === openMenuId);
-                  if (!estimate) return null;
-
-                  return (
-                    <div className="py-1">
-                      <Link
-                        href={`/billing/estimates/${estimate.id}`}
-                        onClick={() => {
-                          setOpenMenuId(null);
-                          setMenuPosition(null);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View
-                      </Link>
-                      {estimate.status !== 'converted' && (
-                        <PermissionGuard permission="edit_estimates">
-                          <Link
-                            href={`/billing/estimates/${estimate.id}/edit`}
-                            onClick={() => {
-                              setOpenMenuId(null);
-                              setMenuPosition(null);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit
-                          </Link>
-                        </PermissionGuard>
-                      )}
-                      <PermissionGuard permission="create_estimates">
-                        <button
-                          onClick={async () => {
-                            setOpenMenuId(null);
-                            setMenuPosition(null);
-                            try {
-                              const duplicated = await billingApi.estimates.duplicate(estimate.id);
-                              queryClient.invalidateQueries({ queryKey: ["estimates"] });
-                              toast({
-                                title: "Success",
-                                description: "Estimate duplicated successfully",
-                              });
-                              window.location.href = `/billing/estimates/${duplicated.id}/edit`;
-
-                            } catch (error: any) {
-                              toast({
-                                title: "Error",
-                                description: error.response?.data?.error || error.response?.data?.detail || "Failed to duplicate estimate",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Duplicate
-                        </button>
-                      </PermissionGuard>
-                      {(estimate.status === 'draft' || estimate.status === 'sent') && (
-                        <PermissionGuard permission="edit_estimates">
-                          <button
-                            onClick={async () => {
-                              setOpenMenuId(null);
-                              setMenuPosition(null);
-                              try {
-                                await billingApi.estimates.send(estimate.id);
-                                queryClient.invalidateQueries({ queryKey: ["estimates"] });
-                                toast({ title: "Success", description: "Estimate sent successfully" });
-
-                              } catch (error: any) {
-                                toast({
-                                  title: "Error",
-                                  description: error.response?.data?.error || "Failed to send estimate",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
-                          >
-                            <Mail className="w-4 h-4" />
-                            Send
-                          </button>
-                        </PermissionGuard>
-                      )}
-                      <div className="border-t border-border my-1" />
-                      <PermissionGuard permission="delete_estimates">
-                        <button
-                          onClick={() => {
-                            setOpenMenuId(null);
-                            setMenuPosition(null);
-                            handleDelete(estimate);
-                          }}
-                          disabled={deleteMutation.isPending}
-                          className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      </PermissionGuard>
-                    </div>
-                  );
-                })()}
-              </div>
-            </>
-          )}
-
           {/* Pagination */}
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">

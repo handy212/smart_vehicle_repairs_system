@@ -20,18 +20,24 @@ interface CustomerTableProps {
   isLoading: boolean;
   formatCurrency: (amount: number) => string;
   onDelete?: (customer: any) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 const CustomerRow = memo(function CustomerRow({
   customer,
   formatCurrency,
   router,
-  onDelete
+  onDelete,
+  canEdit,
+  canDelete,
 }: {
   customer: any;
   formatCurrency: any;
   router: any;
   onDelete?: (customer: any) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const displayName = customer.company_name || customer.full_name;
   const initials = displayName
@@ -118,14 +124,16 @@ const CustomerRow = memo(function CustomerRow({
             >
               View Profile
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/customers/${customer.id}/edit`);
-              }}
-            >
-              Edit Customer
-            </DropdownMenuItem>
+            {canEdit && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/customers/${customer.id}/edit`);
+                }}
+              >
+                Edit Customer
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -172,15 +180,17 @@ const CustomerRow = memo(function CustomerRow({
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.(customer);
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              Delete Customer
-            </DropdownMenuItem>
+            {canDelete && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(customer);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                Delete Customer
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
@@ -188,7 +198,7 @@ const CustomerRow = memo(function CustomerRow({
   );
 });
 
-export function CustomerTable({ customers, isLoading, formatCurrency, onDelete }: CustomerTableProps) {
+export function CustomerTable({ customers, isLoading, formatCurrency, onDelete, canEdit, canDelete }: CustomerTableProps) {
   const router = useRouter();
 
   return (
@@ -230,6 +240,8 @@ export function CustomerTable({ customers, isLoading, formatCurrency, onDelete }
                 formatCurrency={formatCurrency}
                 router={router}
                 onDelete={onDelete}
+                canEdit={canEdit}
+                canDelete={canDelete}
               />
             ))
           )}

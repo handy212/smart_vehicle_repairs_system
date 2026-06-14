@@ -19,10 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDebounce } from "@/lib/hooks/useDebounce";
-import { customersApi, type Customer } from "@/lib/api/customers";
-import { getCustomerSelectLabel } from "@/lib/utils/customer-display";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
 
 export default function CreateRefundPage() {
   const { formatCurrency } = useCurrency();
@@ -36,8 +34,6 @@ export default function CreateRefundPage() {
   const [reason, setReason] = useState("");
   const [refundMethod, setRefundMethod] = useState("cash");
   const [referenceNumber, setReferenceNumber] = useState("");
-  const [customerSearch, setCustomerSearch] = useState("");
-  const debouncedCustomerSearch = useDebounce(customerSearch, 350);
 
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ["payments", "refund-new"],
@@ -45,16 +41,6 @@ export default function CreateRefundPage() {
       billingApi.payments.list({
         status: "completed",
         ordering: "-payment_date",
-      }),
-  });
-
-  const { data: customersData } = useQuery({
-    queryKey: ["customers", "refund-new", debouncedCustomerSearch],
-    queryFn: () =>
-      customersApi.list({
-        page: 1,
-        page_size: 100,
-        search: debouncedCustomerSearch || undefined,
       }),
   });
 
@@ -204,30 +190,12 @@ export default function CreateRefundPage() {
 
             {selectedPayment && !customerIdFromPayment && (
               <div className="space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <Label>Customer *</Label>
-                  <Input
-                    className="h-8 sm:max-w-xs"
-                    placeholder="Search customers…"
-                    value={customerSearch}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
-                  />
-                </div>
-                <Select
-                  value={customerOverride || undefined}
-                  onValueChange={setCustomerOverride}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select customer…" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72 z-[200]">
-                    {(customersData?.results ?? []).map((c: Customer) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {getCustomerSelectLabel(c)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Customer *</Label>
+                <CustomerSelector
+                  selectedCustomerId={customerOverride ? parseInt(customerOverride, 10) : undefined}
+                  onSelect={(selected) => setCustomerOverride(String(selected.id))}
+                  placeholder="Search and select a customer..."
+                />
                 <p className="text-xs text-muted-foreground">
                   This payment had no linked customer id; pick the customer manually.
                 </p>

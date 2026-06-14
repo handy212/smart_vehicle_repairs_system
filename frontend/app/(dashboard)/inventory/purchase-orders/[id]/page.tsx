@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, CheckCircle, XCircle, Package, Printer } from "lucide-react";
+import { ArrowLeft, Edit, CheckCircle, XCircle, Package, Printer, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
@@ -38,10 +38,18 @@ import { CircleDollarSign, Clock, Database, FileText, ReceiptText } from "lucide
 import { cn } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function PurchaseOrderDetailPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
+  const router = useRouter();
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -198,6 +206,25 @@ export default function PurchaseOrderDetailPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => inventoryApi.deletePurchaseOrder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast({
+        title: "Purchase Order Deleted",
+        description: "The purchase order was deleted successfully.",
+      });
+      router.push("/inventory/purchase-orders");
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to delete purchase order"),
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "draft":
@@ -263,6 +290,12 @@ export default function PurchaseOrderDetailPage() {
     typeof purchaseOrder.supplier === "object" && purchaseOrder.supplier !== null
       ? purchaseOrder.supplier
       : null;
+  const canEditPurchaseOrder =
+    (hasPermission("edit_purchase_orders") || hasPermission("manage_inventory")) &&
+    purchaseOrder.status === "draft";
+  const canDeletePurchaseOrder =
+    hasPermission("manage_inventory") &&
+    ["draft", "rejected", "cancelled"].includes(purchaseOrder.status);
 
   return (
     <div className="space-y-6">
@@ -375,12 +408,14 @@ export default function PurchaseOrderDetailPage() {
 
           {purchaseOrder.status === "draft" && (
             <>
-              <Link href={`/inventory/purchase-orders/${id}/edit`}>
-                <Button variant="secondary" size="sm" className="h-8 text-xs font-bold">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-              </Link>
+              {canEditPurchaseOrder && (
+                <Link href={`/inventory/purchase-orders/${id}/edit`}>
+                  <Button variant="secondary" size="sm" className="h-8 text-xs font-bold">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </Link>
+              )}
               {purchaseOrder.items && purchaseOrder.items.length > 0 && isBranchUser && (
                 <Button
                   size="sm"
@@ -450,6 +485,42 @@ export default function PurchaseOrderDetailPage() {
               <XCircle className="w-4 h-4 mr-2" />
               Cancel
             </Button>
+          )}
+
+          {(canEditPurchaseOrder || canDeletePurchaseOrder) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs font-bold">
+                  <MoreVertical className="w-4 h-4 mr-2" />
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {canEditPurchaseOrder && (
+                  <DropdownMenuItem onClick={() => router.push(`/inventory/purchase-orders/${id}/edit`)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit purchase order
+                  </DropdownMenuItem>
+                )}
+                {canDeletePurchaseOrder && (
+                  <>
+                    {canEditPurchaseOrder && <DropdownMenuSeparator />}
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => {
+                        if (confirm(`Delete purchase order "${purchaseOrder.po_number}"?`)) {
+                          deleteMutation.mutate();
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {deleteMutation.isPending ? "Deleting..." : "Delete purchase order"}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>

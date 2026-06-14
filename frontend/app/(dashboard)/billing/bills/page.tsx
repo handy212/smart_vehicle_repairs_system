@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { billingApi } from "@/lib/api/billing";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { billingApi, type Bill, type BillPaymentCreatePayload } from "@/lib/api/billing";
+import { accountingApi, type Account } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,15 +19,57 @@ import { AdvancedFilters, FilterOption } from "@/components/ui/advanced-filters"
 import { SortConfig } from "@/components/ui/sortable-header";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { BadgeProps } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const paymentSchema = z.object({
+    amount: z.string().min(1, "Amount is required"),
+    payment_date: z.string().min(1, "Payment date is required"),
+    payment_method: z.enum(["cash", "check", "bank_transfer", "mobile_money", "credit_card", "other"]),
+    cash_account: z.string().optional(),
+    bank_account: z.string().optional(),
+    reference_number: z.string().optional(),
+    notes: z.string().optional(),
+});
+
+type PaymentValues = z.infer<typeof paymentSchema>;
 
 export default function BillsPage() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, unknown>>({});
-
     const [sortConfig] = useState<SortConfig | null>(null);
+    const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+    const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { formatCurrency } = useCurrency();
+    const { toast } = useToast();
+    const { hasPermission } = usePermissions();
+
+    const paymentForm = useForm<PaymentValues>({
+        resolver: zodResolver(paymentSchema),
+        defaultValues: {
+            amount: "",
+            payment_date: format(new Date(), "yyyy-MM-dd"),
+            payment_method: "bank_transfer",
+            cash_account: "",
+            bank_account: "",
+            reference_number: "",
+            notes: "",
+        },
+    });
+
+    const paymentMethod = useWatch({ control: paymentForm.control, name: "payment_method" });
+    const cashAccount = useWatch({ control: paymentForm.control, name: "cash_account" });
+    const bankAccount = useWatch({ control: paymentForm.control, name: "bank_account" });
 
     const getFilterValue = (key: string) => {
         const value = advancedFilters[key];
@@ -81,6 +124,98 @@ export default function BillsPage() {
             });
         },
     });
+
+    const { data: tillAccounts = [], isLoading: tillAccountsLoading } = useQuery({
+        queryKey: ["accounting", "till-enabled-accounts"],
+        queryFn: () => accountingApi.getTillEnabledAccounts(),
+        enabled: isPaymentDialogOpen && paymentMethod === "cash",
+    });
+
+    const { data: bankAccounts = [], isLoading: bankAccountsLoading } = useQuery({
+        queryKey: ["accounting", "bank-accounts"],
+        queryFn: () => accountingApi.getBankAccounts(),
+        enabled: isPaymentDialogOpen && paymentMethod !== "cash",
+    });
+
+    const recordPaymentMutation = useMutation({
+        mutationFn: ({ billId, payload }: { billId: number; payload: BillPaymentCreatePayload }) =>
+            billingApi.bills.recordPayment(billId, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["bills"] });
+            if (selectedBill) {
+                queryClient.invalidateQueries({ queryKey: ["bill", selectedBill.id] });
+            }
+            setIsPaymentDialogOpen(false);
+            setSelectedBill(null);
+            paymentForm.reset({
+                amount: "",
+                payment_date: format(new Date(), "yyyy-MM-dd"),
+                payment_method: "bank_transfer",
+                cash_account: "",
+                bank_account: "",
+                reference_number: "",
+                notes: "",
+            });
+            toast({ title: "Payment Recorded", description: "Vendor bill payment was recorded successfully." });
+        },
+        onError: (error: unknown) => {
+            const apiError = error as { response?: { data?: Record<string, string | string[]> } };
+            const data = apiError.response?.data;
+            const firstFieldError = data
+                ? Object.values(data).map((value) => Array.isArray(value) ? value.join(" ") : value).find(Boolean)
+                : undefined;
+            toast({
+                title: "Payment Failed",
+                description: firstFieldError || "Failed to record bill payment.",
+                variant: "destructive",
+            });
+        },
+    });
+
+    const openPaymentDialog = (bill: Bill) => {
+        setSelectedBill(bill);
+        paymentForm.reset({
+            amount: bill.amount_due || "",
+            payment_date: format(new Date(), "yyyy-MM-dd"),
+            payment_method: "bank_transfer",
+            cash_account: "",
+            bank_account: "",
+            reference_number: "",
+            notes: "",
+        });
+        setIsPaymentDialogOpen(true);
+    };
+
+    const canRecordPayment = (bill: Bill) =>
+        hasPermission("edit_bills") &&
+        !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) &&
+        Number.parseFloat(bill.amount_due || "0") > 0;
+
+    function handleRecordPayment(data: PaymentValues) {
+        if (!selectedBill) return;
+        if (data.payment_method === "cash" && !data.cash_account) {
+            paymentForm.setError("cash_account", {
+                type: "manual",
+                message: "Select the cash account/till for this payment.",
+            });
+            return;
+        }
+        if (data.payment_method !== "cash" && !data.bank_account) {
+            paymentForm.setError("bank_account", {
+                type: "manual",
+                message: "Select the bank account for this payment.",
+            });
+            return;
+        }
+
+        const payload: BillPaymentCreatePayload = { ...data };
+        if (payload.payment_method !== "cash") {
+            delete payload.cash_account;
+        } else {
+            delete payload.bank_account;
+        }
+        recordPaymentMutation.mutate({ billId: selectedBill.id, payload });
+    }
 
     const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
@@ -323,9 +458,33 @@ export default function BillsPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
-                                                    <Eye className="w-3.5 h-3.5" />
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {canRecordPayment(bill) && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-7 px-2 text-xs"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                openPaymentDialog(bill);
+                                                            }}
+                                                        >
+                                                            <CreditCard className="mr-1 h-3.5 w-3.5" />
+                                                            Pay
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            router.push(`/billing/bills/${bill.id}`);
+                                                        }}
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -375,6 +534,180 @@ export default function BillsPage() {
                     </div>
                 </div>
             )}
+
+            <Dialog
+                open={isPaymentDialogOpen}
+                onOpenChange={(open) => {
+                    setIsPaymentDialogOpen(open);
+                    if (!open) {
+                        setSelectedBill(null);
+                    }
+                }}
+            >
+                <DialogContent onClick={(event) => event.stopPropagation()}>
+                    <DialogHeader>
+                        <DialogTitle>
+                            Record Vendor Payment
+                            {selectedBill?.bill_number ? ` • ${selectedBill.bill_number}` : ""}
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedBill && (
+                        <div className="space-y-4">
+                            <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                                <div className="font-medium text-foreground">{selectedBill.vendor_name || "Unknown vendor"}</div>
+                                <div className="text-muted-foreground">
+                                    Amount due: {formatCurrency(parseFloat(selectedBill.amount_due || "0"))}
+                                </div>
+                            </div>
+                            <Form {...paymentForm}>
+                                <form onSubmit={paymentForm.handleSubmit(handleRecordPayment)} className="space-y-4">
+                                    <FormField
+                                        control={paymentForm.control}
+                                        name="amount"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Amount</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        max={selectedBill.amount_due}
+                                                        placeholder={selectedBill.amount_due}
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={paymentForm.control}
+                                        name="payment_date"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Payment Date</FormLabel>
+                                                <FormControl><Input type="date" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={paymentForm.control}
+                                        name="payment_method"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Payment Method</FormLabel>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        field.onChange(value);
+                                                        if (value !== "cash") {
+                                                            paymentForm.setValue("cash_account", "");
+                                                        } else {
+                                                            paymentForm.setValue("bank_account", "");
+                                                        }
+                                                    }}
+                                                    value={field.value}
+                                                >
+                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="cash">Cash</SelectItem>
+                                                        <SelectItem value="check">Check</SelectItem>
+                                                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                                                        <SelectItem value="credit_card">Credit Card</SelectItem>
+                                                        <SelectItem value="other">Other</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    {paymentMethod === "cash" && (
+                                        <FormField
+                                            control={paymentForm.control}
+                                            name="cash_account"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Cash Account / Till</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={cashAccount || ""} disabled={tillAccountsLoading}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder={tillAccountsLoading ? "Loading cash accounts..." : "Select cash account"} />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {tillAccounts.map((account: Account) => (
+                                                                <SelectItem key={account.id} value={String(account.id)}>
+                                                                    {account.code} - {account.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                    {paymentMethod !== "cash" && (
+                                        <FormField
+                                            control={paymentForm.control}
+                                            name="bank_account"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Bank Account</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={bankAccount || ""} disabled={bankAccountsLoading}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder={bankAccountsLoading ? "Loading bank accounts..." : "Select bank account"} />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {bankAccounts.map((account: Account) => (
+                                                                <SelectItem key={account.id} value={String(account.id)}>
+                                                                    {account.code} - {account.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                    <FormField
+                                        control={paymentForm.control}
+                                        name="reference_number"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Reference</FormLabel>
+                                                <FormControl><Input placeholder="Payment reference" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={paymentForm.control}
+                                        name="notes"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Notes</FormLabel>
+                                                <FormControl><Textarea placeholder="Payment notes..." {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <DialogFooter>
+                                        <Button type="submit" disabled={recordPaymentMutation.isPending}>
+                                            {recordPaymentMutation.isPending ? "Recording..." : "Record Payment"}
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </Form>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

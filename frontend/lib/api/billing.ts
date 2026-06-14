@@ -452,6 +452,11 @@ export const billingApi = {
       return response.data;
     },
 
+    openDraft: async (id: number): Promise<Bill> => {
+      const response = await apiClient.post(`/billing/bills/${id}/open-draft/`);
+      return response.data;
+    },
+
     approve: async (id: number): Promise<Bill> => {
       const response = await apiClient.post(`/billing/bills/${id}/approve/`);
       return response.data;

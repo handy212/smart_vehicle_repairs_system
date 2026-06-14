@@ -12,10 +12,18 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { Input } from "@/components/ui/input";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck, Star } from "lucide-react";
+import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck, MoreVertical, Trash2, Star } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 
@@ -25,6 +33,7 @@ export default function AppointmentDetailPage() {
   const appointmentId = parseInt(params.id as string);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
@@ -87,6 +96,22 @@ export default function AppointmentDetailPage() {
       toast({
         title: "Error",
         description: error.response?.data?.error || "Failed to complete appointment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => appointmentsApi.delete(appointmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Appointment Deleted", description: "The appointment was deleted successfully." });
+      router.push("/appointments");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.response?.data?.detail || "Failed to delete appointment",
         variant: "destructive",
       });
     },
@@ -226,6 +251,8 @@ export default function AppointmentDetailPage() {
         return "default";
     }
   };
+  const canEditAppointment = hasPermission("edit_appointments");
+  const canDeleteAppointment = hasAnyPermission(["delete_appointments", "manage_appointments"]);
 
   return (
     <div className="space-y-6">
@@ -246,14 +273,39 @@ export default function AppointmentDetailPage() {
             <ArrowLeft className="w-3.5 h-3.5 mr-2" />
             Back
           </Button>
-          <PermissionGuard permission="edit_appointments">
-            <Link href={`/appointments/${appointmentId}/edit`}>
-              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-                <Edit className="w-3.5 h-3.5 mr-2" />
-                Edit Appointment
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 bg-card">
+                <MoreVertical className="w-3.5 h-3.5 mr-2" />
+                Actions
               </Button>
-            </Link>
-          </PermissionGuard>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {canEditAppointment && (
+                <DropdownMenuItem onClick={() => router.push(`/appointments/${appointmentId}/edit`)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {canDeleteAppointment && (
+                <>
+                  {canEditAppointment && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      if (confirm(`Delete appointment "${appointment.appointment_number}"?`)) {
+                        deleteMutation.mutate();
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -650,4 +702,3 @@ function MessageCustomerDialog({
     </Dialog>
   );
 }
-

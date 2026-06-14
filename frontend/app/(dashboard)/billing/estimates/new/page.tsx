@@ -8,8 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
-import { customersApi } from "@/lib/api/customers";
-import { vehiclesApi } from "@/lib/api/vehicles";
 import { inventoryApi } from "@/lib/api/inventory";
 import { adminApi } from "@/lib/api/admin";
 import { workordersApi } from "@/lib/api/workorders";
@@ -30,6 +28,8 @@ import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions"
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
+import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
 const requiredNumber = (message: string) => z.coerce.number({ message }).min(1, message);
 const optionalNumber = () => z.coerce.number().min(0).optional();
@@ -189,20 +189,7 @@ export default function NewEstimatePage() {
     enabled: partSearchTerm.length > 1,
   });
 
-  // Fetch customers
-  const { data: customersData } = useQuery({
-    queryKey: ["customers", "list"],
-    queryFn: () => customersApi.list({ page: 1 }),
-  });
-
-  // Fetch vehicles for selected customer
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
-
-  const { data: vehiclesData } = useQuery({
-    queryKey: ["vehicles", "customer", selectedCustomer],
-    queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
-    enabled: !!selectedCustomer,
-  });
 
   const { data: taxConfig } = useQuery({
     queryKey: ["tax", "config"],
@@ -513,46 +500,26 @@ export default function NewEstimatePage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Customer</label>
-                  <Select
-                    value={customer?.toString() || ""}
-                    onValueChange={(val) => {
-                      if (val) {
-                        setValue("customer", parseInt(val), { shouldValidate: true });
-                        setSelectedCustomer(parseInt(val));
-                      }
+                  <CustomerSelector
+                    selectedCustomerId={typeof customer === "number" ? customer : undefined}
+                    onSelect={(selected) => {
+                      setValue("customer", selected.id, { shouldValidate: true });
+                      setValue("vehicle", undefined, { shouldValidate: true });
+                      setSelectedCustomer(selected.id);
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customersData?.results?.map((c) => (
-                        <SelectItem key={c.id} value={c.id.toString()}>
-                          {c.full_name || c.company_name || c.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Search and select a customer..."
+                  />
                   {errors.customer && <p className="text-xs text-destructive">{errors.customer.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Vehicle</label>
-                  <Select
-                    value={watch("vehicle")?.toString() || ""}
-                    onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
+                  <VehicleSelector
+                    selectedVehicleId={typeof watch("vehicle") === "number" ? watch("vehicle") : undefined}
+                    ownerId={selectedCustomer}
                     disabled={!selectedCustomer}
-                  >
-                    <SelectTrigger disabled={!selectedCustomer}>
-                      <SelectValue placeholder={!selectedCustomer ? "Select a customer first" : "Select Vehicle"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehiclesData?.results?.map((v) => (
-                        <SelectItem key={v.id} value={v.id.toString()}>
-                          {v.year} {v.make} {v.model} - {v.license_plate || v.vin}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onSelect={(selected) => setValue("vehicle", selected.id, { shouldValidate: true })}
+                    placeholder={!selectedCustomer ? "Select a customer first" : "Search and select a vehicle..."}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Link Work Order (Optional)</label>
