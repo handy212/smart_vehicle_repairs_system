@@ -10,6 +10,7 @@ import { useBranding } from "@/lib/hooks/useBranding";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
 import { useModules } from "@/lib/hooks/useModules";
+import { DASHBOARD_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 
 interface NavigationItem {
   name: string;
@@ -33,8 +34,7 @@ const navigationGroups: NavigationGroup[] = [
         name: "Dashboard",
         href: "/dashboard",
         icon: PremiumIcons.Dashboard,
-        permission: "view_dashboard",
-        module: "dashboard",
+        permissions: [...DASHBOARD_VIEW_PERMISSIONS],
       },
     ],
   },

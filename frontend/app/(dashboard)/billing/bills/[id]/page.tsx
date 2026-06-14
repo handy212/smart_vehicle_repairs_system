@@ -108,7 +108,7 @@ export default function BillDetailPage() {
 
     const { data: approvers = [] } = useQuery({
         queryKey: ["bill-approvers"],
-        queryFn: billingApi.bills.approvers,
+        queryFn: () => billingApi.bills.approvers(),
     });
     const paymentMethod = useWatch({ control: paymentForm.control, name: "payment_method" });
     const cashAccount = useWatch({ control: paymentForm.control, name: "cash_account" });

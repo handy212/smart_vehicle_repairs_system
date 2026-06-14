@@ -64,7 +64,7 @@ export default function ControlPanelPage() {
   const { data: settings, isLoading: settingsLoading, isError: settingsError, refetch: refetchSettings } =
     useQuery<AccountingSettings>({
       queryKey: ["accounting", "settings"],
-      queryFn: accountingApi.getAccountingSettings,
+      queryFn: () => accountingApi.getAccountingSettings(),
     });
 
   const currentLockDate = lockDateTouched ? lockDate : settings?.period_lock_date || "";

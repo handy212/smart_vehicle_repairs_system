@@ -49,7 +49,7 @@ export default function MySubscriptionsPage() {
 
   const { data: vehiclesRaw } = useQuery({
     queryKey: ["portal", "vehicles-subscriptions"],
-    queryFn: portalApi.getVehicles,
+    queryFn: () => portalApi.getVehicles(),
     enabled: !!user,
   });
   const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : (vehiclesRaw as any)?.results ?? [];

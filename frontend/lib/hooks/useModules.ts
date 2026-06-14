@@ -80,6 +80,11 @@ export function useModules() {
    */
   const isModuleEnabled = useMemo(() => {
     return (slug: string) => {
+      // Dashboard is the staff home route; do not hide it when optional module slugs omit it.
+      if (slug === "dashboard" && isAuthenticated) {
+        return true;
+      }
+
       if (!canViewModuleManagement) {
         if (!hasModuleAvailability) return true;
         return CONTROLLED_MODULE_SLUGS.has(slug) ? enabledModuleSlugs.has(slug) : true;
@@ -88,7 +93,7 @@ export function useModules() {
       const matchedModule = modules.find((m) => m.slug === slug);
       return matchedModule ? matchedModule.is_enabled : true;
     };
-  }, [canViewModuleManagement, enabledModuleSlugs, hasModuleAvailability, modules]);
+  }, [canViewModuleManagement, enabledModuleSlugs, hasModuleAvailability, isAuthenticated, modules]);
 
   return {
     modules,

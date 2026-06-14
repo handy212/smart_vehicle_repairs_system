@@ -70,9 +70,12 @@ class UserSerializer(serializers.ModelSerializer):
     def get_enabled_modules(self, obj):
         """Return enabled module slugs for client-side navigation gating."""
         from apps.accounts.admin_models import SystemModule
-        return list(
+        slugs = list(
             SystemModule.objects.filter(is_enabled=True).values_list('slug', flat=True)
         )
+        if obj.role != 'customer' and 'dashboard' not in slugs:
+            slugs.insert(0, 'dashboard')
+        return slugs
     
     def get_managed_branches_names(self, obj):
         """Return list of managed branch names"""

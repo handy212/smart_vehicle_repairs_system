@@ -30,35 +30,25 @@ export default function DashboardLayoutWrapper({
     let isMounted = true;
 
     const checkAuth = async () => {
-      if (!user) {
-        try {
-          await ensureApiSession();
-          const currentUser = await authApi.getCurrentUser();
-          if (isMounted) setUser(currentUser);
+      try {
+        await ensureApiSession();
+        const currentUser = await authApi.getCurrentUser();
+        if (!isMounted) return;
 
-          // Redirect customers to portal; technicians on phones to mobile app
-          if (currentUser.role === "customer") {
-            if (isMounted) router.push("/portal");
-            return;
-          }
-          if (isMobileShellRole(currentUser.role) && shouldUseMobileApp()) {
-            if (isMounted) router.push("/mobile/dashboard");
-            return;
-          }
-        } catch {
-          if (isMounted) router.push("/login");
+        setUser(currentUser);
+
+        if (currentUser.role === "customer") {
+          router.push("/portal");
           return;
         }
-      }
-      if (user) {
-        // Check role if user is already loaded
-        if (user.role === "customer") {
-          if (isMounted) router.push("/portal");
-          return;
+        if (isMobileShellRole(currentUser.role) && shouldUseMobileApp()) {
+          router.push("/mobile/dashboard");
         }
-        if (isMobileShellRole(user.role) && shouldUseMobileApp()) {
-          if (isMounted) router.push("/mobile/dashboard");
-          return;
+      } catch {
+        if (!isMounted) return;
+        const cachedUser = useAuthStore.getState().user;
+        if (!cachedUser) {
+          router.push("/login");
         }
       }
     };
@@ -70,7 +60,7 @@ export default function DashboardLayoutWrapper({
     return () => {
       isMounted = false;
     };
-  }, [user, setUser, router, mounted]);
+  }, [mounted, router, setUser]);
 
   // Module protection logic
   useEffect(() => {

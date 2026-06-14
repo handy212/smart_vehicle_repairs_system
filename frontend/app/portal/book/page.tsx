@@ -59,14 +59,14 @@ export default function BookAppointmentPage() {
   // vehicles list page which caches a paginated {count, results} object.
   const { data: vehiclesRaw, isLoading: vehiclesLoading } = useQuery({
     queryKey: ["portal", "vehicles-book"],
-    queryFn: portalApi.getVehicles,
+    queryFn: () => portalApi.getVehicles(),
   });
   const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : (vehiclesRaw as any)?.results ?? [];
 
   // Fetch Service Bundles
   const { data: bundles = [] } = useQuery({
     queryKey: ["portal", "services"],
-    queryFn: portalApi.getServices,
+    queryFn: () => portalApi.getServices(),
   });
 
   const {

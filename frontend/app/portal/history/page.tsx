@@ -31,19 +31,19 @@ export default function ServiceHistoryPage() {
   // 2. Fetch Vehicles
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
     queryKey: ["portal", "vehicles"],
-    queryFn: portalApi.getVehicles,
+    queryFn: () => portalApi.getVehicles(),
   });
 
   // 3. Fetch Work Orders (History)
   const { data: workOrders = [], isLoading: workOrdersLoading } = useQuery({
     queryKey: ["portal", "history"],
-    queryFn: portalApi.getHistory,
+    queryFn: () => portalApi.getHistory(),
   });
 
   // 4. Fetch Inspections
   const { data: inspections = [], isLoading: inspectionsLoading } = useQuery({
     queryKey: ["portal", "inspections"],
-    queryFn: portalApi.getInspections,
+    queryFn: () => portalApi.getInspections(),
   });
 
   // Filter Data Client-Side
