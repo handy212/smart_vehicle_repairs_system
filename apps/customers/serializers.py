@@ -29,7 +29,8 @@ class CustomerListSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
-    vehicle_count = serializers.IntegerField(read_only=True)
+    # Use `vehicles_count` annotation from queryset but expose as `vehicle_count` in API
+    vehicle_count = serializers.IntegerField(read_only=True, source='vehicles_count')
     available_credit = serializers.DecimalField(
         max_digits=10, 
         decimal_places=2, 
@@ -68,7 +69,8 @@ class CustomerListSerializer(serializers.ModelSerializer):
 class CustomerDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for customer"""
     user = CustomerUserSerializer(read_only=True)
-    vehicle_count = serializers.IntegerField(read_only=True)
+    # Map annotated `vehicles_count` back to `vehicle_count` to avoid model property collision
+    vehicle_count = serializers.IntegerField(read_only=True, source='vehicles_count')
     available_credit = serializers.DecimalField(
         max_digits=10, 
         decimal_places=2, 

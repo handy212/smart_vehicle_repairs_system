@@ -57,7 +57,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     ordering_fields = [
         'customer_number', 'customer_since', 'current_balance', 'loyalty_points',
         'user__last_name', 'user__first_name', 'user__email', 'customer_type', 'status',
-        'created_at', 'company_name', 'vehicle_count',
+        'created_at', 'company_name', 'vehicle_count', 'vehicles_count',
     ]
     ordering = ['-created_at']
     
@@ -136,7 +136,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 # If no customers have recent visits, the queryset already contains all inactive customers
 
         if self.action == 'list':
-            queryset = queryset.annotate(vehicle_count=Count('vehicles', distinct=True))
+            # Annotate using a name that won't collide with the model's @property
+            # `vehicle_count` is defined as a property on the model (no setter),
+            # so annotate to `vehicles_count` and let the serializer map it back
+            queryset = queryset.annotate(vehicles_count=Count('vehicles', distinct=True))
         
         return queryset
     
