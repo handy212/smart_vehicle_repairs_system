@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 
+from apps.accounting.control_accounts import CONTROL_ACCOUNT_SPECS
 from apps.accounting.models import Account, AccountingControl
 
 # Codes aligned with AccountingService auto-posting helpers
@@ -25,6 +26,7 @@ DEFAULT_ACCOUNTS = [
     ('L000', 'Liabilities', 'liability', 'credit', 'category', None, False),
     ('L100', 'Current Liabilities', 'liability', 'credit', 'current_liability', 'L000', False),
     ('2000', 'Accounts Payable', 'liability', 'credit', 'accounts_payable', 'L100', False),
+    ('2150', 'Customer Prepayments', 'liability', 'credit', 'current_liability', 'L100', False),
     ('2100', 'Sales Tax Payable', 'liability', 'credit', 'tax_payable', 'L100', False),
     ('2200', 'Input Sales Tax', 'asset', 'debit', 'current_asset', 'A100', False),
     ('2300', 'PAYE Tax Payable', 'liability', 'credit', 'tax_payable', 'L100', False),
@@ -42,6 +44,7 @@ DEFAULT_ACCOUNTS = [
     ('4100', 'Sales Returns & Allowances', 'income', 'debit', 'revenue', 'I000', False),
     ('E000', 'Expenses', 'expense', 'debit', 'category', None, False),
     ('5000', 'Purchases / Operating Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('5050', 'Purchase Returns', 'expense', 'credit', 'expense', 'E000', False),
     ('5100', 'Cost of Goods Sold', 'expense', 'debit', 'expense', 'E000', False),
     ('5900', 'Inventory Shrinkage Expense', 'expense', 'debit', 'expense', 'E000', False),
     ('5950', 'Cash Over/Short Expense', 'expense', 'debit', 'expense', 'E000', False),
@@ -109,24 +112,9 @@ class Command(BaseCommand):
             self.style.SUCCESS(f'Chart seeds processed. New accounts created: {created}.')
         )
         controls = AccountingControl.get_settings()
-        defaults = {
-            'accounts_receivable_account': '1200',
-            'accounts_payable_account': '2000',
-            'sales_revenue_account': '4000',
-            'sales_discount_account': '4100',
-            'sales_tax_payable_account': '2100',
-            'shop_supplies_revenue_account': '4050',
-            'environmental_fee_revenue_account': '4060',
-            'input_tax_account': '2200',
-            'default_expense_account': '5000',
-            'inventory_asset_account': '1500',
-            'cost_of_goods_sold_account': '5100',
-            'cash_over_short_account': '5950',
-            'till_counterparty_cash_account': '1010',
-            'default_bank_account': '1100',
-        }
         changed_fields = []
-        for field_name, code in defaults.items():
+        for field_name, spec in CONTROL_ACCOUNT_SPECS.items():
+            code = spec[0]
             if getattr(controls, f'{field_name}_id') is None and code in by_code:
                 setattr(controls, field_name, by_code[code])
                 changed_fields.append(field_name)
