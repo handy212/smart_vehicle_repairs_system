@@ -401,3 +401,67 @@ class IntegrityRemediationCommandTests(TestCase):
             branch=self.branch,
         )
         self.assertFalse(payment_has_posted_gl(payment))
+
+    def test_repair_misrouted_settlement_gl_credits_ar_when_payment_je_lacks_ar_line(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('60.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('60.00'),
+            amount_due=Decimal('60.00'),
+            amount_paid=Decimal('0.00'),
+            created_by=self.user,
+        )
+        AccountingService.post_invoice(invoice)
+
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            bank_account=controls.default_bank_account,
+            amount=Decimal('60.00'),
+            status='pending',
+            processed_by=self.user,
+        )
+        payment.refresh_from_db()
+        AccountingService.create_journal_entry(
+            user=self.user,
+            date=timezone.now().date(),
+            description='Misrouted payment',
+            reference=payment.payment_number,
+            posted=True,
+            branch=self.branch,
+            content_object=payment,
+            lines=[
+                {
+                    'account_id': controls.default_bank_account.id,
+                    'type': 'debit',
+                    'amount': Decimal('60.00'),
+                    'description': 'Bank only',
+                },
+                {
+                    'account_id': controls.sales_revenue_account.id,
+                    'type': 'credit',
+                    'amount': Decimal('60.00'),
+                    'description': 'Wrong credit',
+                },
+            ],
+        )
+        Payment.objects.filter(pk=payment.pk).update(status='completed')
+        Invoice.objects.filter(pk=invoice.pk).update(amount_due=Decimal('0.00'), amount_paid=Decimal('60.00'))
+
+        before = reconcile_subledgers(branch_id=self.branch.id)
+        self.assertFalse(before['accounts_receivable']['in_balance'])
+
+        call_command(
+            'repair_misrouted_settlement_gl',
+            username='remediation_admin',
+            settings='config.settings.testing',
+        )
+        after = reconcile_subledgers(branch_id=self.branch.id)
+        self.assertTrue(after['accounts_receivable']['in_balance'])
