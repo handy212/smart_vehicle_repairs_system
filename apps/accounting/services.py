@@ -1067,6 +1067,294 @@ class AccountingService:
         )
 
     @classmethod
+    def _fixed_asset_accounts(cls, asset):
+        category = asset.category
+        asset_account = cls.get_or_create_account(
+            asset.gl_asset_account_code or category.gl_asset_account_code or '1600',
+            'Fixed Assets',
+            'asset',
+            'debit',
+        )
+        depreciation_expense = cls.get_or_create_account(
+            asset.gl_depreciation_expense_account_code or category.gl_depreciation_expense_account_code or '5900',
+            'Depreciation Expense',
+            'expense',
+            'debit',
+        )
+        accumulated_depreciation = cls.get_or_create_account(
+            asset.gl_accumulated_depreciation_account_code or category.gl_accumulated_depreciation_account_code or '1610',
+            'Accumulated Depreciation',
+            'asset',
+            'credit',
+        )
+        return {
+            'asset': asset_account,
+            'depreciation_expense': depreciation_expense,
+            'accumulated_depreciation': accumulated_depreciation,
+        }
+
+    @classmethod
+    def post_vendor_credit_application(cls, application):
+        """
+        Post GL when vendor credit is applied to a bill.
+        Debit: Accounts Payable
+        Credit: Expense/Inventory and Input Tax (proportional)
+        """
+        from apps.billing.models import VendorCreditApplication
+
+        if not isinstance(application, VendorCreditApplication):
+            application = VendorCreditApplication.objects.select_related(
+                'vendor_credit', 'vendor_credit__vendor', 'bill', 'applied_by'
+            ).get(pk=application)
+
+        vendor_credit = application.vendor_credit
+        if vendor_credit.status not in ('issued', 'applied'):
+            return None
+
+        app_type = ContentType.objects.get_for_model(application)
+        reference = f"VC-APP-{application.id}"
+        if JournalEntry.objects.filter(
+            content_type=app_type,
+            object_id=application.id,
+            reference=reference,
+        ).exists():
+            return None
+
+        apply_amount = Decimal(str(application.amount)).quantize(cls.MONEY_QUANT)
+        if apply_amount <= 0:
+            return None
+
+        vc_total = Decimal(str(vendor_credit.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        if vc_total <= 0:
+            return None
+
+        ratio = (apply_amount / vc_total).quantize(Decimal('0.0001'))
+        subtotal = (Decimal(str(vendor_credit.subtotal or Decimal('0'))) * ratio).quantize(cls.MONEY_QUANT)
+        tax_amount = (Decimal(str(vendor_credit.tax_amount or Decimal('0'))) * ratio).quantize(cls.MONEY_QUANT)
+        if subtotal + tax_amount != apply_amount:
+            tax_amount = (apply_amount - subtotal).quantize(cls.MONEY_QUANT)
+
+        ap_account = cls._control_account('accounts_payable_account', 'Accounts Payable')
+        expense_account = cls._control_account('default_expense_account', 'Default Expense')
+        inventory_account = cls._control_account('inventory_asset_account', 'Inventory Asset')
+        input_tax_account = cls._control_account('input_tax_account', 'Input Tax')
+
+        inventory_ratio = Decimal('0')
+        line_count = vendor_credit.line_items.count()
+        if line_count:
+            inventory_lines = vendor_credit.line_items.filter(inventory_item__isnull=False)
+            inventory_subtotal = sum(line.total for line in inventory_lines) or Decimal('0')
+            vc_subtotal = Decimal(str(vendor_credit.subtotal or Decimal('0')))
+            if vc_subtotal > 0:
+                inventory_ratio = (inventory_subtotal / vc_subtotal).quantize(Decimal('0.0001'))
+
+        inventory_credit = (subtotal * inventory_ratio).quantize(cls.MONEY_QUANT)
+        expense_credit = (subtotal - inventory_credit).quantize(cls.MONEY_QUANT)
+
+        lines = [{
+            'account_id': ap_account.id,
+            'type': 'debit',
+            'amount': apply_amount,
+            'description': f"Vendor credit applied to {application.bill.bill_number}",
+        }]
+        if expense_credit > 0:
+            lines.append({
+                'account_id': expense_account.id,
+                'type': 'credit',
+                'amount': expense_credit,
+                'description': f"Purchase return - {vendor_credit.vendor.name}",
+            })
+        if inventory_credit > 0:
+            lines.append({
+                'account_id': inventory_account.id,
+                'type': 'credit',
+                'amount': inventory_credit,
+                'description': f"Inventory return - {vendor_credit.vendor.name}",
+            })
+        if tax_amount > 0:
+            lines.append({
+                'account_id': input_tax_account.id,
+                'type': 'credit',
+                'amount': tax_amount,
+                'description': f"Input tax reversal - {vendor_credit.vendor.name}",
+            })
+        if len(lines) == 1:
+            lines.append({
+                'account_id': expense_account.id,
+                'type': 'credit',
+                'amount': apply_amount,
+                'description': f"Vendor credit - {vendor_credit.vendor.name}",
+            })
+
+        user = application.applied_by or vendor_credit.created_by
+        return cls.create_journal_entry(
+            user=user,
+            date=application.applied_at.date() if application.applied_at else timezone.now().date(),
+            description=(
+                f"Vendor Credit {vendor_credit.credit_number} applied to "
+                f"{application.bill.bill_number}"
+            ),
+            reference=reference,
+            lines=lines,
+            posted=True,
+            branch=vendor_credit.branch or application.bill.branch,
+            content_object=application,
+        )
+
+    @classmethod
+    def post_fixed_asset_acquisition(cls, asset, user=None):
+        """Capitalize a fixed asset: Dr Fixed Asset, Cr clearing/bank."""
+        if not asset or not asset.pk:
+            return None
+
+        reference = f"FA-ACQ-{asset.asset_number}"
+        if JournalEntry.objects.filter(reference=reference).exists():
+            return None
+
+        accounts = cls._fixed_asset_accounts(asset)
+        clearing = cls._optional_control_account('default_bank_account') or cls.get_or_create_account(
+            '1100', 'Operating Bank', 'asset', 'debit'
+        )
+        amount = Decimal(str(asset.acquisition_cost or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        if amount <= 0:
+            return None
+
+        return cls.create_journal_entry(
+            user=user or asset.created_by,
+            date=asset.acquisition_date,
+            description=f"Capitalize asset {asset.asset_number} - {asset.name}",
+            reference=reference,
+            lines=[
+                {
+                    'account_id': accounts['asset'].id,
+                    'type': 'debit',
+                    'amount': amount,
+                    'description': asset.name,
+                },
+                {
+                    'account_id': clearing.id,
+                    'type': 'credit',
+                    'amount': amount,
+                    'description': f"Acquisition of {asset.asset_number}",
+                },
+            ],
+            posted=True,
+            branch=asset.branch,
+            content_object=asset,
+        )
+
+    @classmethod
+    def post_fixed_asset_depreciation(cls, asset, depreciation_amount, posting_date, user=None):
+        """Post monthly depreciation: Dr Depreciation Expense, Cr Accumulated Depreciation."""
+        amount = Decimal(str(depreciation_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        if amount <= 0:
+            return None
+
+        posting_date = posting_date or timezone.now().date()
+        reference = f"FA-DEP-{asset.asset_number}-{posting_date:%Y%m}"
+        if JournalEntry.objects.filter(reference=reference).exists():
+            return None
+
+        accounts = cls._fixed_asset_accounts(asset)
+        return cls.create_journal_entry(
+            user=user or asset.created_by,
+            date=posting_date,
+            description=f"Depreciation - {asset.asset_number} ({asset.name})",
+            reference=reference,
+            lines=[
+                {
+                    'account_id': accounts['depreciation_expense'].id,
+                    'type': 'debit',
+                    'amount': amount,
+                    'description': asset.name,
+                },
+                {
+                    'account_id': accounts['accumulated_depreciation'].id,
+                    'type': 'credit',
+                    'amount': amount,
+                    'description': asset.name,
+                },
+            ],
+            posted=True,
+            branch=asset.branch,
+            content_object=asset,
+        )
+
+    @classmethod
+    def post_fixed_asset_disposal(cls, asset, user=None):
+        """Post disposal entry with gain/loss recognition."""
+        if asset.status not in ('disposed', 'sold'):
+            return None
+
+        reference = f"FA-DISP-{asset.asset_number}"
+        if JournalEntry.objects.filter(reference=reference).exists():
+            return None
+
+        accounts = cls._fixed_asset_accounts(asset)
+        proceeds = Decimal(str(asset.disposal_proceeds or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        cost = Decimal(str(asset.acquisition_cost or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        accumulated = Decimal(str(asset.accumulated_depreciation or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        nbv = (cost - accumulated).quantize(cls.MONEY_QUANT)
+        gain_loss = (proceeds - nbv).quantize(cls.MONEY_QUANT)
+
+        clearing = cls._optional_control_account('default_bank_account') or cls.get_or_create_account(
+            '1100', 'Operating Bank', 'asset', 'debit'
+        )
+        gain_account = cls._optional_control_account('sales_revenue_account') or cls.get_or_create_account(
+            '8100', 'Gain on Disposal', 'income', 'credit'
+        )
+        loss_account = cls._optional_control_account('default_expense_account') or cls.get_or_create_account(
+            '5900', 'Loss on Disposal', 'expense', 'debit'
+        )
+
+        lines = []
+        if proceeds > 0:
+            lines.append({
+                'account_id': clearing.id,
+                'type': 'debit',
+                'amount': proceeds,
+                'description': f"Proceeds from disposal of {asset.asset_number}",
+            })
+        if accumulated > 0:
+            lines.append({
+                'account_id': accounts['accumulated_depreciation'].id,
+                'type': 'debit',
+                'amount': accumulated,
+                'description': f"Remove accumulated depreciation for {asset.asset_number}",
+            })
+        if gain_loss < 0:
+            lines.append({
+                'account_id': loss_account.id,
+                'type': 'debit',
+                'amount': abs(gain_loss),
+                'description': f"Loss on disposal of {asset.asset_number}",
+            })
+        lines.append({
+            'account_id': accounts['asset'].id,
+            'type': 'credit',
+            'amount': cost,
+            'description': f"Remove asset cost for {asset.asset_number}",
+        })
+        if gain_loss > 0:
+            lines.append({
+                'account_id': gain_account.id,
+                'type': 'credit',
+                'amount': gain_loss,
+                'description': f"Gain on disposal of {asset.asset_number}",
+            })
+
+        return cls.create_journal_entry(
+            user=user or asset.created_by,
+            date=asset.disposal_date or timezone.now().date(),
+            description=f"Dispose asset {asset.asset_number} - {asset.name}",
+            reference=reference,
+            lines=lines,
+            posted=True,
+            branch=asset.branch,
+            content_object=asset,
+        )
+
+    @classmethod
     def post_refund(cls, refund):
         """
         Post GL entry for cash refund.

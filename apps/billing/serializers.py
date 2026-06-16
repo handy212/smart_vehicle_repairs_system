@@ -21,6 +21,9 @@ from apps.billing.models import (
     CreditNote,
     CreditNoteLineItem,
     CreditNoteApplication,
+    VendorCredit,
+    VendorCreditLineItem,
+    VendorCreditApplication,
     Bill,
     BillLineItem,
     BillPayment,
@@ -1776,6 +1779,94 @@ class CreditNoteApplySerializer(serializers.Serializer):
     def validate_invoice(self, value):
         if not Invoice.objects.filter(pk=value).exists():
             raise serializers.ValidationError('Invalid invoice.')
+        return value
+
+
+# ============================================================================
+# VENDOR CREDIT SERIALIZERS
+# ============================================================================
+
+class VendorCreditLineItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VendorCreditLineItem
+        fields = ['id', 'description', 'quantity', 'unit_price', 'total', 'is_taxable', 'inventory_item']
+        read_only_fields = ['total']
+
+
+class VendorCreditApplicationSerializer(serializers.ModelSerializer):
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    applied_by_name = serializers.CharField(source='applied_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = VendorCreditApplication
+        fields = ['id', 'bill', 'bill_number', 'amount', 'applied_by', 'applied_by_name', 'applied_at']
+        read_only_fields = fields
+
+
+class VendorCreditListSerializer(serializers.ModelSerializer):
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+
+    class Meta:
+        model = VendorCredit
+        fields = [
+            'id', 'credit_number', 'credit_date', 'status', 'vendor', 'vendor_name',
+            'bill', 'bill_number', 'total', 'unused_amount', 'reason', 'created_at',
+        ]
+
+
+class VendorCreditDetailSerializer(serializers.ModelSerializer):
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    line_items = VendorCreditLineItemSerializer(many=True, read_only=True)
+    applications = VendorCreditApplicationSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = VendorCredit
+        fields = [
+            'id', 'credit_number', 'credit_date', 'status', 'vendor', 'vendor_name',
+            'bill', 'bill_number', 'branch', 'subtotal', 'tax_amount', 'total',
+            'unused_amount', 'reason', 'notes', 'line_items', 'applications',
+            'created_by', 'created_at', 'updated_at',
+        ]
+
+
+class VendorCreditCreateSerializer(serializers.ModelSerializer):
+    line_items = VendorCreditLineItemSerializer(many=True)
+
+    class Meta:
+        model = VendorCredit
+        fields = [
+            'id', 'credit_number', 'vendor', 'bill', 'credit_date', 'reason', 'notes', 'line_items',
+        ]
+        read_only_fields = ['id', 'credit_number']
+
+    @transaction.atomic
+    def create(self, validated_data):
+        line_items_data = validated_data.pop('line_items')
+        from apps.branches.utils import resolve_branch
+
+        validated_data['created_by'] = self.context['request'].user
+        validated_data['branch'] = resolve_branch(self.context['request'])
+        vendor_credit = VendorCredit.objects.create(**validated_data)
+        for item_data in line_items_data:
+            VendorCreditLineItem.objects.create(vendor_credit=vendor_credit, **item_data)
+        vendor_credit.calculate_totals()
+        return vendor_credit
+
+
+class VendorCreditApplySerializer(serializers.Serializer):
+    bill = serializers.IntegerField(min_value=1)
+    amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        min_value=Decimal('0.01'),
+    )
+
+    def validate_bill(self, value):
+        if not Bill.objects.filter(pk=value).exists():
+            raise serializers.ValidationError('Invalid bill.')
         return value
 
 

@@ -12,6 +12,7 @@ router.register(r'payment-allocations', views.PaymentAllocationViewSet, basename
 # router.register(r'accounting', views.AccountingViewSet, basename='accounting')
 # router.register(r'branch-pl-comparison', views.BranchPLComparisonViewSet, basename='branch-pl-comparison')
 router.register(r'credit-notes', views.CreditNoteViewSet, basename='credit-note')
+router.register(r'vendor-credits', views.VendorCreditViewSet, basename='vendor-credit')
 router.register(r'bills', views.BillViewSet, basename='bill')
 # Phase 2: Cash & Payment Management
 router.register(r'tills', views.TillViewSet, basename='till')

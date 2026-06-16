@@ -562,6 +562,7 @@ class DocumentNumberSequence(models.Model):
         ('credit_note', 'Credit Note'),
         ('payment', 'Payment'),
         ('bill', 'Bill'),
+        ('vendor_credit', 'Vendor Credit'),
     ]
 
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)

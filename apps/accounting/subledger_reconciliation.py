@@ -5,7 +5,7 @@ from django.db.models import Sum
 
 from apps.accounting.models import AccountingControl
 from apps.accounting.services import ReportingService
-from apps.billing.models import Bill, Invoice
+from apps.billing.models import Bill, Invoice, VendorCredit
 
 
 OPEN_INVOICE_STATUSES = ['sent', 'viewed', 'partial', 'overdue', 'open']
@@ -50,6 +50,14 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         bills.filter(amount_due__gt=0).aggregate(total=Sum('amount_due'))['total']
     )
 
+    vendor_credits = VendorCredit.objects.filter(status='issued')
+    if branch_id:
+        vendor_credits = vendor_credits.filter(branch_id=branch_id)
+    unapplied_vendor_credits = _money(
+        vendor_credits.filter(unused_amount__gt=0).aggregate(total=Sum('unused_amount'))['total']
+    )
+    ap_subledger_net = (ap_subledger - unapplied_vendor_credits).quantize(Decimal('0.01'))
+
     ar_gl = _money(
         ReportingService.get_account_balance(ar_account, date=as_of_date, branch_id=branch_id)
         if ar_account else 0
@@ -66,7 +74,7 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
     )
 
     ar_difference = (ar_gl - ar_positive_subledger).quantize(Decimal('0.01'))
-    ap_difference = (ap_gl - ap_subledger).quantize(Decimal('0.01'))
+    ap_difference = (ap_gl - ap_subledger_net).quantize(Decimal('0.01'))
 
     return {
         'as_of_date': as_of_date.isoformat() if as_of_date else None,
@@ -85,9 +93,12 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         'accounts_payable': {
             'gl_balance': float(ap_gl),
             'subledger_balance': float(ap_subledger),
+            'unapplied_vendor_credits': float(unapplied_vendor_credits),
+            'subledger_net_of_credits': float(ap_subledger_net),
             'difference': float(ap_difference),
             'in_balance': abs(ap_difference) <= tolerance,
             'open_bill_count': bills.filter(amount_due__gt=0).count(),
+            'open_vendor_credit_count': vendor_credits.filter(unused_amount__gt=0).count(),
             'control_account_id': ap_account.id if ap_account else None,
             'control_account_code': ap_account.code if ap_account else None,
         },

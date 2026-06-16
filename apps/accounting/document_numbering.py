@@ -12,6 +12,7 @@ class DocumentNumberService:
         'credit_note': 'CN',
         'payment': 'PAY',
         'bill': 'BILL',
+        'vendor_credit': 'VC',
     }
 
     @classmethod
