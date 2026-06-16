@@ -1,5 +1,5 @@
 """Regression tests for accounting audit remediation (Wave 6)."""
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from io import StringIO
 
@@ -181,6 +181,42 @@ class Wave6RemediationTests(TestCase):
                 'validate_accounting_integrity',
                 settings='config.settings.testing',
             )
+
+    def test_legacy_payments_rollup_instead_of_per_record_noise(self):
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('25.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('25.00'),
+            amount_due=Decimal('25.00'),
+            created_by=self.user,
+        )
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            amount=Decimal('25.00'),
+            status='pending',
+            processed_by=self.user,
+        )
+        Payment.objects.filter(pk=payment.pk).update(
+            created_at=timezone.make_aware(datetime(2020, 1, 1)),
+            status='completed',
+        )
+
+        stdout = StringIO()
+        call_command(
+            'validate_accounting_integrity',
+            stdout=stdout,
+            settlement_since='2026-06-09',
+            no_fail=True,
+            settings='config.settings.testing',
+        )
+        output = stdout.getvalue()
+        self.assertIn('legacy_customer_payment_bank_unverified', output)
+        self.assertNotIn('bank_payment_missing_account', output)
 
     def test_validate_accounting_integrity_detects_unposted_locked_period_entry(self):
         locked_date = timezone.now().date()

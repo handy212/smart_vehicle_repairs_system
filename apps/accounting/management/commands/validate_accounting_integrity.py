@@ -1,11 +1,12 @@
-from collections import Counter
-from datetime import timedelta
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 import json
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from apps.accounting.models import Account, AccountingControl, JournalEntry, Transaction
 from apps.accounting.subledger_reconciliation import reconcile_subledgers
@@ -19,6 +20,9 @@ BANK_SETTLEMENT_PAYMENT_METHODS = {
     'mtn_momo', 'vodafone_cash', 'airteltigo_money', 'mobile_money',
     'hubtel_card', 'paystack', 'other',
 }
+
+# bank_account on Payment/BillPayment/Refund was added in billing migration 0034.
+DEFAULT_SETTLEMENT_SINCE = date(2026, 6, 9)
 
 
 class Command(BaseCommand):
@@ -45,8 +49,45 @@ class Command(BaseCommand):
             default=24,
             help='Flag open tills older than this many hours. Defaults to 24.',
         )
+        parser.add_argument(
+            '--settlement-since',
+            default=DEFAULT_SETTLEMENT_SINCE.isoformat(),
+            help=(
+                'Only run per-payment settlement/till checks on records created on or after '
+                f'this date (default {DEFAULT_SETTLEMENT_SINCE}). Older records are rolled up.'
+            ),
+        )
+        parser.add_argument(
+            '--include-legacy-settlement',
+            action='store_true',
+            help='Run settlement/till checks on every historical payment (very noisy on upgrades).',
+        )
+        parser.add_argument(
+            '--summary',
+            action='store_true',
+            help='Print grouped counts by issue code (recommended for large databases).',
+        )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='List every issue (default shows a short sample per issue code).',
+        )
+        parser.add_argument(
+            '--sample-size',
+            type=int,
+            default=3,
+            help='Number of sample issues to print per code when not using --verbose.',
+        )
 
     def handle(self, *args, **options):
+        settlement_since = parse_date(options['settlement_since'])
+        if settlement_since is None:
+            raise CommandError(f"Invalid --settlement-since value: {options['settlement_since']}")
+
+        self.settlement_since = settlement_since
+        self.include_legacy_settlement = options['include_legacy_settlement']
+        self.sample_size = max(1, options['sample_size'])
+
         issues = []
         self._check_control_accounts(issues)
         self._check_till_enabled_accounts(issues)
@@ -61,27 +102,32 @@ class Command(BaseCommand):
         self._check_subledger_reconciliation(issues)
         self._check_tills(issues, options['open_till_hours'])
 
-        counts = Counter(issue['severity'] for issue in issues)
+        severity_counts = Counter(issue['severity'] for issue in issues)
+        code_counts = Counter(issue['code'] for issue in issues)
         payload = {
             'status': 'fail' if issues else 'pass',
             'summary': {
                 'total': len(issues),
-                'critical': counts['critical'],
-                'high': counts['high'],
-                'medium': counts['medium'],
-                'low': counts['low'],
+                'critical': severity_counts['critical'],
+                'high': severity_counts['high'],
+                'medium': severity_counts['medium'],
+                'low': severity_counts['low'],
             },
+            'by_code': dict(sorted(code_counts.items(), key=lambda item: (-item[1], item[0]))),
             'issues': issues,
         }
 
         if options['json']:
             self.stdout.write(json.dumps(payload, indent=2, default=str))
+        elif options['summary'] or options['verbose']:
+            self._write_text_report(payload, verbose=options['verbose'])
         else:
-            self._write_text_report(payload)
+            self._write_text_report(payload, verbose=False)
 
         if issues and not options['no_fail']:
             raise CommandError(
-                f"Accounting integrity validation failed with {len(issues)} issue(s)."
+                f"Accounting integrity validation failed with {len(issues)} issue(s). "
+                f"Run with --summary or --json --no-fail to see a breakdown."
             )
 
     def _add_issue(self, issues, code, severity, message, **context):
@@ -91,6 +137,57 @@ class Command(BaseCommand):
             'message': message,
             'context': context,
         })
+
+    def _modern_qs(self, queryset):
+        if self.include_legacy_settlement:
+            return queryset
+        return queryset.filter(created_at__date__gte=self.settlement_since)
+
+    def _legacy_qs(self, queryset):
+        if self.include_legacy_settlement:
+            return queryset.none()
+        return queryset.filter(created_at__date__lt=self.settlement_since)
+
+    def _rollup_legacy_settlement(self, issues, *, queryset, label, code_prefix):
+        legacy_qs = self._legacy_qs(queryset)
+        if not legacy_qs.exists():
+            return
+
+        missing_bank = 0
+        missing_till = 0
+        for record in legacy_qs.iterator():
+            method = getattr(record, 'payment_method', None) or getattr(record, 'refund_method', None)
+            if method == 'cash' or (
+                method == 'original_method'
+                and getattr(record, 'original_payment_id', None)
+                and record.original_payment.payment_method == 'cash'
+            ):
+                if not record.till_id:
+                    missing_till += 1
+            elif method in BANK_SETTLEMENT_PAYMENT_METHODS or (
+                method == 'original_method' and getattr(record, 'original_payment_id', None)
+            ):
+                if not self._is_valid_bank_account(getattr(record, 'bank_account', None)):
+                    missing_bank += 1
+
+        if missing_bank:
+            self._add_issue(
+                issues,
+                f'legacy_{code_prefix}_bank_unverified',
+                'low',
+                f"{missing_bank} legacy {label} before {self.settlement_since} lack a verified bank account.",
+                count=missing_bank,
+                settlement_since=str(self.settlement_since),
+            )
+        if missing_till:
+            self._add_issue(
+                issues,
+                f'legacy_{code_prefix}_till_unverified',
+                'low',
+                f"{missing_till} legacy {label} before {self.settlement_since} lack a linked till.",
+                count=missing_till,
+                settlement_since=str(self.settlement_since),
+            )
 
     def _is_leaf_account(self, account):
         return account and not account.children.exists()
@@ -165,9 +262,18 @@ class Command(BaseCommand):
                 )
 
     def _check_customer_payments(self, issues):
-        qs = Payment.objects.select_related(
+        base_qs = Payment.objects.select_related(
             'invoice', 'invoice__branch', 'till', 'till__branch', 'till__till_account', 'bank_account'
         ).filter(status='completed')
+
+        self._rollup_legacy_settlement(
+            issues,
+            queryset=base_qs,
+            label='customer payments',
+            code_prefix='customer_payment',
+        )
+
+        qs = self._modern_qs(base_qs)
         for payment in qs.iterator():
             branch_id = payment.invoice.branch_id if payment.invoice_id else None
             if payment.payment_method == 'cash':
@@ -215,10 +321,19 @@ class Command(BaseCommand):
                     )
 
     def _check_refunds(self, issues):
-        qs = Refund.objects.select_related(
+        base_qs = Refund.objects.select_related(
             'invoice', 'invoice__branch', 'original_payment', 'till', 'till__branch',
             'till__till_account', 'bank_account'
         ).filter(status='completed')
+
+        self._rollup_legacy_settlement(
+            issues,
+            queryset=base_qs,
+            label='refunds',
+            code_prefix='refund',
+        )
+
+        qs = self._modern_qs(base_qs)
         for refund in qs.iterator():
             branch_id = refund.invoice.branch_id if refund.invoice_id else None
             is_cash = refund.refund_method == 'cash' or (
@@ -270,9 +385,18 @@ class Command(BaseCommand):
                 )
 
     def _check_vendor_payments(self, issues):
-        qs = BillPayment.objects.select_related(
+        base_qs = BillPayment.objects.select_related(
             'bill', 'bill__branch', 'till', 'till__branch', 'till__till_account', 'bank_account'
         )
+
+        self._rollup_legacy_settlement(
+            issues,
+            queryset=base_qs,
+            label='vendor payments',
+            code_prefix='vendor_payment',
+        )
+
+        qs = self._modern_qs(base_qs)
         for payment in qs.iterator():
             branch_id = payment.bill.branch_id if payment.bill_id else None
             if payment.payment_method == 'cash':
@@ -543,16 +667,47 @@ class Command(BaseCommand):
                 closed_at=till.closed_at,
             )
 
-    def _write_text_report(self, payload):
+    def _write_text_report(self, payload, *, verbose):
         summary = payload['summary']
         self.stdout.write(f"Status: {payload['status'].upper()}")
         self.stdout.write(
             "Issues: {total} total, {critical} critical, {high} high, "
             "{medium} medium, {low} low".format(**summary)
         )
+
+        by_code = payload.get('by_code') or {}
+        if by_code:
+            self.stdout.write('')
+            self.stdout.write('Breakdown by issue code:')
+            for code, count in by_code.items():
+                self.stdout.write(f"  {count:4d}  {code}")
+
+        if not payload['issues']:
+            return
+
+        grouped = defaultdict(list)
         for issue in payload['issues']:
-            self.stdout.write(
-                f"[{issue['severity'].upper()}] {issue['code']}: {issue['message']}"
-            )
-            if issue['context']:
-                self.stdout.write(f"  Context: {issue['context']}")
+            grouped[issue['code']].append(issue)
+
+        self.stdout.write('')
+        if verbose:
+            self.stdout.write('Detailed issues:')
+            for issue in payload['issues']:
+                self._write_issue_line(issue)
+            return
+
+        self.stdout.write(f'Detailed sample (up to {self.sample_size} per code):')
+        for code, code_issues in grouped.items():
+            self.stdout.write(f'--- {code} ({len(code_issues)}) ---')
+            for issue in code_issues[:self.sample_size]:
+                self._write_issue_line(issue)
+            remaining = len(code_issues) - self.sample_size
+            if remaining > 0:
+                self.stdout.write(f'  ... and {remaining} more')
+
+    def _write_issue_line(self, issue):
+        self.stdout.write(
+            f"[{issue['severity'].upper()}] {issue['code']}: {issue['message']}"
+        )
+        if issue['context']:
+            self.stdout.write(f"  Context: {issue['context']}")
