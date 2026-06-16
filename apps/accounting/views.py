@@ -333,6 +333,19 @@ class AccountingTillViewSet(BillingTillViewSet):
     manage_permission = 'manage_accounting_periods'
 
 
+class SubledgerReconciliationView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        from .subledger_reconciliation import reconcile_subledgers
+
+        date_str = request.query_params.get('date')
+        as_of_date = parse_date(date_str) if date_str else timezone.now().date()
+        branch_id = get_report_branch_id(request)
+        report = reconcile_subledgers(branch_id=branch_id, as_of_date=as_of_date)
+        return Response(report)
+
+
 class TillReconciliationReportView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_accounting')]
 

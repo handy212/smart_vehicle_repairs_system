@@ -539,20 +539,51 @@ class InvoiceActionMixin:
 
     @action(detail=True, methods=['post'])
     def void(self, request, pk=None):
-        """Void invoice"""
+        """Void invoice and reverse posted GL entries when safe."""
         invoice = self.get_object()
         if invoice.status in ['paid', 'void', 'refunded']:
             return Response({"error": "Cannot void invoice in current status"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         void_reason = request.data.get('reason', '')
         if not void_reason:
             return Response({"error": "Void reason is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        invoice.status = 'void'
-        invoice.voided_at = timezone.now()
-        invoice.voided_by = request.user
-        invoice.void_reason = void_reason
-        invoice.save()
+
+        blocking_records = []
+        if invoice.amount_paid > 0:
+            blocking_records.append("payments or credits")
+        if invoice.payments.exists():
+            blocking_records.append("payments")
+        if invoice.refunds.exists():
+            blocking_records.append("refunds")
+        if invoice.credit_note_applications.exists():
+            blocking_records.append("credit note applications")
+
+        if blocking_records:
+            return Response(
+                {
+                    "error": (
+                        "This invoice has related "
+                        f"{', '.join(dict.fromkeys(blocking_records))} and cannot be voided. "
+                        "Reverse or reallocate those records first."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.accounting.services import AccountingService
+
+        with transaction.atomic():
+            AccountingService.reverse_invoice_journal_entries(
+                invoice,
+                request.user,
+                reason=void_reason,
+            )
+            invoice.status = 'void'
+            invoice.voided_at = timezone.now()
+            invoice.voided_by = request.user
+            invoice.void_reason = void_reason
+            invoice.save()
+
         return Response({"message": "Invoice voided successfully", "invoice": self.get_serializer(invoice).data})
 
     @action(detail=False, methods=['get'])

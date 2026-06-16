@@ -253,6 +253,7 @@ class AccountingControlSerializer(serializers.ModelSerializer):
             'period_lock_date',
             'accounts_receivable_account',
             'accounts_payable_account',
+            'customer_prepayment_account',
             'sales_revenue_account',
             'sales_discount_account',
             'sales_tax_payable_account',

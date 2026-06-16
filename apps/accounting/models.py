@@ -242,6 +242,7 @@ class AccountingControl(models.Model):
     ACCOUNT_FIELD_NAMES = [
         'accounts_receivable_account',
         'accounts_payable_account',
+        'customer_prepayment_account',
         'sales_revenue_account',
         'sales_discount_account',
         'sales_tax_payable_account',
@@ -266,6 +267,11 @@ class AccountingControl(models.Model):
         Account, on_delete=models.PROTECT, null=True, blank=True,
         related_name='control_accounts_payable',
         help_text="Control account for vendor payables."
+    )
+    customer_prepayment_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_customer_prepayments',
+        help_text="Liability account for customer overpayments / unapplied credits."
     )
     sales_revenue_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, null=True, blank=True,

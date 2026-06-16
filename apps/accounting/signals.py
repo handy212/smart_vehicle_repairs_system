@@ -169,14 +169,6 @@ def post_inventory_transaction_to_ledger(sender, instance, created, **kwargs):
     ]:
         AccountingService.post_inventory_adjustment(instance)
 
-@receiver(post_save, sender=CreditNote)
-def post_credit_note_to_ledger(sender, instance, created, **kwargs):
-    """
-    Auto-post GL entry for Credit Notes (revenue reversal)
-    """
-    if instance.status == 'issued':
-        AccountingService.post_credit_note(instance)
-
 @receiver(post_save, sender=Refund)
 def post_refund_to_ledger(sender, instance, created, **kwargs):
     """

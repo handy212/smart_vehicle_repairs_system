@@ -1050,9 +1050,36 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
             'environmental_fee': {'required': False},
             'status': {'required': False},
         }
+
+    def _has_posted_journal(self, invoice):
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+
+        return JournalEntry.objects.filter(
+            content_type=ContentType.objects.get_for_model(invoice),
+            object_id=invoice.id,
+        ).exists()
+
+    def validate(self, data):
+        if self.instance is not None and self._has_posted_journal(self.instance):
+            raise serializers.ValidationError({
+                "detail": (
+                    "Posted invoices cannot be edited. Void the invoice (if allowed) "
+                    "or post correcting entries instead."
+                )
+            })
+        return data
     
     @transaction.atomic
     def update(self, instance, validated_data):
+        if self._has_posted_journal(instance):
+            raise serializers.ValidationError({
+                "detail": (
+                    "Posted invoices cannot be edited. Void the invoice (if allowed) "
+                    "or post correcting entries instead."
+                )
+            })
+
         line_items_data = validated_data.pop('line_items', None)
         discount_percentage_updated = 'discount_percentage' in validated_data
         
@@ -1256,6 +1283,19 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"invoice": f"Invoice {inv_num} is already fully paid. Cannot record additional payments."}
             )
+
+        amount_due = (invoice.total - invoice.amount_paid).quantize(Decimal('0.01'))
+        if amount > amount_due:
+            from apps.accounting.models import AccountingControl
+
+            controls = AccountingControl.get_settings()
+            if not controls.customer_prepayment_account_id:
+                raise serializers.ValidationError({
+                    "amount": (
+                        "Payment exceeds invoice balance. Configure a customer prepayment "
+                        "account in Accounting Controls to record overpayments."
+                    )
+                })
 
         payment_method = data.get('payment_method')
         if payment_method == 'cash':

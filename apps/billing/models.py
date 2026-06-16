@@ -2054,10 +2054,14 @@ class CreditNote(models.Model):
     def calculate_totals(self):
         """Recalculate totals based on line items"""
         lines = self.line_items.all()
-        self.subtotal = sum(line.total for line in lines)
-        # Simplified tax logic for now
-        self.tax_amount = 0 
-        self.total = self.subtotal + self.tax_amount
+        self.subtotal = sum(line.total for line in lines) or Decimal('0')
+
+        taxable_subtotal = sum(line.total for line in lines if line.is_taxable) or Decimal('0')
+        from apps.billing.tax_service import TaxService
+
+        breakdown = TaxService.calculate_breakdown(taxable_subtotal)
+        self.tax_amount = breakdown.total_tax
+        self.total = (self.subtotal + self.tax_amount).quantize(Decimal('0.01'))
         
         if self.status == 'draft':
             self.unused_amount = self.total
@@ -2090,7 +2094,7 @@ class CreditNoteLineItem(models.Model):
 class CreditNoteApplication(models.Model):
     """
     Applies issued credit note balance toward a customer invoice (reduces amount due).
-    Operational allocation; GL for the note is posted when the credit note is issued.
+    GL is posted when the application is created (AR credit / revenue reversal).
     """
 
     credit_note = models.ForeignKey(

@@ -80,6 +80,14 @@ class AccountingService:
         return account
 
     @classmethod
+    def _optional_control_account(cls, field_name):
+        controls = AccountingControl.get_settings()
+        account = getattr(controls, field_name, None)
+        if account is None or not account.is_active or not account.is_leaf:
+            return None
+        return account
+
+    @classmethod
     def _cash_settlement_account(cls, till, source_label):
         if not till or not getattr(till, 'till_account_id', None):
             raise ValidationError(
@@ -222,6 +230,30 @@ class AccountingService:
             branch=journal_entry.branch,
             content_object=journal_entry,
         )
+
+    @classmethod
+    def reverse_invoice_journal_entries(cls, invoice, user, reason=''):
+        """Reverse all posted journal entries linked to an invoice (revenue and COGS)."""
+        invoice_type = ContentType.objects.get_for_model(invoice)
+        entries = JournalEntry.objects.filter(
+            content_type=invoice_type,
+            object_id=invoice.id,
+            posted=True,
+        ).order_by('id')
+
+        reversals = []
+        for journal_entry in entries:
+            reversal_type = ContentType.objects.get_for_model(journal_entry)
+            if JournalEntry.objects.filter(
+                content_type=reversal_type,
+                object_id=journal_entry.id,
+                reference=f"REV-JE-{journal_entry.id}",
+            ).exists():
+                continue
+            reversals.append(
+                cls.reverse_journal_entry(journal_entry, user, reason=reason)
+            )
+        return reversals
 
     @classmethod
     def close_income_statement_period(cls, user, start_date, end_date, branch=None):
@@ -604,13 +636,13 @@ class AccountingService:
     def post_payment(cls, payment):
         """
         Creates a Journal Entry for an Inbound Customer Payment.
-        Debit: Cash/Undeposited Funds (1000) or Cash in Drawer (1020)
-        Credit: Accounts Receivable (1200)
+        Debit: Cash/Bank
+        Credit: Accounts Receivable (invoice clearing)
+        Credit: Customer Prepayments (overpayment remainder, when configured)
         """
         if payment.status != 'completed':
             return None
 
-        # Check if already posted
         payment_type = ContentType.objects.get_for_model(payment)
         if JournalEntry.objects.filter(content_type=payment_type, object_id=payment.id).exists():
             return None
@@ -623,42 +655,60 @@ class AccountingService:
             else:
                 cash_account = cls._bank_settlement_account(payment, f"Payment {payment.payment_number}")
             ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
+            prepayment_account = cls._optional_control_account('customer_prepayment_account')
 
             allocations = list(
                 payment.allocations.select_related('invoice', 'invoice__branch').order_by('id')
             )
-            branch_credits = defaultdict(lambda: Decimal('0'))
-
-            for alloc in allocations:
-                inv = alloc.invoice
-                bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
-                branch_credits[bid] += Decimal(str(alloc.amount)).quantize(cls.MONEY_QUANT)
-
-            allocated_sum = sum(branch_credits.values(), Decimal('0')).quantize(cls.MONEY_QUANT)
             total_pay = Decimal(str(payment.amount)).quantize(cls.MONEY_QUANT)
-            remainder = (total_pay - allocated_sum).quantize(cls.MONEY_QUANT)
 
-            if remainder < 0:
+            branch_ar_credits = defaultdict(lambda: Decimal('0'))
+            branch_prepayment_credits = defaultdict(lambda: Decimal('0'))
+
+            if allocations:
+                for alloc in allocations:
+                    inv = alloc.invoice
+                    bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
+                    branch_ar_credits[bid] += Decimal(str(alloc.amount)).quantize(cls.MONEY_QUANT)
+
+                allocated_sum = sum(branch_ar_credits.values(), Decimal('0')).quantize(cls.MONEY_QUANT)
+                remainder = (total_pay - allocated_sum).quantize(cls.MONEY_QUANT)
+                if remainder < 0:
+                    raise ValidationError(
+                        f"Payment {payment.payment_number} allocations ({allocated_sum}) exceed payment amount ({total_pay})."
+                    )
+                if remainder > 0:
+                    inv = payment.invoice
+                    bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
+                    branch_prepayment_credits[bid] += remainder
+            else:
+                inv = payment.invoice
+                amount_paid_excluding = max(
+                    (inv.amount_paid - total_pay).quantize(cls.MONEY_QUANT) if inv else Decimal('0'),
+                    Decimal('0'),
+                )
+                amount_due_before = (
+                    (inv.total - amount_paid_excluding).quantize(cls.MONEY_QUANT) if inv else Decimal('0')
+                )
+                ar_portion = min(total_pay, max(amount_due_before, Decimal('0'))).quantize(cls.MONEY_QUANT)
+                prepayment_portion = (total_pay - ar_portion).quantize(cls.MONEY_QUANT)
+                bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
+                if ar_portion > 0:
+                    branch_ar_credits[bid] += ar_portion
+                if prepayment_portion > 0:
+                    branch_prepayment_credits[bid] += prepayment_portion
+
+            prepayment_total = sum(branch_prepayment_credits.values(), Decimal('0')).quantize(cls.MONEY_QUANT)
+            if prepayment_total > 0 and prepayment_account is None:
                 raise ValidationError(
-                    f"Payment {payment.payment_number} allocations ({allocated_sum}) exceed payment amount ({total_pay})."
+                    "Customer prepayment account is not configured. "
+                    "Configure it in Accounting Controls before recording overpayments."
                 )
 
-            if remainder > 0:
-                inv = payment.invoice
-                bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
-                branch_credits[bid] += remainder
-
-            positive_branches = {k: v for k, v in branch_credits.items() if v > 0}
-            if not positive_branches:
-                positive_branches = {None: total_pay}
-
-            branch_keys = {k for k in positive_branches if k is not None}
+            branch_keys = {k for k in list(branch_ar_credits) + list(branch_prepayment_credits) if k is not None}
             if len(branch_keys) <= 1:
                 single_branch_id = next(iter(branch_keys), None)
-                if single_branch_id is not None:
-                    branch_obj = Branch.objects.filter(pk=single_branch_id).first()
-                else:
-                    branch_obj = None
+                branch_obj = Branch.objects.filter(pk=single_branch_id).first() if single_branch_id else None
             else:
                 branch_obj = None
 
@@ -680,7 +730,7 @@ class AccountingService:
             )
 
             for bid, credit_amt in sorted(
-                positive_branches.items(),
+                ((k, v) for k, v in branch_ar_credits.items() if v > 0),
                 key=lambda x: (x[0] is None, x[0] or 0),
             ):
                 labels = []
@@ -695,7 +745,10 @@ class AccountingService:
                     ib = inv.branch_id
                     if (bid is None and ib is None) or (bid == ib):
                         labels.append(inv.invoice_number or f'#{inv.pk}')
-                if not labels and payment.invoice_id and (bid == payment.invoice.branch_id or (bid is None and payment.invoice.branch_id is None)):
+                if not labels and payment.invoice_id and (
+                    bid == payment.invoice.branch_id
+                    or (bid is None and payment.invoice.branch_id is None)
+                ):
                     labels.append(payment.invoice.invoice_number or f'#{payment.invoice_id}')
                 desc = 'AR ' + ', '.join(dict.fromkeys(labels)) if labels else 'AR application'
                 Transaction.objects.create(
@@ -704,6 +757,18 @@ class AccountingService:
                     amount=credit_amt,
                     transaction_type='credit',
                     description=desc[:255],
+                )
+
+            for bid, credit_amt in sorted(
+                ((k, v) for k, v in branch_prepayment_credits.items() if v > 0),
+                key=lambda x: (x[0] is None, x[0] or 0),
+            ):
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=prepayment_account,
+                    amount=credit_amt,
+                    transaction_type='credit',
+                    description='Customer prepayment',
                 )
 
             if not je.validate_balanced():
@@ -909,6 +974,96 @@ class AccountingService:
             posted=True,
             branch=credit_note.branch,
             content_object=credit_note,
+        )
+
+    @classmethod
+    def post_credit_note_application(cls, application):
+        """
+        Post GL entry when credit note balance is applied to an invoice.
+        Debit: Sales Returns & Allowances (+ tax reversal)
+        Credit: Accounts Receivable
+        """
+        from apps.billing.models import CreditNoteApplication
+
+        if not isinstance(application, CreditNoteApplication):
+            application = CreditNoteApplication.objects.select_related(
+                'credit_note', 'credit_note__customer', 'invoice', 'applied_by'
+            ).get(pk=application)
+
+        credit_note = application.credit_note
+        if credit_note.status not in ('issued', 'applied'):
+            return None
+
+        app_type = ContentType.objects.get_for_model(application)
+        reference = f"CN-APP-{application.id}"
+        if JournalEntry.objects.filter(
+            content_type=app_type,
+            object_id=application.id,
+            reference=reference,
+        ).exists():
+            return None
+
+        apply_amount = Decimal(str(application.amount)).quantize(cls.MONEY_QUANT)
+        if apply_amount <= 0:
+            return None
+
+        cn_total = Decimal(str(credit_note.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        if cn_total <= 0:
+            return None
+
+        ratio = (apply_amount / cn_total).quantize(Decimal('0.0001'))
+        subtotal = (Decimal(str(credit_note.subtotal or Decimal('0'))) * ratio).quantize(cls.MONEY_QUANT)
+        tax_amount = (Decimal(str(credit_note.tax_amount or Decimal('0'))) * ratio).quantize(cls.MONEY_QUANT)
+        if subtotal + tax_amount != apply_amount:
+            tax_amount = (apply_amount - subtotal).quantize(cls.MONEY_QUANT)
+
+        sales_returns = cls._control_account('sales_discount_account', 'Sales Returns & Allowances')
+        ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
+        tax_account = cls._control_account('sales_tax_payable_account', 'Sales Tax Payable')
+
+        desc_customer = credit_note.customer.full_name
+        lines = []
+        if subtotal > 0:
+            lines.append({
+                'account_id': sales_returns.id,
+                'type': 'debit',
+                'amount': subtotal,
+                'description': f'Credit applied for {desc_customer}',
+            })
+        if tax_amount > 0:
+            lines.append({
+                'account_id': tax_account.id,
+                'type': 'debit',
+                'amount': tax_amount,
+                'description': f'Tax reversal for {desc_customer}',
+            })
+        if not lines:
+            lines.append({
+                'account_id': sales_returns.id,
+                'type': 'debit',
+                'amount': apply_amount,
+                'description': f'Credit applied for {desc_customer}',
+            })
+        lines.append({
+            'account_id': ar_account.id,
+            'type': 'credit',
+            'amount': apply_amount,
+            'description': f'Credit applied to {application.invoice.invoice_number}',
+        })
+
+        user = application.applied_by or credit_note.created_by
+        return cls.create_journal_entry(
+            user=user,
+            date=application.applied_at.date() if application.applied_at else timezone.now().date(),
+            description=(
+                f"Credit Note {credit_note.credit_note_number} applied to "
+                f"{application.invoice.invoice_number}"
+            ),
+            reference=reference,
+            lines=lines,
+            posted=True,
+            branch=credit_note.branch or application.invoice.branch,
+            content_object=application,
         )
 
     @classmethod

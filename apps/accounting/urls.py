@@ -36,6 +36,7 @@ urlpatterns = [
     path('reports/opex-variance/', mgmt_views.OpexVarianceView.as_view(), name='opex-variance'),
     path('reports/cost-control/', mgmt_views.CostControlReportView.as_view(), name='cost-control'),
     path('reports/till-reconciliation/', views.TillReconciliationReportView.as_view(), name='till-reconciliation'),
+    path('reports/subledger-reconciliation/', views.SubledgerReconciliationView.as_view(), name='subledger-reconciliation'),
     path('reports/<slug:report_slug>/print/', report_print_views.AccountingReportPrintView.as_view(), name='accounting-report-print'),
     path('reports/<slug:report_slug>/pdf/', report_print_views.AccountingReportPdfView.as_view(), name='accounting-report-pdf'),
     path('analytics/dashboard/', views.AnalyticsDashboardView.as_view(), name='analytics-dashboard'),

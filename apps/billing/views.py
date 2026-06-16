@@ -2221,6 +2221,11 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
                 invoice.recalculate_amount_paid_from_collections()
                 cn.refresh_from_db()
 
+                application = cn.applications.filter(invoice=invoice).order_by('-id').first()
+                if application:
+                    from apps.accounting.services import AccountingService
+                    AccountingService.post_credit_note_application(application)
+
         except Invoice.DoesNotExist:
             return Response({'error': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
 
