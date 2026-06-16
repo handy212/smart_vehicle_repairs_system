@@ -176,13 +176,7 @@ class Command(BaseCommand):
         self.stdout.write('Suggested next steps:')
         if missing_payments or missing_bill_payments:
             self.stdout.write('  python manage.py backfill_missing_gl_postings --dry-run')
-            self.stdout.write('  python manage.py backfill_missing_gl_postings --payments-only')
-            self.stdout.write('  python manage.py backfill_missing_gl_postings --bill-payments-only')
-        if missing_invoice_gl:
-            self.stdout.write('  python manage.py backfill_missing_gl_postings --invoices-only --dry-run')
-        if stale_ap_candidates and ap['difference'] > 0:
-            self.stdout.write(
-                '  Paid bills may have AP bill GL without matching bill-payment GL; '
-                'run backfill_missing_gl_postings --bill-payments-only.'
-            )
+        else:
+            self.stdout.write('  python manage.py analyze_subledger_gap')
+            self.stdout.write('  python manage.py repair_misrouted_settlement_gl --dry-run')
         self.stdout.write('  python manage.py repair_operational_balances --dry-run')
