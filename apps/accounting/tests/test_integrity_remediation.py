@@ -2,6 +2,7 @@
 from decimal import Decimal
 from io import StringIO
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
@@ -9,7 +10,9 @@ from django.utils import timezone
 from apps.accounting.models import AccountingControl, Account, JournalEntry, Transaction
 from apps.accounting.services import AccountingService
 from apps.accounts.models import User
-from apps.billing.models import Invoice, Payment
+from apps.accounting.subledger_reconciliation import reconcile_subledgers
+from apps.billing.models import Bill, BillPayment, Invoice, Payment
+from apps.inventory.models import Supplier
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 
@@ -203,3 +206,128 @@ class IntegrityRemediationCommandTests(TestCase):
         self.assertTrue(
             JournalEntry.objects.filter(reference__startswith='REV-JE-').exists()
         )
+
+    def test_backfill_missing_gl_postings_creates_payment_entry(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('100.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('100.00'),
+            amount_due=Decimal('100.00'),
+            amount_paid=Decimal('0.00'),
+            created_by=self.user,
+        )
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            bank_account=controls.default_bank_account,
+            amount=Decimal('100.00'),
+            status='pending',
+            processed_by=self.user,
+        )
+        Payment.objects.filter(pk=payment.pk).update(status='completed')
+
+        payment_type = ContentType.objects.get_for_model(Payment)
+        self.assertFalse(
+            JournalEntry.objects.filter(content_type=payment_type, object_id=payment.id).exists()
+        )
+
+        call_command(
+            'backfill_missing_gl_postings',
+            payments_only=True,
+            settings='config.settings.testing',
+        )
+        self.assertTrue(
+            JournalEntry.objects.filter(content_type=payment_type, object_id=payment.id, posted=True).exists()
+        )
+
+    def test_backfill_missing_gl_postings_creates_bill_payment_entry(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+        vendor = Supplier.objects.create(name='Remediation Vendor', supplier_code='REM-V')
+
+        bill = Bill.objects.create(
+            vendor=vendor,
+            branch=self.branch,
+            due_date=timezone.now().date(),
+            status='paid',
+            subtotal=Decimal('200.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('200.00'),
+            amount_paid=Decimal('200.00'),
+            amount_due=Decimal('0.00'),
+            created_by=self.user,
+        )
+        bill_payment_type = ContentType.objects.get_for_model(BillPayment)
+        bill_payment = BillPayment.objects.create(
+            bill=bill,
+            payment_method='check',
+            bank_account=controls.default_bank_account,
+            amount=Decimal('200.00'),
+            payment_date=timezone.now().date(),
+            paid_by=self.user,
+        )
+        JournalEntry.objects.filter(
+            content_type=bill_payment_type,
+            object_id=bill_payment.id,
+        ).delete()
+
+        self.assertFalse(
+            JournalEntry.objects.filter(
+                content_type=bill_payment_type,
+                object_id=bill_payment.id,
+            ).exists()
+        )
+
+        call_command(
+            'backfill_missing_gl_postings',
+            bill_payments_only=True,
+            settings='config.settings.testing',
+        )
+        self.assertTrue(
+            JournalEntry.objects.filter(
+                content_type=bill_payment_type,
+                object_id=bill_payment.id,
+                posted=True,
+            ).exists()
+        )
+
+    def test_backfill_payment_gl_improves_subledger_balance(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('90.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('90.00'),
+            amount_due=Decimal('90.00'),
+            amount_paid=Decimal('0.00'),
+            created_by=self.user,
+        )
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            bank_account=controls.default_bank_account,
+            amount=Decimal('90.00'),
+            status='pending',
+            processed_by=self.user,
+        )
+        Payment.objects.filter(pk=payment.pk).update(status='completed')
+        Invoice.objects.filter(pk=invoice.pk).update(amount_due=Decimal('0.00'), amount_paid=Decimal('90.00'))
+
+        before = reconcile_subledgers(branch_id=self.branch.id)
+        self.assertFalse(before['accounts_receivable']['in_balance'])
+
+        call_command('backfill_missing_gl_postings', payments_only=True, settings='config.settings.testing')
+        after = reconcile_subledgers(branch_id=self.branch.id)
+        self.assertTrue(after['accounts_receivable']['in_balance'])

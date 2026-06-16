@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from apps.accounting.models import AccountingControl, JournalEntry
 from apps.accounting.services import AccountingService
 from apps.accounting.subledger_reconciliation import OPEN_INVOICE_STATUSES, reconcile_subledgers
-from apps.billing.models import Bill, Invoice
+from apps.billing.models import Bill, BillPayment, Invoice, Payment
 
 
 class Command(BaseCommand):
@@ -36,6 +36,34 @@ class Command(BaseCommand):
         )
 
         bill_type = ContentType.objects.get_for_model(Bill)
+        payment_type = ContentType.objects.get_for_model(Payment)
+        bill_payment_type = ContentType.objects.get_for_model(BillPayment)
+
+        missing_payments = Payment.objects.filter(status='completed').exclude(
+            id__in=JournalEntry.objects.filter(
+                content_type=payment_type,
+                posted=True,
+            ).values_list('object_id', flat=True),
+        ).count()
+        missing_bill_payments = BillPayment.objects.exclude(
+            id__in=JournalEntry.objects.filter(
+                content_type=bill_payment_type,
+                posted=True,
+            ).values_list('object_id', flat=True),
+        ).count()
+
+        self.stdout.write('')
+        self.stdout.write(
+            f'Completed customer payments missing GL: {missing_payments}'
+        )
+        self.stdout.write(
+            f'Vendor bill payments missing GL: {missing_bill_payments}'
+        )
+        prepay = report.get('customer_prepayments', {})
+        if prepay.get('configured'):
+            self.stdout.write(
+                f"Customer prepayment GL ({prepay.get('control_account_code')}): {prepay.get('gl_balance'):.2f}"
+            )
 
         missing_invoice_gl = []
         for invoice in Invoice.objects.filter(
@@ -121,9 +149,15 @@ class Command(BaseCommand):
         )
         self.stdout.write('')
         self.stdout.write('Suggested next steps:')
-        if missing_invoice_gl:
+        if missing_payments or missing_bill_payments:
             self.stdout.write('  python manage.py backfill_missing_gl_postings --dry-run')
+            self.stdout.write('  python manage.py backfill_missing_gl_postings --payments-only')
+            self.stdout.write('  python manage.py backfill_missing_gl_postings --bill-payments-only')
+        if missing_invoice_gl:
+            self.stdout.write('  python manage.py backfill_missing_gl_postings --invoices-only --dry-run')
         if stale_ap_candidates and ap['difference'] > 0:
-            self.stdout.write('  Review paid bills with uncleared AP GL; post missing bill payments or reverse stale entries.')
-        self.stdout.write('  python manage.py repair_duplicate_journal_entries')
-        self.stdout.write('  python manage.py repair_settlement_accounts --dry-run')
+            self.stdout.write(
+                '  Paid bills may have AP bill GL without matching bill-payment GL; '
+                'run backfill_missing_gl_postings --bill-payments-only.'
+            )
+        self.stdout.write('  python manage.py repair_operational_balances --dry-run')
