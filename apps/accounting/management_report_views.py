@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
 
 from .management_reports import ManagementReportingService
-from .views import get_report_branch_id, scope_budgets
+from .views import get_report_branch_id, get_accessible_branch_ids, scope_budgets
 from .models import Budget
 
 
@@ -63,7 +63,9 @@ class ConsolidatedProfitLossView(_ManagementReportBase):
         start_date, end_date = _parse_period(request)
         if not start_date:
             return Response({'error': 'Invalid date format.'}, status=400)
-        report = ManagementReportingService.get_consolidated_profit_loss(start_date, end_date)
+        report = ManagementReportingService.get_consolidated_profit_loss(
+            start_date, end_date, branch_ids=get_accessible_branch_ids(request)
+        )
         return Response(report)
 
 
@@ -73,7 +75,9 @@ class BranchPLScorecardView(_ManagementReportBase):
         start_date, end_date = _parse_period(request)
         if not start_date:
             return Response({'error': 'Invalid date format.'}, status=400)
-        report = ManagementReportingService.get_branch_pl_scorecard(start_date, end_date)
+        report = ManagementReportingService.get_branch_pl_scorecard(
+            start_date, end_date, branch_ids=get_accessible_branch_ids(request)
+        )
         return Response(report)
 
 

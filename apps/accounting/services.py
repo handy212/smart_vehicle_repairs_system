@@ -255,12 +255,11 @@ class AccountingService:
                 continue
 
             amount = abs(balance).quantize(cls.MONEY_QUANT)
-            if account.account_type == 'income':
-                account_line_type = 'debit' if balance > 0 else 'credit'
-                retained_line_type = 'credit' if balance > 0 else 'debit'
+            if balance > 0:
+                account_line_type = 'credit' if account.balance_type == 'debit' else 'debit'
             else:
-                account_line_type = 'credit' if balance > 0 else 'debit'
-                retained_line_type = 'debit' if balance > 0 else 'credit'
+                account_line_type = 'debit' if account.balance_type == 'debit' else 'credit'
+            retained_line_type = 'credit' if account_line_type == 'debit' else 'debit'
 
             lines.append({
                 'account_id': account.id,
@@ -1874,10 +1873,11 @@ class ReportingService:
             # --- Parts cost from inventory transactions (actual) ---
             parts_cost = InventoryTransaction.objects.filter(
                 work_order=wo,
-                transaction_type='issue'
+                transaction_type='sale'
             ).aggregate(
                 total=Sum(models.F('quantity') * models.F('unit_cost'))
             )['total'] or Decimal('0')
+            parts_cost = abs(parts_cost)
 
             # Fall back to work order actual_parts_cost when no inventory transactions
             if parts_cost == 0:
@@ -1920,7 +1920,7 @@ class ReportingService:
                 # Cost basis flag
                 'labor_cost_is_actual': bool(wo.actual_labor_cost and wo.actual_labor_cost > 0),
                 'parts_cost_is_actual': bool(
-                    InventoryTransaction.objects.filter(work_order=wo, transaction_type='issue').exists()
+                    InventoryTransaction.objects.filter(work_order=wo, transaction_type='sale').exists()
                 ),
             })
 
@@ -2077,14 +2077,15 @@ class ReportingService:
 
         # --- Parts expense: sum of inventory issues in the period (actual COGS) ---
         it_qs = InventoryTransaction.objects.filter(
-            transaction_type='issue',
-            created_at__date__range=[start_date, end_date],
+            transaction_type='sale',
+            transaction_date__range=[start_date, end_date],
         )
         if branch_id:
             it_qs = it_qs.filter(work_order__branch_id=branch_id)
         parts_expense = it_qs.aggregate(
             total=Sum(F('quantity') * F('unit_cost'))
         )['total'] or Decimal('0')
+        parts_expense = abs(parts_expense)
 
         # Fall back to GL accounts 5100-5199 (Purchases/Inventory accounts) if no inv. transactions
         if parts_expense == 0:

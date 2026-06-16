@@ -36,8 +36,19 @@ export default function MarginAnalysisPage() {
   });
 
   const jobData = jobs as {
-    jobs?: Array<{ work_order_number?: string; margin_percent?: number; total_revenue?: number; total_cost?: number; net_profit?: number }>;
-    totals?: { total_revenue?: number; total_cost?: number; total_profit?: number; avg_margin_percent?: number };
+    jobs?: Array<{
+      work_order_number?: string;
+      margin_percent?: number;
+      revenue?: number;
+      direct_costs?: number;
+      gross_profit?: number;
+    }>;
+    totals?: {
+      revenue?: number;
+      direct_costs?: number;
+      gross_profit?: number;
+      avg_margin_percent?: number;
+    };
   };
   const jobList = jobData?.jobs ?? [];
   const totals = jobData?.totals;
@@ -51,9 +62,9 @@ export default function MarginAnalysisPage() {
       headers: ["Work order", "Revenue", "Cost", "Profit", "Margin %"],
       rows: jobList.map((j) => [
         j.work_order_number ?? "",
-        j.total_revenue ?? 0,
-        j.total_cost ?? 0,
-        j.net_profit ?? 0,
+        j.revenue ?? 0,
+        j.direct_costs ?? 0,
+        j.gross_profit ?? 0,
         (j.margin_percent ?? 0).toFixed(1),
       ]),
       currencyColumnIndexes: [1, 2, 3],
@@ -95,15 +106,15 @@ export default function MarginAnalysisPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Revenue</CardTitle></CardHeader>
-            <CardContent className="text-lg font-semibold">{formatCurrency(totals.total_revenue ?? 0)}</CardContent>
+            <CardContent className="text-lg font-semibold">{formatCurrency(totals.revenue ?? 0)}</CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Cost</CardTitle></CardHeader>
-            <CardContent className="text-lg font-semibold">{formatCurrency(totals.total_cost ?? 0)}</CardContent>
+            <CardContent className="text-lg font-semibold">{formatCurrency(totals.direct_costs ?? 0)}</CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Gross profit</CardTitle></CardHeader>
-            <CardContent className="text-lg font-semibold">{formatCurrency(totals.total_profit ?? 0)}</CardContent>
+            <CardContent className="text-lg font-semibold">{formatCurrency(totals.gross_profit ?? 0)}</CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Avg margin %</CardTitle></CardHeader>
@@ -134,9 +145,9 @@ export default function MarginAnalysisPage() {
                 {jobList.slice(0, 50).map((j, i) => (
                   <TableRow key={i}>
                     <TableCell>{j.work_order_number ?? "—"}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(j.total_revenue ?? 0)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(j.total_cost ?? 0)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(j.net_profit ?? 0)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(j.revenue ?? 0)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(j.direct_costs ?? 0)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(j.gross_profit ?? 0)}</TableCell>
                     <TableCell className="text-right">{(j.margin_percent ?? 0).toFixed(1)}%</TableCell>
                   </TableRow>
                 ))}

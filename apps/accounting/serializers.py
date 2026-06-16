@@ -298,27 +298,6 @@ class AuditLogSerializer(serializers.ModelSerializer):
 # PHASE 8: CASH & BANKING SERIALIZERS
 # ============================================================================
 
-class BankStatementSerializer(serializers.ModelSerializer):
-    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True)
-    lines_count = serializers.IntegerField(source='lines.count', read_only=True)
-    matched_count = serializers.SerializerMethodField()
-    
-    def get_matched_count(self, obj):
-        return obj.lines.filter(matched=True).count()
-    
-    class Meta:
-        model = BankStatement
-        fields = '__all__'
-        read_only_fields = ('created_by', 'reconciled', 'reconciled_by', 'reconciled_at')
-
-    def validate(self, attrs):
-        if self.instance and self.instance.reconciled:
-            protected_fields = {'bank_account', 'statement_date', 'opening_balance', 'closing_balance'}
-            if protected_fields.intersection(attrs):
-                raise serializers.ValidationError('Cannot edit accounting details of a reconciled statement.')
-        return attrs
-
-
 class BankStatementLineSerializer(serializers.ModelSerializer):
     matched_transaction_details = serializers.SerializerMethodField()
     
@@ -347,6 +326,36 @@ class BankStatementLineSerializer(serializers.ModelSerializer):
             if (debit > 0 and credit > 0) or (debit == 0 and credit == 0):
                 raise serializers.ValidationError('Statement line must have exactly one debit or credit amount.')
         return attrs
+
+
+class BankStatementSerializer(serializers.ModelSerializer):
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True)
+    lines_count = serializers.IntegerField(source='lines.count', read_only=True)
+    matched_count = serializers.SerializerMethodField()
+    
+    def get_matched_count(self, obj):
+        return obj.lines.filter(matched=True).count()
+    
+    class Meta:
+        model = BankStatement
+        fields = '__all__'
+        read_only_fields = ('created_by', 'reconciled', 'reconciled_by', 'reconciled_at')
+
+    def validate(self, attrs):
+        if self.instance and self.instance.reconciled:
+            protected_fields = {'bank_account', 'statement_date', 'opening_balance', 'closing_balance'}
+            if protected_fields.intersection(attrs):
+                raise serializers.ValidationError('Cannot edit accounting details of a reconciled statement.')
+        return attrs
+
+
+class BankStatementDetailSerializer(BankStatementSerializer):
+    """Retrieve serializer including nested statement lines for reconciliation UI."""
+
+    lines = BankStatementLineSerializer(many=True, read_only=True)
+
+    class Meta(BankStatementSerializer.Meta):
+        pass
 
 
 class FundTransferSerializer(serializers.ModelSerializer):
