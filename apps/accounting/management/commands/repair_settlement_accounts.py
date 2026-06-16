@@ -51,8 +51,9 @@ class Command(BaseCommand):
         for payment in Payment.objects.filter(
             status='completed',
             payment_method__in=BANK_SETTLEMENT_PAYMENT_METHODS,
-            bank_account__isnull=True,
-        ).iterator():
+        ).select_related('bank_account').iterator():
+            if self._is_valid_bank_account(payment.bank_account):
+                continue
             payment_changes += 1
             if not dry_run:
                 payment.bank_account = default_bank
@@ -60,8 +61,9 @@ class Command(BaseCommand):
 
         for refund in Refund.objects.filter(
             status='completed',
-            bank_account__isnull=True,
-        ).exclude(refund_method='cash').iterator():
+        ).exclude(refund_method='cash').select_related('bank_account').iterator():
+            if self._is_valid_bank_account(refund.bank_account):
+                continue
             refund_changes += 1
             if not dry_run:
                 refund.bank_account = default_bank
@@ -69,8 +71,9 @@ class Command(BaseCommand):
 
         for payment in BillPayment.objects.filter(
             payment_method__in=BANK_SETTLEMENT_PAYMENT_METHODS,
-            bank_account__isnull=True,
-        ).iterator():
+        ).select_related('bank_account').iterator():
+            if self._is_valid_bank_account(payment.bank_account):
+                continue
             vendor_changes += 1
             if not dry_run:
                 payment.bank_account = default_bank

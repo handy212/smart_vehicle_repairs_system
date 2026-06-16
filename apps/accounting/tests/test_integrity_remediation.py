@@ -86,6 +86,36 @@ class IntegrityRemediationCommandTests(TestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.bank_account_id, controls.default_bank_account_id)
 
+    def test_repair_settlement_accounts_replaces_invalid_bank_account(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+        invalid_bank = Account.objects.get(code='5000')
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('75.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('75.00'),
+            amount_due=Decimal('75.00'),
+            created_by=self.user,
+        )
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            amount=Decimal('75.00'),
+            status='pending',
+            bank_account=invalid_bank,
+            processed_by=self.user,
+        )
+        Payment.objects.filter(pk=payment.pk).update(status='completed')
+
+        call_command('repair_settlement_accounts', settings='config.settings.testing')
+        payment.refresh_from_db()
+        self.assertEqual(payment.bank_account_id, controls.default_bank_account_id)
+
     def test_repair_parent_journal_lines_remaps_parent_account(self):
         call_command('wire_accounting_controls', settings='config.settings.testing')
         parent = Account.objects.get(code='1000')
