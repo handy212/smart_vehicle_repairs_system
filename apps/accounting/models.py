@@ -205,6 +205,10 @@ class Transaction(models.Model):
     def clean(self):
         if self.amount <= 0:
             raise ValidationError(_("Transaction amount must be positive."))
+        if self.account_id and not self.account.is_active:
+            raise ValidationError(
+                _("Journal transactions cannot be posted to inactive accounts.")
+            )
         if self.account_id and self.account.children.exists():
             raise ValidationError(
                 _("Journal transactions must be posted to detail/leaf accounts, not parent category accounts.")
@@ -242,6 +246,7 @@ class AccountingControl(models.Model):
     ACCOUNT_FIELD_NAMES = [
         'accounts_receivable_account',
         'accounts_payable_account',
+        'customer_prepayment_account',
         'sales_revenue_account',
         'sales_discount_account',
         'sales_tax_payable_account',
@@ -249,6 +254,7 @@ class AccountingControl(models.Model):
         'environmental_fee_revenue_account',
         'input_tax_account',
         'default_expense_account',
+        'purchase_returns_account',
         'inventory_asset_account',
         'cost_of_goods_sold_account',
         'cash_over_short_account',
@@ -266,6 +272,11 @@ class AccountingControl(models.Model):
         Account, on_delete=models.PROTECT, null=True, blank=True,
         related_name='control_accounts_payable',
         help_text="Control account for vendor payables."
+    )
+    customer_prepayment_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_customer_prepayments',
+        help_text="Liability account for customer overpayments / unapplied credits."
     )
     sales_revenue_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, null=True, blank=True,
@@ -301,6 +312,11 @@ class AccountingControl(models.Model):
         Account, on_delete=models.PROTECT, null=True, blank=True,
         related_name='control_default_expense',
         help_text="Default expense account for vendor bill lines."
+    )
+    purchase_returns_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_purchase_returns',
+        help_text="Contra-expense account for vendor credit returns (non-inventory)."
     )
     inventory_asset_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, null=True, blank=True,
@@ -542,6 +558,43 @@ class FundTransfer(models.Model):
             self.transfer_number = f"FT{new_number:06d}"
         
         super().save(*args, **kwargs)
+
+
+class DocumentNumberSequence(models.Model):
+    """Fiscal-year sequence counters for standardized accounting document numbers."""
+
+    DOCUMENT_TYPE_CHOICES = [
+        ('invoice', 'Invoice'),
+        ('credit_note', 'Credit Note'),
+        ('payment', 'Payment'),
+        ('bill', 'Bill'),
+        ('vendor_credit', 'Vendor Credit'),
+    ]
+
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.CASCADE,
+        related_name='document_number_sequences',
+    )
+    fiscal_year = models.PositiveIntegerField()
+    last_sequence = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fiscal_year', 'document_type', 'branch']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['document_type', 'branch', 'fiscal_year'],
+                name='unique_document_number_sequence',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['document_type', 'branch', 'fiscal_year']),
+        ]
+
+    def __str__(self):
+        return f"{self.document_type} {self.branch_id} {self.fiscal_year}: {self.last_sequence}"
 
 
 # ============================================================================

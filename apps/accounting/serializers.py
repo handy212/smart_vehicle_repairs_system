@@ -253,6 +253,7 @@ class AccountingControlSerializer(serializers.ModelSerializer):
             'period_lock_date',
             'accounts_receivable_account',
             'accounts_payable_account',
+            'customer_prepayment_account',
             'sales_revenue_account',
             'sales_discount_account',
             'sales_tax_payable_account',
@@ -260,6 +261,7 @@ class AccountingControlSerializer(serializers.ModelSerializer):
             'environmental_fee_revenue_account',
             'input_tax_account',
             'default_expense_account',
+            'purchase_returns_account',
             'inventory_asset_account',
             'cost_of_goods_sold_account',
             'cash_over_short_account',
@@ -298,27 +300,6 @@ class AuditLogSerializer(serializers.ModelSerializer):
 # PHASE 8: CASH & BANKING SERIALIZERS
 # ============================================================================
 
-class BankStatementSerializer(serializers.ModelSerializer):
-    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True)
-    lines_count = serializers.IntegerField(source='lines.count', read_only=True)
-    matched_count = serializers.SerializerMethodField()
-    
-    def get_matched_count(self, obj):
-        return obj.lines.filter(matched=True).count()
-    
-    class Meta:
-        model = BankStatement
-        fields = '__all__'
-        read_only_fields = ('created_by', 'reconciled', 'reconciled_by', 'reconciled_at')
-
-    def validate(self, attrs):
-        if self.instance and self.instance.reconciled:
-            protected_fields = {'bank_account', 'statement_date', 'opening_balance', 'closing_balance'}
-            if protected_fields.intersection(attrs):
-                raise serializers.ValidationError('Cannot edit accounting details of a reconciled statement.')
-        return attrs
-
-
 class BankStatementLineSerializer(serializers.ModelSerializer):
     matched_transaction_details = serializers.SerializerMethodField()
     
@@ -349,6 +330,36 @@ class BankStatementLineSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class BankStatementSerializer(serializers.ModelSerializer):
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True)
+    lines_count = serializers.IntegerField(source='lines.count', read_only=True)
+    matched_count = serializers.SerializerMethodField()
+    
+    def get_matched_count(self, obj):
+        return obj.lines.filter(matched=True).count()
+    
+    class Meta:
+        model = BankStatement
+        fields = '__all__'
+        read_only_fields = ('created_by', 'reconciled', 'reconciled_by', 'reconciled_at')
+
+    def validate(self, attrs):
+        if self.instance and self.instance.reconciled:
+            protected_fields = {'bank_account', 'statement_date', 'opening_balance', 'closing_balance'}
+            if protected_fields.intersection(attrs):
+                raise serializers.ValidationError('Cannot edit accounting details of a reconciled statement.')
+        return attrs
+
+
+class BankStatementDetailSerializer(BankStatementSerializer):
+    """Retrieve serializer including nested statement lines for reconciliation UI."""
+
+    lines = BankStatementLineSerializer(many=True, read_only=True)
+
+    class Meta(BankStatementSerializer.Meta):
+        pass
+
+
 class FundTransferSerializer(serializers.ModelSerializer):
     from_account_name = serializers.CharField(source='from_account.name', read_only=True)
     to_account_name = serializers.CharField(source='to_account.name', read_only=True)
@@ -360,11 +371,23 @@ class FundTransferSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('transfer_number', 'status', 'created_by', 'approved_by', 'approved_at', 'journal_entry')
 
+    def _validate_settlement_account(self, account, field_name):
+        from apps.accounting.account_validation import is_valid_settlement_account
+
+        if account and not is_valid_settlement_account(account):
+            raise serializers.ValidationError({
+                field_name: (
+                    'Select an active leaf Asset account classified as Bank or Cash Equivalent.'
+                ),
+            })
+
     def validate(self, attrs):
         from_account = attrs.get('from_account', getattr(self.instance, 'from_account', None))
         to_account = attrs.get('to_account', getattr(self.instance, 'to_account', None))
         if from_account and to_account and from_account == to_account:
             raise serializers.ValidationError('Source and destination accounts must be different.')
+        self._validate_settlement_account(from_account, 'from_account')
+        self._validate_settlement_account(to_account, 'to_account')
         if self.instance and self.instance.status == 'completed':
             raise serializers.ValidationError('Completed transfers cannot be edited.')
         return attrs

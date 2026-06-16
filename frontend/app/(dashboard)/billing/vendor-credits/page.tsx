@@ -1,98 +1,76 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { FileMinus2, ReceiptText, RotateCcw, Search, ShoppingCart } from "lucide-react";
+import { format } from "date-fns";
+import { FileMinus2, Plus, Search } from "lucide-react";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { billingApi } from "@/lib/api/billing";
-import { inventoryApi, type PurchaseOrder, type Supplier } from "@/lib/api/inventory";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
-import { sortClientRecords, toggleSortConfig } from "@/lib/utils/table-sort";
+import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
-function normalizeResults<T>(value: { results?: T[] } | T[] | undefined): T[] {
-  if (!value) return [];
-  return Array.isArray(value) ? value : value.results ?? [];
-}
-
-export default function VendorCreditsPage() {
-  return (
-    <PermissionPageGuard permission="view_billing">
-      <VendorCreditsContent />
-    </PermissionPageGuard>
-  );
+function getStatusVariant(status: string) {
+  switch (status) {
+    case "issued":
+      return "success";
+    case "applied":
+      return "info";
+    case "void":
+      return "danger";
+    default:
+      return "default";
+  }
 }
 
 function VendorCreditsContent() {
-  const [search, setSearch] = useState("");
-  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { formatCurrency } = useCurrency();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>({
+    field: "credit_date",
+    direction: "desc",
+  });
+  const debouncedSearch = useDebounce(search, 500);
 
   const handleSort = (field: string) => {
     setSortConfig((current) => toggleSortConfig(current, field));
+    setPage(1);
   };
 
-  const { data: suppliersData, isLoading: suppliersLoading } = useQuery({
-    queryKey: ["vendor-credits-suppliers", search],
-    queryFn: () => inventoryApi.listSuppliers({ search: search || undefined, is_active: true }),
-  });
-
-  const { data: billsData } = useQuery({
-    queryKey: ["vendor-credits-bills"],
-    queryFn: () => billingApi.bills.list({ status: "open" }),
-  });
-
-  const { data: purchaseOrdersData } = useQuery({
-    queryKey: ["vendor-credits-purchase-orders"],
-    queryFn: () => inventoryApi.listPurchaseOrders({}),
-  });
-
-  const suppliers = useMemo(() => normalizeResults<Supplier>(suppliersData), [suppliersData]);
-  const bills = useMemo(() => billsData?.results ?? [], [billsData]);
-  const purchaseOrders = useMemo(
-    () => normalizeResults<PurchaseOrder>(purchaseOrdersData),
-    [purchaseOrdersData]
-  );
-
-  const supplierSummaries = useMemo(
-    () =>
-      sortClientRecords(
-        suppliers.map((supplier) => {
-        const openBills = bills.filter((bill) => bill.vendor === supplier.id || bill.vendor_name === supplier.name);
-        const relatedPurchaseOrders = purchaseOrders.filter((purchaseOrder) => {
-          const supplierId =
-            typeof purchaseOrder.supplier === "number" ? purchaseOrder.supplier : purchaseOrder.supplier?.id;
-          return supplierId === supplier.id;
-        });
-
-        const outstandingAmount = openBills.reduce(
-          (sum, bill) => sum + Number.parseFloat(bill.amount_due || bill.total || "0"),
-          0
-        );
-
-        return {
-          supplier,
-          openBills,
-          relatedPurchaseOrders,
-          outstandingAmount,
-        };
+  const { data, isLoading } = useQuery({
+    queryKey: ["vendor-credits", page, debouncedSearch, statusFilter, sortConfig],
+    queryFn: () =>
+      billingApi.vendorCredits.list({
+        page,
+        search: debouncedSearch || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        ordering: sortOrderingParam(sortConfig) || "-credit_date",
       }),
-        sortConfig,
-        { name: (row) => row.supplier.name },
-      ),
-    [suppliers, bills, purchaseOrders, sortConfig]
-  );
+  });
+
+  const credits = data?.results ?? [];
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl p-4 sm:p-6">
+      <div className="mx-auto max-w-7xl p-4 sm:p-6 space-y-4">
         <PageHeader
           title="Vendor Credits"
           breadcrumbs={[
@@ -101,125 +79,137 @@ function VendorCreditsContent() {
             { label: "Vendor Credits" },
           ]}
           actions={
-            <div className="flex gap-2">
-              <Link href="/inventory/suppliers">
-                <Button variant="outline" size="sm">Vendor Centre</Button>
-              </Link>
-              <PermissionGuard permission="create_bills">
-                <Link href="/billing/bills/new">
-                  <Button size="sm">
-                    <ReceiptText className="mr-1.5 h-4 w-4" />
-                    New Bill
-                  </Button>
-                </Link>
-              </PermissionGuard>
-            </div>
+            <Link href="/billing/bills">
+              <Button size="sm" variant="outline">
+                <Plus className="mr-1.5 h-4 w-4" />
+                Open Bills
+              </Button>
+            </Link>
           }
         >
-          <Card className="border-dashed">
-            <CardContent className="space-y-3 p-4 text-sm">
-              <div className="font-medium text-foreground">Vendor credits workspace</div>
-              <div className="text-muted-foreground">
-                The app does not yet expose a dedicated vendor-credit posting API. This workspace gets the operational pieces together now: find the supplier, inspect open bills, review related purchase orders, and jump into the adjacent records we need for the credit workflow.
-              </div>
-              <div className="relative max-w-sm">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search suppliers..."
-                  className="pl-9"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <p className="text-sm text-muted-foreground">
+            Manage vendor credit memos. Credits post to the general ledger when applied against open bills.
+          </p>
         </PageHeader>
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Active Suppliers</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{suppliers.length}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Total Credits
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-foreground">{data?.count ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open Bills</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{bills.length}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Issued (this page)
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-foreground">
+                {credits.filter((c) => c.status === "issued").length}
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Purchase Orders</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{purchaseOrders.length}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Unapplied Balance
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-foreground">
+                {formatCurrency(
+                  credits.reduce((sum, credit) => sum + Number.parseFloat(credit.unused_amount || "0"), 0)
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="text-base">Supplier Review Queue</CardTitle>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search vendor credits..."
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-44">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="issued">Issued</SelectItem>
+                  <SelectItem value="applied">Applied</SelectItem>
+                  <SelectItem value="void">Void</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableHeader field="name" sortConfig={sortConfig} onSort={handleSort}>
-                    Supplier
+                  <SortableHeader field="credit_number" sortConfig={sortConfig} onSort={handleSort}>
+                    Credit #
                   </SortableHeader>
-                  <TableHead>Open Bills</TableHead>
-                  <TableHead>Related POs</TableHead>
-                  <TableHead className="text-right">Outstanding</TableHead>
-                  <TableHead className="w-[260px] text-right">Actions</TableHead>
+                  <SortableHeader field="credit_date" sortConfig={sortConfig} onSort={handleSort}>
+                    Date
+                  </SortableHeader>
+                  <TableHead>Vendor</TableHead>
+                  <TableHead>Bill</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Unused</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {suppliersLoading ? (
+                {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                      Loading suppliers...
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                      Loading vendor credits...
                     </TableCell>
                   </TableRow>
-                ) : supplierSummaries.length === 0 ? (
+                ) : credits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                      No suppliers match the current search.
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                      No vendor credits found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  supplierSummaries.map(({ supplier, openBills, relatedPurchaseOrders, outstandingAmount }) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell>
-                        <div className="font-medium text-foreground">{supplier.name}</div>
-                        <div className="text-xs text-muted-foreground">{supplier.supplier_code}</div>
-                      </TableCell>
-                      <TableCell>{openBills.length}</TableCell>
-                      <TableCell>{relatedPurchaseOrders.length}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(outstandingAmount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Link href={`/inventory/suppliers/${supplier.id}`}>
-                            <Button variant="outline" size="sm">
-                              <FileMinus2 className="mr-1.5 h-4 w-4" />
-                              Vendor
-                            </Button>
-                          </Link>
-                          <Link href={`/billing/bills${openBills[0] ? `/${openBills[0].id}` : ""}`}>
-                            <Button variant="outline" size="sm">
-                              <ReceiptText className="mr-1.5 h-4 w-4" />
-                              Bills
-                            </Button>
-                          </Link>
-                          <Link href="/inventory/purchase-orders">
-                            <Button variant="outline" size="sm">
-                              <ShoppingCart className="mr-1.5 h-4 w-4" />
-                              POs
-                            </Button>
-                          </Link>
+                  credits.map((credit) => (
+                    <TableRow key={credit.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <FileMinus2 className="h-4 w-4 text-muted-foreground" />
+                          {credit.credit_number}
                         </div>
                       </TableCell>
+                      <TableCell>
+                        {credit.credit_date
+                          ? format(new Date(credit.credit_date), "MMM d, yyyy")
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{credit.vendor_name ?? `Vendor #${credit.vendor}`}</TableCell>
+                      <TableCell>
+                        {credit.bill_number ? (
+                          <Link href={`/billing/bills/${credit.bill}`} className="text-primary hover:underline">
+                            {credit.bill_number}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(credit.status)}>{credit.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(credit.total)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(credit.unused_amount)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -228,42 +218,35 @@ function VendorCreditsContent() {
           </CardContent>
         </Card>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Current Workflow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex gap-3">
-                <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>Review the supplier record and confirm the return or billing issue with the vendor.</span>
-              </div>
-              <div className="flex gap-3">
-                <ReceiptText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>Open the related vendor bill to confirm the original amount and payment status.</span>
-              </div>
-              <div className="flex gap-3">
-                <ShoppingCart className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>Use purchase orders and receiving history to validate shortages, returns, or damaged stock.</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Next Backend Step</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <div>
-                A dedicated vendor-credit entity still needs backend support for posting, approval, application against bills, and accounting impact.
-              </div>
-              <div>
-                This route is in place now so staff can start from one screen instead of hopping between suppliers, bills, and purchase orders manually.
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {data && (data.next || data.previous) ? (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!data.previous}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!data.next}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+export default function VendorCreditsPage() {
+  return (
+    <PermissionPageGuard permission="view_billing">
+      <VendorCreditsContent />
+    </PermissionPageGuard>
   );
 }

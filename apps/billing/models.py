@@ -872,12 +872,16 @@ class Invoice(models.Model):
         # Auto-generate invoice number
         if not self.invoice_number:
             if self.branch:
-                # Use branch sequence if branch is available
-                # Use separate numbering for proforma invoices
                 if self.status == 'proforma':
                     self.invoice_number = self.branch.get_next_proforma_number()
                 else:
-                    self.invoice_number = self.branch.get_next_invoice_number()
+                    from apps.accounting.document_numbering import DocumentNumberService
+
+                    self.invoice_number = DocumentNumberService.allocate(
+                        'invoice',
+                        self.branch,
+                        document_date=self.invoice_date,
+                    )
             else:
                 # Fallback: Generate invoice number without branch code
                 # Find last invoice number and increment
@@ -935,8 +939,13 @@ class Invoice(models.Model):
             except Invoice.DoesNotExist:
                 pass
 
-        # Calculate amount due
-        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+        # Operational balances: amount_due never negative; amount_paid capped at total.
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(
+            self.total,
+            self.amount_paid,
+        )
         
         # Auto-update status based on payment
         if self.amount_paid >= self.total and self.total > 0:
@@ -996,7 +1005,12 @@ class Invoice(models.Model):
         self.shop_supplies_fee = estimate.shop_supplies_fee
         self.environmental_fee = estimate.environmental_fee
         self.total = estimate.total
-        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(
+            self.total,
+            self.amount_paid,
+        )
 
         self.line_items.all().delete()
         for order, item in enumerate(estimate.line_items.order_by('order', 'id')):
@@ -1109,8 +1123,10 @@ class Invoice(models.Model):
             self.environmental_fee
         ).quantize(Decimal('0.01'))
         
-        # Amount due
-        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+        # Amount due (operational — never negative)
+        from apps.billing.balance_utils import operational_collection_balances
+
+        _, self.amount_due = operational_collection_balances(self.total, self.amount_paid)
 
     def populate_line_items_from_work_order(self):
         """Create InvoiceLineItem rows from billable work order tasks and parts.
@@ -1274,7 +1290,10 @@ class Invoice(models.Model):
             for p in self.payments.filter(status='completed')
         ) or Decimal('0')
         credit_total = self.credit_note_applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
-        self.amount_paid = (total_payments + credit_total).quantize(Decimal('0.01'))
+        collected = (total_payments + credit_total).quantize(Decimal('0.01'))
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(self.total, collected)
         self.save()
 
 
@@ -1478,16 +1497,26 @@ class Payment(models.Model):
     def save(self, *args, **kwargs):
         # Auto-generate payment number if not set
         if not self.payment_number:
-            last_payment = Payment.objects.order_by('-id').first()
-            if last_payment and last_payment.payment_number:
-                try:
-                    last_number = int(last_payment.payment_number.replace('PAY', ''))
-                    new_number = last_number + 1
-                except (ValueError, AttributeError):
-                    new_number = 1
+            branch = getattr(self.invoice, 'branch', None) if self.invoice_id else None
+            if branch:
+                from apps.accounting.document_numbering import DocumentNumberService
+
+                self.payment_number = DocumentNumberService.allocate(
+                    'payment',
+                    branch,
+                    document_date=self.payment_date,
+                )
             else:
-                new_number = 1
-            self.payment_number = f'PAY{new_number:06d}'
+                last_payment = Payment.objects.order_by('-id').first()
+                if last_payment and last_payment.payment_number:
+                    try:
+                        last_number = int(last_payment.payment_number.replace('PAY', ''))
+                        new_number = last_number + 1
+                    except (ValueError, AttributeError):
+                        new_number = 1
+                else:
+                    new_number = 1
+                self.payment_number = f'PAY{new_number:06d}'
         
         is_new = self.pk is None
         old_status = None
@@ -2043,8 +2072,17 @@ class CreditNote(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.credit_note_number:
-            from django.utils.crypto import get_random_string
-            self.credit_note_number = f"CN-{get_random_string(8).upper()}"
+            if self.branch_id:
+                from apps.accounting.document_numbering import DocumentNumberService
+
+                self.credit_note_number = DocumentNumberService.allocate(
+                    'credit_note',
+                    self.branch,
+                    document_date=self.credit_date,
+                )
+            else:
+                from django.utils.crypto import get_random_string
+                self.credit_note_number = f"CN-{get_random_string(8).upper()}"
         
         if self.pk is None:
             self.unused_amount = self.total
@@ -2054,10 +2092,14 @@ class CreditNote(models.Model):
     def calculate_totals(self):
         """Recalculate totals based on line items"""
         lines = self.line_items.all()
-        self.subtotal = sum(line.total for line in lines)
-        # Simplified tax logic for now
-        self.tax_amount = 0 
-        self.total = self.subtotal + self.tax_amount
+        self.subtotal = sum(line.total for line in lines) or Decimal('0')
+
+        taxable_subtotal = sum(line.total for line in lines if line.is_taxable) or Decimal('0')
+        from apps.billing.tax_service import TaxService
+
+        breakdown = TaxService.calculate_breakdown(taxable_subtotal)
+        self.tax_amount = breakdown.total_tax
+        self.total = (self.subtotal + self.tax_amount).quantize(Decimal('0.01'))
         
         if self.status == 'draft':
             self.unused_amount = self.total
@@ -2090,7 +2132,7 @@ class CreditNoteLineItem(models.Model):
 class CreditNoteApplication(models.Model):
     """
     Applies issued credit note balance toward a customer invoice (reduces amount due).
-    Operational allocation; GL for the note is posted when the credit note is issued.
+    GL is posted when the application is created (AR credit / revenue reversal).
     """
 
     credit_note = models.ForeignKey(
@@ -2122,6 +2164,144 @@ class CreditNoteApplication(models.Model):
 
     def __str__(self):
         return f"{self.credit_note_id} → Inv {self.invoice_id}: {self.amount}"
+
+
+class VendorCredit(models.Model):
+    """Vendor credit memo — reduces AP when applied to open bills."""
+
+    credit_number = models.CharField(max_length=50, unique=True, editable=False)
+    vendor = models.ForeignKey(
+        'inventory.Supplier',
+        on_delete=models.PROTECT,
+        related_name='vendor_credits',
+    )
+    bill = models.ForeignKey(
+        'Bill',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_credits',
+        help_text='Optional link to the original vendor bill',
+    )
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name='vendor_credits')
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('issued', 'Issued'),
+        ('applied', 'Applied'),
+        ('void', 'Void'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    credit_date = models.DateField(default=timezone.now)
+    reason = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    unused_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='vendor_credits_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-credit_date', '-credit_number']
+
+    def __str__(self):
+        return f"{self.credit_number} - {self.vendor}"
+
+    def save(self, *args, **kwargs):
+        if not self.credit_number and self.branch_id:
+            from apps.accounting.document_numbering import DocumentNumberService
+
+            self.credit_number = DocumentNumberService.allocate(
+                'vendor_credit',
+                self.branch,
+                document_date=self.credit_date,
+            )
+        if self.pk is None:
+            self.unused_amount = self.total
+        super().save(*args, **kwargs)
+
+    def calculate_totals(self):
+        lines = self.line_items.all()
+        self.subtotal = sum(line.total for line in lines) or Decimal('0')
+        taxable_subtotal = sum(line.total for line in lines if line.is_taxable) or Decimal('0')
+        from apps.billing.tax_service import TaxService
+
+        breakdown = TaxService.calculate_breakdown(taxable_subtotal)
+        self.tax_amount = breakdown.total_tax
+        self.total = (self.subtotal + self.tax_amount).quantize(Decimal('0.01'))
+
+        if self.status == 'draft':
+            self.unused_amount = self.total
+        elif self.status in ('issued', 'applied') and self.pk:
+            from django.db.models import Sum
+
+            applied_sum = self.applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+            self.unused_amount = max(
+                Decimal('0'),
+                (self.total - applied_sum).quantize(Decimal('0.01')),
+            )
+            if self.status == 'issued' and self.unused_amount == 0 and self.total > 0:
+                self.status = 'applied'
+        self.save()
+
+
+class VendorCreditLineItem(models.Model):
+    vendor_credit = models.ForeignKey(VendorCredit, on_delete=models.CASCADE, related_name='line_items')
+    description = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    is_taxable = models.BooleanField(default=True)
+    inventory_item = models.ForeignKey(
+        'inventory.Part',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_credit_line_items',
+    )
+
+    def save(self, *args, **kwargs):
+        self.total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
+        super().save(*args, **kwargs)
+
+
+class VendorCreditApplication(models.Model):
+    """Apply issued vendor credit toward an open bill (reduces amount due). GL posts on create."""
+
+    vendor_credit = models.ForeignKey(
+        VendorCredit,
+        on_delete=models.CASCADE,
+        related_name='applications',
+    )
+    bill = models.ForeignKey(
+        'Bill',
+        on_delete=models.PROTECT,
+        related_name='vendor_credit_applications',
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    applied_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_credit_applications_recorded',
+    )
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+        indexes = [
+            models.Index(fields=['vendor_credit', '-applied_at']),
+            models.Index(fields=['bill', '-applied_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.vendor_credit_id} → Bill {self.bill_id}: {self.amount}"
 
 
 class Bill(models.Model):
@@ -2216,20 +2396,25 @@ class Bill(models.Model):
         return f"{self.bill_number} - {self.vendor.name}"
 
     def save(self, *args, **kwargs):
-        # Auto-generate bill number
         if not self.bill_number:
-            prefix = "BILL" 
-            if self.branch:
-                # Try to include branch prefix if possible, e.g., ACC-BILL-...
-                # Assuming branch has a code or similar, or just leave as BILL
-                pass
-            
-            # Simple fallback generation
-            last_id = Bill.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
-            self.bill_number = f"{prefix}{(last_id + 1):06d}"
+            if self.branch_id:
+                from apps.accounting.document_numbering import DocumentNumberService
 
-        # Calculate amount due
-        self.amount_due = self.total - self.amount_paid
+                self.bill_number = DocumentNumberService.allocate(
+                    'bill',
+                    self.branch,
+                    document_date=self.bill_date,
+                )
+            else:
+                last_id = Bill.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
+                self.bill_number = f"BILL{(last_id + 1):06d}"
+
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(
+            self.total,
+            self.amount_paid,
+        )
         
         # Update status based on payment
         if self.status not in ['draft', 'pending_approval', 'rejected', 'void']:
@@ -2245,16 +2430,16 @@ class Bill(models.Model):
         super().save(*args, **kwargs)
 
     def calculate_totals(self):
-        """Calculate totals from line items"""
+        """Calculate totals from line items using TaxService for recoverable input tax."""
         lines = self.line_items.all()
-        self.subtotal = sum(line.total for line in lines)
-        # Tax could be sum of line items or handled separately. 
-        # For simplicity, let's assume tax is not auto-calculated per line item yet unless specified.
-        # But if we had tax fields on line items, we'd sum them.
-        # For now, we will rely on frontend or manual input for tax if lines don't specify it, 
-        # OR just sum total.
-        # Let's simple sum totals.
-        self.total = self.subtotal + self.tax_amount
+        self.subtotal = sum(line.total for line in lines) or Decimal('0')
+
+        taxable_subtotal = sum(line.total for line in lines if line.is_taxable) or Decimal('0')
+        from apps.billing.tax_service import TaxService
+
+        breakdown = TaxService.calculate_breakdown(taxable_subtotal)
+        self.tax_amount = breakdown.total_tax
+        self.total = (self.subtotal + self.tax_amount).quantize(Decimal('0.01'))
         self.save()
 
 
@@ -2264,6 +2449,7 @@ class BillLineItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    is_taxable = models.BooleanField(default=True)
     
     # Optional: Link to an expense account if user knows it
     # For now, just a text field or simple category

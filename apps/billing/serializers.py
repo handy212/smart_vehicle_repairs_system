@@ -21,6 +21,9 @@ from apps.billing.models import (
     CreditNote,
     CreditNoteLineItem,
     CreditNoteApplication,
+    VendorCredit,
+    VendorCreditLineItem,
+    VendorCreditApplication,
     Bill,
     BillLineItem,
     BillPayment,
@@ -1050,9 +1053,36 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
             'environmental_fee': {'required': False},
             'status': {'required': False},
         }
+
+    def _has_posted_journal(self, invoice):
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+
+        return JournalEntry.objects.filter(
+            content_type=ContentType.objects.get_for_model(invoice),
+            object_id=invoice.id,
+        ).exists()
+
+    def validate(self, data):
+        if self.instance is not None and self._has_posted_journal(self.instance):
+            raise serializers.ValidationError({
+                "detail": (
+                    "Posted invoices cannot be edited. Void the invoice (if allowed) "
+                    "or post correcting entries instead."
+                )
+            })
+        return data
     
     @transaction.atomic
     def update(self, instance, validated_data):
+        if self._has_posted_journal(instance):
+            raise serializers.ValidationError({
+                "detail": (
+                    "Posted invoices cannot be edited. Void the invoice (if allowed) "
+                    "or post correcting entries instead."
+                )
+            })
+
         line_items_data = validated_data.pop('line_items', None)
         discount_percentage_updated = 'discount_percentage' in validated_data
         
@@ -1140,7 +1170,12 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
                     instance.shop_supplies_fee +
                     instance.environmental_fee
                 ).quantize(Decimal('0.01'))
-                instance.amount_due = (instance.total - instance.amount_paid).quantize(Decimal('0.01'))
+                from apps.billing.balance_utils import operational_collection_balances
+
+                instance.amount_paid, instance.amount_due = operational_collection_balances(
+                    instance.total,
+                    instance.amount_paid,
+                )
                 instance.save()
             else:
                 # No line items provided; fallback to work order totals if available
@@ -1256,6 +1291,19 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"invoice": f"Invoice {inv_num} is already fully paid. Cannot record additional payments."}
             )
+
+        amount_due = invoice.amount_due
+        if amount > amount_due:
+            from apps.accounting.models import AccountingControl
+
+            controls = AccountingControl.get_settings()
+            if not controls.customer_prepayment_account_id:
+                raise serializers.ValidationError({
+                    "amount": (
+                        "Payment exceeds invoice balance. Configure a customer prepayment "
+                        "account in Accounting Controls to record overpayments."
+                    )
+                })
 
         payment_method = data.get('payment_method')
         if payment_method == 'cash':
@@ -1740,6 +1788,94 @@ class CreditNoteApplySerializer(serializers.Serializer):
 
 
 # ============================================================================
+# VENDOR CREDIT SERIALIZERS
+# ============================================================================
+
+class VendorCreditLineItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VendorCreditLineItem
+        fields = ['id', 'description', 'quantity', 'unit_price', 'total', 'is_taxable', 'inventory_item']
+        read_only_fields = ['total']
+
+
+class VendorCreditApplicationSerializer(serializers.ModelSerializer):
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    applied_by_name = serializers.CharField(source='applied_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = VendorCreditApplication
+        fields = ['id', 'bill', 'bill_number', 'amount', 'applied_by', 'applied_by_name', 'applied_at']
+        read_only_fields = fields
+
+
+class VendorCreditListSerializer(serializers.ModelSerializer):
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+
+    class Meta:
+        model = VendorCredit
+        fields = [
+            'id', 'credit_number', 'credit_date', 'status', 'vendor', 'vendor_name',
+            'bill', 'bill_number', 'total', 'unused_amount', 'reason', 'created_at',
+        ]
+
+
+class VendorCreditDetailSerializer(serializers.ModelSerializer):
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    line_items = VendorCreditLineItemSerializer(many=True, read_only=True)
+    applications = VendorCreditApplicationSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = VendorCredit
+        fields = [
+            'id', 'credit_number', 'credit_date', 'status', 'vendor', 'vendor_name',
+            'bill', 'bill_number', 'branch', 'subtotal', 'tax_amount', 'total',
+            'unused_amount', 'reason', 'notes', 'line_items', 'applications',
+            'created_by', 'created_at', 'updated_at',
+        ]
+
+
+class VendorCreditCreateSerializer(serializers.ModelSerializer):
+    line_items = VendorCreditLineItemSerializer(many=True)
+
+    class Meta:
+        model = VendorCredit
+        fields = [
+            'id', 'credit_number', 'vendor', 'bill', 'credit_date', 'reason', 'notes', 'line_items',
+        ]
+        read_only_fields = ['id', 'credit_number']
+
+    @transaction.atomic
+    def create(self, validated_data):
+        line_items_data = validated_data.pop('line_items')
+        from apps.branches.utils import resolve_branch
+
+        validated_data['created_by'] = self.context['request'].user
+        validated_data['branch'] = resolve_branch(self.context['request'])
+        vendor_credit = VendorCredit.objects.create(**validated_data)
+        for item_data in line_items_data:
+            VendorCreditLineItem.objects.create(vendor_credit=vendor_credit, **item_data)
+        vendor_credit.calculate_totals()
+        return vendor_credit
+
+
+class VendorCreditApplySerializer(serializers.Serializer):
+    bill = serializers.IntegerField(min_value=1)
+    amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        min_value=Decimal('0.01'),
+    )
+
+    def validate_bill(self, value):
+        if not Bill.objects.filter(pk=value).exists():
+            raise serializers.ValidationError('Invalid bill.')
+        return value
+
+
+# ============================================================================
 # BILL SERIALIZERS
 # ============================================================================
 
@@ -1750,7 +1886,7 @@ class BillLineItemSerializer(serializers.ModelSerializer):
         model = BillLineItem
         fields = [
             'id', 'description', 'quantity', 'unit_price', 
-            'total', 'expense_category', 'inventory_item',
+            'total', 'is_taxable', 'expense_category', 'inventory_item',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['total', 'created_at', 'updated_at']
@@ -1762,7 +1898,7 @@ class BillLineItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BillLineItem
         fields = [
-            'description', 'quantity', 'unit_price', 'expense_category',
+            'description', 'quantity', 'unit_price', 'is_taxable', 'expense_category',
             'inventory_item'
         ]
 
@@ -1825,7 +1961,6 @@ class BillCreateSerializer(serializers.ModelSerializer):
             'purchase_order',
             'reference_number', 'bill_date', 'due_date',
             'terms', 'notes', 'status', 'currency',
-            'tax_amount',
             'line_items'
         ]
         read_only_fields = ['id', 'bill_number']

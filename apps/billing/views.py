@@ -36,6 +36,8 @@ from apps.billing.models import (
     CreditNote,
     CreditNoteLineItem,
     CreditNoteApplication,
+    VendorCredit,
+    VendorCreditApplication,
     Bill,
     BillLineItem,
     BillPayment,
@@ -70,6 +72,10 @@ from apps.billing.serializers import (
     CreditNoteDetailSerializer,
     CreditNoteCreateSerializer,
     CreditNoteApplySerializer,
+    VendorCreditListSerializer,
+    VendorCreditDetailSerializer,
+    VendorCreditCreateSerializer,
+    VendorCreditApplySerializer,
     BillSerializer,
     BillCreateSerializer,
     BillLineItemSerializer,
@@ -1147,15 +1153,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             )
             
             # Update invoice
-            invoice.amount_paid += payment.amount
-            invoice.amount_due = invoice.total - invoice.amount_paid
-            
-            if invoice.amount_due <= 0:
-                invoice.status = 'paid'
-            elif invoice.amount_paid > 0:
-                invoice.status = 'partial'
-            
-            invoice.save()
+            invoice.recalculate_amount_paid_from_collections()
             
             # Send payment notification
             try:
@@ -2187,7 +2185,7 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
                         )
 
                 invoice.refresh_from_db()
-                amount_due = (invoice.total - invoice.amount_paid).quantize(Decimal('0.01'))
+                amount_due = invoice.amount_due
                 if amount_due <= 0:
                     return Response(
                         {'error': 'This invoice has no open balance.'},
@@ -2220,6 +2218,11 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
                 invoice.refresh_from_db()
                 invoice.recalculate_amount_paid_from_collections()
                 cn.refresh_from_db()
+
+                application = cn.applications.filter(invoice=invoice).order_by('-id').first()
+                if application:
+                    from apps.accounting.services import AccountingService
+                    AccountingService.post_credit_note_application(application)
 
         except Invoice.DoesNotExist:
             return Response({'error': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -2257,6 +2260,114 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
                 {"error": f"Failed to generate print view: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class VendorCreditViewSet(viewsets.ModelViewSet):
+    """ViewSet for vendor credit memos (AP credits)."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_bills')]
+        if self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_bills')]
+        if self.action in ['update', 'partial_update', 'apply', 'issue']:
+            return [IsAuthenticated(), HasPermission('edit_bills')]
+        if self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('manage_billing')]
+        return [IsAuthenticated(), HasPermission('view_bills')]
+
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status', 'vendor', 'bill', 'credit_date']
+    search_fields = ['credit_number', 'vendor__name', 'vendor__supplier_code', 'reason']
+    ordering_fields = ['credit_date', 'credit_number', 'total', 'status', 'created_at']
+    ordering = ['-credit_date']
+
+    def get_queryset(self):
+        queryset = VendorCredit.objects.select_related(
+            'vendor', 'bill', 'branch', 'created_by'
+        ).prefetch_related('line_items', 'applications__bill')
+        branch = resolve_branch(self.request)
+        if branch:
+            queryset = queryset.filter(branch=branch)
+        return queryset
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return VendorCreditListSerializer
+        if self.action == 'create':
+            return VendorCreditCreateSerializer
+        return VendorCreditDetailSerializer
+
+    def perform_create(self, serializer):
+        branch = resolve_branch(self.request)
+        serializer.save(created_by=self.request.user, branch=branch)
+
+    @action(detail=True, methods=['post'])
+    def issue(self, request, pk=None):
+        vendor_credit = self.get_object()
+        if vendor_credit.status != 'draft':
+            return Response({'error': 'Only draft vendor credits can be issued.'}, status=status.HTTP_400_BAD_REQUEST)
+        vendor_credit.status = 'issued'
+        vendor_credit.save(update_fields=['status', 'updated_at'])
+        return Response(VendorCreditDetailSerializer(vendor_credit, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def apply(self, request, pk=None):
+        serializer = VendorCreditApplySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        bill_id = serializer.validated_data['bill']
+        requested_amount = serializer.validated_data.get('amount')
+        vendor_credit = self.get_object()
+
+        try:
+            with transaction.atomic():
+                vc = VendorCredit.objects.select_for_update().get(pk=vendor_credit.pk)
+                bill = Bill.objects.select_for_update().get(pk=bill_id)
+
+                if vc.status != 'issued':
+                    return Response({'error': 'Only issued vendor credits can be applied.'}, status=status.HTTP_400_BAD_REQUEST)
+                if vc.unused_amount <= 0:
+                    return Response({'error': 'This vendor credit has no remaining balance.'}, status=status.HTTP_400_BAD_REQUEST)
+                if bill.vendor_id != vc.vendor_id:
+                    return Response({'error': 'Bill must belong to the same vendor as the credit.'}, status=status.HTTP_400_BAD_REQUEST)
+                if vc.branch_id and bill.branch_id and vc.branch_id != bill.branch_id:
+                    return Response({'error': 'Vendor credit and bill must be for the same branch.'}, status=status.HTTP_400_BAD_REQUEST)
+                if bill.status in ('void', 'paid', 'draft', 'pending_approval', 'rejected'):
+                    return Response({'error': 'Cannot apply credit to this bill status.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                bill.refresh_from_db()
+                amount_due = bill.amount_due
+                if amount_due <= 0:
+                    return Response({'error': 'This bill has no open balance.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                cap = min(vc.unused_amount, amount_due).quantize(Decimal('0.01'))
+                apply_amt = cap if requested_amount is None else min(cap, requested_amount.quantize(Decimal('0.01')))
+                if apply_amt <= 0:
+                    return Response({'error': 'Nothing to apply.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                application = VendorCreditApplication.objects.create(
+                    vendor_credit=vc,
+                    bill=bill,
+                    amount=apply_amt,
+                    applied_by=request.user,
+                )
+                vc.calculate_totals()
+                bill.amount_paid = (bill.amount_paid + apply_amt).quantize(Decimal('0.01'))
+                bill.save()
+                vc.refresh_from_db()
+
+                from apps.accounting.services import AccountingService
+                AccountingService.post_vendor_credit_application(application)
+        except Bill.DoesNotExist:
+            return Response({'error': 'Bill not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            VendorCreditDetailSerializer(vc, context={'request': request}).data,
+            status=status.HTTP_200_OK,
+        )
+
 
 class BillViewSet(viewsets.ModelViewSet):
     """

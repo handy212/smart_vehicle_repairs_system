@@ -25,6 +25,24 @@ class BillTests(TestCase):
         
         self.branch = Branch.objects.create(name="Main Branch", code="MAIN", is_active=True, created_by=self.user)
         self.supplier = Supplier.objects.create(name="Test Vendor", supplier_code="TEST001")
+
+        from apps.accounting.models import AccountingControl
+        from apps.accounting.services import AccountingService
+
+        controls = AccountingControl.get_settings()
+        controls.accounts_payable_account = AccountingService.get_or_create_account(
+            '2000', 'Accounts Payable', 'liability', 'credit'
+        )
+        controls.default_expense_account = AccountingService.get_or_create_account(
+            '5000', 'Operating Expense', 'expense', 'debit'
+        )
+        controls.input_tax_account = AccountingService.get_or_create_account(
+            '2200', 'Input Tax', 'asset', 'debit'
+        )
+        controls.inventory_asset_account = AccountingService.get_or_create_account(
+            '1500', 'Inventory Asset', 'asset', 'debit'
+        )
+        controls.save()
         
         # Add user to branch (if applicable, or assume superuser for simplicity)
         # self.user.branches.add(self.branch) 
@@ -46,6 +64,7 @@ class BillTests(TestCase):
             description="Test bill line",
             quantity=1,
             unit_price=defaults["total"],
+            is_taxable=False,
         )
         bill.refresh_from_db()
         return bill
@@ -84,12 +103,14 @@ class BillTests(TestCase):
                     "description": "Test Item 1",
                     "quantity": 2,
                     "unit_price": "100.00",
-                    "expense_category": "Office Supplies"
+                    "expense_category": "Office Supplies",
+                    "is_taxable": False,
                 },
                  {
                     "description": "Test Item 2",
                     "quantity": 1,
-                    "unit_price": "50.00"
+                    "unit_price": "50.00",
+                    "is_taxable": False,
                 }
             ]
         }

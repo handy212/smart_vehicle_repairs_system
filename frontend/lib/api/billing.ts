@@ -303,6 +303,56 @@ export interface CreditNoteListResponse {
   results: CreditNote[];
 }
 
+export interface VendorCreditLineItem {
+  id?: number;
+  description: string;
+  quantity: number | string;
+  unit_price: string;
+  total?: string;
+  is_taxable?: boolean;
+  inventory_item?: number | null;
+}
+
+export interface VendorCreditApplication {
+  id: number;
+  bill: number;
+  bill_number?: string;
+  amount: string;
+  applied_by?: number | null;
+  applied_by_name?: string;
+  applied_at?: string;
+}
+
+export interface VendorCredit {
+  id: number;
+  credit_number: string;
+  vendor: number;
+  vendor_name?: string;
+  bill?: number | null;
+  bill_number?: string;
+  branch?: number;
+  credit_date: string;
+  status: "draft" | "issued" | "applied" | "void";
+  reason?: string;
+  notes?: string;
+  subtotal?: string;
+  tax_amount?: string;
+  total: string;
+  unused_amount: string;
+  line_items?: VendorCreditLineItem[];
+  applications?: VendorCreditApplication[];
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface VendorCreditListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: VendorCredit[];
+}
+
 
 export interface BillLineItem {
   id?: number;
@@ -621,6 +671,49 @@ export const billingApi = {
       data: { invoice: number; amount?: string | number }
     ): Promise<CreditNote> => {
       const response = await apiClient.post(`/billing/credit-notes/${id}/apply/`, data);
+      return response.data;
+    },
+  },
+
+  vendorCredits: {
+    list: async (params?: {
+      page?: number;
+      status?: string;
+      vendor?: number;
+      search?: string;
+      ordering?: string;
+    }): Promise<VendorCreditListResponse> => {
+      const response = await apiClient.get("/billing/vendor-credits/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<VendorCredit> => {
+      const response = await apiClient.get(`/billing/vendor-credits/${id}/`);
+      return response.data;
+    },
+
+    create: async (data: {
+      vendor: number;
+      bill?: number | null;
+      credit_date?: string;
+      reason?: string;
+      notes?: string;
+      line_items: VendorCreditLineItem[];
+    }): Promise<VendorCredit> => {
+      const response = await apiClient.post("/billing/vendor-credits/", data);
+      return response.data;
+    },
+
+    issue: async (id: number): Promise<VendorCredit> => {
+      const response = await apiClient.post(`/billing/vendor-credits/${id}/issue/`);
+      return response.data;
+    },
+
+    apply: async (
+      id: number,
+      data: { bill: number; amount?: string | number }
+    ): Promise<VendorCredit> => {
+      const response = await apiClient.post(`/billing/vendor-credits/${id}/apply/`, data);
       return response.data;
     },
   },

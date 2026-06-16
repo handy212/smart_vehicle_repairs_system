@@ -102,13 +102,16 @@ class ManagementReportingService:
         }
 
     @classmethod
-    def get_consolidated_profit_loss(cls, start_date, end_date):
+    def get_consolidated_profit_loss(cls, start_date, end_date, branch_ids=None):
         from apps.branches.models import Branch
         from .services import ReportingService
 
-        consolidated = ReportingService.get_profit_loss(start_date, end_date, branch_id=None)
+        branch_qs = Branch.objects.filter(is_active=True).order_by('name')
+        if branch_ids is not None:
+            branch_qs = branch_qs.filter(id__in=branch_ids)
+
         branches = []
-        for branch in Branch.objects.filter(is_active=True).order_by('name'):
+        for branch in branch_qs:
             b_pl = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch.id)
             branches.append({
                 'branch_id': branch.id,
@@ -116,19 +119,45 @@ class ManagementReportingService:
                 'totals': {k: _decimal_to_float(v) for k, v in b_pl['totals'].items()},
             })
 
+        if branch_ids is not None and len(branch_ids) == 1:
+            consolidated = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_ids[0])
+        elif branch_ids is not None:
+            consolidated = cls._aggregate_branch_pl_totals(branches)
+        else:
+            consolidated = ReportingService.get_profit_loss(start_date, end_date, branch_id=None)
+
         return {
             'period': {'start': start_date, 'end': end_date},
             'consolidated': cls._serialize_pl(consolidated),
             'branches': branches,
         }
 
+    @staticmethod
+    def _aggregate_branch_pl_totals(branch_rows):
+        income = sum(Decimal(str(row['totals'].get('income', 0))) for row in branch_rows)
+        expenses = sum(Decimal(str(row['totals'].get('expenses', 0))) for row in branch_rows)
+        net_income = income - expenses
+        return {
+            'income': [],
+            'expenses': [],
+            'totals': {
+                'income': income,
+                'expenses': expenses,
+                'net_income': net_income,
+            },
+        }
+
     @classmethod
-    def get_branch_pl_scorecard(cls, start_date, end_date):
+    def get_branch_pl_scorecard(cls, start_date, end_date, branch_ids=None):
         from apps.branches.models import Branch
         from .services import ReportingService
 
+        branch_qs = Branch.objects.filter(is_active=True).order_by('name')
+        if branch_ids is not None:
+            branch_qs = branch_qs.filter(id__in=branch_ids)
+
         rows = []
-        for branch in Branch.objects.filter(is_active=True).order_by('name'):
+        for branch in branch_qs:
             pl = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch.id)
             income = pl['totals']['income']
             net = pl['totals']['net_income']

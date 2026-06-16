@@ -89,6 +89,33 @@ def get_report_branch_id(request):
     """
     return get_accounting_branch_id(request)
 
+
+def get_accessible_branch_ids(request):
+    """Branch IDs the current user may include in consolidated management reports."""
+    from apps.branches.models import Branch
+
+    scoped_id = get_report_branch_id(request)
+    if scoped_id is not None:
+        return [scoped_id]
+
+    user = request.user
+    role = getattr(user, 'role', None)
+    if user.is_superuser or role in ('super-admin', 'admin'):
+        return list(Branch.objects.filter(is_active=True).order_by('id').values_list('id', flat=True))
+    if role == 'manager':
+        return list(user.managed_branches.filter(is_active=True).order_by('id').values_list('id', flat=True))
+    if user.branch_id:
+        return [user.branch_id]
+    return []
+
+
+def compute_bank_statement_reconciled_balance(statement):
+    """Opening balance plus net matched line movement (debits minus credits)."""
+    movement = Decimal('0')
+    for line in statement.lines.filter(matched=True):
+        movement += (line.debit_amount or Decimal('0')) - (line.credit_amount or Decimal('0'))
+    return (statement.opening_balance or Decimal('0')) + movement
+
 class BalanceSheetView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
@@ -306,6 +333,19 @@ class AccountingTillViewSet(BillingTillViewSet):
     manage_permission = 'manage_accounting_periods'
 
 
+class SubledgerReconciliationView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        from .subledger_reconciliation import reconcile_subledgers
+
+        date_str = request.query_params.get('date')
+        as_of_date = parse_date(date_str) if date_str else timezone.now().date()
+        branch_id = get_report_branch_id(request)
+        report = reconcile_subledgers(branch_id=branch_id, as_of_date=as_of_date)
+        return Response(report)
+
+
 class TillReconciliationReportView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_accounting')]
 
@@ -413,8 +453,16 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     queryset = BankStatement.objects.all()
     serializer_class = BankStatementSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            from .serializers import BankStatementDetailSerializer
+            return BankStatementDetailSerializer
+        return BankStatementSerializer
+
     def get_queryset(self):
         qs = super().get_queryset()
+        if self.action == 'retrieve':
+            qs = qs.prefetch_related('lines')
         branch_id = get_accounting_branch_id(self.request)
         if branch_id is not None:
             qs = qs.filter(
@@ -450,6 +498,23 @@ class BankStatementViewSet(viewsets.ModelViewSet):
         if unmatched_count:
             return Response(
                 {'error': f'Cannot reconcile statement with {unmatched_count} unmatched line(s).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reconciled_balance = compute_bank_statement_reconciled_balance(statement)
+        closing_balance = statement.closing_balance or Decimal('0')
+        difference = reconciled_balance - closing_balance
+        if abs(difference) > Decimal('0.01'):
+            return Response(
+                {
+                    'error': (
+                        f'Cannot reconcile statement with a balance difference of {difference:.2f}. '
+                        f'Reconciled balance {reconciled_balance:.2f} must equal closing balance {closing_balance:.2f}.'
+                    ),
+                    'reconciled_balance': str(reconciled_balance.quantize(Decimal('0.01'))),
+                    'closing_balance': str(closing_balance.quantize(Decimal('0.01'))),
+                    'difference': str(difference.quantize(Decimal('0.01'))),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -727,6 +792,12 @@ class FundTransferViewSet(viewsets.ModelViewSet):
         
         if transfer.status != 'pending':
             return Response({'error': 'Transfer must be pending'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if transfer.created_by_id == request.user.id:
+            return Response(
+                {'error': 'Fund transfers must be approved by someone other than the creator.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         transfer.status = 'approved'
         transfer.approved_by = request.user
