@@ -331,3 +331,36 @@ class IntegrityRemediationCommandTests(TestCase):
         call_command('backfill_missing_gl_postings', payments_only=True, settings='config.settings.testing')
         after = reconcile_subledgers(branch_id=self.branch.id)
         self.assertTrue(after['accounts_receivable']['in_balance'])
+
+    def test_subledger_reconciliation_nets_customer_prepayments(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('80.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('80.00'),
+            amount_due=Decimal('80.00'),
+            amount_paid=Decimal('0.00'),
+            created_by=self.user,
+        )
+        AccountingService.post_invoice(invoice)
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            bank_account=controls.default_bank_account,
+            amount=Decimal('100.00'),
+            status='completed',
+            processed_by=self.user,
+        )
+        AccountingService.post_payment(payment)
+        invoice.refresh_from_db()
+
+        report = reconcile_subledgers(branch_id=self.branch.id)
+        self.assertTrue(report['accounts_receivable']['in_balance'])
+        self.assertEqual(report['customer_prepayments']['gl_balance'], 20.0)
+        self.assertEqual(report['customer_prepayments']['operational_balance'], 20.0)

@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
+from apps.accounting.gl_posting_checks import bill_payment_has_posted_gl, payment_has_posted_gl
 from apps.accounting.models import JournalEntry
 from apps.accounting.services import AccountingService
 from apps.accounting.subledger_reconciliation import reconcile_subledgers
@@ -70,8 +71,6 @@ class Command(BaseCommand):
         payment_errors = 0
         bill_payment_errors = 0
 
-        payment_type = ContentType.objects.get_for_model(Payment)
-        bill_payment_type = ContentType.objects.get_for_model(BillPayment)
         bill_type = ContentType.objects.get_for_model(Bill)
 
         if post_invoices:
@@ -120,11 +119,7 @@ class Command(BaseCommand):
 
         if post_payments:
             for payment in Payment.objects.filter(status='completed').iterator():
-                if JournalEntry.objects.filter(
-                    content_type=payment_type,
-                    object_id=payment.id,
-                    posted=True,
-                ).exists():
+                if payment_has_posted_gl(payment):
                     continue
                 if dry_run:
                     payment_posts += 1
@@ -142,11 +137,7 @@ class Command(BaseCommand):
 
         if post_bill_payments:
             for bill_payment in BillPayment.objects.select_related('bill').iterator():
-                if JournalEntry.objects.filter(
-                    content_type=bill_payment_type,
-                    object_id=bill_payment.id,
-                    posted=True,
-                ).exists():
+                if bill_payment_has_posted_gl(bill_payment):
                     continue
                 if dry_run:
                     bill_payment_posts += 1

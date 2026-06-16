@@ -1,11 +1,11 @@
 """AR/AP subledger reconciliation against GL control accounts."""
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 
 from apps.accounting.models import AccountingControl
 from apps.accounting.services import ReportingService
-from apps.billing.models import Bill, CreditNote, Invoice, VendorCredit
+from apps.billing.models import Bill, CreditNote, Invoice, Payment, VendorCredit
 
 
 OPEN_INVOICE_STATUSES = ['sent', 'viewed', 'partial', 'overdue', 'open']
@@ -16,12 +16,46 @@ def _money(value):
     return Decimal(str(value or 0)).quantize(Decimal('0.01'))
 
 
+def _payment_prepayment_excess(payment):
+    """Operational unapplied customer prepayment for a completed payment."""
+    net = Decimal(str(payment.amount or 0)) - Decimal(str(payment.refund_amount or 0))
+    net = net.quantize(Decimal('0.01'))
+    allocated = sum(
+        Decimal(str(alloc.amount or 0)) for alloc in payment.allocations.all()
+    ) or Decimal('0')
+    if allocated:
+        return max(Decimal('0'), (net - allocated).quantize(Decimal('0.01')))
+    if payment.invoice_id:
+        invoice_total = Decimal(str(payment.invoice.total or 0))
+        return max(Decimal('0'), (net - invoice_total).quantize(Decimal('0.01')))
+    return net if net > 0 else Decimal('0')
+
+
+def compute_operational_customer_prepayments(*, branch_id=None):
+    """Sum unapplied customer prepayment amounts from completed payments."""
+    payments = Payment.objects.filter(status='completed').prefetch_related(
+        'allocations', 'invoice'
+    )
+    if branch_id:
+        payments = payments.filter(
+            Q(invoice__branch_id=branch_id)
+            | Q(allocations__invoice__branch_id=branch_id)
+        ).distinct()
+
+    total = Decimal('0')
+    for payment in payments:
+        total += _payment_prepayment_excess(payment)
+    return _money(total)
+
+
 def reconcile_subledgers(*, branch_id=None, as_of_date=None):
     """
     Compare GL control balances to operational AR/AP subledgers.
 
-    AR subledger uses positive open invoice balances (amount_due).
-    Customer prepayments are reported separately from AR.
+    AR uses net customer receivable:
+      (AR GL - customer prepayment GL) vs (open invoice due - unapplied CN - operational prepayments)
+
+    This matches docs/ACCOUNTING-POSTING-STANDARD.md section 14.
     """
     controls = AccountingControl.get_settings()
     tolerance = Decimal('0.01')
@@ -50,6 +84,11 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         credit_notes.filter(unused_amount__gt=0).aggregate(total=Sum('unused_amount'))['total']
     )
     ar_subledger_net = (ar_positive_subledger - unapplied_customer_credit_notes).quantize(Decimal('0.01'))
+
+    operational_customer_prepayments = compute_operational_customer_prepayments(branch_id=branch_id)
+    ar_subledger_net_of_prepayments = (
+        ar_subledger_net - operational_customer_prepayments
+    ).quantize(Decimal('0.01'))
 
     bills = Bill.objects.filter(status__in=OPEN_BILL_STATUSES)
     if branch_id:
@@ -81,7 +120,8 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         if prepayment_account else 0
     )
 
-    ar_difference = (ar_gl - ar_subledger_net).quantize(Decimal('0.01'))
+    ar_net_gl = (ar_gl - prepayment_gl).quantize(Decimal('0.01'))
+    ar_difference = (ar_net_gl - ar_subledger_net_of_prepayments).quantize(Decimal('0.01'))
     ap_difference = (ap_gl - ap_subledger_net).quantize(Decimal('0.01'))
 
     return {
@@ -90,9 +130,13 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         'tolerance': float(tolerance),
         'accounts_receivable': {
             'gl_balance': float(ar_gl),
+            'prepayment_gl_balance': float(prepayment_gl),
+            'net_gl_balance': float(ar_net_gl),
+            'operational_prepayments': float(operational_customer_prepayments),
             'subledger_balance': float(ar_positive_subledger),
             'unapplied_customer_credit_notes': float(unapplied_customer_credit_notes),
             'subledger_net_of_credits': float(ar_subledger_net),
+            'subledger_net_of_credits_and_prepayments': float(ar_subledger_net_of_prepayments),
             'subledger_including_credits': float(ar_subledger),
             'difference': float(ar_difference),
             'in_balance': abs(ar_difference) <= tolerance,
@@ -115,6 +159,7 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         },
         'customer_prepayments': {
             'gl_balance': float(prepayment_gl),
+            'operational_balance': float(operational_customer_prepayments),
             'control_account_id': prepayment_account.id if prepayment_account else None,
             'control_account_code': prepayment_account.code if prepayment_account else None,
             'configured': prepayment_account is not None,
