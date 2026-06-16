@@ -1170,7 +1170,12 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
                     instance.shop_supplies_fee +
                     instance.environmental_fee
                 ).quantize(Decimal('0.01'))
-                instance.amount_due = (instance.total - instance.amount_paid).quantize(Decimal('0.01'))
+                from apps.billing.balance_utils import operational_collection_balances
+
+                instance.amount_paid, instance.amount_due = operational_collection_balances(
+                    instance.total,
+                    instance.amount_paid,
+                )
                 instance.save()
             else:
                 # No line items provided; fallback to work order totals if available
@@ -1287,7 +1292,7 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
                 {"invoice": f"Invoice {inv_num} is already fully paid. Cannot record additional payments."}
             )
 
-        amount_due = (invoice.total - invoice.amount_paid).quantize(Decimal('0.01'))
+        amount_due = invoice.amount_due
         if amount > amount_due:
             from apps.accounting.models import AccountingControl
 

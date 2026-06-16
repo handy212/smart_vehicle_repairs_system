@@ -228,16 +228,7 @@ def paystack_callback(request):
             processed_by=processed_by,
         )
 
-        # Update invoice status
-        invoice.amount_paid += amount_ghs
-        invoice.amount_due = invoice.total - invoice.amount_paid
-
-        if invoice.amount_due <= 0:
-            invoice.status = 'paid'
-        elif invoice.amount_paid > 0:
-            invoice.status = 'partial'
-
-        invoice.save()
+        invoice.recalculate_amount_paid_from_collections()
 
         # Activate subscription if this is a subscription invoice
         if invoice.description and 'subscription' in invoice.description.lower():

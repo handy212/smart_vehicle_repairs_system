@@ -4,11 +4,12 @@ from decimal import Decimal
 import json
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Count
 from django.utils import timezone
 
 from apps.accounting.models import Account, AccountingControl, JournalEntry, Transaction
 from apps.accounting.subledger_reconciliation import reconcile_subledgers
-from apps.billing.models import BillPayment, CashierTill, Payment, Refund
+from apps.billing.models import Bill, BillPayment, CashierTill, Invoice, Payment, Refund
 
 
 BANK_SETTLEMENT_PAYMENT_METHODS = {
@@ -23,7 +24,8 @@ BANK_SETTLEMENT_PAYMENT_METHODS = {
 class Command(BaseCommand):
     help = (
         "Validate production accounting data for control accounts, till setup, "
-        "settlement accounts, balanced journals, parent postings, and stale tills."
+        "settlement accounts, balanced journals, subledger reconciliation, "
+        "negative balances, duplicate references, orphan entries, and period locks."
     )
 
     def add_arguments(self, parser):
@@ -52,6 +54,10 @@ class Command(BaseCommand):
         self._check_refunds(issues)
         self._check_vendor_payments(issues)
         self._check_journal_integrity(issues)
+        self._check_negative_balances(issues)
+        self._check_duplicate_references(issues)
+        self._check_orphan_journal_entries(issues)
+        self._check_period_lock_violations(issues)
         self._check_subledger_reconciliation(issues)
         self._check_tills(issues, options['open_till_hours'])
 
@@ -364,6 +370,113 @@ class Command(BaseCommand):
                 journal_entry_id=line.journal_entry_id,
                 account_id=line.account_id,
                 account_code=line.account.code,
+            )
+
+    def _check_negative_balances(self, issues):
+        for invoice in Invoice.objects.exclude(
+            status__in=['void', 'refunded', 'draft', 'proforma']
+        ).filter(amount_due__lt=0).iterator():
+            self._add_issue(
+                issues,
+                'negative_invoice_amount_due',
+                'high',
+                "Invoice has a negative amount_due.",
+                invoice_id=invoice.id,
+                invoice_number=invoice.invoice_number,
+                amount_due=str(invoice.amount_due),
+                total=str(invoice.total),
+                amount_paid=str(invoice.amount_paid),
+            )
+
+        for bill in Bill.objects.exclude(
+            status__in=['void', 'draft', 'pending_approval', 'rejected']
+        ).filter(amount_due__lt=0).iterator():
+            self._add_issue(
+                issues,
+                'negative_bill_amount_due',
+                'high',
+                "Vendor bill has a negative amount_due.",
+                bill_id=bill.id,
+                bill_number=bill.bill_number,
+                amount_due=str(bill.amount_due),
+                total=str(bill.total),
+                amount_paid=str(bill.amount_paid),
+            )
+
+    def _check_duplicate_references(self, issues):
+        duplicate_refs = (
+            JournalEntry.objects.filter(posted=True)
+            .exclude(reference='')
+            .values('reference')
+            .annotate(entry_count=Count('id'))
+            .filter(entry_count__gt=1)
+        )
+        for row in duplicate_refs:
+            reference = row['reference']
+            entry_ids = list(
+                JournalEntry.objects.filter(posted=True, reference=reference)
+                .values_list('id', flat=True)[:10]
+            )
+            self._add_issue(
+                issues,
+                'duplicate_journal_reference',
+                'high',
+                "Multiple posted journal entries share the same reference.",
+                reference=reference,
+                entry_count=row['entry_count'],
+                journal_entry_ids=entry_ids,
+            )
+
+    def _check_orphan_journal_entries(self, issues):
+        orphans = (
+            JournalEntry.objects.filter(posted=True)
+            .annotate(transaction_count=Count('transactions'))
+            .filter(transaction_count=0)
+        )
+        for entry in orphans.iterator():
+            self._add_issue(
+                issues,
+                'orphan_journal_entry',
+                'critical',
+                "Posted journal entry has no transaction lines.",
+                journal_entry_id=entry.id,
+                reference=entry.reference,
+                date=str(entry.date),
+            )
+
+        dangling = Transaction.objects.filter(journal_entry__isnull=True)[:50]
+        for line in dangling:
+            self._add_issue(
+                issues,
+                'orphan_transaction_line',
+                'critical',
+                "Transaction line is not linked to a journal entry.",
+                transaction_id=line.id,
+                account_id=line.account_id,
+            )
+
+    def _check_period_lock_violations(self, issues):
+        control = AccountingControl.get_settings()
+        if not control.period_lock_date:
+            return
+
+        unposted_locked = JournalEntry.objects.filter(
+            posted=False,
+            date__lte=control.period_lock_date,
+        )
+        for entry in unposted_locked.iterator():
+            self._add_issue(
+                issues,
+                'period_lock_violation',
+                'high',
+                (
+                    f"Unposted journal entry is dated on or before the period lock "
+                    f"({control.period_lock_date})."
+                ),
+                journal_entry_id=entry.id,
+                reference=entry.reference,
+                entry_date=str(entry.date),
+                period_lock_date=str(control.period_lock_date),
             )
 
     def _check_subledger_reconciliation(self, issues):

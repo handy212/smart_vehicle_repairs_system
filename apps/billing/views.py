@@ -1153,15 +1153,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             )
             
             # Update invoice
-            invoice.amount_paid += payment.amount
-            invoice.amount_due = invoice.total - invoice.amount_paid
-            
-            if invoice.amount_due <= 0:
-                invoice.status = 'paid'
-            elif invoice.amount_paid > 0:
-                invoice.status = 'partial'
-            
-            invoice.save()
+            invoice.recalculate_amount_paid_from_collections()
             
             # Send payment notification
             try:
@@ -2193,7 +2185,7 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
                         )
 
                 invoice.refresh_from_db()
-                amount_due = (invoice.total - invoice.amount_paid).quantize(Decimal('0.01'))
+                amount_due = invoice.amount_due
                 if amount_due <= 0:
                     return Response(
                         {'error': 'This invoice has no open balance.'},
@@ -2346,7 +2338,7 @@ class VendorCreditViewSet(viewsets.ModelViewSet):
                     return Response({'error': 'Cannot apply credit to this bill status.'}, status=status.HTTP_400_BAD_REQUEST)
 
                 bill.refresh_from_db()
-                amount_due = (bill.total - bill.amount_paid).quantize(Decimal('0.01'))
+                amount_due = bill.amount_due
                 if amount_due <= 0:
                     return Response({'error': 'This bill has no open balance.'}, status=status.HTTP_400_BAD_REQUEST)
 

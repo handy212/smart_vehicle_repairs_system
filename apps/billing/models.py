@@ -939,8 +939,13 @@ class Invoice(models.Model):
             except Invoice.DoesNotExist:
                 pass
 
-        # Calculate amount due
-        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+        # Operational balances: amount_due never negative; amount_paid capped at total.
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(
+            self.total,
+            self.amount_paid,
+        )
         
         # Auto-update status based on payment
         if self.amount_paid >= self.total and self.total > 0:
@@ -1000,7 +1005,12 @@ class Invoice(models.Model):
         self.shop_supplies_fee = estimate.shop_supplies_fee
         self.environmental_fee = estimate.environmental_fee
         self.total = estimate.total
-        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(
+            self.total,
+            self.amount_paid,
+        )
 
         self.line_items.all().delete()
         for order, item in enumerate(estimate.line_items.order_by('order', 'id')):
@@ -1113,8 +1123,10 @@ class Invoice(models.Model):
             self.environmental_fee
         ).quantize(Decimal('0.01'))
         
-        # Amount due
-        self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
+        # Amount due (operational — never negative)
+        from apps.billing.balance_utils import operational_collection_balances
+
+        _, self.amount_due = operational_collection_balances(self.total, self.amount_paid)
 
     def populate_line_items_from_work_order(self):
         """Create InvoiceLineItem rows from billable work order tasks and parts.
@@ -1278,7 +1290,10 @@ class Invoice(models.Model):
             for p in self.payments.filter(status='completed')
         ) or Decimal('0')
         credit_total = self.credit_note_applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
-        self.amount_paid = (total_payments + credit_total).quantize(Decimal('0.01'))
+        collected = (total_payments + credit_total).quantize(Decimal('0.01'))
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(self.total, collected)
         self.save()
 
 
@@ -2394,8 +2409,12 @@ class Bill(models.Model):
                 last_id = Bill.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
                 self.bill_number = f"BILL{(last_id + 1):06d}"
 
-        # Calculate amount due
-        self.amount_due = self.total - self.amount_paid
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(
+            self.total,
+            self.amount_paid,
+        )
         
         # Update status based on payment
         if self.status not in ['draft', 'pending_approval', 'rejected', 'void']:
