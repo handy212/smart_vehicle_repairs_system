@@ -345,6 +345,8 @@ class AccountingService:
             reference=invoice_reference,
         ).exists():
             return None
+        if JournalEntry.objects.filter(posted=True, reference=invoice_reference).exists():
+            return None
 
         with transaction.atomic():
             ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
@@ -462,6 +464,8 @@ class AccountingService:
             object_id=invoice.id,
             reference=cogs_reference,
         ).exists():
+            return None
+        if JournalEntry.objects.filter(posted=True, reference=cogs_reference).exists():
             return None
 
         # Iterate over invoice line items, check if they are parts
