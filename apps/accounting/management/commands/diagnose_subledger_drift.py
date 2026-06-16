@@ -1,9 +1,15 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
+from django.db.models import Count
 
-from apps.accounting.models import AccountingControl, JournalEntry
+from apps.accounting.gl_posting_checks import bill_payment_has_posted_gl, payment_has_posted_gl
+from apps.accounting.models import AccountingControl, JournalEntry, Transaction
 from apps.accounting.services import AccountingService
-from apps.accounting.subledger_reconciliation import OPEN_INVOICE_STATUSES, reconcile_subledgers
+from apps.accounting.subledger_reconciliation import (
+    OPEN_INVOICE_STATUSES,
+    compute_operational_customer_prepayments,
+    reconcile_subledgers,
+)
 from apps.billing.models import Bill, BillPayment, Invoice, Payment
 
 
@@ -31,6 +37,11 @@ class Command(BaseCommand):
             f"(diff {ar['difference']:.2f}, in_balance={ar['in_balance']})"
         )
         self.stdout.write(
+            f"  AR net GL (AR - prepayments): {ar.get('net_gl_balance', ar['gl_balance']):.2f}; "
+            f"prepayment GL {ar.get('prepayment_gl_balance', 0):.2f}; "
+            f"operational prepayments {ar.get('operational_prepayments', 0):.2f}"
+        )
+        self.stdout.write(
             f"AP GL {ap['gl_balance']:.2f} vs subledger net {ap['subledger_net_of_credits']:.2f} "
             f"(diff {ap['difference']:.2f}, in_balance={ap['in_balance']})"
         )
@@ -39,18 +50,14 @@ class Command(BaseCommand):
         payment_type = ContentType.objects.get_for_model(Payment)
         bill_payment_type = ContentType.objects.get_for_model(BillPayment)
 
-        missing_payments = Payment.objects.filter(status='completed').exclude(
-            id__in=JournalEntry.objects.filter(
-                content_type=payment_type,
-                posted=True,
-            ).values_list('object_id', flat=True),
-        ).count()
-        missing_bill_payments = BillPayment.objects.exclude(
-            id__in=JournalEntry.objects.filter(
-                content_type=bill_payment_type,
-                posted=True,
-            ).values_list('object_id', flat=True),
-        ).count()
+        missing_payments = sum(
+            1 for payment in Payment.objects.filter(status='completed').iterator()
+            if not payment_has_posted_gl(payment)
+        )
+        missing_bill_payments = sum(
+            1 for bill_payment in BillPayment.objects.iterator()
+            if not bill_payment_has_posted_gl(bill_payment)
+        )
 
         self.stdout.write('')
         self.stdout.write(
@@ -137,6 +144,24 @@ class Command(BaseCommand):
             self.stdout.write('')
             self.stdout.write(f'Paid bills that still have posted bill GL (sample up to {limit}):')
             for bill in stale_ap_candidates:
+                payment_count = bill.payments.count()
+                missing_bp_gl = sum(
+                    1 for bp in bill.payments.all() if not bill_payment_has_posted_gl(bp)
+                )
+                self.stdout.write(
+                    f"  {bill.bill_number} total={bill.total} amount_paid={bill.amount_paid} "
+                    f"payments={payment_count} missing_bp_gl={missing_bp_gl}"
+                )
+
+        paid_without_payments = Bill.objects.filter(
+            status='paid',
+            total__gt=0,
+            amount_due=0,
+        ).annotate(payment_count=Count('payments')).filter(payment_count=0)[:limit]
+        if paid_without_payments.exists():
+            self.stdout.write('')
+            self.stdout.write(f'Paid bills with no BillPayment records (sample up to {limit}):')
+            for bill in paid_without_payments:
                 self.stdout.write(
                     f"  {bill.bill_number} total={bill.total} amount_paid={bill.amount_paid}"
                 )
