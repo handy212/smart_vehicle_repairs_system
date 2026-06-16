@@ -348,6 +348,22 @@ class Command(BaseCommand):
                 account_code=line.account.code,
             )
 
+        inactive_lines = Transaction.objects.filter(
+            journal_entry__posted=True,
+            account__is_active=False,
+        ).select_related('journal_entry', 'account')
+        for line in inactive_lines.iterator():
+            self._add_issue(
+                issues,
+                'journal_line_inactive_account',
+                'critical',
+                "Posted journal line uses an inactive account.",
+                transaction_id=line.id,
+                journal_entry_id=line.journal_entry_id,
+                account_id=line.account_id,
+                account_code=line.account.code,
+            )
+
     def _check_tills(self, issues, open_till_hours):
         stale_cutoff = timezone.now() - timedelta(hours=open_till_hours)
         stale_tills = CashierTill.objects.filter(status='open', opened_at__lt=stale_cutoff)

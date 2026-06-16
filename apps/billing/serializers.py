@@ -1790,7 +1790,7 @@ class BillLineItemSerializer(serializers.ModelSerializer):
         model = BillLineItem
         fields = [
             'id', 'description', 'quantity', 'unit_price', 
-            'total', 'expense_category', 'inventory_item',
+            'total', 'is_taxable', 'expense_category', 'inventory_item',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['total', 'created_at', 'updated_at']
@@ -1802,7 +1802,7 @@ class BillLineItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BillLineItem
         fields = [
-            'description', 'quantity', 'unit_price', 'expense_category',
+            'description', 'quantity', 'unit_price', 'is_taxable', 'expense_category',
             'inventory_item'
         ]
 
@@ -1865,7 +1865,6 @@ class BillCreateSerializer(serializers.ModelSerializer):
             'purchase_order',
             'reference_number', 'bill_date', 'due_date',
             'terms', 'notes', 'status', 'currency',
-            'tax_amount',
             'line_items'
         ]
         read_only_fields = ['id', 'bill_number']

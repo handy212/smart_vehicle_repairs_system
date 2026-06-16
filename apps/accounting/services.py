@@ -1340,6 +1340,11 @@ class AccountingService:
         if transfer.status != 'completed' or transfer.journal_entry:
             return
 
+        from apps.accounting.account_validation import validate_settlement_account
+
+        validate_settlement_account(transfer.from_account, field_name='from_account')
+        validate_settlement_account(transfer.to_account, field_name='to_account')
+
         je = cls._create_posted_journal_header(
             user=transfer.approved_by or transfer.created_by,
             date=transfer.transfer_date,

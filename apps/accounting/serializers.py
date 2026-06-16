@@ -370,11 +370,23 @@ class FundTransferSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('transfer_number', 'status', 'created_by', 'approved_by', 'approved_at', 'journal_entry')
 
+    def _validate_settlement_account(self, account, field_name):
+        from apps.accounting.account_validation import is_valid_settlement_account
+
+        if account and not is_valid_settlement_account(account):
+            raise serializers.ValidationError({
+                field_name: (
+                    'Select an active leaf Asset account classified as Bank or Cash Equivalent.'
+                ),
+            })
+
     def validate(self, attrs):
         from_account = attrs.get('from_account', getattr(self.instance, 'from_account', None))
         to_account = attrs.get('to_account', getattr(self.instance, 'to_account', None))
         if from_account and to_account and from_account == to_account:
             raise serializers.ValidationError('Source and destination accounts must be different.')
+        self._validate_settlement_account(from_account, 'from_account')
+        self._validate_settlement_account(to_account, 'to_account')
         if self.instance and self.instance.status == 'completed':
             raise serializers.ValidationError('Completed transfers cannot be edited.')
         return attrs

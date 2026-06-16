@@ -872,12 +872,16 @@ class Invoice(models.Model):
         # Auto-generate invoice number
         if not self.invoice_number:
             if self.branch:
-                # Use branch sequence if branch is available
-                # Use separate numbering for proforma invoices
                 if self.status == 'proforma':
                     self.invoice_number = self.branch.get_next_proforma_number()
                 else:
-                    self.invoice_number = self.branch.get_next_invoice_number()
+                    from apps.accounting.document_numbering import DocumentNumberService
+
+                    self.invoice_number = DocumentNumberService.allocate(
+                        'invoice',
+                        self.branch,
+                        document_date=self.invoice_date,
+                    )
             else:
                 # Fallback: Generate invoice number without branch code
                 # Find last invoice number and increment
@@ -1478,16 +1482,26 @@ class Payment(models.Model):
     def save(self, *args, **kwargs):
         # Auto-generate payment number if not set
         if not self.payment_number:
-            last_payment = Payment.objects.order_by('-id').first()
-            if last_payment and last_payment.payment_number:
-                try:
-                    last_number = int(last_payment.payment_number.replace('PAY', ''))
-                    new_number = last_number + 1
-                except (ValueError, AttributeError):
-                    new_number = 1
+            branch = getattr(self.invoice, 'branch', None) if self.invoice_id else None
+            if branch:
+                from apps.accounting.document_numbering import DocumentNumberService
+
+                self.payment_number = DocumentNumberService.allocate(
+                    'payment',
+                    branch,
+                    document_date=self.payment_date,
+                )
             else:
-                new_number = 1
-            self.payment_number = f'PAY{new_number:06d}'
+                last_payment = Payment.objects.order_by('-id').first()
+                if last_payment and last_payment.payment_number:
+                    try:
+                        last_number = int(last_payment.payment_number.replace('PAY', ''))
+                        new_number = last_number + 1
+                    except (ValueError, AttributeError):
+                        new_number = 1
+                else:
+                    new_number = 1
+                self.payment_number = f'PAY{new_number:06d}'
         
         is_new = self.pk is None
         old_status = None
@@ -2043,8 +2057,17 @@ class CreditNote(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.credit_note_number:
-            from django.utils.crypto import get_random_string
-            self.credit_note_number = f"CN-{get_random_string(8).upper()}"
+            if self.branch_id:
+                from apps.accounting.document_numbering import DocumentNumberService
+
+                self.credit_note_number = DocumentNumberService.allocate(
+                    'credit_note',
+                    self.branch,
+                    document_date=self.credit_date,
+                )
+            else:
+                from django.utils.crypto import get_random_string
+                self.credit_note_number = f"CN-{get_random_string(8).upper()}"
         
         if self.pk is None:
             self.unused_amount = self.total
@@ -2220,17 +2243,18 @@ class Bill(models.Model):
         return f"{self.bill_number} - {self.vendor.name}"
 
     def save(self, *args, **kwargs):
-        # Auto-generate bill number
         if not self.bill_number:
-            prefix = "BILL" 
-            if self.branch:
-                # Try to include branch prefix if possible, e.g., ACC-BILL-...
-                # Assuming branch has a code or similar, or just leave as BILL
-                pass
-            
-            # Simple fallback generation
-            last_id = Bill.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
-            self.bill_number = f"{prefix}{(last_id + 1):06d}"
+            if self.branch_id:
+                from apps.accounting.document_numbering import DocumentNumberService
+
+                self.bill_number = DocumentNumberService.allocate(
+                    'bill',
+                    self.branch,
+                    document_date=self.bill_date,
+                )
+            else:
+                last_id = Bill.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
+                self.bill_number = f"BILL{(last_id + 1):06d}"
 
         # Calculate amount due
         self.amount_due = self.total - self.amount_paid
@@ -2249,16 +2273,16 @@ class Bill(models.Model):
         super().save(*args, **kwargs)
 
     def calculate_totals(self):
-        """Calculate totals from line items"""
+        """Calculate totals from line items using TaxService for recoverable input tax."""
         lines = self.line_items.all()
-        self.subtotal = sum(line.total for line in lines)
-        # Tax could be sum of line items or handled separately. 
-        # For simplicity, let's assume tax is not auto-calculated per line item yet unless specified.
-        # But if we had tax fields on line items, we'd sum them.
-        # For now, we will rely on frontend or manual input for tax if lines don't specify it, 
-        # OR just sum total.
-        # Let's simple sum totals.
-        self.total = self.subtotal + self.tax_amount
+        self.subtotal = sum(line.total for line in lines) or Decimal('0')
+
+        taxable_subtotal = sum(line.total for line in lines if line.is_taxable) or Decimal('0')
+        from apps.billing.tax_service import TaxService
+
+        breakdown = TaxService.calculate_breakdown(taxable_subtotal)
+        self.tax_amount = breakdown.total_tax
+        self.total = (self.subtotal + self.tax_amount).quantize(Decimal('0.01'))
         self.save()
 
 
@@ -2268,6 +2292,7 @@ class BillLineItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    is_taxable = models.BooleanField(default=True)
     
     # Optional: Link to an expense account if user knows it
     # For now, just a text field or simple category

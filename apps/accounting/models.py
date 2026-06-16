@@ -205,6 +205,10 @@ class Transaction(models.Model):
     def clean(self):
         if self.amount <= 0:
             raise ValidationError(_("Transaction amount must be positive."))
+        if self.account_id and not self.account.is_active:
+            raise ValidationError(
+                _("Journal transactions cannot be posted to inactive accounts.")
+            )
         if self.account_id and self.account.children.exists():
             raise ValidationError(
                 _("Journal transactions must be posted to detail/leaf accounts, not parent category accounts.")
@@ -548,6 +552,42 @@ class FundTransfer(models.Model):
             self.transfer_number = f"FT{new_number:06d}"
         
         super().save(*args, **kwargs)
+
+
+class DocumentNumberSequence(models.Model):
+    """Fiscal-year sequence counters for standardized accounting document numbers."""
+
+    DOCUMENT_TYPE_CHOICES = [
+        ('invoice', 'Invoice'),
+        ('credit_note', 'Credit Note'),
+        ('payment', 'Payment'),
+        ('bill', 'Bill'),
+    ]
+
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.CASCADE,
+        related_name='document_number_sequences',
+    )
+    fiscal_year = models.PositiveIntegerField()
+    last_sequence = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fiscal_year', 'document_type', 'branch']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['document_type', 'branch', 'fiscal_year'],
+                name='unique_document_number_sequence',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['document_type', 'branch', 'fiscal_year']),
+        ]
+
+    def __str__(self):
+        return f"{self.document_type} {self.branch_id} {self.fiscal_year}: {self.last_sequence}"
 
 
 # ============================================================================

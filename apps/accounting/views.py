@@ -792,6 +792,12 @@ class FundTransferViewSet(viewsets.ModelViewSet):
         
         if transfer.status != 'pending':
             return Response({'error': 'Transfer must be pending'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if transfer.created_by_id == request.user.id:
+            return Response(
+                {'error': 'Fund transfers must be approved by someone other than the creator.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         transfer.status = 'approved'
         transfer.approved_by = request.user
