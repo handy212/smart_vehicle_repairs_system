@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from apps.accounting.models import Account, AccountingControl, JournalEntry, Transaction
+from apps.accounting.gl_posting_checks import count_missing_settlement_gl
 from apps.accounting.subledger_reconciliation import reconcile_subledgers
 from apps.billing.models import Bill, BillPayment, CashierTill, Invoice, Payment, Refund
 
@@ -611,20 +612,26 @@ class Command(BaseCommand):
         if ar.get('control_account_id') and not ar.get('in_balance'):
             difference = Decimal(str(ar.get('difference', 0)))
             if abs(difference) > tolerance:
+                missing_payments, missing_bill_payments = count_missing_settlement_gl()
                 self._add_issue(
                     issues,
                     'ar_subledger_out_of_balance',
                     'high',
                     "AR control account balance does not reconcile to the operational subledger.",
                     gl_balance=ar.get('gl_balance'),
+                    prepayment_gl_balance=ar.get('prepayment_gl_balance'),
+                    net_gl_balance=ar.get('net_gl_balance'),
+                    operational_prepayments=ar.get('operational_prepayments'),
                     subledger_net_of_credits=ar.get('subledger_net_of_credits'),
                     difference=ar.get('difference'),
+                    completed_payments_missing_gl=missing_payments,
                 )
 
         ap = report.get('accounts_payable', {})
         if ap.get('control_account_id') and not ap.get('in_balance'):
             difference = Decimal(str(ap.get('difference', 0)))
             if abs(difference) > tolerance:
+                missing_payments, missing_bill_payments = count_missing_settlement_gl()
                 self._add_issue(
                     issues,
                     'ap_subledger_out_of_balance',
@@ -633,6 +640,7 @@ class Command(BaseCommand):
                     gl_balance=ap.get('gl_balance'),
                     subledger_net_of_credits=ap.get('subledger_net_of_credits'),
                     difference=ap.get('difference'),
+                    bill_payments_missing_gl=missing_bill_payments,
                 )
 
     def _check_tills(self, issues, open_till_hours):

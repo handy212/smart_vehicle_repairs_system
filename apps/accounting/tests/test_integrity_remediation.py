@@ -7,6 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
+from apps.accounting.gl_posting_checks import payment_has_posted_gl
 from apps.accounting.models import AccountingControl, Account, JournalEntry, Transaction
 from apps.accounting.services import AccountingService
 from apps.accounts.models import User
@@ -364,3 +365,39 @@ class IntegrityRemediationCommandTests(TestCase):
         self.assertTrue(report['accounts_receivable']['in_balance'])
         self.assertEqual(report['customer_prepayments']['gl_balance'], 20.0)
         self.assertEqual(report['customer_prepayments']['operational_balance'], 20.0)
+
+    def test_payment_has_posted_gl_requires_content_object_link(self):
+        call_command('wire_accounting_controls', settings='config.settings.testing')
+        controls = AccountingControl.get_settings()
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='sent',
+            subtotal=Decimal('40.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('40.00'),
+            amount_due=Decimal('40.00'),
+            created_by=self.user,
+        )
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            bank_account=controls.default_bank_account,
+            amount=Decimal('40.00'),
+            status='pending',
+            processed_by=self.user,
+        )
+        Payment.objects.filter(pk=payment.pk).update(status='completed', payment_number='PAY-STRICT-001')
+        payment.refresh_from_db()
+
+        JournalEntry.objects.create(
+            date=timezone.now().date(),
+            description='Unrelated entry with matching reference',
+            reference='PAY-STRICT-001',
+            posted=True,
+            created_by=self.user,
+            branch=self.branch,
+        )
+        self.assertFalse(payment_has_posted_gl(payment))

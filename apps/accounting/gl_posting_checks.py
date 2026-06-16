@@ -5,47 +5,33 @@ from apps.accounting.models import JournalEntry
 from apps.billing.models import BillPayment, Payment
 
 
-def _references_for_payment(payment):
-    refs = []
-    if payment.payment_number:
-        refs.append(payment.payment_number)
-    if payment.reference_number:
-        refs.append(payment.reference_number)
-    return refs
-
-
-def _references_for_bill_payment(bill_payment):
-    refs = []
-    if bill_payment.payment_number:
-        refs.append(bill_payment.payment_number)
-    if bill_payment.reference_number:
-        refs.append(bill_payment.reference_number)
-    return refs
-
-
 def payment_has_posted_gl(payment):
+    """True only when a posted JE is linked to this payment via content_object."""
     payment_type = ContentType.objects.get_for_model(Payment)
-    if JournalEntry.objects.filter(
+    return JournalEntry.objects.filter(
         content_type=payment_type,
         object_id=payment.id,
         posted=True,
-    ).exists():
-        return True
-    refs = _references_for_payment(payment)
-    if refs and JournalEntry.objects.filter(posted=True, reference__in=refs).exists():
-        return True
-    return False
+    ).exists()
 
 
 def bill_payment_has_posted_gl(bill_payment):
+    """True only when a posted JE is linked to this bill payment via content_object."""
     bill_payment_type = ContentType.objects.get_for_model(BillPayment)
-    if JournalEntry.objects.filter(
+    return JournalEntry.objects.filter(
         content_type=bill_payment_type,
         object_id=bill_payment.id,
         posted=True,
-    ).exists():
-        return True
-    refs = _references_for_bill_payment(bill_payment)
-    if refs and JournalEntry.objects.filter(posted=True, reference__in=refs).exists():
-        return True
-    return False
+    ).exists()
+
+
+def count_missing_settlement_gl():
+    missing_payments = sum(
+        1 for payment in Payment.objects.filter(status='completed').iterator()
+        if not payment_has_posted_gl(payment)
+    )
+    missing_bill_payments = sum(
+        1 for bill_payment in BillPayment.objects.iterator()
+        if not bill_payment_has_posted_gl(bill_payment)
+    )
+    return missing_payments, missing_bill_payments
