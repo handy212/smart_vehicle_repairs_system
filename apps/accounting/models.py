@@ -254,6 +254,7 @@ class AccountingControl(models.Model):
         'environmental_fee_revenue_account',
         'input_tax_account',
         'default_expense_account',
+        'purchase_returns_account',
         'inventory_asset_account',
         'cost_of_goods_sold_account',
         'cash_over_short_account',
@@ -311,6 +312,11 @@ class AccountingControl(models.Model):
         Account, on_delete=models.PROTECT, null=True, blank=True,
         related_name='control_default_expense',
         help_text="Default expense account for vendor bill lines."
+    )
+    purchase_returns_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_purchase_returns',
+        help_text="Contra-expense account for vendor credit returns (non-inventory)."
     )
     inventory_asset_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, null=True, blank=True,

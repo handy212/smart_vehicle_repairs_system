@@ -911,70 +911,14 @@ class AccountingService:
     @classmethod
     def post_credit_note(cls, credit_note):
         """
-        Post GL entry for Credit Note (revenue reversal).
-        Debit: Sales Returns & Allowances
-        Credit: Accounts Receivable
+        Deprecated — GL posts on CreditNoteApplication via post_credit_note_application().
+        Issuing a credit note alone must not create journal entries (posting standard §3).
         """
-        if credit_note.status != 'issued':
-            return
-
-        credit_note_type = ContentType.objects.get_for_model(credit_note)
-        if JournalEntry.objects.filter(
-            content_type=credit_note_type,
-            object_id=credit_note.id,
-            reference=credit_note.credit_note_number,
-        ).exists():
-            return
-
-        sales_returns = cls._control_account('sales_discount_account', 'Sales Returns & Allowances')
-        ar_account = cls._control_account('accounts_receivable_account', 'Accounts Receivable')
-        tax_account = cls._control_account('sales_tax_payable_account', 'Sales Tax Payable')
-
-        amount = Decimal(str(credit_note.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
-        subtotal = Decimal(str(credit_note.subtotal or Decimal('0'))).quantize(cls.MONEY_QUANT)
-        tax_amount = Decimal(str(credit_note.tax_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
-        if amount <= 0:
-            return
-
-        desc_customer = credit_note.customer.full_name
-        lines = []
-        if subtotal > 0:
-            lines.append({
-                'account_id': sales_returns.id,
-                'type': 'debit',
-                'amount': subtotal,
-                'description': f'Credit Note for {desc_customer}',
-            })
-        if tax_amount > 0:
-            lines.append({
-                'account_id': tax_account.id,
-                'type': 'debit',
-                'amount': tax_amount,
-                'description': f'Tax reversal for {desc_customer}',
-            })
-        if not lines:
-            lines.append({
-                'account_id': sales_returns.id,
-                'type': 'debit',
-                'amount': amount,
-                'description': f'Credit Note for {desc_customer}',
-            })
-        lines.append({
-            'account_id': ar_account.id,
-            'type': 'credit',
-            'amount': amount,
-            'description': f'Credit Note for {desc_customer}',
-        })
-        return cls.create_journal_entry(
-            user=credit_note.created_by,
-            date=credit_note.credit_date,
-            description=f"Credit Note {credit_note.credit_note_number}",
-            reference=credit_note.credit_note_number,
-            lines=lines,
-            posted=True,
-            branch=credit_note.branch,
-            content_object=credit_note,
+        import logging
+        logging.getLogger(__name__).warning(
+            'post_credit_note() is deprecated; use post_credit_note_application() on apply.'
         )
+        return None
 
     @classmethod
     def post_credit_note_application(cls, application):
@@ -1135,7 +1079,10 @@ class AccountingService:
             tax_amount = (apply_amount - subtotal).quantize(cls.MONEY_QUANT)
 
         ap_account = cls._control_account('accounts_payable_account', 'Accounts Payable')
-        expense_account = cls._control_account('default_expense_account', 'Default Expense')
+        returns_account = (
+            cls._optional_control_account('purchase_returns_account')
+            or cls._control_account('default_expense_account', 'Default Expense')
+        )
         inventory_account = cls._control_account('inventory_asset_account', 'Inventory Asset')
         input_tax_account = cls._control_account('input_tax_account', 'Input Tax')
 
@@ -1159,7 +1106,7 @@ class AccountingService:
         }]
         if expense_credit > 0:
             lines.append({
-                'account_id': expense_account.id,
+                'account_id': returns_account.id,
                 'type': 'credit',
                 'amount': expense_credit,
                 'description': f"Purchase return - {vendor_credit.vendor.name}",
@@ -1180,7 +1127,7 @@ class AccountingService:
             })
         if len(lines) == 1:
             lines.append({
-                'account_id': expense_account.id,
+                'account_id': returns_account.id,
                 'type': 'credit',
                 'amount': apply_amount,
                 'description': f"Vendor credit - {vendor_credit.vendor.name}",

@@ -261,6 +261,7 @@ class AccountingControlSerializer(serializers.ModelSerializer):
             'environmental_fee_revenue_account',
             'input_tax_account',
             'default_expense_account',
+            'purchase_returns_account',
             'inventory_asset_account',
             'cost_of_goods_sold_account',
             'cash_over_short_account',

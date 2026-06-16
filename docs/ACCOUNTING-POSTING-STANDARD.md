@@ -41,6 +41,7 @@ This document defines the **canonical journal entry patterns** for every automat
 | `till_counterparty_cash_account` | 1010 | Asset | Till pay-in/pay-out counterparty |
 | `default_bank_account` | 1100 | Asset | Default non-cash settlement |
 | `customer_prepayment_account` | 2150 | Liability | **Planned** — customer overpayments |
+| `purchase_returns_account` | 5050 | Expense (contra) | Vendor credit returns (non-inventory) |
 
 Settlement accounts (cash/bank) are selected per transaction, not from `AccountingControl`.
 
@@ -195,16 +196,19 @@ Dr  Accounts Payable             payment.amount
 
 ---
 
-## 7. Vendor Credit (planned — Wave 4)
+## 7. Vendor Credit (Wave 4 — GL on apply)
 
 **Trigger:** `VendorCreditApplication` to bill  
-**Reference:** `VC-{number}`
+**Reference:** `VC-APP-{id}`
 
 ```
 Dr  Accounts Payable
-    Cr  Expense / Inventory      (or dedicated purchase returns account)
-    Cr  Input Tax                (if applicable)
+    Cr  Purchase Returns / Expense   (non-inventory lines)
+    Cr  Inventory Asset              (inventory lines)
+    Cr  Input Tax                    (if applicable)
 ```
+
+Non-inventory credits use `purchase_returns_account` when configured (Wave 5).
 
 ---
 

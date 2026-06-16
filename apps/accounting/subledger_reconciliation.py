@@ -5,7 +5,7 @@ from django.db.models import Sum
 
 from apps.accounting.models import AccountingControl
 from apps.accounting.services import ReportingService
-from apps.billing.models import Bill, Invoice, VendorCredit
+from apps.billing.models import Bill, CreditNote, Invoice, VendorCredit
 
 
 OPEN_INVOICE_STATUSES = ['sent', 'viewed', 'partial', 'overdue', 'open']
@@ -43,6 +43,14 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         invoices.filter(amount_due__gt=0).aggregate(total=Sum('amount_due'))['total']
     )
 
+    credit_notes = CreditNote.objects.filter(status='issued')
+    if branch_id:
+        credit_notes = credit_notes.filter(branch_id=branch_id)
+    unapplied_customer_credit_notes = _money(
+        credit_notes.filter(unused_amount__gt=0).aggregate(total=Sum('unused_amount'))['total']
+    )
+    ar_subledger_net = (ar_positive_subledger - unapplied_customer_credit_notes).quantize(Decimal('0.01'))
+
     bills = Bill.objects.filter(status__in=OPEN_BILL_STATUSES)
     if branch_id:
         bills = bills.filter(branch_id=branch_id)
@@ -73,7 +81,7 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         if prepayment_account else 0
     )
 
-    ar_difference = (ar_gl - ar_positive_subledger).quantize(Decimal('0.01'))
+    ar_difference = (ar_gl - ar_subledger_net).quantize(Decimal('0.01'))
     ap_difference = (ap_gl - ap_subledger_net).quantize(Decimal('0.01'))
 
     return {
@@ -83,10 +91,13 @@ def reconcile_subledgers(*, branch_id=None, as_of_date=None):
         'accounts_receivable': {
             'gl_balance': float(ar_gl),
             'subledger_balance': float(ar_positive_subledger),
+            'unapplied_customer_credit_notes': float(unapplied_customer_credit_notes),
+            'subledger_net_of_credits': float(ar_subledger_net),
             'subledger_including_credits': float(ar_subledger),
             'difference': float(ar_difference),
             'in_balance': abs(ar_difference) <= tolerance,
             'open_invoice_count': invoices.filter(amount_due__gt=0).count(),
+            'open_credit_note_count': credit_notes.filter(unused_amount__gt=0).count(),
             'control_account_id': ar_account.id if ar_account else None,
             'control_account_code': ar_account.code if ar_account else None,
         },

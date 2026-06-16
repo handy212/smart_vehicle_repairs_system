@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from apps.accounting.models import Account, AccountingControl, JournalEntry, Transaction
+from apps.accounting.subledger_reconciliation import reconcile_subledgers
 from apps.billing.models import BillPayment, CashierTill, Payment, Refund
 
 
@@ -51,6 +52,7 @@ class Command(BaseCommand):
         self._check_refunds(issues)
         self._check_vendor_payments(issues)
         self._check_journal_integrity(issues)
+        self._check_subledger_reconciliation(issues)
         self._check_tills(issues, options['open_till_hours'])
 
         counts = Counter(issue['severity'] for issue in issues)
@@ -363,6 +365,38 @@ class Command(BaseCommand):
                 account_id=line.account_id,
                 account_code=line.account.code,
             )
+
+    def _check_subledger_reconciliation(self, issues):
+        report = reconcile_subledgers()
+        tolerance = Decimal(str(report.get('tolerance', '0.01')))
+
+        ar = report.get('accounts_receivable', {})
+        if ar.get('control_account_id') and not ar.get('in_balance'):
+            difference = Decimal(str(ar.get('difference', 0)))
+            if abs(difference) > tolerance:
+                self._add_issue(
+                    issues,
+                    'ar_subledger_out_of_balance',
+                    'high',
+                    "AR control account balance does not reconcile to the operational subledger.",
+                    gl_balance=ar.get('gl_balance'),
+                    subledger_net_of_credits=ar.get('subledger_net_of_credits'),
+                    difference=ar.get('difference'),
+                )
+
+        ap = report.get('accounts_payable', {})
+        if ap.get('control_account_id') and not ap.get('in_balance'):
+            difference = Decimal(str(ap.get('difference', 0)))
+            if abs(difference) > tolerance:
+                self._add_issue(
+                    issues,
+                    'ap_subledger_out_of_balance',
+                    'high',
+                    "AP control account balance does not reconcile to the operational subledger.",
+                    gl_balance=ap.get('gl_balance'),
+                    subledger_net_of_credits=ap.get('subledger_net_of_credits'),
+                    difference=ap.get('difference'),
+                )
 
     def _check_tills(self, issues, open_till_hours):
         stale_cutoff = timezone.now() - timedelta(hours=open_till_hours)
