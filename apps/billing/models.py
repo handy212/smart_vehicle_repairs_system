@@ -2151,6 +2151,144 @@ class CreditNoteApplication(models.Model):
         return f"{self.credit_note_id} → Inv {self.invoice_id}: {self.amount}"
 
 
+class VendorCredit(models.Model):
+    """Vendor credit memo — reduces AP when applied to open bills."""
+
+    credit_number = models.CharField(max_length=50, unique=True, editable=False)
+    vendor = models.ForeignKey(
+        'inventory.Supplier',
+        on_delete=models.PROTECT,
+        related_name='vendor_credits',
+    )
+    bill = models.ForeignKey(
+        'Bill',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_credits',
+        help_text='Optional link to the original vendor bill',
+    )
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name='vendor_credits')
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('issued', 'Issued'),
+        ('applied', 'Applied'),
+        ('void', 'Void'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    credit_date = models.DateField(default=timezone.now)
+    reason = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    unused_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='vendor_credits_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-credit_date', '-credit_number']
+
+    def __str__(self):
+        return f"{self.credit_number} - {self.vendor}"
+
+    def save(self, *args, **kwargs):
+        if not self.credit_number and self.branch_id:
+            from apps.accounting.document_numbering import DocumentNumberService
+
+            self.credit_number = DocumentNumberService.allocate(
+                'vendor_credit',
+                self.branch,
+                document_date=self.credit_date,
+            )
+        if self.pk is None:
+            self.unused_amount = self.total
+        super().save(*args, **kwargs)
+
+    def calculate_totals(self):
+        lines = self.line_items.all()
+        self.subtotal = sum(line.total for line in lines) or Decimal('0')
+        taxable_subtotal = sum(line.total for line in lines if line.is_taxable) or Decimal('0')
+        from apps.billing.tax_service import TaxService
+
+        breakdown = TaxService.calculate_breakdown(taxable_subtotal)
+        self.tax_amount = breakdown.total_tax
+        self.total = (self.subtotal + self.tax_amount).quantize(Decimal('0.01'))
+
+        if self.status == 'draft':
+            self.unused_amount = self.total
+        elif self.status in ('issued', 'applied') and self.pk:
+            from django.db.models import Sum
+
+            applied_sum = self.applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+            self.unused_amount = max(
+                Decimal('0'),
+                (self.total - applied_sum).quantize(Decimal('0.01')),
+            )
+            if self.status == 'issued' and self.unused_amount == 0 and self.total > 0:
+                self.status = 'applied'
+        self.save()
+
+
+class VendorCreditLineItem(models.Model):
+    vendor_credit = models.ForeignKey(VendorCredit, on_delete=models.CASCADE, related_name='line_items')
+    description = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    is_taxable = models.BooleanField(default=True)
+    inventory_item = models.ForeignKey(
+        'inventory.Part',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_credit_line_items',
+    )
+
+    def save(self, *args, **kwargs):
+        self.total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
+        super().save(*args, **kwargs)
+
+
+class VendorCreditApplication(models.Model):
+    """Apply issued vendor credit toward an open bill (reduces amount due). GL posts on create."""
+
+    vendor_credit = models.ForeignKey(
+        VendorCredit,
+        on_delete=models.CASCADE,
+        related_name='applications',
+    )
+    bill = models.ForeignKey(
+        'Bill',
+        on_delete=models.PROTECT,
+        related_name='vendor_credit_applications',
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    applied_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_credit_applications_recorded',
+    )
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+        indexes = [
+            models.Index(fields=['vendor_credit', '-applied_at']),
+            models.Index(fields=['bill', '-applied_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.vendor_credit_id} → Bill {self.bill_id}: {self.amount}"
+
+
 class Bill(models.Model):
     """
     Vendor Bills (Accounts Payable)
