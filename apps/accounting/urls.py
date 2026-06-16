@@ -55,6 +55,7 @@ urlpatterns = [
     
     # Controls & Compliance
     path('control/settings/', views.AccountingControlView.as_view(), name='accounting-settings'),
+    path('control/wire/', views.WireAccountingControlsView.as_view(), name='wire-accounting-controls'),
     path('control/audit-log/', views.AuditLogView.as_view(), name='audit-log'),
     
     # Phase 8: Cash & Banking (ViewSets via router)

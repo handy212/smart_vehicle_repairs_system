@@ -50,6 +50,7 @@ import {
   LucideIcon,
   Puzzle,
   Settings2,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -369,6 +370,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Budgets", href: "/accounting/budgets", permission: "view_budgets", icon: Wallet, group: "Planning" },
     { name: "Financial Reports", href: "/accounting/reports", permission: "view_financial_reports", icon: PieChart, group: "Reports" },
     { name: "Controls & Compliance", href: "/accounting/controls", permission: "manage_accounting_periods", icon: Shield, group: "Governance" },
+    { name: "Subledger Integrity", href: "/accounting/integrity", permission: "view_financial_reports", icon: Scale, group: "Governance" },
   ],
   hr: [
     { name: "Dashboard", href: "/hr", permission: "view_hr", icon: LayoutDashboard },
