@@ -44,7 +44,7 @@ export type HelpSection = {
     id: HelpSectionId;
     title: string;
     description: string;
-    icon: LucideIcon;
+    icon: NavIcon;
 };
 
 /** Legacy module shape kept for module reference section */
@@ -52,7 +52,7 @@ export type HelpModule = {
     id: string;
     title: string;
     description: string;
-    icon: LucideIcon;
+    icon: NavIcon;
     topics: LegacyHelpTopic[];
     keywords?: string[];
 };
