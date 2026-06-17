@@ -61,6 +61,7 @@ import { useBranding } from "@/lib/hooks/useBranding";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
 import { useModules } from "@/lib/hooks/useModules";
+import { ACCOUNTING_NAV_ITEMS, ACCOUNTING_NAV_GROUPS } from "./accounting-nav-config";
 
 interface SubNavItem {
   name: string;
@@ -360,19 +361,10 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Integrations", href: "/admin/integrations", permission: "manage_settings", icon: Puzzle },
     { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
   ],
-  accounting: [
-    { name: "Overview", href: "/accounting", permission: "view_accounting", icon: BarChart3, group: "Overview" },
-    { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries", icon: BookOpen, group: "Ledger" },
-    { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounting", icon: Hash, group: "Ledger" },
-    { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting", icon: Zap, group: "Ledger" },
-    { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_bank_statements", icon: Landmark, group: "Banking" },
-    { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_transfer_requests", icon: Repeat, group: "Banking" },
-    { name: "Till Management", href: "/accounting/tills", permission: "view_accounting", icon: Banknote, group: "Banking" },
-    { name: "Budgets", href: "/accounting/budgets", permission: "view_budgets", icon: Wallet, group: "Planning" },
-    { name: "Financial Reports", href: "/accounting/reports", permission: "view_financial_reports", icon: PieChart, group: "Reports" },
-    { name: "Controls & Compliance", href: "/accounting/controls", permission: "manage_accounting_periods", icon: Shield, group: "Governance" },
-    { name: "Subledger Integrity", href: "/accounting/integrity", permission: "view_financial_reports", icon: Scale, group: "Governance" },
-  ],
+  accounting: ACCOUNTING_NAV_ITEMS.map((item) => ({
+    ...item,
+    group: ACCOUNTING_NAV_GROUPS.find((g) => g.items.some((i) => i.href === item.href))?.label,
+  })),
   hr: [
     { name: "Dashboard", href: "/hr", permission: "view_hr", icon: LayoutDashboard },
     { name: "Staff", href: "/hr/staff", permission: "view_employees", icon: Users },
