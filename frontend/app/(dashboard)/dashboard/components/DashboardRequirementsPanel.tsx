@@ -107,7 +107,7 @@ export function DashboardRequirementsPanel() {
           collapsible
           value={openGroup}
           onValueChange={setOpenGroup}
-          className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+          className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-3"
         >
           {visibleGroups.map((group) => {
             const GroupIcon = group.icon;
@@ -115,7 +115,7 @@ export function DashboardRequirementsPanel() {
               <AccordionItem
                 key={group.id}
                 value={group.id}
-                className="rounded-md border border-border/70 bg-background/70 px-2"
+                className="h-auto self-start rounded-md border border-border/70 bg-background/70 px-2"
               >
                 <AccordionTrigger
                   className={cn(
