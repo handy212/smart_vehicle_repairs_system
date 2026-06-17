@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, Check, X, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import apiClient from "@/lib/api/client";
 import { accountingApi, type Account, type ApiError, type FundTransfer } from "@/lib/api/accounting";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
@@ -29,6 +30,7 @@ interface TransferFormData {
 
 export default function FundTransfersPage() {
     const queryClient = useQueryClient();
+    const { formatCurrency } = useCurrency();
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [formData, setFormData] = useState({
         from_account: "",
@@ -42,14 +44,6 @@ export default function FundTransfersPage() {
 
     const handleSort = (field: string) => {
         setSortConfig((current) => toggleSortConfig(current, field));
-    };
-
-    // Helper function for currency formatting
-    const formatCurrency = (amount: number | string) => {
-        return new Intl.NumberFormat('en-GH', {
-            style: 'currency',
-            currency: 'GHS'
-        }).format(Number(amount));
     };
 
     // Fetch transfers

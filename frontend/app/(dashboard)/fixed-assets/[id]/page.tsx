@@ -179,11 +179,36 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                             <span className="font-semibold">{formatCurrency(asset.acquisition_cost)}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b">
+                            <span className="text-sm text-muted-foreground">Accumulated Depreciation</span>
+                            <span className="font-medium text-card-foreground">
+                                {formatCurrency(asset.accumulated_depreciation || 0)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b">
                             <span className="text-sm text-muted-foreground">Salvage Value</span>
                             <span className="font-medium text-card-foreground">
                                 {formatCurrency(asset.salvage_value || 0)}
                             </span>
                         </div>
+                        <div className="flex justify-between items-center py-2 border-b">
+                            <span className="text-sm text-muted-foreground">Net Book Value (NBV)</span>
+                            <span className="font-semibold text-foreground">
+                                {formatCurrency(asset.net_book_value)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b">
+                            <span className="text-sm text-muted-foreground">Depreciation Progress</span>
+                            <span>{asset.depreciation_percent?.toFixed?.(1) ?? asset.depreciation_percent ?? 0}%</span>
+                        </div>
+                        {asset.last_depreciation_date ? (
+                            <div className="flex justify-between items-center py-2 border-b">
+                                <span className="text-sm text-muted-foreground">Last Depreciation</span>
+                                <span className="flex items-center gap-1.5 status-text">
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    {format(new Date(asset.last_depreciation_date), "MMM d, yyyy")}
+                                </span>
+                            </div>
+                        ) : null}
                         <div className="flex justify-between items-center py-2 border-b">
                             <span className="text-sm text-muted-foreground">Acquisition Date</span>
                             <span className="flex items-center gap-1.5 status-text">

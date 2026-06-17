@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { DashboardShortcutBar } from "./DashboardShortcutBar";
+import { FinanceAtAGlancePanel } from "./FinanceAtAGlancePanel";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import {
   type DashboardRoleConfig,
@@ -602,6 +603,8 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
           </Link>
         ))}
       </div>
+
+      <FinanceAtAGlancePanel />
 
       <DashboardShortcutBar />
 

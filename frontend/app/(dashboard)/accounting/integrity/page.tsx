@@ -52,12 +52,9 @@ export default function SubledgerIntegrityPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Subledger Integrity</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Compare general ledger control balances to open invoices and bills. AR and AP should
-            match within {data?.tolerance ?? 0.01}. See the{" "}
-            <Link href="/accounting/controls" className="text-primary hover:underline">
-              Controls
-            </Link>{" "}
-            page to wire control accounts.
+            Compare general ledger control balances to open invoices and bills. When numbers
+            disagree, review recent postings, control account setup, and open AR/AP reports before
+            escalating to your finance administrator.
           </p>
         </div>
         <Button
@@ -112,7 +109,7 @@ export default function SubledgerIntegrityPage() {
               <p className="text-xs text-muted-foreground">
                 {data?.overall_in_balance
                   ? "GL control accounts match operational open balances."
-                  : "Contact your administrator to run integrity repair commands."}
+                  : "One or more subledgers differ from the general ledger. Review the sections below, confirm control accounts on Controls, and ask your finance administrator to investigate unmatched postings."}
               </p>
             </div>
           </div>
@@ -236,7 +233,7 @@ export default function SubledgerIntegrityPage() {
                 <CardDescription className="text-xs">
                   {prepayments.configured
                     ? "Overpayments held for future invoice application."
-                    : "Control account not configured — wire controls to enable prepayment posting."}
+                    : "Control account not configured — review Controls to enable prepayment posting."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3">

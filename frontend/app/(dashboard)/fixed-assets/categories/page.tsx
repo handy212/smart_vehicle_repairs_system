@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -54,6 +55,14 @@ const methodLabels: Record<string, string> = {
 };
 
 export default function AssetCategoriesPage() {
+  return (
+    <PermissionPageGuard permission="view_assets">
+      <AssetCategoriesContent />
+    </PermissionPageGuard>
+  );
+}
+
+function AssetCategoriesContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
