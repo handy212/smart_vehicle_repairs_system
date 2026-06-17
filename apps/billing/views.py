@@ -2375,7 +2375,7 @@ class BillViewSet(viewsets.ModelViewSet):
     queryset = Bill.objects.select_related(
         'vendor', 'branch', 'purchase_order', 'created_by',
         'submitted_by', 'assigned_approver', 'approved_by', 'rejected_by'
-    ).prefetch_related('line_items', 'payments')
+    ).prefetch_related('line_items', 'payments', 'vendor_credit_applications__vendor_credit')
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
@@ -2446,6 +2446,13 @@ class BillViewSet(viewsets.ModelViewSet):
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
             
         serializer.save(branch=branch, created_by=request.user)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Vendor bill statistics for list dashboard cards."""
+        from .services import BillingService
+
+        return Response(BillingService.get_bill_stats(self.get_queryset()))
 
     @action(detail=False, methods=['get'])
     def approvers(self, request):

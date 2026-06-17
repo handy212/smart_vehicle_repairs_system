@@ -79,12 +79,19 @@ function VendorCreditsContent() {
             { label: "Vendor Credits" },
           ]}
           actions={
-            <Link href="/billing/bills">
-              <Button size="sm" variant="outline">
-                <Plus className="mr-1.5 h-4 w-4" />
-                Open Bills
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/billing/vendor-credits/new">
+                <Button size="sm">
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  New Vendor Credit
+                </Button>
+              </Link>
+              <Link href="/billing/bills">
+                <Button size="sm" variant="outline">
+                  Open Bills
+                </Button>
+              </Link>
+            </div>
           }
         >
           <p className="text-sm text-muted-foreground">
@@ -183,12 +190,15 @@ function VendorCreditsContent() {
                   </TableRow>
                 ) : (
                   credits.map((credit) => (
-                    <TableRow key={credit.id}>
+                    <TableRow key={credit.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
+                        <Link
+                          href={`/billing/vendor-credits/${credit.id}`}
+                          className="flex items-center gap-2 text-primary hover:underline"
+                        >
                           <FileMinus2 className="h-4 w-4 text-muted-foreground" />
                           {credit.credit_number}
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
                         {credit.credit_date

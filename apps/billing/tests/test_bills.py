@@ -295,3 +295,19 @@ class BillTests(TestCase):
         bill.refresh_from_db()
         self.assertEqual(bill.amount_paid, Decimal('200.00'))
         self.assertEqual(bill.amount_due, Decimal('0.00'))
+
+    def test_bill_stats_endpoint(self):
+        self._create_bill(status='open', total=Decimal('100.00'), amount_due=Decimal('100.00'))
+        self._create_bill(status='paid', total=Decimal('50.00'), amount_due=Decimal('0.00'), amount_paid=Decimal('50.00'))
+        self._create_bill(status='overdue', total=Decimal('75.00'), amount_due=Decimal('75.00'))
+
+        url = reverse('api_billing:bill-stats')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['counts']['total'], 3)
+        self.assertEqual(response.data['counts']['open'], 1)
+        self.assertEqual(response.data['counts']['paid'], 1)
+        self.assertEqual(response.data['counts']['overdue'], 1)
+        self.assertEqual(Decimal(str(response.data['financials']['outstanding_total'])), Decimal('175.00'))
+        self.assertEqual(Decimal(str(response.data['financials']['total_paid'])), Decimal('50.00'))

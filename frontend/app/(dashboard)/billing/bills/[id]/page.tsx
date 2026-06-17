@@ -4,10 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Calendar, CreditCard, Download, Edit, FileText, MoreVertical, Package, ReceiptText, Truck, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Download, Edit, FileText, FileMinus2, MoreVertical, Package, ReceiptText, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { billingApi } from "@/lib/api/billing";
+import { ApplyVendorCreditToBillDialog } from "@/components/billing/ApplyVendorCreditToBillDialog";
 import { accountingApi, type Account } from "@/lib/api/accounting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,7 @@ export default function BillDetailPage() {
     const id = Number.parseInt(params.id as string, 10);
     const isValidId = Number.isFinite(id) && id > 0;
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+    const [isVendorCreditDialogOpen, setIsVendorCreditDialogOpen] = useState(false);
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
     const [selectedApproverId, setSelectedApproverId] = useState("");
 
@@ -329,6 +331,11 @@ export default function BillDetailPage() {
     const dueDate = bill.due_date ? format(new Date(bill.due_date), "MMM d, yyyy") : "-";
     const statusLabel = bill.status.replace(/_/g, " ");
     const canRecordPayment = hasPermission("edit_bills") && !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) && Number.parseFloat(bill.amount_due || "0") > 0;
+    const amountDueNum = Number.parseFloat(bill.amount_due || "0");
+    const canApplyVendorCredit =
+        hasPermission("edit_bills") &&
+        !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) &&
+        amountDueNum > 0;
     const canEditBill = hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0;
     const isStandaloneBill = !bill.purchase_order;
     const showSubmitApproval = isStandaloneBill && ["draft", "rejected"].includes(bill.status);
@@ -346,6 +353,13 @@ export default function BillDetailPage() {
 
     return (
         <div className="space-y-6 p-6">
+            <ApplyVendorCreditToBillDialog
+                open={isVendorCreditDialogOpen}
+                onOpenChange={setIsVendorCreditDialogOpen}
+                billId={bill.id}
+                vendorId={bill.vendor}
+                amountDue={amountDueNum}
+            />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/billing/bills">
@@ -506,6 +520,12 @@ export default function BillDetailPage() {
                                 Reject
                             </Button>
                         </>
+                    )}
+                    {canApplyVendorCredit && (
+                        <Button size="sm" variant="outline" onClick={() => setIsVendorCreditDialogOpen(true)}>
+                            <FileMinus2 className="mr-2 h-4 w-4" />
+                            Apply vendor credit
+                        </Button>
                     )}
                     {canRecordPayment && (
                         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
@@ -820,6 +840,43 @@ export default function BillDetailPage() {
                                     <p className="text-sm text-muted-foreground">Notes</p>
                                     <p className="text-sm">{bill.notes}</p>
                                 </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Vendor credits applied</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {bill.vendor_credit_applications && bill.vendor_credit_applications.length > 0 ? (
+                                bill.vendor_credit_applications.map((app) => (
+                                    <div key={app.id} className="rounded-md border p-3 text-sm">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="font-medium">Credit application</span>
+                                            <span className="font-semibold">{formatCurrency(Number.parseFloat(app.amount || "0"))}</span>
+                                        </div>
+                                        <div className="mt-1 text-muted-foreground">
+                                            {app.applied_at
+                                                ? format(new Date(app.applied_at), "MMM d, yyyy")
+                                                : "—"}
+                                            {app.applied_by_name ? ` · ${app.applied_by_name}` : ""}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No vendor credits applied to this bill.</p>
+                            )}
+                            {canApplyVendorCredit && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full"
+                                    onClick={() => setIsVendorCreditDialogOpen(true)}
+                                >
+                                    <FileMinus2 className="mr-2 h-4 w-4" />
+                                    Apply vendor credit
+                                </Button>
                             )}
                         </CardContent>
                     </Card>

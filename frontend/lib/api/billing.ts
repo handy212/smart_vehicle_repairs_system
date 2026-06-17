@@ -419,6 +419,7 @@ export interface Bill {
   amount_due: string;
   line_items?: BillLineItem[];
   payments?: BillPayment[];
+  vendor_credit_applications?: VendorCreditApplication[];
   submitted_by?: number | null;
   submitted_by_name?: string;
   submitted_at?: string | null;
@@ -444,6 +445,23 @@ export interface BillListResponse {
   next: string | null;
   previous: string | null;
   results: Bill[];
+}
+
+export interface BillStats {
+  counts: {
+    total: number;
+    draft: number;
+    open: number;
+    partially_paid: number;
+    paid: number;
+    overdue: number;
+    pending_approval: number;
+  };
+  financials: {
+    total_paid: number | string;
+    overdue_total: number | string;
+    outstanding_total: number | string;
+  };
 }
 
 export interface BillApprover {
@@ -476,6 +494,11 @@ export const billingApi = {
 
     get: async (id: number): Promise<Bill> => {
       const response = await apiClient.get(`/billing/bills/${id}/`);
+      return response.data;
+    },
+
+    stats: async (): Promise<BillStats> => {
+      const response = await apiClient.get("/billing/bills/stats/");
       return response.data;
     },
 
