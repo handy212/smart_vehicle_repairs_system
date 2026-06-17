@@ -4,7 +4,24 @@
 **System:** Smart Vehicle Repairs ERP  
 **Last updated:** June 2026
 
-This guide explains how money flows through the system — from invoices and payments to the general ledger — and how to keep your books accurate.
+This guide explains how money flows through the system — from invoices and payments to the general ledger — and how to use every screen under **Accounting** in the sidebar.
+
+---
+
+## Navigation map
+
+The Accounting module is organized into six areas. Use the collapsible groups in the left sub-navigation to move between them.
+
+| Area | Screens | What you do here |
+|------|---------|------------------|
+| **Overview** | Overview | KPIs, alerts, shortcuts to common tasks |
+| **Ledger** | Journal Entries, Chart of Accounts, Accruals | GL structure, manual entries, period accruals |
+| **Banking** | Bank Reconciliation, Fund Transfers, Till Management | Cash, bank, transfers, and till sessions |
+| **Planning** | Budgets | Annual budgets and budget-vs-actual |
+| **Reports** | Financial Reports | P&L, balance sheet, aging, tax, and management reports |
+| **Governance** | Controls & Compliance, Subledger Integrity | Control wiring, period lock, AR/AP reconciliation |
+
+Operational billing (invoices, payments, bills, vendor credits) lives under **Billing**, but those transactions post to the accounts configured here.
 
 ---
 
@@ -23,7 +40,21 @@ Vendor bill paid            →  Dr Accounts Payable         /  Cr Cash or Bank
 
 ---
 
-## 2. Chart of accounts overview
+## 2. Accounting overview dashboard
+
+**Path:** Accounting → Overview (`/accounting`)
+
+The overview is your command center. It surfaces:
+
+- **Open AR/AP** and cash position at a glance
+- **Alerts** such as missing control accounts, open tills, or subledger drift
+- **Shortcuts** to common tasks (record payment, open reports, wire controls)
+
+Check the overview at the start of each day. Resolve red alerts before processing new payments or period close.
+
+---
+
+## 3. Chart of accounts overview
 
 Accounts are organized by type. Only **leaf (detail) accounts** receive postings — never parent/header accounts like “Assets” or “1000 Cash & Bank.”
 
@@ -42,15 +73,51 @@ Accounts are organized by type. Only **leaf (detail) accounts** receive postings
 | **5000** | Purchases / Operating Expense | Expense | Non-inventory vendor bills |
 | **5050** | Purchase Returns | Expense (contra) | Vendor credits |
 
-View and maintain accounts at **Accounting → Chart of Accounts**.
+View and maintain accounts at **Accounting → Ledger → Chart of Accounts**.
+
+**Tips**
+
+- Create new leaf accounts under the correct parent (Asset, Liability, Income, Expense).
+- Do not post to header/summary accounts — only detail accounts accept journal lines.
+- After adding accounts that will receive automated postings, update **Controls & Compliance**.
 
 ---
 
-## 3. Control accounts (system wiring)
+## 4. Journal entries
+
+**Path:** Accounting → Ledger → Journal Entries
+
+Use journal entries for adjustments that are not created by Billing (e.g. depreciation, corrections, reclassifications).
+
+| Action | Steps |
+|--------|-------|
+| **Create** | Journal Entries → New → add balanced debit/credit lines → Post |
+| **View** | Open any entry for line detail, source document links, and audit trail |
+| **Correct a mistake** | Post a **reversal** entry — do not edit a posted entry |
+
+Posted entries are **immutable** when the entry date falls inside a locked period. See **Controls & Compliance** for period lock rules.
+
+---
+
+## 5. Accruals
+
+**Path:** Accounting → Ledger → Accruals
+
+Accruals record expenses or revenue in the correct period before cash moves (e.g. month-end utilities, prepaid amortization).
+
+1. Create an accrual schedule or one-time accrual.
+2. Review the proposed debit/credit accounts.
+3. Post to the GL for the target period.
+
+Reverse or settle accruals when the related invoice or payment is recorded, per your accountant’s policy.
+
+---
+
+## 6. Control accounts (system wiring)
 
 **Control accounts** tell the system which GL accounts to use when posting invoices, payments, bills, and credit notes. They are configured once (or when your chart changes) at:
 
-**Accounting → Controls & Compliance → Control account mapping**
+**Accounting → Governance → Controls & Compliance → Control account mapping**
 
 | Setting | Default code | What it controls |
 |---------|--------------|------------------|
@@ -64,7 +131,7 @@ View and maintain accounts at **Accounting → Chart of Accounts**.
 
 **First-time setup**
 
-1. Go to **Accounting → Controls & Compliance**.
+1. Go to **Accounting → Governance → Controls & Compliance**.
 2. Click **Wire from standard chart** — this maps all 16 control fields to the correct leaf accounts.
 3. Confirm each row shows a green “Configured” status.
 
@@ -72,7 +139,7 @@ If control accounts are missing, automated posting may fail or post to the wrong
 
 ---
 
-## 4. Customer billing flow
+## 7. Customer billing flow
 
 ### Step 1 — Create and finalize an invoice
 
@@ -109,7 +176,7 @@ If a customer pays more than they owe, the excess should post to **Customer Prep
 
 ---
 
-## 5. Vendor bills flow (accounts payable)
+## 8. Vendor bills flow (accounts payable)
 
 ### Step 1 — Enter a bill
 
@@ -128,11 +195,33 @@ If a customer pays more than they owe, the excess should post to **Customer Prep
 
 ### Vendor credits
 
-Use **Billing → Vendor Credits** to record returns to suppliers. Unapplied vendor credits reduce your AP subledger balance.
+Use **Billing → Vendor Credits** to record returns to suppliers. Issue the credit, then **apply** it to open bills from either the bill or vendor credit screen. Unapplied vendor credits reduce your AP subledger balance.
 
 ---
 
-## 6. Cash tills vs bank accounts
+## 9. Banking
+
+### Bank reconciliation
+
+**Path:** Accounting → Banking → Bank Reconciliation
+
+1. Import or enter bank statement lines for a statement period.
+2. Match statement lines to GL payments and receipts.
+3. Mark the reconciliation complete when the statement balance agrees with the GL bank account.
+
+Reconcile each bank account monthly. Unmatched items often indicate missing payments, duplicate postings, or wrong settlement account selection.
+
+### Fund transfers
+
+**Path:** Accounting → Banking → Fund Transfers
+
+Move money between bank accounts, cash accounts, or branches:
+
+1. Create a transfer request with from/to accounts and amount.
+2. Submit for approval if your workflow requires it.
+3. On approval, the system posts the paired GL entries (Dr destination / Cr source).
+
+### Cash tills vs bank accounts
 
 | Situation | Account to use |
 |-----------|----------------|
@@ -141,17 +230,31 @@ Use **Billing → Vendor Credits** to record returns to suppliers. Unapplied ven
 | Paying a vendor in cash from till | Till-enabled cash account |
 | Paying by cheque or EFT | Bank account |
 
-**Till management:** **Accounting → Till Management**
+**Till management:** **Accounting → Banking → Till Management**
 
 - **Open till** at start of shift (count opening cash).
+- Record **pay-ins** and **pay-outs** during the shift when moving cash to/from the safe.
 - **Close till** at end of shift (count closing cash; system posts variance to Cash Over/Short if needed).
+- Review the **till reconciliation** report before signing off the shift.
 - Never leave tills open overnight — integrity checks flag open tills.
 
 ---
 
-## 7. Period lock and year-end close
+## 10. Budgets
 
-**Accounting → Controls & Compliance**
+**Path:** Accounting → Planning → Budgets
+
+1. **Create a budget** for a fiscal year (or period).
+2. Add **budget lines** by account or category.
+3. Open **Budget vs Actual** from the budget detail page to compare plan to GL actuals.
+
+Use budgets for workshop OPEX planning and variance review with management. Budget figures do not post to the GL — they are for comparison only.
+
+---
+
+## 11. Period lock and year-end close
+
+**Accounting → Governance → Controls & Compliance**
 
 ### Period lock
 
@@ -165,22 +268,43 @@ Post a **closing entry** for a date range to move net income to retained earning
 
 ---
 
-## 8. Reports you should use regularly
+## 12. Financial reports
 
-| Report | Path | Purpose |
-|--------|------|---------|
-| Accounts Receivable Aging | Accounting → Reports → Aging (AR) | Who owes you |
-| Accounts Payable Aging | Accounting → Reports → Aging (AP) | What you owe |
-| Profit & Loss | Accounting → Reports → Profit & Loss | Revenue vs expenses |
-| Balance Sheet | Accounting → Reports → Balance Sheet | Assets, liabilities, equity |
-| Trial Balance | Accounting → Reports → Trial Balance | Debits = credits check |
-| **Subledger integrity** | Accounting → Subledger Integrity | GL vs operational AR/AP match |
+**Path:** Accounting → Reports → Financial Reports
 
-Run **Subledger Integrity** weekly (or after bulk imports) to confirm GL control balances match open invoices and bills.
+The reports hub lists all financial statements. Use the horizontal tabs to switch between reports.
+
+| Report | Purpose |
+|--------|---------|
+| **General Ledger** | Transaction detail by account for an date range |
+| **Balance Sheet** | Assets, liabilities, and equity at a point in time |
+| **Profit & Loss** | Revenue vs expenses for a period |
+| **Trial Balance** | Confirm total debits equal total credits |
+| **Cash Flow** | Cash movement by operating, investing, and financing activity |
+| **AR/AP Aging** | Who owes you / what you owe vendors, by age bucket |
+| **Tax Report** | Tax collected and payable summary |
+| **Management** | Executive summary metrics for leadership review |
+| **Margin Analysis** | Gross margin by service or product line |
+| **Cost Control** | Expense trends and cost drivers |
+| **OPEX Variance** | Operating expense vs budget or prior period |
+| **Job Profitability** | Revenue and cost by work order or job |
+| **Expense Breakdown** | Expense composition by account or category |
+
+**Reports to run regularly**
+
+| Report | Frequency | Why |
+|--------|-----------|-----|
+| AR/AP Aging | Weekly | Collections and payment planning |
+| Profit & Loss | Monthly | Performance review |
+| Balance Sheet | Monthly | Financial position |
+| Trial Balance | Month-end | Debits = credits check |
+| **Subledger Integrity** | Weekly | GL vs operational AR/AP match |
+
+Run **Subledger Integrity** after bulk imports or payment repairs.
 
 ---
 
-## 9. Subledger integrity — what it means
+## 13. Subledger integrity — what it means
 
 The system maintains two views of AR and AP:
 
@@ -195,11 +319,11 @@ These should match within **GHS 0.01**.
 | **AR out of balance** | Payments may not have credited AR, invoices missing GL, or misrouted settlement |
 | **AP out of balance** | Bill payments may not have debited AP, or bills missing GL |
 
-**Accounting → Subledger Integrity** shows the breakdown. Contact your system administrator if out of balance.
+**Accounting → Governance → Subledger Integrity** shows the breakdown. Contact your system administrator if out of balance.
 
 ---
 
-## 10. Common issues and fixes
+## 14. Common issues and fixes
 
 | Symptom | Likely cause | What to do |
 |---------|--------------|------------|
@@ -207,12 +331,12 @@ These should match within **GHS 0.01**.
 | Payment fails — no till | Cash payment without open till | Open till or use bank method |
 | AR aging ≠ GL AR balance | Old misrouted payments or demo data | Run integrity repair (admin) |
 | Cannot edit old journal entry | Period lock active | Clear lock (admin) or post reversal |
-| Open till warning | Till not closed | Accounting → Till Management → Close |
+| Open till warning | Till not closed | Banking → Till Management → Close |
 | Duplicate GL entries | Re-posted after failed retry | Admin runs duplicate repair |
 
 ---
 
-## 11. Demo data and clean resets
+## 15. Demo data and clean resets
 
 **Admin → Demo Data** seeds sample customers, invoices, and GL entries for training. Demo records use markers like `CDINV*` and `CDPAY*`.
 
@@ -233,7 +357,7 @@ python manage.py reset_demo_accounting --confirm --reseed
 
 ---
 
-## 12. Administrator maintenance commands
+## 16. Administrator maintenance commands
 
 These are for system administrators with server access. Run after backups.
 
@@ -257,7 +381,7 @@ python manage.py validate_accounting_integrity --summary --no-fail
 
 ---
 
-## 13. Roles and permissions
+## 17. Roles and permissions
 
 | Task | Typical permission |
 |------|-------------------|
@@ -266,11 +390,13 @@ python manage.py validate_accounting_integrity --summary --no-fail
 | Create manual journal entries | `create_journal_entries` |
 | Lock periods / wire controls | `manage_accounting_periods` |
 | Record payments | Billing payment permissions |
-| Manage tills | Accounting till access |
+| View bank reconciliation | `view_bank_statements` |
+| View fund transfers | `view_transfer_requests` |
+| View budgets | `view_budgets` |
 
 ---
 
-## 14. Golden rules
+## 18. Golden rules
 
 1. **Finalize invoices** only when amounts are correct — GL posts on finalize.
 2. **Always select the correct settlement account** (till for cash, bank for electronic).
