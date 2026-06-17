@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { DASHBOARD_REQUIREMENTS_NAV_GROUPS } from "@/components/layout/dashboard-requirements-nav-config";
 import { filterNavGroups } from "@/components/layout/nav-group-utils";
-import type { NavGroup, NavGroupItem } from "@/components/layout/nav-group-types";
+import type { NavGroup, NavGroupItem, NavIcon } from "@/components/layout/nav-group-types";
 import { useModules } from "@/lib/hooks/useModules";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { cn } from "@/lib/utils/cn";
@@ -62,7 +61,7 @@ function RequirementLink({
   Icon,
 }: {
   item: NavGroupItem;
-  Icon?: LucideIcon;
+  Icon?: NavIcon;
 }) {
   return (
     <Link
@@ -106,7 +105,7 @@ export function DashboardRequirementsPanel() {
           type="single"
           collapsible
           value={openGroup}
-          onValueChange={setOpenGroup}
+          onValueChange={(value) => setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)}
           className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-3"
         >
           {visibleGroups.map((group) => {

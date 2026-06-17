@@ -510,6 +510,7 @@ export const billingApi = {
   bills: {
     list: async (params?: {
       page?: number;
+      page_size?: number;
       status?: string;
       vendor?: number;
       branch?: number;
@@ -735,6 +736,7 @@ export const billingApi = {
   vendorCredits: {
     list: async (params?: {
       page?: number;
+      page_size?: number;
       status?: string;
       vendor?: number;
       search?: string;

@@ -76,7 +76,10 @@ export default function SalesReportsPage() {
   const overdueAmount = Number(invoiceStats?.financials?.past_due_total ?? 0);
   const revenueMtd =
     revenueData?.summary?.total_paid ??
-    revenueData?.revenue_by_period?.reduce((sum, row) => sum + Number(row.revenue ?? 0), 0) ??
+    revenueData?.revenue_by_period?.reduce(
+      (sum: number, row: { revenue?: number | string }) => sum + Number(row.revenue ?? 0),
+      0
+    ) ??
     0;
 
   const summaryCards = [

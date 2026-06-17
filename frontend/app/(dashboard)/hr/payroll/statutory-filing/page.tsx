@@ -42,11 +42,11 @@ export default function StatutoryFilingPage() {
       e.paye,
       ...pack.summary.map((s: { code: string }) => e.statutory_deductions[s.code] || 0),
     ]);
-    exportToCSV({
-      filename: `statutory-pack-${pack.period.name}`,
-      headers: ["Employee", "Gross", "PAYE", ...pack.summary.map((s: { label: string }) => s.label)],
+    exportToCSV(
       rows,
-    });
+      `statutory-pack-${pack.period.name}`,
+      ["Employee", "Gross", "PAYE", ...pack.summary.map((s: { label: string }) => s.label)]
+    );
   };
 
   return (

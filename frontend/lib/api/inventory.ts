@@ -484,6 +484,7 @@ export const inventoryApi = {
   // Suppliers
   listSuppliers: async (params?: {
     page?: number;
+    page_size?: number;
     search?: string;
     supplier_type?: string;
     is_active?: boolean;

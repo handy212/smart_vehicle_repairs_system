@@ -444,7 +444,7 @@ export function GroupedNavPanel({
             type="single"
             collapsible
             value={openGroup}
-            onValueChange={(value) => setOpenGroup(value)}
+            onValueChange={(value) => setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)}
             className="space-y-0.5"
           >
             {accordionGroups.map((group) => renderAccordionGroup(group, "sidebar"))}
@@ -519,7 +519,7 @@ export function GroupedNavPanel({
                 type="single"
                 collapsible
                 value={openGroup}
-                onValueChange={(value) => setOpenGroup(value)}
+                onValueChange={(value) => setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)}
                 className="space-y-0.5"
               >
                 {accordionGroups.map((group) => renderAccordionGroup(group, "desktop"))}
