@@ -101,7 +101,7 @@ export default function ReorderReportsPage() {
                       <TableCell>{item.supplier?.name ?? "—"}</TableCell>
                       <TableCell>
                         {item.is_critical ? (
-                          <Badge variant="destructive">Critical</Badge>
+                          <Badge variant="danger">Critical</Badge>
                         ) : (
                           <Badge variant="outline">Low</Badge>
                         )}

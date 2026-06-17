@@ -159,7 +159,7 @@ export default function DepreciationPage() {
 
               {result.errors.length > 0 && (
                 <div className="space-y-2">
-                  <Badge variant="destructive">{result.errors.length} errors</Badge>
+                  <Badge variant="danger">{result.errors.length} errors</Badge>
                   <ul className="text-sm text-destructive space-y-1 list-disc pl-5">
                     {result.errors.map((error, index) => (
                       <li key={index}>{error}</li>

@@ -152,7 +152,7 @@ export default function CollectionsPage() {
                     <TableCell>{invoice.customer_name ?? "—"}</TableCell>
                     <TableCell>{invoice.due_date}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="destructive">{invoice.days_overdue ?? 0} days</Badge>
+                      <Badge variant="danger">{invoice.days_overdue ?? 0} days</Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {formatCurrency(invoice.amount_due ?? invoice.balance_due ?? 0)}
