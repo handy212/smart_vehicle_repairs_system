@@ -504,6 +504,11 @@ class AccountingServiceTests(TestCase):
         client = APIClient()
         client.force_authenticate(user=self.user)
         bank_account = AccountingService.get_or_create_account('1030', 'Workflow Bank', 'asset', 'debit')
+        bank_account.account_subtype = 'bank'
+        bank_account.save(update_fields=['account_subtype'])
+        cash_account = AccountingService.get_or_create_account('1035', 'Workflow Cash', 'asset', 'debit')
+        cash_account.account_subtype = 'cash_equivalent'
+        cash_account.save(update_fields=['account_subtype'])
         statement = BankStatement.objects.create(
             bank_account=bank_account,
             statement_date=timezone.now().date(),
@@ -542,7 +547,7 @@ class AccountingServiceTests(TestCase):
             '/api/accounting/fund-transfers/',
             {
                 'from_account': bank_account.id,
-                'to_account': self.asset_account.id,
+                'to_account': cash_account.id,
                 'amount': '15.00',
                 'transfer_date': timezone.now().date().isoformat(),
                 'description': 'Transfer mutation attempt',

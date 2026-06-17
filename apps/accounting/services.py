@@ -557,6 +557,9 @@ class AccountingService:
         if bill.status not in ['open', 'paid']:
             return None
 
+        if not bill.line_items.exists():
+            return None
+
         # Check if already posted
         bill_type = ContentType.objects.get_for_model(bill)
         # Note: If we separate COGS in post_invoice, we don't need changes there.

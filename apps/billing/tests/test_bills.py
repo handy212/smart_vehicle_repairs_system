@@ -8,6 +8,7 @@ from apps.inventory.models import Supplier
 from apps.branches.models import Branch
 from apps.accounts.permission_models import Permission, Role
 from django.utils import timezone
+from datetime import timedelta
 from decimal import Decimal
 
 User = get_user_model()
@@ -62,6 +63,8 @@ class BillTests(TestCase):
             "amount_due": Decimal("100.00"),
         }
         defaults.update(kwargs)
+        if defaults.get("status") == "overdue":
+            defaults["due_date"] = timezone.now().date() - timedelta(days=30)
         bill = Bill.objects.create(**defaults)
         BillLineItem.objects.create(
             bill=bill,

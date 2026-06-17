@@ -1,5 +1,6 @@
 from datetime import date, time
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -97,7 +98,8 @@ def test_tax_service_applies_progressive_rules_and_excess_amount():
 
 
 @pytest.mark.django_db
-def test_payroll_uses_percentage_components_and_taxable_allowances(employee, branch):
+@patch("apps.hr.statutory_contributions.StatutoryContributionService._auto_enabled", return_value=False)
+def test_payroll_uses_percentage_components_and_taxable_allowances(mock_auto_ssnit, employee, branch):
     TaxRule.objects.create(
         name="Flat",
         min_income=Decimal("0.00"),
@@ -372,7 +374,8 @@ def test_hiring_applicant_creates_employee_profile(api_client, admin_user, branc
 
 
 @pytest.mark.django_db
-def test_payroll_prorates_new_hire_and_deducts_unpaid_leave_and_absence(employee, branch):
+@patch("apps.hr.statutory_contributions.StatutoryContributionService._auto_enabled", return_value=False)
+def test_payroll_prorates_new_hire_and_deducts_unpaid_leave_and_absence(mock_auto_ssnit, employee, branch):
     employee.start_date = date(2026, 5, 18)
     employee.base_salary = Decimal("2100.00")
     employee.save(update_fields=["start_date", "base_salary", "updated_at"])
