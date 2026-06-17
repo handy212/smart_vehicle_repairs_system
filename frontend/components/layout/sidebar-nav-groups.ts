@@ -1,4 +1,5 @@
 import { PremiumIcons } from "@/components/ui/icons";
+import type { NavIcon } from "@/components/layout/nav-group-types";
 import type { NavGroup } from "./nav-group-types";
 import { DASHBOARD_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 
@@ -6,7 +7,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
   {
     id: "main",
     label: "Main",
-    icon: PremiumIcons.Dashboard,
+    icon: PremiumIcons.Dashboard as NavIcon,
     pinned: true,
     items: [
       {

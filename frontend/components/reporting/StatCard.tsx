@@ -1,12 +1,12 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import { LucideIcon } from 'lucide-react';
+import type { NavIcon } from '@/components/layout/nav-group-types';
 
 interface StatCardProps {
     title: string;
     value: string | number;
-    icon: LucideIcon;
+    icon: NavIcon;
     change?: {
         value: number;
         trend: 'up' | 'down' | 'neutral';

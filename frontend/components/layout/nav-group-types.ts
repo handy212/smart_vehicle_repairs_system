@@ -1,7 +1,8 @@
 import type { LucideIcon } from "lucide-react";
-import type { ElementType } from "react";
+import type { ElementType, ComponentType, SVGProps } from "react";
 
-export type NavIcon = LucideIcon | ElementType;
+// Accept Lucide icons and plain React SVG components
+export type NavIcon = LucideIcon | ComponentType<SVGProps<SVGSVGElement>> | ElementType;
 
 export interface NavGroupItem {
   name: string;

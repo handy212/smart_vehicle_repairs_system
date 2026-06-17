@@ -13,7 +13,8 @@ import {
   UserCheck,
   FileText,
   LayoutDashboard,
-  type LucideIcon,
+  type LucideIcon, 
+  type NavIcon,
 } from "lucide-react";
 import { searchApi, type SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
@@ -25,7 +26,7 @@ interface QuickAction {
   title: string;
   subtitle: string;
   url: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   permission?: string;
   module?: string;
 }

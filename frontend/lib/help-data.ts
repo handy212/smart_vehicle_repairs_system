@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { NavIcon } from "@/components/layout/nav-group-types";
 import {
     Bell,
     Calculator,
@@ -34,7 +34,7 @@ export type HelpModule = {
     id: string;
     title: string;
     description: string;
-    icon: LucideIcon;
+    icon: NavIcon;
     topics: HelpTopic[];
     keywords?: string[];
 };

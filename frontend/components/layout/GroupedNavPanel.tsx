@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import type { NavIcon } from "@/components/layout/nav-group-types";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,7 +77,7 @@ function NavLink({
   brandingColor?: string;
   layout: "sidebar" | "subnav";
   onItemClick?: () => void;
-  Icon?: LucideIcon;
+  Icon?: NavIcon;
 }) {
   const isSidebar = layout === "sidebar";
 

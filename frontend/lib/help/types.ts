@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { NavIcon } from "@/components/layout/nav-group-types";
 
 export type HelpBlock =
     | { type: "paragraph"; text: string }
@@ -23,7 +23,7 @@ export type HelpGuide = {
     id: string;
     title: string;
     description: string;
-    icon: LucideIcon;
+    icon: NavIcon;
     section: HelpSectionId;
     responsibilities?: string[];
     topics: HelpTopic[];
