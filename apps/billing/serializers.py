@@ -1915,6 +1915,7 @@ class BillSerializer(serializers.ModelSerializer):
     rejected_by_name = serializers.CharField(source='rejected_by.get_full_name', read_only=True)
     line_items = BillLineItemSerializer(many=True, read_only=True)
     payments = serializers.SerializerMethodField()
+    vendor_credit_applications = VendorCreditApplicationSerializer(many=True, read_only=True)
     
     class Meta:
         model = Bill
@@ -1925,7 +1926,7 @@ class BillSerializer(serializers.ModelSerializer):
             'terms', 'notes', 'status', 'currency',
             'subtotal', 'tax_amount', 'total', 
             'amount_paid', 'amount_due',
-            'line_items', 'payments',
+            'line_items', 'payments', 'vendor_credit_applications',
             'created_by', 'created_by_name',
             'submitted_by', 'submitted_by_name', 'submitted_at',
             'assigned_approver', 'assigned_approver_name',

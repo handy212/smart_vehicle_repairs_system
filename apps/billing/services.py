@@ -48,6 +48,42 @@ class BillingService:
         }
 
     @staticmethod
+    def get_bill_stats(queryset):
+        """Calculate vendor bill statistics for dashboard."""
+        total_count = queryset.count()
+        open_count = queryset.filter(status='open').count()
+        partially_paid_count = queryset.filter(status='partially_paid').count()
+        paid_count = queryset.filter(status='paid').count()
+        overdue_count = queryset.filter(status='overdue').count()
+        pending_approval_count = queryset.filter(status='pending_approval').count()
+        draft_count = queryset.filter(status='draft').count()
+
+        outstanding_total = queryset.exclude(
+            status__in=['paid', 'void', 'draft', 'rejected', 'pending_approval']
+        ).aggregate(total=Sum('amount_due'))['total'] or 0
+        overdue_total = queryset.filter(status='overdue').aggregate(
+            total=Sum('amount_due')
+        )['total'] or 0
+        total_paid = queryset.aggregate(total=Sum('amount_paid'))['total'] or 0
+
+        return {
+            'counts': {
+                'total': total_count,
+                'draft': draft_count,
+                'open': open_count,
+                'partially_paid': partially_paid_count,
+                'paid': paid_count,
+                'overdue': overdue_count,
+                'pending_approval': pending_approval_count,
+            },
+            'financials': {
+                'total_paid': total_paid,
+                'overdue_total': overdue_total,
+                'outstanding_total': outstanding_total,
+            },
+        }
+
+    @staticmethod
     def get_aging_report_data(queryset):
         """Calculate accounts receivable aging report data"""
         today = timezone.now().date()

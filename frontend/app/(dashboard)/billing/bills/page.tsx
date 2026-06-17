@@ -113,6 +113,11 @@ export default function BillsPage() {
     ];
 
 
+    const { data: stats } = useQuery({
+        queryKey: ["bill-stats"],
+        queryFn: () => billingApi.bills.stats(),
+    });
+
     const { data, isLoading } = useQuery({
         queryKey: ["bills", page, search, advancedFilters, sortConfig],
         queryFn: () => {
@@ -264,11 +269,10 @@ export default function BillsPage() {
         }
     };
 
-    // Calculate summary stats
-    const totalBills = data?.count || 0;
-    const totalAmount = data?.results?.reduce((sum, bill) => sum + parseFloat(bill.total || "0"), 0) || 0;
-    const totalDue = data?.results?.reduce((sum, bill) => sum + parseFloat(bill.amount_due || "0"), 0) || 0;
-    const overdueCount = data?.results?.filter((bill) => bill.status === "overdue").length || 0;
+    const totalBills = stats?.counts.total ?? 0;
+    const totalPaid = stats?.financials.total_paid ?? 0;
+    const totalDue = stats?.financials.outstanding_total ?? 0;
+    const overdueCount = stats?.counts.overdue ?? 0;
 
     return (
         <div className="space-y-4 min-h-screen">
@@ -308,9 +312,9 @@ export default function BillsPage() {
                 </Card>
                 <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Amount</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Paid</span>
                         <div className="flex items-end justify-between">
-                            <span className="text-xl font-bold text-foreground">{formatCurrency(totalAmount)}</span>
+                            <span className="text-xl font-bold text-foreground">{formatCurrency(totalPaid)}</span>
                             <DollarSign className="w-5 h-5 text-muted-foreground mb-0.5" />
                         </div>
                     </CardContent>
