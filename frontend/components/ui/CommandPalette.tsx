@@ -13,9 +13,9 @@ import {
   UserCheck,
   FileText,
   LayoutDashboard,
-  type LucideIcon, 
-  type NavIcon,
+  type LucideIcon,
 } from "lucide-react";
+import type { NavIcon } from "@/components/layout/nav-group-types";
 import { searchApi, type SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
 import { usePermissions } from "@/lib/hooks/usePermissions";
