@@ -6,7 +6,6 @@ import { useTheme } from "@/lib/hooks/useTheme";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import { SubNav, getSubNavConfig } from "./SubNav";
-import { AccountingSubNav } from "./AccountingSubNav";
 import { useKeyboardShortcut } from "@/lib/hooks/useKeyboardShortcut";
 import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dialog";
 import { CommandPalette } from "@/components/ui/CommandPalette";
@@ -17,7 +16,6 @@ import { ErrorBoundary } from "@/components/error-boundary";
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const subNavConfig = getSubNavConfig(pathname);
-  const isAccountingRoute = pathname?.startsWith("/accounting") ?? false;
   const hasSubNav = !!subNavConfig;
   const [isSubNavCollapsed, setIsSubNavCollapsed] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -168,8 +166,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             }
           }}
         />
-        {hasSubNav && isAccountingRoute ? (
-          <AccountingSubNav
+        {hasSubNav && subNavConfig && (
+          <SubNav
+            groups={subNavConfig.groups}
+            title={subNavConfig.title}
+            module={subNavConfig.module}
             onToggle={(collapsed) => {
               setIsSubNavCollapsed(collapsed);
               if (mounted) {
@@ -180,24 +181,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             isCollapsed={mounted ? isSubNavCollapsed : false}
             sidebarCollapsed={mounted ? isSidebarCollapsed : false}
           />
-        ) : (
-          hasSubNav &&
-          subNavConfig && (
-            <SubNav
-              items={subNavConfig.items}
-              title={subNavConfig.title}
-              module={subNavConfig.module}
-              onToggle={(collapsed) => {
-                setIsSubNavCollapsed(collapsed);
-                if (mounted) {
-                  localStorage.setItem("subNavCollapsed", collapsed.toString());
-                  window.dispatchEvent(new Event("subNavToggle"));
-                }
-              }}
-              isCollapsed={mounted ? isSubNavCollapsed : false}
-              sidebarCollapsed={mounted ? isSidebarCollapsed : false}
-            />
-          )
         )}
       </div>
       <main
