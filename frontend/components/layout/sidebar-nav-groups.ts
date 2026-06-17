@@ -131,7 +131,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "tools-reports",
-    label: "Tools & Reports",
+    label: "Tools",
     icon: PremiumIcons.BarChart,
     items: [
       {
