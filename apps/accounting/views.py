@@ -975,6 +975,30 @@ class AccountingControlView(RetrieveUpdateAPIView):
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
 
+
+class WireAccountingControlsView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('manage_accounting_periods'),
+    ]
+
+    def post(self, request):
+        from .wire_controls import wire_accounting_controls
+
+        force = request.data.get('force', True)
+        if isinstance(force, str):
+            force = force.lower() not in ('false', '0', 'no')
+
+        result = wire_accounting_controls(force=bool(force), dry_run=False)
+        controls = AccountingControl.get_settings()
+        serializer = AccountingControlSerializer(controls, context={'request': request})
+        return Response({
+            'changed_fields': result['changed_fields'],
+            'skipped': result['skipped'],
+            'settings': serializer.data,
+        })
+
 class AuditLogView(ListAPIView):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]

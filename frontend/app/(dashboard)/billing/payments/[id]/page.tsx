@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, DollarSign, Calendar, CreditCard, FileText, User, RotateCcw, Printer } from "lucide-react";
+import { ArrowLeft, DollarSign, Calendar, CreditCard, FileText, User, RotateCcw, Printer, Split } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Separator } from "@/components/ui/separator";
+import { PaymentAllocationModal } from "@/components/billing/PaymentAllocationModal";
 import {
     Dialog,
     DialogContent,
@@ -43,6 +44,7 @@ export default function PaymentDetailPage() {
     const [refundAmount, setRefundAmount] = useState("");
     const [refundReason, setRefundReason] = useState("");
     const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+    const [allocationOpen, setAllocationOpen] = useState(false);
 
     // Validate ID to prevent NaN API calls
     const isValidId = !isNaN(id) && id > 0;
@@ -56,6 +58,12 @@ export default function PaymentDetailPage() {
     const { data: allocations } = useQuery({
         queryKey: ['payment-allocations', id],
         queryFn: () => billingApi.payments.allocations(id),
+        enabled: isValidId && !!payment,
+    });
+
+    const { data: unallocatedData } = useQuery({
+        queryKey: ['payment-unallocated', id],
+        queryFn: () => billingApi.payments.unallocatedAmount(id),
         enabled: isValidId && !!payment,
     });
 
@@ -136,6 +144,16 @@ export default function PaymentDetailPage() {
         return variants[status] || 'default';
     };
 
+    const unallocatedAmount = parseFloat(
+        unallocatedData?.unallocated ??
+        payment?.unallocated_balance ??
+        "0"
+    );
+    const canAllocate =
+        payment.status === 'completed' &&
+        Boolean(payment.customer) &&
+        unallocatedAmount > 0.01;
+
     return (
         <div className="space-y-6 p-8 min-h-screen">
             {/* Header */}
@@ -160,6 +178,13 @@ export default function PaymentDetailPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
+                    {canAllocate && (
+                        <Button variant="outline" onClick={() => setAllocationOpen(true)}>
+                            <Split className="mr-2 h-4 w-4" />
+                            Allocate {formatCurrency(unallocatedAmount)}
+                        </Button>
+                    )}
+
                     <Button variant="outline" onClick={() => openPrintWindow({ documentType: 'receipt', documentId: id })} disabled={isOpeningPrint}>
                         <Printer className="mr-2 h-4 w-4" />
                         {isOpeningPrint ? 'Opening...' : 'Print Receipt'}
@@ -232,6 +257,11 @@ export default function PaymentDetailPage() {
                             <div>
                                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
                                 <p className="text-2xl font-bold">{formatCurrency(parseFloat(payment.amount))}</p>
+                                {unallocatedAmount > 0.01 && (
+                                    <p className="text-xs text-primary mt-1">
+                                        {formatCurrency(unallocatedAmount)} unallocated
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Method</h3>
@@ -268,6 +298,7 @@ export default function PaymentDetailPage() {
                             </CardTitle>
                             <CardDescription>
                                 How this payment was applied to invoices
+                                {canAllocate ? ` — ${formatCurrency(unallocatedAmount)} available to allocate` : ""}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -344,6 +375,21 @@ export default function PaymentDetailPage() {
                     )}
                 </div>
             </div>
+
+            {payment.customer ? (
+                <PaymentAllocationModal
+                    paymentId={payment.id}
+                    paymentAmount={payment.amount}
+                    customerId={payment.customer}
+                    open={allocationOpen}
+                    onClose={() => {
+                        setAllocationOpen(false);
+                        queryClient.invalidateQueries({ queryKey: ['payment', id] });
+                        queryClient.invalidateQueries({ queryKey: ['payment-allocations', id] });
+                        queryClient.invalidateQueries({ queryKey: ['payment-unallocated', id] });
+                    }}
+                />
+            ) : null}
         </div>
     );
 }

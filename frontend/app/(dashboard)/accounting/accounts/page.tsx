@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Edit, Loader2, MoreVertical, Plus, Power, PowerOff, Search } from "lucide-react";
+import Link from "next/link";
 import { accountingApi } from "@/lib/api/accounting";
+import { buildControlAccountRoleMap } from "@/lib/accounting/control-accounts";
 import apiClient from "@/lib/api/client";
 import { ACCOUNTING_TABLE_HEAD_CLASS } from "@/lib/constants/table-typography";
 import { cn } from "@/lib/utils/cn";
@@ -137,6 +139,16 @@ export default function ChartOfAccountsPage() {
             ordering: sortOrderingParam(sortConfig) || "code",
         }) as Promise<Account[]>,
     });
+
+    const { data: controlSettings } = useQuery({
+        queryKey: ["accounting", "settings"],
+        queryFn: () => accountingApi.getAccountingSettings(),
+    });
+
+    const controlRoleMap = useMemo(
+        () => buildControlAccountRoleMap(controlSettings),
+        [controlSettings]
+    );
 
     const accountRows = useMemo(() => buildTreeRows(accounts, expanded, searchTerm), [accounts, expanded, searchTerm]);
     const parentOptions = accounts.filter((account) => account.id !== editingAccount?.id);
@@ -347,6 +359,7 @@ export default function ChartOfAccountsPage() {
                             <TableBody>
                                 {accountRows.map((account) => {
                                     const hasChildren = Boolean(account.children_count);
+                                    const controlRoles = controlRoleMap.get(account.id) ?? [];
                                     return (
                                         <TableRow key={account.id} className="border-b border-border hover:bg-muted/20">
                                             <TableCell className="px-4 py-2">
@@ -368,6 +381,13 @@ export default function ChartOfAccountsPage() {
                                                     <Badge variant="outline" className={account.is_active ? "border-success/20 bg-success/10 text-success" : "border-border bg-muted text-muted-foreground"}>{account.is_active ? "Active" : "Inactive"}</Badge>
                                                     {account.is_till_enabled && <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">Till</Badge>}
                                                     {hasChildren && <Badge variant="secondary">Parent</Badge>}
+                                                    {controlRoles.map((role) => (
+                                                        <Link key={role} href="/accounting/controls" title={`Control account: ${role}`}>
+                                                            <Badge variant="outline" className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20">
+                                                                {role}
+                                                            </Badge>
+                                                        </Link>
+                                                    ))}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, Eye, Filter, Download, HandCoins } from "lucide-react";
+import { Plus, Search, Eye, Filter, Download, HandCoins, Split } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -18,6 +18,7 @@ import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { ReceivePaymentDialog } from "./components/ReceivePaymentDialog";
+import { PaymentAllocationModal } from "@/components/billing/PaymentAllocationModal";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -26,12 +27,21 @@ export default function PaymentsPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [methodFilter, setMethodFilter] = useState("");
     const [receivePaymentOpen, setReceivePaymentOpen] = useState(false);
+    const [allocationPayment, setAllocationPayment] = useState<Payment | null>(null);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
     const { hasAnyPermission } = usePermissions();
     const queryClient = useQueryClient();
     const canReceivePayment = hasAnyPermission(["process_payments", "create_payments", "manage_billing"]);
+    const canAllocatePayment = hasAnyPermission(["process_payments", "create_payments", "manage_billing"]);
+
+    const parseUnallocated = (payment: Payment) => {
+        if (payment.unallocated_balance !== undefined) {
+            return parseFloat(payment.unallocated_balance || "0");
+        }
+        return parseFloat(payment.amount || "0");
+    };
 
     const handleSort = (field: string) => {
         setSortConfig((current) => toggleSortConfig(current, field));
@@ -261,11 +271,28 @@ export default function PaymentsPage() {
                                             {formatCurrency(parseFloat(payment.amount))}
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right">
-                                            <Link href={`/billing/payments/${payment.id}`}>
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </Link>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {canAllocatePayment &&
+                                                    payment.status === "completed" &&
+                                                    payment.customer &&
+                                                    parseUnallocated(payment) > 0.01 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 px-2 text-xs text-primary"
+                                                        onClick={() => setAllocationPayment(payment)}
+                                                        title="Allocate to invoices"
+                                                    >
+                                                        <Split className="h-3.5 w-3.5 mr-1" />
+                                                        Allocate
+                                                    </Button>
+                                                )}
+                                                <Link href={`/billing/payments/${payment.id}`}>
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -287,6 +314,19 @@ export default function PaymentsPage() {
                     onOpenChange={setReceivePaymentOpen}
                     onSuccess={() => {
                         setReceivePaymentOpen(false);
+                        queryClient.invalidateQueries({ queryKey: ["payments"] });
+                    }}
+                />
+            ) : null}
+
+            {allocationPayment?.customer ? (
+                <PaymentAllocationModal
+                    paymentId={allocationPayment.id}
+                    paymentAmount={allocationPayment.amount}
+                    customerId={allocationPayment.customer}
+                    open={Boolean(allocationPayment)}
+                    onClose={() => {
+                        setAllocationPayment(null);
                         queryClient.invalidateQueries({ queryKey: ["payments"] });
                     }}
                 />

@@ -271,6 +271,66 @@ export interface ApiError {
 
 export interface AccountingSettings {
     period_lock_date?: string | null;
+    accounts_receivable_account?: number | null;
+    accounts_payable_account?: number | null;
+    customer_prepayment_account?: number | null;
+    sales_revenue_account?: number | null;
+    sales_discount_account?: number | null;
+    sales_tax_payable_account?: number | null;
+    shop_supplies_revenue_account?: number | null;
+    environmental_fee_revenue_account?: number | null;
+    input_tax_account?: number | null;
+    default_expense_account?: number | null;
+    purchase_returns_account?: number | null;
+    inventory_asset_account?: number | null;
+    cost_of_goods_sold_account?: number | null;
+    cash_over_short_account?: number | null;
+    till_counterparty_cash_account?: number | null;
+    default_bank_account?: number | null;
+    updated_at?: string;
+    updated_by?: number | null;
+}
+
+export interface SubledgerSideReport {
+    gl_balance: number;
+    prepayment_gl_balance?: number;
+    net_gl_balance?: number;
+    operational_prepayments?: number;
+    subledger_balance: number;
+    unapplied_customer_credit_notes?: number;
+    unapplied_vendor_credits?: number;
+    subledger_net_of_credits: number;
+    subledger_net_of_credits_and_prepayments?: number;
+    difference: number;
+    in_balance: boolean;
+    open_invoice_count?: number;
+    open_bill_count?: number;
+    open_credit_note_count?: number;
+    open_vendor_credit_count?: number;
+    control_account_id?: number | null;
+    control_account_code?: string | null;
+}
+
+export interface SubledgerReconciliationReport {
+    as_of_date: string | null;
+    branch_id: number | null;
+    tolerance: number;
+    accounts_receivable: SubledgerSideReport;
+    accounts_payable: SubledgerSideReport;
+    customer_prepayments?: {
+        gl_balance: number;
+        operational_balance: number;
+        control_account_id?: number | null;
+        control_account_code?: string | null;
+        configured: boolean;
+    };
+    overall_in_balance: boolean;
+}
+
+export interface WireAccountingControlsResult {
+    changed_fields: string[];
+    skipped: string[];
+    settings: AccountingSettings;
 }
 
 export interface AuditLog {
@@ -598,8 +658,18 @@ export const accountingApi = {
     },
 
 
-    updateAccountingSettings: async (data: QueryParams): Promise<unknown> => {
+    updateAccountingSettings: async (data: QueryParams): Promise<AccountingSettings> => {
         const response = await apiClient.patch("/accounting/control/settings/", data);
+        return response.data;
+    },
+
+    wireAccountingControls: async (force = true): Promise<WireAccountingControlsResult> => {
+        const response = await apiClient.post("/accounting/control/wire/", { force });
+        return response.data;
+    },
+
+    getSubledgerReconciliation: async (params?: QueryParams): Promise<SubledgerReconciliationReport> => {
+        const response = await apiClient.get("/accounting/reports/subledger-reconciliation/", { params });
         return response.data;
     },
 

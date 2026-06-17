@@ -3,6 +3,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { accountingApi, type AccountingSettings, type AuditLog as AccountingAuditLog } from "@/lib/api/accounting";
+import {
+  CONTROL_ACCOUNT_GROUPS,
+  CONTROL_ACCOUNT_SPECS,
+  type ControlAccountField,
+} from "@/lib/accounting/control-accounts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useState } from "react";
-import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink } from "lucide-react";
+import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink, Link2 } from "lucide-react";
 import { endOfYear, format, startOfYear } from "date-fns";
 import {
   Table,
@@ -22,6 +27,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { getUserFacingError } from "@/lib/api/errors";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type ApiError = {
   response?: {
@@ -61,6 +73,9 @@ export default function ControlPanelPage() {
   const [closeStartDate, setCloseStartDate] = useState(format(startOfYear(new Date()), "yyyy-MM-dd"));
   const [closeEndDate, setCloseEndDate] = useState(format(endOfYear(new Date()), "yyyy-MM-dd"));
 
+  const [controlDraft, setControlDraft] = useState<Partial<Record<ControlAccountField, string>>>({});
+  const [controlsTouched, setControlsTouched] = useState(false);
+
   const { data: settings, isLoading: settingsLoading, isError: settingsError, refetch: refetchSettings } =
     useQuery<AccountingSettings>({
       queryKey: ["accounting", "settings"],
@@ -69,15 +84,46 @@ export default function ControlPanelPage() {
 
   const currentLockDate = lockDateTouched ? lockDate : settings?.period_lock_date || "";
 
+  const { data: leafAccounts = [], isLoading: accountsLoading } = useQuery({
+    queryKey: ["accounting", "accounts", "leaf"],
+    queryFn: () => accountingApi.getAccounts({ is_active: true }),
+    select: (accounts) =>
+      accounts.filter((a) => !a.children_count || a.children_count === 0),
+  });
+
+  const wireControlsMutation = useMutation({
+    mutationFn: () => accountingApi.wireAccountingControls(true),
+    onSuccess: (result) => {
+      setControlsTouched(false);
+      setControlDraft({});
+      toast({
+        title: "Control accounts wired",
+        description:
+          result.changed_fields.length > 0
+            ? `Updated ${result.changed_fields.length} field(s) from the standard chart.`
+            : "All control accounts were already configured.",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["accounting", "settings"] });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Wire failed",
+        description: getUserFacingError(error, "Could not wire control accounts."),
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateSettingsMutation = useMutation({
     mutationFn: accountingApi.updateAccountingSettings,
     onSuccess: () => {
       setLockDateTouched(false);
+      setControlsTouched(false);
+      setControlDraft({});
       toast({
-        title: "Lock date saved",
-        description: currentLockDate
-          ? `Period locked through ${currentLockDate}.`
-          : "Period lock cleared — all dates are editable.",
+        title: "Settings saved",
+        description: "Accounting settings updated successfully.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["accounting", "settings"] });
@@ -138,6 +184,31 @@ export default function ControlPanelPage() {
     updateSettingsMutation.mutate({ period_lock_date: currentLockDate || null });
   };
 
+  const handleSaveControlAccounts = () => {
+    const payload: Record<string, number | null> = {};
+    for (const spec of CONTROL_ACCOUNT_SPECS) {
+      const raw = controlsTouched
+        ? controlDraft[spec.field]
+        : settings?.[spec.field] != null
+          ? String(settings[spec.field])
+          : "";
+      payload[spec.field] = raw ? Number(raw) : null;
+    }
+    updateSettingsMutation.mutate(payload);
+  };
+
+  const getControlAccountValue = (field: ControlAccountField): string => {
+    if (controlsTouched && controlDraft[field] !== undefined) {
+      return controlDraft[field] ?? "";
+    }
+    const id = settings?.[field];
+    return id != null ? String(id) : "";
+  };
+
+  const configuredCount = CONTROL_ACCOUNT_SPECS.filter(
+    (spec) => settings?.[spec.field] != null
+  ).length;
+
   const handleClearLockDate = () => {
     setLockDateTouched(true);
     setLockDate("");
@@ -149,8 +220,12 @@ export default function ControlPanelPage() {
       <div>
         <h1 className="text-xl font-bold tracking-tight text-foreground">Controls & Compliance</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-          Lock accounting periods, post year-end closes, and review ledger audit events. For changes across
-          the whole app (customers, inventory, billing), use{" "}
+          Wire control accounts, lock accounting periods, post year-end closes, and review ledger audit
+          events. For subledger health, see{" "}
+          <Link href="/accounting/integrity" className="text-primary hover:underline">
+            Subledger Integrity
+          </Link>
+          . For changes across the whole app, use{" "}
           <Link href="/admin/audit-log" className="text-primary hover:underline">
             Admin → Audit Log
           </Link>
@@ -164,6 +239,113 @@ export default function ControlPanelPage() {
           lock dates or close periods.
         </div>
       )}
+
+      <Card>
+        <CardHeader className="py-3 px-4 flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Link2 className="w-4 h-4 text-primary" />
+              Control account mapping
+            </CardTitle>
+            <CardDescription className="text-xs mt-0.5">
+              {configuredCount} of {CONTROL_ACCOUNT_SPECS.length} configured. These accounts receive
+              automated postings from billing and inventory.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => wireControlsMutation.mutate()}
+              disabled={!canManagePeriods || wireControlsMutation.isPending}
+            >
+              {wireControlsMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+              ) : (
+                <Link2 className="w-3.5 h-3.5 mr-1" />
+              )}
+              Wire from standard chart
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-0 space-y-4">
+          {settingsLoading || accountsLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            CONTROL_ACCOUNT_GROUPS.map((group) => (
+              <div key={group} className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {group}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {CONTROL_ACCOUNT_SPECS.filter((spec) => spec.group === group).map((spec) => {
+                    const value = getControlAccountValue(spec.field);
+                    const isConfigured = Boolean(value);
+                    return (
+                      <div key={spec.field} className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor={spec.field} className="text-xs font-medium">
+                            {spec.label}
+                            <span className="text-muted-foreground font-normal ml-1">
+                              ({spec.defaultCode})
+                            </span>
+                          </Label>
+                          <Badge
+                            variant={isConfigured ? "success" : "outline"}
+                            className="text-[10px] h-5"
+                          >
+                            {isConfigured ? "Configured" : "Missing"}
+                          </Badge>
+                        </div>
+                        <Select
+                          value={value || "__none__"}
+                          onValueChange={(next) => {
+                            setControlsTouched(true);
+                            setControlDraft((prev) => ({
+                              ...prev,
+                              [spec.field]: next === "__none__" ? "" : next,
+                            }));
+                          }}
+                          disabled={!canManagePeriods}
+                        >
+                          <SelectTrigger id={spec.field} className="h-8 text-xs">
+                            <SelectValue placeholder="Select leaf account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Not set —</SelectItem>
+                            {leafAccounts.map((account) => (
+                              <SelectItem key={account.id} value={String(account.id)}>
+                                {account.code} — {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground">{spec.description}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+          {canManagePeriods && !settingsLoading && (
+            <Button
+              size="sm"
+              className="h-8"
+              onClick={handleSaveControlAccounts}
+              disabled={updateSettingsMutation.isPending}
+            >
+              {updateSettingsMutation.isPending && (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              )}
+              Save control accounts
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>

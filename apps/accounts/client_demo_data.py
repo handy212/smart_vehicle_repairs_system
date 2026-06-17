@@ -1537,11 +1537,9 @@ class ClientDemoDataService:
         return JournalEntry.objects.filter(description__contains=DEMO_MARKER).count()
 
     def _purge_accounting(self, s: ModuleSummary) -> None:
-        from apps.accounting.models import JournalEntry
+        from apps.accounting.demo_gl_cleanup import purge_demo_journal_entries
 
-        qs = JournalEntry.objects.filter(description__contains=DEMO_MARKER)
-        s.purged = qs.count()
-        qs.delete()
+        s.purged = purge_demo_journal_entries()
 
     def _load_hr(self, s: ModuleSummary) -> None:
         from apps.hr.models import (
