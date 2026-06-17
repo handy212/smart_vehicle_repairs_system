@@ -44,7 +44,7 @@ class WorkOrderInvoiceLineItemsTests(TestCase):
             license_plate="WO-INV-1",
             current_mileage=50000,
         )
-        category = PartCategory.objects.create(name="Brakes", code="BRK")
+        category = PartCategory.objects.create(name="Brakes")
         self.catalog_part = Part.objects.create(
             name="Brake Pad",
             part_number="BP-WO-1",
@@ -62,6 +62,7 @@ class WorkOrderInvoiceLineItemsTests(TestCase):
             customer_concerns="Brake noise",
             created_by=self.manager,
             actual_parts_cost=Decimal("35.00"),
+            odometer_in=50000,
         )
         WorkOrderPart.objects.create(
             work_order=self.work_order,
@@ -69,7 +70,7 @@ class WorkOrderInvoiceLineItemsTests(TestCase):
             part_number="BP-WO-1",
             inventory_part=self.catalog_part,
             quantity=Decimal("1"),
-            selling_price=Decimal("35.00"),
+            unit_cost=Decimal("35.00"),
             status="installed",
         )
 
