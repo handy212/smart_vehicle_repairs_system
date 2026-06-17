@@ -4,6 +4,8 @@
 **System:** Smart Vehicle Repairs ERP  
 **Last updated:** June 2026
 
+**Related guides:** [Finance Feature Guide](./FINANCE-FEATURE-GUIDE.md) (Accounting + Billing + Fixed Assets overview) · [Finance Fix Backlog](./FINANCE-FIX-BACKLOG.md) (product improvement tracker)
+
 This guide explains how money flows through the system — from invoices and payments to the general ledger — and how to use every screen under **Accounting** in the sidebar.
 
 ---
