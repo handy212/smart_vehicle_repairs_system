@@ -35,7 +35,7 @@ function BalanceRow({
 }
 
 export default function SubledgerIntegrityPage() {
-  const { format: formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["accounting", "subledger-reconciliation"],
