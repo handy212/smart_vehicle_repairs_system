@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownUp, CheckCircle, Loader2, Lock, Plus, RefreshCw, XCircle } from "lucide-react";
@@ -209,7 +210,12 @@ export default function AccountingTillManagementPage() {
                             ) : sortedTills.map((till) => (
                                 <TableRow key={till.id}>
                                     <TableCell className="px-4 py-2">
-                                        <div className="font-medium">{till.till_account_code} - {till.till_account_name}</div>
+                                        <Link
+                                            href={`/accounting/tills/${till.id}`}
+                                            className="font-medium text-primary hover:underline"
+                                        >
+                                            {till.till_account_code} - {till.till_account_name}
+                                        </Link>
                                         <div className="text-xs text-muted-foreground">{till.branch_name}</div>
                                     </TableCell>
                                     <TableCell className="px-4 py-2 text-sm">{till.cashier_name}</TableCell>

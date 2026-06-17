@@ -129,6 +129,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
                     <DialogDescription>
                         Refund payment for Transaction #{payment.payment_number}.
                         Max available: {formatCurrency(maxRefund)}
+                        {" "}Track approval and completion under Billing → Refunds.
                     </DialogDescription>
                 </DialogHeader>
 

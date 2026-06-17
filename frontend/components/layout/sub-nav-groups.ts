@@ -227,6 +227,8 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Assets", href: "/fixed-assets", permission: "view_assets", icon: Landmark },
         { name: "Acquisitions", href: "/fixed-assets/acquisitions", permission: "view_assets", icon: ClipboardList },
         { name: "Depreciation", href: "/fixed-assets/depreciation", permission: "view_assets", icon: Calculator },
+        { name: "Disposals", href: "/fixed-assets/disposals", permission: "edit_assets", icon: Undo2 },
+        { name: "Transfers", href: "/fixed-assets/transfers", permission: "edit_assets", icon: ArrowLeftRight },
         { name: "Valuation", href: "/fixed-assets/reports/valuation", permission: "view_assets", icon: PieChart },
       ],
     },

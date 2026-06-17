@@ -32,7 +32,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Finance users click till alerts on the dashboard and land on a missing page |
 | **Affected paths** | `/accounting` (dashboard links to `/accounting/tills/{id}`) |
 | **Acceptance criteria** | Every till link from the accounting dashboard opens a working page showing session detail, variance, and actions (approve/review) OR links are removed/redirected to `/accounting/tills` with the correct session highlighted |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -44,7 +44,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Users see Disposals/Transfers in navigation but get blocked when opening the page |
 | **Affected paths** | `/fixed-assets/disposals`, `/fixed-assets/transfers`, `sub-nav-groups.ts`, `dashboard-requirements-nav-config.ts` |
 | **Acceptance criteria** | Users who can see Disposals/Transfers in nav can open and use those pages; OR nav items are hidden unless user has `edit_assets`; behavior is consistent across sidebar, sub-nav, and dashboard requirements |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -56,7 +56,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | “Customer Statements” sends users to the customer list instead of the statements workspace |
 | **Affected paths** | `dashboard-requirements-nav-config.ts` — currently `/customers` |
 | **Acceptance criteria** | Dashboard Requirements → Customer Statements opens `/customers/statements`; optional secondary link from customer profile remains available |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -68,7 +68,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Staff do not know whether to use Refunds module vs direct refund on payment detail; outcomes differ |
 | **Affected paths** | `/billing/refunds/*`, `/billing/payments/[id]`, invoice detail refund dialog |
 | **Acceptance criteria** | One documented primary path per scenario (e.g. approval required vs immediate); UI labels explain when to use each; OR direct refund is removed/hidden when formal workflow is enabled; help text added in Finance Feature Guide |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -80,7 +80,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Report may be reachable without `view_assets` page guard |
 | **Affected paths** | `/fixed-assets/reports/valuation` |
 | **Acceptance criteria** | Page uses same permission guard pattern as other fixed-asset pages; unauthorized users see standard access-denied UI |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -106,7 +106,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Lifecycle actions are hard to discover outside dashboard requirements |
 | **Affected paths** | `sub-nav-groups.ts` → `fixedAssets` group |
 | **Acceptance criteria** | Sub-nav lists Disposals and Transfers alongside Assets, Acquisitions, Depreciation, Valuation |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 

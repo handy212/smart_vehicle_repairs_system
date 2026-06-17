@@ -86,7 +86,7 @@ Billing is split into **Receivables** (money in) and **Payables** (money out).
 | **Proforma invoices** | Billing → Proforma Invoices | Issue proforma; convert to standard invoice |
 | **Payments** | Billing → Payments | Receive payment; allocate across multiple invoices |
 | **Credit notes** | Billing → Credit Notes | Issue credits; apply to open invoices |
-| **Refunds** | Billing → Refunds | Process refund requests (approval workflow) |
+| **Refunds** | Billing → Refunds | Request, approve, and complete refunds (single workflow from invoices and payments) |
 | **Collections** | Billing → Collections | View overdue invoices and follow up |
 | **Sales orders** | Billing → Sales Orders | Track commercial orders linked to estimates/work orders |
 | **Sales reports** | Billing → Sales Reports | Shortcuts to revenue and management reports |
@@ -417,7 +417,7 @@ Use this for new site setup or onboarding a finance team.
 | **Sales reports (billing)** | Shortcut hub — detailed analytics live in Accounting/Reports |
 | **Fixed asset transfers** | Updates location/assignee — limited history view |
 | **Fixed asset reports** | Valuation report — additional reports planned |
-| **Refunds** | Two paths (approval workflow vs direct) — follow your admin’s policy |
+| **Refunds** | Single approval workflow from invoices, payments, or Billing → Refunds |
 
 See [Finance Fix Backlog](./FINANCE-FIX-BACKLOG.md) for the prioritized improvement list (internal/product use).
 

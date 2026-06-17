@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fixedAssetsApi, type FixedAsset } from "@/lib/api/fixed-assets";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,14 @@ import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 
 export default function AssetValuationReportPage() {
+    return (
+        <PermissionPageGuard permission="view_assets">
+            <AssetValuationReportContent />
+        </PermissionPageGuard>
+    );
+}
+
+function AssetValuationReportContent() {
     const { formatCurrency } = useCurrency();
 
     // Fetch stats for the summary cards
