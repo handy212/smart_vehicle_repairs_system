@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { useParams } from "next/navigation";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface BudgetReportLine {
     account_code: string;
@@ -22,6 +23,7 @@ interface BudgetReportLine {
 export default function BudgetReportPage() {
     const params = useParams();
     const budgetId = params.id;
+    const { formatCurrency } = useCurrency();
 
     const { data: report, isLoading } = useQuery({
         queryKey: ["budget-vs-actual", budgetId],
@@ -31,13 +33,6 @@ export default function BudgetReportPage() {
         },
         enabled: !!budgetId
     });
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-GH', {
-            style: 'currency',
-            currency: 'GHS'
-        }).format(amount);
-    };
 
     const getVarianceIcon = (status: string) => {
         if (status === 'over') return <TrendingUp className="w-4 h-4 text-destructive" />;

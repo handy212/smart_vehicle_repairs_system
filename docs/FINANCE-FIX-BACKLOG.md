@@ -94,7 +94,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Users expect fiscal year creation/setup; page only shows budgets by year and lock date |
 | **Affected paths** | `/accounting/fiscal-year`, `accounting-nav-config.ts`, dashboard requirements |
 | **Acceptance criteria** | Nav label updated (e.g. “Budgets by Year & Period Lock”); page heading and description match; no promise of fiscal-year wizard unless built |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -118,7 +118,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Register list shows financials; detail page does not — users must go back to the list |
 | **Affected paths** | `/fixed-assets/[id]` |
 | **Acceptance criteria** | Detail page displays cost, accumulated depreciation, NBV, depreciation %, and last depreciation date (when available) in a Financial Summary section |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -130,7 +130,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | `/billing/sales-reports` is only links elsewhere; users expect embedded AR analytics |
 | **Affected paths** | `/billing/sales-reports` |
 | **Acceptance criteria** | **Option A:** Rename to “Sales Report Shortcuts” with clear copy; **Option B:** Embed summary cards (outstanding AR, revenue MTD, overdue count) plus links to full reports |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -142,7 +142,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | AP has vendor balances; AR has no equivalent in billing |
 | **Affected paths** | New page e.g. `/billing/customer-balances`; billing sub-nav |
 | **Acceptance criteria** | Searchable/sortable list of customers with open balance; link to customer profile and statement; permission aligned with `view_billing` |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -154,7 +154,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | “Collections” implies a workspace; page is read-only overdue list |
 | **Affected paths** | `/billing/collections` |
 | **Acceptance criteria** | **Option A:** Rename to “Overdue Invoices” everywhere; **Option B:** Add quick actions (record payment, send reminder, open statement) and aging summary buckets |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -166,7 +166,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | AR staff live in Billing but statements live under Customers |
 | **Affected paths** | `sub-nav-groups.ts` billing receivables group |
 | **Acceptance criteria** | Billing → Receivables includes “Customer Statements” → `/customers/statements` |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -178,7 +178,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | New sales order asks for raw Customer ID instead of searchable customer selector |
 | **Affected paths** | `/billing/sales-orders/new` |
 | **Acceptance criteria** | Uses same `CustomerSelector` (or equivalent) as invoices and estimates |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -190,7 +190,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Subledger integrity page tells users to contact admin for “repair commands” |
 | **Affected paths** | `/accounting/integrity` |
 | **Acceptance criteria** | Business-friendly copy explaining what drift means, what to check (controls, missing postings), and who to contact; no CLI/command references |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -202,7 +202,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Dashboard till shortcuts require `manage_billing` instead of accounting/till permissions |
 | **Affected paths** | `/accounting` quick actions |
 | **Acceptance criteria** | Till actions visible to users with appropriate accounting or till permissions; documented in role setup |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -214,7 +214,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Some pages hardcode `en-GH` / GHS; others use organization currency |
 | **Affected paths** | Fund transfers, budget report, till denominations (if multi-currency) |
 | **Acceptance criteria** | All customer-facing amounts use `useCurrency()` or org settings; Ghana till denominations documented as regional default |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -226,7 +226,7 @@ This backlog turns the finance readiness review into actionable work. Items are 
 | **User impact** | Categories page lacks consistent `view_assets` guard |
 | **Affected paths** | `/fixed-assets/categories` |
 | **Acceptance criteria** | Matches permission pattern of other FA pages |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 

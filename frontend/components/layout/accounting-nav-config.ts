@@ -100,11 +100,11 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
         description: "Budget lines and variance tracking",
       },
       {
-        name: "Fiscal Year",
+        name: "Budgets by Year & Period Lock",
         href: "/accounting/fiscal-year",
         permission: "view_budgets",
         icon: Calendar,
-        description: "Fiscal periods, budgets, and period lock",
+        description: "Budgets grouped by year and period lock date",
       },
     ],
   },

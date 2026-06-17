@@ -8,20 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
 export default function NewSalesOrderPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState<number | undefined>();
   const [referenceNumber, setReferenceNumber] = useState("");
   const [notes, setNotes] = useState("");
 
   const createMutation = useMutation({
     mutationFn: () =>
       billingApi.salesOrders.create({
-        customer: Number(customerId),
+        customer: customerId!,
         reference_number: referenceNumber,
         notes,
         status: "draft",
@@ -36,10 +37,10 @@ export default function NewSalesOrderPage() {
   });
 
   return (
-    <div className="max-w-xl mx-auto p-4 md:p-6 space-y-6">
+    <div className="mx-auto max-w-xl space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">New Sales Order</h1>
-        <p className="text-sm text-muted-foreground mt-1">Create a commercial order for a customer.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Create a commercial order for a customer.</p>
       </div>
 
       <Card>
@@ -47,14 +48,12 @@ export default function NewSalesOrderPage() {
           <CardTitle>Order Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="customer_id">Customer ID</Label>
-            <Input
-              id="customer_id"
-              type="number"
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              placeholder="Customer ID"
+          <div className="space-y-2">
+            <Label>Customer</Label>
+            <CustomerSelector
+              selectedCustomerId={customerId}
+              onSelect={(customer) => setCustomerId(customer.id)}
+              placeholder="Search and select a customer..."
             />
           </div>
           <div>
@@ -71,10 +70,7 @@ export default function NewSalesOrderPage() {
             <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={!customerId || createMutation.isPending}
-            >
+            <Button onClick={() => createMutation.mutate()} disabled={!customerId || createMutation.isPending}>
               Create Sales Order
             </Button>
             <Button variant="outline" onClick={() => router.back()}>

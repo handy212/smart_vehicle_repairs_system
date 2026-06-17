@@ -404,8 +404,8 @@ export default function AccountingDashboardPage() {
     { label: "Supplier Payment", href: "/billing/bills", icon: Receipt, permission: "edit_bills" },
     { label: "Refund", href: "/billing/refunds", icon: CircleDollarSign, permission: ["create_payments", "process_payments", "manage_billing"] },
     { label: "Credit Note", href: "/billing/credit-notes", icon: BadgeDollarSign, permission: ["create_payments", "process_payments", "manage_billing"] },
-    { label: "Open Till", href: "/accounting/tills", icon: Wallet, permission: "manage_billing" },
-    { label: "Close Till", href: "/accounting/tills", icon: ClipboardCheck, permission: "manage_billing" },
+    { label: "Open Till", href: "/accounting/tills", icon: Wallet, permission: ["manage_billing", "process_payments", "view_accounting"] },
+    { label: "Close Till", href: "/accounting/tills", icon: ClipboardCheck, permission: ["manage_billing", "process_payments", "view_accounting"] },
     { label: "Approve Variance", href: "/accounting/tills", icon: CheckCircle2, permission: "manage_billing" },
     { label: "Reconcile Bank", href: "/accounting/banking/reconciliation", icon: Landmark, permission: "reconcile_bank_statements" },
     { label: "Generate Report", href: "/accounting/reports", icon: FileBarChart2, permission: "view_financial_reports" },
@@ -542,7 +542,7 @@ export default function AccountingDashboardPage() {
             ]}
           />
           <FilterSelect
-            label="Fiscal Year"
+            label="Budget Year"
             value={fiscalYear}
             onValueChange={(value) => {
               setFiscalYear(value);
@@ -628,8 +628,6 @@ export default function AccountingDashboardPage() {
             items={[
               { label: "Accounts Receivable", value: formatCurrency(arOutstanding) },
               { label: "Accounts Payable", value: formatCurrency(apOutstanding) },
-              { label: "Outstanding Customer Balances", value: formatCurrency(arOutstanding) },
-              { label: "Outstanding Supplier Balances", value: formatCurrency(apOutstanding) },
               { label: "Net Working Capital", value: formatCurrency(arOutstanding - apOutstanding), tone: arOutstanding - apOutstanding >= 0 ? "positive" : "negative" },
             ]}
           />
@@ -1352,7 +1350,11 @@ export default function AccountingDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2 p-3">
             {recentEntries.slice(0, 6).map((entry) => (
-              <div key={entry.id} className="rounded border border-border/60 p-2">
+              <Link
+                key={entry.id}
+                href={`/accounting/journal-entries/${entry.id}`}
+                className="block rounded border border-border/60 p-2 transition-colors hover:border-primary/40 hover:bg-muted/30"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-xs font-medium text-foreground">{entry.reference || `Journal #${entry.id}`}</div>
@@ -1363,7 +1365,7 @@ export default function AccountingDashboardPage() {
                 <div className="mt-2 text-xs text-muted-foreground">
                   {entry.date ? format(parseISO(entry.date), "MMM d, yyyy") : "No date"}
                 </div>
-              </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
@@ -1376,7 +1378,11 @@ export default function AccountingDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2 p-3">
             {recentEntries.slice(0, 8).map((entry) => (
-              <div key={entry.id} className="rounded border border-border/60 p-2">
+              <Link
+                key={entry.id}
+                href={`/accounting/journal-entries/${entry.id}`}
+                className="block rounded border border-border/60 p-2 transition-colors hover:border-primary/40 hover:bg-muted/30"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-xs font-medium text-foreground">{entry.reference || `Journal #${entry.id}`}</div>
@@ -1384,7 +1390,7 @@ export default function AccountingDashboardPage() {
                   </div>
                   <Badge variant={entry.posted ? "outline" : "secondary"}>{entry.posted ? "Posted" : "Draft"}</Badge>
                 </div>
-              </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
