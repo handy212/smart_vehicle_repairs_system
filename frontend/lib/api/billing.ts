@@ -120,6 +120,8 @@ export interface Payment {
   check_number?: string;
   notes?: string;
   refund_amount?: string;
+  allocated_total?: string;
+  unallocated_balance?: string;
   created_at: string;
 }
 

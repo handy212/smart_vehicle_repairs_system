@@ -122,8 +122,15 @@ export default function RecordPaymentDialog({
   const bankAccount = useWatch({ control, name: "bank_account" });
   const cardType = useWatch({ control, name: "card_type" });
   const amount = useWatch({ control, name: "amount" }) || 0;
-  const isOverPayment = amount > balanceDue;
+  const isOverPayment = balanceDue > 0 && amount > balanceDue;
   const overPaymentAmount = isOverPayment ? (amount - balanceDue) : 0;
+
+  const { data: accountingSettings } = useQuery({
+    queryKey: ["accounting", "settings"],
+    queryFn: () => accountingApi.getAccountingSettings(),
+    enabled: open,
+  });
+  const prepaymentAccountConfigured = Boolean(accountingSettings?.customer_prepayment_account);
 
   const { data: tillAccounts = [], isLoading: tillAccountsLoading } = useQuery({
     queryKey: ["accounting", "till-enabled-accounts"],
@@ -154,7 +161,9 @@ export default function RecordPaymentDialog({
       }
       return billingApi.payments.create(payload);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const paidAmount = variables.amount;
+      const wasOverpayment = paidAmount > balanceDue;
       reset();
       setServerError(null);
       queryClient.invalidateQueries({ queryKey: ["invoice", invoice.id] });
@@ -171,7 +180,9 @@ export default function RecordPaymentDialog({
       queryClient.invalidateQueries({ queryKey: ["workorder"] });
       toast({
         title: "Success",
-        description: "Payment recorded successfully",
+        description: wasOverpayment
+          ? `Payment recorded. ${formatCurrency(paidAmount - balanceDue)} posted to customer prepayments (2150).`
+          : "Payment recorded successfully",
       });
       onSuccess();
     },
@@ -223,10 +234,11 @@ export default function RecordPaymentDialog({
 
   const onSubmit = async (data: PaymentFormData) => {
     setServerError(null);
-    if (data.amount > balanceDue) {
+    if (data.amount > balanceDue && !prepaymentAccountConfigured) {
       setError("amount", {
         type: "manual",
-        message: `Amount cannot exceed the balance due (${formatCurrency(balanceDue)})`,
+        message:
+          "Overpayments require a customer prepayment account (2150). Wire control accounts in Accounting → Controls.",
       });
       return;
     }
@@ -405,9 +417,21 @@ export default function RecordPaymentDialog({
               <p className="text-xs text-destructive">{errors.amount.message}</p>
             )}
             {isOverPayment && (
-              <div className="mt-2 p-2.5 bg-warning/10 border border-warning/20 rounded-md">
-                <p className="text-xs font-medium text-warning">
-                  Overpayment: {formatCurrency(overPaymentAmount)}. Reduce the amount to the balance due.
+              <div
+                className={`mt-2 p-2.5 rounded-md border ${
+                  prepaymentAccountConfigured
+                    ? "bg-primary/5 border-primary/20"
+                    : "bg-warning/10 border-warning/20"
+                }`}
+              >
+                <p
+                  className={`text-xs font-medium ${
+                    prepaymentAccountConfigured ? "text-primary" : "text-warning"
+                  }`}
+                >
+                  {prepaymentAccountConfigured
+                    ? `Overpayment of ${formatCurrency(overPaymentAmount)} will post to Customer Prepayments (2150) and can be applied to future invoices.`
+                    : `Overpayment of ${formatCurrency(overPaymentAmount)} cannot be recorded until a customer prepayment control account is configured.`}
                 </p>
               </div>
             )}
@@ -484,10 +508,9 @@ export default function RecordPaymentDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
-              className={`h-9 ${isOverPayment ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+              disabled={isSubmitting || (isOverPayment && !prepaymentAccountConfigured)}
             >
-              {isSubmitting ? "Recording..." : "Record Payment"}
+              {isSubmitting ? "Recording..." : isOverPayment ? "Record with prepayment" : "Record Payment"}
             </Button>
           </DialogFooter>
         </form>

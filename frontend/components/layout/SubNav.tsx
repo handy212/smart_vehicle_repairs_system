@@ -342,6 +342,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Credit Notes", href: "/billing/credit-notes", permission: "view_billing", icon: MinusSquare },
     { name: "Refunds", href: "/billing/refunds", permission: "view_billing", icon: Undo2 },
     { name: "Bills", href: "/billing/bills", permission: "view_billing", icon: CreditCard },
+    { name: "Vendor Credits", href: "/billing/vendor-credits", permission: "view_billing", icon: MinusSquare },
     { name: "Payments", href: "/billing/payments", permission: "view_billing", icon: Wallet },
   ],
 

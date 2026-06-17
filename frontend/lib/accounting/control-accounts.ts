@@ -147,3 +147,24 @@ export const CONTROL_ACCOUNT_GROUPS = [
   "Purchasing & Inventory",
   "Cash & Banking",
 ] as const;
+
+type AccountingSettingsLike = Partial<Record<ControlAccountField, number | null | undefined>>;
+
+/** Map account IDs to the control roles they serve (for COA badges). */
+export function buildControlAccountRoleMap(
+  settings: AccountingSettingsLike | undefined
+): Map<number, string[]> {
+  const map = new Map<number, string[]>();
+  if (!settings) {
+    return map;
+  }
+  for (const spec of CONTROL_ACCOUNT_SPECS) {
+    const accountId = settings[spec.field];
+    if (accountId) {
+      const roles = map.get(accountId) ?? [];
+      roles.push(spec.label);
+      map.set(accountId, roles);
+    }
+  }
+  return map;
+}
