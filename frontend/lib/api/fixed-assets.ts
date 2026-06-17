@@ -156,6 +156,15 @@ export interface AssetAcquisitionRequest {
     updated_at: string;
 }
 
+export interface DepreciationRunResult {
+    period_start: string;
+    period_end: string;
+    assets_processed: number;
+    total_depreciation: number | string;
+    assets_skipped: number;
+    errors: string[];
+}
+
 export type AssetAcquisitionCreatePayload = {
     title: string;
     description?: string;
@@ -244,6 +253,16 @@ export const fixedAssetsApi = {
             const response = await apiClient.delete(`/fixed-assets/categories/${id}/`);
             return response.data;
         },
+    },
+
+    runDepreciation: async (data: {
+        target_month?: number;
+        target_year?: number;
+        branch_id?: number;
+        post_to_gl?: boolean;
+    }): Promise<DepreciationRunResult> => {
+        const response = await apiClient.post('/fixed-assets/assets/run_depreciation/', data);
+        return response.data;
     },
 
     acquisitions: {

@@ -311,3 +311,19 @@ class BillTests(TestCase):
         self.assertEqual(response.data['counts']['overdue'], 1)
         self.assertEqual(Decimal(str(response.data['financials']['outstanding_total'])), Decimal('175.00'))
         self.assertEqual(Decimal(str(response.data['financials']['total_paid'])), Decimal('50.00'))
+
+    def test_bill_payments_list_endpoint(self):
+        bill = self._create_bill(status='open', total=Decimal('100.00'), amount_due=Decimal('100.00'))
+        from apps.accounting.models import AccountingControl
+        bank = AccountingControl.get_settings().default_bank_account
+        BillPayment.objects.create(
+            bill=bill,
+            amount=Decimal('40.00'),
+            payment_method='bank_transfer',
+            bank_account=bank,
+            paid_by=self.user,
+        )
+        url = reverse('api_billing:bill-payment-list')
+        response = self.client.get(url, {'vendor': self.supplier.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(response.data.get('count', len(response.data)), 1)

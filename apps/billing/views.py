@@ -81,6 +81,7 @@ from apps.billing.serializers import (
     BillLineItemSerializer,
     BillPaymentSerializer,
     BillPaymentCreateSerializer,
+    BillPaymentListSerializer,
     CashierTillSerializer,
     CashCountSerializer,
     OpenTillSerializer,
@@ -2670,3 +2671,32 @@ class BillViewSet(viewsets.ModelViewSet):
                 {"error": f"Failed to generate PDF: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class BillPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    """Vendor bill payment history."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+    serializer_class = BillPaymentListSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['payment_method', 'payment_date']
+    ordering_fields = ['payment_date', 'amount', 'created_at']
+    ordering = ['-payment_date', '-created_at']
+
+    def get_queryset(self):
+        qs = BillPayment.objects.select_related(
+            'bill', 'bill__vendor', 'paid_by', 'till__till_account', 'bank_account'
+        )
+        vendor_id = self.request.query_params.get('vendor')
+        if vendor_id:
+            qs = qs.filter(bill__vendor_id=vendor_id)
+        bill_id = self.request.query_params.get('bill')
+        if bill_id:
+            qs = qs.filter(bill_id=bill_id)
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(payment_date__gte=date_from)
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(payment_date__lte=date_to)
+        return qs

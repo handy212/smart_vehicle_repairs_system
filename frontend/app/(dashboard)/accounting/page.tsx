@@ -332,6 +332,8 @@ export default function AccountingDashboardPage() {
   const arOutstanding = toNumber(snapshot?.working_capital.accounts_receivable);
   const apOutstanding = toNumber(snapshot?.working_capital.accounts_payable);
   const netWorth = toNumber(snapshot?.financial_position.net_worth);
+  const inventoryGlValue = toNumber(snapshot?.financial_position.inventory_gl_value);
+  const inventoryOperationalValue = toNumber(snapshot?.financial_position.inventory_operational_value);
   const grossProfit = toNumber(snapshot?.revenue_expenses.gross_profit);
   const totalTaxCollected = toNumber(snapshot?.tax.output_vat);
   const taxDue = toNumber(snapshot?.tax.tax_due);
@@ -591,6 +593,8 @@ export default function AccountingDashboardPage() {
               { label: "Equity", value: formatCurrency(equity) },
               { label: "Current Profit/Loss", value: formatCurrency(netProfit), tone: netProfit >= 0 ? "positive" : "negative" },
               { label: "Net Worth", value: formatCurrency(netWorth), tone: netWorth >= 0 ? "positive" : "negative" },
+              { label: "Inventory (GL)", value: formatCurrency(inventoryGlValue) },
+              { label: "Inventory (Operational)", value: formatCurrency(inventoryOperationalValue) },
             ]}
           />
           <MetricListCard

@@ -372,6 +372,9 @@ export interface BillPayment {
   id: number;
   payment_number: string;
   bill: number;
+  bill_number?: string;
+  vendor_id?: number;
+  vendor_name?: string;
   amount: string;
   payment_date: string;
   payment_method: "cash" | "check" | "bank_transfer" | "mobile_money" | "credit_card" | "other";
@@ -960,6 +963,26 @@ export const billingApi = {
   taxes: {
     config: async (): Promise<TaxConfig> => {
       const response = await apiClient.get("/billing/tax/config/");
+      return response.data;
+    },
+  },
+
+  billPayments: {
+    list: async (params?: {
+      page?: number;
+      vendor?: number;
+      bill?: number;
+      date_from?: string;
+      date_to?: string;
+      payment_method?: string;
+      ordering?: string;
+    }): Promise<{ count: number; next: string | null; previous: string | null; results: BillPayment[] }> => {
+      const response = await apiClient.get("/billing/bill-payments/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<BillPayment> => {
+      const response = await apiClient.get(`/billing/bill-payments/${id}/`);
       return response.data;
     },
   },

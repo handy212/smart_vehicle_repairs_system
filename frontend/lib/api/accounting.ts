@@ -363,6 +363,72 @@ export interface TaxReport {
     net_tax_liability: number;
 }
 
+export interface FinancialRatiosReport {
+    as_of_date: string;
+    period: { start: string; end: string };
+    inputs: Record<string, number>;
+    ratios: Record<string, number | null>;
+}
+
+export interface VatReturnReport {
+    period: { start: string; end: string };
+    worksheet: {
+        output_vat: number | string;
+        output_nhil: number | string;
+        output_getfund: number | string;
+        output_hrl: number | string;
+        total_output_tax: number | string;
+        input_vat: number | string;
+        net_vat_payable: number | string;
+    };
+    supporting: { invoice_count: number; bill_count: number };
+    status: string;
+}
+
+export interface TaxReconciliationReport {
+    period: { start: string; end: string };
+    gl: {
+        output_tax_balance: number;
+        input_tax_balance: number;
+        net_position: number;
+    };
+    operational: {
+        output_tax_total: number;
+        input_tax_total: number;
+        net_position: number;
+    };
+    variance: {
+        output: number;
+        input: number;
+        net: number;
+    };
+    in_balance: boolean;
+}
+
+export interface WithholdingTaxReport {
+    period: { start: string; end: string };
+    configured: boolean;
+    lines: Array<{ code: string; name: string; balance: number }>;
+    total_withheld: number;
+    note?: string | null;
+}
+
+export interface GeneralLedgerLine {
+    id: number;
+    journal_entry_id?: number;
+    date: string;
+    reference?: string;
+    posted?: boolean;
+    branch_id?: number | null;
+    account_code?: string;
+    account_name?: string;
+    amount: number | string;
+    transaction_type: "debit" | "credit";
+    description?: string;
+    debit?: number | string;
+    credit?: number | string;
+}
+
 export interface TrialBalanceReport {
     accounts: Array<{
         code: string;
@@ -389,6 +455,8 @@ export interface AccountingCommandCenterSnapshot {
         current_profit_loss: number;
         net_worth: number;
         is_balanced: boolean;
+        inventory_gl_value?: number;
+        inventory_operational_value?: number;
     };
     revenue_expenses: {
         revenue_today: number;
@@ -990,6 +1058,51 @@ export const accountingApi = {
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
         const response = await apiClient.get("/accounting/reports/opex-variance/", { params });
+        return response.data;
+    },
+
+    getFinancialRatios: async (params?: {
+        as_of_date?: string;
+        start_date?: string;
+        end_date?: string;
+        branch_id?: number;
+    }): Promise<FinancialRatiosReport> => {
+        const response = await apiClient.get("/accounting/reports/financial-ratios/", { params });
+        return response.data;
+    },
+
+    getVatReturn: async (startDate?: string, endDate?: string, branchId?: number): Promise<VatReturnReport> => {
+        const params: QueryParams = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/vat-return/", { params });
+        return response.data;
+    },
+
+    getTaxReconciliation: async (
+        startDate?: string,
+        endDate?: string,
+        branchId?: number
+    ): Promise<TaxReconciliationReport> => {
+        const params: QueryParams = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/tax-reconciliation/", { params });
+        return response.data;
+    },
+
+    getWithholdingTaxReport: async (
+        startDate?: string,
+        endDate?: string,
+        branchId?: number
+    ): Promise<WithholdingTaxReport> => {
+        const params: QueryParams = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/withholding-tax/", { params });
         return response.data;
     },
 };

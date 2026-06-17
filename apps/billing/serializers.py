@@ -2086,6 +2086,24 @@ class BillCreateSerializer(serializers.ModelSerializer):
         return instance
 
 
+class BillPaymentListSerializer(serializers.ModelSerializer):
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    vendor_id = serializers.IntegerField(source='bill.vendor_id', read_only=True)
+    vendor_name = serializers.CharField(source='bill.vendor.name', read_only=True)
+    paid_by_name = serializers.CharField(source='paid_by.get_full_name', read_only=True)
+    till_account_name = serializers.CharField(source='till.till_account.name', read_only=True)
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
+
+    class Meta:
+        model = BillPayment
+        fields = [
+            'id', 'payment_number', 'bill', 'bill_number', 'vendor_id', 'vendor_name',
+            'amount', 'payment_date', 'payment_method', 'till', 'till_account_name',
+            'bank_account', 'bank_account_name', 'reference_number', 'notes',
+            'paid_by', 'paid_by_name', 'created_at',
+        ]
+
+
 class BillPaymentSerializer(serializers.ModelSerializer):
     paid_by_name = serializers.CharField(source='paid_by.get_full_name', read_only=True)
     till_account_name = serializers.CharField(source='till.till_account.name', read_only=True)

@@ -274,6 +274,53 @@ class TaxReportView(APIView):
         return Response(report)
 
 
+class FinancialRatiosView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        as_of = parse_date(request.query_params.get('as_of_date') or request.query_params.get('date') or '')
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_financial_ratios(
+            as_of_date=as_of,
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=branch_id,
+        )
+        return Response(report)
+
+
+class VatReturnView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        return Response(ReportingService.get_vat_return(start_date, end_date, branch_id=branch_id))
+
+
+class TaxReconciliationView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        return Response(ReportingService.get_tax_reconciliation(start_date, end_date, branch_id=branch_id))
+
+
+class WithholdingTaxReportView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        return Response(ReportingService.get_withholding_tax_report(start_date, end_date, branch_id=branch_id))
+
+
 class ExpenseBreakdownView(APIView):
     """
     Expense dashboard broken down by category: parts, labor, and overhead.

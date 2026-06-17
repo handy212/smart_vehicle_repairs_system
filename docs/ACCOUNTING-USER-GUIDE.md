@@ -408,6 +408,28 @@ python manage.py validate_accounting_integrity --summary --no-fail
 
 ---
 
+## 19. ERP feature map
+
+| Capability | Path |
+|------------|------|
+| Account register | Accounting → Reports → Account Register |
+| Financial ratios | Accounting → Reports → Financial Ratios |
+| VAT return worksheet | Accounting → Reports → VAT Return |
+| Tax reconciliation | Accounting → Reports → Tax Reconciliation |
+| Withholding tax | Accounting → Reports → Withholding Tax |
+| Fiscal year & period lock | Accounting → Fiscal Year; Controls & Compliance |
+| Collections (overdue AR) | Billing → Collections |
+| Sales orders hub | Billing → Sales Orders (work orders + estimates) |
+| Sales reports | Billing → Sales Reports |
+| Vendor balances | Billing → Vendor Balances |
+| Vendor payment history | Billing → Vendor Payments |
+| AP due monitoring | Billing → AP Due |
+| Purchase reports | Billing → Purchase Reports |
+| Reorder / low stock | Inventory → Reorder Reports |
+| Run depreciation | Fixed Assets → Depreciation |
+
+---
+
 ## Related documentation
 
 - **Developers / posting rules:** `docs/ACCOUNTING-POSTING-STANDARD.md`

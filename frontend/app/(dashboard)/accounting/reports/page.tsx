@@ -20,12 +20,17 @@ import type { LucideIcon } from "lucide-react";
 
 const REPORT_ICONS: Record<string, LucideIcon> = {
   "general-ledger": Library,
+  "account-register": Library,
   "balance-sheet": Scale,
   "profit-loss": PieChart,
   "trial-balance": BarChart3,
   "cash-flow": Activity,
   aging: Clock,
   tax: Percent,
+  "vat-return": Percent,
+  "tax-reconciliation": Percent,
+  "withholding-tax": Percent,
+  "financial-ratios": Target,
   management: BarChart3,
   "margin-analysis": Target,
   "cost-control": Target,

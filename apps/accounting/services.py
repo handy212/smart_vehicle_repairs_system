@@ -3045,6 +3045,25 @@ class DashboardService:
         ]
 
         control = AccountingControl.get_settings()
+        inventory_gl_value = Decimal('0')
+        inventory_operational_value = Decimal('0')
+        if control.inventory_asset_account_id:
+            inventory_gl_value = ReportingService.get_account_balance(
+                control.inventory_asset_account, date=end_date, branch_id=branch_id
+            )
+        try:
+            from apps.inventory.models import Part
+            from apps.inventory.services import InventoryService
+
+            branch_obj = None
+            if branch_id:
+                from apps.branches.models import Branch
+                branch_obj = Branch.objects.filter(pk=branch_id).first()
+            inventory_operational_value = InventoryService.get_stock_valuation(
+                Part.objects.filter(is_active=True), branch=branch_obj
+            )
+        except Exception:
+            inventory_operational_value = Decimal('0')
         missing_control_accounts = [
             field for field in AccountingControl.ACCOUNT_FIELD_NAMES
             if getattr(control, f'{field}_id', None) is None
@@ -3242,6 +3261,8 @@ class DashboardService:
                 'current_profit_loss': money(profit_loss['totals']['net_income']),
                 'net_worth': money(balance_sheet['totals']['assets'] - balance_sheet['totals']['liabilities']),
                 'is_balanced': balance_sheet.get('is_balanced', True),
+                'inventory_gl_value': money(inventory_gl_value),
+                'inventory_operational_value': money(inventory_operational_value),
             },
             'revenue_expenses': {
                 'revenue_today': money(revenue_today),
@@ -3419,6 +3440,195 @@ class DashboardService:
                 'permissions': getattr(user, 'role', None),
             },
         }
+
+    @staticmethod
+    def get_financial_ratios(as_of_date=None, start_date=None, end_date=None, branch_id=None):
+        """Compute common financial ratios from balance sheet and P&L."""
+        if not as_of_date:
+            as_of_date = timezone.now().date()
+        if not start_date:
+            start_date = as_of_date.replace(month=1, day=1)
+        if not end_date:
+            end_date = as_of_date
+
+        balance_sheet = ReportingService.get_balance_sheet(as_of_date, branch_id=branch_id)
+        profit_loss = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_id)
+
+        def sum_subtype(accounts, subtype):
+            return sum(
+                Decimal(str(a.get('balance', 0)))
+                for a in accounts
+                if a.get('account_subtype') == subtype
+            )
+
+        def sum_codes(accounts, prefixes):
+            return sum(
+                Decimal(str(a.get('balance', 0)))
+                for a in accounts
+                if any(str(a.get('code', '')).startswith(p) for p in prefixes)
+            )
+
+        assets = balance_sheet.get('assets', [])
+        liabilities = balance_sheet.get('liabilities', [])
+
+        current_assets = sum_subtype(assets, 'current_asset') or sum_codes(assets, ['10', '11', '12', '13', '14', '15'])
+        current_liabilities = sum_subtype(liabilities, 'current_liability') or sum_codes(liabilities, ['20', '21', '22'])
+        total_assets = Decimal(str(balance_sheet['totals']['assets']))
+        total_liabilities = Decimal(str(balance_sheet['totals']['liabilities']))
+        total_equity = Decimal(str(balance_sheet['totals']['equity']))
+        revenue = Decimal(str(profit_loss['totals']['income']))
+        net_income = Decimal(str(profit_loss['totals']['net_income']))
+        expenses = Decimal(str(profit_loss['totals']['expenses']))
+
+        cash_and_bank = sum_codes(assets, ['1010', '1100', '10', '11'])
+        inventory = sum_codes(assets, ['1500', '15'])
+
+        def safe_div(numerator, denominator, as_percent=False):
+            if not denominator:
+                return None
+            value = float(numerator) / float(denominator)
+            return round(value * 100, 2) if as_percent else round(value, 4)
+
+        return {
+            'as_of_date': as_of_date.isoformat(),
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'inputs': {
+                'current_assets': float(current_assets),
+                'current_liabilities': float(current_liabilities),
+                'total_assets': float(total_assets),
+                'total_liabilities': float(total_liabilities),
+                'total_equity': float(total_equity),
+                'revenue': float(revenue),
+                'net_income': float(net_income),
+                'expenses': float(expenses),
+                'cash_and_bank': float(cash_and_bank),
+                'inventory': float(inventory),
+            },
+            'ratios': {
+                'current_ratio': safe_div(current_assets, current_liabilities),
+                'quick_ratio': safe_div(current_assets - inventory, current_liabilities),
+                'cash_ratio': safe_div(cash_and_bank, current_liabilities),
+                'debt_to_equity': safe_div(total_liabilities, total_equity),
+                'debt_ratio': safe_div(total_liabilities, total_assets),
+                'equity_ratio': safe_div(total_equity, total_assets),
+                'net_profit_margin': safe_div(net_income, revenue, as_percent=True),
+                'return_on_assets': safe_div(net_income, total_assets, as_percent=True),
+                'return_on_equity': safe_div(net_income, total_equity, as_percent=True),
+                'expense_ratio': safe_div(expenses, revenue, as_percent=True),
+            },
+        }
+
+    @staticmethod
+    def get_vat_return(start_date=None, end_date=None, branch_id=None):
+        """VAT return worksheet from operational tax data."""
+        tax_report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
+        collected = tax_report['tax_collected']
+        return {
+            'period': tax_report['period'],
+            'worksheet': {
+                'output_vat': collected.get('vat', 0),
+                'output_nhil': collected.get('nhil', 0),
+                'output_getfund': collected.get('getfund', 0),
+                'output_hrl': collected.get('hrl', 0),
+                'total_output_tax': collected.get('total', 0),
+                'input_vat': tax_report['tax_paid']['total'],
+                'net_vat_payable': tax_report['net_tax_liability'],
+            },
+            'supporting': {
+                'invoice_count': tax_report['invoice_count'],
+                'bill_count': tax_report['bill_count'],
+            },
+            'status': 'draft',
+        }
+
+    @staticmethod
+    def get_tax_reconciliation(start_date=None, end_date=None, branch_id=None):
+        """Reconcile GL tax accounts against operational tax report."""
+        if not start_date:
+            start_date = timezone.now().date().replace(month=1, day=1)
+        if not end_date:
+            end_date = timezone.now().date()
+
+        tax_report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
+        control = AccountingControl.get_settings()
+
+        gl_output_tax = Decimal('0')
+        gl_input_tax = Decimal('0')
+        if control.sales_tax_payable_account_id:
+            gl_output_tax = ReportingService.get_account_balance(
+                control.sales_tax_payable_account, date=end_date, branch_id=branch_id
+            )
+        if control.input_tax_account_id:
+            gl_input_tax = ReportingService.get_account_balance(
+                control.input_tax_account, date=end_date, branch_id=branch_id
+            )
+
+        operational_output = Decimal(str(tax_report['tax_collected']['total']))
+        operational_input = Decimal(str(tax_report['tax_paid']['total']))
+        gl_net = gl_output_tax - gl_input_tax
+        operational_net = Decimal(str(tax_report['net_tax_liability']))
+
+        return {
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'gl': {
+                'output_tax_balance': float(gl_output_tax),
+                'input_tax_balance': float(gl_input_tax),
+                'net_position': float(gl_net),
+            },
+            'operational': {
+                'output_tax_total': float(operational_output),
+                'input_tax_total': float(operational_input),
+                'net_position': float(operational_net),
+            },
+            'variance': {
+                'output': float(gl_output_tax - operational_output),
+                'input': float(gl_input_tax - operational_input),
+                'net': float(gl_net - operational_net),
+            },
+            'in_balance': abs(gl_net - operational_net) <= Decimal('0.01'),
+        }
+
+    @staticmethod
+    def get_withholding_tax_report(start_date=None, end_date=None, branch_id=None):
+        """Withholding tax summary from WHT liability accounts (if configured)."""
+        if not start_date:
+            start_date = timezone.now().date().replace(month=1, day=1)
+        if not end_date:
+            end_date = timezone.now().date()
+
+        wht_accounts = Account.objects.filter(
+            is_active=True,
+            account_type='liability',
+        ).filter(
+            Q(name__icontains='withhold') | Q(code__startswith='23')
+        ).order_by('code')
+
+        lines = []
+        total = Decimal('0')
+        for account in wht_accounts:
+            balance = ReportingService.get_account_balance(account, date=end_date, branch_id=branch_id)
+            if balance == 0:
+                continue
+            lines.append({
+                'code': account.code,
+                'name': account.name,
+                'balance': float(balance),
+            })
+            total += balance
+
+        return {
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'configured': wht_accounts.exists(),
+            'lines': lines,
+            'total_withheld': float(total),
+            'note': (
+                'No withholding tax liability accounts found. Create accounts for WHT payable '
+                'or post withholding via journal entries.'
+                if not lines
+                else None
+            ),
+        }
+
 
 class ExportService:
     @staticmethod
