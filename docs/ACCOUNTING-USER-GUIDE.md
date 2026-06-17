@@ -4,7 +4,8 @@
 **System:** Smart Vehicle Repairs ERP  
 **Last updated:** June 2026
 
-**Related guides:** [Finance Feature Guide](./FINANCE-FEATURE-GUIDE.md) (Accounting + Billing + Fixed Assets overview) · [Finance Fix Backlog](./FINANCE-FIX-BACKLOG.md) (product improvement tracker)
+**Related guides:** 
+(Accounting + Billing + Fixed Assets overview)
 
 This guide explains how money flows through the system — from invoices and payments to the general ledger — and how to use every screen under **Accounting** in the sidebar.
 
@@ -431,10 +432,3 @@ python manage.py validate_accounting_integrity --summary --no-fail
 | Run depreciation | Fixed Assets → Depreciation |
 
 ---
-
-## Related documentation
-
-- **Developers / posting rules:** `docs/ACCOUNTING-POSTING-STANDARD.md`
-- **Dashboard KPIs:** `docs/accounting-dashboard-spec.md`
-
-For technical support or chart-of-accounts changes, involve your accountant before altering control account mappings.
