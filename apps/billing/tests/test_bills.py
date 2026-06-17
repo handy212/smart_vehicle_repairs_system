@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from apps.billing.models import Bill, BillLineItem
+from apps.billing.models import Bill, BillLineItem, BillPayment, VendorCredit, VendorCreditApplication
 from apps.inventory.models import Supplier
 from apps.branches.models import Branch
 from apps.accounts.permission_models import Permission, Role
@@ -42,6 +42,10 @@ class BillTests(TestCase):
         controls.inventory_asset_account = AccountingService.get_or_create_account(
             '1500', 'Inventory Asset', 'asset', 'debit'
         )
+        bank = AccountingService.get_or_create_account('1100', 'Operating Bank', 'asset', 'debit')
+        bank.account_subtype = 'bank'
+        bank.save(update_fields=['account_subtype'])
+        controls.default_bank_account = bank
         controls.save()
         
         # Add user to branch (if applicable, or assume superuser for simplicity)
@@ -250,3 +254,44 @@ class BillTests(TestCase):
     #         # Verify signal called the service
     #         self.assertTrue(mock_create_dl.called)
     #         # mock_create_dl.assert_called_once() # Called multiple times due to line item saves triggering parent save
+
+    def test_bill_recalculate_includes_vendor_credit_and_payment(self):
+        bill = self._create_bill(total=Decimal('200.00'))
+        bill.refresh_from_db()
+        self.assertEqual(bill.amount_due, Decimal('200.00'))
+
+        vendor_credit = VendorCredit.objects.create(
+            vendor=self.supplier,
+            branch=self.branch,
+            status='issued',
+            subtotal=Decimal('50.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('50.00'),
+            unused_amount=Decimal('50.00'),
+            created_by=self.user,
+        )
+        VendorCreditApplication.objects.create(
+            vendor_credit=vendor_credit,
+            bill=bill,
+            amount=Decimal('50.00'),
+            applied_by=self.user,
+        )
+        bill.recalculate_amount_paid_from_collections()
+        bill.refresh_from_db()
+        self.assertEqual(bill.amount_paid, Decimal('50.00'))
+        self.assertEqual(bill.amount_due, Decimal('150.00'))
+
+        from apps.accounting.models import AccountingControl
+
+        bank = AccountingControl.get_settings().default_bank_account
+
+        BillPayment.objects.create(
+            bill=bill,
+            amount=Decimal('150.00'),
+            payment_method='bank_transfer',
+            bank_account=bank,
+            paid_by=self.user,
+        )
+        bill.refresh_from_db()
+        self.assertEqual(bill.amount_paid, Decimal('200.00'))
+        self.assertEqual(bill.amount_due, Decimal('0.00'))

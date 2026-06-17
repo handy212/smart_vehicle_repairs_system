@@ -2395,6 +2395,21 @@ class Bill(models.Model):
     def __str__(self):
         return f"{self.bill_number} - {self.vendor.name}"
 
+    def recalculate_amount_paid_from_collections(self):
+        """
+        Set amount_paid from bill payments plus vendor credit applications.
+        Then save() refreshes amount_due and status.
+        """
+        from django.db.models import Sum
+
+        payment_total = self.payments.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        credit_total = self.vendor_credit_applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        collected = (payment_total + credit_total).quantize(Decimal('0.01'))
+        from apps.billing.balance_utils import operational_collection_balances
+
+        self.amount_paid, self.amount_due = operational_collection_balances(self.total, collected)
+        self.save()
+
     def save(self, *args, **kwargs):
         if not self.bill_number:
             if self.branch_id:
@@ -2539,7 +2554,5 @@ class BillPayment(models.Model):
         self.update_bill_status()
 
     def update_bill_status(self):
-        """Update parent bill amount_paid and status"""
-        total_paid = self.bill.payments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
-        self.bill.amount_paid = total_paid
-        self.bill.save() # Bill.save() handles status update logic
+        """Update parent bill amount_paid and status from payments and vendor credits."""
+        self.bill.recalculate_amount_paid_from_collections()

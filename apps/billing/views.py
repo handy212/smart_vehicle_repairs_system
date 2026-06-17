@@ -2354,8 +2354,7 @@ class VendorCreditViewSet(viewsets.ModelViewSet):
                     applied_by=request.user,
                 )
                 vc.calculate_totals()
-                bill.amount_paid = (bill.amount_paid + apply_amt).quantize(Decimal('0.01'))
-                bill.save()
+                bill.recalculate_amount_paid_from_collections()
                 vc.refresh_from_db()
 
                 from apps.accounting.services import AccountingService
