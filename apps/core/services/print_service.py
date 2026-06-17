@@ -375,6 +375,7 @@ class DocumentPrinter:
         'payslip': 'printing/documents/payslip.html',
         'diagnosis_report': 'diagnosis/customer_report.html',
         'financial_report': 'printing/reports/financial_report.html',
+        'customer_statement': 'printing/reports/customer_statement.html',
     }
     
     def __init__(self, document_type: str):
@@ -998,6 +999,64 @@ def generate_aging_report_pdf(data):
     }
     filename = f"aging_report_{context['generated_at'].strftime('%Y%m%d')}.pdf"
     return printer.generate_pdf(context, filename)
+
+
+def generate_customer_statement_pdf(statement_data, customer, branch=None, request=None):
+    """Generate PDF for a customer account statement."""
+    from django.utils import timezone
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+
+    printer = DocumentPrinter('customer_statement')
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document_type': 'customer_statement',
+        'customer_name': str(customer),
+        'customer_number': getattr(customer, 'customer_number', ''),
+        'period': statement_data.get('period', {}),
+        'opening_balance': statement_data.get('opening_balance', 0),
+        'closing_balance': statement_data.get('closing_balance', 0),
+        'period_debits': statement_data.get('period_debits', 0),
+        'period_credits': statement_data.get('period_credits', 0),
+        'transactions': statement_data.get('transactions', []),
+        'generated_at': timezone.now(),
+        'branch': branch,
+        'base_url': base_url.rstrip('/'),
+        'watermark': _get_document_watermark('financial_report', None),
+        **company_info,
+        **branding,
+    }
+    safe_customer = (getattr(customer, 'customer_number', None) or f'customer_{customer.id}').replace('/', '-')
+    filename = f"statement_{safe_customer}_{context['period'].get('end', 'export')}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def render_customer_statement_html(statement_data, customer, branch=None, request=None):
+    from django.utils import timezone
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document_type': 'customer_statement',
+        'customer_name': str(customer),
+        'customer_number': getattr(customer, 'customer_number', ''),
+        'period': statement_data.get('period', {}),
+        'opening_balance': statement_data.get('opening_balance', 0),
+        'closing_balance': statement_data.get('closing_balance', 0),
+        'transactions': statement_data.get('transactions', []),
+        'generated_at': timezone.now(),
+        'branch': branch,
+        'base_url': base_url.rstrip('/'),
+        'show_print_controls': True,
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/reports/customer_statement.html', context)
 
 
 def _accounting_report_base_context(context: Dict[str, Any], request=None) -> Dict[str, Any]:

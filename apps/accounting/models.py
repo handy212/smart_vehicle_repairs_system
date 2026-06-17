@@ -410,6 +410,14 @@ class VatReturn(models.Model):
         blank=True,
         related_name='vat_return_payments',
     )
+    gra_acknowledgment = models.CharField(max_length=100, blank=True)
+    gra_submitted_at = models.DateTimeField(null=True, blank=True)
+    gra_submission_mode = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[('manual', 'Manual'), ('api', 'API')],
+    )
+    gra_submission_payload = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

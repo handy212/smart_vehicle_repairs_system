@@ -1518,7 +1518,7 @@ class VatReturnViewSet(viewsets.ModelViewSet):
     ordering = ['-period_end']
 
     def get_permissions(self):
-        if self.action in ['create', 'review', 'file', 'record_payment']:
+        if self.action in ['create', 'review', 'file', 'record_payment', 'submit_to_gra']:
             return [
                 IsAuthenticated(),
                 IsModuleEnabled('accounting')(),
@@ -1603,6 +1603,50 @@ class VatReturnViewSet(viewsets.ModelViewSet):
                 vat_return,
                 payment_reference=request.data.get('payment_reference', ''),
                 user=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({'detail': str(exc)})
+        vat_return.refresh_from_db()
+        return Response(self.get_serializer(vat_return).data)
+
+    @action(detail=True, methods=['get'])
+    def export_gra_csv(self, request, pk=None):
+        from django.http import HttpResponse
+        from .gra_filing import GraFilingService
+
+        vat_return = self.get_object()
+        csv_content = GraFilingService.build_csv(vat_return)
+        response = HttpResponse(csv_content, content_type='text/csv')
+        response['Content-Disposition'] = (
+            f'attachment; filename="gra_vat_return_{vat_return.period_end}.csv"'
+        )
+        return response
+
+    @action(detail=True, methods=['get'])
+    def export_gra_xml(self, request, pk=None):
+        from django.http import HttpResponse
+        from .gra_filing import GraFilingService
+
+        vat_return = self.get_object()
+        xml_content = GraFilingService.build_xml(vat_return)
+        response = HttpResponse(xml_content, content_type='application/xml')
+        response['Content-Disposition'] = (
+            f'attachment; filename="gra_vat_return_{vat_return.period_end}.xml"'
+        )
+        return response
+
+    @action(detail=True, methods=['post'])
+    def submit_to_gra(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .gra_filing import GraFilingService
+        from rest_framework.exceptions import ValidationError
+
+        vat_return = self.get_object()
+        try:
+            GraFilingService.submit(
+                vat_return,
+                user=request.user,
+                acknowledgment=request.data.get('gra_acknowledgment', ''),
             )
         except DjangoValidationError as exc:
             raise ValidationError({'detail': str(exc)})

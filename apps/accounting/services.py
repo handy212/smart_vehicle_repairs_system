@@ -1727,6 +1727,7 @@ class AccountingService:
         total_deductions = Decimal('0')
         total_net = Decimal('0')
         total_unpaid_absence = Decimal('0')
+        total_employer_contributions = Decimal('0')
 
         for slip in payslips:
             total_basic += slip.basic_salary or Decimal('0')
@@ -1736,6 +1737,7 @@ class AccountingService:
             total_deductions += _sum_json_values(slip.deductions)
             total_net += slip.net_pay or Decimal('0')
             total_unpaid_absence += (slip.unpaid_leave_deduction or Decimal('0')) + (slip.absence_deduction or Decimal('0'))
+            total_employer_contributions += _sum_json_values(getattr(slip, 'employer_contributions', {}))
 
         salary_expense_amount = total_basic - total_unpaid_absence
 
@@ -1746,6 +1748,8 @@ class AccountingService:
             allowances_expense = cls.get_or_create_account('6020', 'Allowances Expense', 'expense', 'debit')
             tax_payable = cls.get_or_create_account('2300', 'PAYE Tax Payable', 'liability', 'credit')
             deductions_payable = cls.get_or_create_account('2310', 'Payroll Deductions Payable', 'liability', 'credit')
+            employer_statutory_payable = cls.get_or_create_account('2315', 'Employer Statutory Payable', 'liability', 'credit')
+            employer_statutory_expense = cls.get_or_create_account('6030', 'Employer Statutory Expense', 'expense', 'debit')
             cash_account = cls._control_account('default_bank_account', 'Default Bank Account')
 
             je = cls._create_posted_journal_header(
@@ -1776,6 +1780,12 @@ class AccountingService:
                     amount=total_allowances, transaction_type='debit',
                     description='Allowances (Housing, Transport, etc.)',
                 )
+            if total_employer_contributions > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=employer_statutory_expense,
+                    amount=total_employer_contributions, transaction_type='debit',
+                    description='Employer SSNIT and tier 2 contributions',
+                )
 
             # 4. Credit lines (liabilities + cash)
             if total_tax > 0:
@@ -1790,6 +1800,12 @@ class AccountingService:
                     amount=total_deductions, transaction_type='credit',
                     description='Payroll deductions (SSNIT, Provident Fund, etc.)',
                 )
+            if total_employer_contributions > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=employer_statutory_payable,
+                    amount=total_employer_contributions, transaction_type='credit',
+                    description='Employer statutory contributions payable',
+                )
             if total_net > 0:
                 Transaction.objects.create(
                     journal_entry=je, account=cash_account,
@@ -1801,8 +1817,8 @@ class AccountingService:
             if not je.validate_balanced():
                 raise ValidationError(
                     f"Payroll Journal Entry for '{payroll_period.name}' is not balanced. "
-                    f"Debits: {salary_expense_amount + total_overtime + total_allowances}, "
-                    f"Credits: {total_tax + total_deductions + total_net}"
+                    f"Debits: {salary_expense_amount + total_overtime + total_allowances + total_employer_contributions}, "
+                    f"Credits: {total_tax + total_deductions + total_employer_contributions + total_net}"
                 )
 
             return je

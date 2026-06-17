@@ -548,7 +548,8 @@ class SalaryComponent(models.Model):
         ('PAYE', 'PAYE'),
         ('SSNIT_EE', 'SSNIT Employee'),
         ('SSNIT_ER', 'SSNIT Employer'),
-        ('TIER2', 'Tier 2 Pension'),
+        ('TIER2', 'Tier 2 Pension (Employee)'),
+        ('TIER2_ER', 'Tier 2 Pension (Employer)'),
         ('TIER3', 'Tier 3 Pension'),
         ('NHIS', 'NHIS'),
         ('OTHER', 'Other Statutory'),
@@ -781,6 +782,10 @@ class PaySlip(models.Model):
     deductions = models.JSONField(
         _('deductions'), default=dict, blank=True,
         help_text=_('{"component_name": amount}'),
+    )
+    employer_contributions = models.JSONField(
+        _('employer contributions'), default=dict, blank=True,
+        help_text=_('{"SSNIT Employer (Tier 1)": amount} — not deducted from net pay'),
     )
     gross_pay = models.DecimalField(
         _('gross pay'), max_digits=12, decimal_places=2, default=0,

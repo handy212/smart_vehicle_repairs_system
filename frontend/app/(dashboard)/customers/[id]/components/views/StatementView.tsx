@@ -8,7 +8,8 @@ import { format, startOfMonth, startOfYear } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface StatementViewProps {
     customerId: number;
@@ -61,11 +62,29 @@ export function StatementView({ customerId }: StatementViewProps) {
 
     const transactions = statement?.transactions ?? [];
 
+    const handleDownloadPdf = async () => {
+        const blob = await customersApi.statementPdf(customerId, {
+            start_date: periodDates.start,
+            end_date: periodDates.end,
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `customer_statement_${customerId}_${periodDates.end}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-3">
                 <h2 className="text-lg font-semibold">Account Statement</h2>
-                <Select value={period} onValueChange={(val) => setPeriod(val)}>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download PDF
+                    </Button>
+                    <Select value={period} onValueChange={(val) => setPeriod(val)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select period" />
                     </SelectTrigger>
@@ -76,6 +95,7 @@ export function StatementView({ customerId }: StatementViewProps) {
                         <SelectItem value="all_time">All Time</SelectItem>
                     </SelectContent>
                 </Select>
+                </div>
             </div>
 
             <StatsGrid stats={stats} columns={4} />

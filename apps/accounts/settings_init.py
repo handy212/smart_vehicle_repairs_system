@@ -117,6 +117,17 @@ DEFAULT_SETTINGS = {
         {'key': 'quickbooks_client_id', 'value': '', 'description': ''},
         {'key': 'quickbooks_client_secret', 'value': '', 'description': '', 'is_secret': True},
         {'key': 'quickbooks_sandbox_enabled', 'value': 'true', 'description': ''},
+        {'key': 'gra_api_url', 'value': '', 'description': 'GRA e-filing API endpoint URL'},
+        {'key': 'gra_api_key', 'value': '', 'description': 'GRA e-filing API key', 'is_secret': True},
+        {'key': 'gra_tin', 'value': '', 'description': 'Company TIN for GRA VAT submissions'},
+    ],
+    'payroll': [
+        {'key': 'payroll_auto_ssnit', 'value': 'true', 'description': 'Auto-calculate SSNIT tier 1 on payroll processing'},
+        {'key': 'payroll_auto_tier2', 'value': 'true', 'description': 'Auto-calculate tier 2 pension on payroll processing'},
+        {'key': 'payroll_ssnit_ee_rate', 'value': '5.5', 'description': 'SSNIT employee rate (%)'},
+        {'key': 'payroll_ssnit_er_rate', 'value': '13.0', 'description': 'SSNIT employer rate (%)'},
+        {'key': 'payroll_tier2_rate', 'value': '5.0', 'description': 'Tier 2 employee pension rate (%)'},
+        {'key': 'payroll_tier2_er_rate', 'value': '5.0', 'description': 'Tier 2 employer pension rate (%)'},
     ],
     'maintenance': [
         {'key': 'maintenance_mode', 'value': 'false', 'description': 'Enable maintenance mode'},

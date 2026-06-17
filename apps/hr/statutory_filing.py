@@ -71,6 +71,7 @@ class StatutoryFilingService:
     payslips = payroll_period.payslips.select_related('employee', 'employee__user')
 
     statutory_totals = defaultdict(lambda: Decimal('0'))
+    employer_totals = defaultdict(lambda: Decimal('0'))
     employee_lines = []
 
     for slip in payslips:
@@ -81,6 +82,7 @@ class StatutoryFilingService:
         'taxable_income': float(slip.gross_pay),
         'paye': float(slip.tax_amount),
         'statutory_deductions': {},
+        'employer_contributions': {},
       }
       statutory_totals['PAYE'] += slip.tax_amount
       line['statutory_deductions']['PAYE'] = float(slip.tax_amount)
@@ -93,6 +95,14 @@ class StatutoryFilingService:
         statutory_totals[code] += amt
         line['statutory_deductions'][code] = line['statutory_deductions'].get(code, 0) + float(amt)
 
+      for name, amount in (getattr(slip, 'employer_contributions', None) or {}).items():
+        code = 'SSNIT_ER' if 'SSNIT' in name and 'Employer' in name else (
+          'TIER2_ER' if 'Tier 2' in name and 'Employer' in name else 'OTHER'
+        )
+        amt = Decimal(str(amount))
+        employer_totals[code] += amt
+        line['employer_contributions'][code] = line['employer_contributions'].get(code, 0) + float(amt)
+
       employee_lines.append(line)
 
     summary = [
@@ -100,8 +110,19 @@ class StatutoryFilingService:
         'code': code,
         'label': cls.STATUTORY_LABELS.get(code, code),
         'total': float(total),
+        'side': 'employee',
       }
       for code, total in sorted(statutory_totals.items())
+      if total > 0
+    ]
+    employer_summary = [
+      {
+        'code': code,
+        'label': cls.STATUTORY_LABELS.get(code, code),
+        'total': float(total),
+        'side': 'employer',
+      }
+      for code, total in sorted(employer_totals.items())
       if total > 0
     ]
 
@@ -114,10 +135,10 @@ class StatutoryFilingService:
         'status': payroll_period.status,
       },
       'summary': summary,
+      'employer_summary': employer_summary,
       'employees': employee_lines,
       'filing_notes': (
-        'Statutory totals aggregate PAYE from payslips and deductions mapped via '
-        'salary component statutory codes. Configure SSNIT_EE, SSNIT_ER, and other '
-        'codes on salary components for authority-ready breakdowns.'
+        'Employee deductions and employer SSNIT/tier 2 contributions are auto-calculated '
+        'during payroll processing unless overridden by salary components with statutory codes.'
       ),
     }

@@ -439,6 +439,9 @@ export interface VatReturnFiling {
     paid_at?: string | null;
     payment_reference?: string;
     payment_journal_entry?: number | null;
+    gra_acknowledgment?: string;
+    gra_submitted_at?: string | null;
+    gra_submission_mode?: 'manual' | 'api' | '';
     notes?: string;
     created_at?: string;
     updated_at?: string;
@@ -1159,6 +1162,24 @@ export const accountingApi = {
         recordPayment: async (id: number, paymentReference?: string) => {
             const response = await apiClient.post(`/accounting/vat-returns/${id}/record_payment/`, {
                 payment_reference: paymentReference,
+            });
+            return response.data as VatReturnFiling;
+        },
+        exportGraCsv: async (id: number) => {
+            const response = await apiClient.get(`/accounting/vat-returns/${id}/export_gra_csv/`, {
+                responseType: 'blob',
+            });
+            return response.data as Blob;
+        },
+        exportGraXml: async (id: number) => {
+            const response = await apiClient.get(`/accounting/vat-returns/${id}/export_gra_xml/`, {
+                responseType: 'blob',
+            });
+            return response.data as Blob;
+        },
+        submitToGra: async (id: number, graAcknowledgment?: string) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/submit_to_gra/`, {
+                gra_acknowledgment: graAcknowledgment,
             });
             return response.data as VatReturnFiling;
         },

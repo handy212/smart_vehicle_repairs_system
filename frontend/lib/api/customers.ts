@@ -167,6 +167,14 @@ export const customersApi = {
     return response.data;
   },
 
+  statementPdf: async (id: number, params?: { start_date?: string; end_date?: string; branch_id?: number }): Promise<Blob> => {
+    const response = await apiClient.get(`/customers/customers/${id}/statement_pdf/`, {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   notes: {
 
     list: async (id: number): Promise<any[]> => {

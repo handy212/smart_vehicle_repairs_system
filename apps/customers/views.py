@@ -448,6 +448,28 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
         CustomerStatementService.sync_customer_balance(customer)
         return Response(data)
+
+    @action(detail=True, methods=['get'])
+    def statement_pdf(self, request, pk=None):
+        """Download customer account statement as PDF."""
+        from apps.billing.customer_statement import CustomerStatementService
+        from apps.core.services.print_service import generate_customer_statement_pdf
+        from django.utils.dateparse import parse_date
+        from apps.branches.utils import resolve_branch
+
+        customer = self.get_object()
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch = resolve_branch(request)
+        branch_id = branch.id if branch else request.query_params.get('branch_id')
+
+        statement = CustomerStatementService.get_statement(
+            customer_id=customer.id,
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=int(branch_id) if branch_id else None,
+        )
+        return generate_customer_statement_pdf(statement, customer, branch=branch, request=request)
     
     @action(detail=True, methods=['post'])
     def add_note(self, request, pk=None):

@@ -479,12 +479,16 @@ class VatReturnSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'period_start', 'period_end', 'branch', 'branch_name',
             'worksheet', 'status', 'filing_reference', 'filed_at', 'filed_by', 'filed_by_name',
-            'paid_at', 'payment_reference', 'payment_journal_entry', 'notes',
+            'paid_at', 'payment_reference', 'payment_journal_entry',
+            'gra_acknowledgment', 'gra_submitted_at', 'gra_submission_mode', 'gra_submission_payload',
+            'notes',
             'created_by', 'created_by_name', 'created_at', 'updated_at',
         ]
         read_only_fields = [
             'worksheet', 'status', 'filed_at', 'filed_by', 'paid_at',
-            'payment_reference', 'payment_journal_entry', 'created_by', 'created_at', 'updated_at',
+            'payment_reference', 'payment_journal_entry',
+            'gra_acknowledgment', 'gra_submitted_at', 'gra_submission_mode', 'gra_submission_payload',
+            'created_by', 'created_at', 'updated_at',
         ]
 
 

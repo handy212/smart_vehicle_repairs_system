@@ -84,9 +84,19 @@ export default function StatutoryFilingPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {pack.summary.map((item: { code: string; label: string; total: number }) => (
-              <Card key={item.code}>
+              <Card key={`ee-${item.code}`}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{item.label}</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{item.label} (Employee)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{formatCurrency(item.total)}</p>
+                </CardContent>
+              </Card>
+            ))}
+            {(pack.employer_summary || []).map((item: { code: string; label: string; total: number }) => (
+              <Card key={`er-${item.code}`}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{item.label} (Employer)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold">{formatCurrency(item.total)}</p>

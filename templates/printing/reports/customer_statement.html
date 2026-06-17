@@ -1,0 +1,55 @@
+{% extends 'printing/base/document_base.html' %}
+{% load humanize %}
+
+{% block title %}Customer Statement{% endblock %}
+
+{% block document_type %}Customer Account Statement{% endblock %}
+
+{% block document_number %}{{ customer_name }}{% endblock %}
+
+{% block document_meta %}
+<div>Period: {{ period.start }} to {{ period.end }}</div>
+<div>Generated: {{ generated_at|date:"Y-m-d H:i" }}</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 grid grid-cols-2 gap-4 text-sm">
+    <div class="border rounded p-3">
+        <div class="text-gray-500 uppercase text-xs mb-1">Opening Balance</div>
+        <div class="font-bold text-lg">{{ opening_balance|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="border rounded p-3">
+        <div class="text-gray-500 uppercase text-xs mb-1">Closing Balance</div>
+        <div class="font-bold text-lg">{{ closing_balance|floatformat:2|intcomma }}</div>
+    </div>
+</div>
+
+<table class="table w-full text-xs">
+    <thead>
+        <tr class="bg-gray-100">
+            <th class="text-left">Date</th>
+            <th class="text-left">Type</th>
+            <th class="text-left">Reference</th>
+            <th class="text-right">Debit</th>
+            <th class="text-right">Credit</th>
+            <th class="text-right">Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in transactions %}
+        <tr class="border-b border-gray-100">
+            <td>{{ row.date }}</td>
+            <td class="capitalize">{{ row.type }}</td>
+            <td class="font-mono">{{ row.reference }}</td>
+            <td class="text-right">{% if row.debit %}{{ row.debit|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+            <td class="text-right">{% if row.credit %}{{ row.credit|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+            <td class="text-right font-semibold">{{ row.running_balance|floatformat:2|intcomma }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center py-6 text-gray-500">No transactions in this period.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

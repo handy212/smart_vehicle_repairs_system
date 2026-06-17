@@ -66,6 +66,20 @@ export default function VatReturnPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounting", "vat-return-filings"] }),
   });
 
+  const submitGra = useMutation({
+    mutationFn: (id: number) => accountingApi.vatReturns.submitToGra(id, filingReference),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounting", "vat-return-filings"] }),
+  });
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const worksheet = report?.worksheet;
   const getExportPayload = () => {
     if (!worksheet) return null;
@@ -186,13 +200,39 @@ export default function VatReturnPage() {
                   <div>
                     <span className="font-medium">{f.period_start} → {f.period_end}</span>
                     <Badge variant="outline" className="ml-2 capitalize">{f.status}</Badge>
+                    {f.gra_acknowledgment && (
+                      <span className="ml-2 text-xs text-muted-foreground">GRA: {f.gra_acknowledgment}</span>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        const blob = await accountingApi.vatReturns.exportGraCsv(f.id);
+                        downloadBlob(blob, `gra_vat_${f.period_end}.csv`);
+                      }}
+                    >
+                      GRA CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        const blob = await accountingApi.vatReturns.exportGraXml(f.id);
+                        downloadBlob(blob, `gra_vat_${f.period_end}.xml`);
+                      }}
+                    >
+                      GRA XML
+                    </Button>
                     {f.status === "draft" && (
                       <Button size="sm" variant="outline" onClick={() => reviewFiling.mutate(f.id)}>Review</Button>
                     )}
                     {(f.status === "draft" || f.status === "reviewed") && (
-                      <Button size="sm" variant="outline" onClick={() => fileFiling.mutate(f.id)}>File</Button>
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => fileFiling.mutate(f.id)}>File</Button>
+                        <Button size="sm" onClick={() => submitGra.mutate(f.id)}>Submit to GRA</Button>
+                      </>
                     )}
                     {f.status === "filed" && (
                       <Button size="sm" onClick={() => payFiling.mutate(f.id)}>Record Payment</Button>
