@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookOpen,
@@ -13,24 +12,10 @@ import {
   Scale,
 } from "lucide-react";
 
-export interface AccountingNavItem {
-  name: string;
-  href: string;
-  permission?: string;
-  permissions?: string[];
-  icon?: LucideIcon;
-  description?: string;
-}
-
-export interface AccountingNavGroup {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  items: AccountingNavItem[];
-}
+import type { NavGroup, NavGroupItem } from "./nav-group-types";
 
 /** Accounting module navigation — grouped for collapsible sub-nav. */
-export const ACCOUNTING_NAV_GROUPS: AccountingNavGroup[] = [
+export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
   {
     id: "overview",
     label: "Overview",
@@ -153,11 +138,14 @@ export const ACCOUNTING_NAV_GROUPS: AccountingNavGroup[] = [
 ];
 
 /** Flat list for backwards compatibility (e.g. command palette). */
-export const ACCOUNTING_NAV_ITEMS: AccountingNavItem[] = ACCOUNTING_NAV_GROUPS.flatMap(
+export const ACCOUNTING_NAV_ITEMS: NavGroupItem[] = ACCOUNTING_NAV_GROUPS.flatMap(
   (group) => group.items
 );
 
-export function getAccountingActiveItem(pathname: string | null): AccountingNavItem | null {
+export type AccountingNavItem = NavGroupItem;
+export type AccountingNavGroup = NavGroup;
+
+export function getAccountingActiveItem(pathname: string | null): NavGroupItem | null {
   if (!pathname) return null;
 
   const matches = ACCOUNTING_NAV_ITEMS.filter(
