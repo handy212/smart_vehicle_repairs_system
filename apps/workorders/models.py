@@ -691,8 +691,8 @@ class WorkOrder(models.Model):
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
             if django_apps.is_installed('apps.billing'):
-                Invoice = django_apps.get_model('billing', 'Invoice')
-                invoice = Invoice.objects.filter(work_order=self).exclude(status='proforma').first()
+                from apps.billing.work_order_invoices import get_primary_invoice
+                invoice = get_primary_invoice(self)
                 if not invoice:
                     return False, "Create and link an invoice to this work order before marking as invoiced."
                 if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
@@ -732,16 +732,16 @@ class WorkOrder(models.Model):
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
             if django_apps.is_installed('apps.billing'):
-                Invoice = django_apps.get_model('billing', 'Invoice')
-                invoice = Invoice.objects.filter(work_order=self).exclude(status='proforma').first()
+                from apps.billing.work_order_invoices import get_primary_invoice
+                invoice = get_primary_invoice(self)
                 if not invoice:
                     return False, "A finalized invoice must be created before the work order can be marked as invoiced."
                 if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
                     return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
 
         if new_status == 'closed' and django_apps.is_installed('apps.billing'):
-            Invoice = django_apps.get_model('billing', 'Invoice')
-            invoice = Invoice.objects.filter(work_order=self).exclude(status='proforma').first()
+            from apps.billing.work_order_invoices import get_primary_invoice
+            invoice = get_primary_invoice(self)
             if not invoice:
                 return False, "A finalized invoice is required before the work order can be closed."
             if invoice.status == 'draft':

@@ -125,14 +125,25 @@ export default function WorkflowActions({
     : false;
   const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, status);
 
+  const openCreateInvoice = () => {
+    router.push(`/billing/invoices/new?work_order=${workOrderId}`);
+  };
+
   const openInvoice = async () => {
     const fresh = await queryClient.fetchQuery({
       queryKey: ["workorder", workOrderId],
       queryFn: () => workordersApi.get(workOrderId),
     });
-    const linkedId = fresh?.invoice_summary?.id ?? existingInvoiceId;
-    if (linkedId) {
-      router.push(`/billing/invoices/${linkedId}`);
+    const summary = fresh?.invoice_summary;
+    if (summary?.id && summary.status !== "void") {
+      router.push(`/billing/invoices/${summary.id}`);
+      return;
+    }
+    if (
+      ["completed", "discontinued_pending_bill"].includes(fresh?.status ?? status) &&
+      (!summary?.id || summary.status === "void")
+    ) {
+      openCreateInvoice();
       return;
     }
     const estimateId = fresh?.estimate_summary?.id ?? linkedEstimateId;
@@ -140,11 +151,7 @@ export default function WorkflowActions({
       router.push(`/billing/estimates/${estimateId}`);
       return;
     }
-    toast({
-      title: "Invoice not ready",
-      description: "Create the invoice from the linked estimate first.",
-      variant: "warning",
-    });
+    openCreateInvoice();
   };
 
   const openEstimateForInvoice = () => {
@@ -1065,6 +1072,16 @@ export default function WorkflowActions({
                 invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
               }`
             : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`;
+          if (invoicePayment?.canMarkWorkOrderInvoiced) {
+            actions.push({
+              label: "Confirm billing complete",
+              icon: CheckCircle,
+              onClick: () => setShowMarkInvoicedDialog(true),
+              disabled: markInvoicedMutation.isPending,
+              description:
+                "Record odometer out and move the work order to Ready to Close after the invoice is issued.",
+            });
+          }
           if (hasIssuedInvoice) {
             actions.push({
               label: "Close Work Order",
@@ -1083,6 +1100,24 @@ export default function WorkflowActions({
             variant: hasIssuedInvoice ? "outline" : "default",
             description: viewDescription,
           });
+        } else if (canCreateNewInvoice) {
+          actions.push({
+            label: "Create invoice",
+            icon: DollarSign,
+            onClick: openCreateInvoice,
+            description: invoiceSummary?.status === "void"
+              ? "Issue a new invoice (previous invoice was voided)"
+              : "Bill labor and installed parts directly from this work order",
+          });
+          if (linkedEstimateId) {
+            actions.push({
+              label: "Open estimate",
+              icon: FileCheck,
+              onClick: openEstimateForInvoice,
+              variant: "outline",
+              description: "Alternatively, convert the approved estimate to an invoice",
+            });
+          }
         } else if (linkedEstimateId) {
           actions.push({
             label: "Open estimate",
@@ -1100,6 +1135,16 @@ export default function WorkflowActions({
                 invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
               }`
             : `Open ${invoiceSummary?.invoice_number || "linked invoice"}`;
+          if (invoicePayment?.canMarkWorkOrderInvoiced) {
+            actions.push({
+              label: "Confirm billing complete",
+              icon: CheckCircle,
+              onClick: () => setShowMarkInvoicedDialog(true),
+              disabled: markInvoicedMutation.isPending,
+              description:
+                "Record odometer out and move the work order to Ready to Close after the invoice is issued.",
+            });
+          }
           if (hasIssuedInvoice) {
             actions.push({
               label: "Close Work Order",
@@ -1122,7 +1167,7 @@ export default function WorkflowActions({
           actions.push({
             label: "Create invoice",
             icon: DollarSign,
-            onClick: openInvoice,
+            onClick: openCreateInvoice,
             description: invoiceSummary?.status === "void"
               ? "Issue a new invoice (previous invoice was voided)"
               : "Bill for labor on completed/skipped tasks and installed parts",

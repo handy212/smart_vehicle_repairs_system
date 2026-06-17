@@ -30,6 +30,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { EstimatedNextServiceCallout } from "./EstimatedNextServiceCallout";
 import {
+  canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
 } from "@/lib/workorders/invoiceSummaryDisplay";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
@@ -76,6 +77,7 @@ export default function WorkOrderOverviewTab({
   const invoiceSummary = wo.invoice_summary;
   const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
   const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, wo.status);
+  const canCreateInvoice = canCreateWorkOrderInvoice(wo);
   const displayedEstimatedTotal = parseFloat(wo.estimated_total || "0");
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
@@ -455,6 +457,13 @@ export default function WorkOrderOverviewTab({
                       <FileText className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
+                ) : canCreateInvoice ? (
+                  <Link href={`/billing/invoices/new?work_order=${wo.id}`}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-primary">
+                      <FileText className="mr-1 h-3 w-3" />
+                      Create Invoice
+                    </Button>
+                  </Link>
                 ) : estimateSummary?.id ? (
                   <Link href={`/billing/estimates/${estimateSummary.id}`}>
                     <Button variant="ghost" size="sm" className="h-7 text-xs text-primary">
@@ -498,17 +507,38 @@ export default function WorkOrderOverviewTab({
                 </p>
               )}
               {!invoiceSummary?.id &&
-              estimateSummary?.id &&
               ["completed", "discontinued_pending_bill"].includes(wo.status) ? (
                 <p className="text-xs text-muted-foreground">
-                  Invoice should be created from{" "}
-                  <Link
-                    href={`/billing/estimates/${estimateSummary.id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {estimateSummary.estimate_number}
-                  </Link>
-                  .
+                  {estimateSummary?.id ? (
+                    <>
+                      Create an invoice from{" "}
+                      <Link
+                        href={`/billing/estimates/${estimateSummary.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {estimateSummary.estimate_number}
+                      </Link>
+                      {" "}or{" "}
+                      <Link
+                        href={`/billing/invoices/new?work_order=${wo.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        bill directly from this work order
+                      </Link>
+                      .
+                    </>
+                  ) : (
+                    <>
+                      No invoice yet.{" "}
+                      <Link
+                        href={`/billing/invoices/new?work_order=${wo.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        Create invoice from work order
+                      </Link>
+                      .
+                    </>
+                  )}
                 </p>
               ) : null}
               {invoiceSummary?.id && (
@@ -547,7 +577,7 @@ export default function WorkOrderOverviewTab({
                       {invoicePayment?.paymentLabel.startsWith("Paid")
                         ? " — when payment is complete, status should move to Ready to Close automatically."
                         : invoicePayment?.canMarkWorkOrderInvoiced
-                          ? " — once billing is complete, confirm it here to move the work order to Ready to Close."
+                          ? " — use Confirm billing complete in the workflow actions when the invoice is issued."
                           : invoicePayment?.markBlockedReason
                             ? ` — ${invoicePayment.markBlockedReason}`
                             : null}

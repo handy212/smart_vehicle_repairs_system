@@ -177,16 +177,36 @@ export function buildLineItemsFromWorkOrder(
         });
       }
     }
-    const partsTotal = parseMoney(wo.actual_parts_cost);
-    if (partsTotal > 0) {
+    const installed = parts.filter((p) => p.status === "installed");
+    for (const p of installed) {
+      const sp = parseMoney(p.selling_price || p.total_cost);
+      if (sp <= 0) continue;
+      const qty =
+        (typeof p.quantity === "number" ? p.quantity : parseMoney(p.quantity as unknown as string)) || 1;
+      const unit = qty > 0 ? roundMoney(sp / qty) : roundMoney(sp);
       lines.push({
         item_type: "part",
-        description: `Parts & materials — ${woNum}`,
-        quantity: 1,
-        unit_price: roundMoney(partsTotal),
+        description: `${p.part_name} — ${woNum} (installed)`,
+        quantity: qty,
+        unit_price: unit,
+        part: typeof p.inventory_part === "number" ? p.inventory_part : undefined,
+        part_number: p.part_number,
         discount_percentage: 0,
         is_taxable: true,
       });
+    }
+    if (!lines.some((line) => line.item_type === "part")) {
+      const partsTotal = parseMoney(wo.actual_parts_cost);
+      if (partsTotal > 0) {
+        lines.push({
+          item_type: "part",
+          description: `Parts & materials — ${woNum}`,
+          quantity: 1,
+          unit_price: roundMoney(partsTotal),
+          discount_percentage: 0,
+          is_taxable: true,
+        });
+      }
     }
   }
 

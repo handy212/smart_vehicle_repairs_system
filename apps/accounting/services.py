@@ -485,6 +485,23 @@ class AccountingService:
                 if line_total_cost > 0:
                     cogs_total += line_total_cost
                     line_costs.append((line, line_total_cost))
+
+        if cogs_total == 0 and invoice.work_order_id:
+            from apps.inventory.models import Part
+
+            wo = invoice.work_order
+            for wo_part in wo.parts.filter(status='installed'):
+                if not wo_part.inventory_part_id:
+                    continue
+                part = Part.objects.filter(pk=wo_part.inventory_part_id).first()
+                if not part:
+                    continue
+                qty = wo_part.quantity or Decimal('1')
+                unit_cost = part.cost_price or Decimal('0')
+                line_total_cost = (qty * unit_cost).quantize(cls.MONEY_QUANT)
+                if line_total_cost > 0:
+                    cogs_total += line_total_cost
+                    line_costs.append((wo_part, line_total_cost))
                     
         if cogs_total == 0:
             return None # No COGS to record

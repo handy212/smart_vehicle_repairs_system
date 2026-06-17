@@ -97,9 +97,14 @@ Billing is split into **Receivables** (money in) and **Payables** (money out).
 1. **Create an estimate** for the customer and vehicle.  
 2. **Send** to the customer; mark **approved** when they agree.  
 3. **Convert to work order** — job is performed in the workshop.  
-4. **Create invoice** from the completed job (or manually).  
-5. **Record payment** — cash, card, bank transfer, or mobile money.  
-6. **Print or email** the invoice and receipt.
+4. **Create invoice** when the job is complete:
+   - From the **work order** → **Create invoice** (bills labor and installed parts directly), or  
+   - From the **estimate** → **Convert to invoice**  
+5. **Issue** the invoice (move out of draft) so it posts to the general ledger.  
+6. **Record payment** — cash, card, bank transfer, or mobile money.  
+7. **Confirm billing complete** on the work order when the invoice is issued (or let full payment auto-advance the status).  
+8. **Close** the work order for vehicle handover.  
+9. **Print or email** the invoice and receipt.
 
 **Credit note:** If you need to reduce an invoice after issue, create a credit note and apply it to the open invoice.
 
@@ -418,6 +423,7 @@ Use this for new site setup or onboarding a finance team.
 | **Fixed asset transfers** | Updates location/assignee — limited history view |
 | **Fixed asset reports** | Valuation report — additional reports planned |
 | **Refunds** | Single approval workflow from invoices, payments, or Billing → Refunds |
+| **Work order billing** | Create invoice and confirm billing complete from the work order screen |
 
 See [Finance Fix Backlog](./FINANCE-FIX-BACKLOG.md) for the prioritized improvement list (internal/product use).
 

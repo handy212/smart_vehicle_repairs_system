@@ -1212,19 +1212,42 @@ class Invoice(models.Model):
         else:
             for t in wo.tasks.all().order_by('sequence_order', 'id'):
                 add_labor_from_task(t, discontinued=False)
-            parts_sub = wo.actual_parts_cost or Decimal('0')
-            if parts_sub > 0:
+            installed_part_lines = 0
+            for p in wo.parts.filter(status='installed').order_by('id'):
+                sp = p.selling_price or Decimal('0')
+                if sp <= 0:
+                    continue
+                qty = p.quantity or Decimal('1')
+                unit = (sp / qty).quantize(Decimal('0.01')) if qty > 0 else sp
+                desc = f"{p.part_name} — WO {wo.work_order_number} (installed)"[:500]
                 InvoiceLineItem.objects.create(
                     invoice=self,
                     order=order_idx,
                     item_type='part',
-                    description=f"Parts & materials — WO {wo.work_order_number}"[:500],
-                    quantity=Decimal('1'),
-                    unit_price=parts_sub,
+                    description=desc,
+                    part_id=p.inventory_part_id,
+                    part_number=p.part_number or '',
+                    quantity=qty,
+                    unit_price=unit,
                     is_taxable=True,
                     discount_percentage=Decimal('0'),
                 )
                 order_idx += 1
+                installed_part_lines += 1
+            if installed_part_lines == 0:
+                parts_sub = wo.actual_parts_cost or Decimal('0')
+                if parts_sub > 0:
+                    InvoiceLineItem.objects.create(
+                        invoice=self,
+                        order=order_idx,
+                        item_type='part',
+                        description=f"Parts & materials — WO {wo.work_order_number}"[:500],
+                        quantity=Decimal('1'),
+                        unit_price=parts_sub,
+                        is_taxable=True,
+                        discount_percentage=Decimal('0'),
+                    )
+                    order_idx += 1
 
         if order_idx == 0:
             InvoiceLineItem.objects.create(
