@@ -809,16 +809,17 @@ class AccountingService:
 
             # 3. Create Transactions
             
-            # Debit AP (Total Amount)
+            # Debit AP (Gross Amount including WHT)
+            gross = bill_payment.gross_amount
             Transaction.objects.create(
                 journal_entry=je,
                 account=ap_account,
-                amount=bill_payment.amount,
+                amount=gross,
                 transaction_type='debit',
                 description=f'Payment for Bill {bill_payment.bill.bill_number}'
             )
 
-            # Credit Cash (Total Amount)
+            # Credit Cash (Net Amount paid to vendor)
             Transaction.objects.create(
                 journal_entry=je,
                 account=cash_account,
@@ -827,10 +828,66 @@ class AccountingService:
                 description=f'Payment Sent ({bill_payment.payment_method})'
             )
 
+            # Credit WHT Payable when tax was withheld
+            wht_amount = bill_payment.wht_amount or Decimal('0')
+            if wht_amount > 0:
+                wht_account = cls._control_account(
+                    'withholding_tax_payable_account', 'Withholding Tax Payable'
+                )
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=wht_account,
+                    amount=wht_amount,
+                    transaction_type='credit',
+                    description=f'WHT withheld ({bill_payment.wht_rate}%)'
+                )
+
             # Validate
             if not je.validate_balanced():
                 raise ValidationError(f"Journal Entry for Bill Payment {bill_payment.payment_number} is not balanced.")
             
+            return je
+
+    @classmethod
+    def post_vat_payment(cls, amount, branch=None, user=None, payment_date=None, reference='', vat_return=None):
+        """Post GL entry for VAT remittance: Dr Sales Tax Payable, Cr Bank."""
+        from django.contrib.contenttypes.models import ContentType
+
+        if vat_return:
+            ct = ContentType.objects.get_for_model(vat_return)
+            if JournalEntry.objects.filter(content_type=ct, object_id=vat_return.id).exists():
+                return None
+
+        with transaction.atomic():
+            tax_account = cls._control_account('sales_tax_payable_account', 'Sales Tax Payable')
+            bank_account = cls._control_account('default_bank_account', 'Operating Bank Account')
+
+            je = cls._create_posted_journal_header(
+                user=user,
+                date=payment_date or timezone.now().date(),
+                description=f"VAT payment for period ending {getattr(vat_return, 'period_end', '')}",
+                reference=reference or 'VAT-PAYMENT',
+                branch=branch,
+                content_object=vat_return,
+            )
+
+            Transaction.objects.create(
+                journal_entry=je,
+                account=tax_account,
+                amount=amount,
+                transaction_type='debit',
+                description='VAT remittance',
+            )
+            Transaction.objects.create(
+                journal_entry=je,
+                account=bank_account,
+                amount=amount,
+                transaction_type='credit',
+                description='VAT payment from bank',
+            )
+
+            if not je.validate_balanced():
+                raise ValidationError('VAT payment journal entry is not balanced.')
             return je
 
     # ========================================================================
@@ -3590,41 +3647,70 @@ class DashboardService:
 
     @staticmethod
     def get_withholding_tax_report(start_date=None, end_date=None, branch_id=None):
-        """Withholding tax summary from WHT liability accounts (if configured)."""
+        """Withholding tax summary from WHT liability account and bill payment transactions."""
+        from apps.billing.models import BillPayment
+
         if not start_date:
             start_date = timezone.now().date().replace(month=1, day=1)
         if not end_date:
             end_date = timezone.now().date()
 
-        wht_accounts = Account.objects.filter(
-            is_active=True,
-            account_type='liability',
-        ).filter(
-            Q(name__icontains='withhold') | Q(code__startswith='23')
-        ).order_by('code')
-
+        control = AccountingControl.get_settings()
+        wht_account = control.withholding_tax_payable_account
         lines = []
         total = Decimal('0')
-        for account in wht_accounts:
-            balance = ReportingService.get_account_balance(account, date=end_date, branch_id=branch_id)
-            if balance == 0:
-                continue
-            lines.append({
-                'code': account.code,
-                'name': account.name,
-                'balance': float(balance),
+
+        if wht_account:
+            balance = ReportingService.get_account_balance(
+                wht_account, date=end_date, branch_id=branch_id
+            )
+            if balance != 0:
+                lines.append({
+                    'code': wht_account.code,
+                    'name': wht_account.name,
+                    'balance': float(balance),
+                })
+                total = balance
+
+        payment_qs = BillPayment.objects.filter(
+            wht_amount__gt=0,
+            payment_date__gte=start_date,
+            payment_date__lte=end_date,
+        ).select_related('bill', 'bill__vendor')
+        if branch_id:
+            payment_qs = payment_qs.filter(bill__branch_id=branch_id)
+
+        transactions = []
+        period_total = Decimal('0')
+        for bp in payment_qs.order_by('payment_date', 'payment_number'):
+            period_total += bp.wht_amount
+            transactions.append({
+                'payment_number': bp.payment_number,
+                'payment_date': bp.payment_date.isoformat(),
+                'vendor': str(bp.bill.vendor),
+                'bill_number': bp.bill.bill_number,
+                'wht_rate': float(bp.wht_rate),
+                'wht_amount': float(bp.wht_amount),
+                'net_paid': float(bp.amount),
+                'gross_amount': float(bp.gross_amount),
+                'certificate': bp.wht_certificate,
             })
-            total += balance
 
         return {
             'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
-            'configured': wht_accounts.exists(),
+            'configured': wht_account is not None,
+            'control_account': {
+                'code': wht_account.code,
+                'name': wht_account.name,
+            } if wht_account else None,
             'lines': lines,
             'total_withheld': float(total),
+            'period_transactions': transactions,
+            'period_withheld_total': float(period_total),
             'note': (
-                'No withholding tax liability accounts found. Create accounts for WHT payable '
-                'or post withholding via journal entries.'
-                if not lines
+                'Configure withholding_tax_payable_account in Accounting Controls. '
+                'Record WHT on vendor bill payments to auto-post liability.'
+                if not wht_account
                 else None
             ),
         }

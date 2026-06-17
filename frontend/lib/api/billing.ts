@@ -376,6 +376,10 @@ export interface BillPayment {
   vendor_id?: number;
   vendor_name?: string;
   amount: string;
+  gross_amount?: string;
+  wht_rate?: string;
+  wht_amount?: string;
+  wht_certificate?: string;
   payment_date: string;
   payment_method: "cash" | "check" | "bank_transfer" | "mobile_money" | "credit_card" | "other";
   till?: number | null;
@@ -392,6 +396,9 @@ export interface BillPayment {
 
 export interface BillPaymentCreatePayload {
   amount: string;
+  wht_rate?: string;
+  wht_amount?: string;
+  wht_certificate?: string;
   payment_date: string;
   payment_method: "cash" | "check" | "bank_transfer" | "mobile_money" | "credit_card" | "other";
   cash_account?: string;
@@ -465,6 +472,28 @@ export interface BillStats {
     overdue_total: number | string;
     outstanding_total: number | string;
   };
+}
+
+export interface SalesOrder {
+  id: number;
+  sales_order_number: string;
+  status: "draft" | "confirmed" | "in_progress" | "fulfilled" | "cancelled";
+  order_date: string;
+  expected_fulfillment_date?: string | null;
+  customer: number;
+  customer_name?: string;
+  vehicle?: number | null;
+  vehicle_display?: string | null;
+  estimate?: number | null;
+  estimate_number?: string | null;
+  work_order?: number | null;
+  work_order_number?: string | null;
+  sales_agent?: number | null;
+  sales_agent_name?: string | null;
+  reference_number?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BillApprover {
@@ -983,6 +1012,44 @@ export const billingApi = {
 
     get: async (id: number): Promise<BillPayment> => {
       const response = await apiClient.get(`/billing/bill-payments/${id}/`);
+      return response.data;
+    },
+  },
+
+  salesOrders: {
+    list: async (params?: {
+      page?: number;
+      search?: string;
+      status?: string;
+      customer?: number;
+      ordering?: string;
+    }): Promise<{ count: number; next: string | null; previous: string | null; results: SalesOrder[] }> => {
+      const response = await apiClient.get("/billing/sales-orders/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<SalesOrder> => {
+      const response = await apiClient.get(`/billing/sales-orders/${id}/`);
+      return response.data;
+    },
+
+    create: async (data: Partial<SalesOrder>): Promise<SalesOrder> => {
+      const response = await apiClient.post("/billing/sales-orders/", data);
+      return response.data;
+    },
+
+    update: async (id: number, data: Partial<SalesOrder>): Promise<SalesOrder> => {
+      const response = await apiClient.patch(`/billing/sales-orders/${id}/`, data);
+      return response.data;
+    },
+
+    linkEstimate: async (id: number, estimateId: number): Promise<SalesOrder> => {
+      const response = await apiClient.post(`/billing/sales-orders/${id}/link_estimate/`, { estimate_id: estimateId });
+      return response.data;
+    },
+
+    convertToWorkOrder: async (id: number): Promise<SalesOrder> => {
+      const response = await apiClient.post(`/billing/sales-orders/${id}/convert_to_work_order/`);
       return response.data;
     },
   },

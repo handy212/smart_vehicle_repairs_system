@@ -408,9 +408,40 @@ export interface TaxReconciliationReport {
 export interface WithholdingTaxReport {
     period: { start: string; end: string };
     configured: boolean;
+    control_account?: { code: string; name: string } | null;
     lines: Array<{ code: string; name: string; balance: number }>;
     total_withheld: number;
+    period_transactions?: Array<{
+        payment_number: string;
+        payment_date: string;
+        vendor: string;
+        bill_number: string;
+        wht_rate: number;
+        wht_amount: number;
+        net_paid: number;
+        gross_amount: number;
+        certificate: string;
+    }>;
+    period_withheld_total?: number;
     note?: string | null;
+}
+
+export interface VatReturnFiling {
+    id: number;
+    period_start: string;
+    period_end: string;
+    branch?: number | null;
+    branch_name?: string | null;
+    worksheet: VatReturnReport['worksheet'];
+    status: 'draft' | 'reviewed' | 'filed' | 'paid';
+    filing_reference?: string;
+    filed_at?: string | null;
+    paid_at?: string | null;
+    payment_reference?: string;
+    payment_journal_entry?: number | null;
+    notes?: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface GeneralLedgerLine {
@@ -1104,5 +1135,32 @@ export const accountingApi = {
         if (branchId) params.branch_id = branchId;
         const response = await apiClient.get("/accounting/reports/withholding-tax/", { params });
         return response.data;
+    },
+
+    vatReturns: {
+        list: async (): Promise<VatReturnFiling[]> => {
+            const response = await apiClient.get("/accounting/vat-returns/");
+            return response.data.results || response.data;
+        },
+        create: async (data: { period_start: string; period_end: string; branch?: number; notes?: string }) => {
+            const response = await apiClient.post("/accounting/vat-returns/", data);
+            return response.data as VatReturnFiling;
+        },
+        review: async (id: number) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/review/`);
+            return response.data as VatReturnFiling;
+        },
+        file: async (id: number, filingReference?: string) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/file/`, {
+                filing_reference: filingReference,
+            });
+            return response.data as VatReturnFiling;
+        },
+        recordPayment: async (id: number, paymentReference?: string) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/record_payment/`, {
+                payment_reference: paymentReference,
+            });
+            return response.data as VatReturnFiling;
+        },
     },
 };

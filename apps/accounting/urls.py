@@ -13,6 +13,7 @@ router.register(r'tills', views.AccountingTillViewSet, basename='accounting-till
 router.register(r'budgets', views.BudgetViewSet, basename='budget')
 router.register(r'budget-lines', views.BudgetLineViewSet, basename='budgetline')
 router.register(r'accruals', views.AccrualViewSet, basename='accrual')
+router.register(r'vat-returns', views.VatReturnViewSet, basename='vat-return')
 
 urlpatterns = [
     # Financial Reports

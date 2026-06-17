@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { billingApi } from "@/lib/api/billing";
+import { customersApi } from "@/lib/api/customers";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatsGrid } from "@/components/shared/StatsGrid";
-import { format } from "date-fns";
+import { format, startOfMonth, startOfYear } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 
@@ -14,108 +14,58 @@ interface StatementViewProps {
     customerId: number;
 }
 
+function getPeriodDates(period: string): { start: string; end: string } {
+    const today = new Date();
+    const end = format(today, "yyyy-MM-dd");
+    if (period === "this_month") {
+        return { start: format(startOfMonth(today), "yyyy-MM-dd"), end };
+    }
+    if (period === "last_month") {
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        return {
+            start: format(lastMonth, "yyyy-MM-dd"),
+            end: format(lastMonthEnd, "yyyy-MM-dd"),
+        };
+    }
+    if (period === "this_year") {
+        return { start: format(startOfYear(today), "yyyy-MM-dd"), end };
+    }
+    return { start: "2000-01-01", end };
+}
+
 export function StatementView({ customerId }: StatementViewProps) {
     const { formatCurrency } = useCurrency();
     const [period, setPeriod] = useState("all_time");
+    const periodDates = useMemo(() => getPeriodDates(period), [period]);
 
-    const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-        queryKey: ["invoices", "customer", customerId],
-        queryFn: () => billingApi.invoices.list({ customer: customerId }).then(res => res.results),
+    const { data: statement, isLoading } = useQuery({
+        queryKey: ["customer-statement", customerId, periodDates.start, periodDates.end],
+        queryFn: () =>
+            customersApi.statement(customerId, {
+                start_date: periodDates.start,
+                end_date: periodDates.end,
+            }),
     });
-
-    const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-        queryKey: ["payments", "customer", customerId],
-        queryFn: () => billingApi.payments.list({ customer: customerId }),
-    });
-
-    const isLoading = invoicesLoading || paymentsLoading;
-
-    // Calculate summary based on real data
-    const calculateSummary = () => {
-        // Filter by period if needed (simple implementation for now)
-        const filteredInvoices = invoices;
-        const filteredPayments = payments;
-
-        const invoiced = filteredInvoices
-
-            .filter((inv: any) => inv.status !== 'void')
-
-            .reduce((sum: number, inv: any) => sum + parseFloat(inv.total), 0);
-
-        const paymentTotal = filteredPayments
-
-            .filter((pay: any) => pay.status !== 'failed' && pay.status !== 'void')
-
-            .reduce((sum: number, pay: any) => sum + parseFloat(pay.amount), 0);
-
-        const balanceDue = invoiced - paymentTotal;
-
-        return {
-            beginning_balance: 0, // Would need historical balance logic
-            invoiced,
-            payments: paymentTotal,
-            balance_due: balanceDue
-        };
-    };
-
-    const summary = calculateSummary();
-
-    // Combine and sort transactions
-    const transactions = [
-
-        ...invoices.map((inv: any) => ({
-            id: inv.id,
-            type: 'invoice',
-            date: inv.issue_date,
-            amount: inv.total,
-            status: inv.status,
-            number: inv.invoice_number,
-            original: inv
-        })),
-
-        ...payments.map((pay: any) => ({
-            id: pay.id,
-            type: 'payment',
-            date: pay.payment_date,
-            amount: pay.amount,
-            status: pay.status,
-            number: `PAY-${pay.id}`,
-            original: pay
-        }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (isLoading) {
         return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const cols = [
-
-        { header: "Date", accessorKey: "date", cell: (item: any) => format(new Date(item.date), "MMM dd, yyyy") },
-
-        { header: "Type", accessorKey: "type", cell: (item: any) => <span className="capitalize">{item.type}</span> },
-        { header: "Number", accessorKey: "number" },
-
-        { header: "Amount", accessorKey: "amount", cell: (item: any) => formatCurrency(parseFloat(item.amount)) },
-
-        { header: "Status", accessorKey: "status", cell: (item: any) => <span className="capitalize px-2 py-1 rounded bg-border text-xs">{item.status}</span> },
-    ];
-
     const stats = [
-        { label: "Beginning Balance", value: formatCurrency(summary.beginning_balance) },
-        { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-primary" },
-        { label: "Payments Made", value: formatCurrency(summary.payments), color: "text-success" },
-        { label: "Balance Due", value: formatCurrency(summary.balance_due), color: "text-destructive" }
+        { label: "Opening Balance", value: formatCurrency(statement?.opening_balance ?? 0) },
+        { label: "Period Charges", value: formatCurrency(statement?.period_debits ?? 0), color: "text-primary" },
+        { label: "Period Credits", value: formatCurrency(statement?.period_credits ?? 0), color: "text-success" },
+        { label: "Closing Balance", value: formatCurrency(statement?.closing_balance ?? 0), color: "text-destructive" },
     ];
+
+    const transactions = statement?.transactions ?? [];
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Account Statement</h2>
-                <Select
-                    value={period}
-                    onValueChange={(val) => setPeriod(val)}
-                >
+                <Select value={period} onValueChange={(val) => setPeriod(val)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select period" />
                     </SelectTrigger>
@@ -131,54 +81,39 @@ export function StatementView({ customerId }: StatementViewProps) {
             <StatsGrid stats={stats} columns={4} />
 
             <div className="space-y-4">
-                <h3 className="text-md font-medium">Detailed Transaction History</h3>
+                <h3 className="text-md font-medium">Running Balance Ledger</h3>
                 <Card>
                     <CardContent className="p-0">
-                        {/* Import DataTable dynamically or use what's available? DataTable is imported implicitly? No, I need to check imports */}
-                        {/* Actually I need to add DataTable import if it's not there. It was NOT there in previous view of StatementView.tsx */}
-                        {/* Wait, StatementView.tsx imports:
-                            import { StatsGrid } from "@/components/shared/StatsGrid";
-                            ...
-                            No DataTable.
-                            I must add DataTable import.
-                          */}
-                        {/* I will use the DataTable component */}
-                        {/* Since I can't update imports in this replacement easily without seeing top, I will assume I can update imports in a separate call or try to squeeze it in if I knew the file content. 
-                             The file content (Step 469) shows imports at top. 
-                             I will update the whole file to be safe and include DataTable. 
-                          */}
                         <table className="w-full text-sm text-left">
                             <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                                 <tr>
                                     <th className="px-4 py-3">Date</th>
                                     <th className="px-4 py-3">Type</th>
-                                    <th className="px-4 py-3">Number</th>
-                                    <th className="px-4 py-3 text-right">Amount</th>
-                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3">Reference</th>
+                                    <th className="px-4 py-3 text-right">Debit</th>
+                                    <th className="px-4 py-3 text-right">Credit</th>
+                                    <th className="px-4 py-3 text-right">Balance</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {transactions.length === 0 ? (
-                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No transactions found</td></tr>
+                                    <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No transactions found</td></tr>
                                 ) : (
-
-                                    transactions.map((t: any) => (
-                                        <tr key={`${t.type}-${t.id}`} className="hover:bg-muted/50 hover:bg-muted/50">
+                                    transactions.map((t) => (
+                                        <tr key={`${t.type}-${t.source_id}`} className="hover:bg-muted/50">
                                             <td className="px-4 py-3">
-                                                {t.date ? (
-                                                    // specific check for invalid date string
-                                                    isNaN(new Date(t.date).getTime()) ? '-' : format(new Date(t.date), "MMM dd, yyyy")
-                                                ) : '-'}
+                                                {t.date ? format(new Date(t.date), "MMM dd, yyyy") : "—"}
                                             </td>
-                                            <td className="px-4 py-3 capitalize">
-                                                <span className={`inline-flex items-center gap-1 ${t.type === 'payment' ? 'text-success' : 'text-primary'}`}>
-                                                    {t.type}
-                                                </span>
+                                            <td className="px-4 py-3 capitalize">{t.type.replace("_", " ")}</td>
+                                            <td className="px-4 py-3 font-medium">{t.reference}</td>
+                                            <td className="px-4 py-3 text-right font-mono">
+                                                {t.debit > 0 ? formatCurrency(t.debit) : "—"}
                                             </td>
-                                            <td className="px-4 py-3 font-medium">{t.number}</td>
-                                            <td className="px-4 py-3 text-right font-medium">{formatCurrency(parseFloat(t.amount))}</td>
-                                            <td className="px-4 py-3">
-                                                <span className="px-2 py-0.5 rounded text-xs bg-border capitalize">{t.status}</span>
+                                            <td className="px-4 py-3 text-right font-mono">
+                                                {t.credit > 0 ? formatCurrency(t.credit) : "—"}
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-mono font-medium">
+                                                {formatCurrency(t.running_balance)}
                                             </td>
                                         </tr>
                                     ))

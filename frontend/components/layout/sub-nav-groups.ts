@@ -182,6 +182,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Leave", href: "/hr/leave", permission: "view_leave", icon: Calendar },
         { name: "Attendance", href: "/hr/attendance", permission: "view_attendance", icon: Clock },
         { name: "Payroll", href: "/hr/payroll", permission: "view_payroll", icon: Banknote },
+        { name: "Statutory Filing", href: "/hr/payroll/statutory-filing", permission: "view_payroll", icon: FileCheck },
       ],
     },
     {

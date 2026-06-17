@@ -50,6 +50,9 @@ CONTROL_ACCOUNT_SPECS = {
     'default_bank_account': (
         '1100', 'Operating Bank Account', 'asset', 'debit', 'bank', 'A120',
     ),
+    'withholding_tax_payable_account': (
+        '2320', 'Withholding Tax Payable', 'liability', 'credit', 'tax_payable', 'L100',
+    ),
 }
 
 # Historical postings often used parent clearing account 1000 instead of a leaf bank/cash account.

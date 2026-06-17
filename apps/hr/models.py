@@ -543,6 +543,17 @@ class SalaryComponent(models.Model):
         ('percentage', 'Percentage of Basic'),
     ]
 
+    STATUTORY_CODE_CHOICES = [
+        ('', 'None'),
+        ('PAYE', 'PAYE'),
+        ('SSNIT_EE', 'SSNIT Employee'),
+        ('SSNIT_ER', 'SSNIT Employer'),
+        ('TIER2', 'Tier 2 Pension'),
+        ('TIER3', 'Tier 3 Pension'),
+        ('NHIS', 'NHIS'),
+        ('OTHER', 'Other Statutory'),
+    ]
+
     name = models.CharField(_('component name'), max_length=100)
     component_type = models.CharField(
         _('type'), max_length=20, choices=COMPONENT_TYPE_CHOICES,
@@ -558,6 +569,11 @@ class SalaryComponent(models.Model):
     percentage = models.DecimalField(
         _('percentage'), max_digits=5, decimal_places=2,
         default=0, help_text=_('Used when calculation type is Percentage'),
+    )
+    statutory_code = models.CharField(
+        _('statutory code'), max_length=20,
+        choices=STATUTORY_CODE_CHOICES, blank=True, default='',
+        help_text=_('Maps this component to statutory filing reports.'),
     )
     is_taxable = models.BooleanField(_('taxable'), default=True)
     is_active = models.BooleanField(_('active'), default=True)

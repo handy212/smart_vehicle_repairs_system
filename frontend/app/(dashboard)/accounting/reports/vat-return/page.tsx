@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth } from "date-fns";
 import { accountingApi } from "@/lib/api/accounting";
 import { AccountingReportSkeleton } from "../../components/AccountingReportSkeleton";
@@ -14,16 +14,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 
 export default function VatReturnPage() {
   const { formatCurrency } = useCurrency();
   const { activeBranchId } = useBranchStore();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [filingReference, setFilingReference] = useState("");
 
   const { data: report, isLoading } = useQuery({
     queryKey: ["accounting", "vat-return", startDate, endDate, activeBranchId],
     queryFn: () => accountingApi.getVatReturn(startDate, endDate, activeBranchId || undefined),
+  });
+
+  const { data: filings = [] } = useQuery({
+    queryKey: ["accounting", "vat-return-filings"],
+    queryFn: () => accountingApi.vatReturns.list(),
+  });
+
+  const createFiling = useMutation({
+    mutationFn: () =>
+      accountingApi.vatReturns.create({
+        period_start: startDate,
+        period_end: endDate,
+        branch: activeBranchId || undefined,
+      }),
+    onSuccess: () => {
+      toast({ title: "VAT return draft created" });
+      queryClient.invalidateQueries({ queryKey: ["accounting", "vat-return-filings"] });
+    },
+    onError: (e) => toast({ title: "Failed", description: getUserFacingError(e), variant: "destructive" }),
+  });
+
+  const reviewFiling = useMutation({
+    mutationFn: (id: number) => accountingApi.vatReturns.review(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounting", "vat-return-filings"] }),
+  });
+
+  const fileFiling = useMutation({
+    mutationFn: (id: number) => accountingApi.vatReturns.file(id, filingReference),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounting", "vat-return-filings"] }),
+  });
+
+  const payFiling = useMutation({
+    mutationFn: (id: number) => accountingApi.vatReturns.recordPayment(id, filingReference),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounting", "vat-return-filings"] }),
   });
 
   const worksheet = report?.worksheet;
@@ -122,6 +162,48 @@ export default function VatReturnPage() {
           </Card>
         </div>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Filing Workflow</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => createFiling.mutate()} disabled={createFiling.isPending}>
+              Create Draft Return
+            </Button>
+            <Input
+              placeholder="Filing / payment reference"
+              value={filingReference}
+              onChange={(e) => setFilingReference(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          {filings.length > 0 && (
+            <div className="space-y-2">
+              {filings.slice(0, 5).map((f) => (
+                <div key={f.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3 text-sm">
+                  <div>
+                    <span className="font-medium">{f.period_start} → {f.period_end}</span>
+                    <Badge variant="outline" className="ml-2 capitalize">{f.status}</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    {f.status === "draft" && (
+                      <Button size="sm" variant="outline" onClick={() => reviewFiling.mutate(f.id)}>Review</Button>
+                    )}
+                    {(f.status === "draft" || f.status === "reviewed") && (
+                      <Button size="sm" variant="outline" onClick={() => fileFiling.mutate(f.id)}>File</Button>
+                    )}
+                    {f.status === "filed" && (
+                      <Button size="sm" onClick={() => payFiling.mutate(f.id)}>Record Payment</Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2402,7 +2402,10 @@ class Bill(models.Model):
         """
         from django.db.models import Sum
 
-        payment_total = self.payments.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        payment_total = sum(
+            (p.gross_amount for p in self.payments.all()),
+            Decimal('0'),
+        )
         credit_total = self.vendor_credit_applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
         collected = (payment_total + credit_total).quantize(Decimal('0.01'))
         from apps.billing.balance_utils import operational_collection_balances
@@ -2506,7 +2509,27 @@ class BillPayment(models.Model):
     amount = models.DecimalField(
         max_digits=12, 
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))]
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Net cash amount paid to vendor (after WHT if applicable).",
+    )
+    wht_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+        help_text="Withholding tax rate applied to gross payment (percentage).",
+    )
+    wht_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text="Withholding tax withheld from vendor payment.",
+    )
+    wht_certificate = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="WHT certificate or reference number.",
     )
     payment_date = models.DateField(default=timezone.now)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
@@ -2544,6 +2567,11 @@ class BillPayment(models.Model):
     def __str__(self):
         return f"{self.payment_number} - {self.amount} for {self.bill.bill_number}"
 
+    @property
+    def gross_amount(self):
+        """Total AP settlement including withheld tax."""
+        return (self.amount + (self.wht_amount or Decimal('0'))).quantize(Decimal('0.01'))
+
     def save(self, *args, **kwargs):
         if not self.payment_number:
             # Simple ID generation
@@ -2556,3 +2584,110 @@ class BillPayment(models.Model):
     def update_bill_status(self):
         """Update parent bill amount_paid and status from payments and vendor credits."""
         self.bill.recalculate_amount_paid_from_collections()
+
+
+class SalesOrder(models.Model):
+    """
+    Commercial sales order header linking customer, quote, work order, and billing.
+  """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('in_progress', 'In Progress'),
+        ('fulfilled', 'Fulfilled'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    sales_order_number = models.CharField(max_length=30, unique=True, editable=False)
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name='sales_orders',
+        null=True,
+        blank=True,
+    )
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='sales_orders')
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales_orders',
+    )
+    estimate = models.ForeignKey(
+        'Estimate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales_orders',
+    )
+    work_order = models.OneToOneField(
+        WorkOrder,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales_order',
+    )
+    sales_agent = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales_orders_managed',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    order_date = models.DateField(default=timezone.now)
+    expected_fulfillment_date = models.DateField(null=True, blank=True)
+    reference_number = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='sales_orders_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-order_date', '-created_at']
+        indexes = [
+            models.Index(fields=['sales_order_number']),
+            models.Index(fields=['status', 'order_date']),
+            models.Index(fields=['customer', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.sales_order_number} - {self.customer}"
+
+    def save(self, *args, **kwargs):
+        if not self.sales_order_number and self.branch_id:
+            from apps.accounting.document_numbering import DocumentNumberService
+            self.sales_order_number = DocumentNumberService.allocate(
+                'sales_order',
+                self.branch,
+                document_date=self.order_date,
+            )
+        super().save(*args, **kwargs)
+        self._sync_status_from_links()
+
+    def _sync_status_from_links(self):
+        """Derive status from linked work order when not cancelled."""
+        if self.status == 'cancelled':
+            return
+        wo = self.work_order
+        if wo:
+            if wo.status in ('invoiced', 'closed'):
+                new_status = 'fulfilled'
+            elif wo.status in ('in_progress', 'completed', 'discontinued_pending_bill', 'awaiting_approval', 'approved'):
+                new_status = 'in_progress'
+            elif wo.status != 'draft':
+                new_status = 'confirmed'
+            else:
+                new_status = self.status
+            if new_status != self.status:
+                SalesOrder.objects.filter(pk=self.pk).update(status=new_status)
+                self.status = new_status
+        elif self.estimate_id and self.status == 'draft':
+            if self.estimate.status in ('approved', 'converted', 'sent', 'viewed'):
+                SalesOrder.objects.filter(pk=self.pk).update(status='confirmed')
+                self.status = 'confirmed'

@@ -15,6 +15,7 @@ router.register(r'credit-notes', views.CreditNoteViewSet, basename='credit-note'
 router.register(r'vendor-credits', views.VendorCreditViewSet, basename='vendor-credit')
 router.register(r'bills', views.BillViewSet, basename='bill')
 router.register(r'bill-payments', views.BillPaymentViewSet, basename='bill-payment')
+router.register(r'sales-orders', views.SalesOrderViewSet, basename='sales-order')
 # Phase 2: Cash & Payment Management
 router.register(r'tills', views.TillViewSet, basename='till')
 router.register(r'refunds', views.RefundViewSet, basename='refund')

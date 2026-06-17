@@ -1,64 +1,113 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Calculator, ClipboardList, Wrench } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Plus, Search } from "lucide-react";
+import { billingApi, SalesOrder } from "@/lib/api/billing";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
-const LINKS = [
-  {
-    title: "Work Orders",
-    description: "Active jobs, diagnosis, repairs, and shop floor pipeline.",
-    href: "/workorders",
-    icon: Wrench,
-  },
-  {
-    title: "Estimates",
-    description: "Customer quotes awaiting approval or conversion.",
-    href: "/billing/estimates",
-    icon: Calculator,
-  },
-  {
-    title: "Kanban Board",
-    description: "Visual work order board by stage.",
-    href: "/workorders/kanban",
-    icon: ClipboardList,
-  },
-];
+const STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  confirmed: "bg-blue-500/10 text-blue-600",
+  in_progress: "bg-amber-500/10 text-amber-600",
+  fulfilled: "bg-green-500/10 text-green-600",
+  cancelled: "bg-destructive/10 text-destructive",
+};
 
 export default function SalesOrdersPage() {
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["sales-orders", search],
+    queryFn: () => billingApi.salesOrders.list({ search: search || undefined }),
+  });
+
+  const orders: SalesOrder[] = data?.results || [];
+
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Sales Orders</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Work orders and estimates — your operational sales pipeline without a separate sales order model.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Sales Orders</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Commercial order documents linking customers, estimates, and work orders.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/billing/sales-orders/new">
+            <Plus className="h-4 w-4 mr-2" />
+            New Sales Order
+          </Link>
+        </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {LINKS.map((link) => {
-          const Icon = link.icon;
-          return (
-            <Link key={link.href} href={link.href} className="group">
-              <Card className="h-full transition-colors hover:border-primary/40 hover:bg-muted/20">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  </div>
-                  <CardTitle className="text-base">{link.title}</CardTitle>
-                  <CardDescription>{link.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <span className="text-xs font-medium text-primary">Open</span>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search sales orders..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <TableSkeleton columns={7} rows={6} />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Estimate</TableHead>
+                  <TableHead>Work Order</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No sales orders found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.sales_order_number}</TableCell>
+                      <TableCell>{order.customer_name}</TableCell>
+                      <TableCell>{order.order_date ? format(new Date(order.order_date), "MMM d, yyyy") : "—"}</TableCell>
+                      <TableCell>{order.estimate_number || "—"}</TableCell>
+                      <TableCell>{order.work_order_number || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={STATUS_COLORS[order.status] || ""}>
+                          {order.status.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/billing/sales-orders/${order.id}`}>View</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -89,7 +89,48 @@ export default function WithholdingTaxPage() {
 
           <Card className="overflow-hidden">
             <CardHeader className="border-b pb-3">
-              <CardTitle className="text-base">WHT Liability Accounts</CardTitle>
+              <CardTitle className="text-base">Period WHT Transactions</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!report.period_transactions?.length ? (
+                <p className="p-6 text-sm text-muted-foreground">No withholding tax recorded on vendor payments in this period.</p>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted/10">
+                    <TableRow className="hover:bg-transparent border-none">
+                      <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Date</TableHead>
+                      <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Vendor</TableHead>
+                      <TableHead className={ACCOUNTING_TABLE_HEAD_CLASS}>Bill</TableHead>
+                      <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>WHT</TableHead>
+                      <TableHead className={cn(ACCOUNTING_TABLE_HEAD_CLASS, "text-right")}>Net Paid</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.period_transactions.map((tx) => (
+                      <TableRow key={tx.payment_number} className="border-b border-border hover:bg-muted/20">
+                        <TableCell className="px-4 py-2 text-sm">{tx.payment_date}</TableCell>
+                        <TableCell className="px-4 py-2 text-sm">{tx.vendor}</TableCell>
+                        <TableCell className="px-4 py-2 text-sm font-mono">{tx.bill_number}</TableCell>
+                        <TableCell className="px-4 py-2 text-sm text-right font-mono">{formatCurrency(tx.wht_amount)}</TableCell>
+                        <TableCell className="px-4 py-2 text-sm text-right font-mono">{formatCurrency(tx.net_paid)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/20 font-semibold">
+                      <TableCell colSpan={3} className="px-4 py-2 text-sm">Period Total</TableCell>
+                      <TableCell className="px-4 py-2 text-sm text-right font-mono">
+                        {formatCurrency(report.period_withheld_total || 0)}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b pb-3">
+              <CardTitle className="text-base">WHT Liability Balance</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {report.lines.length === 0 ? (
