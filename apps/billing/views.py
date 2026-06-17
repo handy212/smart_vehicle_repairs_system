@@ -41,6 +41,7 @@ from apps.billing.models import (
     Bill,
     BillLineItem,
     BillPayment,
+    SalesOrder,
 )
 from apps.billing.services import PDFService, BillingService
 from apps.billing.mixins import (
@@ -81,6 +82,10 @@ from apps.billing.serializers import (
     BillLineItemSerializer,
     BillPaymentSerializer,
     BillPaymentCreateSerializer,
+    BillPaymentListSerializer,
+    SalesOrderListSerializer,
+    SalesOrderDetailSerializer,
+    SalesOrderCreateSerializer,
     CashierTillSerializer,
     CashCountSerializer,
     OpenTillSerializer,
@@ -2625,9 +2630,11 @@ class BillViewSet(viewsets.ModelViewSet):
 
         serializer = BillPaymentCreateSerializer(data=request.data, context={'request': request, 'bill': bill})
         serializer.is_valid(raise_exception=True)
-        if serializer.validated_data['amount'] > bill.amount_due:
+        wht_amount = serializer.validated_data.get('wht_amount') or Decimal('0')
+        gross = serializer.validated_data['amount'] + wht_amount
+        if gross > bill.amount_due:
             return Response(
-                {"error": "Payment amount cannot exceed the bill amount due."},
+                {"error": "Payment amount (including WHT) cannot exceed the bill amount due."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         payment = serializer.save(bill=bill, paid_by=request.user)
@@ -2670,3 +2677,104 @@ class BillViewSet(viewsets.ModelViewSet):
                 {"error": f"Failed to generate PDF: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class BillPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    """Vendor bill payment history."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+    serializer_class = BillPaymentListSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['payment_method', 'payment_date']
+    ordering_fields = ['payment_date', 'amount', 'created_at']
+    ordering = ['-payment_date', '-created_at']
+
+    def get_queryset(self):
+        qs = BillPayment.objects.select_related(
+            'bill', 'bill__vendor', 'paid_by', 'till__till_account', 'bank_account'
+        )
+        vendor_id = self.request.query_params.get('vendor')
+        if vendor_id:
+            qs = qs.filter(bill__vendor_id=vendor_id)
+        bill_id = self.request.query_params.get('bill')
+        if bill_id:
+            qs = qs.filter(bill_id=bill_id)
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(payment_date__gte=date_from)
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(payment_date__lte=date_to)
+        return qs
+
+
+class SalesOrderViewSet(viewsets.ModelViewSet):
+    """Formal sales order documents linking customer, estimate, and work order."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status', 'customer', 'order_date']
+    search_fields = [
+        'sales_order_number', 'reference_number',
+        'customer__company_name', 'customer__user__first_name', 'customer__user__last_name',
+    ]
+    ordering_fields = ['order_date', 'sales_order_number', 'status', 'created_at']
+    ordering = ['-order_date', '-created_at']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsAuthenticated(), IsModuleEnabled('billing')(), HasPermission('create_estimates')()]
+        if self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), IsModuleEnabled('billing')(), HasPermission('edit_estimates')()]
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsModuleEnabled('billing')(), HasPermission('manage_billing')()]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        qs = SalesOrder.objects.select_related(
+            'customer', 'customer__user', 'vehicle', 'estimate', 'work_order', 'sales_agent', 'branch'
+        )
+        return filter_queryset_for_user_branches(
+            qs, self.request.user, request=self.request, include_unassigned=True
+        )
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return SalesOrderListSerializer
+        if self.action == 'create':
+            return SalesOrderCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return SalesOrderCreateSerializer
+        return SalesOrderDetailSerializer
+
+    def perform_create(self, serializer):
+        branch = resolve_branch(self.request)
+        serializer.save(created_by=self.request.user, branch=branch)
+
+    @action(detail=True, methods=['post'])
+    def link_estimate(self, request, pk=None):
+        sales_order = self.get_object()
+        estimate_id = request.data.get('estimate_id')
+        if not estimate_id:
+            return Response({'error': 'estimate_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        estimate = Estimate.objects.filter(pk=estimate_id, customer_id=sales_order.customer_id).first()
+        if not estimate:
+            return Response({'error': 'Estimate not found for this customer.'}, status=status.HTTP_404_NOT_FOUND)
+        sales_order.estimate = estimate
+        if estimate.work_order_id and not sales_order.work_order_id:
+            sales_order.work_order = estimate.work_order
+        sales_order.save()
+        return Response(SalesOrderDetailSerializer(sales_order).data)
+
+    @action(detail=True, methods=['post'])
+    def convert_to_work_order(self, request, pk=None):
+        sales_order = self.get_object()
+        if sales_order.work_order_id:
+            return Response({'error': 'Sales order already has a work order.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not sales_order.estimate_id:
+            return Response({'error': 'Link an estimate before converting to a work order.'}, status=status.HTTP_400_BAD_REQUEST)
+        work_order = sales_order.estimate.convert_to_work_order()
+        sales_order.work_order = work_order
+        sales_order.status = 'in_progress'
+        sales_order.save()
+        return Response(SalesOrderDetailSerializer(sales_order).data)

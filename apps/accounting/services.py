@@ -809,16 +809,17 @@ class AccountingService:
 
             # 3. Create Transactions
             
-            # Debit AP (Total Amount)
+            # Debit AP (Gross Amount including WHT)
+            gross = bill_payment.gross_amount
             Transaction.objects.create(
                 journal_entry=je,
                 account=ap_account,
-                amount=bill_payment.amount,
+                amount=gross,
                 transaction_type='debit',
                 description=f'Payment for Bill {bill_payment.bill.bill_number}'
             )
 
-            # Credit Cash (Total Amount)
+            # Credit Cash (Net Amount paid to vendor)
             Transaction.objects.create(
                 journal_entry=je,
                 account=cash_account,
@@ -827,10 +828,66 @@ class AccountingService:
                 description=f'Payment Sent ({bill_payment.payment_method})'
             )
 
+            # Credit WHT Payable when tax was withheld
+            wht_amount = bill_payment.wht_amount or Decimal('0')
+            if wht_amount > 0:
+                wht_account = cls._control_account(
+                    'withholding_tax_payable_account', 'Withholding Tax Payable'
+                )
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=wht_account,
+                    amount=wht_amount,
+                    transaction_type='credit',
+                    description=f'WHT withheld ({bill_payment.wht_rate}%)'
+                )
+
             # Validate
             if not je.validate_balanced():
                 raise ValidationError(f"Journal Entry for Bill Payment {bill_payment.payment_number} is not balanced.")
             
+            return je
+
+    @classmethod
+    def post_vat_payment(cls, amount, branch=None, user=None, payment_date=None, reference='', vat_return=None):
+        """Post GL entry for VAT remittance: Dr Sales Tax Payable, Cr Bank."""
+        from django.contrib.contenttypes.models import ContentType
+
+        if vat_return:
+            ct = ContentType.objects.get_for_model(vat_return)
+            if JournalEntry.objects.filter(content_type=ct, object_id=vat_return.id).exists():
+                return None
+
+        with transaction.atomic():
+            tax_account = cls._control_account('sales_tax_payable_account', 'Sales Tax Payable')
+            bank_account = cls._control_account('default_bank_account', 'Operating Bank Account')
+
+            je = cls._create_posted_journal_header(
+                user=user,
+                date=payment_date or timezone.now().date(),
+                description=f"VAT payment for period ending {getattr(vat_return, 'period_end', '')}",
+                reference=reference or 'VAT-PAYMENT',
+                branch=branch,
+                content_object=vat_return,
+            )
+
+            Transaction.objects.create(
+                journal_entry=je,
+                account=tax_account,
+                amount=amount,
+                transaction_type='debit',
+                description='VAT remittance',
+            )
+            Transaction.objects.create(
+                journal_entry=je,
+                account=bank_account,
+                amount=amount,
+                transaction_type='credit',
+                description='VAT payment from bank',
+            )
+
+            if not je.validate_balanced():
+                raise ValidationError('VAT payment journal entry is not balanced.')
             return je
 
     # ========================================================================
@@ -1670,6 +1727,7 @@ class AccountingService:
         total_deductions = Decimal('0')
         total_net = Decimal('0')
         total_unpaid_absence = Decimal('0')
+        total_employer_contributions = Decimal('0')
 
         for slip in payslips:
             total_basic += slip.basic_salary or Decimal('0')
@@ -1679,6 +1737,7 @@ class AccountingService:
             total_deductions += _sum_json_values(slip.deductions)
             total_net += slip.net_pay or Decimal('0')
             total_unpaid_absence += (slip.unpaid_leave_deduction or Decimal('0')) + (slip.absence_deduction or Decimal('0'))
+            total_employer_contributions += _sum_json_values(getattr(slip, 'employer_contributions', {}))
 
         salary_expense_amount = total_basic - total_unpaid_absence
 
@@ -1689,6 +1748,8 @@ class AccountingService:
             allowances_expense = cls.get_or_create_account('6020', 'Allowances Expense', 'expense', 'debit')
             tax_payable = cls.get_or_create_account('2300', 'PAYE Tax Payable', 'liability', 'credit')
             deductions_payable = cls.get_or_create_account('2310', 'Payroll Deductions Payable', 'liability', 'credit')
+            employer_statutory_payable = cls.get_or_create_account('2315', 'Employer Statutory Payable', 'liability', 'credit')
+            employer_statutory_expense = cls.get_or_create_account('6030', 'Employer Statutory Expense', 'expense', 'debit')
             cash_account = cls._control_account('default_bank_account', 'Default Bank Account')
 
             je = cls._create_posted_journal_header(
@@ -1719,6 +1780,12 @@ class AccountingService:
                     amount=total_allowances, transaction_type='debit',
                     description='Allowances (Housing, Transport, etc.)',
                 )
+            if total_employer_contributions > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=employer_statutory_expense,
+                    amount=total_employer_contributions, transaction_type='debit',
+                    description='Employer SSNIT and tier 2 contributions',
+                )
 
             # 4. Credit lines (liabilities + cash)
             if total_tax > 0:
@@ -1733,6 +1800,12 @@ class AccountingService:
                     amount=total_deductions, transaction_type='credit',
                     description='Payroll deductions (SSNIT, Provident Fund, etc.)',
                 )
+            if total_employer_contributions > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=employer_statutory_payable,
+                    amount=total_employer_contributions, transaction_type='credit',
+                    description='Employer statutory contributions payable',
+                )
             if total_net > 0:
                 Transaction.objects.create(
                     journal_entry=je, account=cash_account,
@@ -1744,8 +1817,8 @@ class AccountingService:
             if not je.validate_balanced():
                 raise ValidationError(
                     f"Payroll Journal Entry for '{payroll_period.name}' is not balanced. "
-                    f"Debits: {salary_expense_amount + total_overtime + total_allowances}, "
-                    f"Credits: {total_tax + total_deductions + total_net}"
+                    f"Debits: {salary_expense_amount + total_overtime + total_allowances + total_employer_contributions}, "
+                    f"Credits: {total_tax + total_deductions + total_employer_contributions + total_net}"
                 )
 
             return je
@@ -3045,6 +3118,25 @@ class DashboardService:
         ]
 
         control = AccountingControl.get_settings()
+        inventory_gl_value = Decimal('0')
+        inventory_operational_value = Decimal('0')
+        if control.inventory_asset_account_id:
+            inventory_gl_value = ReportingService.get_account_balance(
+                control.inventory_asset_account, date=end_date, branch_id=branch_id
+            )
+        try:
+            from apps.inventory.models import Part
+            from apps.inventory.services import InventoryService
+
+            branch_obj = None
+            if branch_id:
+                from apps.branches.models import Branch
+                branch_obj = Branch.objects.filter(pk=branch_id).first()
+            inventory_operational_value = InventoryService.get_stock_valuation(
+                Part.objects.filter(is_active=True), branch=branch_obj
+            )
+        except Exception:
+            inventory_operational_value = Decimal('0')
         missing_control_accounts = [
             field for field in AccountingControl.ACCOUNT_FIELD_NAMES
             if getattr(control, f'{field}_id', None) is None
@@ -3242,6 +3334,8 @@ class DashboardService:
                 'current_profit_loss': money(profit_loss['totals']['net_income']),
                 'net_worth': money(balance_sheet['totals']['assets'] - balance_sheet['totals']['liabilities']),
                 'is_balanced': balance_sheet.get('is_balanced', True),
+                'inventory_gl_value': money(inventory_gl_value),
+                'inventory_operational_value': money(inventory_operational_value),
             },
             'revenue_expenses': {
                 'revenue_today': money(revenue_today),
@@ -3419,6 +3513,224 @@ class DashboardService:
                 'permissions': getattr(user, 'role', None),
             },
         }
+
+    @staticmethod
+    def get_financial_ratios(as_of_date=None, start_date=None, end_date=None, branch_id=None):
+        """Compute common financial ratios from balance sheet and P&L."""
+        if not as_of_date:
+            as_of_date = timezone.now().date()
+        if not start_date:
+            start_date = as_of_date.replace(month=1, day=1)
+        if not end_date:
+            end_date = as_of_date
+
+        balance_sheet = ReportingService.get_balance_sheet(as_of_date, branch_id=branch_id)
+        profit_loss = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_id)
+
+        def sum_subtype(accounts, subtype):
+            return sum(
+                Decimal(str(a.get('balance', 0)))
+                for a in accounts
+                if a.get('account_subtype') == subtype
+            )
+
+        def sum_codes(accounts, prefixes):
+            return sum(
+                Decimal(str(a.get('balance', 0)))
+                for a in accounts
+                if any(str(a.get('code', '')).startswith(p) for p in prefixes)
+            )
+
+        assets = balance_sheet.get('assets', [])
+        liabilities = balance_sheet.get('liabilities', [])
+
+        current_assets = sum_subtype(assets, 'current_asset') or sum_codes(assets, ['10', '11', '12', '13', '14', '15'])
+        current_liabilities = sum_subtype(liabilities, 'current_liability') or sum_codes(liabilities, ['20', '21', '22'])
+        total_assets = Decimal(str(balance_sheet['totals']['assets']))
+        total_liabilities = Decimal(str(balance_sheet['totals']['liabilities']))
+        total_equity = Decimal(str(balance_sheet['totals']['equity']))
+        revenue = Decimal(str(profit_loss['totals']['income']))
+        net_income = Decimal(str(profit_loss['totals']['net_income']))
+        expenses = Decimal(str(profit_loss['totals']['expenses']))
+
+        cash_and_bank = sum_codes(assets, ['1010', '1100', '10', '11'])
+        inventory = sum_codes(assets, ['1500', '15'])
+
+        def safe_div(numerator, denominator, as_percent=False):
+            if not denominator:
+                return None
+            value = float(numerator) / float(denominator)
+            return round(value * 100, 2) if as_percent else round(value, 4)
+
+        return {
+            'as_of_date': as_of_date.isoformat(),
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'inputs': {
+                'current_assets': float(current_assets),
+                'current_liabilities': float(current_liabilities),
+                'total_assets': float(total_assets),
+                'total_liabilities': float(total_liabilities),
+                'total_equity': float(total_equity),
+                'revenue': float(revenue),
+                'net_income': float(net_income),
+                'expenses': float(expenses),
+                'cash_and_bank': float(cash_and_bank),
+                'inventory': float(inventory),
+            },
+            'ratios': {
+                'current_ratio': safe_div(current_assets, current_liabilities),
+                'quick_ratio': safe_div(current_assets - inventory, current_liabilities),
+                'cash_ratio': safe_div(cash_and_bank, current_liabilities),
+                'debt_to_equity': safe_div(total_liabilities, total_equity),
+                'debt_ratio': safe_div(total_liabilities, total_assets),
+                'equity_ratio': safe_div(total_equity, total_assets),
+                'net_profit_margin': safe_div(net_income, revenue, as_percent=True),
+                'return_on_assets': safe_div(net_income, total_assets, as_percent=True),
+                'return_on_equity': safe_div(net_income, total_equity, as_percent=True),
+                'expense_ratio': safe_div(expenses, revenue, as_percent=True),
+            },
+        }
+
+    @staticmethod
+    def get_vat_return(start_date=None, end_date=None, branch_id=None):
+        """VAT return worksheet from operational tax data."""
+        tax_report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
+        collected = tax_report['tax_collected']
+        return {
+            'period': tax_report['period'],
+            'worksheet': {
+                'output_vat': collected.get('vat', 0),
+                'output_nhil': collected.get('nhil', 0),
+                'output_getfund': collected.get('getfund', 0),
+                'output_hrl': collected.get('hrl', 0),
+                'total_output_tax': collected.get('total', 0),
+                'input_vat': tax_report['tax_paid']['total'],
+                'net_vat_payable': tax_report['net_tax_liability'],
+            },
+            'supporting': {
+                'invoice_count': tax_report['invoice_count'],
+                'bill_count': tax_report['bill_count'],
+            },
+            'status': 'draft',
+        }
+
+    @staticmethod
+    def get_tax_reconciliation(start_date=None, end_date=None, branch_id=None):
+        """Reconcile GL tax accounts against operational tax report."""
+        if not start_date:
+            start_date = timezone.now().date().replace(month=1, day=1)
+        if not end_date:
+            end_date = timezone.now().date()
+
+        tax_report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
+        control = AccountingControl.get_settings()
+
+        gl_output_tax = Decimal('0')
+        gl_input_tax = Decimal('0')
+        if control.sales_tax_payable_account_id:
+            gl_output_tax = ReportingService.get_account_balance(
+                control.sales_tax_payable_account, date=end_date, branch_id=branch_id
+            )
+        if control.input_tax_account_id:
+            gl_input_tax = ReportingService.get_account_balance(
+                control.input_tax_account, date=end_date, branch_id=branch_id
+            )
+
+        operational_output = Decimal(str(tax_report['tax_collected']['total']))
+        operational_input = Decimal(str(tax_report['tax_paid']['total']))
+        gl_net = gl_output_tax - gl_input_tax
+        operational_net = Decimal(str(tax_report['net_tax_liability']))
+
+        return {
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'gl': {
+                'output_tax_balance': float(gl_output_tax),
+                'input_tax_balance': float(gl_input_tax),
+                'net_position': float(gl_net),
+            },
+            'operational': {
+                'output_tax_total': float(operational_output),
+                'input_tax_total': float(operational_input),
+                'net_position': float(operational_net),
+            },
+            'variance': {
+                'output': float(gl_output_tax - operational_output),
+                'input': float(gl_input_tax - operational_input),
+                'net': float(gl_net - operational_net),
+            },
+            'in_balance': abs(gl_net - operational_net) <= Decimal('0.01'),
+        }
+
+    @staticmethod
+    def get_withholding_tax_report(start_date=None, end_date=None, branch_id=None):
+        """Withholding tax summary from WHT liability account and bill payment transactions."""
+        from apps.billing.models import BillPayment
+
+        if not start_date:
+            start_date = timezone.now().date().replace(month=1, day=1)
+        if not end_date:
+            end_date = timezone.now().date()
+
+        control = AccountingControl.get_settings()
+        wht_account = control.withholding_tax_payable_account
+        lines = []
+        total = Decimal('0')
+
+        if wht_account:
+            balance = ReportingService.get_account_balance(
+                wht_account, date=end_date, branch_id=branch_id
+            )
+            if balance != 0:
+                lines.append({
+                    'code': wht_account.code,
+                    'name': wht_account.name,
+                    'balance': float(balance),
+                })
+                total = balance
+
+        payment_qs = BillPayment.objects.filter(
+            wht_amount__gt=0,
+            payment_date__gte=start_date,
+            payment_date__lte=end_date,
+        ).select_related('bill', 'bill__vendor')
+        if branch_id:
+            payment_qs = payment_qs.filter(bill__branch_id=branch_id)
+
+        transactions = []
+        period_total = Decimal('0')
+        for bp in payment_qs.order_by('payment_date', 'payment_number'):
+            period_total += bp.wht_amount
+            transactions.append({
+                'payment_number': bp.payment_number,
+                'payment_date': bp.payment_date.isoformat(),
+                'vendor': str(bp.bill.vendor),
+                'bill_number': bp.bill.bill_number,
+                'wht_rate': float(bp.wht_rate),
+                'wht_amount': float(bp.wht_amount),
+                'net_paid': float(bp.amount),
+                'gross_amount': float(bp.gross_amount),
+                'certificate': bp.wht_certificate,
+            })
+
+        return {
+            'period': {'start': start_date.isoformat(), 'end': end_date.isoformat()},
+            'configured': wht_account is not None,
+            'control_account': {
+                'code': wht_account.code,
+                'name': wht_account.name,
+            } if wht_account else None,
+            'lines': lines,
+            'total_withheld': float(total),
+            'period_transactions': transactions,
+            'period_withheld_total': float(period_total),
+            'note': (
+                'Configure withholding_tax_payable_account in Accounting Controls. '
+                'Record WHT on vendor bill payments to auto-post liability.'
+                if not wht_account
+                else None
+            ),
+        }
+
 
 class ExportService:
     @staticmethod

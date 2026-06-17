@@ -6,12 +6,17 @@ import { cn } from "@/lib/utils/cn";
 
 export const ACCOUNTING_REPORT_SECTIONS = [
   { slug: "general-ledger", label: "General Ledger", href: "/accounting/reports/general-ledger" },
+  { slug: "account-register", label: "Account Register", href: "/accounting/reports/account-register" },
   { slug: "balance-sheet", label: "Balance Sheet", href: "/accounting/reports/balance-sheet" },
   { slug: "profit-loss", label: "Profit & Loss", href: "/accounting/reports/profit-loss" },
   { slug: "trial-balance", label: "Trial Balance", href: "/accounting/reports/trial-balance" },
   { slug: "cash-flow", label: "Cash Flow", href: "/accounting/reports/cash-flow" },
   { slug: "aging", label: "AR/AP Aging", href: "/accounting/reports/aging" },
   { slug: "tax", label: "Tax Report", href: "/accounting/reports/tax" },
+  { slug: "vat-return", label: "VAT Return", href: "/accounting/reports/vat-return" },
+  { slug: "tax-reconciliation", label: "Tax Reconciliation", href: "/accounting/reports/tax-reconciliation" },
+  { slug: "withholding-tax", label: "Withholding Tax", href: "/accounting/reports/withholding-tax" },
+  { slug: "financial-ratios", label: "Financial Ratios", href: "/accounting/reports/financial-ratios" },
   { slug: "management", label: "Management", href: "/accounting/reports/management" },
   { slug: "margin-analysis", label: "Margin Analysis", href: "/accounting/reports/margin-analysis" },
   { slug: "cost-control", label: "Cost Control", href: "/accounting/reports/cost-control" },

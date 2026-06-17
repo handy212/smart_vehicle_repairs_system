@@ -274,6 +274,53 @@ class TaxReportView(APIView):
         return Response(report)
 
 
+class FinancialRatiosView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        as_of = parse_date(request.query_params.get('as_of_date') or request.query_params.get('date') or '')
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_financial_ratios(
+            as_of_date=as_of,
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=branch_id,
+        )
+        return Response(report)
+
+
+class VatReturnView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        return Response(ReportingService.get_vat_return(start_date, end_date, branch_id=branch_id))
+
+
+class TaxReconciliationView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        return Response(ReportingService.get_tax_reconciliation(start_date, end_date, branch_id=branch_id))
+
+
+class WithholdingTaxReportView(APIView):
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    def get(self, request):
+        start_date = parse_date(request.query_params.get('start_date') or '')
+        end_date = parse_date(request.query_params.get('end_date') or '')
+        branch_id = get_report_branch_id(request)
+        return Response(ReportingService.get_withholding_tax_report(start_date, end_date, branch_id=branch_id))
+
+
 class ExpenseBreakdownView(APIView):
     """
     Expense dashboard broken down by category: parts, labor, and overhead.
@@ -1461,3 +1508,147 @@ class AccountingCommandCenterView(APIView):
             user=request.user,
         )
         return Response(data)
+
+
+class VatReturnViewSet(viewsets.ModelViewSet):
+    """Persisted VAT return filings with review, file, and pay workflow."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+    http_method_names = ['get', 'post', 'head', 'options']
+    ordering = ['-period_end']
+
+    def get_permissions(self):
+        if self.action in ['create', 'review', 'file', 'record_payment', 'submit_to_gra']:
+            return [
+                IsAuthenticated(),
+                IsModuleEnabled('accounting')(),
+                HasPermission('manage_accounting_periods')(),
+            ]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        from .models import VatReturn
+        from apps.branches.utils import filter_queryset_for_user_branches
+
+        qs = VatReturn.objects.select_related('branch', 'filed_by', 'created_by')
+        return filter_queryset_for_user_branches(qs, self.request.user, request=self.request)
+
+    def get_serializer_class(self):
+        from .serializers import VatReturnSerializer, VatReturnCreateSerializer
+        if self.action == 'create':
+            return VatReturnCreateSerializer
+        return VatReturnSerializer
+
+    def create(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .vat_filing import VatFilingService
+        from .serializers import VatReturnSerializer
+        from apps.branches.utils import resolve_branch_for_user
+        from rest_framework.exceptions import ValidationError
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        branch = serializer.validated_data.get('branch') or resolve_branch_for_user(request)
+        try:
+            vat_return = VatFilingService.create_from_worksheet(
+                period_start=serializer.validated_data['period_start'],
+                period_end=serializer.validated_data['period_end'],
+                branch=branch,
+                user=request.user,
+                notes=serializer.validated_data.get('notes', ''),
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({'detail': str(exc)})
+        return Response(VatReturnSerializer(vat_return).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def review(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .vat_filing import VatFilingService
+        from rest_framework.exceptions import ValidationError
+
+        vat_return = self.get_object()
+        try:
+            VatFilingService.review(vat_return, user=request.user)
+        except DjangoValidationError as exc:
+            raise ValidationError({'detail': str(exc)})
+        return Response(self.get_serializer(vat_return).data)
+
+    @action(detail=True, methods=['post'])
+    def file(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .vat_filing import VatFilingService
+        from rest_framework.exceptions import ValidationError
+
+        vat_return = self.get_object()
+        try:
+            VatFilingService.file_return(
+                vat_return,
+                filing_reference=request.data.get('filing_reference', ''),
+                user=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({'detail': str(exc)})
+        return Response(self.get_serializer(vat_return).data)
+
+    @action(detail=True, methods=['post'])
+    def record_payment(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .vat_filing import VatFilingService
+        from rest_framework.exceptions import ValidationError
+
+        vat_return = self.get_object()
+        try:
+            VatFilingService.record_payment(
+                vat_return,
+                payment_reference=request.data.get('payment_reference', ''),
+                user=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({'detail': str(exc)})
+        vat_return.refresh_from_db()
+        return Response(self.get_serializer(vat_return).data)
+
+    @action(detail=True, methods=['get'])
+    def export_gra_csv(self, request, pk=None):
+        from django.http import HttpResponse
+        from .gra_filing import GraFilingService
+
+        vat_return = self.get_object()
+        csv_content = GraFilingService.build_csv(vat_return)
+        response = HttpResponse(csv_content, content_type='text/csv')
+        response['Content-Disposition'] = (
+            f'attachment; filename="gra_vat_return_{vat_return.period_end}.csv"'
+        )
+        return response
+
+    @action(detail=True, methods=['get'])
+    def export_gra_xml(self, request, pk=None):
+        from django.http import HttpResponse
+        from .gra_filing import GraFilingService
+
+        vat_return = self.get_object()
+        xml_content = GraFilingService.build_xml(vat_return)
+        response = HttpResponse(xml_content, content_type='application/xml')
+        response['Content-Disposition'] = (
+            f'attachment; filename="gra_vat_return_{vat_return.period_end}.xml"'
+        )
+        return response
+
+    @action(detail=True, methods=['post'])
+    def submit_to_gra(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .gra_filing import GraFilingService
+        from rest_framework.exceptions import ValidationError
+
+        vat_return = self.get_object()
+        try:
+            GraFilingService.submit(
+                vat_return,
+                user=request.user,
+                acknowledgment=request.data.get('gra_acknowledgment', ''),
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({'detail': str(exc)})
+        vat_return.refresh_from_db()
+        return Response(self.get_serializer(vat_return).data)

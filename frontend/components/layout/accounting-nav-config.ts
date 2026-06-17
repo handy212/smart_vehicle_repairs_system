@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Calendar,
   Hash,
   Zap,
   Landmark,
@@ -97,6 +98,13 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
         permission: "view_budgets",
         icon: Wallet,
         description: "Budget lines and variance tracking",
+      },
+      {
+        name: "Fiscal Year",
+        href: "/accounting/fiscal-year",
+        permission: "view_budgets",
+        icon: Calendar,
+        description: "Fiscal periods, budgets, and period lock",
       },
     ],
   },

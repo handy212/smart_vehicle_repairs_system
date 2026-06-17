@@ -27,6 +27,7 @@ from apps.billing.models import (
     Bill,
     BillLineItem,
     BillPayment,
+    SalesOrder,
 )
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -2086,17 +2087,39 @@ class BillCreateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class BillPaymentSerializer(serializers.ModelSerializer):
+class BillPaymentListSerializer(serializers.ModelSerializer):
+    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    vendor_id = serializers.IntegerField(source='bill.vendor_id', read_only=True)
+    vendor_name = serializers.CharField(source='bill.vendor.name', read_only=True)
     paid_by_name = serializers.CharField(source='paid_by.get_full_name', read_only=True)
     till_account_name = serializers.CharField(source='till.till_account.name', read_only=True)
     bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
+    gross_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = BillPayment
         fields = [
-            'id', 'payment_number', 'bill', 'amount', 'payment_date',
-            'payment_method', 'till', 'till_account_name', 'bank_account', 'bank_account_name',
-            'reference_number', 'notes', 'paid_by',
+            'id', 'payment_number', 'bill', 'bill_number', 'vendor_id', 'vendor_name',
+            'amount', 'gross_amount', 'wht_rate', 'wht_amount', 'wht_certificate',
+            'payment_date', 'payment_method', 'till', 'till_account_name',
+            'bank_account', 'bank_account_name', 'reference_number', 'notes',
+            'paid_by', 'paid_by_name', 'created_at',
+        ]
+
+
+class BillPaymentSerializer(serializers.ModelSerializer):
+    paid_by_name = serializers.CharField(source='paid_by.get_full_name', read_only=True)
+    till_account_name = serializers.CharField(source='till.till_account.name', read_only=True)
+    bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
+    gross_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = BillPayment
+        fields = [
+            'id', 'payment_number', 'bill', 'amount', 'gross_amount',
+            'wht_rate', 'wht_amount', 'wht_certificate',
+            'payment_date', 'payment_method', 'till', 'till_account_name',
+            'bank_account', 'bank_account_name', 'reference_number', 'notes', 'paid_by',
             'paid_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -2119,11 +2142,26 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BillPayment
-        fields = ['amount', 'payment_date', 'payment_method', 'reference_number', 'notes', 'cash_account', 'bank_account']
+        fields = [
+            'amount', 'wht_rate', 'wht_amount', 'wht_certificate',
+            'payment_date', 'payment_method', 'reference_number', 'notes',
+            'cash_account', 'bank_account',
+        ]
 
     def validate(self, data):
         payment_method = data.get('payment_method')
-        if payment_method == 'cash':
+        amount = data.get('amount') or Decimal('0')
+        wht_rate = data.get('wht_rate') or Decimal('0')
+        wht_amount = data.get('wht_amount') or Decimal('0')
+
+        if wht_rate > 0 and wht_amount == 0:
+            gross_base = amount / (Decimal('1') - (wht_rate / Decimal('100')))
+            data['wht_amount'] = (gross_base - amount).quantize(Decimal('0.01'))
+        elif wht_amount > 0 and wht_rate == 0 and amount > 0:
+            gross = amount + wht_amount
+            data['wht_rate'] = ((wht_amount / gross) * Decimal('100')).quantize(Decimal('0.01'))
+
+        if data.get('payment_method') == 'cash':
             request = self.context.get('request')
             bill = self.context.get('bill')
             cash_account = data.pop('cash_account', None)
@@ -2151,4 +2189,56 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
                     'bank_account': 'Select the bank or cash-equivalent account for this vendor payment.'
                 })
             data['till'] = None
+        return data
+
+
+class SalesOrderListSerializer(serializers.ModelSerializer):
+    customer_name = serializers.SerializerMethodField()
+    vehicle_display = serializers.SerializerMethodField()
+    estimate_number = serializers.CharField(source='estimate.estimate_number', read_only=True, allow_null=True)
+    work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True, allow_null=True)
+    sales_agent_name = serializers.CharField(source='sales_agent.get_full_name', read_only=True, allow_null=True)
+
+    class Meta:
+        model = SalesOrder
+        fields = [
+            'id', 'sales_order_number', 'status', 'order_date', 'expected_fulfillment_date',
+            'customer', 'customer_name', 'vehicle', 'vehicle_display',
+            'estimate', 'estimate_number', 'work_order', 'work_order_number',
+            'sales_agent', 'sales_agent_name', 'reference_number', 'created_at',
+        ]
+
+    def get_customer_name(self, obj):
+        return str(obj.customer)
+
+    def get_vehicle_display(self, obj):
+        return str(obj.vehicle) if obj.vehicle_id else None
+
+
+class SalesOrderDetailSerializer(SalesOrderListSerializer):
+    notes = serializers.CharField(required=False, allow_blank=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+
+    class Meta(SalesOrderListSerializer.Meta):
+        fields = SalesOrderListSerializer.Meta.fields + [
+            'notes', 'created_by', 'created_by_name', 'updated_at',
+        ]
+
+
+class SalesOrderCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalesOrder
+        fields = [
+            'customer', 'vehicle', 'estimate', 'work_order', 'sales_agent',
+            'status', 'order_date', 'expected_fulfillment_date', 'reference_number', 'notes',
+        ]
+
+    def validate(self, data):
+        estimate = data.get('estimate')
+        work_order = data.get('work_order')
+        customer = data.get('customer')
+        if estimate and customer and estimate.customer_id != customer.id:
+            raise serializers.ValidationError({'estimate': 'Estimate must belong to the same customer.'})
+        if work_order and customer and work_order.customer_id != customer.id:
+            raise serializers.ValidationError({'work_order': 'Work order must belong to the same customer.'})
         return data

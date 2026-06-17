@@ -13,6 +13,7 @@ router.register(r'tills', views.AccountingTillViewSet, basename='accounting-till
 router.register(r'budgets', views.BudgetViewSet, basename='budget')
 router.register(r'budget-lines', views.BudgetLineViewSet, basename='budgetline')
 router.register(r'accruals', views.AccrualViewSet, basename='accrual')
+router.register(r'vat-returns', views.VatReturnViewSet, basename='vat-return')
 
 urlpatterns = [
     # Financial Reports
@@ -23,6 +24,10 @@ urlpatterns = [
     path('reports/aging/', views.AgingReportView.as_view(), name='aging-report'),
     path('reports/cash-flow/', views.CashFlowView.as_view(), name='cash-flow'),
     path('reports/tax/', views.TaxReportView.as_view(), name='tax-report'),
+    path('reports/financial-ratios/', views.FinancialRatiosView.as_view(), name='financial-ratios'),
+    path('reports/vat-return/', views.VatReturnView.as_view(), name='vat-return'),
+    path('reports/tax-reconciliation/', views.TaxReconciliationView.as_view(), name='tax-reconciliation'),
+    path('reports/withholding-tax/', views.WithholdingTaxReportView.as_view(), name='withholding-tax'),
     path('reports/job-profitability/', views.JobProfitabilityView.as_view(), name='job-profitability'),
     path('reports/expense-breakdown/', views.ExpenseBreakdownView.as_view(), name='expense-breakdown'),
     path('reports/budget-vs-actual/', views.BudgetVsActualView.as_view(), name='budget-vs-actual'),

@@ -13,6 +13,7 @@ class DocumentNumberService:
         'payment': 'PAY',
         'bill': 'BILL',
         'vendor_credit': 'VC',
+        'sales_order': 'SO',
     }
 
     @classmethod

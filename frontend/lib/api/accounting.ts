@@ -363,6 +363,106 @@ export interface TaxReport {
     net_tax_liability: number;
 }
 
+export interface FinancialRatiosReport {
+    as_of_date: string;
+    period: { start: string; end: string };
+    inputs: Record<string, number>;
+    ratios: Record<string, number | null>;
+}
+
+export interface VatReturnReport {
+    period: { start: string; end: string };
+    worksheet: {
+        output_vat: number | string;
+        output_nhil: number | string;
+        output_getfund: number | string;
+        output_hrl: number | string;
+        total_output_tax: number | string;
+        input_vat: number | string;
+        net_vat_payable: number | string;
+    };
+    supporting: { invoice_count: number; bill_count: number };
+    status: string;
+}
+
+export interface TaxReconciliationReport {
+    period: { start: string; end: string };
+    gl: {
+        output_tax_balance: number;
+        input_tax_balance: number;
+        net_position: number;
+    };
+    operational: {
+        output_tax_total: number;
+        input_tax_total: number;
+        net_position: number;
+    };
+    variance: {
+        output: number;
+        input: number;
+        net: number;
+    };
+    in_balance: boolean;
+}
+
+export interface WithholdingTaxReport {
+    period: { start: string; end: string };
+    configured: boolean;
+    control_account?: { code: string; name: string } | null;
+    lines: Array<{ code: string; name: string; balance: number }>;
+    total_withheld: number;
+    period_transactions?: Array<{
+        payment_number: string;
+        payment_date: string;
+        vendor: string;
+        bill_number: string;
+        wht_rate: number;
+        wht_amount: number;
+        net_paid: number;
+        gross_amount: number;
+        certificate: string;
+    }>;
+    period_withheld_total?: number;
+    note?: string | null;
+}
+
+export interface VatReturnFiling {
+    id: number;
+    period_start: string;
+    period_end: string;
+    branch?: number | null;
+    branch_name?: string | null;
+    worksheet: VatReturnReport['worksheet'];
+    status: 'draft' | 'reviewed' | 'filed' | 'paid';
+    filing_reference?: string;
+    filed_at?: string | null;
+    paid_at?: string | null;
+    payment_reference?: string;
+    payment_journal_entry?: number | null;
+    gra_acknowledgment?: string;
+    gra_submitted_at?: string | null;
+    gra_submission_mode?: 'manual' | 'api' | '';
+    notes?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface GeneralLedgerLine {
+    id: number;
+    journal_entry_id?: number;
+    date: string;
+    reference?: string;
+    posted?: boolean;
+    branch_id?: number | null;
+    account_code?: string;
+    account_name?: string;
+    amount: number | string;
+    transaction_type: "debit" | "credit";
+    description?: string;
+    debit?: number | string;
+    credit?: number | string;
+}
+
 export interface TrialBalanceReport {
     accounts: Array<{
         code: string;
@@ -389,6 +489,8 @@ export interface AccountingCommandCenterSnapshot {
         current_profit_loss: number;
         net_worth: number;
         is_balanced: boolean;
+        inventory_gl_value?: number;
+        inventory_operational_value?: number;
     };
     revenue_expenses: {
         revenue_today: number;
@@ -991,5 +1093,95 @@ export const accountingApi = {
         if (endDate) params.end_date = endDate;
         const response = await apiClient.get("/accounting/reports/opex-variance/", { params });
         return response.data;
+    },
+
+    getFinancialRatios: async (params?: {
+        as_of_date?: string;
+        start_date?: string;
+        end_date?: string;
+        branch_id?: number;
+    }): Promise<FinancialRatiosReport> => {
+        const response = await apiClient.get("/accounting/reports/financial-ratios/", { params });
+        return response.data;
+    },
+
+    getVatReturn: async (startDate?: string, endDate?: string, branchId?: number): Promise<VatReturnReport> => {
+        const params: QueryParams = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/vat-return/", { params });
+        return response.data;
+    },
+
+    getTaxReconciliation: async (
+        startDate?: string,
+        endDate?: string,
+        branchId?: number
+    ): Promise<TaxReconciliationReport> => {
+        const params: QueryParams = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/tax-reconciliation/", { params });
+        return response.data;
+    },
+
+    getWithholdingTaxReport: async (
+        startDate?: string,
+        endDate?: string,
+        branchId?: number
+    ): Promise<WithholdingTaxReport> => {
+        const params: QueryParams = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/withholding-tax/", { params });
+        return response.data;
+    },
+
+    vatReturns: {
+        list: async (): Promise<VatReturnFiling[]> => {
+            const response = await apiClient.get("/accounting/vat-returns/");
+            return response.data.results || response.data;
+        },
+        create: async (data: { period_start: string; period_end: string; branch?: number; notes?: string }) => {
+            const response = await apiClient.post("/accounting/vat-returns/", data);
+            return response.data as VatReturnFiling;
+        },
+        review: async (id: number) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/review/`);
+            return response.data as VatReturnFiling;
+        },
+        file: async (id: number, filingReference?: string) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/file/`, {
+                filing_reference: filingReference,
+            });
+            return response.data as VatReturnFiling;
+        },
+        recordPayment: async (id: number, paymentReference?: string) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/record_payment/`, {
+                payment_reference: paymentReference,
+            });
+            return response.data as VatReturnFiling;
+        },
+        exportGraCsv: async (id: number) => {
+            const response = await apiClient.get(`/accounting/vat-returns/${id}/export_gra_csv/`, {
+                responseType: 'blob',
+            });
+            return response.data as Blob;
+        },
+        exportGraXml: async (id: number) => {
+            const response = await apiClient.get(`/accounting/vat-returns/${id}/export_gra_xml/`, {
+                responseType: 'blob',
+            });
+            return response.data as Blob;
+        },
+        submitToGra: async (id: number, graAcknowledgment?: string) => {
+            const response = await apiClient.post(`/accounting/vat-returns/${id}/submit_to_gra/`, {
+                gra_acknowledgment: graAcknowledgment,
+            });
+            return response.data as VatReturnFiling;
+        },
     },
 };

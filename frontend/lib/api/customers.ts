@@ -57,6 +57,26 @@ export interface CustomerListResponse {
   results: Customer[];
 }
 
+export interface CustomerStatement {
+  customer_id: number;
+  period: { start: string; end: string };
+  opening_balance: number;
+  closing_balance: number;
+  period_debits: number;
+  period_credits: number;
+  transactions: Array<{
+    date: string;
+    type: string;
+    reference: string;
+    description: string;
+    debit: number;
+    credit: number;
+    running_balance: number;
+    status: string;
+    source_id: number;
+  }>;
+}
+
 export const customersApi = {
   list: async (params?: {
     page?: number;
@@ -139,6 +159,19 @@ export const customersApi = {
     vehicles_serviced: number;
   }> => {
     const response = await apiClient.get(`/customers/customers/${id}/stats/`);
+    return response.data;
+  },
+
+  statement: async (id: number, params?: { start_date?: string; end_date?: string; branch_id?: number }): Promise<CustomerStatement> => {
+    const response = await apiClient.get(`/customers/customers/${id}/statement/`, { params });
+    return response.data;
+  },
+
+  statementPdf: async (id: number, params?: { start_date?: string; end_date?: string; branch_id?: number }): Promise<Blob> => {
+    const response = await apiClient.get(`/customers/customers/${id}/statement_pdf/`, {
+      params,
+      responseType: 'blob',
+    });
     return response.data;
   },
 

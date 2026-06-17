@@ -7,7 +7,7 @@ from apps.branches.models import Branch
 from .models import (
     Account, JournalEntry, Transaction, AccountingControl, AuditLog,
     BankStatement, BankStatementLine, FundTransfer,
-    Budget, BudgetLine
+    Budget, BudgetLine, VatReturn,
 )
 
 
@@ -467,3 +467,35 @@ class AccrualCandidateSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=15, decimal_places=2)
     date = serializers.DateField()
     description = serializers.CharField()
+
+
+class VatReturnSerializer(serializers.ModelSerializer):
+    branch_name = serializers.CharField(source='branch.name', read_only=True, allow_null=True)
+    filed_by_name = serializers.CharField(source='filed_by.get_full_name', read_only=True, allow_null=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True, allow_null=True)
+
+    class Meta:
+        model = VatReturn
+        fields = [
+            'id', 'period_start', 'period_end', 'branch', 'branch_name',
+            'worksheet', 'status', 'filing_reference', 'filed_at', 'filed_by', 'filed_by_name',
+            'paid_at', 'payment_reference', 'payment_journal_entry',
+            'gra_acknowledgment', 'gra_submitted_at', 'gra_submission_mode', 'gra_submission_payload',
+            'notes',
+            'created_by', 'created_by_name', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'worksheet', 'status', 'filed_at', 'filed_by', 'paid_at',
+            'payment_reference', 'payment_journal_entry',
+            'gra_acknowledgment', 'gra_submitted_at', 'gra_submission_mode', 'gra_submission_payload',
+            'created_by', 'created_at', 'updated_at',
+        ]
+
+
+class VatReturnCreateSerializer(serializers.Serializer):
+    period_start = serializers.DateField()
+    period_end = serializers.DateField()
+    branch = serializers.PrimaryKeyRelatedField(
+        queryset=Branch.objects.all(), required=False, allow_null=True
+    )
+    notes = serializers.CharField(required=False, allow_blank=True, default='')

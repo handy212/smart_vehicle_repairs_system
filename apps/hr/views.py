@@ -1076,6 +1076,25 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
         data['journal_entry_id'] = journal_entry_id
         return Response(data)
 
+    @action(detail=True, methods=['get'])
+    def payroll_register(self, request, pk=None):
+        """Payroll register summary for a period."""
+        from .statutory_filing import StatutoryFilingService
+        period = self.get_object()
+        return Response(StatutoryFilingService.get_payroll_register(period))
+
+    @action(detail=True, methods=['get'])
+    def statutory_pack(self, request, pk=None):
+        """Statutory filing pack (PAYE, SSNIT, mapped deductions) for a period."""
+        from .statutory_filing import StatutoryFilingService
+        period = self.get_object()
+        if period.status not in ('approved', 'paid', 'processing'):
+            return Response(
+                {'detail': 'Process and approve payroll before generating statutory packs.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(StatutoryFilingService.get_statutory_pack(period))
+
     @action(detail=True, methods=['post'])
     def reverse(self, request, pk=None):
         """Reverse a paid payroll period and its accounting journal."""

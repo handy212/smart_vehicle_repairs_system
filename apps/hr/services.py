@@ -202,6 +202,16 @@ class PayrollService:
                 else:
                     deductions[comp.name] = str(value)
                     total_deductions_amount += value
+
+            from .statutory_contributions import StatutoryContributionService
+            StatutoryContributionService.ensure_default_components()
+            auto_deductions, auto_employer = StatutoryContributionService.calculate(emp, basic_salary)
+            for name, amount in auto_deductions.items():
+                if name not in deductions:
+                    value = Decimal(str(amount))
+                    deductions[name] = amount
+                    total_deductions_amount += value
+            employer_contributions = {name: amount for name, amount in auto_employer.items()}
             
             # Allowances might be taxable. For simplicity, assume all allowances are taxable gross income.
             gross_pay = basic_salary + overtime_pay + total_allowances_amount
@@ -220,10 +230,11 @@ class PayrollService:
                 proration_factor=proration_factor,
                 allowances=allowances,
                 deductions=deductions,
+                employer_contributions=employer_contributions,
                 gross_pay=gross_pay,
                 tax_amount=tax_amount,
                 # Net Pay will be calculated by model method or here
-                net_pay=gross_pay - tax_amount - total_deductions_amount
+                net_pay=gross_pay - tax_amount - total_deductions_amount - unpaid_leave_deduction - absence_deduction
             )
             created_count += 1
             

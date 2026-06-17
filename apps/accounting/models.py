@@ -253,6 +253,7 @@ class AccountingControl(models.Model):
         'shop_supplies_revenue_account',
         'environmental_fee_revenue_account',
         'input_tax_account',
+        'withholding_tax_payable_account',
         'default_expense_account',
         'purchase_returns_account',
         'inventory_asset_account',
@@ -307,6 +308,11 @@ class AccountingControl(models.Model):
         Account, on_delete=models.PROTECT, null=True, blank=True,
         related_name='control_input_tax',
         help_text="Asset account for recoverable input VAT/tax."
+    )
+    withholding_tax_payable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_withholding_tax_payable',
+        help_text="Liability account for vendor withholding tax."
     )
     default_expense_account = models.ForeignKey(
         Account, on_delete=models.PROTECT, null=True, blank=True,
@@ -363,6 +369,82 @@ class AccountingControl(models.Model):
             account = getattr(self, field_name, None)
             if account and not account.is_leaf:
                 raise ValidationError(_("%(field)s must be a leaf/detail account.") % {'field': field_name})
+
+
+class VatReturn(models.Model):
+    """Persisted VAT return filing with workflow status."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('reviewed', 'Reviewed'),
+        ('filed', 'Filed'),
+        ('paid', 'Paid'),
+    ]
+
+    period_start = models.DateField()
+    period_end = models.DateField()
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='vat_returns',
+        null=True,
+        blank=True,
+    )
+    worksheet = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    filing_reference = models.CharField(max_length=100, blank=True)
+    filed_at = models.DateTimeField(null=True, blank=True)
+    filed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vat_returns_filed',
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_reference = models.CharField(max_length=100, blank=True)
+    payment_journal_entry = models.ForeignKey(
+        'JournalEntry',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vat_return_payments',
+    )
+    gra_acknowledgment = models.CharField(max_length=100, blank=True)
+    gra_submitted_at = models.DateTimeField(null=True, blank=True)
+    gra_submission_mode = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[('manual', 'Manual'), ('api', 'API')],
+    )
+    gra_submission_payload = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='vat_returns_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-period_end', '-created_at']
+        indexes = [
+            models.Index(fields=['status', 'period_end']),
+            models.Index(fields=['branch', 'period_start', 'period_end']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['period_start', 'period_end', 'branch'],
+                name='unique_vat_return_period_branch',
+            ),
+        ]
+
+    def __str__(self):
+        branch_code = self.branch.code if self.branch_id else 'ALL'
+        return f"VAT {self.period_start}–{self.period_end} ({branch_code}) [{self.status}]"
+
 
 class AuditLog(models.Model):
     """

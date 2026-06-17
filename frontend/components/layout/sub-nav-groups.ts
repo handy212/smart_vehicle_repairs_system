@@ -3,6 +3,7 @@ import { STORES_QUOTATION_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 import { ACCOUNTING_NAV_GROUPS } from "./accounting-nav-config";
 import {
   Activity,
+  AlertCircle,
   Banknote,
   BarChart3,
   BookOpen,
@@ -79,6 +80,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       items: [
         { name: "Compliance Reports", href: "/inventory/reports/compliance", permission: "view_inventory", icon: BarChart3 },
         { name: "Inventory GL Report", href: "/inventory/reports/accounting", permission: "view_inventory", icon: PieChart },
+        { name: "Reorder Reports", href: "/inventory/reorder-reports", permission: "view_inventory", icon: AlertCircle },
       ],
     },
   ],
@@ -94,6 +96,9 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Credit Notes", href: "/billing/credit-notes", permission: "view_billing", icon: MinusSquare },
         { name: "Refunds", href: "/billing/refunds", permission: "view_billing", icon: Undo2 },
         { name: "Payments", href: "/billing/payments", permission: "view_billing", icon: Wallet },
+        { name: "Collections", href: "/billing/collections", permission: "view_billing", icon: AlertCircle },
+        { name: "Sales Reports", href: "/billing/sales-reports", permission: "view_billing", icon: BarChart3 },
+        { name: "Sales Orders", href: "/billing/sales-orders", permission: "view_billing", icon: ClipboardList },
       ],
     },
     {
@@ -103,6 +108,10 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       items: [
         { name: "Bills", href: "/billing/bills", permission: "view_billing", icon: CreditCard },
         { name: "Vendor Credits", href: "/billing/vendor-credits", permission: "view_billing", icon: MinusSquare },
+        { name: "Vendor Payments", href: "/billing/vendor-payments", permission: "view_billing", icon: Wallet },
+        { name: "AP Due", href: "/billing/ap-due", permission: "view_billing", icon: Clock },
+        { name: "Vendor Balances", href: "/billing/vendor-balances", permission: "view_billing", icon: Building2 },
+        { name: "Purchase Reports", href: "/billing/purchase-reports", permission: "view_billing", icon: BarChart3 },
       ],
     },
   ],
@@ -173,6 +182,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Leave", href: "/hr/leave", permission: "view_leave", icon: Calendar },
         { name: "Attendance", href: "/hr/attendance", permission: "view_attendance", icon: Clock },
         { name: "Payroll", href: "/hr/payroll", permission: "view_payroll", icon: Banknote },
+        { name: "Statutory Filing", href: "/hr/payroll/statutory-filing", permission: "view_payroll", icon: FileCheck },
       ],
     },
     {
@@ -216,6 +226,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       items: [
         { name: "Assets", href: "/fixed-assets", permission: "view_assets", icon: Landmark },
         { name: "Acquisitions", href: "/fixed-assets/acquisitions", permission: "view_assets", icon: ClipboardList },
+        { name: "Depreciation", href: "/fixed-assets/depreciation", permission: "view_assets", icon: Calculator },
         { name: "Valuation", href: "/fixed-assets/reports/valuation", permission: "view_assets", icon: PieChart },
       ],
     },

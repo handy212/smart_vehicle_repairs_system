@@ -645,6 +645,10 @@ export const hrApi = {
             apiClient.post<PayrollPeriod>(`${BASE}/payroll-periods/${id}/reverse/`, data),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/payroll-periods/${id}/`),
+        payrollRegister: (id: number) =>
+            apiClient.get(`${BASE}/payroll-periods/${id}/payroll_register/`),
+        statutoryPack: (id: number) =>
+            apiClient.get(`${BASE}/payroll-periods/${id}/statutory_pack/`),
     },
 
     payslips: {
