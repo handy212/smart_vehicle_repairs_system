@@ -513,3 +513,65 @@ def test_payroll_mark_paid_posts_balanced_journal_and_reverse_reverses_it(api_cl
     assert period.reversal_reason == "Payment file rejected"
     assert slip.status == "reversed"
     assert PayrollAuditLog.objects.filter(payroll_period=period, action="period_reversed").exists()
+
+
+@pytest.mark.django_db
+def test_my_payslips_accessible_without_view_payroll(api_client, employee, branch):
+    period = PayrollPeriod.objects.create(
+        name="June 2026",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 30),
+        branch=branch,
+        created_by=employee.user,
+        status="paid",
+    )
+    PaySlip.objects.create(
+        payroll_period=period,
+        employee=employee,
+        basic_salary=Decimal("1000.00"),
+        status="paid",
+    )
+    api_client.force_authenticate(user=employee.user)
+
+    list_response = api_client.get(reverse("api_hr:payslip-list"))
+    my_response = api_client.get(reverse("api_hr:payslip-my-payslips"))
+
+    assert list_response.status_code == status.HTTP_403_FORBIDDEN
+    assert my_response.status_code == status.HTTP_200_OK
+    assert len(my_response.data) == 1
+
+
+@pytest.mark.django_db
+def test_my_balances_accessible_without_manage_leave(api_client, employee, branch):
+    leave_type = LeaveType.objects.create(name="Annual", days_allowed=21)
+    LeaveBalance.objects.create(
+        employee=employee,
+        leave_type=leave_type,
+        year=2026,
+        total_days=Decimal("21"),
+    )
+    api_client.force_authenticate(user=employee.user)
+
+    response = api_client.get(reverse("api_hr:leave-balance-my-balances"), {"year": 2026})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]["leave_type_name"] == "Annual"
+
+
+@pytest.mark.django_db
+def test_process_payroll_permission_allows_period_process(api_client, admin_user, employee, branch):
+    period = PayrollPeriod.objects.create(
+        name="July 2026",
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 7, 31),
+        branch=branch,
+        created_by=admin_user,
+    )
+    api_client.force_authenticate(user=admin_user)
+
+    with patch("apps.hr.services.PayrollService.process_period", return_value=1):
+        response = api_client.post(reverse("api_hr:payroll-period-process", args=[period.id]))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["payslips_created"] == 1

@@ -225,6 +225,7 @@ export interface PaySlip {
     proration_factor: string;
     allowances: Record<string, string>;
     deductions: Record<string, string>;
+    employer_contributions?: Record<string, string>;
     gross_pay: string;
     tax_amount: string;
     net_pay: string;
@@ -244,6 +245,7 @@ export interface SalaryComponent {
     amount: string;
     percentage: string;
     is_taxable: boolean;
+    statutory_code?: string;
     is_active: boolean;
     created_at: string;
     updated_at: string;

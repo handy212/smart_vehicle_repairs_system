@@ -9,8 +9,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { exportToCSV } from "@/lib/utils/export";
 import { Button } from "@/components/ui/button";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 
 export default function StatutoryFilingPage() {
+  return (
+    <PermissionPageGuard permission="view_payroll">
+      <DynamicPageTitle title="Statutory Filing Pack" />
+      <StatutoryFilingContent />
+    </PermissionPageGuard>
+  );
+}
+
+function StatutoryFilingContent() {
   const { formatCurrency } = useCurrency();
   const [periodId, setPeriodId] = useState<string>("");
 
@@ -42,21 +54,23 @@ export default function StatutoryFilingPage() {
       e.paye,
       ...pack.summary.map((s: { code: string }) => e.statutory_deductions[s.code] || 0),
     ]);
-    exportToCSV(
+    exportToCSV({
+      filename: `statutory-pack-${pack.period.name}`,
+      headers: ["Employee", "Gross", "PAYE", ...pack.summary.map((s: { label: string }) => s.label)],
       rows,
-      `statutory-pack-${pack.period.name}`,
-      ["Employee", "Gross", "PAYE", ...pack.summary.map((s: { label: string }) => s.label)]
-    );
+    });
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Statutory Filing Pack</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          PAYE, SSNIT, and mapped deduction totals for authority filing.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <StaffPageHeader
+        title="Statutory Filing Pack"
+        breadcrumbs={[
+          { label: "HR", href: "/hr" },
+          { label: "Payroll", href: "/hr/payroll" },
+          { label: "Statutory Filing" },
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-4">
         <Select value={periodId} onValueChange={setPeriodId}>

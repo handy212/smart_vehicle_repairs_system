@@ -10,7 +10,6 @@ import { CalendarIcon, Loader2, Save, ImagePlus, X, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button";
 import {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -29,6 +28,7 @@ import { branchesApi } from "@/lib/api/branches";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { getUserFacingError } from "@/lib/api/errors";
 
 const staffSchema = z.object({
@@ -72,6 +72,15 @@ const staffSchema = z.object({
 type StaffFormValues = z.infer<typeof staffSchema>;
 
 export default function NewStaffPage() {
+    return (
+        <PermissionPageGuard permission="manage_staff">
+            <DynamicPageTitle title="New Staff Member" />
+            <NewStaffContent />
+        </PermissionPageGuard>
+    );
+}
+
+function NewStaffContent() {
     const router = useRouter();
     const { addToast } = useToastStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,8 +177,6 @@ export default function NewStaffPage() {
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-10">
-            <DynamicPageTitle title="Add Staff Member" />
-
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Add Staff Member</h2>

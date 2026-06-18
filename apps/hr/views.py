@@ -13,7 +13,7 @@ from django.db.models import Q, Count, Sum
 from django.db import transaction
 from decimal import Decimal
 
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled
 from apps.accounts.models import User
 from .models import (
     Department, Position, EmployeeProfile,
@@ -364,7 +364,9 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveBalanceSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['my_balances']:
+            pass
+        elif self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_leave'))
         else:
             permission_classes.append(HasPermission('manage_leave'))
@@ -914,8 +916,10 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollPeriodSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'payroll_register', 'statutory_pack']:
             permission_classes.append(HasPermission('view_payroll'))
+        elif self.action == 'process':
+            permission_classes.append(HasAnyPermission(['process_payroll', 'manage_payroll']))
         else:
             permission_classes.append(HasPermission('manage_payroll'))
         return [permission() for permission in permission_classes]
@@ -946,11 +950,12 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Get active employees for this branch
+        # Active employees at this branch (user branch or department branch)
         employees = EmployeeProfile.objects.filter(
-            user__branch=period.branch,
             employment_status__in=['active', 'probation'],
-        )
+        ).filter(
+            Q(user__branch=period.branch) | Q(department__branch=period.branch),
+        ).select_related('user', 'department')
         if not employees.exists():
             return Response(
                 {'detail': 'No active or probation employees found for this payroll period branch.'},
@@ -1162,7 +1167,7 @@ class PaySlipViewSet(viewsets.ModelViewSet):
     serializer_class = PaySlipSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
-        if self.action in ['my_slips', 'my_summary', 'download_pdf']:
+        if self.action in ['my_payslips', 'my_summary', 'download_pdf']:
             pass
         elif self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_payroll'))

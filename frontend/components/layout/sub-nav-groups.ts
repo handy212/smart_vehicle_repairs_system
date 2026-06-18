@@ -40,6 +40,7 @@ import {
   Target,
   Truck,
   Undo2,
+  UserCheck,
   Users,
   Wallet,
   ArrowLeftRight,
@@ -172,7 +173,8 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       label: "People",
       icon: Users,
       items: [
-        { name: "Staff", href: "/hr/staff", permission: "view_employees", icon: Users },
+        { name: "My HR", href: "/hr/me", icon: UserCheck },
+        { name: "Staff", href: "/hr/staff", permission: "view_staff", icon: Users },
         { name: "Departments", href: "/hr/departments", permission: "view_departments", icon: Building2 },
         { name: "Recruitment", href: "/hr/recruitment", permission: "view_recruitment", icon: Briefcase },
       ],

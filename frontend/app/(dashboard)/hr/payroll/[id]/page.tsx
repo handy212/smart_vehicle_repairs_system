@@ -184,8 +184,12 @@ function PayrollPeriodDetail() {
                     { label: period.name },
                 ]}
                 actions={
-                    <PermissionGuard permission="process_payroll">
-                        <DropdownMenu>
+                    <div className="flex gap-2">
+                        <Button size="sm" variant="outline" asChild>
+                            <Link href={`/hr/payroll/${periodId}/register`}>Payroll Register</Link>
+                        </Button>
+                        <PermissionGuard permissions={["process_payroll", "manage_payroll"]}>
+                            <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="outline" className="h-8 w-8 p-0">
                                     <MoreVertical className="h-4 w-4" />
@@ -217,8 +221,9 @@ function PayrollPeriodDetail() {
                                     <Link href="/hr/payroll">Back to Payroll</Link>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
-                        </DropdownMenu>
-                    </PermissionGuard>
+                            </DropdownMenu>
+                        </PermissionGuard>
+                    </div>
                 }
             />
 

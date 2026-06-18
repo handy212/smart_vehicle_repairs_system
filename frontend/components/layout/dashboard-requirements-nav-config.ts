@@ -127,7 +127,7 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
     label: "Employees & Payroll",
     icon: Briefcase,
     items: [
-      { name: "Employee Centre", href: "/hr/staff", permission: "view_employees", module: "hr", icon: Users },
+      { name: "Employee Centre", href: "/hr/staff", permission: "view_staff", module: "hr", icon: Users },
       { name: "Payroll Processing", href: "/hr/payroll", permission: "view_payroll", module: "hr", icon: Banknote },
       { name: "Time Tracking", href: "/hr/attendance", permission: "view_attendance", module: "hr", icon: Clock },
       { name: "Leave Management", href: "/hr/leave", permission: "view_leave", module: "hr", icon: Calendar },

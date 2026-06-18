@@ -1,11 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, Applicant, Interview } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Calendar, Phone, Mail, User, Briefcase, Clock, MapPin, Video, CheckCircle, XCircle, ArrowRight, Pencil, Trash2 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useParams, useRouter } from "next/navigation";
@@ -17,8 +15,7 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -127,7 +124,12 @@ function ApplicantDetailContent() {
                                                 <div className="text-xs text-muted-foreground">{new Date(int.scheduled_at).toLocaleTimeString()} • {int.duration_minutes} mins</div>
                                             </div>
                                         </div>
-                                        <Badge variant="outline" className="capitalize">{int.status}</Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="capitalize">{int.status}</Badge>
+                                            <PermissionGuard permission="manage_recruitment">
+                                                <InterviewActions interview={int} onUpdated={() => queryClient.invalidateQueries({ queryKey: ["hr", "applicant", id] })} />
+                                            </PermissionGuard>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -230,6 +232,77 @@ function DeleteConfirmDialog({ open, onOpenChange, id, onDeleted }: { open: bool
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button variant="destructive" onClick={() => mut.mutate()} disabled={mut.isPending}>Delete</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function InterviewActions({ interview, onUpdated }: { interview: Interview; onUpdated: () => void }) {
+    const [showEdit, setShowEdit] = useState(false);
+    const deleteMutation = useMutation({
+        mutationFn: () => hrApi.interviews.delete(interview.id),
+        onSuccess: () => { toast.success("Interview deleted"); onUpdated(); },
+        onError: () => toast.error("Failed to delete interview"),
+    });
+
+    return (
+        <>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setShowEdit(true)}><Pencil className="h-3.5 w-3.5" /></Button>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteMutation.mutate()}><Trash2 className="h-3.5 w-3.5" /></Button>
+            <EditInterviewDialog interview={interview} open={showEdit} onOpenChange={setShowEdit} onUpdated={onUpdated} />
+        </>
+    );
+}
+
+function EditInterviewDialog({ interview, open, onOpenChange, onUpdated }: { interview: Interview; open: boolean; onOpenChange: (o: boolean) => void; onUpdated: () => void }) {
+    const scheduled = new Date(interview.scheduled_at);
+    const [date, setDate] = useState(scheduled.toISOString().slice(0, 10));
+    const [time, setTime] = useState(scheduled.toTimeString().slice(0, 5));
+    const [type, setType] = useState(interview.interview_type);
+    const [duration, setDuration] = useState(String(interview.duration_minutes));
+    const [status, setStatus] = useState(interview.status);
+
+    const mut = useMutation({
+        mutationFn: () => hrApi.interviews.update(interview.id, {
+            scheduled_at: `${date}T${time}:00`,
+            interview_type: type,
+            duration_minutes: Number(duration),
+            status,
+        }),
+        onSuccess: () => { toast.success("Interview updated"); onUpdated(); onOpenChange(false); },
+        onError: () => toast.error("Failed to update interview"),
+    });
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Edit Interview</DialogTitle></DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Time</Label><Input type="time" value={time} onChange={e => setTime(e.target.value)} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Type</Label><Select value={type} onValueChange={setType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="phone">Phone</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="in_person">In Person</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Duration (mins)</Label><Input type="number" value={duration} onChange={e => setDuration(e.target.value)} /></div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="scheduled">Scheduled</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                <SelectItem value="no_show">No Show</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={() => mut.mutate()} disabled={mut.isPending}>Save</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
