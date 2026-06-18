@@ -323,7 +323,7 @@ function PayrollContent() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                                                <PermissionGuard permission="process_payroll">
+                                                <PermissionGuard permissions={["process_payroll", "manage_payroll"]}>
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => router.push(`/hr/payroll/${period.id}`)}>
                                                             <ArrowRight className="h-4 w-4" />

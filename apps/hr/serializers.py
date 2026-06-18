@@ -463,7 +463,7 @@ class SalaryComponentSerializer(serializers.ModelSerializer):
         model = SalaryComponent
         fields = [
             'id', 'name', 'component_type', 'calculation_type',
-            'amount', 'percentage', 'is_taxable', 'is_active',
+            'amount', 'percentage', 'is_taxable', 'statutory_code', 'is_active',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -530,7 +530,7 @@ class PaySlipSerializer(serializers.ModelSerializer):
             'staff', 'staff_name',
             'basic_salary', 'overtime_pay', 'unpaid_leave_deduction',
             'absence_deduction', 'proration_factor',
-            'allowances', 'deductions',
+            'allowances', 'deductions', 'employer_contributions',
             'gross_pay', 'tax_amount', 'net_pay',
             'status', 'payment_date', 'payment_reference', 'is_locked',
             'created_at', 'updated_at',

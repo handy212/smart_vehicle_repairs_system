@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Filter, LogIn, LogOut, Search } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -138,6 +139,9 @@ function AttendanceContent() {
                             Clock Out
                         </Button>
                         <PermissionGuard permission="manage_attendance">
+                            <Button size="sm" variant="outline" asChild>
+                                <Link href="/hr/attendance/policies">Policies</Link>
+                            </Button>
                             <Button size="sm" onClick={() => setShowManual(true)}>
                                 <Plus className="h-4 w-4 mr-2" />Manual Entry
                             </Button>

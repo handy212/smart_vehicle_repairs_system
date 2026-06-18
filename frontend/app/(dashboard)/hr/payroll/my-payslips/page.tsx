@@ -4,15 +4,29 @@ import { useQuery } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, PaySlip } from "@/lib/api/hr";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Banknote, Download, FileText } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { cn } from "@/lib/utils/cn";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { toast } from "sonner";
+
+async function downloadPayslipPdf(id: number, periodName: string) {
+    try {
+        const response = await hrApi.payslips.downloadPdf(id);
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `payslip-${periodName.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+    } catch {
+        toast.error("Failed to download payslip PDF");
+    }
+}
 
 export default function MyPayslipsPage() {
     return (
@@ -75,13 +89,15 @@ function MyPayslipsContent() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", getStatusColor(slip.status))}>{slip.status}</Badge>
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); downloadPayslipPdf(slip.id, slip.period_name); }} aria-label="Download PDF">
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
                                                 <span className="text-sm font-bold text-success">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="px-4 pb-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                            // Earnings
                                             <Card className="border shadow-none">
                                                 <CardHeader className="py-2 px-3 bg-success/10/50 dark:bg-green-900/10 border-b">
                                                     <CardTitle className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">Earnings</CardTitle>
@@ -96,7 +112,6 @@ function MyPayslipsContent() {
                                                 </CardContent>
                                             </Card>
 
-                                            // Deductions
                                             <Card className="border shadow-none">
                                                 <CardHeader className="py-2 px-3 bg-destructive/10/50 dark:bg-red-900/10 border-b">
                                                     <CardTitle className="text-xs font-semibold text-destructive dark:text-red-400 uppercase">Deductions</CardTitle>

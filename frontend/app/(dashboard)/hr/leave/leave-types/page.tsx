@@ -25,7 +25,7 @@ import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function LeaveTypesPage() {
     return (
-        <PermissionPageGuard permission="view_hr">
+        <PermissionPageGuard permission="view_leave">
             <DynamicPageTitle title="Leave Types" />
             <LeaveTypesContent />
         </PermissionPageGuard>
@@ -87,9 +87,11 @@ function LeaveTypesContent() {
                         <Button variant="outline" asChild>
                             <Link href="/hr/leave"><ArrowLeft className="h-4 w-4 mr-2" />Back to Leave</Link>
                         </Button>
-                        <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-                            <Plus className="h-4 w-4 mr-2" />Add Leave Type
-                        </Button>
+                        <PermissionGuard permission="manage_leave">
+                            <Button onClick={() => { setEditing(null); setShowForm(true); }}>
+                                <Plus className="h-4 w-4 mr-2" />Add Leave Type
+                            </Button>
+                        </PermissionGuard>
                     </div>
                 }
             />
@@ -169,14 +171,16 @@ function LeaveTypesContent() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex gap-1 justify-end">
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(lt)} aria-label={`Edit leave type ${lt.name}`}>
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(lt)} aria-label={`Delete leave type ${lt.name}`}>
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
+                                            <PermissionGuard permission="manage_leave">
+                                                <div className="flex gap-1 justify-end">
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(lt)} aria-label={`Edit leave type ${lt.name}`}>
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(lt)} aria-label={`Delete leave type ${lt.name}`}>
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </PermissionGuard>
                                         </TableCell>
                                     </TableRow>
                                 ))

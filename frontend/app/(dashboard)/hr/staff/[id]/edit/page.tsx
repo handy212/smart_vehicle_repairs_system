@@ -31,6 +31,7 @@ import { branchesApi } from "@/lib/api/branches";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { getUserFacingError } from "@/lib/api/errors";
 
 const staffSchema = z.object({
@@ -74,6 +75,14 @@ const staffSchema = z.object({
 type StaffFormValues = z.infer<typeof staffSchema>;
 
 export default function EditStaffPage() {
+    return (
+        <PermissionPageGuard permission="manage_staff">
+            <EditStaffContent />
+        </PermissionPageGuard>
+    );
+}
+
+function EditStaffContent() {
     const params = useParams();
     const router = useRouter();
     const id = parseInt(params.id as string);

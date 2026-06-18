@@ -21,8 +21,17 @@ import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useToastStore } from "@/store/useToastStore";
 import { getUserFacingError } from "@/lib/api/errors";
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 
 export default function StaffDetailPage() {
+    return (
+        <PermissionPageGuard permission="view_staff">
+            <StaffDetailContent />
+        </PermissionPageGuard>
+    );
+}
+
+function StaffDetailContent() {
     const params = useParams();
     const router = useRouter();
     const id = parseInt(params.id as string);
