@@ -75,9 +75,9 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
     label: "Vendors & Purchases",
     icon: Truck,
     items: [
-      { name: "Vendor Centre", href: "/inventory/suppliers", permission: "view_inventory", module: "inventory", icon: Building2 },
-      { name: "Create Purchase Orders", href: "/inventory/purchase-orders/new", permission: "view_inventory", module: "inventory", icon: FilePlus2 },
-      { name: "Receive Inventory", href: "/inventory/purchase-orders", permission: "view_inventory", module: "inventory", icon: Package },
+      { name: "Vendor Centre", href: "/inventory/suppliers", permission: "view_suppliers", module: "inventory", icon: Building2 },
+      { name: "Create Purchase Orders", href: "/inventory/purchase-orders/new", permission: "create_purchase_orders", module: "inventory", icon: FilePlus2 },
+      { name: "Receive Inventory", href: "/inventory/purchase-orders", permission: "receive_parts", module: "inventory", icon: Package },
       { name: "Enter Bills", href: "/billing/bills/new", permission: "view_billing", module: "billing", icon: Receipt },
       { name: "Pay Bills", href: "/billing/bills", permission: "view_billing", module: "billing", icon: CreditCard },
       { name: "Vendor Credits", href: "/billing/vendor-credits", permission: "view_billing", module: "billing", icon: MinusSquare },
@@ -90,7 +90,7 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
     icon: Package,
     items: [
       { name: "Item List", href: "/inventory", permission: "view_inventory", module: "inventory", icon: Package },
-      { name: "Inventory Adjustments", href: "/inventory/physical-counts", permission: "view_inventory", module: "inventory", icon: ClipboardList },
+      { name: "Inventory Adjustments", href: "/inventory/physical-counts", permission: "manage_inventory", module: "inventory", icon: ClipboardList },
       { name: "Inventory Transfers", href: "/inventory/transfers", permission: "view_inventory", module: "inventory", icon: ArrowLeftRight },
       { name: "Stock Valuation", href: "/inventory/reports/accounting", permission: "view_inventory", module: "inventory", icon: PieChart },
       { name: "Reorder Reports", href: "/inventory/reorder-reports", permission: "view_inventory", module: "inventory", icon: AlertCircle },

@@ -106,7 +106,7 @@ export default function ServiceBundlesPage() {
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                    <PermissionGuard permission="manage_bundles">
+                    <PermissionGuard permission="manage_inventory">
                         <Link href="/inventory/bundles/new">
                             <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                                 <Plus className="w-4 h-4 mr-2" />
@@ -181,7 +181,7 @@ export default function ServiceBundlesPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-40">
-                                                        <PermissionGuard permission="manage_bundles">
+                                                        <PermissionGuard permission="manage_inventory">
                                                             <DropdownMenuItem asChild>
                                                                 <Link href={`/inventory/bundles/${bundle.id}/edit`} className="flex items-center cursor-pointer">
                                                                     <Edit className="w-4 h-4 mr-2" />
@@ -190,7 +190,7 @@ export default function ServiceBundlesPage() {
                                                             </DropdownMenuItem>
                                                         </PermissionGuard>
                                                         <DropdownMenuSeparator />
-                                                        <PermissionGuard permission="manage_bundles">
+                                                        <PermissionGuard permission="manage_inventory">
                                                             <DropdownMenuItem
                                                                 onClick={() => handleDelete(bundle.id)}
                                                                 className="text-destructive focus:text-destructive cursor-pointer"
@@ -215,7 +215,7 @@ export default function ServiceBundlesPage() {
                             <p className="text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
                                 Service bundles make it easy to add common parts to work orders in one click.
                             </p>
-                            <PermissionGuard permission="manage_bundles">
+                            <PermissionGuard permission="manage_inventory">
                                 <Link href="/inventory/bundles/new">
                                     <Button variant="outline" size="sm">
                                         <Plus className="w-3.5 h-3.5 mr-2" />

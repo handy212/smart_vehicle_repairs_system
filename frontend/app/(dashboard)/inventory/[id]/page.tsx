@@ -105,7 +105,8 @@ export default function PartDetailPage() {
 
   const stockStatus = getStockStatus();
   const partImageUrl = part.image ? getMediaUrl(part.image) : "";
-  const canEditPart = hasPermission("edit_inventory") || hasPermission("manage_inventory");
+  const canEditPart = hasPermission("edit_parts") || hasPermission("manage_inventory");
+  const canAdjustStock = hasPermission("adjust_inventory") || hasPermission("manage_inventory");
   const canDeletePart = hasAnyPermission(["delete_parts", "manage_inventory"]);
 
   return (
@@ -131,7 +132,7 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {canEditPart && (
+          {canAdjustStock && (
             <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
               <RotateCcw className="w-4 h-4 mr-2" />
               Adjust Stock

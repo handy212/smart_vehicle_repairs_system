@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, FileText, MoreVertical, Edit, Printer, Truck, X, Download, Upload, ChevronDown, CheckCircle, Clock, AlertTriangle, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -290,12 +291,14 @@ export default function PurchaseOrdersPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link href="/inventory/purchase-orders/new">
-            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-              <Plus className="w-4 h-4 mr-2" />
-              New PO
-            </Button>
-          </Link>
+          <PermissionGuard permission="create_purchase_orders">
+            <Link href="/inventory/purchase-orders/new">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
+                <Plus className="w-4 h-4 mr-2" />
+                New PO
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 

@@ -824,4 +824,14 @@ export const inventoryApi = {
     const response = await apiClient.post(`/inventory/physical-counts/${id}/add_item/`, data);
     return response.data;
   },
+
+  stockAlerts: {
+    list: (params?: { status?: string; alert_type?: string; severity?: string; branch?: number }) =>
+      apiClient.get("/inventory/stock-alerts/", { params }),
+    active: () => apiClient.get("/inventory/stock-alerts/active/"),
+    stats: () => apiClient.get("/inventory/stock-alerts/stats/"),
+    acknowledge: (id: number) => apiClient.post(`/inventory/stock-alerts/${id}/acknowledge/`),
+    resolve: (id: number) => apiClient.post(`/inventory/stock-alerts/${id}/resolve/`),
+    dismiss: (id: number) => apiClient.post(`/inventory/stock-alerts/${id}/dismiss/`),
+  },
 };

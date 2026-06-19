@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -49,6 +50,21 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
     { label: "Total Categories", value: stats.total_categories, icon: FolderTree, color: "text-primary" },
   ];
 
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {items.map((item) => (
+        <Card key={item.label} className="border shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</p>
+              <p className="text-2xl font-bold mt-1">{item.value}</p>
+            </div>
+            <item.icon className={`h-8 w-8 ${item.color}`} />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 };
 
 export default function PartCategoriesPage() {
@@ -182,12 +198,14 @@ export default function PartCategoriesPage() {
                     </DropdownMenuContent>
                 </DropdownMenu>
                 */}
-          <Link href="/inventory/categories/new">
-            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-              <Plus className="w-4 h-4 mr-2" />
-              New Category
-            </Button>
-          </Link>
+          <PermissionGuard permission="manage_categories">
+            <Link href="/inventory/categories/new">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
+                <Plus className="w-4 h-4 mr-2" />
+                New Category
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -244,7 +262,8 @@ export default function PartCategoriesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="px-4 py-2 text-right">
-                        <DropdownMenu>
+                        <PermissionGuard permission="manage_categories">
+                          <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground">
                               <MoreVertical className="w-3.5 h-3.5" />
@@ -267,7 +286,8 @@ export default function PartCategoriesPage() {
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
+                          </DropdownMenu>
+                        </PermissionGuard>
                       </TableCell>
                     </TableRow>
                   ))}
