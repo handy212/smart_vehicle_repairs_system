@@ -293,6 +293,8 @@ export default function PurchaseOrderDetailPage() {
   const canEditPurchaseOrder =
     (hasPermission("edit_purchase_orders") || hasPermission("manage_inventory")) &&
     purchaseOrder.status === "draft";
+  const canReceiveItems =
+    (hasPermission("receive_parts") || hasPermission("manage_inventory")) && isBranchUser;
   const canDeletePurchaseOrder =
     hasPermission("manage_inventory") &&
     ["draft", "rejected", "cancelled"].includes(purchaseOrder.status);
@@ -467,7 +469,7 @@ export default function PurchaseOrderDetailPage() {
             </Button>
           )}
 
-          {["confirmed", "partially_received"].includes(purchaseOrder.status) && isBranchUser && (
+          {["confirmed", "partially_received"].includes(purchaseOrder.status) && canReceiveItems && (
             <ReceiveItemsDialog
               purchaseOrder={purchaseOrder}
               triggerLabel={purchaseOrder.status === 'partially_received' ? "Receive Remaining" : "Receive Items"}

@@ -1,5 +1,5 @@
 import type { NavGroup } from "./nav-group-types";
-import { STORES_QUOTATION_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
+import { PARTS_REQUESTS_VIEW_PERMISSIONS, STORES_QUOTATION_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 import { ACCOUNTING_NAV_GROUPS } from "./accounting-nav-config";
 import {
   Activity,
@@ -73,6 +73,8 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_inventory", icon: FileText },
         { name: "Transfers", href: "/inventory/transfers", permission: "view_inventory", icon: ArrowLeftRight },
         { name: "Physical Counts", href: "/inventory/physical-counts", permission: "view_inventory", icon: ClipboardList },
+        { name: "Stock Alerts", href: "/inventory/alerts", permission: "view_low_stock_alerts", icon: AlertCircle },
+        { name: "Parts Requests", href: "/inventory/parts-requests", permissions: [...PARTS_REQUESTS_VIEW_PERMISSIONS], icon: Inbox },
       ],
     },
     {

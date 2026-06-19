@@ -72,9 +72,9 @@ export default function SuppliersPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission, hasAnyPermission } = usePermissions();
-  const canCreateSupplier = hasPermission("create_inventory") || hasPermission("manage_inventory");
-  const canEditSupplier = hasPermission("edit_inventory") || hasPermission("manage_inventory");
-  const canDeleteSupplier = hasAnyPermission(["delete_inventory", "manage_inventory"]);
+  const canCreateSupplier = hasPermission("manage_suppliers") || hasPermission("manage_inventory");
+  const canEditSupplier = hasPermission("manage_suppliers") || hasPermission("manage_inventory");
+  const canDeleteSupplier = hasAnyPermission(["manage_suppliers", "manage_inventory"]);
 
   const handleSort = (field: string) => {
     setSortConfig((current) => toggleSortConfig(current, field));

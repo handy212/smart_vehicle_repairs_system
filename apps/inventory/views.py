@@ -2,7 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+import logging
 from apps.accounts.permissions import (
+    HasAnyPermission,
     HasPermission,
     IsModuleEnabled,
     user_can_access_all_branches,
@@ -48,6 +50,18 @@ from .serializers import (
 )
 from .services import InventoryService
 from .filters import StockItemFilter
+
+logger = logging.getLogger(__name__)
+
+PART_STOCK_MUTATION_ACTIONS = frozenset({
+    'adjust', 'bulk_adjust', 'reserve', 'release_reservation',
+})
+PART_IMPORT_ACTIONS = frozenset({'import_excel', 'import_csv'})
+PART_REPORT_ACTIONS = frozenset({
+    'dashboard_stats', 'low_stock', 'out_of_stock', 'inventory_value',
+    'inventory_accounting_report', 'stock_movement_report', 'turnover_report',
+    'abc_analysis', 'multi_location_stock', 'stock_by_location', 'transaction_history',
+})
 
 
 class PartCategoryViewSet(viewsets.ModelViewSet):
@@ -123,6 +137,12 @@ class SupplierViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_suppliers')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_suppliers')]
+        elif self.action in ['activate', 'deactivate', 'preferred', 'parts_list', 'purchase_orders_list', 'dashboard_stats']:
+            if self.action in ['activate', 'deactivate']:
+                return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_suppliers')]
+            if self.action == 'preferred':
+                return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_suppliers')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
         return [IsAuthenticated(), IsModuleEnabled('inventory')]
     
     """
@@ -231,15 +251,22 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
-        elif self.action == 'create':
-            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('create_parts')]
-        elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('edit_parts')]
-        elif self.action == 'destroy':
-            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('delete_parts')]
-        return [IsAuthenticated(), IsModuleEnabled('inventory')]
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_inventory')()]
+        if self.action == 'create':
+            return base + [HasPermission('create_parts')()]
+        if self.action in ('update', 'partial_update'):
+            return base + [HasPermission('edit_parts')()]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_parts')()]
+        if self.action in PART_STOCK_MUTATION_ACTIONS:
+            return base + [HasAnyPermission(['adjust_inventory', 'manage_inventory'])()]
+        if self.action in PART_IMPORT_ACTIONS:
+            return base + [HasAnyPermission(['import_inventory', 'manage_inventory'])()]
+        if self.action in PART_REPORT_ACTIONS:
+            return base + [HasAnyPermission(['view_inventory_reports', 'view_inventory'])()]
+        return base
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = [
         'category', 'is_active', 'manufacturer', 'preferred_supplier', 'is_taxable', 'is_core'
@@ -352,7 +379,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                         category_name = row.get('category', '').strip()
                         category, _ = PartCategory.objects.get_or_create(
                             name=category_name,
-                            defaults={'created_by': request.user, 'is_active': True}
+                            defaults={'is_active': True}
                         )
                     
                     # Parse numeric fields
@@ -1333,14 +1360,12 @@ class ServicePackageViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return action_permission_instances(
-            'inventory', self.action, view_code='view_inventory',
-            manage_code='manage_inventory', request=self.request,
-        )
+            return base + [HasPermission('view_inventory')()]
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return base + [HasPermission('manage_inventory')()]
+        return base
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'description']
@@ -1981,14 +2006,26 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'receive']:
-            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_inventory')]
-        return [IsAuthenticated(), IsModuleEnabled('inventory')]
+            return base + [HasPermission('view_inventory')()]
+        if self.action == 'receive':
+            return base + [HasAnyPermission(['receive_parts', 'manage_inventory'])()]
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return base + [HasPermission('manage_inventory')()]
+        return base
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['purchase_order', 'part']
     ordering = ['id']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup='purchase_order__branch',
+        )
 
     @action(detail=True, methods=['post'])
     def receive(self, request, pk=None):
@@ -2116,11 +2153,22 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        return [IsAuthenticated(), HasPermission('view_inventory')]
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
+        if self.action in ['recent', 'by_date_range', 'list', 'retrieve']:
+            return base + [HasPermission('view_inventory')()]
+        return base
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['part', 'transaction_type', 'purchase_order', 'work_order']
     ordering_fields = ['transaction_date', 'created_at']
     ordering = ['-transaction_date']
+
+    def get_queryset(self):
+        return filter_queryset_for_user_branches(
+            super().get_queryset(),
+            self.request.user,
+            self.request,
+            branch_lookup='branch',
+        )
 
     @action(detail=False, methods=['get'])
     def recent(self, request):
@@ -2147,7 +2195,7 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        transactions = self.queryset.filter(
+        transactions = self.get_queryset().filter(
             transaction_date__date__gte=start_date,
             transaction_date__date__lte=end_date
         )
@@ -2166,14 +2214,12 @@ class StockItemViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return action_permission_instances(
-            'inventory', self.action, view_code='view_inventory',
-            manage_code='manage_inventory', request=self.request,
-        )
+            return base + [HasPermission('view_inventory')()]
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return base + [HasPermission('manage_inventory')()]
+        return base
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = StockItemFilter
     search_fields = ['part__part_number', 'part__name', 'bin_location']
@@ -2208,15 +2254,12 @@ class TransferViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive', 'submit_for_approval', 'reject']:
-            return [IsAuthenticated(), HasPermission('transfer_inventory')]
-        return action_permission_instances(
-            'inventory', self.action, view_code='view_inventory',
-            edit_code='transfer_inventory', manage_code='manage_inventory',
-            request=self.request,
-        )
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
+        if self.action in ['list', 'retrieve', 'pdf']:
+            return base + [HasPermission('view_inventory')()]
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive', 'submit_for_approval', 'reject']:
+            return base + [HasAnyPermission(['transfer_inventory', 'manage_inventory'])()]
+        return base
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'source_branch', 'destination_branch']
     ordering_fields = [
@@ -2409,14 +2452,12 @@ class StockAlertViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['update', 'partial_update', 'acknowledge', 'resolve', 'dismiss']:
-            return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return action_permission_instances(
-            'inventory', self.action, view_code='view_inventory',
-            manage_code='manage_inventory', request=self.request,
-        )
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
+        if self.action in ['list', 'retrieve', 'active', 'critical', 'stats']:
+            return base + [HasAnyPermission(['view_low_stock_alerts', 'view_inventory'])()]
+        if self.action in ['update', 'partial_update', 'acknowledge', 'resolve', 'dismiss', 'check_all']:
+            return base + [HasPermission('manage_inventory')()]
+        return base
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'alert_type', 'severity', 'branch', 'part']
@@ -2438,8 +2479,8 @@ class StockAlertViewSet(viewsets.ModelViewSet):
         # Filter by accessible branches
         from apps.branches.utils import get_user_accessible_branches
         accessible_branches = get_user_accessible_branches(user)
-        
-        if user_has_permission(user, 'manage_inventory'):
+
+        if user_can_access_all_branches(user):
             return queryset
 
         return queryset.filter(branch__in=accessible_branches)
@@ -2553,14 +2594,12 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['create', 'update', 'partial_update', 'start', 'complete', 'cancel']:
-            return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return action_permission_instances(
-            'inventory', self.action, view_code='view_inventory',
-            manage_code='manage_inventory', request=self.request,
-        )
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
+        if self.action in ['list', 'retrieve', 'discrepancies', 'unreconciled', 'print_count_sheet']:
+            return base + [HasPermission('view_inventory')()]
+        if self.action in ['create', 'update', 'partial_update', 'start', 'complete', 'cancel', 'add_item']:
+            return base + [HasPermission('manage_inventory')()]
+        return base
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'branch', 'count_date']
@@ -2582,10 +2621,10 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
         # Filter by accessible branches
         from apps.branches.utils import get_user_accessible_branches
         accessible_branches = get_user_accessible_branches(user)
-        
-        if user_has_permission(user, 'manage_inventory'):
+
+        if user_can_access_all_branches(user):
             return queryset
-            
+
         return queryset.filter(branch__in=accessible_branches)
 
     def perform_create(self, serializer):
@@ -2733,14 +2772,12 @@ class PhysicalCountItemViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        base = [IsAuthenticated(), IsModuleEnabled('inventory')]
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['update', 'partial_update', 'reconcile']:
-            return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return action_permission_instances(
-            'inventory', self.action, view_code='view_inventory',
-            manage_code='manage_inventory', request=self.request,
-        )
+            return base + [HasPermission('view_inventory')()]
+        if self.action in ['create', 'update', 'partial_update', 'reconcile', 'bulk_reconcile']:
+            return base + [HasPermission('manage_inventory')()]
+        return base
     
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['session', 'part', 'reconciled']
@@ -2762,10 +2799,10 @@ class PhysicalCountItemViewSet(viewsets.ModelViewSet):
         # Filter by accessible branches through session
         from apps.branches.utils import get_user_accessible_branches
         accessible_branches = get_user_accessible_branches(user)
-        
-        if user_has_permission(user, 'manage_inventory'):
+
+        if user_can_access_all_branches(user):
             return queryset
-        
+
         return queryset.filter(session__branch__in=accessible_branches)
     
     @action(detail=True, methods=['post'])

@@ -365,6 +365,7 @@ class Manager(AbstractUserRole):
         'manage_inventory': True,
         'view_inventory_reports': True,
         'adjust_inventory': True,
+        'transfer_inventory': True,
         'manage_suppliers': True,
         'view_suppliers': True,
         'create_purchase_orders': True,

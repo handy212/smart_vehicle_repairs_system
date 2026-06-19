@@ -4,7 +4,7 @@ from .views import (
     PartCategoryViewSet, SupplierViewSet, PartViewSet,
     PurchaseOrderViewSet, PurchaseOrderItemViewSet, InventoryTransactionViewSet,
     ServicePackageViewSet, StockItemViewSet, TransferViewSet, ServiceBundleViewSet,
-    PhysicalCountSessionViewSet, PhysicalCountItemViewSet,
+    PhysicalCountSessionViewSet, PhysicalCountItemViewSet, StockAlertViewSet,
 )
 from . import report_views
 
@@ -21,6 +21,7 @@ router.register(r'transfers', TransferViewSet, basename='transfer')
 router.register(r'service-bundles', ServiceBundleViewSet, basename='servicebundle')
 router.register(r'physical-counts', PhysicalCountSessionViewSet, basename='physicalcountsession')
 router.register(r'physical-count-items', PhysicalCountItemViewSet, basename='physicalcountitem')
+router.register(r'stock-alerts', StockAlertViewSet, basename='stockalert')
 
 urlpatterns = [
     path('reports/availability-top-100/', report_views.availability_top_100, name='availability-top-100'),

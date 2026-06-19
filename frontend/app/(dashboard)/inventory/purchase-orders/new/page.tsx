@@ -1,5 +1,6 @@
 "use client";
 
+import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +34,14 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function NewPurchaseOrderPage() {
+    return (
+        <PermissionPageGuard permission="create_purchase_orders">
+            <NewPurchaseOrderContent />
+        </PermissionPageGuard>
+    );
+}
+
+function NewPurchaseOrderContent() {
     const router = useRouter();
     const { toast } = useToast();
     const queryClient = useQueryClient();
