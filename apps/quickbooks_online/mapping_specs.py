@@ -58,14 +58,25 @@ MAPPING_KIND_INVOICE_LINE = 'invoice_line_type'
 MAPPING_KIND_PAYMENT_METHOD = 'payment_method'
 MAPPING_KIND_VENDOR_PAYMENT_METHOD = 'vendor_payment_method'
 MAPPING_KIND_BILL_LINE = 'bill_line_kind'
+MAPPING_KIND_TAX_CODE = 'tax_code'
 
-# Invoice lines map to QBO Items; everything else maps to QBO Accounts.
+TAX_CODE_LABELS = {
+    'composite': 'Composite sales tax (all levies)',
+    'vat': 'VAT',
+    'nhil': 'NHIL',
+    'getfund': 'GETFund levy',
+    'hrl': 'Health Recovery Levy (HRL)',
+}
+
+# Invoice lines map to QBO Items; tax codes use qbo_account_id to store TaxCode.Id.
 ITEM_MAPPING_KINDS = {MAPPING_KIND_INVOICE_LINE}
+TAX_CODE_MAPPING_KINDS = {MAPPING_KIND_TAX_CODE}
 ACCOUNT_MAPPING_KINDS = {
     MAPPING_KIND_CONTROL,
     MAPPING_KIND_PAYMENT_METHOD,
     MAPPING_KIND_VENDOR_PAYMENT_METHOD,
     MAPPING_KIND_BILL_LINE,
+    MAPPING_KIND_TAX_CODE,
 }
 
 
@@ -79,6 +90,7 @@ def all_mapping_rows():
             'label': CONTROL_ACCOUNT_LABELS.get(field_name, field_name),
             'group': CONTROL_ACCOUNT_GROUPS.get(field_name, 'Control Accounts'),
             'uses_item': False,
+            'uses_tax_code': False,
             'control_field': field_name,
         })
 
@@ -89,6 +101,7 @@ def all_mapping_rows():
             'label': label,
             'group': 'Invoice Line Types',
             'uses_item': True,
+            'uses_tax_code': False,
             'control_field': None,
         })
 
@@ -99,6 +112,7 @@ def all_mapping_rows():
             'label': label,
             'group': 'Customer Payment Methods',
             'uses_item': False,
+            'uses_tax_code': False,
             'control_field': None,
         })
 
@@ -109,6 +123,7 @@ def all_mapping_rows():
             'label': label,
             'group': 'Vendor Payment Methods',
             'uses_item': False,
+            'uses_tax_code': False,
             'control_field': None,
         })
 
@@ -119,6 +134,18 @@ def all_mapping_rows():
             'label': label,
             'group': 'Purchase Order / Bill Lines',
             'uses_item': False,
+            'uses_tax_code': False,
+            'control_field': None,
+        })
+
+    for key, label in TAX_CODE_LABELS.items():
+        rows.append({
+            'mapping_kind': MAPPING_KIND_TAX_CODE,
+            'mapping_key': key,
+            'label': label,
+            'group': 'Sales Tax Codes',
+            'uses_item': False,
+            'uses_tax_code': True,
             'control_field': None,
         })
 

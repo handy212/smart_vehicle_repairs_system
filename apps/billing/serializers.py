@@ -305,7 +305,7 @@ class EstimateListSerializer(serializers.ModelSerializer):
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
 
 
-class EstimateDetailSerializer(serializers.ModelSerializer):
+class EstimateDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Serializer for estimate details"""
     
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
@@ -333,6 +333,8 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     days_until_expiration = serializers.IntegerField(read_only=True)
     can_be_approved = serializers.BooleanField(read_only=True)
     can_be_converted = serializers.BooleanField(read_only=True)
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
     
     class Meta:
         model = Estimate
@@ -355,8 +357,21 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'created_by', 'created_by_name',
             'approved_by', 'approved_by_name',
             'sent_by', 'sent_by_name', 'sent_at',
-            'viewed_at', 'created_at', 'updated_at'
+            'viewed_at', 'created_at', 'updated_at',
+            'qbo_sync_status', 'qbo_sync_error',
         ]
+    
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
@@ -1704,7 +1719,7 @@ class CreditNoteListSerializer(serializers.ModelSerializer):
         extra_kwargs = {'amount': {'source': 'total', 'read_only': True}}
 
 
-class CreditNoteDetailSerializer(serializers.ModelSerializer):
+class CreditNoteDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Serializer for credit note details"""
     
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
@@ -1712,6 +1727,8 @@ class CreditNoteDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     line_items = CreditNoteLineItemSerializer(many=True, read_only=True)
     applications = CreditNoteApplicationSerializer(many=True, read_only=True)
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
 
     class Meta:
         model = CreditNote
@@ -1721,8 +1738,21 @@ class CreditNoteDetailSerializer(serializers.ModelSerializer):
             'subtotal', 'tax_amount', 'total', 'unused_amount',
             'reason', 'notes', 'internal_notes',
             'line_items', 'applications',
-            'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'created_at', 'updated_at',
+            'qbo_sync_status', 'qbo_sync_error',
         ]
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
 
 
 class CreditNoteCreateSerializer(serializers.ModelSerializer):

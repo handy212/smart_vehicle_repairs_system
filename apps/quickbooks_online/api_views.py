@@ -10,7 +10,8 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
 from apps.quickbooks_online.mapping_services import get_account_mapping_service
-from apps.quickbooks_online.models import QBOMapping
+from apps.quickbooks_online.models import QBOMapping, QBOSyncLog
+from apps.quickbooks_online.serializers import QBOSyncLogSerializer
 from apps.quickbooks_online.services import QuickBooksService
 from apps.quickbooks_online import tasks as qbo_tasks
 
@@ -63,6 +64,22 @@ OUTBOUND_SYNC_ENTITIES = {
         'task_name': 'task_sync_branch_to_qbo',
         'service_method': 'sync_branch',
     },
+    'estimate': {
+        'app_label': 'billing',
+        'model_name': 'Estimate',
+        'module': 'billing',
+        'permission': 'view_billing',
+        'task_name': 'task_sync_estimate_to_qbo',
+        'service_method': 'sync_estimate',
+    },
+    'credit_note': {
+        'app_label': 'billing',
+        'model_name': 'CreditNote',
+        'module': 'billing',
+        'permission': 'view_billing',
+        'task_name': 'task_sync_credit_note_to_qbo',
+        'service_method': 'sync_credit_note',
+    },
 }
 
 
@@ -113,6 +130,58 @@ class QBOItemsListView(QBOConnectedMixin, APIView):
         if error:
             return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'items': items, 'is_connected': True})
+
+
+class QBOTaxCodesListView(QBOConnectedMixin, APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('view_accounting'),
+    ]
+
+    def get(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+        tax_codes, error = get_account_mapping_service().list_tax_codes()
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'tax_codes': tax_codes, 'is_connected': True})
+
+
+class QBOSyncLogsListView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('view_accounting'),
+    ]
+
+    def get(self, request):
+        queryset = QBOSyncLog.objects.select_related('triggered_by').order_by('-started_at')
+
+        entity_type = request.query_params.get('entity_type')
+        if entity_type:
+            queryset = queryset.filter(entity_type=entity_type)
+
+        direction = request.query_params.get('direction')
+        if direction:
+            queryset = queryset.filter(direction=direction)
+
+        log_status = request.query_params.get('status')
+        if log_status:
+            queryset = queryset.filter(status=log_status)
+
+        try:
+            limit = min(int(request.query_params.get('limit', 50)), 200)
+        except (TypeError, ValueError):
+            limit = 50
+
+        logs = queryset[:limit]
+        serializer = QBOSyncLogSerializer(logs, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+        })
 
 
 class QBOAccountMappingsView(QBOConnectedMixin, APIView):

@@ -11,6 +11,8 @@ try:
     from quickbooks import QuickBooks
     from quickbooks.objects.customer import Customer as QBCustomer
     from quickbooks.objects.invoice import Invoice as QBInvoice
+    from quickbooks.objects.estimate import Estimate as QBEstimate
+    from quickbooks.objects.creditmemo import CreditMemo as QBCreditMemo
     from quickbooks.objects.payment import Payment as QBPayment, PaymentLine
     from quickbooks.objects.base import Ref, LinkedTxn
     from quickbooks.objects.detailline import DetailLine, SalesItemLineDetail
@@ -19,12 +21,15 @@ try:
     from quickbooks.objects.bill import Bill as QBBill
     from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
     from quickbooks.objects.detailline import AccountBasedExpenseLineDetail
+    from quickbooks.objects.tax import TxnTaxDetail
 except ModuleNotFoundError as exc:
     if exc.name != "quickbooks":
         raise
     QuickBooks = None
     QBCustomer = None
     QBInvoice = None
+    QBEstimate = None
+    QBCreditMemo = None
     QBPayment = None
     PaymentLine = None
     Ref = None
@@ -36,6 +41,7 @@ except ModuleNotFoundError as exc:
     QBBill = None
     ItemBasedExpenseLineDetail = None
     AccountBasedExpenseLineDetail = None
+    TxnTaxDetail = None
 
 try:
     from intuitlib.client import AuthClient
@@ -493,6 +499,73 @@ class QuickBooksService:
         ).delete()
         return deleted > 0
 
+    def _get_mapping_service(self):
+        try:
+            from .mapping_services import get_account_mapping_service
+            return get_account_mapping_service()
+        except Exception:
+            return None
+
+    def _build_sales_item_lines(self, line_items, *, item_type_attr='item_type'):
+        lines = []
+        mapping_service = self._get_mapping_service()
+        for item in line_items:
+            line = DetailLine()
+            line.Amount = float(item.total)
+            line.DetailType = "SalesItemLineDetail"
+            item_type = getattr(item, item_type_attr, 'other')
+            line.Description = item.description or f"{str(item_type).title()} Item"
+
+            sales_item = SalesItemLineDetail()
+            sales_item.Qty = float(item.quantity)
+            sales_item.UnitPrice = float(item.unit_price)
+            if mapping_service and Ref is not None:
+                qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type)
+                if qbo_item_id:
+                    sales_item.ItemRef = Ref()
+                    sales_item.ItemRef.value = qbo_item_id
+            line.SalesItemLineDetail = sales_item
+            lines.append(line)
+        return lines
+
+    def _apply_mapped_tax(self, qb_txn, local_obj):
+        mapping_service = self._get_mapping_service()
+        if not mapping_service or TxnTaxDetail is None or Ref is None:
+            return
+        tax_amount = float(getattr(local_obj, 'tax_amount', 0) or 0)
+        if tax_amount <= 0:
+            return
+        tax_code_id = mapping_service.resolve_tax_code_id('composite')
+        if not tax_code_id:
+            return
+        qb_txn.TxnTaxDetail = TxnTaxDetail()
+        qb_txn.TxnTaxDetail.TxnTaxCodeRef = Ref()
+        qb_txn.TxnTaxDetail.TxnTaxCodeRef.value = tax_code_id
+        if hasattr(qb_txn, 'GlobalTaxCalculation'):
+            qb_txn.GlobalTaxCalculation = 'TaxExcluded'
+
+    def _apply_department_ref(self, qb_txn, branch):
+        if not branch:
+            return
+        qb_dept = self.sync_branch(branch)
+        if qb_dept and Ref is not None:
+            qb_txn.DepartmentRef = Ref()
+            qb_txn.DepartmentRef.value = qb_dept.Id
+
+    def _update_qbo_mapping(self, local_obj, qb_obj, *, error=None):
+        defaults = {
+            'status': 'failed' if error else 'synced',
+            'error_message': error or '',
+        }
+        if qb_obj and not error:
+            defaults['qbo_id'] = qb_obj.Id
+            defaults['qbo_sync_token'] = qb_obj.SyncToken
+        QBOMapping.objects.update_or_create(
+            content_type=ContentType.objects.get_for_model(local_obj),
+            object_id=local_obj.id,
+            defaults=defaults,
+        )
+
     def sync_invoice(self, local_invoice):
         """
         Sync a local Invoice to QBO.
@@ -541,39 +614,21 @@ class QuickBooksService:
         if local_invoice.notes:
             qb_invoice.PrivateNote = local_invoice.notes
             
-        # Map Branch/Department
-        if local_invoice.branch:
-            qb_dept = self.sync_branch(local_invoice.branch)
-            if qb_dept:
-                qb_invoice.DepartmentRef = Ref()
-                qb_invoice.DepartmentRef.value = qb_dept.Id
-            
-        # Map Line Items
-        qb_invoice.Line = []
-        mapping_service = None
-        try:
-            from .mapping_services import get_account_mapping_service
-            mapping_service = get_account_mapping_service()
-        except Exception:
-            mapping_service = None
-        
-        for item in local_invoice.line_items.all():
-            line = DetailLine()
-            line.Amount = float(item.total)
-            line.DetailType = "SalesItemLineDetail"
-            line.Description = item.description or f"{item.item_type.title()} Item"
-            
-            sales_item = SalesItemLineDetail()
-            sales_item.Qty = float(item.quantity)
-            sales_item.UnitPrice = float(item.unit_price)
-            if mapping_service and Ref is not None:
-                qbo_item_id = mapping_service.resolve_invoice_line_item_id(item.item_type)
-                if qbo_item_id:
-                    sales_item.ItemRef = Ref()
-                    sales_item.ItemRef.value = qbo_item_id
-            line.SalesItemLineDetail = sales_item
-            
-            qb_invoice.Line.append(line)
+        self._apply_department_ref(qb_invoice, local_invoice.branch)
+
+        qb_invoice.Line = self._build_sales_item_lines(local_invoice.line_items.all())
+        self._apply_mapped_tax(qb_invoice, local_invoice)
+
+        if local_invoice.estimate_id and LinkedTxn is not None:
+            estimate_mapping = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(local_invoice.estimate),
+                object_id=local_invoice.estimate_id,
+            ).first()
+            if estimate_mapping and estimate_mapping.qbo_id:
+                linked = LinkedTxn()
+                linked.TxnId = estimate_mapping.qbo_id
+                linked.TxnType = 'Estimate'
+                qb_invoice.LinkedTxn = [linked]
             
         # Save
         try:
@@ -601,6 +656,157 @@ class QuickBooksService:
                     'error_message': str(e)
                 }
             )
+            return None
+
+    def sync_estimate(self, local_estimate):
+        """Sync a local Estimate to QBO."""
+        client = self.get_client()
+        if not client:
+            self._update_qbo_mapping(
+                local_estimate,
+                None,
+                error='QuickBooks not connected or unauthorized.',
+            )
+            return None
+
+        if QBEstimate is None:
+            self._update_qbo_mapping(local_estimate, None, error=_quickbooks_sdk_message())
+            return None
+
+        qb_customer = self.sync_customer(local_estimate.customer)
+        if not qb_customer:
+            logger.error(
+                'Cannot sync estimate %s: Customer sync failed.',
+                local_estimate.estimate_number,
+            )
+            return None
+
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_estimate),
+            object_id=local_estimate.id,
+        ).first()
+
+        qb_estimate = QBEstimate()
+        if mapping and mapping.qbo_id:
+            try:
+                qb_estimate = QBEstimate.get(int(mapping.qbo_id), qb=client)
+            except Exception:
+                qb_estimate = QBEstimate()
+
+        qb_estimate.CustomerRef = Ref()
+        qb_estimate.CustomerRef.value = qb_customer.Id
+        qb_estimate.DocNumber = local_estimate.estimate_number
+        qb_estimate.TxnDate = local_estimate.estimate_date.isoformat()
+        if local_estimate.valid_until:
+            qb_estimate.ExpirationDate = local_estimate.valid_until.isoformat()
+        if local_estimate.notes:
+            qb_estimate.PrivateNote = local_estimate.notes
+        if local_estimate.customer_notes:
+            qb_estimate.CustomerMemo = {'value': local_estimate.customer_notes}
+
+        self._apply_department_ref(qb_estimate, local_estimate.branch)
+        qb_estimate.Line = self._build_sales_item_lines(local_estimate.line_items.all())
+        self._apply_mapped_tax(qb_estimate, local_estimate)
+
+        try:
+            self._save_qb(qb_estimate, client)
+            self._update_qbo_mapping(local_estimate, qb_estimate)
+            return qb_estimate
+        except Exception as exc:
+            logger.error('QBO Estimate Sync Error: %s', exc)
+            self._update_qbo_mapping(local_estimate, None, error=str(exc))
+            return None
+
+    def sync_credit_note(self, local_credit_note):
+        """Sync a local CreditNote to QBO as a Credit Memo."""
+        client = self.get_client()
+        if not client:
+            self._update_qbo_mapping(
+                local_credit_note,
+                None,
+                error='QuickBooks not connected or unauthorized.',
+            )
+            return None
+
+        if QBCreditMemo is None:
+            self._update_qbo_mapping(local_credit_note, None, error=_quickbooks_sdk_message())
+            return None
+
+        if local_credit_note.status not in ('issued', 'applied', 'refunded'):
+            logger.info(
+                'Skipping QBO sync for credit note %s in status %s',
+                local_credit_note.credit_note_number,
+                local_credit_note.status,
+            )
+            return None
+
+        qb_customer = self.sync_customer(local_credit_note.customer)
+        if not qb_customer:
+            logger.error(
+                'Cannot sync credit note %s: Customer sync failed.',
+                local_credit_note.credit_note_number,
+            )
+            return None
+
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_credit_note),
+            object_id=local_credit_note.id,
+        ).first()
+
+        qb_credit_memo = QBCreditMemo()
+        if mapping and mapping.qbo_id:
+            try:
+                qb_credit_memo = QBCreditMemo.get(int(mapping.qbo_id), qb=client)
+            except Exception:
+                qb_credit_memo = QBCreditMemo()
+
+        qb_credit_memo.CustomerRef = Ref()
+        qb_credit_memo.CustomerRef.value = qb_customer.Id
+        qb_credit_memo.DocNumber = local_credit_note.credit_note_number
+        qb_credit_memo.TxnDate = local_credit_note.credit_date.isoformat()
+        if local_credit_note.reason:
+            qb_credit_memo.PrivateNote = local_credit_note.reason
+        if local_credit_note.notes:
+            qb_credit_memo.CustomerMemo = {'value': local_credit_note.notes}
+
+        self._apply_department_ref(qb_credit_memo, local_credit_note.branch)
+
+        qb_credit_memo.Line = []
+        for item in local_credit_note.line_items.all():
+            line = DetailLine()
+            line.Amount = float(item.total)
+            line.DetailType = "SalesItemLineDetail"
+            line.Description = item.description
+            sales_item = SalesItemLineDetail()
+            sales_item.Qty = float(item.quantity)
+            sales_item.UnitPrice = float(item.unit_price)
+            line.SalesItemLineDetail = sales_item
+            qb_credit_memo.Line.append(line)
+
+        self._apply_mapped_tax(qb_credit_memo, local_credit_note)
+
+        if local_credit_note.invoice_id and LinkedTxn is not None:
+            invoice_mapping = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(local_credit_note.invoice),
+                object_id=local_credit_note.invoice_id,
+            ).first()
+            qb_invoice_id = invoice_mapping.qbo_id if invoice_mapping else None
+            if not qb_invoice_id and local_credit_note.invoice:
+                qb_invoice = self.sync_invoice(local_credit_note.invoice)
+                qb_invoice_id = qb_invoice.Id if qb_invoice else None
+            if qb_invoice_id:
+                linked = LinkedTxn()
+                linked.TxnId = qb_invoice_id
+                linked.TxnType = 'Invoice'
+                qb_credit_memo.LinkedTxn = [linked]
+
+        try:
+            self._save_qb(qb_credit_memo, client)
+            self._update_qbo_mapping(local_credit_note, qb_credit_memo)
+            return qb_credit_memo
+        except Exception as exc:
+            logger.error('QBO Credit Memo Sync Error: %s', exc)
+            self._update_qbo_mapping(local_credit_note, None, error=str(exc))
             return None
 
     def sync_payment(self, local_payment):

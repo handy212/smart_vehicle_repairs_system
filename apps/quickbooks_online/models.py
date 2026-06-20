@@ -88,7 +88,16 @@ class QBOSyncLog(models.Model):
         ('vendor', 'Vendors (Suppliers)'),
         ('invoice', 'Invoices'),
         ('bill', 'Bills (Purchase Orders)'),
+        ('estimate', 'Estimates'),
+        ('credit_memo', 'Credit Memos'),
+        ('payment', 'Payments'),
+        ('customer', 'Customers'),
         ('all', 'Full Inbound Sync'),
+    ]
+
+    DIRECTION_CHOICES = [
+        ('inbound', 'Inbound (QBO → SVR)'),
+        ('outbound', 'Outbound (SVR → QBO)'),
     ]
 
     STATUS_CHOICES = [
@@ -98,6 +107,7 @@ class QBOSyncLog(models.Model):
     ]
 
     entity_type = models.CharField(max_length=20, choices=ENTITY_TYPES)
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default='inbound')
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     records_pulled = models.IntegerField(default=0, help_text="Total records fetched from QBO")
@@ -136,6 +146,7 @@ class QBOAccountMapping(models.Model):
         ('vendor_payment_method', 'Vendor Payment Method'),
         ('bill_line_kind', 'Bill Line Kind'),
         ('svr_account', 'SVR GL Account'),
+        ('tax_code', 'Tax Code'),
     ]
 
     STATUS_CHOICES = [

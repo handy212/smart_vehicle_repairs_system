@@ -2,7 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from apps.customers.models import Customer
-from apps.billing.models import Invoice, Payment
+from apps.billing.models import Invoice, Payment, Estimate, CreditNote
 from apps.inventory.models import Supplier, PurchaseOrder
 from apps.branches.models import Branch
 from .tasks import (
@@ -12,6 +12,8 @@ from .tasks import (
     task_sync_supplier_to_qbo,
     task_sync_purchase_order_to_qbo,
     task_sync_branch_to_qbo,
+    task_sync_estimate_to_qbo,
+    task_sync_credit_note_to_qbo,
 )
 import logging
 
@@ -90,3 +92,31 @@ def sync_branch_on_save(sender, instance, created, **kwargs):
         return
     logger.info(f"Triggering QBO sync for Branch {instance.id} ({instance.name})")
     task_sync_branch_to_qbo.delay(instance.id)
+
+
+ESTIMATE_QBO_SYNC_STATUSES = {'sent', 'viewed', 'approved'}
+
+
+@receiver(post_save, sender=Estimate)
+def sync_estimate_on_save(sender, instance, created, **kwargs):
+    """Trigger QBO sync when an estimate is sent or approved."""
+    if not _auto_sync_enabled():
+        return
+    if instance.status not in ESTIMATE_QBO_SYNC_STATUSES:
+        return
+    logger.info(f"Triggering QBO sync for Estimate {instance.id}")
+    task_sync_estimate_to_qbo.delay(instance.id)
+
+
+CREDIT_NOTE_QBO_SYNC_STATUSES = {'issued', 'applied', 'refunded'}
+
+
+@receiver(post_save, sender=CreditNote)
+def sync_credit_note_on_save(sender, instance, created, **kwargs):
+    """Trigger QBO sync when a credit note is issued."""
+    if not _auto_sync_enabled():
+        return
+    if instance.status not in CREDIT_NOTE_QBO_SYNC_STATUSES:
+        return
+    logger.info(f"Triggering QBO sync for CreditNote {instance.id}")
+    task_sync_credit_note_to_qbo.delay(instance.id)

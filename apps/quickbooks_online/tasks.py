@@ -121,6 +121,50 @@ def task_sync_purchase_order_to_qbo(po_id):
 
 
 @shared_task
+def task_sync_estimate_to_qbo(estimate_id):
+    """Background task to sync an Estimate to QBO."""
+    try:
+        Estimate = apps.get_model('billing', 'Estimate')
+        estimate = Estimate.objects.get(id=estimate_id)
+
+        service = QuickBooksService()
+        qb_estimate = service.sync_estimate(estimate)
+
+        if qb_estimate:
+            logger.info(f"Successfully synced Estimate {estimate_id} to QBO ID {qb_estimate.Id}")
+        else:
+            logger.warning(f"Failed to sync Estimate {estimate_id} to QBO (no result returned)")
+
+    except Estimate.DoesNotExist:
+        logger.error(f"Estimate {estimate_id} does not exist.")
+    except Exception as e:
+        logger.error(f"Error syncing Estimate {estimate_id} to QBO: {e}", exc_info=True)
+
+
+@shared_task
+def task_sync_credit_note_to_qbo(credit_note_id):
+    """Background task to sync a CreditNote to QBO as a Credit Memo."""
+    try:
+        CreditNote = apps.get_model('billing', 'CreditNote')
+        credit_note = CreditNote.objects.get(id=credit_note_id)
+
+        service = QuickBooksService()
+        qb_credit_memo = service.sync_credit_note(credit_note)
+
+        if qb_credit_memo:
+            logger.info(
+                f"Successfully synced CreditNote {credit_note_id} to QBO ID {qb_credit_memo.Id}"
+            )
+        else:
+            logger.warning(f"Failed to sync CreditNote {credit_note_id} to QBO (no result returned)")
+
+    except CreditNote.DoesNotExist:
+        logger.error(f"CreditNote {credit_note_id} does not exist.")
+    except Exception as e:
+        logger.error(f"Error syncing CreditNote {credit_note_id} to QBO: {e}", exc_info=True)
+
+
+@shared_task
 def task_sync_branch_to_qbo(branch_id):
     """
     Background task to sync a Branch to QBO as a Department (Location).

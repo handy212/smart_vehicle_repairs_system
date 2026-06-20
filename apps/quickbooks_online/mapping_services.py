@@ -7,6 +7,7 @@ from apps.accounting.models import AccountingControl
 from .mapping_specs import (
     ITEM_MAPPING_KINDS,
     MAPPING_KIND_CONTROL,
+    TAX_CODE_MAPPING_KINDS,
     all_mapping_rows,
 )
 from .models import QBOAccountMapping
@@ -16,9 +17,11 @@ logger = logging.getLogger(__name__)
 try:
     from quickbooks.objects.account import Account as QBAccount
     from quickbooks.objects.item import Item as QBItem
+    from quickbooks.objects.taxcode import TaxCode as QBTaxCode
 except ModuleNotFoundError:
     QBAccount = None
     QBItem = None
+    QBTaxCode = None
 
 
 class QBOAccountMappingService:
@@ -103,6 +106,43 @@ class QBOAccountMappingService:
             logger.error('Failed to list QBO items: %s', exc)
             return None, str(exc)
 
+    def list_tax_codes(self):
+        client = self.qb.get_client()
+        if not client:
+            return None, 'QuickBooks not connected or unauthorized.'
+        if QBTaxCode is None:
+            return None, self.qb.sdk_unavailable_message()
+
+        try:
+            tax_codes = QBTaxCode.all(qb=client)
+            tax_mappings = {
+                row.qbo_account_id: row
+                for row in QBOAccountMapping.objects.filter(
+                    mapping_kind='tax_code',
+                ).exclude(qbo_account_id='')
+            }
+            results = []
+            for tax_code in tax_codes:
+                mapping = tax_mappings.get(str(tax_code.Id))
+                mapped_row = None
+                if mapping:
+                    mapped_row = {
+                        'mapping_kind': mapping.mapping_kind,
+                        'mapping_key': mapping.mapping_key,
+                    }
+                results.append({
+                    'id': str(tax_code.Id),
+                    'name': tax_code.Name,
+                    'active': bool(getattr(tax_code, 'Active', True)),
+                    'description': getattr(tax_code, 'Description', '') or '',
+                    'mapped_row': mapped_row,
+                })
+            results.sort(key=lambda row: (row['name'] or '').lower())
+            return results, None
+        except Exception as exc:
+            logger.error('Failed to list QBO tax codes: %s', exc)
+            return None, str(exc)
+
     def get_mapping_overview(self):
         controls = AccountingControl.get_settings()
         stored = {
@@ -131,6 +171,7 @@ class QBOAccountMappingService:
                 'qbo_account_name': mapping.qbo_account_name if mapping else '',
                 'qbo_item_id': mapping.qbo_item_id if mapping else '',
                 'qbo_item_name': mapping.qbo_item_name if mapping else '',
+                'uses_tax_code': spec.get('uses_tax_code', False),
                 'status': mapping.status if mapping else 'unmapped',
                 'error_message': mapping.error_message if mapping else '',
             }
@@ -145,6 +186,9 @@ class QBOAccountMappingService:
 
     def _fetch_qbo_item(self, client, item_id):
         return QBItem.get(int(item_id), qb=client)
+
+    def _fetch_qbo_tax_code(self, client, tax_code_id):
+        return QBTaxCode.get(int(tax_code_id), qb=client)
 
     def map_row(self, mapping_kind, mapping_key, *, qbo_account_id=None, qbo_item_id=None, user=None):
         client = self.qb.get_client()
@@ -164,6 +208,23 @@ class QBOAccountMappingService:
                 'qbo_account_id': '',
                 'qbo_account_name': '',
                 'qbo_account_type': '',
+                'status': 'synced',
+                'error_message': '',
+                'updated_by': user,
+            }
+        elif mapping_kind in TAX_CODE_MAPPING_KINDS:
+            if not qbo_account_id:
+                return False, 'qbo_account_id (tax code id) is required for tax code mappings.'
+            try:
+                tax_code = self._fetch_qbo_tax_code(client, qbo_account_id)
+            except Exception as exc:
+                return False, f'QBO tax code {qbo_account_id} was not found: {exc}'
+            defaults = {
+                'qbo_account_id': str(tax_code.Id),
+                'qbo_account_name': tax_code.Name or '',
+                'qbo_account_type': 'TaxCode',
+                'qbo_item_id': '',
+                'qbo_item_name': '',
                 'status': 'synced',
                 'error_message': '',
                 'updated_by': user,
@@ -253,6 +314,9 @@ class QBOAccountMappingService:
 
     def resolve_invoice_line_item_id(self, item_type):
         return self.resolve_qbo_item_id('invoice_line_type', item_type)
+
+    def resolve_tax_code_id(self, tax_key='composite'):
+        return self.resolve_qbo_account_id('tax_code', tax_key)
 
     def resolve_bill_line_account_id(self, *, is_inventory_line):
         key = 'inventory' if is_inventory_line else 'expense'

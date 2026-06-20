@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, BadgeProps } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle, Copy, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle, Copy, Trash2, Database, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,6 +28,8 @@ import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 
 const parseAmount = (value?: string | number | null) => {
   if (value === null || value === undefined) {
@@ -47,6 +49,8 @@ export default function EstimateDetailPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const [activeTab, setActiveTab] = useState("estimate");
   const { user: currentUser } = useAuthStore();
@@ -72,6 +76,27 @@ export default function EstimateDetailPage() {
   ]);
   const canConvertEstimateToWorkOrder = hasPermission("create_workorders");
   const currentStatus = estimate?.status ?? null;
+
+  const handleQBOSync = async () => {
+    try {
+      setIsSyncing(true);
+      await quickbooksApi.syncOutbound({ entity_type: "estimate", object_id: estimateId });
+      toast({
+        title: "QuickBooks Sync",
+        description: "Estimate push to QuickBooks triggered. Status should update shortly.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+    } catch {
+      toast({
+        title: "Sync Failed",
+        description: "Failed to trigger QuickBooks synchronization.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const canEditInUi = canEditEstimate && estimate?.status !== "converted";
 
   const statusChangeMutation = useMutation({
@@ -765,6 +790,49 @@ export default function EstimateDetailPage() {
                           )}
                         </div>
                       </div>
+                      {isQboConnected && estimate.qbo_sync_status && (
+                        <div className="flex flex-col mt-2">
+                          <span className="text-sm text-muted-foreground mb-1">QuickBooks Sync</span>
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  estimate.qbo_sync_status === "synced"
+                                    ? "success"
+                                    : estimate.qbo_sync_status === "failed"
+                                      ? "danger"
+                                      : "secondary"
+                                }
+                                className="w-fit capitalize"
+                              >
+                                {estimate.qbo_sync_status}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={handleQBOSync}
+                                disabled={isSyncing}
+                                title="Push to QuickBooks"
+                              >
+                                {isSyncing ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Database className="w-3.5 h-3.5" />
+                                )}
+                              </Button>
+                            </div>
+                            {estimate.qbo_sync_status === "failed" && estimate.qbo_sync_error && (
+                              <span
+                                className="text-xs text-destructive line-clamp-2 max-w-[200px]"
+                                title={estimate.qbo_sync_error}
+                              >
+                                {estimate.qbo_sync_error}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {latestInvoice && (
                         <div className="flex flex-col mt-2">
                           <span className="text-sm text-muted-foreground">Invoice</span>

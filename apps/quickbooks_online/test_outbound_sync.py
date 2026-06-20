@@ -146,7 +146,7 @@ class QBOOutboundSyncApiTests(APITestCase):
     def test_outbound_sync_rejects_unknown_entity_type(self):
         response = self.client.post(
             '/api/quickbooks/sync-outbound/',
-            {'entity_type': 'estimate', 'object_id': 1},
+            {'entity_type': 'purchase_receipt', 'object_id': 1},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
