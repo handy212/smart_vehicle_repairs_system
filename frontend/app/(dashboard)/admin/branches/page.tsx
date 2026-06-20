@@ -47,6 +47,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getUserFacingError } from "@/lib/api/errors";
+import { BranchQboMappingPanel } from "@/components/branches/BranchQboMappingPanel";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -159,7 +160,7 @@ export default function BranchesPage() {
         </div>
         <Card className="border-none shadow-none">
           <CardContent className="p-0">
-            <TableSkeleton rows={8} columns={6} />
+            <TableSkeleton rows={8} columns={7} />
           </CardContent>
         </Card>
       </div>
@@ -235,6 +236,10 @@ export default function BranchesPage() {
         </CardContent>
       </Card>
 
+      <PermissionGuard permission="manage_branches">
+        <BranchQboMappingPanel branches={filteredBranches} />
+      </PermissionGuard>
+
       {/* Branches Table */}
       <Card className="mx-4 border-t shadow-sm">
         <CardHeader className="py-3 px-4 border-b bg-muted/30">
@@ -268,6 +273,7 @@ export default function BranchesPage() {
                     </SortableHeader>
                     <TableHead className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contact</TableHead>
                     <TableHead className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Staff</TableHead>
+                    <TableHead className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">QBO</TableHead>
                     <SortableHeader field="is_active" sortConfig={sortConfig} onSort={handleSort} className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       Status
                     </SortableHeader>
@@ -330,6 +336,24 @@ export default function BranchesPage() {
                             <span className="text-[10px] text-muted-foreground ml-1">({branch.manager_count} mgrs)</span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        {branch.qbo_sync_status ? (
+                          <Badge
+                            variant={
+                              branch.qbo_sync_status === "synced"
+                                ? "success"
+                                : branch.qbo_sync_status === "failed"
+                                  ? "danger"
+                                  : "secondary"
+                            }
+                            className="text-[9px] h-4 px-1 capitalize"
+                          >
+                            {branch.qbo_sync_status === "unmapped" ? "Unmapped" : branch.qbo_sync_status}
+                          </Badge>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
                         <div className="flex items-center gap-1.5">

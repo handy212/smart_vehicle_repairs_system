@@ -2,6 +2,7 @@
 Tests for branches app
 """
 from django.test import TestCase
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.template.loader import render_to_string
@@ -154,6 +155,54 @@ class BranchApiPermissionTest(TestCase):
         response = client.get(f'/api/branches/{self.branch.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['id'], self.branch.id)
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=False)
+    def test_qbo_departments_requires_connection(self, _mock_connected):
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.get('/api/branches/qbo-departments/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    @patch('apps.quickbooks_online.services.QuickBooksService.list_departments')
+    def test_qbo_departments_returns_locations(self, mock_list_departments, _mock_connected):
+        mock_list_departments.return_value = (
+            [{
+                'id': '10',
+                'name': 'Main (APIMAIN)',
+                'active': True,
+                'mapped_branch': {
+                    'id': self.branch.id,
+                    'name': self.branch.name,
+                    'code': self.branch.code,
+                },
+                'sync_status': 'synced',
+            }],
+            None,
+        )
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.get('/api/branches/qbo-departments/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['departments']), 1)
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    @patch('apps.quickbooks_online.services.QuickBooksService.map_branch_to_department')
+    def test_qbo_mapping_links_department(self, mock_map_branch, _mock_connected):
+        mock_map_branch.return_value = (True, None)
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        with patch('apps.quickbooks_online.services.QuickBooksService.list_departments', return_value=([], None)):
+            response = client.post(
+                f'/api/branches/{self.branch.id}/qbo-mapping/',
+                {'department_id': '10'},
+                format='json',
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_map_branch.assert_called_once()
 
     def test_branch_delete_archives_without_removing_staff_assignment(self):
         second_branch = Branch.objects.create(

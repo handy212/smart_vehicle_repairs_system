@@ -5,6 +5,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Sum, F
 from django.utils import timezone
 
@@ -47,6 +48,8 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action in ['qbo_departments', 'qbo_mapping']:
+            return [IsAuthenticated(), HasPermission('manage_branches')]
         return [IsAuthenticated(), HasPermission('view_branches')()]
     
     def get_serializer_class(self):
@@ -79,6 +82,20 @@ class BranchViewSet(viewsets.ModelViewSet):
                 return Branch.objects.filter(id=user.branch.id)
         
         return Branch.objects.none()
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action == 'list':
+            from apps.quickbooks_online.services import QuickBooksService
+            from apps.quickbooks_online.models import QBOMapping
+
+            if QuickBooksService.is_connected():
+                branch_ct = ContentType.objects.get_for_model(Branch)
+                mappings = list(
+                    QBOMapping.objects.filter(content_type=branch_ct)
+                )
+                context['qbo_branch_mappings'] = {mapping.object_id: mapping for mapping in mappings}
+        return context
     
     def perform_create(self, serializer):
         """Set created_by when creating a branch"""
@@ -290,6 +307,93 @@ class BranchViewSet(viewsets.ModelViewSet):
         branches = request.user.get_accessible_branches()
         serializer = BranchListSerializer(branches, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='qbo-departments')
+    def qbo_departments(self, request):
+        """List QBO locations and show which SVR branch each one is mapped to."""
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected. Connect under Admin → Integrations first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        departments, error = QuickBooksService().list_departments()
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'departments': departments,
+            'is_connected': True,
+        })
+
+    @action(detail=True, methods=['post'], url_path='qbo-mapping')
+    def qbo_mapping(self, request, pk=None):
+        """
+        Manage the QBO location mapping for a branch.
+
+        Body:
+          { "department_id": "12" }  — map to an existing QBO location
+          { "action": "auto_sync" }  — create/update QBO location from branch data
+          { "action": "clear" }      — remove mapping
+        """
+        from apps.quickbooks_online.services import QuickBooksService
+
+        branch = self.get_object()
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        service = QuickBooksService()
+        action_name = request.data.get('action')
+        department_id = request.data.get('department_id')
+
+        if action_name == 'clear':
+            service.clear_branch_qbo_mapping(branch)
+            return Response({'detail': 'QuickBooks mapping cleared.', 'branch_id': branch.id})
+
+        if action_name == 'auto_sync':
+            qb_department = service.sync_branch(branch)
+            if not qb_department:
+                from apps.quickbooks_online.models import QBOMapping
+                branch_ct = ContentType.objects.get_for_model(Branch)
+                mapping = QBOMapping.objects.filter(content_type=branch_ct, object_id=branch.id).first()
+                error_message = mapping.error_message if mapping else 'Failed to sync branch to QuickBooks.'
+                return Response({'detail': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'detail': 'Branch synced to QuickBooks.',
+                'branch_id': branch.id,
+                'qbo_department_id': str(qb_department.Id),
+                'qbo_department_name': qb_department.Name,
+            })
+
+        if department_id:
+            success, error = service.map_branch_to_department(branch, department_id)
+            if not success:
+                return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+            departments, _list_error = service.list_departments()
+            department_name = None
+            if departments:
+                department_name = next(
+                    (item['name'] for item in departments if item['id'] == str(department_id)),
+                    None,
+                )
+            return Response({
+                'detail': 'Branch mapped to QuickBooks location.',
+                'branch_id': branch.id,
+                'qbo_department_id': str(department_id),
+                'qbo_department_name': department_name,
+            })
+
+        return Response(
+            {'detail': 'Provide department_id or action (auto_sync, clear).'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):

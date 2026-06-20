@@ -23,6 +23,34 @@ export interface Branch {
   manager_count?: number;
   created_at?: string;
   updated_at?: string;
+  qbo_department_id?: string | null;
+  qbo_department_name?: string | null;
+  qbo_sync_status?: string | null;
+  qbo_sync_error?: string | null;
+}
+
+export interface QboDepartment {
+  id: string;
+  name: string;
+  active: boolean;
+  mapped_branch?: {
+    id: number;
+    name: string;
+    code: string;
+  } | null;
+  sync_status?: string | null;
+}
+
+export interface QboDepartmentsResponse {
+  departments: QboDepartment[];
+  is_connected: boolean;
+}
+
+export interface BranchQboMappingResult {
+  detail: string;
+  branch_id: number;
+  qbo_department_id?: string;
+  qbo_department_name?: string;
 }
 
 export interface BranchListResponse {
@@ -140,6 +168,19 @@ export const branchesApi = {
 
   getAccessible: async (): Promise<Branch[]> => {
     const response = await apiClient.get("/branches/accessible/");
+    return response.data;
+  },
+
+  listQboDepartments: async (): Promise<QboDepartmentsResponse> => {
+    const response = await apiClient.get("/branches/qbo-departments/");
+    return response.data;
+  },
+
+  setQboMapping: async (
+    id: number,
+    payload: { department_id?: string; action?: "auto_sync" | "clear" },
+  ): Promise<BranchQboMappingResult> => {
+    const response = await apiClient.post(`/branches/${id}/qbo-mapping/`, payload);
     return response.data;
   },
 

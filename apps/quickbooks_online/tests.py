@@ -146,6 +146,113 @@ class QuickBooksIntegrationTests(TestCase):
         self.assertEqual(mapping.qbo_id, "50")
         self.assertEqual(mapping.status, 'synced')
 
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client')
+    @patch('apps.quickbooks_online.services.QBDepartment')
+    def test_list_departments_includes_branch_mappings(self, mock_qb_dept_class, mock_get_client):
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        dept_one = MagicMock()
+        dept_one.Id = "10"
+        dept_one.Name = "Main (MAIN)"
+        dept_one.Active = True
+
+        dept_two = MagicMock()
+        dept_two.Id = "20"
+        dept_two.Name = "West (WEST)"
+        dept_two.Active = True
+
+        mock_qb_dept_class.all.return_value = [dept_one, dept_two]
+
+        branch_ct = ContentType.objects.get_for_model(self.branch)
+        QBOMapping.objects.create(
+            content_type=branch_ct,
+            object_id=self.branch.id,
+            qbo_id="10",
+            qbo_sync_token="0",
+            status='synced',
+        )
+
+        service = QuickBooksService()
+        departments, error = service.list_departments()
+
+        self.assertIsNone(error)
+        self.assertEqual(len(departments), 2)
+        self.assertEqual(departments[0]['mapped_branch']['id'], self.branch.id)
+        self.assertIsNone(departments[1]['mapped_branch'])
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client')
+    @patch('apps.quickbooks_online.services.QBDepartment')
+    def test_map_branch_to_department_success(self, mock_qb_dept_class, mock_get_client):
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        qb_department = MagicMock()
+        qb_department.Id = "77"
+        qb_department.SyncToken = "3"
+        mock_qb_dept_class.get.return_value = qb_department
+
+        service = QuickBooksService()
+        success, error = service.map_branch_to_department(self.branch, "77")
+
+        self.assertTrue(success)
+        self.assertIsNone(error)
+
+        branch_ct = ContentType.objects.get_for_model(self.branch)
+        mapping = QBOMapping.objects.get(content_type=branch_ct, object_id=self.branch.id)
+        self.assertEqual(mapping.qbo_id, "77")
+        self.assertEqual(mapping.status, 'synced')
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client')
+    @patch('apps.quickbooks_online.services.QBDepartment')
+    def test_map_branch_to_department_rejects_duplicate(self, mock_qb_dept_class, mock_get_client):
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        other_branch = Branch.objects.create(
+            name="Other Branch",
+            code="OTHER",
+            created_by=self.admin_user,
+            phone="1234567890",
+            address="123 Street",
+            city="City",
+            state="State",
+            zip_code="12345",
+        )
+
+        branch_ct = ContentType.objects.get_for_model(other_branch)
+        QBOMapping.objects.create(
+            content_type=branch_ct,
+            object_id=other_branch.id,
+            qbo_id="77",
+            qbo_sync_token="0",
+            status='synced',
+        )
+
+        service = QuickBooksService()
+        success, error = service.map_branch_to_department(self.branch, "77")
+
+        self.assertFalse(success)
+        self.assertIn('already mapped', error)
+
+    def test_clear_branch_qbo_mapping(self):
+        branch_ct = ContentType.objects.get_for_model(self.branch)
+        QBOMapping.objects.create(
+            content_type=branch_ct,
+            object_id=self.branch.id,
+            qbo_id="88",
+            qbo_sync_token="0",
+            status='synced',
+        )
+
+        service = QuickBooksService()
+        cleared = service.clear_branch_qbo_mapping(self.branch)
+
+        self.assertTrue(cleared)
+        self.assertFalse(
+            QBOMapping.objects.filter(content_type=branch_ct, object_id=self.branch.id).exists()
+        )
+
     @patch('apps.quickbooks_online.services.QuickBooksService.sync_customer')
     @patch('apps.quickbooks_online.services.QuickBooks')
     @patch('apps.quickbooks_online.services.QBInvoice')

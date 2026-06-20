@@ -354,9 +354,19 @@ class QuickBooksService:
         try:
             self._save_qb(qb_dept, client)
 
+            branch_ct = ContentType.objects.get_for_model(local_branch)
+            conflict = QBOMapping.objects.filter(
+                content_type=branch_ct,
+                qbo_id=str(qb_dept.Id),
+            ).exclude(object_id=local_branch.id).first()
+            if conflict:
+                raise ValueError(
+                    f'QBO location {qb_dept.Id} is already mapped to branch id={conflict.object_id}.'
+                )
+
             # Update Mapping
             QBOMapping.objects.update_or_create(
-                content_type=ContentType.objects.get_for_model(local_branch),
+                content_type=branch_ct,
                 object_id=local_branch.id,
                 defaults={
                     'qbo_id': qb_dept.Id,
@@ -377,6 +387,109 @@ class QuickBooksService:
                 }
             )
             return None
+
+    def list_departments(self):
+        """
+        Fetch all QBO Departments (Locations) and include any existing SVR branch mappings.
+        Returns (departments_list, error_message).
+        """
+        from apps.branches.models import Branch
+
+        client = self.get_client()
+        if not client:
+            return None, 'QuickBooks not connected or unauthorized.'
+
+        if QBDepartment is None:
+            return None, _quickbooks_sdk_message()
+
+        try:
+            qb_departments = QBDepartment.all(qb=client)
+            branch_ct = ContentType.objects.get_for_model(Branch)
+            mappings_by_qbo_id = {
+                mapping.qbo_id: mapping
+                for mapping in QBOMapping.objects.filter(content_type=branch_ct).exclude(qbo_id='')
+            }
+            branch_ids = [mapping.object_id for mapping in mappings_by_qbo_id.values()]
+            branches_by_id = Branch.objects.in_bulk(branch_ids)
+
+            departments = []
+            for department in qb_departments:
+                mapping = mappings_by_qbo_id.get(str(department.Id))
+                mapped_branch = None
+                if mapping:
+                    branch = branches_by_id.get(mapping.object_id)
+                    if branch:
+                        mapped_branch = {
+                            'id': branch.id,
+                            'name': branch.name,
+                            'code': branch.code,
+                        }
+                departments.append({
+                    'id': str(department.Id),
+                    'name': department.Name,
+                    'active': bool(getattr(department, 'Active', True)),
+                    'mapped_branch': mapped_branch,
+                    'sync_status': mapping.status if mapping else None,
+                })
+
+            departments.sort(key=lambda item: (item['name'] or '').lower())
+            return departments, None
+        except Exception as exc:
+            logger.error('Failed to list QBO departments: %s', exc)
+            return None, str(exc)
+
+    def map_branch_to_department(self, local_branch, qbo_department_id):
+        """
+        Link a local Branch to an existing QBO Department without creating a new one.
+        Returns (success, error_message).
+        """
+        client = self.get_client()
+        if not client:
+            return False, 'QuickBooks not connected or unauthorized.'
+
+        if QBDepartment is None:
+            return False, _quickbooks_sdk_message()
+
+        branch_ct = ContentType.objects.get_for_model(local_branch)
+        department_id = str(qbo_department_id).strip()
+        if not department_id:
+            return False, 'department_id is required.'
+
+        conflict = QBOMapping.objects.filter(
+            content_type=branch_ct,
+            qbo_id=department_id,
+        ).exclude(object_id=local_branch.id).first()
+        if conflict:
+            return False, (
+                f'QBO location is already mapped to another branch (id={conflict.object_id}).'
+            )
+
+        try:
+            qb_department = QBDepartment.get(int(department_id), qb=client)
+        except Exception as exc:
+            logger.error('Failed to fetch QBO department %s: %s', department_id, exc)
+            return False, f'QBO location {department_id} was not found.'
+
+        QBOMapping.objects.update_or_create(
+            content_type=branch_ct,
+            object_id=local_branch.id,
+            defaults={
+                'qbo_id': str(qb_department.Id),
+                'qbo_sync_token': qb_department.SyncToken or '',
+                'status': 'synced',
+                'error_message': '',
+            },
+        )
+        return True, None
+
+    def clear_branch_qbo_mapping(self, local_branch):
+        """Remove the QBO mapping for a branch."""
+        branch_ct = ContentType.objects.get_for_model(local_branch)
+        deleted, _ = QBOMapping.objects.filter(
+            content_type=branch_ct,
+            object_id=local_branch.id,
+        ).delete()
+        return deleted > 0
 
     def sync_invoice(self, local_invoice):
         """
