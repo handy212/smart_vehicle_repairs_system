@@ -1,4 +1,5 @@
 import apiClient from "./client";
+import { resolveApiUrl } from "./base-url";
 
 export interface QBOStatus {
   is_connected: boolean;
@@ -83,13 +84,18 @@ export const quickbooksApi = {
    * However, we can use it to hit the connect/disconnect endpoints if needed.)
    */
   connect: () => {
-    const configuredBaseUrl = apiClient.defaults.baseURL || "http://localhost:8000/api";
-    const normalizedBaseUrl = configuredBaseUrl.replace(/\/$/, "");
-    const connectUrl = new URL(`${normalizedBaseUrl}/quickbooks/connect/`);
+    if (typeof window === "undefined") {
+      return;
+    }
 
-    // When the app is opened on localhost, keep the OAuth bootstrap on localhost too
-    // so the browser sends the non-httpOnly auth cookie to Django.
-    if (typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    const connectUrl = new URL(resolveApiUrl("/quickbooks/connect/"));
+
+    // When using a direct backend URL on localhost, align hostname with the app
+    // so the browser sends auth cookies to Django.
+    if (
+      ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+      connectUrl.origin !== window.location.origin
+    ) {
       connectUrl.hostname = window.location.hostname;
     }
 
