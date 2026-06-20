@@ -75,7 +75,6 @@ export function BranchQboMappingPanel({ branches }: { branches: Branch[] }) {
           <a href="/admin/integrations" className="text-primary hover:underline">
             Admin → Integrations
           </a>{" "}
-          to map branches to QBO locations.
         </CardContent>
       </Card>
     );

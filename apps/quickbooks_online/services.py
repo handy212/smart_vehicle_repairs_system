@@ -1,8 +1,10 @@
 import logging
+from urllib.parse import urlparse
 from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from apps.accounts.settings_utils import get_site_url
 from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,74 @@ def _is_stale_error(exc) -> bool:
     return '5010' in msg or 'stale object' in msg.lower()
 
 
+def _normalize_qbo_callback_url(base_url: str) -> str:
+    normalized = str(base_url or "").strip().rstrip("/")
+    if normalized.endswith("/api/quickbooks/callback"):
+        return f"{normalized}/"
+    if normalized.endswith("/api/quickbooks/callback/"):
+        return normalized
+    return f"{normalized}/api/quickbooks/callback/"
+
+
+def _is_allowed_qbo_redirect_base(origin: str) -> bool:
+    parsed = urlparse(origin.strip())
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return False
+
+    if getattr(settings, "DEBUG", False) and parsed.hostname in ("localhost", "127.0.0.1"):
+        return True
+
+    allowed_bases = {get_site_url().rstrip("/")}
+    for attr in ("FRONTEND_URL", "FRONTEND_BASE_URL"):
+        value = getattr(settings, attr, None)
+        if value:
+            allowed_bases.add(str(value).strip().rstrip("/"))
+    for cors_origin in getattr(settings, "CORS_ALLOWED_ORIGINS", []) or []:
+        allowed_bases.add(str(cors_origin).strip().rstrip("/"))
+
+    return origin.strip().rstrip("/") in allowed_bases
+
+
+def _infer_redirect_base(request) -> str | None:
+    redirect_base = request.GET.get("redirect_base", "").strip()
+    if redirect_base:
+        return redirect_base
+
+    for header in (
+        request.META.get("HTTP_ORIGIN", ""),
+        request.META.get("HTTP_REFERER", ""),
+    ):
+        if not header:
+            continue
+        parsed = urlparse(header.strip())
+        if parsed.scheme in ("http", "https") and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+
+    forwarded_host = request.META.get("HTTP_X_FORWARDED_HOST", "").split(",")[0].strip()
+    forwarded_proto = request.META.get("HTTP_X_FORWARDED_PROTO", "http").split(",")[0].strip()
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}"
+
+    return None
+
+
+def get_qbo_redirect_uri(redirect_base: str | None = None) -> str:
+    """
+    Public OAuth callback URL registered with Intuit.
+
+    Uses the SPA origin (via redirect_base or FRONTEND_BASE_URL), not SITE_URL,
+    so the browser callback stays on the same host as /api proxy routes.
+    """
+    explicit = getattr(settings, "QBO_REDIRECT_URI", "")
+    if explicit:
+        return _normalize_qbo_callback_url(explicit)
+
+    if redirect_base and _is_allowed_qbo_redirect_base(redirect_base):
+        return _normalize_qbo_callback_url(redirect_base)
+
+    return _normalize_qbo_callback_url(get_site_url())
+
+
 class QuickBooksService:
     """
     Service for interacting with QuickBooks Online API.
@@ -124,7 +194,7 @@ class QuickBooksService:
         return bool(config.is_active and has_token)
 
     @staticmethod
-    def get_auth_client(config=None):
+    def get_auth_client(config=None, redirect_uri: str | None = None):
         """Get the Intuit AuthClient."""
         if AuthClient is None:
             logger.warning(_quickbooks_sdk_message())
@@ -135,12 +205,14 @@ class QuickBooksService:
         
         if not config:
             return None
+
+        resolved_redirect_uri = redirect_uri or get_qbo_redirect_uri()
             
         return AuthClient(
             client_id=config.client_id,
             client_secret=config.client_secret,
             environment='sandbox' if config.is_sandbox else 'production',
-            redirect_uri=f"{settings.SITE_URL}/api/quickbooks/callback/",
+            redirect_uri=resolved_redirect_uri,
         )
 
     @classmethod

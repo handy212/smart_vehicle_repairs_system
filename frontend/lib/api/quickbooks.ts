@@ -7,6 +7,8 @@ export interface QBOStatus {
   is_sandbox: boolean;
   last_sync: string | null;
   company_name: string | null;
+  oauth_redirect_uri?: string | null;
+  oauth_keys_environment?: "sandbox" | "production" | null;
   error?: string;
 }
 
@@ -85,16 +87,10 @@ export const quickbooksApi = {
    * However, we can use it to hit the connect/disconnect endpoints if needed.)
    */
   connect: () => {
-    const configuredBaseUrl = apiClient.defaults.baseURL || "http://localhost:8000/api";
-    const normalizedBaseUrl = configuredBaseUrl.replace(/\/$/, "");
-    const connectUrl = new URL(`${normalizedBaseUrl}/quickbooks/connect/`);
+    if (typeof window === "undefined") return;
 
-    // When the app is opened on localhost, keep the OAuth bootstrap on localhost too
-    // so the browser sends the non-httpOnly auth cookie to Django.
-    if (typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname)) {
-      connectUrl.hostname = window.location.hostname;
-    }
-
+    const connectUrl = new URL("/api/quickbooks/connect/", window.location.origin);
+    connectUrl.searchParams.set("redirect_base", window.location.origin);
     window.location.href = connectUrl.toString();
   },
 

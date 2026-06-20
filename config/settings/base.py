@@ -444,6 +444,8 @@ CARAPI_SECRET = env('CARAPI_SECRET', default='')
 QUICKBOOKS_CLIENT_ID = env('QUICKBOOKS_CLIENT_ID', default='')
 QUICKBOOKS_CLIENT_SECRET = env('QUICKBOOKS_CLIENT_SECRET', default='')
 QUICKBOOKS_SANDBOX_ENABLED = env.bool('QUICKBOOKS_SANDBOX_ENABLED', default=True)
+# Optional override; default is {FRONTEND_BASE_URL}/api/quickbooks/callback/
+QBO_REDIRECT_URI = env('QBO_REDIRECT_URI', default='')
 
 # Twilio Configuration
 TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
@@ -494,7 +496,7 @@ PAYPAL_SECRET = env('PAYPAL_SECRET', default='')
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
 
 # Frontend base URL (used for redirect-based payment success pages)
-FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:3001')
+FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:3000')
 
 # Role Permissions
 ROLEPERMISSIONS_MODULE = 'config.roles'

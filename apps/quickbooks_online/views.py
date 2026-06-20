@@ -11,7 +11,7 @@ from django.utils import timezone
 from datetime import timedelta
 from urllib.parse import urlencode
 from .models import QBOConfig, QBOToken, QBOSyncLog
-from .services import QuickBooksService
+from .services import QuickBooksService, get_qbo_redirect_uri, _infer_redirect_base
 from .tasks import task_full_inbound_sync
 import logging
 
@@ -103,7 +103,10 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
             messages.error(request, message)
             return redirect(build_qbo_integrations_url(qbo_status="sdk_missing"))
             
-        auth_client = QuickBooksService.get_auth_client(config)
+        redirect_base = _infer_redirect_base(request)
+        redirect_uri = get_qbo_redirect_uri(redirect_base)
+        logger.info("QBO OAuth redirect_uri=%s (redirect_base=%s)", redirect_uri, redirect_base)
+        auth_client = QuickBooksService.get_auth_client(config, redirect_uri=redirect_uri)
         
         # Scopes: Accounting is the main one we need
         # The intuit-oauth library uses enum Scopes
@@ -123,6 +126,7 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
         
         # Store state in session
         request.session['qbo_state'] = auth_client.state_token
+        request.session['qbo_redirect_uri'] = redirect_uri
         
         return redirect(auth_url)
 
@@ -155,7 +159,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             messages.error(request, QuickBooksService.sdk_unavailable_message())
             return redirect(build_qbo_integrations_url(qbo_status="sdk_missing"))
 
-        auth_client = QuickBooksService.get_auth_client(config)
+        redirect_uri = request.session.get("qbo_redirect_uri") or get_qbo_redirect_uri()
+        auth_client = QuickBooksService.get_auth_client(config, redirect_uri=redirect_uri)
         
         try:
             # Exchange code for bearer token
@@ -190,6 +195,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             
             if 'qbo_state' in request.session:
                 del request.session['qbo_state']
+            if 'qbo_redirect_uri' in request.session:
+                del request.session['qbo_redirect_uri']
 
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
             return redirect(build_qbo_integrations_url(qbo_status="connected"))
@@ -338,6 +345,8 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             'is_sandbox': config.is_sandbox if config else True,
             'last_sync': last_sync.finished_at if last_sync else None,
             'company_name': config.company_name if config and hasattr(config, 'company_name') else None,
+            'oauth_redirect_uri': get_qbo_redirect_uri(_infer_redirect_base(request)),
+            'oauth_keys_environment': 'sandbox' if (config.is_sandbox if config else True) else 'production',
         })
 
 

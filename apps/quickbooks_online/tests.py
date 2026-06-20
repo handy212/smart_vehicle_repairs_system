@@ -5,7 +5,7 @@ from apps.customers.models import Customer
 from apps.inventory.models import Supplier, PurchaseOrder, PurchaseOrderItem, Part, PartCategory
 from apps.billing.models import Invoice, InvoiceLineItem
 from apps.branches.models import Branch
-from apps.quickbooks_online.services import QuickBooksService
+from apps.quickbooks_online.services import QuickBooksService, get_qbo_redirect_uri
 from apps.quickbooks_online.models import QBOMapping, QBOConfig, QBOToken
 from django.utils import timezone
 from datetime import timedelta
@@ -568,11 +568,24 @@ class QuickBooksAuthFlowTests(TestCase):
         access_token = str(RefreshToken.for_user(self.admin_user).access_token)
         self.client.cookies["access_token"] = access_token
 
-        response = self.client.get(reverse("quickbooks_online:connect"))
+        response = self.client.get(
+            reverse("quickbooks_online:connect"),
+            {"redirect_base": "http://localhost:3000"},
+        )
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "https://example.intuit.test/oauth")
         self.assertEqual(self.client.session["qbo_state"], "state-123")
+        self.assertEqual(
+            self.client.session["qbo_redirect_uri"],
+            "http://localhost:3000/api/quickbooks/callback/",
+        )
+        mock_get_auth_client.assert_called_once()
+        _, kwargs = mock_get_auth_client.call_args
+        self.assertEqual(
+            kwargs["redirect_uri"],
+            "http://localhost:3000/api/quickbooks/callback/",
+        )
 
     @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
     @patch("apps.quickbooks_online.views.QuickBooksService.get_config")
@@ -611,6 +624,7 @@ class QuickBooksAuthFlowTests(TestCase):
         self.client.force_login(self.admin_user)
         session = self.client.session
         session["qbo_state"] = "valid-state"
+        session["qbo_redirect_uri"] = "http://frontend.test/api/quickbooks/callback/"
         session.save()
 
         response = self.client.get(
@@ -713,3 +727,47 @@ class QuickBooksAuthFlowTests(TestCase):
         self.assertEqual(response.json()["status"], "success")
         self.assertFalse(response.json()["queued"])
         mock_task.assert_called_once_with(triggered_by_id=self.admin_user.id)
+
+
+@override_settings(
+    DEBUG=True,
+    FRONTEND_BASE_URL="http://localhost:3001",
+    QBO_REDIRECT_URI="",
+)
+class QuickBooksRedirectUriTests(TestCase):
+    @override_settings(QBO_REDIRECT_URI="http://localhost:3000/api/quickbooks/callback/")
+    def test_explicit_env_override(self):
+        self.assertEqual(
+            get_qbo_redirect_uri(),
+            "http://localhost:3000/api/quickbooks/callback/",
+        )
+
+    def test_uses_frontend_base_url_by_default(self):
+        self.assertEqual(
+            get_qbo_redirect_uri(),
+            "http://localhost:3001/api/quickbooks/callback/",
+        )
+
+    def test_accepts_browser_origin_in_debug(self):
+        self.assertEqual(
+            get_qbo_redirect_uri("http://127.0.0.1:3000"),
+            "http://127.0.0.1:3000/api/quickbooks/callback/",
+        )
+
+    @override_settings(DEBUG=True, FRONTEND_BASE_URL="http://localhost:3001")
+    def test_infer_redirect_base_from_referer(self):
+        from django.test import RequestFactory
+        from apps.quickbooks_online.services import _infer_redirect_base
+
+        request = RequestFactory().get(
+            "/api/quickbooks/connect/",
+            HTTP_REFERER="http://localhost:3000/admin/integrations?category=accounting",
+        )
+        self.assertEqual(_infer_redirect_base(request), "http://localhost:3000")
+
+    @override_settings(DEBUG=False, FRONTEND_BASE_URL="https://app.example.com")
+    def test_rejects_unknown_origin_outside_debug(self):
+        self.assertEqual(
+            get_qbo_redirect_uri("http://localhost:3000"),
+            "https://app.example.com/api/quickbooks/callback/",
+        )
