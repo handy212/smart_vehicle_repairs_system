@@ -117,6 +117,7 @@ DEFAULT_SETTINGS = {
         {'key': 'quickbooks_client_id', 'value': '', 'description': ''},
         {'key': 'quickbooks_client_secret', 'value': '', 'description': '', 'is_secret': True},
         {'key': 'quickbooks_sandbox_enabled', 'value': 'true', 'description': ''},
+        {'key': 'quickbooks_webhook_token', 'value': '', 'description': 'QuickBooks webhook verifier token from Intuit Developer Portal', 'is_secret': True},
         {'key': 'gra_api_url', 'value': '', 'description': 'GRA e-filing API endpoint URL'},
         {'key': 'gra_api_key', 'value': '', 'description': 'GRA e-filing API key', 'is_secret': True},
         {'key': 'gra_tin', 'value': '', 'description': 'Company TIN for GRA VAT submissions'},

@@ -1,13 +1,69 @@
 """DRF endpoints for QuickBooks account and item mappings."""
 
+from django.apps import apps
+from django.contrib.contenttypes.models import ContentType
+
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
 from apps.quickbooks_online.mapping_services import get_account_mapping_service
+from apps.quickbooks_online.models import QBOMapping
 from apps.quickbooks_online.services import QuickBooksService
+from apps.quickbooks_online import tasks as qbo_tasks
+
+OUTBOUND_SYNC_ENTITIES = {
+    'customer': {
+        'app_label': 'customers',
+        'model_name': 'Customer',
+        'module': 'customers',
+        'permission': 'view_customers',
+        'task_name': 'task_sync_customer_to_qbo',
+        'service_method': 'sync_customer',
+    },
+    'invoice': {
+        'app_label': 'billing',
+        'model_name': 'Invoice',
+        'module': 'billing',
+        'permission': 'view_billing',
+        'task_name': 'task_sync_invoice_to_qbo',
+        'service_method': 'sync_invoice',
+    },
+    'payment': {
+        'app_label': 'billing',
+        'model_name': 'Payment',
+        'module': 'billing',
+        'permission': 'view_billing',
+        'task_name': 'task_sync_payment_to_qbo',
+        'service_method': 'sync_payment',
+    },
+    'supplier': {
+        'app_label': 'inventory',
+        'model_name': 'Supplier',
+        'module': 'inventory',
+        'permission': 'view_inventory',
+        'task_name': 'task_sync_supplier_to_qbo',
+        'service_method': 'sync_supplier',
+    },
+    'purchase_order': {
+        'app_label': 'inventory',
+        'model_name': 'PurchaseOrder',
+        'module': 'inventory',
+        'permission': 'view_inventory',
+        'task_name': 'task_sync_purchase_order_to_qbo',
+        'service_method': 'sync_purchase_order',
+    },
+    'branch': {
+        'app_label': 'branches',
+        'model_name': 'Branch',
+        'module': None,
+        'permission': 'manage_branches',
+        'task_name': 'task_sync_branch_to_qbo',
+        'service_method': 'sync_branch',
+    },
+}
 
 
 class QBOConnectedMixin:
@@ -163,4 +219,138 @@ class QBOAccountMappingDetailView(QBOConnectedMixin, APIView):
             'qbo_account_name': mapping.qbo_account_name if mapping else '',
             'qbo_item_id': mapping.qbo_item_id if mapping else '',
             'qbo_item_name': mapping.qbo_item_name if mapping else '',
+        })
+
+
+class QBOOutboundSyncView(QBOConnectedMixin, APIView):
+    """Manually push a single SVR entity to QuickBooks Online."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _entity_config(self, entity_type):
+        return OUTBOUND_SYNC_ENTITIES.get(entity_type)
+
+    def _module_enabled(self, module_slug):
+        if not module_slug:
+            return True
+        checker = IsModuleEnabled(module_slug)
+        return checker.has_permission(self.request, self)
+
+    def _has_entity_permission(self, entity_config):
+        return user_has_permission(self.request.user, entity_config['permission'])
+
+    def _get_mapping_payload(self, instance):
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(instance),
+            object_id=instance.id,
+        ).first()
+        return {
+            'qbo_sync_status': mapping.status if mapping else 'un-synced',
+            'qbo_sync_error': mapping.error_message if mapping else '',
+            'qbo_id': mapping.qbo_id if mapping else '',
+        }
+
+    def post(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+
+        entity_type = request.data.get('entity_type')
+        object_id = request.data.get('object_id')
+        inline = bool(request.data.get('inline', False))
+
+        entity_config = self._entity_config(entity_type)
+        if not entity_config:
+            return Response(
+                {
+                    'detail': (
+                        f'Unsupported entity_type "{entity_type}". '
+                        f'Expected one of: {", ".join(sorted(OUTBOUND_SYNC_ENTITIES))}.'
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not self._module_enabled(entity_config['module']):
+            return Response(
+                {'detail': f'The {entity_config["module"]} module is not enabled.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not self._has_entity_permission(entity_config):
+            return Response(
+                {'detail': 'You do not have permission to sync this entity type.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            object_id = int(object_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'detail': 'object_id must be a positive integer.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if object_id <= 0:
+            return Response(
+                {'detail': 'object_id must be a positive integer.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        model = apps.get_model(entity_config['app_label'], entity_config['model_name'])
+        try:
+            instance = model.objects.get(id=object_id)
+        except model.DoesNotExist:
+            return Response(
+                {'detail': f'{entity_config["model_name"]} {object_id} was not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if inline:
+            service = QuickBooksService()
+            sync_method = getattr(service, entity_config['service_method'])
+            try:
+                result = sync_method(instance)
+            except Exception as exc:
+                return Response(
+                    {
+                        'status': 'error',
+                        'queued': False,
+                        'entity_type': entity_type,
+                        'object_id': object_id,
+                        'detail': str(exc),
+                        **self._get_mapping_payload(instance),
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            payload = {
+                'status': 'success' if result else 'failed',
+                'queued': False,
+                'entity_type': entity_type,
+                'object_id': object_id,
+                'qbo_id': getattr(result, 'Id', '') if result else '',
+                **self._get_mapping_payload(instance),
+            }
+            if not result:
+                payload['detail'] = payload['qbo_sync_error'] or 'Sync returned no result from QuickBooks.'
+            return Response(payload)
+
+        task = getattr(qbo_tasks, entity_config['task_name'])
+        try:
+            task.delay(object_id)
+            queued = True
+            message = 'Outbound sync queued. Status should update shortly.'
+        except Exception:
+            task(object_id)
+            queued = False
+            message = 'Outbound sync completed directly because the background worker was unavailable.'
+
+        return Response({
+            'status': 'success',
+            'queued': queued,
+            'message': message,
+            'entity_type': entity_type,
+            'object_id': object_id,
+            **self._get_mapping_payload(instance),
         })

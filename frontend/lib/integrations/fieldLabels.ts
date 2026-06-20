@@ -21,6 +21,7 @@ const FIELD_LABELS: Record<string, string> = {
   quickbooks_client_id: "Client ID",
   quickbooks_client_secret: "Client secret",
   quickbooks_sandbox_enabled: "Sandbox mode",
+  quickbooks_webhook_token: "Webhook verifier token",
 };
 
 function humanizeKey(key: string): string {

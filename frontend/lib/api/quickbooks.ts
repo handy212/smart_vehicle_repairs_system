@@ -28,6 +28,18 @@ export const quickbooksApi = {
   },
 
   /**
+   * Pushes a single SVR entity to QuickBooks Online.
+   */
+  syncOutbound: async (params: {
+    entity_type: "customer" | "invoice" | "payment" | "supplier" | "purchase_order" | "branch";
+    object_id: number;
+    inline?: boolean;
+  }) => {
+    const response = await apiClient.post("/quickbooks/sync-outbound/", params);
+    return response.data;
+  },
+
+  /**
    * Triggers an outbound sync for a specific object
    * (This hitting a generic endpoint if we had one, but currently outbound is signal-based.
    * However, we can use it to hit the connect/disconnect endpoints if needed.)

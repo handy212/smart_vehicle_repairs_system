@@ -20,4 +20,5 @@ urlpatterns = [
         api_views.QBOAccountMappingDetailView.as_view(),
         name='account_mapping_detail',
     ),
+    path('sync-outbound/', api_views.QBOOutboundSyncView.as_view(), name='sync_outbound'),
 ]
