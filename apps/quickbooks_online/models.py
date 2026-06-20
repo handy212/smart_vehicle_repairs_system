@@ -121,3 +121,69 @@ class QBOSyncLog(models.Model):
 
     def __str__(self):
         return f"{self.get_entity_type_display()} sync @ {self.started_at:%Y-%m-%d %H:%M} [{self.status}]"
+
+
+class QBOAccountMapping(models.Model):
+    """
+    Maps SVR accounting roles (control accounts, payment methods, line types)
+    to QuickBooks chart-of-accounts entries or service/inventory items.
+    """
+
+    MAPPING_KIND_CHOICES = [
+        ('control_account', 'Control Account'),
+        ('invoice_line_type', 'Invoice Line Type'),
+        ('payment_method', 'Customer Payment Method'),
+        ('vendor_payment_method', 'Vendor Payment Method'),
+        ('bill_line_kind', 'Bill Line Kind'),
+        ('svr_account', 'SVR GL Account'),
+    ]
+
+    STATUS_CHOICES = [
+        ('synced', 'Mapped'),
+        ('failed', 'Failed'),
+        ('pending', 'Pending'),
+    ]
+
+    mapping_kind = models.CharField(max_length=32, choices=MAPPING_KIND_CHOICES)
+    mapping_key = models.CharField(max_length=64, help_text="Role key, e.g. sales_revenue_account or cash")
+
+    qbo_account_id = models.CharField(max_length=50, blank=True)
+    qbo_account_name = models.CharField(max_length=255, blank=True)
+    qbo_account_type = models.CharField(max_length=64, blank=True)
+
+    qbo_item_id = models.CharField(max_length=50, blank=True)
+    qbo_item_name = models.CharField(max_length=255, blank=True)
+
+    svr_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='qbo_account_mappings',
+        help_text='Optional SVR GL account this row mirrors (bank/cash accounts).',
+    )
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='synced')
+    error_message = models.TextField(blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='qbo_account_mappings_updated',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('mapping_kind', 'mapping_key')
+        indexes = [
+            models.Index(fields=['mapping_kind', 'mapping_key']),
+            models.Index(fields=['qbo_account_id']),
+            models.Index(fields=['qbo_item_id']),
+        ]
+        verbose_name = 'QBO Account Mapping'
+        verbose_name_plural = 'QBO Account Mappings'
+
+    def __str__(self):
+        target = self.qbo_item_id or self.qbo_account_id or 'unmapped'
+        return f'{self.mapping_kind}:{self.mapping_key} -> {target}'

@@ -18,6 +18,7 @@ try:
     from quickbooks.objects.vendor import Vendor as QBVendor
     from quickbooks.objects.bill import Bill as QBBill
     from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
+    from quickbooks.objects.detailline import AccountBasedExpenseLineDetail
 except ModuleNotFoundError as exc:
     if exc.name != "quickbooks":
         raise
@@ -34,6 +35,7 @@ except ModuleNotFoundError as exc:
     QBVendor = None
     QBBill = None
     ItemBasedExpenseLineDetail = None
+    AccountBasedExpenseLineDetail = None
 
 try:
     from intuitlib.client import AuthClient
@@ -435,6 +437,12 @@ class QuickBooksService:
             
         # Map Line Items
         qb_invoice.Line = []
+        mapping_service = None
+        try:
+            from .mapping_services import get_account_mapping_service
+            mapping_service = get_account_mapping_service()
+        except Exception:
+            mapping_service = None
         
         for item in local_invoice.line_items.all():
             line = DetailLine()
@@ -443,10 +451,13 @@ class QuickBooksService:
             line.Description = item.description or f"{item.item_type.title()} Item"
             
             sales_item = SalesItemLineDetail()
-            # If QBO requires an ItemRef, we might still need to set it,
-            # but setting Qty and UnitPrice is a start
             sales_item.Qty = float(item.quantity)
             sales_item.UnitPrice = float(item.unit_price)
+            if mapping_service and Ref is not None:
+                qbo_item_id = mapping_service.resolve_invoice_line_item_id(item.item_type)
+                if qbo_item_id:
+                    sales_item.ItemRef = Ref()
+                    sales_item.ItemRef.value = qbo_item_id
             line.SalesItemLineDetail = sales_item
             
             qb_invoice.Line.append(line)
@@ -524,8 +535,17 @@ class QuickBooksService:
         
         if local_payment.reference_number:
             qb_payment.PaymentRefNum = local_payment.reference_number
-            
+        if local_payment.notes:
             qb_payment.PrivateNote = local_payment.notes
+
+        try:
+            from .mapping_services import get_account_mapping_service
+            deposit_account_id = get_account_mapping_service().resolve_payment_deposit_account_id(local_payment)
+            if deposit_account_id and Ref is not None:
+                qb_payment.DepositToAccountRef = Ref()
+                qb_payment.DepositToAccountRef.value = deposit_account_id
+        except Exception as mapping_error:
+            logger.debug('Could not resolve QBO deposit account for payment: %s', mapping_error)
 
         # Map Branch/Department from Invoice
         # Payments in this system don't have direct branch, but are linked to invoice
@@ -723,18 +743,37 @@ class QuickBooksService:
                 qb_bill.DepartmentRef.value = qb_dept.Id
                 
         qb_bill.Line = []
+        mapping_service = None
+        try:
+            from .mapping_services import get_account_mapping_service
+            mapping_service = get_account_mapping_service()
+        except Exception:
+            mapping_service = None
+
         for item in local_po.items.all():
             line = DetailLine()
             line.Amount = float(item.total)
-            line.DetailType = "ItemBasedExpenseLineDetail"
-            line.Description = item.part.name or "PO Item"
-            
-            exp_item = ItemBasedExpenseLineDetail()
-            # If QBO requires an ItemRef, we might still need to set it,
-            # but setting Qty and UnitPrice is a start
-            exp_item.Qty = float(item.quantity)
-            exp_item.UnitPrice = float(item.unit_cost)
-            line.ItemBasedExpenseLineDetail = exp_item
+            line.Description = item.part.name if item.part_id else "PO Item"
+
+            is_inventory_line = bool(item.part_id)
+            account_id = None
+            if mapping_service:
+                account_id = mapping_service.resolve_bill_line_account_id(
+                    is_inventory_line=is_inventory_line,
+                )
+
+            if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
+                line.DetailType = "AccountBasedExpenseLineDetail"
+                expense_detail = AccountBasedExpenseLineDetail()
+                expense_detail.AccountRef = Ref()
+                expense_detail.AccountRef.value = account_id
+                line.AccountBasedExpenseLineDetail = expense_detail
+            else:
+                line.DetailType = "ItemBasedExpenseLineDetail"
+                exp_item = ItemBasedExpenseLineDetail()
+                exp_item.Qty = float(item.quantity)
+                exp_item.UnitPrice = float(item.unit_cost)
+                line.ItemBasedExpenseLineDetail = exp_item
             
             qb_bill.Line.append(line)
             

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
+from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog, QBOAccountMapping, QBOAccountMapping
 
 @admin.register(QBOConfig)
 class QBOConfigAdmin(admin.ModelAdmin):
@@ -36,3 +36,12 @@ class QBOSyncLogAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False  # Logs should never be manually created via admin
+
+
+@admin.register(QBOAccountMapping)
+class QBOAccountMappingAdmin(admin.ModelAdmin):
+    list_display = (
+        'mapping_kind', 'mapping_key', 'qbo_account_name', 'qbo_item_name', 'status', 'updated_at',
+    )
+    list_filter = ('mapping_kind', 'status')
+    search_fields = ('mapping_key', 'qbo_account_name', 'qbo_item_name')
