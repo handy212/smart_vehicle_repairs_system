@@ -31,12 +31,50 @@ export const quickbooksApi = {
    * Pushes a single SVR entity to QuickBooks Online.
    */
   syncOutbound: async (params: {
-    entity_type: "customer" | "invoice" | "payment" | "supplier" | "purchase_order" | "branch";
+    entity_type:
+      | "customer"
+      | "invoice"
+      | "payment"
+      | "supplier"
+      | "purchase_order"
+      | "branch"
+      | "estimate"
+      | "credit_note";
     object_id: number;
     inline?: boolean;
   }) => {
     const response = await apiClient.post("/quickbooks/sync-outbound/", params);
     return response.data;
+  },
+
+  listSyncLogs: async (params?: {
+    entity_type?: string;
+    direction?: string;
+    status?: string;
+    limit?: number;
+  }) => {
+    const response = await apiClient.get("/quickbooks/sync-logs/", { params });
+    return response.data as {
+      count: number;
+      results: Array<{
+        id: number;
+        entity_type: string;
+        entity_type_display: string;
+        direction: string;
+        direction_display: string;
+        started_at: string;
+        finished_at: string | null;
+        duration_seconds: number | null;
+        records_pulled: number;
+        records_created: number;
+        records_updated: number;
+        records_skipped: number;
+        status: string;
+        status_display: string;
+        error_message: string;
+        triggered_by_name: string | null;
+      }>;
+    };
   },
 
   /**

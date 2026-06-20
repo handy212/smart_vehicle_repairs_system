@@ -25,12 +25,24 @@ export interface QboItemOption {
   } | null;
 }
 
+export interface QboTaxCodeOption {
+  id: string;
+  name: string;
+  active: boolean;
+  description: string;
+  mapped_row?: {
+    mapping_kind: string;
+    mapping_key: string;
+  } | null;
+}
+
 export interface QboMappingRow {
   mapping_kind: string;
   mapping_key: string;
   label: string;
   group: string;
   uses_item: boolean;
+  uses_tax_code?: boolean;
   control_field?: string | null;
   svr_account?: { id: number; code: string; name: string } | null;
   qbo_account_id: string;
@@ -60,6 +72,11 @@ export const qboMappingsApi = {
 
   listItems: async (): Promise<{ items: QboItemOption[]; is_connected: boolean }> => {
     const response = await apiClient.get("/quickbooks/items/");
+    return response.data;
+  },
+
+  listTaxCodes: async (): Promise<{ tax_codes: QboTaxCodeOption[]; is_connected: boolean }> => {
+    const response = await apiClient.get("/quickbooks/tax-codes/");
     return response.data;
   },
 

@@ -16,6 +16,7 @@ import { useState, useMemo } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { QuickBooksOnlineCard } from "@/components/integrations/QuickBooksOnlineCard";
+import { QboSyncLogPanel } from "@/components/integrations/QboSyncLogPanel";
 import { IntegrationField } from "@/components/integrations/IntegrationField";
 import {
   fieldPrefixForKey,
@@ -224,10 +225,13 @@ export default function IntegrationsPage() {
         <main className="space-y-4">
           {/* Featured/Special Cards */}
           {activeCategory === "accounting" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <QuickBooksOnlineCard />
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <QuickBooksOnlineCard />
+                  </div>
                 </div>
+                <QboSyncLogPanel />
               </div>
           )}
 

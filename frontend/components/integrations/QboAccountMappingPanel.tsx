@@ -65,8 +65,20 @@ export function QboAccountMappingPanel() {
     enabled: isConnected,
   });
 
+  const {
+    data: taxCodesData,
+    isLoading: taxCodesLoading,
+    refetch: refetchTaxCodes,
+    isFetching: taxCodesFetching,
+  } = useQuery({
+    queryKey: ["qbo", "tax-codes"],
+    queryFn: () => qboMappingsApi.listTaxCodes(),
+    enabled: isConnected,
+  });
+
   const accounts = accountsData?.accounts ?? [];
   const items = itemsData?.items ?? [];
+  const taxCodes = taxCodesData?.tax_codes ?? [];
 
   const saveMutation = useMutation({
     mutationFn: ([mappingKind, mappingKey, payload]: [
@@ -185,8 +197,8 @@ export function QboAccountMappingPanel() {
     }
   };
 
-  const isLoading = overviewLoading || accountsLoading || itemsLoading;
-  const isRefreshing = accountsFetching || itemsFetching;
+  const isLoading = overviewLoading || accountsLoading || itemsLoading || taxCodesLoading;
+  const isRefreshing = accountsFetching || itemsFetching || taxCodesFetching;
 
   return (
     <Card className="border shadow-sm">
@@ -203,6 +215,7 @@ export function QboAccountMappingPanel() {
             onClick={() => {
               refetchAccounts();
               refetchItems();
+              refetchTaxCodes();
               queryClient.invalidateQueries({ queryKey: ["qbo", "account-mappings"] });
             }}
             disabled={isRefreshing}
@@ -214,8 +227,9 @@ export function QboAccountMappingPanel() {
       </CardHeader>
       <CardContent className="p-0">
         <p className="px-4 py-3 text-xs text-muted-foreground border-b">
-          Map SVR control accounts, invoice line types, and payment methods to QuickBooks accounts and
-          service items. Outbound invoice, payment, and bill sync uses these mappings.
+          Map SVR control accounts, invoice line types, payment methods, and sales tax codes to
+          QuickBooks accounts, service items, and tax codes. Outbound invoice, estimate, and credit
+          memo sync uses these mappings.
         </p>
 
         {isLoading ? (
@@ -282,7 +296,15 @@ export function QboAccountMappingPanel() {
                             }
                           >
                             <SelectTrigger className="w-full sm:w-[280px] h-8 text-xs bg-card">
-                              <SelectValue placeholder={row.uses_item ? "Select QBO item" : "Select QBO account"} />
+                              <SelectValue
+                                placeholder={
+                                  row.uses_item
+                                    ? "Select QBO item"
+                                    : row.uses_tax_code
+                                      ? "Select QBO tax code"
+                                      : "Select QBO account"
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value={UNMAPPED_VALUE}>Not mapped</SelectItem>
@@ -298,7 +320,14 @@ export function QboAccountMappingPanel() {
                                       </SelectItem>
                                     );
                                   })
-                                : accounts.map((account) => {
+                                : row.uses_tax_code
+                                  ? taxCodes.map((taxCode) => (
+                                      <SelectItem key={taxCode.id} value={taxCode.id}>
+                                        {taxCode.name}
+                                        {taxCode.description ? ` — ${taxCode.description}` : ""}
+                                      </SelectItem>
+                                    ))
+                                  : accounts.map((account) => {
                                     const taken =
                                       mappedAccountIds.has(account.id) &&
                                       account.id !== row.qbo_account_id;

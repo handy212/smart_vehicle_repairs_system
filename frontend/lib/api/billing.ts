@@ -246,6 +246,8 @@ export interface Estimate {
     amount_paid?: string;
     amount_due?: string;
   } | null;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface EstimateListResponse {
@@ -296,6 +298,8 @@ export interface CreditNote {
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface CreditNoteListResponse {
