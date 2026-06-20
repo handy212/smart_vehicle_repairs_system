@@ -9,6 +9,7 @@ from .contact_services import (
     build_primary_contact_display_name,
     sync_primary_contact,
 )
+from apps.quickbooks_online.serializer_mixins import QBOSyncFieldsMixin
 
 User = get_user_model()
 
@@ -24,7 +25,7 @@ class CustomerUserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
-class CustomerListSerializer(serializers.ModelSerializer):
+class CustomerListSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Serializer for customer list view"""
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
@@ -39,6 +40,8 @@ class CustomerListSerializer(serializers.ModelSerializer):
     last_visit_date = serializers.SerializerMethodField()
     days_since_last_visit = serializers.SerializerMethodField()
     is_inactive = serializers.SerializerMethodField()
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
     
     def get_last_visit_date(self, obj):
         return obj.get_last_visit_date()
@@ -54,6 +57,18 @@ class CustomerListSerializer(serializers.ModelSerializer):
         # Default threshold: 180 days (6 months)
         threshold = self.context.get('inactive_threshold_days', 180)
         return days >= threshold
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
     
     class Meta:
         model = Customer
@@ -62,11 +77,12 @@ class CustomerListSerializer(serializers.ModelSerializer):
             'company_name', 'customer_type', 'status', 'customer_since',
             'vehicle_count', 'current_balance', 'available_credit',
             'loyalty_points', 'loyalty_tier', 'created_at',
-            'last_visit_date', 'days_since_last_visit', 'is_inactive'
+            'last_visit_date', 'days_since_last_visit', 'is_inactive',
+            'qbo_sync_status', 'qbo_sync_error',
         ]
 
 
-class CustomerDetailSerializer(serializers.ModelSerializer):
+class CustomerDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Detailed serializer for customer"""
     user = CustomerUserSerializer(read_only=True)
     # Map annotated `vehicles_count` back to `vehicle_count` to avoid model property collision
@@ -77,6 +93,22 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
         read_only=True
     )
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
     
     class Meta:
         model = Customer

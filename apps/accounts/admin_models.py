@@ -68,6 +68,7 @@ class SystemSettings(models.Model):
         ('quickbooks_client_id', '', 'QuickBooks Online Client ID from Intuit Developer Portal'),
         ('quickbooks_client_secret', '', 'QuickBooks Online Client Secret'),
         ('quickbooks_sandbox_enabled', 'true', 'Use QuickBooks Online Sandbox environment if true'),
+        ('quickbooks_webhook_token', '', 'QuickBooks webhook verifier token from Intuit Developer Portal'),
     ]
     
     @classmethod

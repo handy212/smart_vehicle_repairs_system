@@ -52,8 +52,8 @@ export default function SupplierDetailPage() {
   const handleQBOSync = async () => {
     try {
       setIsSyncing(true);
-      await quickbooksApi.syncInbound();
-      toastSuccess("QuickBooks sync triggered successfully.");
+      await quickbooksApi.syncOutbound({ entity_type: "supplier", object_id: id });
+      toastSuccess("Supplier push to QuickBooks triggered successfully.");
       refetch();
     } catch {
       toastError("Failed to trigger QuickBooks sync");

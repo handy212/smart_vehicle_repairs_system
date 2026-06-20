@@ -140,12 +140,16 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             messages.error(request, "Invalid QuickBooks callback parameters.")
             return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
             
-        # Verify state
         saved_state = request.session.get('qbo_state')
-        if state != saved_state:
-             # Basic CSRF check, potentially optional depending on strictness
-             pass
-            
+        if not saved_state or state != saved_state:
+            logger.warning(
+                "QBO OAuth callback rejected due to state mismatch (received=%s, expected=%s)",
+                state,
+                saved_state,
+            )
+            messages.error(request, "QuickBooks authorization failed due to an invalid session state. Please try connecting again.")
+            return redirect(build_qbo_integrations_url(qbo_status="invalid_state"))
+
         config = QuickBooksService.get_config(active_only=False)
         if not QuickBooksService.sdk_available():
             messages.error(request, QuickBooksService.sdk_unavailable_message())
@@ -184,6 +188,9 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
                 }
             )
             
+            if 'qbo_state' in request.session:
+                del request.session['qbo_state']
+
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
             return redirect(build_qbo_integrations_url(qbo_status="connected"))
             

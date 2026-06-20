@@ -91,10 +91,10 @@ export default function InvoiceDetailPage() {
   const handleQBOSync = async () => {
     try {
       setIsSyncing(true);
-      await quickbooksApi.syncInbound();
+      await quickbooksApi.syncOutbound({ entity_type: "invoice", object_id: invoiceId });
       toast({
         title: "QuickBooks Sync",
-        description: "Consistency check triggered. Status should update shortly.",
+        description: "Invoice push to QuickBooks triggered. Status should update shortly.",
       });
       // Invalidate query to refresh UI
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });

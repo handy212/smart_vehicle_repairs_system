@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { getUserFacingError } from "@/lib/api/errors";
+import { QboAccountMappingPanel } from "@/components/integrations/QboAccountMappingPanel";
 import {
   Select,
   SelectContent,
@@ -346,6 +347,8 @@ export default function ControlPanelPage() {
           )}
         </CardContent>
       </Card>
+
+      <QboAccountMappingPanel />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>

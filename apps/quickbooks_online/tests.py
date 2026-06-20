@@ -574,6 +574,54 @@ class QuickBooksAuthFlowTests(TestCase):
         self.assertEqual(response.url, "https://example.intuit.test/oauth")
         self.assertEqual(self.client.session["qbo_state"], "state-123")
 
+    @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
+    @patch("apps.quickbooks_online.views.QuickBooksService.get_config")
+    def test_callback_rejects_state_mismatch(self, mock_get_config, mock_get_auth_client):
+        config = MagicMock(client_id="client-id", client_secret="client-secret")
+        mock_get_config.return_value = config
+        mock_get_auth_client.return_value = MagicMock()
+
+        self.client.force_login(self.admin_user)
+        session = self.client.session
+        session["qbo_state"] = "expected-state"
+        session.save()
+
+        response = self.client.get(
+            reverse("quickbooks_online:callback"),
+            {"state": "wrong-state", "code": "auth-code", "realmId": "realm-123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("qbo_status=invalid_state", response.url)
+        mock_get_auth_client.return_value.get_bearer_token.assert_not_called()
+
+    @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
+    @patch("apps.quickbooks_online.views.QuickBooksService.get_config")
+    def test_callback_clears_state_after_success(self, mock_get_config, mock_get_auth_client):
+        config = QBOConfig.objects.get(pk=self.config.pk)
+        mock_get_config.return_value = config
+
+        auth_client = MagicMock()
+        auth_client.access_token = "new-access"
+        auth_client.refresh_token = "new-refresh"
+        auth_client.expires_in = 3600
+        auth_client.x_refresh_token_expires_in = 8640000
+        mock_get_auth_client.return_value = auth_client
+
+        self.client.force_login(self.admin_user)
+        session = self.client.session
+        session["qbo_state"] = "valid-state"
+        session.save()
+
+        response = self.client.get(
+            reverse("quickbooks_online:callback"),
+            {"state": "valid-state", "code": "auth-code", "realmId": "realm-456"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("qbo_status=connected", response.url)
+        self.assertNotIn("qbo_state", self.client.session)
+
     def test_unauthenticated_connect_redirects_to_frontend_login(self):
         response = self.client.get(reverse("quickbooks_online:connect"))
 

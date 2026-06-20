@@ -44,7 +44,7 @@ export function QuickBooksOnlineCard() {
     try {
       await quickbooksApi.syncInbound();
       toast({
-        title: "Sync Started",
+        title: "Pull Started",
         description: "Pulling data from QuickBooks in the background.",
       });
       // Refresh status after a short delay
@@ -116,7 +116,7 @@ export function QuickBooksOnlineCard() {
                 disabled={syncing}
               >
                 <RefreshCcw className={`w-3.5 h-3.5 mr-2 transition-transform duration-500 ${syncing ? "animate-spin" : "group-hover:rotate-180"}`} />
-                Sync Now
+                Pull from QBO
               </Button>
               <Button
                 variant="outline"
