@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 User = get_user_model()
 
-@patch('apps.workorders.views.filter_queryset_for_user_branches', side_effect=lambda qs, *args, **kwargs: qs)
+@patch('apps.workorders.views.work_order.filter_queryset_for_user_branches', side_effect=lambda qs, *args, **kwargs: qs)
 class MobileAPITestCase(TestCase):
     def setUp(self):
         self.client = APIClient()

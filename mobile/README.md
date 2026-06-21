@@ -8,3 +8,5 @@ Technicians should use the **Next.js PWA** at `/mobile/*` in the `frontend/` pro
 - Routes: `/mobile/dashboard`, work orders, inspections, schedule, roadside, etc.
 
 Do not add shop features here until the PWA roadmap is complete and native delivery is explicitly prioritized.
+
+See [`docs/MOBILE-APP-STRATEGY.md`](../docs/MOBILE-APP-STRATEGY.md) for the full decision record.

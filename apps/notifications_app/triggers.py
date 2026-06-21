@@ -2,11 +2,15 @@
 Notification triggers for automatic notifications across the system.
 This module provides functions to send notifications for key events.
 """
+import logging
+
 from django.utils import timezone
 from .services import NotificationService, NotificationHelper
 from .models import Notification, NotificationTemplate
 from apps.accounts.settings_utils import get_setting, get_company_info, get_whatsapp_settings, get_site_url
 from .currency import format_money, enrich_money_context, get_currency_symbol
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationTriggers:
@@ -580,8 +584,8 @@ Please review and approve to proceed with repairs.'''
             # Adapt the template message for approval request
             try:
                 message = self.service._render_template(template.body, context)
-            except:
-                pass  # Fall back to default message if template rendering fails
+            except Exception as exc:
+                logger.debug("Approval template render failed, using default: %s", exc)
         
         self._create_notification_for_channels(
             recipient=work_order.customer.user,
@@ -732,8 +736,8 @@ Please review and make payment when ready.'''
                 message = self.service._render_template(template.body, context)
                 if template and template.subject:
                     title = self.service._render_template(template.subject, context)
-            except:
-                pass  # Fall back to default message if template rendering fails
+            except Exception as exc:
+                logger.debug("Invoice template render failed, using default: %s", exc)
         
         
         # Determine enabled channels
@@ -884,14 +888,14 @@ Please contact us to schedule an appointment or book online.'''
         if template and template.subject:
             try:
                 title = self.service._render_template(template.subject, context)
-            except:
-                pass
+            except Exception as exc:
+                logger.debug("Service-due subject template render failed: %s", exc)
                 
         if template and template.body:
             try:
                 message = self.service._render_template(template.body, context)
-            except:
-                pass
+            except Exception as exc:
+                logger.debug("Service-due body template render failed: %s", exc)
                 
         notification = Notification.objects.create(
             recipient=schedule.vehicle.owner.user,

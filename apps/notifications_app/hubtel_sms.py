@@ -246,9 +246,11 @@ def send_sms(phone_number, message, sender=None):
             error_code = error_response.get('responseCode', 'unknown')
             logger.error(f"HTTP error sending SMS: {error_detail} (code: {error_code})")
             logger.error(f"Response body: {e.response.text}")
-        except:
-            logger.error(f"HTTP error sending SMS: {error_detail}")
-            logger.error(f"Response body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
+        except (ValueError, TypeError, KeyError) as parse_exc:
+            logger.debug("Hubtel error response was not JSON: %s", parse_exc)
+            logger.error("HTTP error sending SMS: %s", error_detail)
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error("Response body: %s", getattr(e.response, 'text', 'N/A'))
         return False, f"Hubtel API error: {error_detail}"
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error sending SMS via Hubtel to {formatted_phone}: {e}")

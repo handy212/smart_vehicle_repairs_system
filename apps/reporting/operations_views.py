@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from apps.accounts.permissions import HasAnyPermission, IsModuleEnabled, REPORTS_VIEW_PERMISSIONS
 
@@ -16,6 +17,7 @@ from .operations_reports import OperationsReportingService
 from .views import _get_branch_ids, _parse_date_range
 
 
+@extend_schema(description='Roadside assistance revenue by period and branch.')
 @api_view(['GET'])
 @permission_classes(REPORTS_PERMISSION_CLASSES)
 def roadside_revenue_report(request):
@@ -64,6 +66,13 @@ def exception_log_report(request):
     return Response(OperationsReportingService.exception_log(branch_ids or None))
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter('work_order_id', OpenApiTypes.INT, required=False),
+        OpenApiParameter('part_id', OpenApiTypes.INT, required=False),
+    ],
+    description='Part/work-order traceability chain. Requires work_order_id or part_id.',
+)
 @api_view(['GET'])
 @permission_classes(REPORTS_PERMISSION_CLASSES)
 def traceability_dashboard(request):
