@@ -506,14 +506,17 @@ class QuickBooksService:
         except Exception:
             return None
 
-    def _build_sales_item_lines(self, line_items, *, item_type_attr='item_type'):
+    def _build_sales_item_lines(self, line_items, *, item_type_attr='item_type', default_item_type='other'):
         lines = []
         mapping_service = self._get_mapping_service()
         for item in line_items:
             line = DetailLine()
             line.Amount = float(item.total)
             line.DetailType = "SalesItemLineDetail"
-            item_type = getattr(item, item_type_attr, 'other')
+            if hasattr(item, item_type_attr):
+                item_type = getattr(item, item_type_attr)
+            else:
+                item_type = default_item_type
             line.Description = item.description or f"{str(item_type).title()} Item"
 
             sales_item = SalesItemLineDetail()
@@ -528,6 +531,27 @@ class QuickBooksService:
             lines.append(line)
         return lines
 
+    _LEVY_TAX_FIELD_MAP = (
+        ('vat', 'tax_vat_amount'),
+        ('nhil', 'tax_nhil_amount'),
+        ('getfund', 'tax_getfund_amount'),
+        ('hrl', 'tax_hrl_amount'),
+    )
+
+    def _resolve_tax_code_id(self, mapping_service, local_obj):
+        """Prefer composite tax code; fall back to the first mapped Ghana levy with an amount."""
+        composite_id = mapping_service.resolve_tax_code_id('composite')
+        if composite_id:
+            return composite_id
+        for key, field in self._LEVY_TAX_FIELD_MAP:
+            amount = float(getattr(local_obj, field, 0) or 0)
+            if amount <= 0:
+                continue
+            code_id = mapping_service.resolve_tax_code_id(key)
+            if code_id:
+                return code_id
+        return None
+
     def _apply_mapped_tax(self, qb_txn, local_obj):
         mapping_service = self._get_mapping_service()
         if not mapping_service or TxnTaxDetail is None or Ref is None:
@@ -535,12 +559,13 @@ class QuickBooksService:
         tax_amount = float(getattr(local_obj, 'tax_amount', 0) or 0)
         if tax_amount <= 0:
             return
-        tax_code_id = mapping_service.resolve_tax_code_id('composite')
+        tax_code_id = self._resolve_tax_code_id(mapping_service, local_obj)
         if not tax_code_id:
             return
         qb_txn.TxnTaxDetail = TxnTaxDetail()
         qb_txn.TxnTaxDetail.TxnTaxCodeRef = Ref()
         qb_txn.TxnTaxDetail.TxnTaxCodeRef.value = tax_code_id
+        qb_txn.TxnTaxDetail.TotalTax = tax_amount
         if hasattr(qb_txn, 'GlobalTaxCalculation'):
             qb_txn.GlobalTaxCalculation = 'TaxExcluded'
 
@@ -771,17 +796,10 @@ class QuickBooksService:
 
         self._apply_department_ref(qb_credit_memo, local_credit_note.branch)
 
-        qb_credit_memo.Line = []
-        for item in local_credit_note.line_items.all():
-            line = DetailLine()
-            line.Amount = float(item.total)
-            line.DetailType = "SalesItemLineDetail"
-            line.Description = item.description
-            sales_item = SalesItemLineDetail()
-            sales_item.Qty = float(item.quantity)
-            sales_item.UnitPrice = float(item.unit_price)
-            line.SalesItemLineDetail = sales_item
-            qb_credit_memo.Line.append(line)
+        qb_credit_memo.Line = self._build_sales_item_lines(
+            local_credit_note.line_items.all(),
+            default_item_type='other',
+        )
 
         self._apply_mapped_tax(qb_credit_memo, local_credit_note)
 
@@ -1388,6 +1406,160 @@ class QuickBooksService:
             logger.error(f"QBO pull_bills failed: {e}")
             log.status = 'failed'
             log.error_message = str(e)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log
+
+    def pull_estimates(self, triggered_by=None):
+        """
+        Pull Estimates from QBO and update status on existing local estimates.
+        Local business data remains authoritative; only status and sync meta are updated.
+        """
+        from apps.billing.models import Estimate
+
+        log = QBOSyncLog.objects.create(entity_type='estimate', triggered_by=triggered_by)
+
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        if QBEstimate is None:
+            log.status = 'failed'
+            log.error_message = _quickbooks_sdk_message()
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        qbo_status_map = {
+            'Accepted': 'approved',
+            'Rejected': 'declined',
+            'Closed': 'converted',
+        }
+
+        try:
+            qb_estimates = QBEstimate.all(qb=client)
+            log.records_pulled = len(qb_estimates)
+            estimate_ct = ContentType.objects.get_for_model(Estimate)
+
+            for qb_estimate in qb_estimates:
+                mapping = QBOMapping.objects.filter(
+                    content_type=estimate_ct,
+                    qbo_id=str(qb_estimate.Id),
+                ).first()
+                if not mapping:
+                    log.records_skipped += 1
+                    continue
+
+                try:
+                    local_estimate = Estimate.objects.get(id=mapping.object_id)
+                    updated = False
+                    qbo_status = getattr(qb_estimate, 'TxnStatus', None)
+                    mapped_status = qbo_status_map.get(qbo_status)
+                    if mapped_status and local_estimate.status != mapped_status:
+                        Estimate.objects.filter(id=local_estimate.id).update(status=mapped_status)
+                        updated = True
+
+                    if updated:
+                        log.records_updated += 1
+                    else:
+                        log.records_skipped += 1
+
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = qb_estimate.SyncToken or ''
+                    mapping.error_message = ''
+                    mapping.save()
+                except Estimate.DoesNotExist:
+                    logger.warning(
+                        'QBOMapping points to Estimate id=%s which no longer exists.',
+                        mapping.object_id,
+                    )
+                    log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as exc:
+            logger.error('QBO pull_estimates failed: %s', exc)
+            log.status = 'failed'
+            log.error_message = str(exc)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log
+
+    def pull_credit_memos(self, triggered_by=None):
+        """
+        Pull Credit Memos from QBO and update applied status on existing local credit notes.
+        """
+        from apps.billing.models import CreditNote
+        from decimal import Decimal
+
+        log = QBOSyncLog.objects.create(entity_type='credit_memo', triggered_by=triggered_by)
+
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        if QBCreditMemo is None:
+            log.status = 'failed'
+            log.error_message = _quickbooks_sdk_message()
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        try:
+            qb_credit_memos = QBCreditMemo.all(qb=client)
+            log.records_pulled = len(qb_credit_memos)
+            credit_note_ct = ContentType.objects.get_for_model(CreditNote)
+
+            for qb_credit_memo in qb_credit_memos:
+                mapping = QBOMapping.objects.filter(
+                    content_type=credit_note_ct,
+                    qbo_id=str(qb_credit_memo.Id),
+                ).first()
+                if not mapping:
+                    log.records_skipped += 1
+                    continue
+
+                try:
+                    local_credit_note = CreditNote.objects.get(id=mapping.object_id)
+                    updated = False
+                    remaining = Decimal(str(getattr(qb_credit_memo, 'RemainingCredit', 0) or 0))
+                    if (
+                        remaining == Decimal('0')
+                        and local_credit_note.status == 'issued'
+                    ):
+                        CreditNote.objects.filter(id=local_credit_note.id).update(status='applied')
+                        updated = True
+
+                    if updated:
+                        log.records_updated += 1
+                    else:
+                        log.records_skipped += 1
+
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = qb_credit_memo.SyncToken or ''
+                    mapping.error_message = ''
+                    mapping.save()
+                except CreditNote.DoesNotExist:
+                    logger.warning(
+                        'QBOMapping points to CreditNote id=%s which no longer exists.',
+                        mapping.object_id,
+                    )
+                    log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as exc:
+            logger.error('QBO pull_credit_memos failed: %s', exc)
+            log.status = 'failed'
+            log.error_message = str(exc)
 
         log.finished_at = timezone.now()
         log.save()

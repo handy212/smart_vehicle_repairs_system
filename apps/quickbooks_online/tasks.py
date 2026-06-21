@@ -149,13 +149,55 @@ def task_pull_bills_from_qbo(triggered_by_id=None):
 
 
 @shared_task
+def task_pull_estimates_from_qbo(triggered_by_id=None):
+    """Pull Estimates from QBO → update status on existing local estimates."""
+    try:
+        from .services import QuickBooksService
+        service = QuickBooksService()
+        log = service.pull_estimates(triggered_by=triggered_by_id)
+        if log:
+            logger.info(
+                "[QBO Inbound] Estimates pull complete: "
+                "pulled=%s, updated=%s, skipped=%s, status=%s",
+                log.records_pulled,
+                log.records_updated,
+                log.records_skipped,
+                log.status,
+            )
+    except Exception as e:
+        logger.error("Error in task_pull_estimates_from_qbo: %s", e, exc_info=True)
+
+
+@shared_task
+def task_pull_credit_memos_from_qbo(triggered_by_id=None):
+    """Pull Credit Memos from QBO → update applied status on local credit notes."""
+    try:
+        from .services import QuickBooksService
+        service = QuickBooksService()
+        log = service.pull_credit_memos(triggered_by=triggered_by_id)
+        if log:
+            logger.info(
+                "[QBO Inbound] Credit memos pull complete: "
+                "pulled=%s, updated=%s, skipped=%s, status=%s",
+                log.records_pulled,
+                log.records_updated,
+                log.records_skipped,
+                log.status,
+            )
+    except Exception as e:
+        logger.error("Error in task_pull_credit_memos_from_qbo: %s", e, exc_info=True)
+
+
+@shared_task
 def task_full_inbound_sync(triggered_by_id=None):
     """
-    Convenience task: runs all three inbound pulls sequentially.
+    Convenience task: runs all inbound pulls sequentially.
     Triggered by Celery Beat schedule or manual admin action.
     """
     logger.info("[QBO Inbound] Starting full inbound sync...")
     task_pull_vendors_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_invoices_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_bills_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_estimates_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_credit_memos_from_qbo(triggered_by_id=triggered_by_id)
     logger.info("[QBO Inbound] Full inbound sync complete.")

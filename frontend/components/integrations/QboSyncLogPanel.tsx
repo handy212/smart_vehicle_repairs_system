@@ -61,7 +61,7 @@ export function QboSyncLogPanel() {
       </CardHeader>
       <CardContent className="p-0">
         <p className="px-4 py-3 text-xs text-muted-foreground border-b">
-          Recent inbound pulls and outbound pushes with QuickBooks. Use this to confirm vendor, invoice, bill, and document sync runs.
+          Recent inbound pulls and outbound pushes with QuickBooks. Tracks vendors, invoices, bills, estimates, credit memos, and document sync runs.
         </p>
         {isLoading ? (
           <div className="p-6 text-sm text-muted-foreground">Loading sync history...</div>
