@@ -897,7 +897,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
 
         InvoiceLineItem.objects.create(
             invoice=invoice,
-            item_type='service',
+            item_type='other',
             description=f"{roadside_request.get_service_type_display()} - {roadside_request.request_number}",
             quantity=1,
             unit_price=roadside_request.charge_amount,

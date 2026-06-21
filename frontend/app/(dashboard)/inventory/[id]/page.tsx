@@ -31,6 +31,7 @@ import { getUserFacingError } from "@/lib/api/errors";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { cn } from "@/lib/utils";
+import { productServiceTypeLabel } from "@/components/inventory/product-service-types";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -108,7 +109,9 @@ export default function PartDetailPage() {
     return { variant: "success" as const, text: "In Stock", icon: Package };
   };
 
-  const stockStatus = getStockStatus();
+  const tracksStock = part.item_type === "inventory" || !part.item_type;
+  const stockStatus = tracksStock ? getStockStatus() : null;
+  const activeTabValue = !tracksStock && activeTab === "overview" ? "details" : activeTab;
   const partImageUrl = part.image ? getMediaUrl(part.image) : "";
   const canEditPart = hasPermission("edit_parts") || hasPermission("manage_inventory");
   const canAdjustStock = hasPermission("adjust_inventory") || hasPermission("manage_inventory");
@@ -148,10 +151,16 @@ export default function PartDetailPage() {
               <p className="text-sm font-mono text-muted-foreground bg-border px-2 py-0.5 rounded">
                 {part.part_number}
               </p>
-              <Badge variant={stockStatus.variant} className="h-6 gap-1">
-                <stockStatus.icon className="w-3 h-3" />
-                {stockStatus.text}
-              </Badge>
+              {tracksStock && stockStatus ? (
+                <Badge variant={stockStatus.variant} className="h-6 gap-1">
+                  <stockStatus.icon className="w-3 h-3" />
+                  {stockStatus.text}
+                </Badge>
+              ) : part.item_type ? (
+                <Badge variant="outline" className="h-6">
+                  {productServiceTypeLabel(part.item_type)}
+                </Badge>
+              ) : null}
               {!part.is_active && <Badge variant="secondary">Inactive</Badge>}
             </div>
           </div>
@@ -186,7 +195,7 @@ export default function PartDetailPage() {
               )}
             </div>
           )}
-          {canAdjustStock && (
+          {canAdjustStock && tracksStock && (
             <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
               <RotateCcw className="w-4 h-4 mr-2" />
               Adjust Stock
@@ -322,15 +331,16 @@ export default function PartDetailPage() {
           </Card>
 
           {/* Tabs for detailed info */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Stock</TabsTrigger>
+          <Tabs value={activeTabValue} onValueChange={setActiveTab} className="w-full">
+            <TabsList className={cn("grid w-full", tracksStock ? "grid-cols-4" : "grid-cols-3")}>
+              {tracksStock && <TabsTrigger value="overview">Stock</TabsTrigger>}
               <TabsTrigger value="details">Specs</TabsTrigger>
               <TabsTrigger value="compatibility">Vehicles</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
 
             {/* Stock Tab */}
+            {tracksStock && (
             <TabsContent value="overview" className="mt-4 space-y-4">
               {activeBranch && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -389,6 +399,7 @@ export default function PartDetailPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+            )}
 
             {/* Specs Tab */}
             <TabsContent value="details" className="mt-4">

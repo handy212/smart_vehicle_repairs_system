@@ -2079,42 +2079,40 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
                 item.notes = f"{item.notes}\n{notes}" if item.notes else notes
             item.save()
             
-            # Use InventoryService to record transaction and update StockItem
-            InventoryService.record_transaction(
-                part=item.part,
-                quantity=quantity_received,
-                transaction_type='purchase',
-                user=request.user,
-                purchase_order=po,
-                branch=branch,
-                unit_cost=item.unit_cost,
-                reason=f"Received from PO {po.po_number}",
-                notes=notes
-            )
-            
-            # Update StockItem quantity_on_order
-            from .models import StockItem
-            stock_item, _ = StockItem.objects.get_or_create(
-                part=item.part,
-                branch=branch,
-                defaults={
-                    'quantity_on_order': 0,
-                    'reorder_point': item.part.reorder_point,
-                    'reorder_quantity': item.part.reorder_quantity,
-                    'minimum_stock': item.part.minimum_stock,
-                }
-            )
-            # Recalculate total on order for this part at this branch
-            from django.db.models import Sum, F
-            total_on_order = PurchaseOrderItem.objects.filter(
-                part=item.part,
-                purchase_order__status__in=['pending_approval', 'approved', 'confirmed'],
-                purchase_order__branch=branch
-            ).aggregate(
-                total=Sum(F('quantity') - F('quantity_received'))
-            )['total'] or 0
-            stock_item.quantity_on_order = max(0, total_on_order)
-            stock_item.save()
+            if item.part.tracks_inventory():
+                InventoryService.record_transaction(
+                    part=item.part,
+                    quantity=quantity_received,
+                    transaction_type='purchase',
+                    user=request.user,
+                    purchase_order=po,
+                    branch=branch,
+                    unit_cost=item.unit_cost,
+                    reason=f"Received from PO {po.po_number}",
+                    notes=notes
+                )
+
+                from .models import StockItem
+                stock_item, _ = StockItem.objects.get_or_create(
+                    part=item.part,
+                    branch=branch,
+                    defaults={
+                        'quantity_on_order': 0,
+                        'reorder_point': item.part.reorder_point,
+                        'reorder_quantity': item.part.reorder_quantity,
+                        'minimum_stock': item.part.minimum_stock,
+                    }
+                )
+                from django.db.models import Sum, F
+                total_on_order = PurchaseOrderItem.objects.filter(
+                    part=item.part,
+                    purchase_order__status__in=['pending_approval', 'approved', 'confirmed'],
+                    purchase_order__branch=branch
+                ).aggregate(
+                    total=Sum(F('quantity') - F('quantity_received'))
+                )['total'] or 0
+                stock_item.quantity_on_order = max(0, total_on_order)
+                stock_item.save()
             
             # Update purchase order status
             if po.is_fully_received:

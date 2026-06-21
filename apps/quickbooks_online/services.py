@@ -777,8 +777,12 @@ class QuickBooksService:
             description = getattr(item, description_attr, '') or 'Line item'
             is_inventory_line = False
             if inventory_relation:
-                is_inventory_line = bool(getattr(item, f'{inventory_relation}_id', None))
                 related = getattr(item, inventory_relation, None)
+                if related is not None:
+                    tracks = getattr(related, 'tracks_inventory', None)
+                    is_inventory_line = tracks() if callable(tracks) else bool(getattr(related, 'item_type', None) == 'inventory')
+                else:
+                    is_inventory_line = bool(getattr(item, f'{inventory_relation}_id', None))
                 if related and getattr(related, 'name', None):
                     description = related.name
             line.Description = description

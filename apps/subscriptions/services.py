@@ -146,7 +146,7 @@ class SubscriptionService:
             
         InvoiceLineItem.objects.create(
             invoice=invoice,
-            item_type='service',
+            item_type='other',
             description=desc,
             quantity=1,
             unit_price=purchase_price,
@@ -303,7 +303,7 @@ class SubscriptionService:
             
         InvoiceLineItem.objects.create(
             invoice=invoice,
-            item_type='service',
+            item_type='other',
             description=desc,
             quantity=1,
             unit_price=purchase_price,

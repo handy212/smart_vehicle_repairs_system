@@ -14,6 +14,11 @@ class StockManagementMixin:
     def adjust(self, request, pk=None):
         """Manually adjust stock quantity"""
         part = self.get_object()
+        if not part.tracks_inventory():
+            return Response(
+                {'error': 'Only inventory-type catalog items track stock levels.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         from .serializers import PartStockAdjustmentSerializer
         serializer = PartStockAdjustmentSerializer(data=request.data)
         

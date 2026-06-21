@@ -809,8 +809,8 @@ class PurchaseOrderItem(models.Model):
         # Update purchase order totals
         self.purchase_order.calculate_totals()
         
-        # Update StockItem quantity_on_order (not deprecated part.quantity_on_order)
-        if self.purchase_order.status in ['pending_approval', 'approved', 'confirmed']:
+        # Update StockItem quantity_on_order (inventory catalog parts only)
+        if self.part.tracks_inventory() and self.purchase_order.status in ['pending_approval', 'approved', 'confirmed']:
             branch = self.purchase_order.branch
             if branch:
                 # Get or create StockItem for this branch

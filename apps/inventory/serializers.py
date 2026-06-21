@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.db import transaction
+from django.db import transaction, models
 from decimal import Decimal
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
@@ -332,6 +332,26 @@ class PartUpdateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializ
             'image', 'is_active', 'is_taxable', 'is_core', 'core_charge'
         ]
 
+    def validate(self, attrs):
+        instance = getattr(self, 'instance', None)
+        new_type = attrs.get('item_type')
+        if instance and new_type and new_type != instance.item_type:
+            if instance.item_type == 'inventory' and new_type != 'inventory':
+                from apps.inventory.models import StockItem
+                has_stock = StockItem.objects.filter(part=instance).filter(
+                    models.Q(quantity_in_stock__gt=0)
+                    | models.Q(quantity_reserved__gt=0)
+                    | models.Q(quantity_on_order__gt=0)
+                ).exists()
+                if has_stock:
+                    raise serializers.ValidationError({
+                        'item_type': (
+                            'Cannot change an inventory item while branch stock, reservations, '
+                            'or on-order quantities remain. Adjust stock to zero first.'
+                        ),
+                    })
+        return attrs
+
 
 class PartStockAdjustmentSerializer(serializers.Serializer):
     """Serializer for manual stock adjustments"""
@@ -365,6 +385,13 @@ class PurchaseOrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseOrderItem
         fields = ['id', 'part', 'quantity', 'unit_cost', 'notes']
+
+    def validate_part(self, value):
+        if value.item_type == 'service':
+            raise serializers.ValidationError(
+                'Service catalog items cannot be added to purchase orders.'
+            )
+        return value
 
     def validate_quantity(self, value):
         if value <= 0:
