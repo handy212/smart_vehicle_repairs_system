@@ -307,10 +307,9 @@ export default function EditInvoicePage() {
         notes: data.notes,
         customer_notes: data.customer_notes,
         status: data.status,
-        sales_agent: data.sales_agent,
         discount_percentage: data.discount_type !== 'none' ? data.discount_percentage?.toString() : '0',
         discount_reason: data.discount_reason,
-        line_items: data.line_items.map((item, idx) => ({
+        line_items: data.line_items.map((item) => ({
           item_type: item.item_type,
           description: item.description,
           quantity: item.quantity || 0,
@@ -321,8 +320,6 @@ export default function EditInvoicePage() {
           is_taxable: item.is_taxable,
           part: item.part,
           part_number: item.part_number,
-          notes: item.notes,
-          order: idx,
         })),
       };
       return billingApi.invoices.update(invoiceId, payload);
