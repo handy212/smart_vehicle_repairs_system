@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useBranding } from "@/lib/hooks/useBranding";
-import { getAccessToken } from "@/lib/utils/token";
+import { useAuthStore } from "@/store/authStore";
 import { getContrastColor } from "@/lib/utils/color-utils";
 
 /**
@@ -10,7 +10,8 @@ import { getContrastColor } from "@/lib/utils/color-utils";
  * Uses authenticated settings when logged in to avoid tight public rate limits.
  */
 export function BrandingThemeSync() {
-    const variant = typeof window !== "undefined" && getAccessToken() ? "authenticated" : "public";
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const variant = isAuthenticated ? "authenticated" : "public";
     const { primaryColor, secondaryColor, faviconSrc, siteName } = useBranding(variant);
 
     useEffect(() => {

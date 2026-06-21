@@ -9,7 +9,7 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
-import { setTokens } from "@/lib/utils/token";
+import { applyLoginTokens } from "@/lib/auth/session";
 import { adminApi } from "@/lib/api/admin";
 import { useBranding } from "@/lib/hooks/useBranding";
 import { Button } from "@/components/ui/button";
@@ -181,8 +181,8 @@ export default function RegisterPage() {
                 otp_code: otpCode
             });
 
-            // Login user
-            setTokens(authData.access);
+            // HttpOnly cookies set by Django proxy on register verify
+            await applyLoginTokens(authData.access);
             setUser(authData.user);
 
             router.push(getPostLoginPath(authData.user.role));

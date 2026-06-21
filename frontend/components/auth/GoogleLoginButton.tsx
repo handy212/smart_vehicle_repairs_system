@@ -148,10 +148,7 @@ export default function GoogleLoginButton({
                 return;
             }
 
-            const { setTokens } = await import('@/lib/utils/token');
-            setTokens(data.access);
-            localStorage.setItem('user', JSON.stringify(data.user));
-
+            // HttpOnly cookies set by Django proxy response
             if (onSuccess) {
                 onSuccess(data);
             }

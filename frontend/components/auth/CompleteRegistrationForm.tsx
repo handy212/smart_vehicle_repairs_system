@@ -141,9 +141,6 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
             const authData = (await apiResponse.json()) as CompleteRegistrationSuccess;
 
-            const { setTokens } = await import('@/lib/utils/token');
-            setTokens(authData.access);
-            localStorage.setItem('user', JSON.stringify(authData.user));
 
             onSuccess(authData);
 

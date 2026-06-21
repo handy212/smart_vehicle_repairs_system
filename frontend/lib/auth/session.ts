@@ -1,14 +1,16 @@
 import { authApi } from "@/lib/api/auth";
 import { refreshAccessToken } from "@/lib/auth/refresh-access-token";
-import { getAccessToken, setTokens } from "@/lib/utils/token";
+import { getAccessToken } from "@/lib/utils/token";
 import { useAuthStore } from "@/store/authStore";
 
 let inflightSession: Promise<boolean> | null = null;
 
-/** After login/2FA when tokens may be HttpOnly-only (no access in JSON). */
-export async function applyLoginTokens(access?: string | null): Promise<void> {
-  if (access) {
-    setTokens(access);
+/**
+ * After login/2FA — tokens are set as HttpOnly cookies by BFF or Django proxy.
+ * Optionally warm the session when legacy JSON access is still returned.
+ */
+export async function applyLoginTokens(_access?: string | null): Promise<void> {
+  if (_access) {
     return;
   }
   await refreshAccessToken();
@@ -16,7 +18,7 @@ export async function applyLoginTokens(access?: string | null): Promise<void> {
 
 /**
  * Restore API auth after a full page load. Zustand may still show the user as
- * logged in while the in-memory access token was cleared.
+ * logged in while HttpOnly cookies carry the real session.
  */
 export async function ensureApiSession(): Promise<boolean> {
   if (typeof window === "undefined") {
@@ -36,16 +38,22 @@ export async function ensureApiSession(): Promise<boolean> {
   }
 
   inflightSession = (async () => {
-    const access = await refreshAccessToken();
-    if (access) {
-      return true;
-    }
-
     try {
       const user = await authApi.getCurrentUser();
       useAuthStore.getState().setUser(user);
       return true;
     } catch {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        try {
+          const user = await authApi.getCurrentUser();
+          useAuthStore.getState().setUser(user);
+          return true;
+        } catch {
+          useAuthStore.getState().logout();
+          return false;
+        }
+      }
       useAuthStore.getState().logout();
       return false;
     }

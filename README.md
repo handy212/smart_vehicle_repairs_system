@@ -96,7 +96,7 @@ export DJANGO_SETTINGS_MODULE=config.settings.testing
 pytest
 ```
 
-Configuration: [`pytest.ini`](pytest.ini) — **80% coverage** fail-under on `apps/`, in-memory SQLite, eager Celery.
+Configuration: [`pytest.ini`](pytest.ini) — **55% coverage** fail-under on `apps/` (ratcheted incrementally toward 65%+), in-memory SQLite, eager Celery.
 
 ### Frontend (Vitest)
 

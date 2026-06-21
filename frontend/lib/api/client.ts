@@ -29,7 +29,7 @@ type OfflineQueuedError = Error & {
 };
 
 type FailedQueueItem = {
-  resolve: (token: string | null) => void;
+  resolve: (ok: boolean) => void;
   reject: (error: unknown) => void;
 };
 
@@ -135,12 +135,12 @@ let isRefreshing = false;
 let failedQueue: FailedQueueItem[] = [];
 
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error: unknown, ok = false) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(ok);
     }
   });
 
@@ -189,12 +189,12 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint && !originalRequest.skipAuthRefresh) {
       if (isRefreshing) {
-        return new Promise<string | null>(function (resolve, reject) {
+        return new Promise<boolean>(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            if (token && originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
+          .then((ok) => {
+            if (!ok) {
+              return Promise.reject(new Error("Session expired"));
             }
             return apiClient(originalRequest);
           })
@@ -208,8 +208,8 @@ apiClient.interceptors.response.use(
 
       if (typeof window !== "undefined") {
         try {
-          const access = await refreshAccessToken();
-          if (!access) {
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
             const refreshError = new Error("Session expired");
             processQueue(refreshError, null);
             clearTokens();
@@ -219,11 +219,7 @@ apiClient.interceptors.response.use(
             return Promise.reject(refreshError);
           }
 
-          processQueue(null, access);
-
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access}`;
-          }
+          processQueue(null, null);
 
           return apiClient(originalRequest);
         } catch (refreshError) {

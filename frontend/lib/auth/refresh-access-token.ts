@@ -1,26 +1,19 @@
 import { authApi } from "@/lib/api/auth";
-import { setAccessToken } from "@/lib/utils/token";
 
-let inflightRefresh: Promise<string | null> | null = null;
+let inflightRefresh: Promise<boolean> | null = null;
 
 /**
- * Single in-flight refresh to avoid duplicate POST /auth/token/refresh/ 401 noise.
+ * Single in-flight refresh via BFF /api/auth/refresh (HttpOnly cookie rotation).
  */
-export function refreshAccessToken(): Promise<string | null> {
+export function refreshAccessToken(): Promise<boolean> {
   if (inflightRefresh) {
     return inflightRefresh;
   }
 
   inflightRefresh = authApi
     .refreshToken()
-    .then(({ access }) => {
-      if (access) {
-        setAccessToken(access);
-        return access;
-      }
-      return null;
-    })
-    .catch(() => null)
+    .then(() => true)
+    .catch(() => false)
     .finally(() => {
       inflightRefresh = null;
     });

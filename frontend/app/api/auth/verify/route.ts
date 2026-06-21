@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ACCESS_COOKIE, getDjangoApiBase } from '@/lib/auth/bff-cookies';
 
 /**
  * Proxies JWT verification to Django SimpleJWT.
- * Used by future BFF/session flows; middleware uses fast local expiry checks.
+ * Reads the HttpOnly access_token cookie set by BFF login/refresh.
  */
 export async function POST(request: NextRequest) {
     let token: string | undefined;
@@ -14,14 +15,13 @@ export async function POST(request: NextRequest) {
         token = undefined;
     }
 
-    token = token || request.cookies.get('access_token')?.value;
+    token = token || request.cookies.get(ACCESS_COOKIE)?.value;
 
     if (!token) {
         return NextResponse.json({ ok: false, detail: 'Token required' }, { status: 401 });
     }
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const verifyUrl = `${apiBase.replace(/\/$/, '')}/auth/token/verify/`;
+    const verifyUrl = `${getDjangoApiBase()}/auth/token/verify/`;
 
     try {
         const upstream = await fetch(verifyUrl, {
