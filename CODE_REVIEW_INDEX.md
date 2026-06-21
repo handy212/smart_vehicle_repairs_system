@@ -1,376 +1,101 @@
-# 📋 Code Review - Navigation Index
+# Code Review — Navigation Index
 
-**Review Date:** October 12, 2025  
+> **Archive notice:** This index was written in **October 2025**. Metrics below were **verified June 2026**. For current integration status see [`docs/QBO-INTEGRATION-GUIDE.md`](docs/QBO-INTEGRATION-GUIDE.md), mobile strategy [`docs/MOBILE-APP-STRATEGY.md`](docs/MOBILE-APP-STRATEGY.md), and legacy UI plan [`docs/LEGACY-UI-DEPRECATION.md`](docs/LEGACY-UI-DEPRECATION.md).
+
+**Last verified:** June 20, 2026  
 **Project:** Smart Vehicle Repairs System  
-**Overall Grade:** B+ (Very Good)  
-**Status:** 85% Complete → 70% Production Ready
+**Overall grade:** B+ (architecture) / B− (test depth in reporting & chat)  
+**Status:** ~90% feature complete · ~60% backend test coverage · CI gate 48% (ratcheting to 55%+)
 
 ---
 
-## 🎯 Start Here
+## Start here
 
-New to this review? Read documents in this order:
+Historical deep-dives (October 2025) — still useful for patterns, not for current metrics:
 
-1. **[REVIEW_SUMMARY.md](docs/REVIEW_SUMMARY.md)** ⭐ START HERE
-   - Quick overview of findings
-   - Key statistics and metrics
-   - Main issues and recommendations
-   - 10-minute read
+1. **[REVIEW_SUMMARY.md](docs/REVIEW_SUMMARY.md)** — original findings (partially outdated)
+2. **[CODE_REVIEW_REPORT.md](docs/CODE_REVIEW_REPORT.md)** — full technical review
+3. **[ACTION_PLAN.md](docs/ACTION_PLAN.md)** — original 3-week roadmap (mostly superseded)
 
-2. **[QUICK_FIXES_GUIDE.md](docs/QUICK_FIXES_GUIDE.md)** 🔧 FIX NOW
-   - Step-by-step fix instructions
-   - Before/after code examples
-   - Can complete in 2-3 days
-   - 15-minute read
+**Current operational docs:**
 
-3. **[CODE_REVIEW_REPORT.md](docs/CODE_REVIEW_REPORT.md)** 📖 FULL DETAILS
-   - Comprehensive technical review
-   - 15 detailed sections
-   - Code examples and recommendations
-   - 45-minute read
-
-4. **[ACTION_PLAN.md](docs/ACTION_PLAN.md)** 📅 IMPLEMENTATION
-   - 3-week roadmap to production
-   - Task breakdown with estimates
-   - Success criteria
-   - 30-minute read
+- [QBO Integration Guide](docs/QBO-INTEGRATION-GUIDE.md)
+- [Auth hardening](docs/auth-hardening.md) — Phase B HttpOnly cookies
+- [Legacy UI deprecation](docs/LEGACY-UI-DEPRECATION.md)
+- [Mobile app strategy](docs/MOBILE-APP-STRATEGY.md)
 
 ---
 
-## 📊 Quick Stats
+## Quick stats (June 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| **Lines of Code** | ~34,000 | ✅ |
-| **Python Files** | 166 | ✅ |
-| **Django Apps** | 10 | ✅ |
-| **Models** | 34 | ✅ |
-| **API Endpoints** | 205+ | ✅ |
-| **Test Coverage** | <10% | 🔴 |
-| **API Documentation** | 0% | 🔴 |
-| **Print Statements** | 20+ | 🔴 |
-| **Bare Exceptions** | 15 | 🔴 |
-| **TODO Comments** | 15 | 🟡 |
+| Django apps | 25+ | ✅ |
+| API surface | OpenAPI `/api/docs/` | ✅ |
+| Backend test coverage (`apps/`) | ~60% | 🟡 |
+| CI `cov-fail-under` | 48% → 55% (ratchet) | 🟡 |
+| QuickBooks Online | Implemented + tested | ✅ |
+| Next.js primary UI | Dashboard, portal, `/mobile` PWA | ✅ |
+| Reporting app coverage | ~41% | 🔴 |
+| Chat app coverage | Was ~0% API tests; improving | 🟡 |
+| Legacy Django templates | Deprecated, not removed | 🟡 |
+| Expo `/mobile` scaffold | Experimental only | 🟡 |
 
 ---
 
-## 🎯 Critical Issues (Fix First)
+## Resolved since October 2025
 
-### Issue #1: No Automated Tests 🔴
-- **Current:** <10% coverage
-- **Target:** 80%+ coverage
-- **Time:** 3-4 days
-- **Priority:** CRITICAL
-- **Guide:** [ACTION_PLAN.md - Task 1.1](docs/ACTION_PLAN.md#task-11-add-automated-tests)
-
-### Issue #2: No API Documentation 🔴
-- **Current:** 0 endpoints documented
-- **Target:** All 205+ endpoints
-- **Time:** 1-2 days
-- **Priority:** CRITICAL
-- **Guide:** [QUICK_FIXES_GUIDE.md - Fix #4](docs/QUICK_FIXES_GUIDE.md#fix-4-add-basic-api-documentation-1-day)
-
-### Issue #3: Print Statements 🔴
-- **Current:** 20+ print() in code
-- **Target:** 0 print() statements
-- **Time:** 2-3 hours
-- **Priority:** HIGH
-- **Guide:** [QUICK_FIXES_GUIDE.md - Fix #1](docs/QUICK_FIXES_GUIDE.md#fix-1-replace-print-statements-2-3-hours)
-
-### Issue #4: Bare Exception Handlers 🔴
-- **Current:** 15 bare except:
-- **Target:** 0 bare exceptions
-- **Time:** 4-6 hours
-- **Priority:** HIGH
-- **Guide:** [QUICK_FIXES_GUIDE.md - Fix #2](docs/QUICK_FIXES_GUIDE.md#fix-2-fix-bare-exception-handlers-4-6-hours)
-
-### Issue #5: TODO Comments 🟡
-- **Current:** 15 incomplete features
-- **Target:** All completed or tracked
-- **Time:** 2-3 days
-- **Priority:** HIGH
-- **Guide:** [QUICK_FIXES_GUIDE.md - Fix #3](docs/QUICK_FIXES_GUIDE.md#fix-3-complete-critical-todos-1-2-days)
+| October 2025 issue | June 2026 status |
+|--------------------|------------------|
+| No automated tests | **851+ pytest tests**, CI workflow |
+| No API documentation | **drf-spectacular** schema + Swagger UI |
+| No tests at all | Coverage ~60%; gate staged incrementally |
+| QBO not started | **Phase 1–3 document bridge done** |
 
 ---
 
-## 📅 Timeline to Production
+## Active priorities (June 2026)
 
-```
-Week 1: Critical Blockers (5-7 days)
-├── Add automated tests (3-4 days) 🔴
-├── Add API documentation (1-2 days) 🔴
-├── Fix exception handling (0.5 days) 🔴
-└── Replace print statements (0.5 days) 🔴
+### P1 — Quality
 
-Week 2: Quality & Security (5-7 days)
-├── Complete TODO items (2-3 days) 🟡
-├── Add security headers (0.5 days) 🟡
-├── Add rate limiting (0.5 days) 🟡
-└── Database migration (0.5 days) 🟡
+1. **Reporting & chat behavioral tests** — analytics correctness, conversation permissions
+2. **`workorders/views.py` split** — package under `apps/workorders/views/` (done in PR)
+3. **Typed exceptions + logging** — notification templates, Hubtel SMS, bank upload parsing
+4. **Coverage ratchet** — 48% → 55% → 65% (not a single jump to 80%)
 
-Week 3: Testing & Deployment (5-7 days)
-├── Integration testing (2 days) 🟢
-├── Performance optimization (2-3 days) 🟢
-├── Monitoring setup (1-2 days) 🟢
-└── CI/CD pipeline (2-3 days) 🟢
+### P2 — Strategic
 
-Total: 2-3 weeks
-```
+1. **Legacy template routes** — remove per [`LEGACY-UI-DEPRECATION.md`](docs/LEGACY-UI-DEPRECATION.md)
+2. **Mobile** — PWA canonical; Expo stub documented, not expanded
+3. **`@extend_schema`** — expand on chat, reporting ops, external portal APIs
 
 ---
 
-## 📚 Document Guide
+## Success criteria (updated)
 
-### Review Documents (Created Today)
-
-| Document | Purpose | Length | Read Time |
-|----------|---------|--------|-----------|
-| **REVIEW_SUMMARY.md** | High-level overview | 11KB | 10 min |
-| **QUICK_FIXES_GUIDE.md** | Step-by-step fixes | 13KB | 15 min |
-| **CODE_REVIEW_REPORT.md** | Complete technical review | 22KB | 45 min |
-| **ACTION_PLAN.md** | Implementation roadmap | 18KB | 30 min |
-
-### Existing Project Docs
-
-| Document | Purpose |
-|----------|---------|
-| **[README.md](README.md)** | Project overview and setup |
-| **[ROADMAP.md](ROADMAP.md)** | Development phases (13 phases) |
-| **[CURRENT_PROJECT_STATUS.md](docs/CURRENT_PROJECT_STATUS.md)** | Current implementation status |
-| **[PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** | Project statistics |
-| **[PHASE1-11_COMPLETE.md](docs/)** | Phase completion documentation |
+- [x] CI pytest with coverage artifact
+- [x] OpenAPI schema generation
+- [x] QBO document sync (customers, invoices, estimates, AP bills/credits)
+- [x] Next.js staff + portal + mobile PWA
+- [x] Auth Phase B (HttpOnly cookies via Next.js BFF)
+- [ ] Coverage ≥ 65% (staged)
+- [ ] Reporting + chat ≥ 60% app coverage
+- [ ] Legacy `frontend_urls` modules removed (phased)
+- [ ] Zero bare `except:` in production notification/payment paths
 
 ---
 
-## 🎓 What Each Document Contains
+## Common questions
 
-### 📄 REVIEW_SUMMARY.md
-**Best for:** Getting the big picture quickly
+**Can we deploy now?**  
+Closer than October 2025. Remaining risk: under-tested reporting aggregations and chat WebSocket paths; staged coverage gate reflects pragmatic rollout.
 
-Contains:
-- Quick stats and metrics
-- What's working well
-- Critical issues summary
-- Security assessment
-- Production readiness
-- Timeline overview
+**Biggest technical debt?**  
+Legacy Django HTML routes (parallel to Next.js), large `workorders` view modules (being split), and incremental OpenAPI annotations.
 
-**Read if:** You want a 10-minute overview
+**Where is the mobile app?**  
+Production: **Next.js PWA** at `/mobile/*`. Expo folder is a placeholder — see [MOBILE-APP-STRATEGY.md](docs/MOBILE-APP-STRATEGY.md).
 
 ---
 
-### 🔧 QUICK_FIXES_GUIDE.md
-**Best for:** Fixing issues immediately
-
-Contains:
-- 6 quick fix guides
-- Before/after code examples
-- Verification commands
-- Step-by-step instructions
-- Common issues and solutions
-
-**Read if:** You want to start fixing today
-
----
-
-### 📖 CODE_REVIEW_REPORT.md
-**Best for:** Understanding technical details
-
-Contains:
-- 15 detailed sections
-- Architecture analysis
-- Code quality assessment
-- Security review
-- Performance analysis
-- Database review
-- API design review
-- Specific recommendations
-
-**Read if:** You need complete technical analysis
-
----
-
-### 📅 ACTION_PLAN.md
-**Best for:** Planning implementation
-
-Contains:
-- 3-week roadmap
-- Task breakdown by week
-- Time estimates
-- Success criteria
-- Resource requirements
-- Risk assessment
-- Sign-off checklist
-
-**Read if:** You need an implementation plan
-
----
-
-## 🚀 Quick Start Guide
-
-### For Developers
-
-1. **Day 1: Quick Wins**
-   ```bash
-   # Fix print statements (2-3 hours)
-   # See: QUICK_FIXES_GUIDE.md - Fix #1
-   
-   # Fix exception handling (4-6 hours)
-   # See: QUICK_FIXES_GUIDE.md - Fix #2
-   ```
-
-2. **Day 2-5: Testing**
-   ```bash
-   # Set up test infrastructure
-   # Write model tests
-   # Write API tests
-   # See: ACTION_PLAN.md - Task 1.1
-   ```
-
-3. **Day 6-7: Documentation**
-   ```bash
-   # Configure drf-spectacular
-   # Add @extend_schema decorators
-   # See: QUICK_FIXES_GUIDE.md - Fix #4
-   ```
-
-### For Project Managers
-
-1. **Read** REVIEW_SUMMARY.md (10 minutes)
-2. **Review** ACTION_PLAN.md (30 minutes)
-3. **Schedule** team meeting to discuss priorities
-4. **Create** GitHub issues for all tasks
-5. **Assign** tasks to team members
-6. **Track** weekly progress
-
-### For DevOps
-
-1. **Security fixes** - QUICK_FIXES_GUIDE.md Fix #5
-2. **Database migration** - ACTION_PLAN.md Task 2.4
-3. **Production config** - CODE_REVIEW_REPORT.md Section 9
-4. **Monitoring setup** - ACTION_PLAN.md Phase 3
-
----
-
-## 📞 Common Questions
-
-### Q: Is the project production-ready?
-**A:** Not yet (70%). Need 2-3 weeks of focused work on testing and docs.
-
-### Q: What are the critical blockers?
-**A:** Testing (<10% coverage) and API documentation (0%). See REVIEW_SUMMARY.md.
-
-### Q: How long to fix critical issues?
-**A:** 2-3 days for quick fixes. See QUICK_FIXES_GUIDE.md.
-
-### Q: What's the biggest risk?
-**A:** Lack of automated tests. Without tests, bugs will reach production.
-
-### Q: Can we deploy now?
-**A:** Not recommended. Complete critical fixes first (Week 1 tasks).
-
-### Q: What's working well?
-**A:** Architecture (A-), Database (A-), Features (A), Docs (B+). See REVIEW_SUMMARY.md.
-
----
-
-## 🎯 Success Criteria
-
-Before production deployment:
-
-### Must Have ✅
-- [ ] Test coverage ≥ 80%
-- [ ] API documentation complete
-- [ ] No print() statements
-- [ ] No bare exception handlers
-- [ ] Security headers configured
-- [ ] Rate limiting implemented
-
-### Should Have 🎯
-- [ ] All TODOs completed or tracked
-- [ ] PostgreSQL configured
-- [ ] Monitoring set up
-- [ ] CI/CD pipeline
-- [ ] Load testing passed
-
-### Nice to Have 💡
-- [ ] Performance optimization
-- [ ] Caching implemented
-- [ ] Architecture diagrams
-- [ ] Deployment automation
-
----
-
-## 📊 Grading Scale
-
-| Grade | Meaning | Action |
-|-------|---------|--------|
-| A | Excellent | Minor tweaks |
-| B | Good | Some improvements |
-| C | Acceptable | Significant work needed |
-| D | Poor | Critical issues |
-| F | Fail | Major overhaul required |
-
-**Overall Project Grade: B+** (Very Good with improvements)
-
----
-
-## 🔗 Quick Links
-
-### Review Documents
-- [REVIEW_SUMMARY.md](docs/REVIEW_SUMMARY.md) - Overview
-- [QUICK_FIXES_GUIDE.md](docs/QUICK_FIXES_GUIDE.md) - Quick fixes
-- [CODE_REVIEW_REPORT.md](docs/CODE_REVIEW_REPORT.md) - Full review
-- [ACTION_PLAN.md](docs/ACTION_PLAN.md) - Implementation plan
-
-### Project Documentation
-- [README.md](README.md) - Project overview
-- [ROADMAP.md](ROADMAP.md) - Development roadmap
-- [CURRENT_PROJECT_STATUS.md](docs/CURRENT_PROJECT_STATUS.md) - Status
-- [docs/](docs/) - All documentation
-
-### Key Files
-- [requirements.txt](requirements.txt) - Dependencies
-- [config/settings/](config/settings/) - Settings
-- [apps/](apps/) - Django applications
-
----
-
-## 📈 Progress Tracking
-
-Use this checklist to track progress:
-
-### Week 1: Critical Blockers
-- [ ] Replace print statements (2-3 hours)
-- [ ] Fix exception handlers (4-6 hours)
-- [ ] Add test infrastructure (1 day)
-- [ ] Write model tests (2 days)
-- [ ] Write API tests (1 day)
-- [ ] Configure API docs (1 day)
-
-### Week 2: Quality & Security
-- [ ] Complete critical TODOs (2-3 days)
-- [ ] Add security headers (2-3 hours)
-- [ ] Add rate limiting (3-4 hours)
-- [ ] Migrate to PostgreSQL (4-6 hours)
-
-### Week 3: Deployment Prep
-- [ ] Integration testing (2 days)
-- [ ] Performance optimization (2-3 days)
-- [ ] Monitoring setup (1-2 days)
-- [ ] CI/CD pipeline (2-3 days)
-
----
-
-## 💬 Feedback
-
-Questions or feedback on this review?
-- Create an issue in the repository
-- Contact the development team
-- Schedule a review discussion meeting
-
----
-
-**Review Status:** ✅ Complete  
-**Next Action:** Read REVIEW_SUMMARY.md  
-**Updated:** October 12, 2025
+_For the original October 2025 timeline, critical issues list, and week-by-week checklist, see git history of this file or `docs/ACTION_PLAN.md`._

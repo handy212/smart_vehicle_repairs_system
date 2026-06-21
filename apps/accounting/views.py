@@ -7,7 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.dateparse import parse_date
 from django.core.exceptions import ValidationError as DjangoValidationError
 import openpyxl
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.utils import timezone
 from django.db.models import Q
 from datetime import datetime
@@ -631,12 +631,12 @@ class BankStatementViewSet(viewsets.ModelViewSet):
                     if not tx_date:
                         # try other formats if needed, e.g. DD/MM/YYYY
                         tx_date = datetime.strptime(date_str, '%d/%m/%Y').date()
-                except:
-                    continue # Skip invalid dates
+                except (ValueError, TypeError):
+                    continue  # Skip invalid dates
                 
                 try:
                     amount = Decimal(amount_str)
-                except:
+                except (ValueError, TypeError, InvalidOperation):
                     continue
                 
                 # Determine Debit/Credit

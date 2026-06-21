@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db import transaction
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiTypes
+from rest_framework import serializers
 from .models import Conversation, ChatMessage, ChatMembership
 from .serializers import ConversationSerializer, ChatMessageSerializer
 
@@ -51,6 +53,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
             ]
             ChatMembership.objects.bulk_create(memberships, ignore_conflicts=True)
 
+    @extend_schema(
+        responses=inline_serializer(
+            name='ChatDiscoveryResponse',
+            fields={
+                'staff': serializers.ListField(child=serializers.DictField()),
+                'clients': serializers.ListField(child=serializers.DictField()),
+            },
+        ),
+    )
     @action(detail=False, methods=['get'])
     def discovery(self, request):
         """
@@ -127,6 +138,16 @@ class ConversationViewSet(viewsets.ModelViewSet):
         serializer = ChatMessageSerializer(messages, many=True, context={'request': request})
         return Response(serializer.data)
 
+    @extend_schema(
+        request=inline_serializer(
+            name='ChatObjectLinkRequest',
+            fields={
+                'related_object_type': serializers.CharField(),
+                'related_object_id': serializers.IntegerField(),
+            },
+        ),
+        responses=ConversationSerializer,
+    )
     @action(detail=False, methods=['post'])
     def get_or_create_by_object(self, request):
         object_type = request.data.get('related_object_type')
@@ -174,7 +195,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
                                 conversation=conversation,
                                 defaults={'role': 'member'}
                             )
-                    except Exception:
+                    except WorkOrder.DoesNotExist:
                         pass
 
         serializer = self.get_serializer(conversation)
@@ -191,3 +212,19 @@ class ChatMessageViewSet(viewsets.ReadOnlyModelViewSet):
         return ChatMessage.objects.filter(
             conversation__participants=self.request.user
         ).select_related('sender', 'parent_message__sender')
+
+    @extend_schema(
+        responses=inline_serializer(
+            name='ChatMarkReadResponse',
+            fields={'status': serializers.CharField()},
+        ),
+    )
+    @action(detail=True, methods=['post'], url_path='mark_as_read')
+    def mark_as_read(self, request, pk=None):
+        """Mark a single message as read for the current user."""
+        message = self.get_object()
+        if message.sender_id != request.user.id:
+            message.mark_read_by(request.user)
+            if not message.is_read:
+                message.mark_as_read()
+        return Response({'status': 'marked as read'})
