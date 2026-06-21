@@ -42,20 +42,25 @@ export function CreateProductServiceDrawer({ open, onOpenChange }: CreateProduct
             const Icon = option.icon;
             return (
               <li key={option.id}>
-                <button
-                  type="button"
-                  onClick={() => handleSelect(option.urlSlug)}
+                <div
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-4 py-3.5 text-left",
+                    "flex items-center gap-2 rounded-lg px-2 py-1",
                     "hover:bg-muted/80 transition-colors group"
                   )}
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <span className="flex-1 font-medium text-foreground group-hover:text-primary transition-colors">
-                    {option.title}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(option.urlSlug)}
+                    className="flex flex-1 items-center gap-3 rounded-md px-2 py-2.5 text-left"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className="flex-1 font-medium text-foreground group-hover:text-primary transition-colors">
+                      {option.title}
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100" />
+                  </button>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -64,7 +69,6 @@ export function CreateProductServiceDrawer({ open, onOpenChange }: CreateProduct
                         size="icon"
                         className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
                         aria-label={`About ${option.title}`}
-                        onClick={(e) => e.stopPropagation()}
                       >
                         <Info className="h-4 w-4" />
                       </Button>
@@ -73,13 +77,11 @@ export function CreateProductServiceDrawer({ open, onOpenChange }: CreateProduct
                       side="left"
                       align="center"
                       className="max-w-xs text-sm leading-relaxed"
-                      onClick={(e) => e.stopPropagation()}
                     >
                       {option.description}
                     </PopoverContent>
                   </Popover>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100" />
-                </button>
+                </div>
               </li>
             );
           })}

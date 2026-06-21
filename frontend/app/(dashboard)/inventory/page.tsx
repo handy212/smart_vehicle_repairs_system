@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Package, Trash2, Download, Upload, MoreVertical, Eye, Edit, Search, X, ChevronDown, QrCode } from "lucide-react";
+import { Plus, Package, Trash2, Download, Upload, MoreVertical, Eye, Edit, Search, X, ChevronDown, QrCode, Tags } from "lucide-react";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadPartTemplate } from "@/lib/utils/import-templates";
 import { exportPartsForImport } from "@/lib/utils/export-templates";
@@ -433,11 +433,18 @@ function InventoryPageContent() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 bg-card">
-                Actions
+                More
                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/inventory/categories" className="flex items-center cursor-pointer">
+                  <Tags className="w-4 h-4 mr-2" />
+                  Manage Categories
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <PermissionGuard permission="import_inventory">
                 <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
                   <Upload className="w-4 h-4 mr-2" />

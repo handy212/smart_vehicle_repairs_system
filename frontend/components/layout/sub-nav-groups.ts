@@ -53,8 +53,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       label: "Catalog",
       icon: Package,
       items: [
-        { name: "Parts", href: "/inventory", permission: "view_inventory", icon: Package },
-        { name: "Categories", href: "/inventory/categories", permission: "view_inventory", icon: Tags },
+        { name: "Inventory", href: "/inventory", permission: "view_inventory", icon: Package },
         { name: "Suppliers", href: "/inventory/suppliers", permission: "view_inventory", icon: Truck },
         { name: "Service Bundles", href: "/inventory/bundles", permission: "view_inventory", icon: Boxes },
       ],
