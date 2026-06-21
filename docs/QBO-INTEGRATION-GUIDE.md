@@ -132,7 +132,7 @@ Triggered by:
 - **Admin → Integrations**: connect/disconnect, inbound pull, sync history, account mappings
 - **Entity detail pages**: QBO sync badge, manual push button, error display on:
   - Customers, invoices, payments, estimates, credit notes
-  - Suppliers, purchase orders, vendor bills, vendor credits
+  - Suppliers, purchase orders, vendor bills, vendor credits, **parts (catalog)**
 
 ## Tax handling (Ghana)
 
