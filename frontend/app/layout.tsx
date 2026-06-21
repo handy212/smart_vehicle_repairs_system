@@ -18,8 +18,14 @@ import { unstable_cache } from "next/cache";
 
 const getCachedPublicBranding = unstable_cache(
   async () => {
+    const timeoutMs = process.env.NODE_ENV === "development" ? 1500 : 10_000;
     try {
-      return await adminApi.settings.publicBranding();
+      return await Promise.race([
+        adminApi.settings.publicBranding(),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("branding fetch timeout")), timeoutMs);
+        }),
+      ]);
     } catch {
       return [];
     }

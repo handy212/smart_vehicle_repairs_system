@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
@@ -12,14 +13,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ArrowLeft, Star } from "lucide-react";
-import WorkOrderOverviewTab from "./components/OverviewTab";
-import WorkOrderTasksTab from "./components/TasksTab";
-import WorkOrderPartsTab from "./components/PartsTab";
-import WorkOrderNotesTab from "./components/NotesTab";
-import PhotosTab from "./components/PhotosTab";
-import DocumentsTab from "./components/DocumentsTab";
-import DiagnosisTab from "./components/DiagnosisTab";
-import WorkOrderTimeline from "./components/WorkOrderTimeline";
+
+const WorkOrderOverviewTab = dynamic(() => import("./components/OverviewTab"));
+const WorkOrderTasksTab = dynamic(() => import("./components/TasksTab"));
+const WorkOrderPartsTab = dynamic(() => import("./components/PartsTab"));
+const WorkOrderNotesTab = dynamic(() => import("./components/NotesTab"));
+const PhotosTab = dynamic(() => import("./components/PhotosTab"));
+const DocumentsTab = dynamic(() => import("./components/DocumentsTab"));
+const DiagnosisTab = dynamic(() => import("./components/DiagnosisTab"));
+const WorkOrderTimeline = dynamic(() => import("./components/WorkOrderTimeline"));
 import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
 import { usePrint } from "@/lib/hooks/usePrint";
