@@ -58,6 +58,19 @@ export interface UpdateProfileData {
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    if (typeof window !== "undefined") {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(credentials),
+      });
+      const data = (await response.json()) as AuthResponse;
+      if (!response.ok) {
+        throw Object.assign(new Error("Login failed"), { response: { data, status: response.status } });
+      }
+      return data;
+    }
     const response = await apiClient.post("/auth/token", credentials, {
       withCredentials: true,
     });
@@ -91,7 +104,17 @@ export const authApi = {
     return response.data;
   },
 
-  refreshToken: async (): Promise<{ access: string; refresh?: string }> => {
+  refreshToken: async (): Promise<{ access?: string; refresh?: string }> => {
+    if (typeof window !== "undefined") {
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw Object.assign(new Error("Refresh failed"), { response: { status: response.status } });
+      }
+      return (await response.json()) as { access?: string; refresh?: string };
+    }
     const response = await apiClient.post(
       "/auth/token/refresh",
       {},
@@ -147,11 +170,10 @@ export const authApi = {
   logout: async (): Promise<void> => {
     if (typeof window === "undefined") return;
     try {
-      await apiClient.post(
-        "/auth/logout/",
-        {},
-        { withCredentials: true, skipAuth: true, skipAuthRefresh: true }
-      );
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     } catch {
       // Still clear local state if API is unreachable
     }

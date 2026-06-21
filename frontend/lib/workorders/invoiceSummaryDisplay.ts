@@ -83,12 +83,29 @@ export function getInvoicePaymentDisplay(
   };
 }
 
+const ESTIMATE_INVOICE_STATUSES = new Set(["approved", "sent", "viewed"]);
+
+/** Whether billing must go through the linked estimate (not direct WO invoice). */
+export function mustInvoiceViaLinkedEstimate(workOrder: {
+  estimate_summary?: { id?: number; status?: string } | null;
+}): boolean {
+  const estimate = workOrder.estimate_summary;
+  if (!estimate?.id || !estimate.status) {
+    return false;
+  }
+  return ESTIMATE_INVOICE_STATUSES.has(estimate.status);
+}
+
 /** Whether staff can open the create-invoice flow for this work order. */
 export function canCreateWorkOrderInvoice(workOrder: {
   status: string;
   invoice_summary?: { id?: number; status?: string } | null;
+  estimate_summary?: { id?: number; status?: string } | null;
 }): boolean {
   if (!["completed", "discontinued_pending_bill"].includes(workOrder.status)) {
+    return false;
+  }
+  if (mustInvoiceViaLinkedEstimate(workOrder)) {
     return false;
   }
   if (!workOrder.invoice_summary?.id) {

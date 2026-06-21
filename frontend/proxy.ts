@@ -10,9 +10,26 @@ function getBackendBase(): string {
     return getApiBase().replace(/\/api\/?$/, '');
 }
 
+/** Next.js BFF auth routes — must not be rewritten to Django. */
+const BFF_AUTH_ROUTES = new Set([
+    '/api/auth/login',
+    '/api/auth/logout',
+    '/api/auth/refresh',
+    '/api/auth/session',
+    '/api/auth/verify',
+]);
+
+function isBffAuthRoute(pathname: string): boolean {
+    return BFF_AUTH_ROUTES.has(pathname);
+}
+
 /** Proxy /api and /media to Django (avoids Next trailing-slash redirects that break POST + cookies). */
 function rewriteBackend(request: NextRequest): NextResponse | null {
     const { pathname, search } = request.nextUrl;
+
+    if (isBffAuthRoute(pathname)) {
+        return null;
+    }
 
     if (pathname.startsWith('/api/') || pathname === '/api') {
         const subPath = pathname === '/api' ? '' : pathname.slice('/api/'.length);

@@ -13,32 +13,26 @@ This document describes the current JWT auth model, incremental improvements in 
 
 **Risk:** Tokens in `localStorage` are readable by any XSS script. The cookie exists only so middleware can perform a fast redirect without loading the SPA.
 
-## Implemented (incremental)
+## Implemented
 
 1. **JWT shape and expiry check at the edge** — [`frontend/lib/auth/jwt.ts`](../frontend/lib/auth/jwt.ts) decodes the access token and rejects missing, malformed, or expired tokens before serving protected pages. This does **not** verify the signature (the secret must not live in the frontend).
 
-2. **Documented BFF target** — this file.
+2. **Phase B — HttpOnly cookies (BFF)** — Next.js Route Handlers proxy login, logout, refresh, and session to Django and set `httpOnly` cookies on the frontend origin:
+   - `POST /api/auth/login`
+   - `POST /api/auth/logout`
+   - `POST /api/auth/refresh`
+   - `GET /api/auth/session`
+   - `POST /api/auth/verify`
+
+   Client code no longer stores tokens in `localStorage` or non-httpOnly cookies. API calls use `withCredentials` and Django `JWTCookieAuthentication`.
+
+3. **Django cookie helpers** — [`apps/accounts/jwt_cookies.py`](../apps/accounts/jwt_cookies.py) and [`apps/accounts/authentication.py`](../apps/accounts/authentication.py).
 
 ## Recommended next steps
 
-### Phase A — Server-side verification (no secret in browser)
+### Phase A — Server-side verification (optional hardening)
 
-1. Add a lightweight Next.js Route Handler, e.g. `GET /api/auth/session`, that:
-   - Reads the `access_token` cookie (or `Authorization` header)
-   - Calls Django `POST /api/auth/token/verify/` with the token
-   - Returns `{ ok: true, user }` or 401
-
-2. Update middleware to call that route (or inline `fetch` to Django verify) instead of only checking expiry.
-
-### Phase B — httpOnly cookies (BFF)
-
-1. Login Route Handler proxies credentials to Django and sets:
-   - `httpOnly`, `Secure`, `SameSite=Lax` cookies for refresh (and optionally access)
-   - No tokens in `localStorage`
-
-2. Middleware reads httpOnly access cookie only; Axios uses a same-origin `/api/proxy` that attaches cookies server-side.
-
-3. Logout clears cookies via Route Handler.
+Middleware may call `POST /api/auth/verify` (BFF) instead of only checking JWT expiry locally.
 
 ### Phase C — CSRF and rotation
 
