@@ -20,6 +20,7 @@ from apps.quickbooks_online.payment_helpers import (
     is_customer_deposit_payment,
     payment_private_note,
 )
+from apps.quickbooks_online.sync_policy import outbound_eligibility_reason
 from apps.quickbooks_online.services import QuickBooksService
 
 User = get_user_model()
@@ -170,6 +171,81 @@ class Phase4PaymentHelperTests(TestCase):
         self.assertEqual(len(lines), 2)
         linked_ids = {line.LinkedTxn[0].TxnId for line in lines}
         self.assertEqual(linked_ids, {'INV-A', 'INV-B'})
+
+    def test_allocations_take_precedence_over_deposit_primary_invoice(self):
+        """Multi-invoice allocations sync even when payment.invoice is deposit-stage."""
+        proforma = self._invoice(status='proforma')
+        finalized = self._invoice(status='sent')
+        payment = self._payment(proforma, amount=Decimal('50.00'))
+        PaymentAllocation.objects.filter(payment=payment, invoice=proforma).delete()
+        PaymentAllocation.objects.create(
+            payment=payment,
+            invoice=finalized,
+            amount=Decimal('50.00'),
+            allocated_by=self.admin,
+        )
+        QBOMapping.objects.create(
+            content_type=ContentType.objects.get_for_model(finalized),
+            object_id=finalized.id,
+            qbo_id='INV-FINAL',
+            status='synced',
+        )
+        service = MagicMock()
+        lines = build_qbo_payment_lines(
+            service,
+            payment,
+            PaymentLine=_MockPaymentLine,
+            LinkedTxn=_MockLinkedTxn,
+        )
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].LinkedTxn[0].TxnId, 'INV-FINAL')
+
+
+class DepositStageInvoicePolicyTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email='deposit-policy@test.com',
+            username='deposit_policy_admin',
+            password='password',
+        )
+        self.branch = Branch.objects.create(name='Main', code='MAIN-DEP', created_by=self.admin)
+        customer_user = User.objects.create_user(
+            username='deposit-policy-cust',
+            email='deposit-policy-cust@example.com',
+            password='password',
+            role='customer',
+        )
+        self.customer = Customer.objects.create(user=customer_user, customer_number='C-DEP')
+
+    def test_proforma_invoice_not_outbound_eligible(self):
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='proforma',
+            total=Decimal('100.00'),
+            amount_due=Decimal('100.00'),
+            invoice_date=timezone.now().date(),
+            created_by=self.admin,
+        )
+        eligible, reason = outbound_eligibility_reason('invoice', invoice)
+        self.assertFalse(eligible)
+        self.assertIn('deposit', reason.lower())
+
+    def test_pro_numbered_partial_invoice_not_outbound_eligible(self):
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=self.branch,
+            status='partial',
+            total=Decimal('100.00'),
+            amount_due=Decimal('50.00'),
+            amount_paid=Decimal('50.00'),
+            invoice_date=timezone.now().date(),
+            created_by=self.admin,
+        )
+        invoice.invoice_number = f'{self.branch.code}-PRO000042'
+        eligible, reason = outbound_eligibility_reason('invoice', invoice)
+        self.assertFalse(eligible)
+        self.assertIn('deposit', reason.lower())
 
 
 class Phase4SyncPaymentIntegrationTests(TestCase):
@@ -518,3 +594,29 @@ class Phase4PartSerializerTests(TestCase):
         data = PartDetailSerializer(self.part).data
         self.assertNotIn('qbo_sync_status', data)
         self.assertNotIn('qbo_sync_error', data)
+
+
+class InvoiceFinalizationChainTests(TestCase):
+    @patch('apps.quickbooks_online.tasks.run_outbound_entity_sync')
+    def test_finalize_syncs_invoice_before_payments(self, mock_run):
+        from apps.quickbooks_online.tasks import task_sync_invoice_then_resync_payments
+
+        mock_run.side_effect = [MagicMock(Id='INV-1'), MagicMock(Id='PAY-1'), MagicMock(Id='PAY-2')]
+
+        invoice = MagicMock()
+        invoice.payments.filter.return_value.values_list.return_value = [10, 11]
+        with patch('apps.billing.models.Invoice') as mock_invoice_model:
+            mock_invoice_model.objects.get.return_value = invoice
+            task_sync_invoice_then_resync_payments(5)
+
+        self.assertEqual(mock_run.call_count, 3)
+        self.assertEqual(mock_run.call_args_list[0][0][0], 'invoice')
+        self.assertEqual(mock_run.call_args_list[1][0][0], 'payment')
+        self.assertEqual(mock_run.call_args_list[2][0][0], 'payment')
+
+    @patch('apps.quickbooks_online.tasks.run_outbound_entity_sync', return_value=None)
+    def test_finalize_skips_payments_when_invoice_sync_fails(self, mock_run):
+        from apps.quickbooks_online.tasks import task_sync_invoice_then_resync_payments
+
+        task_sync_invoice_then_resync_payments(5)
+        mock_run.assert_called_once()

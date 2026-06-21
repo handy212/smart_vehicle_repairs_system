@@ -703,6 +703,14 @@ export default function BillDetailPage() {
                 </div>
             </div>
 
+            {isQboConnected && bill.qbo_sync_status === "failed" && bill.qbo_sync_error && (
+                <Card className="border-destructive/20 bg-destructive/5">
+                    <CardContent className="py-3 text-sm text-destructive">
+                        QuickBooks sync failed: {bill.qbo_sync_error}
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <Card>
                     <CardContent className="flex items-center justify-between p-4">

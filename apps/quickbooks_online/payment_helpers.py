@@ -21,6 +21,18 @@ def _is_proforma_numbered_invoice(invoice) -> bool:
     return '-PRO' in number or number.startswith('PRO')
 
 
+def is_deposit_stage_invoice(invoice) -> bool:
+    """Proforma or PRO-numbered partial invoices are customer-deposit stage (not issued in QBO)."""
+    if not invoice:
+        return False
+    if getattr(invoice, 'status', None) == 'proforma':
+        return True
+    return (
+        _is_proforma_numbered_invoice(invoice)
+        and getattr(invoice, 'status', None) == 'partial'
+    )
+
+
 def is_customer_deposit_payment(local_payment) -> bool:
     """
     Treat proforma / deposit invoices as unapplied customer credits in QBO.
@@ -29,12 +41,7 @@ def is_customer_deposit_payment(local_payment) -> bool:
     A completed payment on a proforma invoice moves the invoice to ``partial``,
     so we also treat PRO-numbered partial invoices as deposits until issued.
     """
-    invoice = getattr(local_payment, 'invoice', None)
-    if not invoice:
-        return False
-    if invoice.status == 'proforma':
-        return True
-    return _is_proforma_numbered_invoice(invoice) and invoice.status == 'partial'
+    return is_deposit_stage_invoice(getattr(local_payment, 'invoice', None))
 
 
 def resolve_qbo_invoice_id(service, invoice) -> str | None:
@@ -66,9 +73,6 @@ def build_qbo_payment_lines(service, local_payment, *, PaymentLine, LinkedTxn):
 
     Raises PaymentSyncError when a finalized invoice payment cannot be linked.
     """
-    if is_customer_deposit_payment(local_payment):
-        return []
-
     allocations = list(
         local_payment.allocations.select_related('invoice').all()
     ) if hasattr(local_payment, 'allocations') else []
@@ -76,6 +80,8 @@ def build_qbo_payment_lines(service, local_payment, *, PaymentLine, LinkedTxn):
     if allocations:
         lines = []
         for allocation in allocations:
+            if is_deposit_stage_invoice(allocation.invoice):
+                continue
             qb_invoice_id = resolve_qbo_invoice_id(service, allocation.invoice)
             if not qb_invoice_id:
                 raise PaymentSyncError(
@@ -99,6 +105,9 @@ def build_qbo_payment_lines(service, local_payment, *, PaymentLine, LinkedTxn):
             lines.append(line)
         return lines
 
+    if is_customer_deposit_payment(local_payment):
+        return []
+
     invoice = local_payment.invoice
     if not invoice:
         raise PaymentSyncError(
@@ -108,7 +117,7 @@ def build_qbo_payment_lines(service, local_payment, *, PaymentLine, LinkedTxn):
     if invoice.status == 'proforma':
         return []
 
-    if _is_proforma_numbered_invoice(invoice) and invoice.status == 'partial':
+    if is_deposit_stage_invoice(invoice):
         return []
 
     qb_invoice_id = resolve_qbo_invoice_id(service, invoice)

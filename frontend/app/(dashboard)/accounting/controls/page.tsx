@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useState } from "react";
-import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink, Link2 } from "lucide-react";
+import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink, Link2, BookOpen } from "lucide-react";
 import { endOfYear, format, startOfYear } from "date-fns";
 import {
   Table,
@@ -28,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getUserFacingError } from "@/lib/api/errors";
 import { QboAccountMappingPanel } from "@/components/integrations/QboAccountMappingPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -221,12 +222,12 @@ export default function ControlPanelPage() {
       <div>
         <h1 className="text-xl font-bold tracking-tight text-foreground">Controls & Compliance</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-          Wire control accounts, lock accounting periods, post year-end closes, and review ledger audit
-          events. For subledger health, see{" "}
+          Configure SVR control accounts, QuickBooks mappings, accounting periods, and review ledger
+          audit events. Subledger health:{" "}
           <Link href="/accounting/integrity" className="text-primary hover:underline">
             Subledger Integrity
           </Link>
-          . For changes across the whole app, use{" "}
+          . App-wide changes:{" "}
           <Link href="/admin/audit-log" className="text-primary hover:underline">
             Admin → Audit Log
           </Link>
@@ -241,7 +242,28 @@ export default function ControlPanelPage() {
         </div>
       )}
 
-      <Card>
+      <Tabs defaultValue="gl-accounts" className="w-full">
+        <TabsList className="w-full flex flex-wrap justify-start h-auto gap-1 p-1">
+          <TabsTrigger value="gl-accounts" className="gap-1.5">
+            <Link2 className="w-3.5 h-3.5" />
+            GL control accounts
+          </TabsTrigger>
+          <TabsTrigger value="quickbooks" className="gap-1.5">
+            <BookOpen className="w-3.5 h-3.5" />
+            QuickBooks mapping
+          </TabsTrigger>
+          <TabsTrigger value="periods" className="gap-1.5">
+            <Lock className="w-3.5 h-3.5" />
+            Periods
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1.5">
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Audit trail
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="gl-accounts" className="mt-4 space-y-4">
+      <Card className="border shadow-sm">
         <CardHeader className="py-3 px-4 flex flex-row items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -347,9 +369,21 @@ export default function ControlPanelPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <QboAccountMappingPanel />
+        <TabsContent value="quickbooks" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Map SVR roles to QuickBooks accounts, items, and tax codes. Required for invoice sync, part
+            catalog push, and payment deposit accounts. Connect QuickBooks under{" "}
+            <Link href="/admin/integrations" className="text-primary hover:underline">
+              Admin → Integrations
+            </Link>
+            .
+          </p>
+          <QboAccountMappingPanel />
+        </TabsContent>
 
+        <TabsContent value="periods" className="mt-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
           <CardHeader className="py-3 px-4">
@@ -482,7 +516,9 @@ export default function ControlPanelPage() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
 
+        <TabsContent value="audit" className="mt-4">
       <Card>
         <CardHeader className="py-3 px-4 flex flex-row items-center justify-between gap-2">
           <div>
@@ -571,6 +607,8 @@ export default function ControlPanelPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

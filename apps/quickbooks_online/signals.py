@@ -1,8 +1,8 @@
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from apps.customers.models import Customer
-from apps.billing.models import Invoice, Payment, Estimate, CreditNote, Bill, VendorCredit
+from apps.billing.models import Invoice, Payment, Estimate, CreditNote, Bill, VendorCredit, PaymentAllocation
 from apps.inventory.models import Supplier, PurchaseOrder, Part
 from apps.branches.models import Branch
 from .tasks import (
@@ -16,7 +16,7 @@ from .tasks import (
     task_sync_credit_note_to_qbo,
     task_sync_vendor_bill_to_qbo,
     task_sync_vendor_credit_to_qbo,
-    task_resync_payments_for_invoice,
+    task_sync_invoice_then_resync_payments,
 )
 from .sync_policy import is_outbound_eligible, INVOICE_QBO_SYNC_STATUSES
 from .sync_context import outbound_signals_suppressed
@@ -52,6 +52,24 @@ def sync_invoice_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('invoice', instance):
         return
+
+    prev = getattr(instance, '_qbo_prev_status', None)
+    leaving_deposit_stage = (
+        prev == 'proforma'
+        or (prev == 'partial' and _is_proforma_numbered_invoice(instance))
+    )
+    if leaving_deposit_stage and instance.status in PROFORMA_FINALIZED_STATUSES:
+        logger.info(
+            'Scheduling chained QBO invoice + payment sync for finalized Invoice %s',
+            instance.id,
+        )
+        schedule_entity_sync(
+            'invoice_finalize',
+            instance.id,
+            task=task_sync_invoice_then_resync_payments,
+        )
+        return
+
     logger.info(f"Scheduling QBO sync for Invoice {instance.id}")
     schedule_entity_sync('invoice', instance.id, task=task_sync_invoice_to_qbo)
 
@@ -82,28 +100,29 @@ def capture_invoice_status_before_save(sender, instance, **kwargs):
 PROFORMA_FINALIZED_STATUSES = INVOICE_QBO_SYNC_STATUSES - {'partial'}
 
 
-@receiver(post_save, sender=Invoice)
-def resync_payments_when_invoice_finalized(sender, instance, created, **kwargs):
-    """Re-sync proforma deposits to apply against the issued QBO invoice."""
-    if created or _skip_signal():
+def _schedule_payment_sync(payment):
+    if _skip_signal() or not payment:
         return
-    prev = getattr(instance, '_qbo_prev_status', None)
-    leaving_deposit_stage = (
-        prev == 'proforma'
-        or (prev == 'partial' and _is_proforma_numbered_invoice(instance))
-    )
-    if leaving_deposit_stage and instance.status in PROFORMA_FINALIZED_STATUSES:
-        schedule_entity_sync(
-            'invoice_payments',
-            instance.id,
-            task=task_resync_payments_for_invoice,
-        )
+    if is_outbound_eligible('payment', payment):
+        schedule_entity_sync('payment', payment.id, task=task_sync_payment_to_qbo)
+
+
+@receiver(post_save, sender=PaymentAllocation)
+def sync_payment_on_allocation_save(sender, instance, **kwargs):
+    """Re-push payment when allocation rows change."""
+    _schedule_payment_sync(instance.payment)
+
+
+@receiver(post_delete, sender=PaymentAllocation)
+def sync_payment_on_allocation_delete(sender, instance, **kwargs):
+    """Re-push payment when an allocation is removed."""
+    _schedule_payment_sync(instance.payment)
 
 
 @receiver(post_save, sender=Part)
 def sync_part_on_save(sender, instance, created, **kwargs):
-    """Push active parts catalog to QBO Items when auto-sync is enabled."""
-    if _skip_signal() or not instance.is_active:
+    """Push parts catalog to QBO Items (including deactivation as Active=False)."""
+    if _skip_signal():
         return
     logger.info('Scheduling QBO sync for Part %s', instance.id)
     schedule_part_sync(instance.id)
