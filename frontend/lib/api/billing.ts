@@ -352,6 +352,8 @@ export interface VendorCredit {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface VendorCreditListResponse {
@@ -454,6 +456,8 @@ export interface Bill {
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface BillListResponse {

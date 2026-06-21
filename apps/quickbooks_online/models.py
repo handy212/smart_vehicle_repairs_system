@@ -90,6 +90,8 @@ class QBOSyncLog(models.Model):
         ('bill', 'Bills (Purchase Orders)'),
         ('estimate', 'Estimates'),
         ('credit_memo', 'Credit Memos'),
+        ('vendor_credit', 'Vendor Credits'),
+        ('vendor_bill', 'Vendor Bills (AP)'),
         ('payment', 'Payments'),
         ('customer', 'Customers'),
         ('all', 'Full Inbound Sync'),

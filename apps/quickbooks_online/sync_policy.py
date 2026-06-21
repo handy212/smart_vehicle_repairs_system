@@ -7,6 +7,8 @@ PAYMENT_QBO_SYNC_STATUSES = {'completed'}
 PO_QBO_EXCLUDED_STATUSES = {'draft', 'pending_approval', 'rejected', 'cancelled'}
 ESTIMATE_QBO_SYNC_STATUSES = {'sent', 'viewed', 'approved'}
 CREDIT_NOTE_QBO_SYNC_STATUSES = {'issued', 'applied', 'refunded'}
+VENDOR_BILL_QBO_EXCLUDED_STATUSES = {'draft', 'pending_approval', 'rejected', 'void'}
+VENDOR_CREDIT_QBO_SYNC_STATUSES = {'issued', 'applied'}
 
 
 def outbound_eligibility_reason(entity_type, instance):
@@ -54,6 +56,22 @@ def outbound_eligibility_reason(entity_type, instance):
             return False, (
                 f'Credit note status "{status}" is not eligible for QuickBooks sync. '
                 'Issue the credit note before pushing.'
+            )
+        return True, ''
+
+    if entity_type == 'vendor_bill':
+        if status in VENDOR_BILL_QBO_EXCLUDED_STATUSES:
+            return False, (
+                f'Vendor bill status "{status}" is not eligible for QuickBooks sync. '
+                'Approve or open the bill before pushing.'
+            )
+        return True, ''
+
+    if entity_type == 'vendor_credit':
+        if status not in VENDOR_CREDIT_QBO_SYNC_STATUSES:
+            return False, (
+                f'Vendor credit status "{status}" is not eligible for QuickBooks sync. '
+                'Issue the vendor credit before pushing.'
             )
         return True, ''
 

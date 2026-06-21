@@ -19,6 +19,7 @@ try:
     from quickbooks.objects.department import Department as QBDepartment
     from quickbooks.objects.vendor import Vendor as QBVendor
     from quickbooks.objects.bill import Bill as QBBill
+    from quickbooks.objects.vendorcredit import VendorCredit as QBVendorCredit
     from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
     from quickbooks.objects.detailline import AccountBasedExpenseLineDetail
     from quickbooks.objects.tax import TxnTaxDetail
@@ -39,6 +40,7 @@ except ModuleNotFoundError as exc:
     QBDepartment = None
     QBVendor = None
     QBBill = None
+    QBVendorCredit = None
     ItemBasedExpenseLineDetail = None
     AccountBasedExpenseLineDetail = None
     TxnTaxDetail = None
@@ -591,6 +593,88 @@ class QuickBooksService:
             defaults=defaults,
         )
 
+    def _build_ap_expense_lines(self, line_items, *, description_attr='description', inventory_relation=None):
+        """Build QBO Bill/VendorCredit expense lines from SVR AP line items."""
+        lines = []
+        mapping_service = self._get_mapping_service()
+        for item in line_items:
+            line = DetailLine()
+            line.Amount = float(item.total)
+            description = getattr(item, description_attr, '') or 'Line item'
+            is_inventory_line = False
+            if inventory_relation:
+                is_inventory_line = bool(getattr(item, f'{inventory_relation}_id', None))
+                related = getattr(item, inventory_relation, None)
+                if related and getattr(related, 'name', None):
+                    description = related.name
+            line.Description = description
+
+            account_id = None
+            if mapping_service:
+                account_id = mapping_service.resolve_bill_line_account_id(
+                    is_inventory_line=is_inventory_line,
+                )
+
+            if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
+                line.DetailType = "AccountBasedExpenseLineDetail"
+                expense_detail = AccountBasedExpenseLineDetail()
+                expense_detail.AccountRef = Ref()
+                expense_detail.AccountRef.value = account_id
+                line.AccountBasedExpenseLineDetail = expense_detail
+            else:
+                line.DetailType = "ItemBasedExpenseLineDetail"
+                exp_item = ItemBasedExpenseLineDetail()
+                exp_item.Qty = float(item.quantity)
+                unit_price = getattr(item, 'unit_price', None) or getattr(item, 'unit_cost', 0)
+                exp_item.UnitPrice = float(unit_price)
+                line.ItemBasedExpenseLineDetail = exp_item
+            lines.append(line)
+        return lines
+
+    def _sync_qbo_bill_document(
+        self,
+        local_obj,
+        *,
+        qb_vendor,
+        doc_number,
+        txn_date,
+        due_date=None,
+        notes=None,
+        branch=None,
+        line_items=None,
+        inventory_relation=None,
+    ):
+        """Create or update a QBO Bill for a PO or vendor bill."""
+        client = self.get_client()
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_obj),
+            object_id=local_obj.id,
+        ).first()
+
+        qb_bill = QBBill()
+        if mapping and mapping.qbo_id:
+            try:
+                qb_bill = QBBill.get(int(mapping.qbo_id), qb=client)
+            except Exception:
+                qb_bill = QBBill()
+
+        qb_bill.VendorRef = Ref()
+        qb_bill.VendorRef.value = qb_vendor.Id
+        qb_bill.DocNumber = doc_number
+        qb_bill.TxnDate = txn_date.isoformat() if hasattr(txn_date, 'isoformat') else txn_date
+        if due_date:
+            qb_bill.DueDate = due_date.isoformat() if hasattr(due_date, 'isoformat') else due_date
+        if notes:
+            qb_bill.PrivateNote = notes
+        self._apply_department_ref(qb_bill, branch)
+        qb_bill.Line = self._build_ap_expense_lines(
+            line_items or [],
+            inventory_relation=inventory_relation,
+        )
+        self._save_qb(qb_bill, client)
+        self._update_qbo_mapping(local_obj, qb_bill)
+        return qb_bill
+
     def sync_invoice(self, local_invoice):
         """
         Sync a local Invoice to QBO.
@@ -1139,6 +1223,110 @@ class QuickBooksService:
             )
             return None
 
+    def sync_vendor_bill(self, local_bill):
+        """Sync a local AP Bill to QBO as a Bill."""
+        client = self.get_client()
+        if not client:
+            self._update_qbo_mapping(
+                local_bill,
+                None,
+                error='QuickBooks not connected or unauthorized.',
+            )
+            return None
+
+        qb_vendor = self.sync_supplier(local_bill.vendor)
+        if not qb_vendor:
+            logger.error('Cannot sync vendor bill %s: Supplier sync failed.', local_bill.bill_number)
+            return None
+
+        try:
+            return self._sync_qbo_bill_document(
+                local_bill,
+                qb_vendor=qb_vendor,
+                doc_number=local_bill.bill_number,
+                txn_date=local_bill.bill_date,
+                due_date=local_bill.due_date,
+                notes=local_bill.notes,
+                branch=local_bill.branch,
+                line_items=local_bill.line_items.all(),
+                inventory_relation='inventory_item',
+            )
+        except Exception as exc:
+            logger.error('QBO Vendor Bill Sync Error: %s', exc)
+            self._update_qbo_mapping(local_bill, None, error=str(exc))
+            return None
+
+    def sync_vendor_credit(self, local_vendor_credit):
+        """Sync a local VendorCredit to QBO as a Vendor Credit."""
+        client = self.get_client()
+        if not client:
+            self._update_qbo_mapping(
+                local_vendor_credit,
+                None,
+                error='QuickBooks not connected or unauthorized.',
+            )
+            return None
+
+        if QBVendorCredit is None:
+            self._update_qbo_mapping(local_vendor_credit, None, error=_quickbooks_sdk_message())
+            return None
+
+        qb_vendor = self.sync_supplier(local_vendor_credit.vendor)
+        if not qb_vendor:
+            logger.error(
+                'Cannot sync vendor credit %s: Supplier sync failed.',
+                local_vendor_credit.credit_number,
+            )
+            return None
+
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_vendor_credit),
+            object_id=local_vendor_credit.id,
+        ).first()
+
+        qb_vendor_credit = QBVendorCredit()
+        if mapping and mapping.qbo_id:
+            try:
+                qb_vendor_credit = QBVendorCredit.get(int(mapping.qbo_id), qb=client)
+            except Exception:
+                qb_vendor_credit = QBVendorCredit()
+
+        qb_vendor_credit.VendorRef = Ref()
+        qb_vendor_credit.VendorRef.value = qb_vendor.Id
+        qb_vendor_credit.DocNumber = local_vendor_credit.credit_number
+        qb_vendor_credit.TxnDate = local_vendor_credit.credit_date.isoformat()
+        if local_vendor_credit.notes:
+            qb_vendor_credit.PrivateNote = local_vendor_credit.notes
+        self._apply_department_ref(qb_vendor_credit, local_vendor_credit.branch)
+        qb_vendor_credit.Line = self._build_ap_expense_lines(
+            local_vendor_credit.line_items.all(),
+            inventory_relation='inventory_item',
+        )
+
+        if local_vendor_credit.bill_id and LinkedTxn is not None:
+            bill_mapping = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(local_vendor_credit.bill),
+                object_id=local_vendor_credit.bill_id,
+            ).first()
+            qb_bill_id = bill_mapping.qbo_id if bill_mapping else None
+            if not qb_bill_id and local_vendor_credit.bill:
+                qb_bill = self.sync_vendor_bill(local_vendor_credit.bill)
+                qb_bill_id = qb_bill.Id if qb_bill else None
+            if qb_bill_id:
+                linked = LinkedTxn()
+                linked.TxnId = qb_bill_id
+                linked.TxnType = 'Bill'
+                qb_vendor_credit.LinkedTxn = [linked]
+
+        try:
+            self._save_qb(qb_vendor_credit, client)
+            self._update_qbo_mapping(local_vendor_credit, qb_vendor_credit)
+            return qb_vendor_credit
+        except Exception as exc:
+            logger.error('QBO Vendor Credit Sync Error: %s', exc)
+            self._update_qbo_mapping(local_vendor_credit, None, error=str(exc))
+            return None
+
     # -------------------------------------------------------------------------
     # INBOUND SYNC: Pull from QBO → our local system
     # Design rules:
@@ -1340,11 +1528,11 @@ class QuickBooksService:
 
     def pull_bills(self, triggered_by=None):
         """
-        Pull Bills from QBO and update STATUS of existing local Purchase Orders.
-        - Local is source of truth for business data.
-        - Only updates: status (to 'received' if QBO Bill is paid/cleared).
-        - Does NOT create new POs from QBO.
+        Pull Bills from QBO and update existing local Purchase Orders or vendor bills.
+        - PO: status → received when QBO balance is zero
+        - Vendor bill: amount_paid / amount_due / status when QBO is ahead
         """
+        from apps.billing.models import Bill
         from apps.inventory.models import PurchaseOrder
         from decimal import Decimal
 
@@ -1363,43 +1551,60 @@ class QuickBooksService:
             log.records_pulled = len(qb_bills)
 
             po_ct = ContentType.objects.get_for_model(PurchaseOrder)
+            bill_ct = ContentType.objects.get_for_model(Bill)
 
             for qb_bill in qb_bills:
-                mapping = QBOMapping.objects.filter(
-                    content_type=po_ct,
-                    qbo_id=str(qb_bill.Id)
+                mapping = QBOMapping.objects.filter(qbo_id=str(qb_bill.Id)).filter(
+                    content_type__in=[po_ct, bill_ct],
                 ).first()
 
                 if not mapping:
                     log.records_skipped += 1
-                    continue  # No local PO for this QBO Bill — skip
+                    continue
 
-                try:
-                    local_po = PurchaseOrder.objects.get(id=mapping.object_id)
+                qbo_balance = Decimal(str(qb_bill.Balance or 0))
+                updated = False
 
-                    updated = False
-
-                    # If QBO Bill balance is 0, the bill is fully paid/received
-                    qbo_balance = Decimal(str(qb_bill.Balance or 0))
-                    if qbo_balance == Decimal('0') and local_po.status not in ('received', 'cancelled'):
-                        PurchaseOrder.objects.filter(id=local_po.id).update(status='received')
-                        updated = True
-                        logger.info(f"Updated PO {local_po.po_number} status to 'received' based on QBO Bill {qb_bill.Id}")
-
-                    if updated:
-                        log.records_updated += 1
-                    else:
+                if mapping.content_type_id == po_ct.id:
+                    try:
+                        local_po = PurchaseOrder.objects.get(id=mapping.object_id)
+                        if qbo_balance == Decimal('0') and local_po.status not in ('received', 'cancelled'):
+                            PurchaseOrder.objects.filter(id=local_po.id).update(status='received')
+                            updated = True
+                    except PurchaseOrder.DoesNotExist:
                         log.records_skipped += 1
+                        continue
+                elif mapping.content_type_id == bill_ct.id:
+                    try:
+                        local_bill = Bill.objects.get(id=mapping.object_id)
+                        qbo_total = Decimal(str(getattr(qb_bill, 'TotalAmt', 0) or 0))
+                        qbo_paid = qbo_total - qbo_balance
+                        if qbo_paid > local_bill.amount_paid:
+                            amount_due = max(qbo_balance, Decimal('0'))
+                            new_status = local_bill.status
+                            if qbo_balance == Decimal('0'):
+                                new_status = 'paid'
+                            elif qbo_paid > Decimal('0') and local_bill.status == 'open':
+                                new_status = 'partially_paid'
+                            Bill.objects.filter(id=local_bill.id).update(
+                                amount_paid=qbo_paid,
+                                amount_due=amount_due,
+                                status=new_status,
+                            )
+                            updated = True
+                    except Bill.DoesNotExist:
+                        log.records_skipped += 1
+                        continue
 
-                    # Keep sync meta current
-                    mapping.status = 'synced'
-                    mapping.qbo_sync_token = qb_bill.SyncToken or ''
-                    mapping.error_message = ''
-                    mapping.save()
-
-                except PurchaseOrder.DoesNotExist:
-                    logger.warning(f"QBOMapping points to PurchaseOrder id={mapping.object_id} which no longer exists.")
+                if updated:
+                    log.records_updated += 1
+                else:
                     log.records_skipped += 1
+
+                mapping.status = 'synced'
+                mapping.qbo_sync_token = qb_bill.SyncToken or ''
+                mapping.error_message = ''
+                mapping.save()
 
             log.status = 'success'
         except Exception as e:
@@ -1558,6 +1763,76 @@ class QuickBooksService:
             log.status = 'success'
         except Exception as exc:
             logger.error('QBO pull_credit_memos failed: %s', exc)
+            log.status = 'failed'
+            log.error_message = str(exc)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log
+
+    def pull_vendor_credits(self, triggered_by=None):
+        """Pull Vendor Credits from QBO and update applied status on local vendor credits."""
+        from apps.billing.models import VendorCredit
+        from decimal import Decimal
+
+        log = QBOSyncLog.objects.create(entity_type='vendor_credit', triggered_by=triggered_by)
+
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        if QBVendorCredit is None:
+            log.status = 'failed'
+            log.error_message = _quickbooks_sdk_message()
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        try:
+            qb_vendor_credits = QBVendorCredit.all(qb=client)
+            log.records_pulled = len(qb_vendor_credits)
+            vendor_credit_ct = ContentType.objects.get_for_model(VendorCredit)
+
+            for qb_vendor_credit in qb_vendor_credits:
+                mapping = QBOMapping.objects.filter(
+                    content_type=vendor_credit_ct,
+                    qbo_id=str(qb_vendor_credit.Id),
+                ).first()
+                if not mapping:
+                    log.records_skipped += 1
+                    continue
+
+                try:
+                    local_vendor_credit = VendorCredit.objects.get(id=mapping.object_id)
+                    updated = False
+                    remaining = Decimal(str(getattr(qb_vendor_credit, 'RemainingCredit', 0) or 0))
+                    if remaining == Decimal('0') and local_vendor_credit.status == 'issued':
+                        VendorCredit.objects.filter(id=local_vendor_credit.id).update(status='applied')
+                        updated = True
+
+                    if updated:
+                        log.records_updated += 1
+                    else:
+                        log.records_skipped += 1
+
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = qb_vendor_credit.SyncToken or ''
+                    mapping.error_message = ''
+                    mapping.save()
+                except VendorCredit.DoesNotExist:
+                    logger.warning(
+                        'QBOMapping points to VendorCredit id=%s which no longer exists.',
+                        mapping.object_id,
+                    )
+                    log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as exc:
+            logger.error('QBO pull_vendor_credits failed: %s', exc)
             log.status = 'failed'
             log.error_message = str(exc)
 

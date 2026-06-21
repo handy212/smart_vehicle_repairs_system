@@ -2,7 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from apps.customers.models import Customer
-from apps.billing.models import Invoice, Payment, Estimate, CreditNote
+from apps.billing.models import Invoice, Payment, Estimate, CreditNote, Bill, VendorCredit
 from apps.inventory.models import Supplier, PurchaseOrder
 from apps.branches.models import Branch
 from .tasks import (
@@ -14,6 +14,8 @@ from .tasks import (
     task_sync_branch_to_qbo,
     task_sync_estimate_to_qbo,
     task_sync_credit_note_to_qbo,
+    task_sync_vendor_bill_to_qbo,
+    task_sync_vendor_credit_to_qbo,
 )
 from .sync_policy import is_outbound_eligible
 import logging
@@ -120,3 +122,25 @@ def sync_credit_note_on_save(sender, instance, created, **kwargs):
         return
     logger.info(f"Triggering QBO sync for CreditNote {instance.id}")
     task_sync_credit_note_to_qbo.delay(instance.id)
+
+
+@receiver(post_save, sender=Bill)
+def sync_vendor_bill_on_save(sender, instance, created, **kwargs):
+    """Trigger QBO sync when a vendor bill is open or paid."""
+    if not _auto_sync_enabled():
+        return
+    if not is_outbound_eligible('vendor_bill', instance):
+        return
+    logger.info(f"Triggering QBO sync for Bill {instance.id}")
+    task_sync_vendor_bill_to_qbo.delay(instance.id)
+
+
+@receiver(post_save, sender=VendorCredit)
+def sync_vendor_credit_on_save(sender, instance, created, **kwargs):
+    """Trigger QBO sync when a vendor credit is issued."""
+    if not _auto_sync_enabled():
+        return
+    if not is_outbound_eligible('vendor_credit', instance):
+        return
+    logger.info(f"Triggering QBO sync for VendorCredit {instance.id}")
+    task_sync_vendor_credit_to_qbo.delay(instance.id)

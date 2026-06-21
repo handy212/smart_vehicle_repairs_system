@@ -39,7 +39,9 @@ export const quickbooksApi = {
       | "purchase_order"
       | "branch"
       | "estimate"
-      | "credit_note";
+      | "credit_note"
+      | "vendor_bill"
+      | "vendor_credit";
     object_id: number;
     inline?: boolean;
   }) => {

@@ -17,6 +17,8 @@ ENTITY_LOG_TYPES = {
     'purchase_order': 'bill',
     'estimate': 'estimate',
     'credit_note': 'credit_memo',
+    'vendor_bill': 'vendor_bill',
+    'vendor_credit': 'vendor_credit',
 }
 
 

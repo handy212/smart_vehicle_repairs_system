@@ -61,6 +61,22 @@ def task_sync_credit_note_to_qbo(credit_note_id):
 
 
 @shared_task
+def task_sync_vendor_bill_to_qbo(bill_id):
+    """Background task to sync a vendor Bill to QBO."""
+    run_outbound_entity_sync(
+        'vendor_bill', bill_id, 'billing', 'Bill', 'sync_vendor_bill',
+    )
+
+
+@shared_task
+def task_sync_vendor_credit_to_qbo(vendor_credit_id):
+    """Background task to sync a VendorCredit to QBO."""
+    run_outbound_entity_sync(
+        'vendor_credit', vendor_credit_id, 'billing', 'VendorCredit', 'sync_vendor_credit',
+    )
+
+
+@shared_task
 def task_sync_branch_to_qbo(branch_id):
     """Background task to sync a Branch to QBO as a Department (Location)."""
     from django.apps import apps
@@ -189,6 +205,26 @@ def task_pull_credit_memos_from_qbo(triggered_by_id=None):
 
 
 @shared_task
+def task_pull_vendor_credits_from_qbo(triggered_by_id=None):
+    """Pull Vendor Credits from QBO → update applied status on local vendor credits."""
+    try:
+        from .services import QuickBooksService
+        service = QuickBooksService()
+        log = service.pull_vendor_credits(triggered_by=triggered_by_id)
+        if log:
+            logger.info(
+                "[QBO Inbound] Vendor credits pull complete: "
+                "pulled=%s, updated=%s, skipped=%s, status=%s",
+                log.records_pulled,
+                log.records_updated,
+                log.records_skipped,
+                log.status,
+            )
+    except Exception as e:
+        logger.error("Error in task_pull_vendor_credits_from_qbo: %s", e, exc_info=True)
+
+
+@shared_task
 def task_full_inbound_sync(triggered_by_id=None):
     """
     Convenience task: runs all inbound pulls sequentially.
@@ -200,4 +236,5 @@ def task_full_inbound_sync(triggered_by_id=None):
     task_pull_bills_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_estimates_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_credit_memos_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_vendor_credits_from_qbo(triggered_by_id=triggered_by_id)
     logger.info("[QBO Inbound] Full inbound sync complete.")

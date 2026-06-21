@@ -285,7 +285,7 @@ class QBOInboundSyncView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperU
 
                 messages.success(
                     request,
-                    "Inbound sync triggered! Vendors, Invoices, and Bills are being pulled from QuickBooks. "
+                    "Inbound sync triggered! Vendors, invoices, bills, estimates, credit memos, and vendor credits are being pulled from QuickBooks. "
                     "Check the QBO Sync Logs in the admin panel to monitor progress."
                 )
             except Exception as queue_error:
@@ -440,6 +440,10 @@ class QBOWebhookView(View):
                     from .tasks import task_pull_credit_memos_from_qbo
                     task_pull_credit_memos_from_qbo.delay()
                     queued.append('credit_memo')
+                elif entity_name in ('vendorcredit', 'vendor_credit'):
+                    from .tasks import task_pull_vendor_credits_from_qbo
+                    task_pull_vendor_credits_from_qbo.delay()
+                    queued.append('vendor_credit')
 
         logger.info(f"QBO webhook processed. Queued syncs: {list(set(queued))}")
         # QBO expects a 200 response

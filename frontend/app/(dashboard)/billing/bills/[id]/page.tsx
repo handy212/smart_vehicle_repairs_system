@@ -4,10 +4,12 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Calendar, CreditCard, Download, Edit, FileText, FileMinus2, MoreVertical, Package, ReceiptText, Truck, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, Database, Download, Edit, FileText, FileMinus2, MoreVertical, Package, ReceiptText, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { billingApi } from "@/lib/api/billing";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { ApplyVendorCreditToBillDialog } from "@/components/billing/ApplyVendorCreditToBillDialog";
 import { accountingApi, type Account } from "@/lib/api/accounting";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +51,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { cn } from "@/lib/utils/cn";
 
 const statusClassNames: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
@@ -88,6 +91,8 @@ export default function BillDetailPage() {
     const [isVendorCreditDialogOpen, setIsVendorCreditDialogOpen] = useState(false);
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
     const [selectedApproverId, setSelectedApproverId] = useState("");
+    const [isSyncing, setIsSyncing] = useState(false);
+    const { isConnected: isQboConnected } = useQuickBooksConnection();
 
     const paymentForm = useForm<PaymentValues>({
         resolver: zodResolver(paymentSchema),
@@ -351,6 +356,26 @@ export default function BillDetailPage() {
         ["draft", "rejected"].includes(bill.status) &&
         Number.parseFloat(bill.amount_paid || "0") === 0;
 
+    const handleQBOSync = async () => {
+        try {
+            setIsSyncing(true);
+            await quickbooksApi.syncOutbound({ entity_type: "vendor_bill", object_id: id });
+            toast({
+                title: "QuickBooks Sync",
+                description: "Vendor bill push to QuickBooks triggered. Status should update shortly.",
+            });
+            queryClient.invalidateQueries({ queryKey: ["bill", id] });
+        } catch {
+            toast({
+                title: "QuickBooks Sync Failed",
+                description: "Could not trigger vendor bill sync with QuickBooks.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     return (
         <div className="space-y-6 p-6">
             <ApplyVendorCreditToBillDialog
@@ -373,6 +398,11 @@ export default function BillDetailPage() {
                             <Badge className={`capitalize ${statusClassNames[bill.status] || statusClassNames.draft}`}>
                                 {statusLabel}
                             </Badge>
+                            {isQboConnected && bill.qbo_sync_status && (
+                                <Badge variant={bill.qbo_sync_status === "synced" ? "default" : bill.qbo_sync_status === "failed" ? "destructive" : "secondary"} className="capitalize">
+                                    QBO: {bill.qbo_sync_status}
+                                </Badge>
+                            )}
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Vendor bill from {bill.vendor_name || "Unknown vendor"}
@@ -380,6 +410,12 @@ export default function BillDetailPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    {isQboConnected && bill.qbo_sync_status && (
+                        <Button variant="outline" size="sm" onClick={handleQBOSync} disabled={isSyncing}>
+                            <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                            {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+                        </Button>
+                    )}
                     {showSubmitApproval && (
                         <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
                             <DialogTrigger asChild>

@@ -5,9 +5,11 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, CheckCircle, FileMinus2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Database, FileMinus2 } from "lucide-react";
 
 import { billingApi } from "@/lib/api/billing";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -23,6 +25,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { ApplyCreditToBillDialog } from "@/components/billing/ApplyCreditToBillDialog";
+import { cn } from "@/lib/utils/cn";
 
 function getStatusVariant(status: string): BadgeProps["variant"] {
   switch (status) {
@@ -45,6 +48,8 @@ function VendorCreditDetailContent() {
   const id = parseInt(params.id as string, 10);
   const isValidId = !Number.isNaN(id) && id > 0;
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
 
   const { data: credit, isLoading, error } = useQuery({
     queryKey: ["vendorCredit", id],
@@ -95,6 +100,26 @@ function VendorCreditDetailContent() {
   const unusedNum = parseFloat(credit.unused_amount || "0");
   const vendorId = Number(credit.vendor);
 
+  const handleQBOSync = async () => {
+    try {
+      setIsSyncing(true);
+      await quickbooksApi.syncOutbound({ entity_type: "vendor_credit", object_id: id });
+      toast({
+        title: "QuickBooks Sync",
+        description: "Vendor credit push to QuickBooks triggered. Status should update shortly.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["vendorCredit", id] });
+    } catch {
+      toast({
+        title: "QuickBooks Sync Failed",
+        description: "Could not trigger vendor credit sync with QuickBooks.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       <ApplyCreditToBillDialog
@@ -117,6 +142,11 @@ function VendorCreditDetailContent() {
               <FileMinus2 className="h-5 w-5 text-muted-foreground" />
               {credit.credit_number}
               <Badge variant={getStatusVariant(credit.status)}>{credit.status.toUpperCase()}</Badge>
+              {isQboConnected && credit.qbo_sync_status && (
+                <Badge variant={credit.qbo_sync_status === "synced" ? "default" : credit.qbo_sync_status === "failed" ? "destructive" : "secondary"} className="capitalize">
+                  QBO: {credit.qbo_sync_status}
+                </Badge>
+              )}
             </h1>
             <p className="text-sm text-muted-foreground">
               {credit.vendor_name} · {format(new Date(credit.credit_date), "MMM d, yyyy")}
@@ -124,6 +154,12 @@ function VendorCreditDetailContent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {isQboConnected && credit.qbo_sync_status && (
+            <Button variant="outline" onClick={handleQBOSync} disabled={isSyncing}>
+              <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+              {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+            </Button>
+          )}
           {credit.status === "draft" && (
             <Button
               onClick={() => issueMutation.mutate()}
