@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   CreditCard,
+  Database,
   DollarSign,
   FileText,
   Printer,
@@ -24,6 +25,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import ProcessRefundDialog from "@/app/(dashboard)/billing/invoices/[id]/components/ProcessRefundDialog";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useToast } from "@/lib/hooks/useToast";
+import { cn } from "@/lib/utils/cn";
 
 export default function PaymentDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -34,6 +39,9 @@ export default function PaymentDetailPage() {
   const id = parseInt(params.id as string);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [allocationOpen, setAllocationOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { toast } = useToast();
 
   const isValidId = !Number.isNaN(id) && id > 0;
 
@@ -107,6 +115,26 @@ export default function PaymentDetailPage() {
     payment.status === "completed" && Boolean(payment.customer) && unallocatedAmount > 0.01;
   const canRequestRefund = payment.status === "completed" && maxRefundable > 0.01;
 
+  const handleQBOSync = async () => {
+    try {
+      setIsSyncing(true);
+      await quickbooksApi.syncOutbound({ entity_type: "payment", object_id: id });
+      toast({
+        title: "QuickBooks Sync",
+        description: "Payment push to QuickBooks triggered. Status should update shortly.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["payment", id] });
+    } catch {
+      toast({
+        title: "QuickBooks Sync Failed",
+        description: "Could not trigger payment sync with QuickBooks.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen space-y-6 p-8">
       <div className="flex items-center justify-between">
@@ -121,6 +149,20 @@ export default function PaymentDetailPage() {
               <Badge variant={getStatusVariant(payment.status)}>
                 {payment.status.replace("_", " ").toUpperCase()}
               </Badge>
+              {isQboConnected && payment.qbo_sync_status && (
+                <Badge
+                  variant={
+                    payment.qbo_sync_status === "synced"
+                      ? "default"
+                      : payment.qbo_sync_status === "failed"
+                        ? "destructive"
+                        : "secondary"
+                  }
+                  className="capitalize"
+                >
+                  QBO: {payment.qbo_sync_status}
+                </Badge>
+              )}
             </div>
             <p className="mt-1 text-muted-foreground">
               Received on {format(new Date(payment.payment_date), "MMMM dd, yyyy")}
@@ -129,6 +171,13 @@ export default function PaymentDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {isQboConnected && payment.qbo_sync_status && (
+            <Button variant="outline" onClick={handleQBOSync} disabled={isSyncing}>
+              <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+              {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+            </Button>
+          )}
+
           {canAllocate && (
             <Button variant="outline" onClick={() => setAllocationOpen(true)}>
               <Split className="mr-2 h-4 w-4" />
@@ -153,6 +202,14 @@ export default function PaymentDetailPage() {
           )}
         </div>
       </div>
+
+      {isQboConnected && payment.qbo_sync_status === "failed" && payment.qbo_sync_error && (
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="py-3 text-sm text-destructive">
+            QuickBooks sync failed: {payment.qbo_sync_error}
+          </CardContent>
+        </Card>
+      )}
 
       {canRequestRefund && (
         <Card className="border-amber-200/60 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20">

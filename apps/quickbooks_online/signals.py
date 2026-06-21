@@ -15,6 +15,7 @@ from .tasks import (
     task_sync_estimate_to_qbo,
     task_sync_credit_note_to_qbo,
 )
+from .sync_policy import is_outbound_eligible
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,8 +31,7 @@ def sync_customer_on_save(sender, instance, created, **kwargs):
     """
     if not _auto_sync_enabled():
         return
-    # Avoid syncing if created by tests or fixtures without proper data
-    if not instance.customer_number:
+    if not is_outbound_eligible('customer', instance):
         return
         
     logger.info(f"Triggering QBO sync for Customer {instance.id}")
@@ -41,9 +41,11 @@ def sync_customer_on_save(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Invoice)
 def sync_invoice_on_save(sender, instance, created, **kwargs):
     """
-    Trigger QBO sync when an Invoice is saved.
+    Trigger QBO sync when a finalized Invoice is saved.
     """
     if not _auto_sync_enabled():
+        return
+    if not is_outbound_eligible('invoice', instance):
         return
     logger.info(f"Triggering QBO sync for Invoice {instance.id}")
     task_sync_invoice_to_qbo.delay(instance.id)
@@ -52,9 +54,11 @@ def sync_invoice_on_save(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Payment)
 def sync_payment_on_save(sender, instance, created, **kwargs):
     """
-    Trigger QBO sync when a Payment is saved.
+    Trigger QBO sync when a completed Payment is saved.
     """
     if not _auto_sync_enabled():
+        return
+    if not is_outbound_eligible('payment', instance):
         return
     logger.info(f"Triggering QBO sync for Payment {instance.id}")
     task_sync_payment_to_qbo.delay(instance.id)
@@ -74,9 +78,11 @@ def sync_supplier_on_save(sender, instance, created, **kwargs):
 @receiver(post_save, sender=PurchaseOrder)
 def sync_purchase_order_on_save(sender, instance, created, **kwargs):
     """
-    Trigger QBO sync when a PurchaseOrder is saved.
+    Trigger QBO sync when an approved PurchaseOrder is saved.
     """
     if not _auto_sync_enabled():
+        return
+    if not is_outbound_eligible('purchase_order', instance):
         return
     logger.info(f"Triggering QBO sync for PurchaseOrder {instance.id}")
     task_sync_purchase_order_to_qbo.delay(instance.id)
@@ -94,21 +100,15 @@ def sync_branch_on_save(sender, instance, created, **kwargs):
     task_sync_branch_to_qbo.delay(instance.id)
 
 
-ESTIMATE_QBO_SYNC_STATUSES = {'sent', 'viewed', 'approved'}
-
-
 @receiver(post_save, sender=Estimate)
 def sync_estimate_on_save(sender, instance, created, **kwargs):
     """Trigger QBO sync when an estimate is sent or approved."""
     if not _auto_sync_enabled():
         return
-    if instance.status not in ESTIMATE_QBO_SYNC_STATUSES:
+    if not is_outbound_eligible('estimate', instance):
         return
     logger.info(f"Triggering QBO sync for Estimate {instance.id}")
     task_sync_estimate_to_qbo.delay(instance.id)
-
-
-CREDIT_NOTE_QBO_SYNC_STATUSES = {'issued', 'applied', 'refunded'}
 
 
 @receiver(post_save, sender=CreditNote)
@@ -116,7 +116,7 @@ def sync_credit_note_on_save(sender, instance, created, **kwargs):
     """Trigger QBO sync when a credit note is issued."""
     if not _auto_sync_enabled():
         return
-    if instance.status not in CREDIT_NOTE_QBO_SYNC_STATUSES:
+    if not is_outbound_eligible('credit_note', instance):
         return
     logger.info(f"Triggering QBO sync for CreditNote {instance.id}")
     task_sync_credit_note_to_qbo.delay(instance.id)

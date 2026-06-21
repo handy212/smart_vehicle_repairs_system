@@ -14,6 +14,8 @@ from apps.quickbooks_online.models import QBOMapping, QBOSyncLog
 from apps.quickbooks_online.serializers import QBOSyncLogSerializer
 from apps.quickbooks_online.services import QuickBooksService
 from apps.quickbooks_online import tasks as qbo_tasks
+from apps.quickbooks_online.outbound_log import get_mapping_error, record_outbound_sync
+from apps.quickbooks_online.sync_policy import outbound_eligibility_reason
 
 OUTBOUND_SYNC_ENTITIES = {
     'customer': {
@@ -375,12 +377,25 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        eligible, eligibility_reason = outbound_eligibility_reason(entity_type, instance)
+        if not eligible:
+            return Response(
+                {
+                    'detail': eligibility_reason,
+                    'entity_type': entity_type,
+                    'object_id': object_id,
+                    **self._get_mapping_payload(instance),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if inline:
             service = QuickBooksService()
             sync_method = getattr(service, entity_config['service_method'])
             try:
                 result = sync_method(instance)
             except Exception as exc:
+                record_outbound_sync(entity_type, success=False, error_message=str(exc))
                 return Response(
                     {
                         'status': 'error',
@@ -391,6 +406,15 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
                         **self._get_mapping_payload(instance),
                     },
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            if result:
+                record_outbound_sync(entity_type, success=True)
+            else:
+                record_outbound_sync(
+                    entity_type,
+                    success=False,
+                    error_message=get_mapping_error(instance) or 'Sync returned no result from QuickBooks.',
                 )
 
             payload = {

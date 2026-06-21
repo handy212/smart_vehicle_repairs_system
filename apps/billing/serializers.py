@@ -1219,7 +1219,7 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
 # PAYMENT SERIALIZERS
 # ============================================================================
 
-class PaymentSerializer(serializers.ModelSerializer):
+class PaymentSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Serializer for payments"""
     
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
@@ -1234,6 +1234,8 @@ class PaymentSerializer(serializers.ModelSerializer):
     is_partially_refunded = serializers.BooleanField(read_only=True)
     allocated_total = serializers.SerializerMethodField()
     unallocated_balance = serializers.SerializerMethodField()
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
     
     class Meta:
         model = Payment
@@ -1249,9 +1251,22 @@ class PaymentSerializer(serializers.ModelSerializer):
             'net_amount', 'is_refunded', 'is_partially_refunded',
             'allocated_total', 'unallocated_balance',
             'processed_by', 'processed_by_name',
+            'qbo_sync_status', 'qbo_sync_error',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
 
     def get_allocated_total(self, obj):
         total = obj.allocations.aggregate(t=Sum('amount'))['t']

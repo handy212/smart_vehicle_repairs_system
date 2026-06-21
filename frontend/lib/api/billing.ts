@@ -123,6 +123,8 @@ export interface Payment {
   allocated_total?: string;
   unallocated_balance?: string;
   created_at: string;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface PaymentAllocation {

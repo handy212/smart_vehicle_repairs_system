@@ -48,6 +48,8 @@ export interface Customer {
   last_visit_date?: string | null;
   days_since_last_visit?: number | null;
   is_inactive?: boolean | null;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface CustomerListResponse {

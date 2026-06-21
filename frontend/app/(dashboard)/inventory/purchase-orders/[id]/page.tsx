@@ -38,6 +38,7 @@ import { CircleDollarSign, Clock, Database, FileText, ReceiptText } from "lucide
 import { cn } from "@/lib/utils";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { quickbooksApi } from "@/lib/api/quickbooks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,6 +78,7 @@ export default function PurchaseOrderDetailPage() {
   );
   const { hasPermission } = usePermissions();
   const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const [isSyncing, setIsSyncing] = useState(false);
   const isPrivilegedApprover = hasPermission("approve_purchase_orders");
   const isLegacyApprover = currentUser?.id === purchaseOrder?.assigned_approver;
   const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isPrivilegedApprover);
@@ -124,6 +126,26 @@ export default function PurchaseOrderDetailPage() {
       }
       return current.filter((idToKeep) => idToKeep !== approverId);
     });
+  };
+
+  const handleQBOSync = async () => {
+    try {
+      setIsSyncing(true);
+      await quickbooksApi.syncOutbound({ entity_type: "purchase_order", object_id: id });
+      toast({
+        title: "QuickBooks Sync",
+        description: "Purchase order push to QuickBooks triggered. Status should update shortly.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+    } catch (error: unknown) {
+      toast({
+        title: "QuickBooks Sync Failed",
+        description: getUserFacingError(error, "Could not trigger purchase order sync with QuickBooks."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const approveMutation = useMutation({
@@ -562,15 +584,28 @@ export default function PurchaseOrderDetailPage() {
         {isQboConnected && (
           <Card className="border-l-2 border-l-green-500 shadow-sm">
             <CardContent className="p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sync Status</p>
                   <h3 className="text-xl font-bold text-foreground capitalize">
                     {purchaseOrder.qbo_sync_status || 'Un-synced'}
                   </h3>
                   <p className="text-[10px] text-muted-foreground">QuickBooks integration</p>
+                  {purchaseOrder.qbo_sync_status === 'failed' && purchaseOrder.qbo_sync_error && (
+                    <p className="text-[10px] text-destructive mt-1 line-clamp-2" title={purchaseOrder.qbo_sync_error}>
+                      {purchaseOrder.qbo_sync_error}
+                    </p>
+                  )}
                 </div>
-                <Database className="h-6 w-6 text-success/30" />
+                <div className="flex flex-col items-end gap-2">
+                  <Database className="h-6 w-6 text-success/30" />
+                  {purchaseOrder.qbo_sync_status && (
+                    <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={handleQBOSync} disabled={isSyncing}>
+                      <Database className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")} />
+                      {isSyncing ? "Syncing" : "Push"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

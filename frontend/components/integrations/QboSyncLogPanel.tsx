@@ -61,7 +61,7 @@ export function QboSyncLogPanel() {
       </CardHeader>
       <CardContent className="p-0">
         <p className="px-4 py-3 text-xs text-muted-foreground border-b">
-          Recent inbound pulls from QuickBooks. Use this to confirm vendor, invoice, and bill sync runs.
+          Recent inbound pulls and outbound pushes with QuickBooks. Use this to confirm vendor, invoice, bill, and document sync runs.
         </p>
         {isLoading ? (
           <div className="p-6 text-sm text-muted-foreground">Loading sync history...</div>
@@ -76,7 +76,9 @@ export function QboSyncLogPanel() {
                   <TableHead className="text-xs">Entity</TableHead>
                   <TableHead className="text-xs">Direction</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-xs text-right">Pulled</TableHead>
+                  <TableHead className="text-xs text-right">
+                    {logs.some((log) => log.direction === "outbound") ? "Changed" : "Pulled"}
+                  </TableHead>
                   <TableHead className="text-xs text-right">Updated</TableHead>
                   <TableHead className="text-xs">Triggered by</TableHead>
                 </TableRow>
@@ -94,7 +96,9 @@ export function QboSyncLogPanel() {
                         {log.status_display}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-right">{log.records_pulled}</TableCell>
+                    <TableCell className="text-xs text-right">
+                      {log.direction === "outbound" ? log.records_updated : log.records_pulled}
+                    </TableCell>
                     <TableCell className="text-xs text-right">{log.records_updated}</TableCell>
                     <TableCell className="text-xs">{log.triggered_by_name || "Scheduled"}</TableCell>
                   </TableRow>
