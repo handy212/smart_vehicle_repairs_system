@@ -212,7 +212,8 @@ Use a **QuickBooks sandbox company** connected under **Admin → Integrations �
 | Step | SVR UI | What to expect |
 |------|--------|----------------|
 | 1 | **Inventory → New part** (or open existing **Inventory → [part]**) | Part saves with `part_number`, name, prices |
-| 2 | Part detail header | **QBO: synced** badge (or **failed** with error text) |
+| 2 | Confirm **Admin → Integrations → Account mappings** includes **Sales Revenue** and/or **Purchases / Operating Expense** control accounts mapped to QBO | Required for Part → QBO Item sync |
+| 3 | Part detail header | **QBO: synced** badge (or **failed** with error text) |
 | 3 | Click **Sync QBO** | Toast success; badge updates after refresh |
 | 4 | Create/send an **invoice** with a line linked to that part | Line should use the synced QBO Item (not only generic line-type mapping) |
 
@@ -281,7 +282,7 @@ If PDF generation fails server-side, the QBO transaction still syncs; attachment
 
 | Common failure | Fix |
 |----------------|-----|
-| Part sync failed | Map sales revenue + expense control accounts |
+| Part sync failed | Map **Sales Revenue** and/or **Purchases / Operating Expense** control accounts in Integrations (or map invoice line type **Part** to a QBO Item with accounts) |
 | Payment blocked | Sync target invoice(s) to QBO first |
 | No QBO badge | QBO not connected, or refresh page |
 | Auto-sync delayed | Start Celery worker, or use **Sync QBO** manually |

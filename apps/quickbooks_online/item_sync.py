@@ -26,13 +26,63 @@ def _mapping_service(service):
     return service._get_mapping_service()
 
 
-def _income_expense_account_ids(mapping_service):
+PART_ITEM_ACCOUNTS_HELP = (
+    'QuickBooks requires an income or expense account on catalog Items. '
+    'Map control accounts under Admin → Integrations → Account mappings: '
+    '"Sales Revenue" (sales_revenue_account) and/or '
+    '"Purchases / Operating Expense" (default_expense_account). '
+    'Alternatively, map invoice line type "Part" to a QBO Item that already has accounts.'
+)
+
+
+def _accounts_from_mapped_part_line_item(mapping_service, client):
+    """Copy account refs from the mapped invoice line type Part QBO Item."""
+    if not mapping_service or client is None or QBItem is None:
+        return None, None
+
+    item_id = mapping_service.resolve_invoice_line_item_id('part')
+    if not item_id:
+        return None, None
+
+    try:
+        qb_item = QBItem.get(int(item_id), qb=client)
+    except Exception as exc:
+        logger.debug('Could not load mapped Part line QBO item %s: %s', item_id, exc)
+        return None, None
+
+    income_ref = getattr(qb_item, 'IncomeAccountRef', None)
+    expense_ref = getattr(qb_item, 'ExpenseAccountRef', None)
+    income_id = getattr(income_ref, 'value', None) if income_ref else None
+    expense_id = getattr(expense_ref, 'value', None) if expense_ref else None
+    return income_id, expense_id
+
+
+def _income_expense_account_ids(mapping_service, client=None):
     income_id = None
     expense_id = None
     if mapping_service:
         income_id = mapping_service.resolve_control_account_qbo_id('sales_revenue_account')
         expense_id = mapping_service.resolve_control_account_qbo_id('default_expense_account')
+        if not expense_id:
+            expense_id = mapping_service.resolve_control_account_qbo_id('cost_of_goods_sold_account')
+
+    if client is not None and mapping_service and (not income_id or not expense_id):
+        fallback_income, fallback_expense = _accounts_from_mapped_part_line_item(
+            mapping_service, client
+        )
+        income_id = income_id or fallback_income
+        expense_id = expense_id or fallback_expense
+
     return income_id, expense_id
+
+
+def _apply_item_account_refs(qb_item, income_id, expense_id):
+    if income_id and Ref is not None:
+        qb_item.IncomeAccountRef = Ref()
+        qb_item.IncomeAccountRef.value = income_id
+    if expense_id and Ref is not None:
+        qb_item.ExpenseAccountRef = Ref()
+        qb_item.ExpenseAccountRef.value = expense_id
 
 
 def sync_part(service, local_part):
@@ -71,13 +121,12 @@ def sync_part(service, local_part):
         qb_item.Description = local_part.description[:4000]
 
     mapping_service = _mapping_service(service)
-    income_id, expense_id = _income_expense_account_ids(mapping_service)
-    if income_id:
-        qb_item.IncomeAccountRef = Ref()
-        qb_item.IncomeAccountRef.value = income_id
-    if expense_id:
-        qb_item.ExpenseAccountRef = Ref()
-        qb_item.ExpenseAccountRef.value = expense_id
+    income_id, expense_id = _income_expense_account_ids(mapping_service, client=client)
+    if not income_id and not expense_id:
+        service._update_qbo_mapping(local_part, None, error=PART_ITEM_ACCOUNTS_HELP)
+        return None
+
+    _apply_item_account_refs(qb_item, income_id, expense_id)
 
     if local_part.selling_price:
         qb_item.UnitPrice = float(local_part.selling_price)

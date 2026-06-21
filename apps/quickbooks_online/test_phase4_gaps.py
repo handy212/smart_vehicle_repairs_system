@@ -293,7 +293,9 @@ class Phase4PartSyncTests(TestCase):
     @patch('apps.quickbooks_online.item_sync.Ref')
     def test_sync_part_creates_qbo_mapping(self, mock_ref, mock_qb_item_cls, mock_save, mock_client):
         mock_client.return_value = MagicMock()
-        mock_ref.return_value = MagicMock()
+        income_ref = MagicMock()
+        expense_ref = MagicMock()
+        mock_ref.side_effect = [income_ref, expense_ref]
         qb_item = MagicMock()
         qb_item.Id = 'ITEM-42'
         qb_item.SyncToken = '0'
@@ -303,7 +305,13 @@ class Phase4PartSyncTests(TestCase):
         )
 
         service = QuickBooksService()
-        with patch.object(service, '_get_mapping_service', return_value=None):
+        mock_mapping = MagicMock()
+        mock_mapping.resolve_control_account_qbo_id.side_effect = lambda key: {
+            'sales_revenue_account': 'INC-1',
+            'default_expense_account': 'EXP-1',
+            'cost_of_goods_sold_account': None,
+        }.get(key)
+        with patch.object(service, '_get_mapping_service', return_value=mock_mapping):
             result = service.sync_part(self.part)
 
         self.assertIsNotNone(result)
@@ -315,6 +323,32 @@ class Phase4PartSyncTests(TestCase):
         self.assertEqual(mapping.status, 'synced')
         self.assertEqual(qb_item.Type, 'NonInventory')
         self.assertEqual(qb_item.Sku, 'OIL-001')
+        self.assertEqual(qb_item.IncomeAccountRef, income_ref)
+        self.assertEqual(qb_item.ExpenseAccountRef, expense_ref)
+        self.assertEqual(income_ref.value, 'INC-1')
+        self.assertEqual(expense_ref.value, 'EXP-1')
+
+    @patch.object(QuickBooksService, 'get_client')
+    @patch('apps.quickbooks_online.item_sync.QBItem')
+    def test_sync_part_fails_without_account_mappings(self, mock_qb_item_cls, mock_client):
+        mock_client.return_value = MagicMock()
+        mock_qb_item_cls.return_value = MagicMock()
+
+        service = QuickBooksService()
+        mock_mapping = MagicMock()
+        mock_mapping.resolve_control_account_qbo_id.return_value = None
+        mock_mapping.resolve_invoice_line_item_id.return_value = None
+
+        with patch.object(service, '_get_mapping_service', return_value=mock_mapping):
+            result = service.sync_part(self.part)
+
+        self.assertIsNone(result)
+        mapping = QBOMapping.objects.get(
+            content_type=ContentType.objects.get_for_model(self.part),
+            object_id=self.part.id,
+        )
+        self.assertEqual(mapping.status, 'failed')
+        self.assertIn('Sales Revenue', mapping.error_message)
 
 
 class Phase4AttachmentSyncTests(TestCase):
