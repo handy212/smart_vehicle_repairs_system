@@ -1,9 +1,9 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from apps.customers.models import Customer
 from apps.billing.models import Invoice, Payment, Estimate, CreditNote, Bill, VendorCredit
-from apps.inventory.models import Supplier, PurchaseOrder
+from apps.inventory.models import Supplier, PurchaseOrder, Part
 from apps.branches.models import Branch
 from .tasks import (
     task_sync_customer_to_qbo, 
@@ -16,8 +16,11 @@ from .tasks import (
     task_sync_credit_note_to_qbo,
     task_sync_vendor_bill_to_qbo,
     task_sync_vendor_credit_to_qbo,
+    task_sync_part_to_qbo,
+    task_resync_payments_for_invoice,
 )
-from .sync_policy import is_outbound_eligible
+from .sync_policy import is_outbound_eligible, INVOICE_QBO_SYNC_STATUSES
+from .payment_helpers import _is_proforma_numbered_invoice
 import logging
 
 logger = logging.getLogger(__name__)
@@ -64,6 +67,46 @@ def sync_payment_on_save(sender, instance, created, **kwargs):
         return
     logger.info(f"Triggering QBO sync for Payment {instance.id}")
     task_sync_payment_to_qbo.delay(instance.id)
+
+
+@receiver(pre_save, sender=Invoice)
+def capture_invoice_status_before_save(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            instance._qbo_prev_status = Invoice.objects.get(pk=instance.pk).status
+        except Invoice.DoesNotExist:
+            instance._qbo_prev_status = None
+    else:
+        instance._qbo_prev_status = None
+
+
+# Issued invoice statuses — exclude ``partial`` (auto-set when a proforma receives a deposit).
+PROFORMA_FINALIZED_STATUSES = INVOICE_QBO_SYNC_STATUSES - {'partial'}
+
+
+@receiver(post_save, sender=Invoice)
+def resync_payments_when_invoice_finalized(sender, instance, created, **kwargs):
+    """Re-sync proforma deposits to apply against the issued QBO invoice."""
+    if created:
+        return
+    prev = getattr(instance, '_qbo_prev_status', None)
+    leaving_deposit_stage = (
+        prev == 'proforma'
+        or (prev == 'partial' and _is_proforma_numbered_invoice(instance))
+    )
+    if leaving_deposit_stage and instance.status in PROFORMA_FINALIZED_STATUSES:
+        task_resync_payments_for_invoice.delay(instance.id)
+
+
+@receiver(post_save, sender=Part)
+def sync_part_on_save(sender, instance, created, **kwargs):
+    """Push active parts catalog to QBO Items when auto-sync is enabled."""
+    if not _auto_sync_enabled():
+        return
+    if not instance.is_active:
+        return
+    logger.info('Triggering QBO sync for Part %s', instance.id)
+    task_sync_part_to_qbo.delay(instance.id)
 
 
 @receiver(post_save, sender=Supplier)

@@ -453,6 +453,10 @@ class QBOWebhookView(View):
                     from .tasks import task_pull_vendor_credits_from_qbo
                     task_pull_vendor_credits_from_qbo.delay()
                     queued.append('vendor_credit')
+                elif entity_name == 'item':
+                    from .tasks import task_pull_items_from_qbo
+                    task_pull_items_from_qbo.delay()
+                    queued.append('item')
 
         logger.info(f"QBO webhook processed. Queued syncs: {list(set(queued))}")
         # QBO expects a 200 response

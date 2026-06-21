@@ -580,9 +580,11 @@ class QuickBooksService:
         except Exception:
             return None
 
-    def _build_sales_item_lines(self, line_items, *, item_type_attr='item_type', default_item_type='other'):
+    def _build_sales_item_lines(self, line_items, *, item_type_attr='item_type', default_item_type='other', part_attr='part'):
         lines = []
         mapping_service = self._get_mapping_service()
+        from .item_sync import resolve_part_qbo_item_id
+
         for item in line_items:
             line = DetailLine()
             line.Amount = float(item.total)
@@ -596,11 +598,15 @@ class QuickBooksService:
             sales_item = SalesItemLineDetail()
             sales_item.Qty = float(item.quantity)
             sales_item.UnitPrice = float(item.unit_price)
-            if mapping_service and Ref is not None:
+            qbo_item_id = None
+            part = getattr(item, part_attr, None) if part_attr else None
+            if part is not None and getattr(part, 'pk', None):
+                qbo_item_id = resolve_part_qbo_item_id(self, part)
+            if not qbo_item_id and mapping_service and Ref is not None:
                 qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type)
-                if qbo_item_id:
-                    sales_item.ItemRef = Ref()
-                    sales_item.ItemRef.value = qbo_item_id
+            if qbo_item_id and Ref is not None:
+                sales_item.ItemRef = Ref()
+                sales_item.ItemRef.value = qbo_item_id
             line.SalesItemLineDetail = sales_item
             lines.append(line)
         return lines
@@ -826,6 +832,8 @@ class QuickBooksService:
                     'error_message': ''
                 }
             )
+            from .attachment_sync import sync_invoice_attachment
+            sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
             return qb_invoice
         except Exception as e:
             logger.error(f"QBO Invoice Sync Error: {e}")
@@ -892,6 +900,8 @@ class QuickBooksService:
         try:
             self._save_qb(qb_estimate, client)
             self._update_qbo_mapping(local_estimate, qb_estimate)
+            from .attachment_sync import sync_estimate_attachment
+            sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
             return qb_estimate
         except Exception as exc:
             logger.error('QBO Estimate Sync Error: %s', exc)
@@ -985,8 +995,14 @@ class QuickBooksService:
 
     def sync_payment(self, local_payment):
         """
-        Sync a local Payment to QBO.
+        Sync a local Payment to QBO with explicit invoice linking or deposit handling.
         """
+        from .payment_helpers import (
+            PaymentSyncError,
+            build_qbo_payment_lines,
+            payment_private_note,
+        )
+
         client = self.get_client()
         if not client:
             QBOMapping.objects.update_or_create(
@@ -998,14 +1014,15 @@ class QuickBooksService:
                 }
             )
             return None
-            
-        # Ensure Customer is synced
+
         qb_customer = self.sync_customer(local_payment.customer)
         if not qb_customer:
-            logger.error(f"Cannot sync payment {local_payment.payment_number}: Customer sync failed.")
+            logger.error(
+                'Cannot sync payment %s: Customer sync failed.',
+                local_payment.payment_number,
+            )
             return None
 
-        # Check for existing mapping
         mapping = QBOMapping.objects.filter(
             content_type=ContentType.objects.get_for_model(local_payment),
             object_id=local_payment.id
@@ -1019,17 +1036,17 @@ class QuickBooksService:
                 mapping = None
                 qb_payment = QBPayment()
 
-        # Map Fields
         qb_payment.CustomerRef = Ref()
         qb_payment.CustomerRef.value = qb_customer.Id
-        
         qb_payment.TotalAmt = float(local_payment.amount)
         qb_payment.TxnDate = local_payment.payment_date.date().isoformat()
-        
+
         if local_payment.reference_number:
             qb_payment.PaymentRefNum = local_payment.reference_number
-        if local_payment.notes:
-            qb_payment.PrivateNote = local_payment.notes
+
+        note = payment_private_note(local_payment)
+        if note:
+            qb_payment.PrivateNote = note
 
         try:
             from .mapping_services import get_account_mapping_service
@@ -1040,63 +1057,24 @@ class QuickBooksService:
         except Exception as mapping_error:
             logger.debug('Could not resolve QBO deposit account for payment: %s', mapping_error)
 
-        # Map Branch/Department from Invoice
-        # Payments in this system don't have direct branch, but are linked to invoice
-        if local_payment.invoice and local_payment.invoice.branch:
-            qb_dept = self.sync_branch(local_payment.invoice.branch)
-            if qb_dept:
-                # Payment object supports DepartmentRef? Check docs/schema.
-                # python-quickbooks Payment object does NOT have 'DepartmentRef' in class_dict
-                # But we can try to set it dynamically if QBO API supports it.
-                # If python-quickbooks filters it out, we might need to subclass or mixin.
-                # However, for now let's try to set it, if it fails validation we will catch it.
-                # Checked QBO API Ref: Payment DOES NOT have DepartmentRef. 
-                # Location is usually tracked at Line level for some txns, or Header for others.
-                # Payment header does NOT confirm support for DepartmentRef in docs.
-                # Wait, QBO API for Payment: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/payment
-                # No DepartmentRef in Payment Header.
-                # So we CANNOT set DepartmentRef on Payment.
-                # We can only rely on the linked Invoice having the Location.
-                pass
-        
-        # Link to Invoice
+        try:
+            qb_payment.Line = build_qbo_payment_lines(
+                self,
+                local_payment,
+                PaymentLine=PaymentLine,
+                LinkedTxn=LinkedTxn,
+            )
+        except PaymentSyncError as exc:
+            logger.error('QBO payment %s blocked: %s', local_payment.payment_number, exc)
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_payment),
+                object_id=local_payment.id,
+                defaults={'status': 'failed', 'error_message': str(exc)},
+            )
+            return None
 
-        # Link to Invoice
-        # We need the QBO ID of the invoice being paid
-        if local_payment.invoice:
-            # Check if invoice is already synced
-            invoice_mapping = QBOMapping.objects.filter(
-                content_type=ContentType.objects.get_for_model(local_payment.invoice),
-                object_id=local_payment.invoice.id
-            ).first()
-            
-            qb_invoice_id = None
-            if invoice_mapping:
-                qb_invoice_id = invoice_mapping.qbo_id
-            else:
-                # Try to sync invoice immediately if not found
-                # Note: sync_invoice checks customer sync internally, so it is safe
-                qb_invoice = self.sync_invoice(local_payment.invoice)
-                if qb_invoice:
-                    qb_invoice_id = qb_invoice.Id
-            
-            if qb_invoice_id:
-                line = PaymentLine()
-                line.Amount = float(local_payment.amount)
-                
-                linked_txn = LinkedTxn()
-                linked_txn.TxnId = qb_invoice_id
-                linked_txn.TxnType = "Invoice"
-                
-                line.LinkedTxn = [linked_txn]
-                qb_payment.Line = [line]
-            else:
-                logger.warning(f"Syncing payment {local_payment.payment_number} without linking to Invoice (Invoice sync failed).")
-
-        # Save
         try:
             self._save_qb(qb_payment, client)
-
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_payment),
                 object_id=local_payment.id,
@@ -1108,7 +1086,6 @@ class QuickBooksService:
                 }
             )
             return qb_payment
-            
         except Exception as e:
             logger.error(f"QBO Payment Sync Error: {e}")
             if hasattr(e, 'detail'):
@@ -1122,6 +1099,16 @@ class QuickBooksService:
                 }
             )
             return None
+
+    def sync_part(self, local_part):
+        """Sync SVR Part catalog row to QBO Item (NonInventory; SVR owns stock)."""
+        from .item_sync import sync_part as _sync_part
+        return _sync_part(self, local_part)
+
+    def pull_items(self, triggered_by=None):
+        """Pull Item name/SKU/active metadata for mapped parts (no quantities)."""
+        from .item_sync import pull_items_metadata
+        return pull_items_metadata(self, triggered_by=triggered_by)
 
     def sync_supplier(self, local_supplier):
         """

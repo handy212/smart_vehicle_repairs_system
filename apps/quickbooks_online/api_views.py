@@ -98,6 +98,14 @@ OUTBOUND_SYNC_ENTITIES = {
         'task_name': 'task_sync_vendor_credit_to_qbo',
         'service_method': 'sync_vendor_credit',
     },
+    'part': {
+        'app_label': 'inventory',
+        'model_name': 'Part',
+        'module': 'inventory',
+        'permission': 'view_inventory',
+        'task_name': 'task_sync_part_to_qbo',
+        'service_method': 'sync_part',
+    },
 }
 
 

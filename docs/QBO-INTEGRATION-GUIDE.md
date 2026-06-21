@@ -69,6 +69,20 @@ Automatic sync runs on `post_save` when `QUICKBOOKS_AUTO_SYNC_ENABLED` is true (
 | SVR entity | QBO object | Notes |
 |------------|------------|-------|
 | Branch | Department | Location / class tracking |
+| Part (catalog) | Item (`NonInventory`) | Active parts on save; SVR owns stock quantities |
+
+### Phase 4: items, deposits, payment allocation, attachments
+
+| Feature | Behavior |
+|---------|----------|
+| **Part → QBO Item** | Outbound push creates/updates a `NonInventory` Item (SKU = `part_number`). Invoice/estimate lines with a linked `Part` prefer the synced QBO Item over generic line-type mappings. |
+| **Inbound item metadata** | `pull_items` / webhook `item` events update mapped Part `name`, `part_number` (SKU), and `is_active` only — **never** quantities. |
+| **Customer deposits** | Payments against **proforma** invoices push as **unapplied** QBO Payments (no `LinkedTxn`). `PrivateNote` is tagged as an SVR customer deposit. |
+| **Payment allocation** | When `PaymentAllocation` rows exist, QBO receives one `PaymentLine` per allocated invoice. Sync **fails** if any target invoice is not in QBO (no silent unapplied payments). |
+| **Invoice finalization** | When a proforma invoice moves to a finalized status, completed payments on that invoice are re-synced to apply against the QBO invoice. |
+| **PDF attachments** | After a successful invoice or estimate push, SVR renders the document PDF and uploads it as a QBO `Attachable` linked to the synced transaction. |
+
+**Intentionally not synced:** multi-branch stock levels, transfers, and inventory adjustments remain SVR-only (see [What is not synced](#what-is-not-synced)).
 
 ### Outbound logging
 
@@ -86,6 +100,7 @@ Inbound sync **never creates** new operational records from QBO (except new supp
 | `pull_estimates` | Estimate | Estimate | `status` from QBO `TxnStatus` |
 | `pull_credit_memos` | Credit Memo | Credit note | `applied` when `RemainingCredit` is zero |
 | `pull_vendor_credits` | Vendor Credit | Vendor credit | `applied` when remaining credit is zero |
+| `pull_items` | Item | Part (mapped only) | `name`, `part_number` (SKU), `is_active` — no quantities |
 
 Triggered by:
 
@@ -110,7 +125,7 @@ Triggered by:
 
 ### Outbound `entity_type` values
 
-`customer`, `invoice`, `payment`, `supplier`, `purchase_order`, `vendor_bill`, `vendor_credit`, `branch`, `estimate`, `credit_note`
+`customer`, `invoice`, `payment`, `supplier`, `purchase_order`, `vendor_bill`, `vendor_credit`, `branch`, `estimate`, `credit_note`, `part`
 
 ## Frontend UI
 
@@ -135,6 +150,7 @@ Per-line multi-levy `TaxLine` arrays are not implemented; use a composite QBO ta
 |-------------|--------|
 | `JournalEntry` / GL postings | Would duplicate document sync in QBO |
 | Work orders, vehicles, appointments | Operational data outside QBO scope |
+| Multi-branch stock quantities / transfers | SVR `StockItem` and transfers are source of truth; QBO Items are catalog metadata only |
 | Hubtel / Paystack payment webhooks | Separate payment gateways; only completed `Payment` records push to QBO |
 | Creating invoices/POs from QBO | SVR is document source of truth |
 
@@ -157,6 +173,9 @@ python manage.py migrate quickbooks_online
 | Path | Role |
 |------|------|
 | `apps/quickbooks_online/services.py` | OAuth, all `sync_*` and `pull_*` methods |
+| `apps/quickbooks_online/item_sync.py` | Part catalog ↔ QBO Item sync |
+| `apps/quickbooks_online/payment_helpers.py` | Payment line building, deposit detection, invoice-link validation |
+| `apps/quickbooks_online/attachment_sync.py` | PDF attachables for invoices and estimates |
 | `apps/quickbooks_online/sync_policy.py` | Status-gated outbound eligibility |
 | `apps/quickbooks_online/outbound_log.py` | Outbound `QBOSyncLog` helper |
 | `apps/quickbooks_online/signals.py` | Auto-sync on save |
@@ -180,3 +199,4 @@ SECRET_KEY=test DATABASE_URL=sqlite:///test.db pytest apps/quickbooks_online/ --
 | Phase 2 | Estimates, credit memos, tax codes, sync log API/UI |
 | Document hardening | Status policy, outbound logs, payment/customer/PO UI |
 | Phase 3 (AP) | Vendor bills, vendor credits, extended inbound pulls |
+| Phase 4 | Part Items, customer deposits, payment allocation validation, PDF attachments |
