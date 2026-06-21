@@ -163,12 +163,14 @@ class PartListSerializer(serializers.ModelSerializer):
         return stock <= obj.reorder_point
 
 
-class PartDetailSerializer(serializers.ModelSerializer):
+class PartDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     category_name = serializers.SerializerMethodField()
     category_path = serializers.SerializerMethodField()
     preferred_supplier_name = serializers.SerializerMethodField()
     suppliers_list = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
     
     # Override stock fields to use annotated values from viewset
     quantity_in_stock = serializers.IntegerField(source='current_stock', read_only=True)
@@ -225,6 +227,18 @@ class PartDetailSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else None
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id,
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
 
 
 class PartBarcodeSerializerMixin(serializers.Serializer):

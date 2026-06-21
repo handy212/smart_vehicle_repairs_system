@@ -14,7 +14,7 @@ from apps.billing.models import Invoice
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.customers.serializers import CustomerDetailSerializer
-from apps.inventory.models import Supplier
+from apps.inventory.models import Part, PartCategory, Supplier
 from apps.quickbooks_online.models import QBOMapping, QBOConfig, QBOToken
 from apps.quickbooks_online.services import QuickBooksService
 
@@ -76,6 +76,16 @@ class QBOOutboundSyncApiTests(APITestCase):
             created_by=self.admin,
         )
         self.supplier = Supplier.objects.create(name='Vendor', supplier_code='V-001')
+        self.part_category = PartCategory.objects.create(name='General')
+        self.part = Part.objects.create(
+            part_number='PART-001',
+            name='Test Part',
+            category=self.part_category,
+            branch=self.branch,
+            cost_price=Decimal('5.00'),
+            selling_price=Decimal('10.00'),
+            created_by=self.admin,
+        )
 
     @patch.object(QuickBooksService, 'is_connected', return_value=False)
     def test_outbound_sync_requires_connection(self, _mock_connected):
@@ -98,6 +108,19 @@ class QBOOutboundSyncApiTests(APITestCase):
         self.assertTrue(response.data['queued'])
         self.assertEqual(response.data['entity_type'], 'invoice')
         mock_delay.assert_called_once_with(self.invoice.id)
+
+    @patch.object(QuickBooksService, 'sdk_available', return_value=True)
+    @patch('apps.quickbooks_online.tasks.task_sync_part_to_qbo.delay')
+    def test_outbound_sync_queues_part(self, mock_delay, _mock_sdk):
+        response = self.client.post(
+            '/api/quickbooks/sync-outbound/',
+            {'entity_type': 'part', 'object_id': self.part.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['queued'])
+        self.assertEqual(response.data['entity_type'], 'part')
+        mock_delay.assert_called_once_with(self.part.id)
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
     @patch('apps.quickbooks_online.tasks.task_sync_supplier_to_qbo')

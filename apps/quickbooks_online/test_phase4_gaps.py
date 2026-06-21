@@ -348,3 +348,44 @@ class Phase4AttachmentSyncTests(TestCase):
         self.assertEqual(attachable.ContentType, 'application/pdf')
         self.assertEqual(attachable._FileBytes, b'%PDF-1.4')
         attachable.save.assert_called_once()
+
+
+class Phase4PartSerializerTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email='phase4-ser@test.com',
+            username='phase4_ser_admin',
+            password='password',
+        )
+        self.branch = Branch.objects.create(name='Main', code='MAIN-P4SER', created_by=self.admin)
+        self.category = PartCategory.objects.create(name='Filters')
+        self.part = Part.objects.create(
+            part_number='FIL-001',
+            name='Air Filter',
+            category=self.category,
+            branch=self.branch,
+            cost_price=Decimal('8.00'),
+            selling_price=Decimal('15.00'),
+            created_by=self.admin,
+        )
+
+    @patch.object(QuickBooksService, 'is_connected', return_value=True)
+    def test_part_detail_serializer_includes_qbo_fields(self, _mock_connected):
+        from apps.inventory.serializers import PartDetailSerializer
+
+        QBOMapping.objects.create(
+            content_type=ContentType.objects.get_for_model(self.part),
+            object_id=self.part.id,
+            qbo_id='ITEM-1',
+            status='synced',
+        )
+        data = PartDetailSerializer(self.part).data
+        self.assertEqual(data['qbo_sync_status'], 'synced')
+
+    @patch.object(QuickBooksService, 'is_connected', return_value=False)
+    def test_part_detail_serializer_hides_qbo_fields_when_disconnected(self, _mock_connected):
+        from apps.inventory.serializers import PartDetailSerializer
+
+        data = PartDetailSerializer(self.part).data
+        self.assertNotIn('qbo_sync_status', data)
+        self.assertNotIn('qbo_sync_error', data)
