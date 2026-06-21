@@ -104,7 +104,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // /api and /media: proxy.ts + beforeFiles rewrites (matcher must include /media/* — image ext. excluded from catch-all)
+  // BFF routes under app/api/* must win over Django proxying. Media has no local handlers.
   async rewrites() {
     const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api").replace(
       /\/$/,
@@ -113,9 +113,11 @@ const nextConfig: NextConfig = {
     const backendOrigin = apiUrl.replace(/\/api\/?$/, "");
     return {
       beforeFiles: [
+        { source: "/media/:path*", destination: `${backendOrigin}/media/:path*` },
+      ],
+      afterFiles: [
         { source: "/api", destination: apiUrl },
         { source: "/api/:path*", destination: `${apiUrl}/:path*` },
-        { source: "/media/:path*", destination: `${backendOrigin}/media/:path*` },
       ],
     };
   },

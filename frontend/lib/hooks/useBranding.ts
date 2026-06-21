@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { adminApi, type SystemSetting } from "@/lib/api/admin";
 import { useTheme } from "@/lib/hooks/useTheme";
-import { getAccessToken } from "@/lib/utils/token";
 import { getMediaUrl as resolveMediaUrl } from "@/lib/api/utils";
 import { brandingMediaVersion, withCacheBuster } from "@/lib/branding/parse";
 
@@ -50,10 +49,20 @@ export function useBranding(
             queryKeyVariant === "authenticated"
                 ? ["settings", "branding"]
                 : ["settings", "branding", "public"],
-        queryFn: () =>
-            queryKeyVariant === "authenticated"
-                ? adminApi.settings.byCategory("branding")
-                : adminApi.settings.publicBranding(),
+        queryFn: async () => {
+            if (queryKeyVariant === "authenticated") {
+                try {
+                    return await adminApi.settings.byCategory("branding");
+                } catch (error) {
+                    // Stale persisted auth state — fall back to the public branding endpoint.
+                    if (isAxiosError(error) && error.response?.status === 401) {
+                        return adminApi.settings.publicBranding();
+                    }
+                    throw error;
+                }
+            }
+            return adminApi.settings.publicBranding();
+        },
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
         retry: (failureCount, error) => {
