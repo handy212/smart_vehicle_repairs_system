@@ -9,6 +9,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
+import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
 import { adminApi } from "@/lib/api/admin";
 import { workordersApi } from "@/lib/api/workorders";
 import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
@@ -296,7 +297,7 @@ export default function NewEstimatePage() {
       updatedLineItems = [
         ...lineItems,
         {
-          item_type: "part",
+          item_type: billingLineTypeForPart(partData),
           description: partData.name,
           quantity: 1,
           unit_price: parseFloat(partData.selling_price || "0"),
@@ -663,7 +664,7 @@ export default function NewEstimatePage() {
                           }}
                         >
                           <div className="font-medium">{part.part_number} - {part.name}</div>
-                          <div className="text-xs text-muted-foreground">Stock: {part.quantity_on_hand} | {formatCurrency(part.selling_price || "0")}</div>
+                          <div className="text-xs text-muted-foreground">{formatPartPickerMeta(part, formatCurrency)}</div>
                         </div>
                       ))}
                     </div>

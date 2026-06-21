@@ -264,6 +264,13 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if not part.tracks_inventory():
+            wo_part.status = 'ready'
+            wo_part.inventory_part = part
+            wo_part.save(update_fields=['status', 'inventory_part', 'updated_at'])
+            serializer = self.get_serializer(wo_part)
+            return Response(serializer.data)
+
         inventory_status = wo_part.get_inventory_status_payload()
         if not inventory_status or not inventory_status.get('available'):
             available = inventory_status.get('quantity', 0) if inventory_status else 0
@@ -370,6 +377,12 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
                  },
                  status=status.HTTP_404_NOT_FOUND
              )
+
+        if part.item_type == 'service':
+            return Response(
+                {'error': 'Service catalog items cannot be ordered on a purchase order.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         inventory_status = wo_part.get_inventory_status_payload()
         if inventory_status and inventory_status.get('available'):
@@ -512,6 +525,7 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
             part_number=part_data['part_number'],
             description=part_data.get('description', wo_part.description or ''),
             category=category,
+            item_type='non_inventory',
             cost_price=Decimal(str(part_data.get('cost_price') or 0)),
             selling_price=Decimal(str(part_data.get('selling_price') or part_data.get('cost_price') or 0)),
             quantity_in_stock=0,  # Initially 0, will be updated when PO is received

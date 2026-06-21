@@ -5,7 +5,8 @@ from django.test import TestCase
 from apps.accounts.models import User
 from apps.branches.models import Branch
 from apps.inventory.models import Part, PartCategory, StockItem
-from apps.inventory.serializers import PartCreateSerializer
+from apps.inventory.serializers import PartCreateSerializer, PartUpdateSerializer
+from apps.inventory.services import InventoryService
 from rest_framework.test import APIRequestFactory
 
 
@@ -69,3 +70,30 @@ class PartInventoryCreateTests(TestCase):
         part = self._create_part_via_serializer(item_type='non_inventory', initial_quantity=5)
 
         self.assertFalse(StockItem.objects.filter(part=part).exists())
+
+    def test_record_transaction_rejects_non_inventory_stock_moves(self):
+        part = self._create_part_via_serializer(item_type='non_inventory', initial_quantity=0)
+        with self.assertRaises(ValueError) as ctx:
+            InventoryService.record_transaction(
+                part,
+                1,
+                'adjustment',
+                self.user,
+                branch=self.branch,
+                reason='Should fail',
+            )
+        self.assertIn('does not track stock', str(ctx.exception).lower())
+
+    def test_cannot_demote_inventory_part_with_stock(self):
+        part = self._create_part_via_serializer()
+        factory = APIRequestFactory()
+        request = factory.patch(f'/api/inventory/parts/{part.id}/')
+        request.user = self.user
+        serializer = PartUpdateSerializer(
+            instance=part,
+            data={'item_type': 'service'},
+            context={'request': request},
+            partial=True,
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('item_type', serializer.errors)

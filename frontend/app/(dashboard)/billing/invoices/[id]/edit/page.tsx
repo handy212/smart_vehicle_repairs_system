@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
+import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
 import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -218,7 +219,7 @@ export default function EditInvoicePage() {
     if (type === "part" && partData) {
 
       const newLineItem: any = {
-        item_type: "part",
+        item_type: billingLineTypeForPart(partData),
         description: partData.name,
         quantity: 1,
         unit_price: parseFloat(partData.selling_price || partData.cost_price || "0"),
@@ -590,7 +591,7 @@ export default function EditInvoicePage() {
                           }}
                         >
                           <div className="font-medium">{part.part_number} - {part.name}</div>
-                          <div className="text-xs text-muted-foreground">Stock: {part.quantity_on_hand || part.quantity_in_stock} | {formatCurrency(part.selling_price || part.cost_price || "0")}</div>
+                          <div className="text-xs text-muted-foreground">{formatPartPickerMeta(part, formatCurrency)}</div>
                         </div>
                       ))}
                     </div>

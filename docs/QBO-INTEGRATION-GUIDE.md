@@ -104,6 +104,22 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 
 **Intentionally not synced:** multi-branch stock breakdown, transfers between branches, and inventory adjustment audit detail remain SVR-only. QBO receives **total** qty on hand for Inventory-type parts only.
 
+### Catalog item types (Inventory / Non-inventory / Service)
+
+Each **Part** has a catalog `item_type` (distinct from billing line types like labor/part/fee):
+
+| Catalog type | Stock in SVR | PO receive | WO allocate | QBO Item.Type |
+|--------------|--------------|------------|-------------|---------------|
+| **Inventory** | Yes | Updates qty on hand | Issues stock | `Inventory` |
+| **Non-inventory** | No | Receipt only (no stock txn) | Marks ready without stock move | `NonInventory` |
+| **Service** | No | Cannot add to PO | Marks ready without stock move | `Service` |
+
+**Billing documents** (invoices, estimates, proformas): picking a catalog part sets the billing line type automatically — physical/non-inventory parts → `part`, service parts → `other`. When a line has a `part` FK, QBO sync uses the linked Part's QBO Item regardless of billing line type.
+
+**Vendor bills / credits:** AP account routing uses the linked part's catalog type (`tracks_inventory()`), not merely whether `inventory_item` is set.
+
+Configure part types under **Inventory → Products & services** (typed create flow). Map QBO accounts under **Accounting → Controls → QuickBooks mapping**.
+
 ### Outbound logging
 
 Each outbound Celery task writes a `QBOSyncLog` row with `direction=outbound`. Per-entity sync status is stored in `QBOMapping` (`synced`, `failed`, `pending`) and exposed on API serializers as `qbo_sync_status` / `qbo_sync_error` when QBO is connected.

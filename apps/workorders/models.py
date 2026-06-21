@@ -1539,6 +1539,7 @@ class WorkOrder(models.Model):
                     description=f"Auto-created from diagnosis recommendation on {self.work_order_number}.",
                     category=category,
                     branch=self.branch,
+                    item_type='non_inventory',
                     unit='piece',
                     cost_price=Decimal('0.01'),
                     selling_price=Decimal('0.01'),
@@ -2242,6 +2243,16 @@ class WorkOrderPart(models.Model):
                 'quantity': 0,
                 'part_id': None,
                 'message': 'Part not found in inventory',
+            }
+
+        if not part.tracks_inventory():
+            item_label = part.get_item_type_display()
+            return {
+                'available': False,
+                'quantity': 0,
+                'part_id': part.id,
+                'tracks_stock': False,
+                'message': f'{item_label} item (no stock tracking)',
             }
 
         branch = getattr(self.work_order, 'branch', None)

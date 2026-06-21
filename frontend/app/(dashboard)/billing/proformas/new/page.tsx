@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi, Invoice } from "@/lib/api/billing";
 import { workordersApi } from "@/lib/api/workorders";
 import { inventoryApi } from "@/lib/api/inventory";
+import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
 import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -199,7 +200,7 @@ export default function NewProformaPage() {
     const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
         if (type === "part" && partData) {
             append({
-                item_type: "part",
+                item_type: billingLineTypeForPart(partData),
                 description: partData.name,
                 quantity: 1,
                 unit_price: parseFloat(partData.selling_price || partData.cost_price || "0"),
@@ -522,7 +523,7 @@ export default function NewProformaPage() {
                                                     setPartSearchTerm("");
                                                 }}
                                             >
-                                                {part.part_number} - {part.name} ({formatCurrency(part.selling_price || "0")})
+                                                {part.part_number} - {part.name} ({formatPartPickerMeta(part, formatCurrency)})
                                             </div>
                                         ))}
                                     </div>

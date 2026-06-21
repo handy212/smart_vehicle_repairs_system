@@ -91,7 +91,18 @@ class InventoryService:
     def record_transaction(part, quantity, transaction_type, user, branch=None, reason='', notes='', unit_cost=None, **kwargs):
         """Record an inventory transaction and update stock levels"""
         from .models import InventoryTransaction, StockItem
+        from .part_catalog import part_tracks_stock
         from django.db import transaction as db_transaction
+
+        stock_affecting_types = {
+            'reserve', 'release', 'purchase', 'receive', 'transfer_in', 'transfer_out',
+            'sale', 'damage', 'loss', 'return', 'found', 'adjustment', 'correction', 'count',
+        }
+        if transaction_type in stock_affecting_types and not part_tracks_stock(part):
+            item_label = getattr(part, 'get_item_type_display', lambda: 'non-inventory')()
+            raise ValueError(
+                f'Part {part.part_number} is a {item_label} item and does not track stock.'
+            )
         
         if not branch:
             raise ValueError("Branch is required for inventory transactions")
