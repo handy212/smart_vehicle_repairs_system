@@ -19,9 +19,10 @@ import { format } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 interface DiagnosisTabProps {
   workOrderId: number;
+  workOrderStatus?: string;
 }
 
-export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
+export default function DiagnosisTab({ workOrderId, workOrderStatus }: DiagnosisTabProps) {
   const { formatCurrency } = useCurrency();
   const diagnosisHref = `/workorders/${workOrderId}/diagnosis`;
 
@@ -45,20 +46,25 @@ export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
 
   // No diagnosis yet
   if (!diagnosis) {
+    const preDiagnosis = ["draft", "inspection", "intake", "assigned"].includes(workOrderStatus || "");
     return (
       <Card>
         <CardContent className="py-12 text-center">
           <Search className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2 text-foreground">No Diagnosis Started</h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Start diagnosis to document findings, identify root causes, and create repair recommendations for the customer.
+            {preDiagnosis
+              ? "Complete intake and use the workflow actions above to start diagnosis. That creates the diagnosis record and moves this job into the diagnostic stage."
+              : "Start diagnosis to document findings, identify root causes, and create repair recommendations for the customer."}
           </p>
-          <Button asChild>
-            <Link href={diagnosisHref}>
-              <Wrench className="w-4 h-4 mr-2" />
-              Start Diagnosis
-            </Link>
-          </Button>
+          {!preDiagnosis && (
+            <Button asChild>
+              <Link href={diagnosisHref}>
+                <Wrench className="w-4 h-4 mr-2" />
+                Open diagnosis workspace
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

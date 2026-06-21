@@ -159,29 +159,34 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         """
         from apps.gatepass.models import GatePass
 
-        # Filter by branch if applicable
         queryset = self.get_queryset()
-        
-        # Calculate stats
-        total_workorders = queryset.count()
-        in_progress = queryset.filter(status='in_progress').count()
-        pending = queryset.filter(status='pending').count()
-        completed = queryset.filter(status='completed').count()
-        cancelled = queryset.filter(status='cancelled').count()
 
-        # Closed WOs where a gate pass has been fully completed (vehicle picked up)
+        total_workorders = queryset.count()
+        in_progress = queryset.filter(status__in=['in_progress', 'paused']).count()
+        awaiting_approval = queryset.filter(status='awaiting_approval').count()
+        needs_action = queryset.filter(
+            status__in=[
+                'intake', 'assigned', 'diagnosis', 'awaiting_approval',
+                'additional_work_found',
+            ],
+        ).count()
+        completed = queryset.filter(status__in=['completed', 'invoiced', 'closed']).count()
+        discontinued = queryset.filter(status='discontinued_pending_bill').count()
+
         picked_up_count = queryset.filter(
             status='closed',
-            gate_passes__status='completed'
+            gate_passes__status='completed',
         ).distinct().count()
 
         return Response({
             'total_workorders': total_workorders,
             'in_progress': in_progress,
-            'pending': pending,
-            'completed': completed + picked_up_count,
+            'pending': needs_action,
+            'awaiting_approval': awaiting_approval,
+            'completed': completed,
             'picked_up': picked_up_count,
-            'cancelled': cancelled
+            'cancelled': discontinued,
+            'discontinued': discontinued,
         })
     
     def get_queryset(self):
@@ -744,8 +749,11 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         logger = logging.getLogger(__name__)
         
         try:
-            active_statuses = ['draft', 'intake', 'diagnosis', 'awaiting_approval', 
-                              'approved', 'in_progress', 'paused', 'quality_check']
+            active_statuses = [
+                'draft', 'inspection', 'intake', 'assigned', 'diagnosis',
+                'awaiting_approval', 'approved', 'in_progress', 'paused',
+                'additional_work_found', 'quality_check',
+            ]
             work_orders = self.get_queryset().filter(status__in=active_statuses)
             
             page = self.paginate_queryset(work_orders)

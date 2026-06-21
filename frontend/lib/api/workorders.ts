@@ -205,8 +205,11 @@ export const workordersApi = {
     total_workorders: number;
     in_progress: number;
     pending: number;
+    awaiting_approval?: number;
     completed: number;
     cancelled: number;
+    discontinued?: number;
+    picked_up?: number;
   }> => {
     const response = await apiClient.get("/workorders/work-orders/dashboard_stats/");
     return response.data;

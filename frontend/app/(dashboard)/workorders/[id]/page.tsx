@@ -66,7 +66,7 @@ export default function WorkOrderDetailPage() {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
 
-  const { data: workOrder, isLoading, error } = useQuery({
+  const { data: workOrder, isLoading, error, refetch } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(workOrderId),
     refetchOnWindowFocus: true,
@@ -99,13 +99,13 @@ export default function WorkOrderDetailPage() {
     }
   }, [requestedTab]);
 
-  const { data: tasks = [] } = useQuery({
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
     queryFn: () => workOrderTasksApi.list({ work_order: workOrderId }),
     enabled: !!workOrderId,
   });
 
-  const { data: parts = [] } = useQuery({
+  const { data: parts = [], isLoading: partsLoading } = useQuery({
     queryKey: ["workorder-parts", workOrderId],
     queryFn: () => workOrderPartsApi.list({ work_order: workOrderId }),
     enabled: !!workOrderId,
@@ -184,8 +184,13 @@ export default function WorkOrderDetailPage() {
           Back
         </Button>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-destructive">Error loading work order. Please try again.</p>
+          <CardContent className="pt-6 space-y-3">
+            <p className="text-destructive">
+              {getUserFacingError(error, "Error loading work order. Please try again.")}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -247,6 +252,7 @@ export default function WorkOrderDetailPage() {
         workOrder={workOrder}
         workOrderId={workOrderId}
         statusLabelOverride={statusLabelOverride}
+        statusForVariant={stagePresentation.workflowStatus}
         onStatusChange={refreshData}
         onStartRepairs={() => handleTabChange("tasks")}
         onShowRecommendations={() => setShowUnapprovedRecommendationsDialog(true)}
@@ -338,6 +344,7 @@ export default function WorkOrderDetailPage() {
             parts={parts}
             onRefresh={refreshData}
             workOrder={workOrder}
+            isLoading={partsLoading}
           />
         </TabsContent>
 
@@ -354,7 +361,7 @@ export default function WorkOrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="diagnosis" className="mt-4">
-          <DiagnosisTab workOrderId={workOrderId} />
+          <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">

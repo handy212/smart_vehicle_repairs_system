@@ -134,7 +134,10 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
                  {'error': 'This requisition is already approved.'},
                  status=status.HTTP_400_BAD_REQUEST
              )
-             
+
+        if part.status == 'draft':
+            part.status = 'pending'
+
         part.approved_by = request.user
         part.approved_at = timezone.now()
         part.save()
@@ -151,11 +154,17 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
         return Response(serializer.data)
 
     def get_queryset(self):
+        from apps.accounts.permissions import filter_workorders_for_user
+        from apps.workorders.models import WorkOrder
+
         queryset = super().get_queryset()
         user = self.request.user
 
         if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
             return queryset.filter(work_order__customer=user.customer_profile)
+
+        scoped_work_orders = filter_workorders_for_user(WorkOrder.objects.all(), user)
+        queryset = queryset.filter(work_order__in=scoped_work_orders)
         
         # Admin can view all if requested
         if getattr(user, 'role', None) == 'admin' and \

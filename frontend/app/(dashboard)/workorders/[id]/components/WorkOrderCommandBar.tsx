@@ -38,6 +38,7 @@ interface WorkOrderCommandBarProps {
   };
   workOrderId: number;
   statusLabelOverride?: string;
+  statusForVariant?: string;
   onStatusChange?: () => void;
   onStartRepairs?: () => void;
   onShowRecommendations?: () => void;
@@ -57,6 +58,7 @@ export function WorkOrderCommandBar({
   workOrder,
   workOrderId,
   statusLabelOverride,
+  statusForVariant,
   onStatusChange,
   onStartRepairs,
   onShowRecommendations,
@@ -100,7 +102,7 @@ export function WorkOrderCommandBar({
               <span className="font-mono text-sm font-bold text-primary">
                 #{workOrder.work_order_number}
               </span>
-              <Badge variant={getStatusVariant(workOrder.status) as "default"} className="text-[10px]">
+              <Badge variant={getStatusVariant(statusForVariant || workOrder.status) as "default"} className="text-[10px]">
                 {statusLabelOverride || getStatusLabel(workOrder.status)}
               </Badge>
               {workOrder.priority && workOrder.priority !== "normal" && (

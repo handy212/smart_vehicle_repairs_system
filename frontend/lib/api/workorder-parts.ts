@@ -29,6 +29,14 @@ export interface WorkOrderPart {
   approved_by_name?: string;
   approved_at?: string;
 
+  inventory_status?: {
+    available?: boolean;
+    quantity?: number;
+    part_id?: number | null;
+    message?: string;
+    tracks_stock?: boolean;
+  };
+
   created_at: string;
 }
 

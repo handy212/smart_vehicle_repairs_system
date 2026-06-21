@@ -20,6 +20,9 @@ import Link from "next/link";
 import AddPartDialog from "./AddPartDialog";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
+
 interface PartsTabProps {
   workOrderId: number;
   workOrder?: {
@@ -27,32 +30,16 @@ interface PartsTabProps {
   };
   parts: WorkOrderPart[];
   onRefresh: () => void;
+  isLoading?: boolean;
 }
 
 export default function WorkOrderPartsTab({
-  workOrderId, workOrder, parts, onRefresh }: PartsTabProps) {
+  workOrderId, workOrder, parts, onRefresh, isLoading = false }: PartsTabProps) {
   const { formatCurrency } = useCurrency();
+  const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [returningPart, setReturningPart] = useState<WorkOrderPart | null>(null);
   const [returnReason, setReturnReason] = useState("");
-
-  const getStatusVariant = (status: string): BadgeProps["variant"] => {
-    switch (status) {
-      case "installed":
-        return "success";
-      case "ready":
-      case "received":
-        return "info";
-      case "pending":
-      case "po_created":
-      case "awaiting_stock":
-        return "warning";
-      case "returned":
-        return "secondary";
-      default:
-        return "default";
-    }
-  };
 
   const postApprovalStatuses = ["approved", "in_progress", "paused"];
   const lockedStatuses = ["quality_check", "completed", "invoiced", "closed"];
@@ -77,7 +64,15 @@ export default function WorkOrderPartsTab({
   const markInstalledMutation = useMutation({
     mutationFn: (partId: number) => workOrderPartsApi.markInstalled(partId),
     onSuccess: () => {
+      toast({ title: "Part installed", description: "The part was marked as installed.", variant: "success" });
       onRefresh();
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not mark installed",
+        description: getUserFacingError(error, "Failed to update part status."),
+        variant: "destructive",
+      });
     },
   });
 
@@ -85,13 +80,24 @@ export default function WorkOrderPartsTab({
     mutationFn: ({ partId, reason }: { partId: number; reason: string }) =>
       workOrderPartsApi.markReturned(partId, reason),
     onSuccess: () => {
+      toast({ title: "Part returned", description: "The return was recorded.", variant: "success" });
       onRefresh();
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not return part",
+        description: getUserFacingError(error, "Failed to record the return."),
+        variant: "destructive",
+      });
     },
   });
 
   const totalPartsCost = parts.reduce((sum, part) => {
     return sum + parseFloat(part.total_cost || "0");
   }, 0);
+
+  const repairStatuses = ["approved", "in_progress", "paused", "additional_work_found", "quality_check"];
+  const showRepairWorkspaceLink = repairStatuses.includes(currentStatus);
 
   return (
     <>
@@ -107,12 +113,29 @@ export default function WorkOrderPartsTab({
               )}
             </p>
           </div>
-          <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={!canAddPart}>
-            <Plus className="w-4 h-4 mr-2" />
-            {addingPartRequiresApproval ? "Add Extra Part" : "Add Part"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {showRepairWorkspaceLink && (
+              <Button size="sm" variant="outline" asChild>
+                <Link href={`/workorders/${workOrderId}/repairs`}>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Repair workspace
+                </Link>
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={!canAddPart}>
+              <Plus className="w-4 h-4 mr-2" />
+              {addingPartRequiresApproval ? "Add Extra Part" : "Add Part"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+              <p className="mt-3 text-sm text-muted-foreground">Loading parts…</p>
+            </div>
+          ) : (
+          <>
           {addingPartRequiresApproval && (
             <div className="mb-3 flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -154,8 +177,7 @@ export default function WorkOrderPartsTab({
                   <TableHead className="w-[72px]">Qty</TableHead>
                   <TableHead className="min-w-[104px]">Unit Cost</TableHead>
                   <TableHead className="min-w-[112px]">Total Cost</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Flow</TableHead>
+                  <TableHead className="min-w-[160px]">Pipeline</TableHead>
                   <TableHead className="w-[64px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -196,14 +218,14 @@ export default function WorkOrderPartsTab({
                         {formatCurrency(parseFloat(part.total_cost || "0"))}
                       </TableCell>
                       <TableCell className="py-3">
-                        <Badge variant={getStatusVariant(part.status)}>
-                          {part.status?.replace(/_/g, " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3">
-                        <Badge variant={flowBadge.variant} className="text-[10px]">
-                          {flowBadge.label}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={flowBadge.variant} className="w-fit text-[10px]">
+                            {flowBadge.label}
+                          </Badge>
+                          {part.inventory_status?.message && (
+                            <span className="text-[10px] text-muted-foreground">{part.inventory_status.message}</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3 text-right">
                         <DropdownMenu>
@@ -254,6 +276,8 @@ export default function WorkOrderPartsTab({
               </TableBody>
             </Table>
             </div>
+          )}
+          </>
           )}
         </CardContent>
       </Card>

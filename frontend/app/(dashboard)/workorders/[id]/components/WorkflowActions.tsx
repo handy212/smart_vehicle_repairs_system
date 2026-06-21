@@ -11,6 +11,12 @@ import { workordersApi } from "@/lib/api/workorders";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +38,7 @@ import {
   AlertTriangle,
   User,
   Wrench,
+  ChevronDown,
 } from "lucide-react";
 
 // Refactored Forms
@@ -1219,13 +1226,7 @@ export default function WorkflowActions({
   const availableActions = getAvailableActions();
 
   if (availableActions.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-sm text-muted-foreground">
-          No actions available at this stage.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   // Primary action is the first one
@@ -1236,10 +1237,10 @@ export default function WorkflowActions({
   // Render primary button (inline or full card)
   const primaryButton = (
     <Button
-      variant={primaryAction.variant || "default"}
+      variant={primaryAction.variant === "outline" || primaryAction.variant === "destructive" ? primaryAction.variant : "default"}
       onClick={primaryAction.onClick}
       disabled={primaryAction.disabled}
-      className={inline ? "bg-muted text-foreground " : "w-full h-12 text-base font-medium bg-muted text-foreground "}
+      className={inline ? undefined : "w-full h-12 text-base font-medium"}
       size={inline ? "default" : "lg"}
     >
       <PrimaryIcon className={inline ? "w-4 h-4 mr-2" : "w-5 h-5 mr-2"} />
@@ -1540,39 +1541,37 @@ export default function WorkflowActions({
     </>
   );
 
-  // Inline mode - for in_progress status, show secondary actions too
   if (inline) {
-    // For active work statuses, show secondary actions even in inline mode
-    const showSecondaryInInline =
-      status === "in_progress" ||
-      status === "additional_work_found" ||
-      status === "discontinued_pending_bill" ||
-      DISCONTINUE_ELIGIBLE_STATUSES.has(status);
-
     return (
       <>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {primaryButton}
-          {showSecondaryInInline && secondaryActions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {secondaryActions.map((action, index) => {
-                const Icon = action.icon;
-                return (
-                  <Button
-                    key={index}
-                    variant={action.variant || "outline"}
-                    onClick={action.onClick}
-                    disabled={action.disabled}
-                    title={action.description}
-                    size="sm"
-                    className="bg-muted text-foreground "
-                  >
-                    <Icon className="w-4 h-4 mr-1" />
-                    {action.label}
-                  </Button>
-                );
-              })}
-            </div>
+          {secondaryActions.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="default">
+                  More actions
+                  <ChevronDown className="ml-1.5 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {secondaryActions.map((action, index) => {
+                  const Icon = action.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={index}
+                      onClick={action.onClick}
+                      disabled={action.disabled}
+                      title={action.description}
+                      className="gap-2"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{action.label}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         {renderDialogs()}

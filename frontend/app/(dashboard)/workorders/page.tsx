@@ -387,7 +387,7 @@ export default function WorkOrdersPage() {
         </Card>
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Needs action</span>
             <span className="text-lg font-bold text-warning dark:text-amber-400">{stats?.pending || 0}</span>
           </CardContent>
         </Card>
@@ -399,8 +399,8 @@ export default function WorkOrdersPage() {
         </Card>
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cancelled</span>
-            <span className="text-lg font-bold text-muted-foreground">{stats?.cancelled || 0}</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Discontinued</span>
+            <span className="text-lg font-bold text-muted-foreground">{stats?.discontinued ?? stats?.cancelled ?? 0}</span>
           </CardContent>
         </Card>
       </div>
@@ -675,7 +675,7 @@ export default function WorkOrdersPage() {
                     <TableRow
                       key={workorder.id}
                       className="group hover:bg-muted/80 transition-colors border-b border-border cursor-pointer"
-                      onDoubleClick={() => router.push(`/workorders/${workorder.id}`)}
+                      onClick={() => router.push(`/workorders/${workorder.id}`)}
                     >
                       <TableCell className="px-3 py-1.5">
                         <input
