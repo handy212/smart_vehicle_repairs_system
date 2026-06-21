@@ -176,6 +176,14 @@ function VendorCreditDetailContent() {
         </div>
       </div>
 
+      {isQboConnected && credit.qbo_sync_status === "failed" && credit.qbo_sync_error && (
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="py-3 text-sm text-destructive">
+            QuickBooks sync failed: {credit.qbo_sync_error}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-4">

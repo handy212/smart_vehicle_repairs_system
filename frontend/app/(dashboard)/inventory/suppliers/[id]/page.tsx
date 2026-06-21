@@ -158,6 +158,14 @@ export default function SupplierDetailPage() {
         </div>
       </div>
 
+      {isQboConnected && supplier.qbo_sync_status === "failed" && supplier.qbo_sync_error && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="py-3 text-sm text-destructive">
+            QuickBooks sync failed: {supplier.qbo_sync_error}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="border-l-2 border-l-blue-500 shadow-sm">

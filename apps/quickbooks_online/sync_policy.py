@@ -1,6 +1,7 @@
 """Eligibility rules for outbound QuickBooks document sync."""
 
 from apps.accounting.services import AccountingService
+from .payment_helpers import is_deposit_stage_invoice
 
 INVOICE_QBO_SYNC_STATUSES = AccountingService.FINALIZED_INVOICE_STATUSES
 PAYMENT_QBO_SYNC_STATUSES = {'completed'}
@@ -25,6 +26,11 @@ def outbound_eligibility_reason(entity_type, instance):
     status = getattr(instance, 'status', None)
 
     if entity_type == 'invoice':
+        if is_deposit_stage_invoice(instance):
+            return False, (
+                'Proforma and deposit-stage invoices are not pushed to QuickBooks until '
+                'converted to an issued invoice (sent, viewed, paid, etc.).'
+            )
         if status not in INVOICE_QBO_SYNC_STATUSES:
             return False, (
                 f'Invoice status "{status}" is not eligible for QuickBooks sync. '

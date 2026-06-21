@@ -108,6 +108,37 @@ def task_resync_payments_for_invoice(invoice_id):
 
 
 @shared_task
+def task_sync_invoice_then_resync_payments(invoice_id):
+    """
+    Sync issued invoice to QBO, then re-push completed payments in order.
+
+    Used when a proforma/deposit invoice is finalized so payments apply only
+    after the QBO invoice exists.
+    """
+    result = run_outbound_entity_sync(
+        'invoice', invoice_id, 'billing', 'Invoice', 'sync_invoice',
+    )
+    if not result:
+        logger.warning(
+            'QBO invoice finalization sync failed for invoice %s; skipping payment resync',
+            invoice_id,
+        )
+        return
+
+    from apps.billing.models import Invoice
+
+    try:
+        invoice = Invoice.objects.get(pk=invoice_id)
+    except Invoice.DoesNotExist:
+        return
+
+    for payment_id in invoice.payments.filter(status='completed').values_list('id', flat=True):
+        run_outbound_entity_sync(
+            'payment', payment_id, 'billing', 'Payment', 'sync_payment',
+        )
+
+
+@shared_task
 def task_pull_items_from_qbo(triggered_by_id=None):
     """Pull QBO Item metadata (name/SKU/active) for mapped parts — no quantities."""
     try:
