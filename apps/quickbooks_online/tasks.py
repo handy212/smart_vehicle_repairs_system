@@ -100,9 +100,46 @@ def task_sync_branch_to_qbo(branch_id):
         logger.error(f"Error syncing Branch {branch_id} to QBO: {e}", exc_info=True)
 
 
-# ---------------------------------------------------------------------------
-# INBOUND TASKS: Pull from QBO → local system
-# ---------------------------------------------------------------------------
+@shared_task
+def task_sync_part_to_qbo(part_id):
+    """Background task to sync a Part catalog row to QBO Item."""
+    run_outbound_entity_sync(
+        'part', part_id, 'inventory', 'Part', 'sync_part',
+    )
+
+
+@shared_task
+def task_resync_payments_for_invoice(invoice_id):
+    """Re-push completed payments after a proforma invoice is finalized."""
+    from apps.billing.models import Invoice, Payment
+
+    try:
+        invoice = Invoice.objects.get(pk=invoice_id)
+    except Invoice.DoesNotExist:
+        return
+    for payment_id in invoice.payments.filter(status='completed').values_list('id', flat=True):
+        task_sync_payment_to_qbo.delay(payment_id)
+
+
+@shared_task
+def task_pull_items_from_qbo(triggered_by_id=None):
+    """Pull QBO Item metadata (name/SKU/active) for mapped parts — no quantities."""
+    try:
+        from .services import QuickBooksService
+        service = QuickBooksService()
+        log = service.pull_items(triggered_by=triggered_by_id)
+        if log:
+            logger.info(
+                '[QBO Inbound] Items pull complete: pulled=%s, updated=%s, skipped=%s, status=%s',
+                log.records_pulled,
+                log.records_updated,
+                log.records_skipped,
+                log.status,
+            )
+    except Exception as e:
+        logger.error('Error in task_pull_items_from_qbo: %s', e, exc_info=True)
+
+
 
 @shared_task
 def task_pull_vendors_from_qbo(triggered_by_id=None):
@@ -237,4 +274,5 @@ def task_full_inbound_sync(triggered_by_id=None):
     task_pull_estimates_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_credit_memos_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_vendor_credits_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_items_from_qbo(triggered_by_id=triggered_by_id)
     logger.info("[QBO Inbound] Full inbound sync complete.")

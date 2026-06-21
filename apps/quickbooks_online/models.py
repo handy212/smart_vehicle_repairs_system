@@ -94,6 +94,7 @@ class QBOSyncLog(models.Model):
         ('vendor_bill', 'Vendor Bills (AP)'),
         ('payment', 'Payments'),
         ('customer', 'Customers'),
+        ('item', 'Items (Parts catalog)'),
         ('all', 'Full Inbound Sync'),
     ]
 
