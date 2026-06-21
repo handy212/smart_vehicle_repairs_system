@@ -23,9 +23,38 @@ const getApiHost = () => {
 };
 
 const apiConfig = getApiHost();
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Dispose idle route bundles in dev to reduce memory pressure and dev-server crashes.
+  onDemandEntries: isDev
+    ? {
+        maxInactiveAge: 60 * 1000,
+        pagesBufferLength: 5,
+      }
+    : undefined,
+  experimental: {
+    // Extra barrel-import packages beyond Next.js defaults (lucide-react, date-fns, recharts).
+    optimizePackageImports: [
+      "framer-motion",
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-label",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-progress",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-select",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-tooltip",
+      "@fullcalendar/react",
+      "@fullcalendar/daygrid",
+      "@fullcalendar/timegrid",
+      "@fullcalendar/interaction",
+    ],
+  },
   // Keep trailing slashes on proxied /api/* POSTs (Django requires them; default redirect drops POST body).
   skipTrailingSlashRedirect: true,
   // Allow the dev server to accept 127.0.0.1 origin requests in addition to localhost.
@@ -90,7 +119,26 @@ const nextConfig: NextConfig = {
       ],
     };
   },
-  webpack: (config) => {
+  webpack: (config, { dev }) => {
+    if (dev) {
+      const existingIgnored = config.watchOptions?.ignored;
+      const ignoredList = [
+        ...(Array.isArray(existingIgnored)
+          ? existingIgnored
+          : existingIgnored
+            ? [existingIgnored]
+            : []),
+        "**/htmlcov/**",
+        "**/.pytest_cache/**",
+        "**/coverage.xml",
+        "**/coverage/**",
+      ];
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: ignoredList,
+      };
+    }
+
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       {
@@ -118,8 +166,12 @@ const withPWA = withPWAInit({
 
 const sentryEnabled = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
 
+/** PWA wrapping adds compile overhead; only apply for production builds. */
+const withPWAInProduction = (config: NextConfig) =>
+  isDev ? config : withPWA(config);
+
 const finalConfig = sentryEnabled
-  ? withSentryConfig(withPWA(nextConfig), {
+  ? withSentryConfig(withPWAInProduction(nextConfig), {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
       silent: !process.env.CI,
@@ -128,6 +180,6 @@ const finalConfig = sentryEnabled
       automaticVercelMonitors: false,
       telemetry: false,
     })
-  : withPWA(nextConfig);
+  : withPWAInProduction(nextConfig);
 
 export default finalConfig;
