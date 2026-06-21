@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2, User, Hash, FileText, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2, User, Hash, FileText, MoreVertical, Trash2, Database } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import StockAdjustmentDialog from "./components/StockAdjustmentDialog";
@@ -28,6 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { cn } from "@/lib/utils";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -41,8 +44,10 @@ export default function PartDetailPage() {
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [showImageModal, setShowImageModal] = useState(false);
+  const [isQboSyncing, setIsQboSyncing] = useState(false);
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
 
-  const { data: part, isLoading, error } = useQuery({
+  const { data: part, isLoading, error, refetch } = useQuery({
     queryKey: ["part", partId],
     queryFn: () => inventoryApi.get(partId),
   });
@@ -109,6 +114,26 @@ export default function PartDetailPage() {
   const canAdjustStock = hasPermission("adjust_inventory") || hasPermission("manage_inventory");
   const canDeletePart = hasAnyPermission(["delete_parts", "manage_inventory"]);
 
+  const handleQboSync = async () => {
+    try {
+      setIsQboSyncing(true);
+      await quickbooksApi.syncOutbound({ entity_type: "part", object_id: partId });
+      toast({
+        title: "QuickBooks sync triggered",
+        description: "Part catalog push to QuickBooks was queued.",
+      });
+      refetch();
+    } catch (syncError: unknown) {
+      toast({
+        title: "QuickBooks sync failed",
+        description: getUserFacingError(syncError, "Failed to trigger QuickBooks sync"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsQboSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -132,6 +157,31 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isQboConnected && part.qbo_sync_status && (
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={
+                  part.qbo_sync_status === "synced"
+                    ? "success"
+                    : part.qbo_sync_status === "failed"
+                      ? "danger"
+                      : "secondary"
+                }
+                className="capitalize"
+              >
+                QBO: {part.qbo_sync_status}
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleQboSync}
+                disabled={isQboSyncing}
+              >
+                <Database className={cn("w-4 h-4 mr-2", isQboSyncing && "animate-spin")} />
+                {isQboSyncing ? "Syncing..." : "Sync QBO"}
+              </Button>
+            </div>
+          )}
           {canAdjustStock && (
             <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
               <RotateCcw className="w-4 h-4 mr-2" />
@@ -182,6 +232,14 @@ export default function PartDetailPage() {
           )}
         </div>
       </div>
+
+      {isQboConnected && part.qbo_sync_status === "failed" && part.qbo_sync_error && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="py-3 text-sm text-destructive">
+            QuickBooks sync failed: {part.qbo_sync_error}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (Main Info) */}

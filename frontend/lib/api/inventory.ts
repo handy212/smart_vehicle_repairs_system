@@ -184,6 +184,8 @@ export interface Part {
   total_value?: string;
   created_at?: string;
   updated_at?: string;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface PartListResponse {
