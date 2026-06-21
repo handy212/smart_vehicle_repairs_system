@@ -117,10 +117,10 @@ export default function PartDetailPage() {
   const handleQboSync = async () => {
     try {
       setIsQboSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "part", object_id: partId });
+      await quickbooksApi.syncOutbound({ entity_type: "part", object_id: partId, inline: true });
       toast({
-        title: "QuickBooks sync triggered",
-        description: "Part catalog push to QuickBooks was queued.",
+        title: "QuickBooks sync started",
+        description: "Retrying push to QuickBooks. Refresh in a moment to see status.",
       });
       refetch();
     } catch (syncError: unknown) {
@@ -157,29 +157,33 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isQboConnected && part.qbo_sync_status && (
+          {isQboConnected && (
             <div className="flex items-center gap-2">
-              <Badge
-                variant={
-                  part.qbo_sync_status === "synced"
-                    ? "success"
-                    : part.qbo_sync_status === "failed"
-                      ? "danger"
-                      : "secondary"
-                }
-                className="capitalize"
-              >
-                QBO: {part.qbo_sync_status}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleQboSync}
-                disabled={isQboSyncing}
-              >
-                <Database className={cn("w-4 h-4 mr-2", isQboSyncing && "animate-spin")} />
-                {isQboSyncing ? "Syncing..." : "Sync QBO"}
-              </Button>
+              {part.qbo_sync_status && (
+                <Badge
+                  variant={
+                    part.qbo_sync_status === "synced"
+                      ? "success"
+                      : part.qbo_sync_status === "failed"
+                        ? "danger"
+                        : "secondary"
+                  }
+                  className="capitalize"
+                >
+                  QBO: {part.qbo_sync_status}
+                </Badge>
+              )}
+              {(part.qbo_sync_status === "failed" || part.qbo_sync_status === "pending") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleQboSync}
+                  disabled={isQboSyncing}
+                >
+                  <Database className={cn("w-4 h-4 mr-2", isQboSyncing && "animate-spin")} />
+                  {isQboSyncing ? "Syncing…" : "Retry QBO sync"}
+                </Button>
+              )}
             </div>
           )}
           {canAdjustStock && (
@@ -282,6 +286,16 @@ export default function PartDetailPage() {
                     <div>
                       <p className="text-xs text-muted-foreground">Category</p>
                       <p className="font-medium">{part.category_path || part.category_name || "Uncategorized"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">QBO item type</p>
+                      <p className="font-medium capitalize">
+                        {part.item_type === "non_inventory"
+                          ? "Non-inventory"
+                          : part.item_type === "service"
+                            ? "Service"
+                            : "Inventory"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Manufacturer</p>

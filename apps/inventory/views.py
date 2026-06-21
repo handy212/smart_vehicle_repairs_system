@@ -269,7 +269,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
         return base
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = [
-        'category', 'is_active', 'manufacturer', 'preferred_supplier', 'is_taxable', 'is_core'
+        'category', 'is_active', 'manufacturer', 'preferred_supplier', 'is_taxable', 'is_core', 'item_type'
     ]
     search_fields = [
         'part_number', 'barcode', 'name', 'description', 'manufacturer',

@@ -33,6 +33,7 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
 from apps.inventory.models import Part, PurchaseOrder
+from apps.billing.invoice_locks import invoice_is_financially_locked
 from apps.quickbooks_online.serializer_mixins import QBOSyncFieldsMixin
 from apps.accounting.models import Account
 
@@ -1080,25 +1081,26 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
         ).exists()
 
     def validate(self, data):
-        if self.instance is not None and self._has_posted_journal(self.instance):
+        if self.instance is not None and invoice_is_financially_locked(self.instance):
             raise serializers.ValidationError({
                 "detail": (
-                    "Posted invoices cannot be edited. Void the invoice (if allowed) "
-                    "or post correcting entries instead."
+                    "This invoice has payments or credit applied and cannot be edited. "
+                    "Void the invoice (if allowed) or post correcting entries instead."
                 )
             })
         return data
     
     @transaction.atomic
     def update(self, instance, validated_data):
-        if self._has_posted_journal(instance):
+        if invoice_is_financially_locked(instance):
             raise serializers.ValidationError({
                 "detail": (
-                    "Posted invoices cannot be edited. Void the invoice (if allowed) "
-                    "or post correcting entries instead."
+                    "This invoice has payments or credit applied and cannot be edited. "
+                    "Void the invoice (if allowed) or post correcting entries instead."
                 )
             })
 
+        had_posted_gl = self._has_posted_journal(instance)
         line_items_data = validated_data.pop('line_items', None)
         discount_percentage_updated = 'discount_percentage' in validated_data
         
@@ -1210,7 +1212,20 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
         #     AccountingService.create_dl_invoice(instance)
         # except Exception:
         #     pass
-        pass
+
+        from apps.accounting.services import AccountingService
+
+        if (
+            instance.status in AccountingService.FINALIZED_INVOICE_STATUSES
+            and not invoice_is_financially_locked(instance)
+            and (had_posted_gl or self._has_posted_journal(instance))
+        ):
+            request = self.context.get('request')
+            user = getattr(request, 'user', None) if request else None
+            if user is None or not getattr(user, 'is_authenticated', False):
+                user = instance.created_by
+            if user is not None:
+                AccountingService.repost_invoice(instance, user, reason='Invoice updated')
         
         return instance
 
@@ -1273,11 +1288,9 @@ class PaymentSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
         return str(total or Decimal('0'))
 
     def get_unallocated_balance(self, obj):
-        allocated = obj.allocations.aggregate(t=Sum('amount'))['t'] or Decimal('0')
-        left = (obj.amount - allocated).quantize(Decimal('0.01'))
-        if left < 0:
-            left = Decimal('0')
-        return str(left)
+        from apps.billing.balance_utils import payment_unallocated_balance
+
+        return str(payment_unallocated_balance(obj))
 
 
 class PaymentCreateSerializer(serializers.ModelSerializer):

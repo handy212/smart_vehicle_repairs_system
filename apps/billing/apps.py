@@ -8,3 +8,4 @@ class BillingConfig(AppConfig):
 
     def ready(self):
         """Accounting hooks live in apps.accounting.signals (Invoice, Payment, Bill, …)."""
+        import apps.billing.signals  # noqa: F401

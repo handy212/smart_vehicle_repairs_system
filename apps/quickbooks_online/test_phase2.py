@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework import status
@@ -117,8 +118,8 @@ class QBOPhase2ApiTests(APITestCase):
         mock_sync_estimate.assert_called_once()
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
-    @patch('apps.quickbooks_online.tasks.task_sync_credit_note_to_qbo.delay')
-    def test_outbound_sync_queues_credit_note(self, mock_delay, _mock_sdk):
+    @patch('apps.quickbooks_online.task_dispatch.schedule_entity_sync')
+    def test_outbound_sync_queues_credit_note(self, mock_schedule, _mock_sdk):
         credit_note = CreditNote.objects.create(
             customer=self.customer,
             branch=self.branch,
@@ -135,7 +136,7 @@ class QBOPhase2ApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['queued'])
-        mock_delay.assert_called_once_with(credit_note.id)
+        mock_schedule.assert_called_once()
 
 
 class QBOPhase2SerializerTests(APITestCase):
@@ -211,3 +212,20 @@ class QBOPhase2SerializerTests(APITestCase):
         data = CreditNoteDetailSerializer(credit_note).data
         self.assertEqual(data['qbo_sync_status'], 'failed')
         self.assertEqual(data['qbo_sync_error'], 'Invalid customer')
+
+
+class EstimateQboTxnStatusTests(TestCase):
+    def test_apply_estimate_txn_status_maps_approved_to_accepted(self):
+        service = QuickBooksService()
+        qb_estimate = MagicMock()
+        local_estimate = MagicMock(status='approved')
+        service._apply_estimate_txn_status(qb_estimate, local_estimate)
+        self.assertEqual(qb_estimate.TxnStatus, 'Accepted')
+
+    def test_apply_estimate_txn_status_omits_sent_status(self):
+        service = QuickBooksService()
+        qb_estimate = MagicMock()
+        qb_estimate.TxnStatus = 'Pending'
+        local_estimate = MagicMock(status='sent')
+        service._apply_estimate_txn_status(qb_estimate, local_estimate)
+        self.assertEqual(qb_estimate.TxnStatus, 'Pending')

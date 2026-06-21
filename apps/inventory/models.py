@@ -166,6 +166,12 @@ class Part(models.Model):
         ('other', 'Other'),
     ]
 
+    ITEM_TYPE_CHOICES = [
+        ('inventory', 'Inventory'),
+        ('non_inventory', 'Non-inventory'),
+        ('service', 'Service'),
+    ]
+
     # Basic information
     part_number = models.CharField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=255)
@@ -205,9 +211,21 @@ class Part(models.Model):
     maximum_stock = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
     
     # Unit
-    
-    # Unit
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='piece')
+
+    # QuickBooks Online item classification (maps to QBO Item.Type)
+    item_type = models.CharField(
+        max_length=20,
+        choices=ITEM_TYPE_CHOICES,
+        default='inventory',
+        db_index=True,
+        help_text='How this part syncs to QuickBooks Online (Inventory, NonInventory, or Service).',
+    )
+    inventory_start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Opening inventory date sent to QBO when first synced as an Inventory item.',
+    )
     
     # Pricing
     cost_price = models.DecimalField(
@@ -291,6 +309,23 @@ class Part(models.Model):
 
     def __str__(self):
         return f"{self.part_number} - {self.name}"
+
+    @property
+    def qbo_item_type(self):
+        """QuickBooks Online Item.Type value for this part."""
+        return {
+            'inventory': 'Inventory',
+            'non_inventory': 'NonInventory',
+            'service': 'Service',
+        }.get(self.item_type, 'Inventory')
+
+    def tracks_inventory(self):
+        return self.item_type == 'inventory'
+
+    def total_quantity_on_hand(self):
+        """Sum on-hand quantity across all branch StockItem rows."""
+        total = self.stock_items.aggregate(total=models.Sum('quantity_in_stock'))['total']
+        return int(total or 0)
 
     @property
     def available_quantity(self):

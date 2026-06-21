@@ -18,17 +18,9 @@ def _money(value):
 
 def _payment_prepayment_excess(payment):
     """Operational unapplied customer prepayment for a completed payment."""
-    net = Decimal(str(payment.amount or 0)) - Decimal(str(payment.refund_amount or 0))
-    net = net.quantize(Decimal('0.01'))
-    allocated = sum(
-        Decimal(str(alloc.amount or 0)) for alloc in payment.allocations.all()
-    ) or Decimal('0')
-    if allocated:
-        return max(Decimal('0'), (net - allocated).quantize(Decimal('0.01')))
-    if payment.invoice_id:
-        invoice_total = Decimal(str(payment.invoice.total or 0))
-        return max(Decimal('0'), (net - invoice_total).quantize(Decimal('0.01')))
-    return net if net > 0 else Decimal('0')
+    from apps.billing.balance_utils import payment_unallocated_balance
+
+    return payment_unallocated_balance(payment, sync=True)
 
 
 def compute_operational_customer_prepayments(*, branch_id=None):

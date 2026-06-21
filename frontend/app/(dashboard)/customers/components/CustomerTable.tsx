@@ -239,7 +239,7 @@ export function CustomerTable({
               Vehicles
             </SortableHeader>
             <SortableHeader field="current_balance" sortConfig={sortConfig} onSort={onSort} className={cn(headerClass, "text-right")}>
-              Balance
+              Open Balance
             </SortableHeader>
             <TableHead className={headerClass}>Last Visit</TableHead>
             <SortableHeader field="status" sortConfig={sortConfig} onSort={onSort} className={headerClass}>

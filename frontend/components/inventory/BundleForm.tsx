@@ -46,9 +46,10 @@ interface BundleFormProps {
     isSubmitting: boolean;
     mode: "create" | "edit";
     onCancel?: () => void;
+    showHeader?: boolean;
 }
 
-export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel }: BundleFormProps) {
+export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel, showHeader = true }: BundleFormProps) {
     const [partSearch, setPartSearch] = useState("");
 
     const { data: serviceTypesResponse } = useQuery({
@@ -133,10 +134,12 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                 {/* Main Info */}
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
+                        {showHeader && (
                         <CardHeader>
-                            <CardTitle className="text-lg">Bundle Information</CardTitle>
+                            <CardTitle className="text-lg">Bundle information</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        )}
+                        <CardContent className={showHeader ? "space-y-4" : "pt-6 space-y-4"}>
                             <div className="space-y-2">
                                 <Label htmlFor="name">Bundle Name <span className="text-destructive">*</span></Label>
                                 <Input id="name" {...register("name")} placeholder="e.g. Major Service Kit" />
@@ -175,7 +178,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-lg">Bundle Items (Parts)</CardTitle>
+                            <CardTitle className="text-lg">Bundle items</CardTitle>
                             <div className="relative w-64">
                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                 <Input

@@ -7,11 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ArrowLeft,
   CreditCard,
   Database,
   DollarSign,
   FileText,
+  MoreHorizontal,
   Printer,
   RotateCcw,
   Split,
@@ -137,14 +145,14 @@ export default function PaymentDetailPage() {
 
   return (
     <div className="min-h-screen space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="shrink-0">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">Payment {payment.payment_number}</h1>
               <Badge variant={getStatusVariant(payment.status)}>
                 {payment.status.replace("_", " ").toUpperCase()}
@@ -164,42 +172,57 @@ export default function PaymentDetailPage() {
                 </Badge>
               )}
             </div>
-            <p className="mt-1 text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground">
               Received on {format(new Date(payment.payment_date), "MMMM dd, yyyy")}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {isQboConnected && payment.qbo_sync_status && (
-            <Button variant="outline" onClick={handleQBOSync} disabled={isSyncing}>
-              <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-              {isSyncing ? "Syncing..." : "Push to QuickBooks"}
-            </Button>
-          )}
-
+        <div className="flex shrink-0 items-center gap-2">
           {canAllocate && (
-            <Button variant="outline" onClick={() => setAllocationOpen(true)}>
+            <Button size="sm" onClick={() => setAllocationOpen(true)}>
               <Split className="mr-2 h-4 w-4" />
-              Allocate {formatCurrency(unallocatedAmount)}
+              Allocate credit
             </Button>
           )}
 
-          <Button
-            variant="outline"
-            onClick={() => openPrintWindow({ documentType: "receipt", documentId: id })}
-            disabled={isOpeningPrint}
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            {isOpeningPrint ? "Opening..." : "Print Receipt"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="mr-2 h-4 w-4" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem
+                onClick={() => openPrintWindow({ documentType: "receipt", documentId: id })}
+                disabled={isOpeningPrint}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                {isOpeningPrint ? "Opening print..." : "Print receipt"}
+              </DropdownMenuItem>
 
-          {canRequestRefund && (
-            <Button variant="destructive" onClick={() => setIsRefundDialogOpen(true)}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Request Refund
-            </Button>
-          )}
+              {isQboConnected && payment.qbo_sync_status && (
+                <DropdownMenuItem onClick={handleQBOSync} disabled={isSyncing}>
+                  <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                  {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+                </DropdownMenuItem>
+              )}
+
+              {canRequestRefund && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setIsRefundDialogOpen(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Request refund
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

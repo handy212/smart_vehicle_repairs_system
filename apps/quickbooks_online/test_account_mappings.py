@@ -63,6 +63,7 @@ class QBOAccountMappingServiceTests(APITestCase):
         qb_account.Id = '400'
         qb_account.Name = 'Sales'
         qb_account.AccountType = 'Income'
+        qb_account.AccountSubType = 'SalesOfProductIncome'
         mock_qb_account.get.return_value = qb_account
 
         success, error = self.service.map_row(

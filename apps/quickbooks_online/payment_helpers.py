@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
 
@@ -81,8 +82,16 @@ def build_qbo_payment_lines(service, local_payment, *, PaymentLine, LinkedTxn):
                     f'Invoice {allocation.invoice.invoice_number} is not synced to QuickBooks; '
                     'sync the invoice before allocating this payment.'
                 )
+            from .invoice_sync_helpers import fetch_qbo_invoice_balance
+
+            amount = Decimal(str(allocation.amount or 0)).quantize(Decimal('0.01'))
+            qbo_balance = fetch_qbo_invoice_balance(service, allocation.invoice)
+            if qbo_balance is not None:
+                amount = min(amount, qbo_balance)
+            if amount <= 0:
+                continue
             line = PaymentLine()
-            line.Amount = float(allocation.amount)
+            line.Amount = float(amount)
             linked = LinkedTxn()
             linked.TxnId = qb_invoice_id
             linked.TxnType = 'Invoice'
@@ -109,8 +118,14 @@ def build_qbo_payment_lines(service, local_payment, *, PaymentLine, LinkedTxn):
             'Finalize and sync the invoice before syncing this payment.'
         )
 
+    from .invoice_sync_helpers import qbo_payment_apply_amount
+
+    apply_amount = qbo_payment_apply_amount(service, local_payment, invoice)
+    if apply_amount <= 0:
+        return []
+
     line = PaymentLine()
-    line.Amount = float(local_payment.amount)
+    line.Amount = float(apply_amount)
     linked = LinkedTxn()
     linked.TxnId = qb_invoice_id
     linked.TxnType = 'Invoice'

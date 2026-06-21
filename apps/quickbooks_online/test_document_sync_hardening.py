@@ -88,9 +88,11 @@ class SyncPolicyTests(APITestCase):
     def test_draft_purchase_order_not_eligible(self):
         self.assertFalse(is_outbound_eligible('purchase_order', self.po))
 
-    def test_approved_purchase_order_is_eligible(self):
+    def test_approved_purchase_order_is_not_eligible(self):
         self.po.status = 'approved'
-        self.assertTrue(is_outbound_eligible('purchase_order', self.po))
+        eligible, reason = outbound_eligibility_reason('purchase_order', self.po)
+        self.assertFalse(eligible)
+        self.assertIn('vendor bill', reason.lower())
 
 
 class OutboundSignalPolicyTests(APITestCase):
@@ -124,8 +126,8 @@ class OutboundSignalPolicyTests(APITestCase):
         mock_delay.assert_not_called()
 
     @override_settings(QUICKBOOKS_AUTO_SYNC_ENABLED=True)
-    @patch('apps.quickbooks_online.signals.task_sync_invoice_to_qbo.delay')
-    def test_sent_invoice_save_queues_sync(self, mock_delay):
+    @patch('apps.quickbooks_online.signals.schedule_entity_sync')
+    def test_sent_invoice_save_queues_sync(self, mock_schedule):
         invoice = Invoice.objects.create(
             customer=self.customer,
             branch=self.branch,
@@ -135,7 +137,10 @@ class OutboundSignalPolicyTests(APITestCase):
             invoice_date=timezone.now().date(),
             created_by=self.admin,
         )
-        mock_delay.assert_called_once_with(invoice.id)
+        mock_schedule.assert_called_once()
+        args, kwargs = mock_schedule.call_args
+        self.assertEqual(args[0], 'invoice')
+        self.assertEqual(args[1], invoice.id)
 
 
 class OutboundLoggingTests(APITestCase):
@@ -206,7 +211,7 @@ class OutboundLoggingTests(APITestCase):
         )
         log = QBOSyncLog.objects.get(direction='outbound', entity_type='invoice')
         self.assertEqual(log.status, 'failed')
-        self.assertIn('Customer missing in QBO', log.error_message)
+        self.assertIn('Sync returned no result', log.error_message)
 
 
 class OutboundApiPolicyTests(APITestCase):

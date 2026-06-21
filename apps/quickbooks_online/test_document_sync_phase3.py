@@ -49,26 +49,23 @@ class TaxCodeResolutionTests(APITestCase):
         tax_code_id = self.service._resolve_tax_code_id(self.mapping_service, self.invoice)
         self.assertEqual(tax_code_id, 'VAT-1')
 
+    @patch('apps.quickbooks_online.tax_sync_helpers.apply_transaction_tax')
     @patch.object(QuickBooksService, '_get_mapping_service')
-    def test_apply_mapped_tax_sets_total_tax(self, mock_get_mapping):
+    def test_apply_mapped_tax_delegates_to_tax_helper(self, mock_get_mapping, mock_apply):
         mock_get_mapping.return_value = self.mapping_service
-        self.mapping_service.resolve_tax_code_id.return_value = 'COMP-1'
         qb_invoice = MagicMock()
 
-        with patch('apps.quickbooks_online.services.TxnTaxDetail', create=True), patch(
-            'apps.quickbooks_online.services.Ref', create=True
-        ):
-            from apps.quickbooks_online.services import TxnTaxDetail, Ref
+        self.service._apply_mapped_tax(
+            qb_invoice,
+            self.invoice,
+            sales_lines=['line'],
+            line_items=['item'],
+        )
 
-            txn_tax = MagicMock()
-            TxnTaxDetail.return_value = txn_tax
-            ref = MagicMock()
-            Ref.return_value = ref
-
-            self.service._apply_mapped_tax(qb_invoice, self.invoice)
-
-        self.assertIsNotNone(qb_invoice.TxnTaxDetail)
-        self.assertEqual(qb_invoice.TxnTaxDetail.TotalTax, 15.0)
+        mock_apply.assert_called_once()
+        call_kwargs = mock_apply.call_args.kwargs
+        self.assertEqual(call_kwargs['sales_lines'], ['line'])
+        self.assertEqual(call_kwargs['line_items'], ['item'])
 
 
 class CreditMemoLineMappingTests(APITestCase):
@@ -129,6 +126,7 @@ class CreditMemoLineMappingTests(APITestCase):
             qb_cm = MagicMock()
             qb_cm.Line = []
             mock_cm_cls.return_value = qb_cm
+            mock_cm_cls.__name__ = 'CreditMemo'
 
             from apps.quickbooks_online.services import DetailLine, SalesItemLineDetail, Ref
 

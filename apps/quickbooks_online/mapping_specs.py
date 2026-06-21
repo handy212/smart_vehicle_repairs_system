@@ -62,6 +62,7 @@ MAPPING_KIND_TAX_CODE = 'tax_code'
 
 TAX_CODE_LABELS = {
     'composite': 'Composite sales tax (all levies)',
+    'exempt': 'Non-taxable / Exempt',
     'vat': 'VAT',
     'nhil': 'NHIL',
     'getfund': 'GETFund levy',

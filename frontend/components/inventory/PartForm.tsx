@@ -22,6 +22,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
 import { getMediaUrl } from "@/lib/api/utils";
 
+type PartProductType = "inventory" | "non_inventory" | "service";
+
 export const partSchema = z.object({
     part_number: z.string().min(1, "Part number is required"),
     barcode: z.string().optional(),
@@ -29,6 +31,9 @@ export const partSchema = z.object({
     description: z.string().optional(),
     category: z.number().min(1, "Category is required"),
     branch: z.number().optional(),
+    item_type: z.enum(["inventory", "non_inventory", "service"]),
+    inventory_start_date: z.string().optional(),
+    initial_quantity: z.number().min(0).optional(),
     manufacturer: z.string().optional(),
     manufacturer_part_number: z.string().optional(),
     preferred_supplier: z.number().optional(),
@@ -61,11 +66,14 @@ export type PartFormData = z.infer<typeof partSchema>;
 
 interface PartFormProps {
     initialData?: Partial<PartFormData> & { image?: string | null };
-    onSubmit: (data: PartFormData, imageFile: File | null, clearImage: boolean) => Promise<void>;
+    onSubmit: (data: PartFormData, imageFile: File | null, clearImage?: boolean) => Promise<void>;
     formId?: string;
+    mode?: "create" | "edit";
+    /** When set, type is fixed from the create flow (no type picker in form). */
+    productType?: PartProductType;
 }
 
-export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
+export function PartForm({ initialData, onSubmit, formId, mode = "edit", productType }: PartFormProps) {
     const { formatCurrency } = useCurrency();
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [clearExistingImage, setClearExistingImage] = useState(false);
@@ -103,23 +111,33 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
         resolver: zodResolver(partSchema),
         defaultValues: {
             barcode: "",
-            // quantity_in_stock removed - stock is managed via StockItem per branch
             reorder_point: 10,
             reorder_quantity: 20,
             minimum_stock: 5,
             unit: "piece",
+            item_type: productType ?? "inventory",
             markup_percentage: 0,
             is_active: true,
             is_taxable: true,
             is_core: false,
             core_charge: 0,
             ...initialData,
+            ...(productType ? { item_type: productType } : {}),
         },
     });
 
     const costPrice = watch("cost_price");
     const markup = watch("markup_percentage") || 0;
+    const itemType = productType ?? watch("item_type");
+    const isService = itemType === "service";
+    const isInventory = itemType === "inventory";
+    const isNonInventory = itemType === "non_inventory";
     const calculatedSellingPrice = costPrice ? costPrice * (1 + markup / 100) : undefined;
+
+    const nameLabel = isService ? "Service name" : "Product name";
+    const skuLabel = isService ? "Service code" : "SKU / Item #";
+    const skuPlaceholder = isService ? "SVC-001" : "SKU-001";
+    const namePlaceholder = isService ? "Oil Change Service" : "Brake Pad Set";
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -146,6 +164,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
 
     return (
         <form id={formId} onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+            {productType && <input type="hidden" {...register("item_type")} value={productType} />}
             <Dialog open={showScanner} onOpenChange={setShowScanner}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -180,10 +199,11 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                             <Tabs value={activeTab} onValueChange={setActiveTab}>
                                 <div className="border-b px-4 pt-4 sm:px-6">
                                     <TabsList>
-                                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                                        <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                                        <TabsTrigger value="basic">Basic info</TabsTrigger>
+                                        {isInventory && <TabsTrigger value="inventory">Stock</TabsTrigger>}
+                                        {!isService && isNonInventory && <TabsTrigger value="inventory">Units</TabsTrigger>}
                                         <TabsTrigger value="pricing">Pricing</TabsTrigger>
-                                        <TabsTrigger value="additional">Additional</TabsTrigger>
+                                        {!isService && <TabsTrigger value="additional">Additional</TabsTrigger>}
                                     </TabsList>
                                 </div>
 
@@ -191,10 +211,11 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 <TabsContent value="basic" className="p-4 space-y-4 sm:p-6">
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="part_number">Part Number <span className="text-destructive">*</span></Label>
-                                            <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-destructive" : ""} placeholder="PART-001" />
+                                            <Label htmlFor="part_number">{skuLabel} <span className="text-destructive">*</span></Label>
+                                            <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-destructive" : ""} placeholder={skuPlaceholder} />
                                             {errors.part_number && <p className="text-xs text-destructive">{errors.part_number.message}</p>}
                                         </div>
+                                        {!isService && (
                                         <div className="space-y-2">
                                             <Label htmlFor="barcode">Barcode (UPC/EAN)</Label>
                                             <div className="flex gap-2">
@@ -204,6 +225,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                                 </Button>
                                             </div>
                                         </div>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
@@ -225,15 +247,29 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Part Name <span className="text-destructive">*</span></Label>
-                                        <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : ""} placeholder="Brake Pad Set" />
+                                        <Label htmlFor="name">{nameLabel} <span className="text-destructive">*</span></Label>
+                                        <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : ""} placeholder={namePlaceholder} />
                                         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="description">Description</Label>
                                         <Textarea id="description" {...register("description")} rows={2} />
                                     </div>
+                                    {isService && (
+                                    <div className="space-y-2 max-w-xs">
+                                        <Label htmlFor="unit">Unit</Label>
+                                        <select
+                                            id="unit"
+                                            {...register("unit")}
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option value="piece">Each</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    )}
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        {!isService && (
                                         <div className="space-y-2">
                                             <Label htmlFor="branch">Branch</Label>
                                             <select
@@ -244,10 +280,12 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 <option value="">Any Branch</option>
-
                                                 {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                                             </select>
                                         </div>
+                                        )}
+                                        {!isService && (
+                                        <>
                                         <div className="space-y-2">
                                             <Label htmlFor="manufacturer">Manufacturer</Label>
                                             <Input id="manufacturer" {...register("manufacturer")} />
@@ -256,17 +294,61 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                             <Label htmlFor="manufacturer_part_number">Mfr Part #</Label>
                                             <Input id="manufacturer_part_number" {...register("manufacturer_part_number")} />
                                         </div>
+                                        </>
+                                        )}
                                     </div>
                                 </TabsContent>
 
-                                {/* Inventory Tab */}
+                                {/* Stock / units tab */}
                                 <TabsContent value="inventory" className="p-4 space-y-4 sm:p-6">
-                                    <div className="bg-info/10 border border-info/20 rounded-md p-3 mb-4">
-                                        <p className="text-sm text-info">
-                                            <strong>Note:</strong> Stock quantities are managed per branch via Stock Items.
-                                            Set initial stock after creating the part, or use purchase orders to receive inventory.
-                                        </p>
+                                    {isInventory && mode === "create" && (
+                                        <div className="space-y-2 max-w-xs">
+                                            <Label htmlFor="initial_quantity">Opening quantity (active branch)</Label>
+                                            <Input
+                                                type="number"
+                                                id="initial_quantity"
+                                                min={0}
+                                                {...register("initial_quantity", { valueAsNumber: true })}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    )}
+                                    {isInventory && (
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="inventory_start_date">Inventory start date</Label>
+                                            <Input id="inventory_start_date" type="date" {...register("inventory_start_date")} />
+                                        </div>
                                     </div>
+                                    )}
+                                    {isInventory && (
+                                    <>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="minimum_stock">Min stock</Label>
+                                            <Input type="number" id="minimum_stock" {...register("minimum_stock", { valueAsNumber: true })} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="reorder_point">Reorder point</Label>
+                                            <Input type="number" id="reorder_point" {...register("reorder_point", { valueAsNumber: true })} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="reorder_quantity">Reorder qty</Label>
+                                            <Input type="number" id="reorder_quantity" {...register("reorder_quantity", { valueAsNumber: true })} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="bin_location">Bin location</Label>
+                                            <Input id="bin_location" {...register("bin_location")} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="shelf">Shelf</Label>
+                                            <Input id="shelf" {...register("shelf")} />
+                                        </div>
+                                    </div>
+                                    </>
+                                    )}
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="unit">Unit <span className="text-destructive">*</span></Label>
@@ -291,61 +373,45 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                                 <option value="other">Other</option>
                                             </select>
                                         </div>
+                                        {isInventory && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="maximum_stock">Max Stock</Label>
+                                            <Label htmlFor="maximum_stock">Max stock</Label>
                                             <Input type="number" id="maximum_stock" {...register("maximum_stock", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="Optional" />
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="minimum_stock">Min Stock</Label>
-                                            <Input type="number" id="minimum_stock" {...register("minimum_stock", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="reorder_point">Reorder Point</Label>
-                                            <Input type="number" id="reorder_point" {...register("reorder_point", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="reorder_quantity">Reorder Qty</Label>
-                                            <Input type="number" id="reorder_quantity" {...register("reorder_quantity", { valueAsNumber: true })} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="bin_location">Bin Location</Label>
-                                            <Input id="bin_location" {...register("bin_location")} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="shelf">Shelf</Label>
-                                            <Input id="shelf" {...register("shelf")} />
-                                        </div>
+                                        )}
                                     </div>
                                 </TabsContent>
 
                                 {/* Pricing Tab */}
                                 <TabsContent value="pricing" className="p-4 space-y-4 sm:p-6">
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        {!isService && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="cost_price">Cost Price</Label>
+                                            <Label htmlFor="cost_price">Cost price</Label>
                                             <Input type="number" step="0.01" id="cost_price" {...register("cost_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                             {errors.cost_price && <p className="text-xs text-destructive">{errors.cost_price.message}</p>}
                                         </div>
+                                        )}
+                                        {!isService && (
                                         <div className="space-y-2">
                                             <Label htmlFor="markup_percentage">Markup %</Label>
                                             <Input type="number" step="0.1" id="markup_percentage" {...register("markup_percentage", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0" />
                                         </div>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="selling_price">Selling Price</Label>
+                                            <Label htmlFor="selling_price">{isService ? "Rate / price" : "Selling price"}</Label>
                                             <Input type="number" step="0.01" id="selling_price" {...register("selling_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                             {calculatedSellingPrice && <p className="text-xs text-muted-foreground">Calculated: {formatCurrency(calculatedSellingPrice)}</p>}
                                             {errors.selling_price && <p className="text-xs text-destructive">{errors.selling_price.message}</p>}
                                         </div>
+                                        {!isService && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="list_price">List Price (MSRP)</Label>
+                                            <Label htmlFor="list_price">List price (MSRP)</Label>
                                             <Input type="number" step="0.01" id="list_price" {...register("list_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                         </div>
+                                        )}
                                     </div>
                                 </TabsContent>
 
@@ -434,6 +500,7 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                         </CardContent>
                     </Card>
 
+                    {!isService && (
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -449,11 +516,11 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">None</option>
-
                                 {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.supplier_code})</option>)}
                             </select>
                         </CardContent>
                     </Card>
+                    )}
 
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
@@ -468,15 +535,27 @@ export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
                                 <input type="checkbox" {...register("is_taxable")} className="rounded border-border text-primary focus:ring-primary" />
                                 <span className="text-sm">Taxable</span>
                             </label>
+                            {!isService && (
                             <label className="flex items-center space-x-2 cursor-pointer">
                                 <input type="checkbox" {...register("is_core")} className="rounded border-border text-primary focus:ring-primary" />
-                                <span className="text-sm">Core Part</span>
+                                <span className="text-sm">Core part</span>
                             </label>
-                            {watch("is_core") && (
+                            )}
+                            {!isService && watch("is_core") && (
                                 <div className="space-y-1 pl-6">
                                     <Label htmlFor="core_charge" className="text-xs">Core Charge</Label>
                                     <Input type="number" step="0.01" id="core_charge" {...register("core_charge", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} className="h-8 text-sm" />
                                 </div>
+                            )}
+                            {!productType && mode === "edit" && (
+                            <div className="pt-3 border-t space-y-2">
+                                <Label htmlFor="item_type" className="text-xs text-muted-foreground">Product type</Label>
+                                <select id="item_type" {...register("item_type")} className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                                    <option value="inventory">Inventory</option>
+                                    <option value="non_inventory">Non-inventory</option>
+                                    <option value="service">Service</option>
+                                </select>
+                            </div>
                             )}
                         </CardContent>
                     </Card>

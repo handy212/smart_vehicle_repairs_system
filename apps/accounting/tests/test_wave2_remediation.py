@@ -162,11 +162,32 @@ class Wave2RemediationTests(TestCase):
         invoice.refresh_from_db()
         self.assertNotEqual(invoice.status, 'void')
 
-    def test_invoice_update_blocked_after_gl_post(self):
+    def test_invoice_update_allowed_after_gl_post_without_payments(self):
         invoice = self._create_posted_invoice()
         serializer = InvoiceUpdateSerializer(
             instance=invoice,
             data={'description': 'Changed after post'},
+            partial=True,
+            context={'request': type('Req', (), {'user': self.user})()},
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        updated = serializer.save()
+        self.assertEqual(updated.description, 'Changed after post')
+
+    def test_invoice_update_blocked_after_payment(self):
+        invoice = self._create_posted_invoice()
+        Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='check',
+            amount=Decimal('25.00'),
+            status='completed',
+            processed_by=self.user,
+            bank_account=self.cash_account,
+        )
+        serializer = InvoiceUpdateSerializer(
+            instance=invoice,
+            data={'description': 'Changed after payment'},
             partial=True,
             context={'request': type('Req', (), {'user': self.user})()},
         )

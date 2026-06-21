@@ -320,6 +320,50 @@ class AccountingService:
         )
 
     @classmethod
+    def _has_unreversed_posted_journal(cls, *, content_type, object_id, reference):
+        """True when a posted journal entry exists and has not been reversed."""
+        je_type = ContentType.objects.get_for_model(JournalEntry)
+        checked_ids = set()
+        queries = [
+            JournalEntry.objects.filter(reference=reference, posted=True),
+        ]
+        if content_type is not None and object_id is not None:
+            queries.insert(
+                0,
+                JournalEntry.objects.filter(
+                    content_type=content_type,
+                    object_id=object_id,
+                    reference=reference,
+                    posted=True,
+                ),
+            )
+
+        for queryset in queries:
+            for journal_entry in queryset:
+                if journal_entry.id in checked_ids:
+                    continue
+                checked_ids.add(journal_entry.id)
+                if not JournalEntry.objects.filter(
+                    content_type=je_type,
+                    object_id=journal_entry.id,
+                    reference=f"REV-JE-{journal_entry.id}",
+                    posted=True,
+                ).exists():
+                    return True
+        return False
+
+    @classmethod
+    def repost_invoice(cls, invoice, user, reason='Invoice updated'):
+        """Reverse existing invoice GL entries and post updated amounts."""
+        if invoice.status not in cls.FINALIZED_INVOICE_STATUSES:
+            return None, None
+
+        cls.reverse_invoice_journal_entries(invoice, user, reason=reason)
+        revenue_entry = cls.post_invoice(invoice)
+        cogs_entry = cls.post_cogs(invoice)
+        return revenue_entry, cogs_entry
+
+    @classmethod
     def post_invoice(cls, invoice):
         """
         Creates a Journal Entry for a finalized Invoice.
@@ -339,13 +383,11 @@ class AccountingService:
 
         # Check if the AR/revenue entry has already been posted. COGS is a
         # separate entry for the same invoice and should not block this one.
-        if JournalEntry.objects.filter(
+        if cls._has_unreversed_posted_journal(
             content_type=invoice_type,
             object_id=invoice.id,
             reference=invoice_reference,
-        ).exists():
-            return None
-        if JournalEntry.objects.filter(posted=True, reference=invoice_reference).exists():
+        ):
             return None
 
         with transaction.atomic():
@@ -459,13 +501,11 @@ class AccountingService:
         invoice_reference = invoice.invoice_number or f"INV-{invoice.id}"
         cogs_reference = f"{invoice_reference}-COGS"
 
-        if JournalEntry.objects.filter(
+        if cls._has_unreversed_posted_journal(
             content_type=invoice_type,
             object_id=invoice.id,
             reference=cogs_reference,
-        ).exists():
-            return None
-        if JournalEntry.objects.filter(posted=True, reference=cogs_reference).exists():
+        ):
             return None
 
         # Iterate over invoice line items, check if they are parts

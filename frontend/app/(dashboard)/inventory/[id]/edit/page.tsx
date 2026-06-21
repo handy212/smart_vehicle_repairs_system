@@ -131,6 +131,8 @@ export default function EditPartPage() {
     maximum_stock: part.maximum_stock || undefined,
 
     unit: (part.unit as any) || "piece",
+    item_type: (part.item_type as PartFormData["item_type"]) || "inventory",
+    inventory_start_date: part.inventory_start_date || undefined,
     cost_price: part.cost_price ? parseFloat(part.cost_price) : undefined,
     selling_price: part.selling_price ? parseFloat(part.selling_price) : undefined,
     markup_percentage: part.markup_percentage ? parseFloat(part.markup_percentage) : 0,

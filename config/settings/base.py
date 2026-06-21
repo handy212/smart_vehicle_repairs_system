@@ -444,6 +444,10 @@ CARAPI_SECRET = env('CARAPI_SECRET', default='')
 QUICKBOOKS_CLIENT_ID = env('QUICKBOOKS_CLIENT_ID', default='')
 QUICKBOOKS_CLIENT_SECRET = env('QUICKBOOKS_CLIENT_SECRET', default='')
 QUICKBOOKS_SANDBOX_ENABLED = env.bool('QUICKBOOKS_SANDBOX_ENABLED', default=True)
+# Push customers, invoices, parts, etc. to QBO on save (requires QBO connected).
+QUICKBOOKS_AUTO_SYNC_ENABLED = env.bool('QUICKBOOKS_AUTO_SYNC_ENABLED', default=True)
+# When True, QBO outbound sync runs in-process after save (no Celery worker required).
+QUICKBOOKS_SYNC_INLINE = env.bool('QUICKBOOKS_SYNC_INLINE', default=DEBUG)
 # Optional override; default is {FRONTEND_BASE_URL}/api/quickbooks/callback/
 QBO_REDIRECT_URI = env('QBO_REDIRECT_URI', default='')
 

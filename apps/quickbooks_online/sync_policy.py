@@ -10,6 +10,13 @@ CREDIT_NOTE_QBO_SYNC_STATUSES = {'issued', 'applied', 'refunded'}
 VENDOR_BILL_QBO_EXCLUDED_STATUSES = {'draft', 'pending_approval', 'rejected', 'void'}
 VENDOR_CREDIT_QBO_SYNC_STATUSES = {'issued', 'applied'}
 
+# SVR estimate status → QBO Estimate.TxnStatus (inverse of pull_estimates map)
+ESTIMATE_QBO_TXN_STATUS = {
+    'approved': 'Accepted',
+    'declined': 'Rejected',
+    'converted': 'Closed',
+}
+
 
 def outbound_eligibility_reason(entity_type, instance):
     """
@@ -35,12 +42,10 @@ def outbound_eligibility_reason(entity_type, instance):
         return True, ''
 
     if entity_type == 'purchase_order':
-        if status in PO_QBO_EXCLUDED_STATUSES:
-            return False, (
-                f'Purchase order status "{status}" is not eligible for QuickBooks sync. '
-                'Approve or confirm the PO before pushing.'
-            )
-        return True, ''
+        return False, (
+            'Purchase orders are not pushed to QuickBooks as bills. '
+            'Receive the PO in SVR, create the linked vendor bill, and sync that bill to QBO.'
+        )
 
     if entity_type == 'estimate':
         if status not in ESTIMATE_QBO_SYNC_STATUSES:

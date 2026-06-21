@@ -316,48 +316,91 @@ class QuickBooksService:
                 raise
         return qb_obj
 
+    def _fail_qbo_mapping(self, local_obj, error_message: str):
+        QBOMapping.objects.update_or_create(
+            content_type=ContentType.objects.get_for_model(local_obj),
+            object_id=local_obj.id,
+            defaults={'status': 'failed', 'error_message': error_message},
+        )
+
+    def _load_qbo_entity(
+        self,
+        qb_class,
+        local_obj,
+        *,
+        doc_number=None,
+        display_name=None,
+        sku=None,
+        name=None,
+        allow_create=True,
+    ):
+        """
+        Resolve a QBO record for update (GET → query by natural key → create).
+
+        Returns (entity, is_new_in_qbo, error_message).
+        """
+        from .entity_resolver import resolve_qbo_entity
+
+        client = self.get_client()
+        if not client:
+            return None, False, 'QuickBooks not connected or unauthorized.'
+
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_obj),
+            object_id=local_obj.id,
+        ).first()
+
+        entity, error = resolve_qbo_entity(
+            client=client,
+            qb_class=qb_class,
+            local_obj=local_obj,
+            mapping=mapping,
+            doc_number=doc_number,
+            display_name=display_name,
+            sku=sku,
+            name=name,
+            allow_create=allow_create,
+        )
+        if error:
+            return None, False, error
+        is_new = entity is not None and not getattr(entity, 'Id', None)
+        return entity, is_new, None
+
     def sync_customer(self, local_customer):
         """
         Sync a local Customer to QBO.
         """
         client = self.get_client()
         if not client:
-            QBOMapping.objects.update_or_create(
-                content_type=ContentType.objects.get_for_model(local_customer),
-                object_id=local_customer.id,
-                defaults={
-                    'status': 'failed',
-                    'error_message': 'QuickBooks not connected or unauthorized.'
-                }
+            self._fail_qbo_mapping(
+                local_customer,
+                'QuickBooks not connected or unauthorized.',
             )
             return None
-            
-        # Check for existing mapping
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_customer),
-            object_id=local_customer.id
-        ).first()
-        
-        qb_customer = QBCustomer()
-        
-        if mapping:
-            # Update existing
-            try:
-                qb_customer = QBCustomer.get(int(mapping.qbo_id), qb=client)
-            except Exception as e:
-                logger.warning(f"Failed to fetch existing QBO customer {mapping.qbo_id}: {e}. Creating new.")
-                mapping = None
-                qb_customer = QBCustomer()
-        
-        # Map fields
+
         user = local_customer.user
         full_name = f"{user.first_name} {user.last_name}".strip()
+        if local_customer.company_name:
+            display_name = f"{local_customer.company_name} ({local_customer.customer_number})"
+        else:
+            display_name = f"{full_name} ({local_customer.customer_number})"
+
+        qb_customer, _is_new, load_error = self._load_qbo_entity(
+            QBCustomer,
+            local_customer,
+            display_name=display_name,
+        )
+        if load_error:
+            logger.error('QBO Customer load failed: %s', load_error)
+            self._fail_qbo_mapping(local_customer, load_error)
+            return None
         
+        # Map fields
         if local_customer.company_name:
             qb_customer.CompanyName = local_customer.company_name
-            qb_customer.DisplayName = f"{local_customer.company_name} ({local_customer.customer_number})"
+            qb_customer.DisplayName = display_name
         else:
-            qb_customer.DisplayName = f"{full_name} ({local_customer.customer_number})"
+            qb_customer.DisplayName = display_name
             
         # Parse name
         qb_customer.GivenName = user.first_name
@@ -415,22 +458,18 @@ class QuickBooksService:
             )
             return None
             
-        # Check for existing mapping
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_branch),
-            object_id=local_branch.id
-        ).first()
-        
-        qb_dept = QBDepartment()
-        if mapping:
-            try:
-                qb_dept = QBDepartment.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                mapping = None
-                qb_dept = QBDepartment()
+        dept_name = f"{local_branch.name} ({local_branch.code})"
+        qb_dept, _is_new, load_error = self._load_qbo_entity(
+            QBDepartment,
+            local_branch,
+            name=dept_name,
+        )
+        if load_error:
+            self._fail_qbo_mapping(local_branch, load_error)
+            return None
                 
         # Map Fields
-        qb_dept.Name = f"{local_branch.name} ({local_branch.code})"
+        qb_dept.Name = dept_name
         
         # Save
         try:
@@ -580,10 +619,35 @@ class QuickBooksService:
         except Exception:
             return None
 
-    def _build_sales_item_lines(self, line_items, *, item_type_attr='item_type', default_item_type='other', part_attr='part'):
+    def _apply_estimate_txn_status(self, qb_estimate, local_estimate):
+        """Push Accepted/Rejected/Closed to QBO when SVR estimate status changes."""
+        from .sync_policy import ESTIMATE_QBO_TXN_STATUS
+
+        txn_status = ESTIMATE_QBO_TXN_STATUS.get(local_estimate.status)
+        if txn_status:
+            qb_estimate.TxnStatus = txn_status
+
+    def _build_sales_item_lines(
+        self,
+        line_items,
+        *,
+        item_type_attr='item_type',
+        default_item_type='other',
+        part_attr='part',
+        txn_date=None,
+    ):
         lines = []
         mapping_service = self._get_mapping_service()
         from .item_sync import resolve_part_qbo_item_id
+
+        if txn_date:
+            from .item_sync import _prepare_inventory_parts_for_txn_date
+            _prepare_inventory_parts_for_txn_date(
+                self,
+                line_items,
+                txn_date,
+                part_attr=part_attr,
+            )
 
         for item in line_items:
             line = DetailLine()
@@ -601,7 +665,7 @@ class QuickBooksService:
             qbo_item_id = None
             part = getattr(item, part_attr, None) if part_attr else None
             if part is not None and getattr(part, 'pk', None):
-                qbo_item_id = resolve_part_qbo_item_id(self, part)
+                qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
             if not qbo_item_id and mapping_service and Ref is not None:
                 qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type)
             if qbo_item_id and Ref is not None:
@@ -632,22 +696,18 @@ class QuickBooksService:
                 return code_id
         return None
 
-    def _apply_mapped_tax(self, qb_txn, local_obj):
+    def _apply_mapped_tax(self, qb_txn, local_obj, *, sales_lines=None, line_items=None):
         mapping_service = self._get_mapping_service()
-        if not mapping_service or TxnTaxDetail is None or Ref is None:
-            return
-        tax_amount = float(getattr(local_obj, 'tax_amount', 0) or 0)
-        if tax_amount <= 0:
-            return
-        tax_code_id = self._resolve_tax_code_id(mapping_service, local_obj)
-        if not tax_code_id:
-            return
-        qb_txn.TxnTaxDetail = TxnTaxDetail()
-        qb_txn.TxnTaxDetail.TxnTaxCodeRef = Ref()
-        qb_txn.TxnTaxDetail.TxnTaxCodeRef.value = tax_code_id
-        qb_txn.TxnTaxDetail.TotalTax = tax_amount
-        if hasattr(qb_txn, 'GlobalTaxCalculation'):
-            qb_txn.GlobalTaxCalculation = 'TaxExcluded'
+        from .tax_sync_helpers import apply_transaction_tax
+
+        apply_transaction_tax(
+            self,
+            qb_txn,
+            local_obj,
+            mapping_service=mapping_service,
+            sales_lines=sales_lines,
+            line_items=line_items,
+        )
 
     def _apply_department_ref(self, qb_txn, branch):
         if not branch:
@@ -709,6 +769,76 @@ class QuickBooksService:
             lines.append(line)
         return lines
 
+    def _mirror_po_qbo_bill_mapping(self, purchase_order, qb_bill):
+        """Keep PO mapping aligned with the vendor bill's QBO Bill (inbound pull + UI)."""
+        if not purchase_order or not qb_bill or not getattr(qb_bill, 'Id', None):
+            return
+        QBOMapping.objects.update_or_create(
+            content_type=ContentType.objects.get_for_model(purchase_order),
+            object_id=purchase_order.id,
+            defaults={
+                'qbo_id': str(qb_bill.Id),
+                'qbo_sync_token': getattr(qb_bill, 'SyncToken', '') or '',
+                'status': 'synced',
+                'error_message': '',
+            },
+        )
+
+    def _resolve_vendor_bill_qbo_bill(self, local_bill, *, doc_number):
+        """
+        Load the QBO Bill for a vendor bill.
+
+        PO-linked bills reuse the Bill already created from an earlier PO push
+        (DocNumber = po_number) instead of creating a second QBO Bill.
+        """
+        from apps.inventory.models import PurchaseOrder
+
+        client = self.get_client()
+        purchase_order = getattr(local_bill, 'purchase_order', None)
+
+        if purchase_order:
+            po_mapping = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(PurchaseOrder),
+                object_id=purchase_order.id,
+            ).exclude(qbo_id='').first()
+            if po_mapping:
+                try:
+                    return QBBill.get(int(po_mapping.qbo_id), qb=client), None
+                except Exception as exc:
+                    logger.warning(
+                        'Could not load QBO Bill %s from PO %s mapping: %s',
+                        po_mapping.qbo_id,
+                        purchase_order.po_number,
+                        exc,
+                    )
+
+        qb_bill, _is_new, load_error = self._load_qbo_entity(
+            QBBill,
+            local_bill,
+            doc_number=doc_number,
+        )
+        if not load_error or not purchase_order:
+            return qb_bill, load_error
+
+        from .entity_resolver import find_by_doc_number
+
+        found = find_by_doc_number(QBBill, client, purchase_order.po_number)
+        if found and getattr(found, 'Id', None):
+            self._mirror_po_qbo_bill_mapping(purchase_order, found)
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_bill),
+                object_id=local_bill.id,
+                defaults={
+                    'qbo_id': str(found.Id),
+                    'qbo_sync_token': getattr(found, 'SyncToken', '') or '',
+                    'status': 'synced',
+                    'error_message': '',
+                },
+            )
+            return found, None
+
+        return qb_bill, load_error
+
     def _sync_qbo_bill_document(
         self,
         local_obj,
@@ -721,20 +851,19 @@ class QuickBooksService:
         branch=None,
         line_items=None,
         inventory_relation=None,
+        qb_bill=None,
     ):
         """Create or update a QBO Bill for a PO or vendor bill."""
         client = self.get_client()
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_obj),
-            object_id=local_obj.id,
-        ).first()
-
-        qb_bill = QBBill()
-        if mapping and mapping.qbo_id:
-            try:
-                qb_bill = QBBill.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                qb_bill = QBBill()
+        if qb_bill is None:
+            qb_bill, _is_new, load_error = self._load_qbo_entity(
+                QBBill,
+                local_obj,
+                doc_number=doc_number,
+            )
+            if load_error:
+                self._fail_qbo_mapping(local_obj, load_error)
+                raise ValueError(load_error)
 
         qb_bill.VendorRef = Ref()
         qb_bill.VendorRef.value = qb_vendor.Id
@@ -751,6 +880,9 @@ class QuickBooksService:
         )
         self._save_qb(qb_bill, client)
         self._update_qbo_mapping(local_obj, qb_bill)
+        purchase_order = getattr(local_obj, 'purchase_order', None)
+        if purchase_order is not None:
+            self._mirror_po_qbo_bill_mapping(purchase_order, qb_bill)
         return qb_bill
 
     def sync_invoice(self, local_invoice):
@@ -781,20 +913,30 @@ class QuickBooksService:
             object_id=local_invoice.id
         ).first()
         
-        qb_invoice = QBInvoice()
-        if mapping:
-            try:
-                qb_invoice = QBInvoice.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                mapping = None
-                qb_invoice = QBInvoice()
+        qb_invoice, is_new_qbo, load_error = self._load_qbo_entity(
+            QBInvoice,
+            local_invoice,
+            doc_number=local_invoice.invoice_number,
+        )
+        if load_error:
+            logger.error('QBO Invoice load failed for %s: %s', local_invoice.invoice_number, load_error)
+            self._fail_qbo_mapping(local_invoice, load_error)
+            return None
                 
         # Map Header Fields
         qb_invoice.CustomerRef = Ref()
         qb_invoice.CustomerRef.value = qb_customer.Id
         
         qb_invoice.DocNumber = local_invoice.invoice_number
-        qb_invoice.TxnDate = local_invoice.invoice_date.isoformat()
+        invoice_lines = list(local_invoice.line_items.select_related('part').all())
+        from .item_sync import effective_sales_txn_date
+
+        qbo_txn_date = effective_sales_txn_date(
+            self,
+            invoice_lines,
+            local_invoice.invoice_date,
+        )
+        qb_invoice.TxnDate = qbo_txn_date.isoformat()
         if local_invoice.due_date:
             qb_invoice.DueDate = local_invoice.due_date.isoformat()
             
@@ -803,8 +945,27 @@ class QuickBooksService:
             
         self._apply_department_ref(qb_invoice, local_invoice.branch)
 
-        qb_invoice.Line = self._build_sales_item_lines(local_invoice.line_items.all())
-        self._apply_mapped_tax(qb_invoice, local_invoice)
+        qb_invoice.Line = self._build_sales_item_lines(
+            invoice_lines,
+            txn_date=qbo_txn_date,
+        )
+        self._apply_mapped_tax(
+            qb_invoice,
+            local_invoice,
+            sales_lines=qb_invoice.Line,
+            line_items=invoice_lines,
+        )
+
+        from .invoice_status_sync_helpers import apply_invoice_communication_status
+        from .tax_sync_helpers import finalize_sales_transaction_for_qbo, uses_us_line_tax_codes
+
+        apply_invoice_communication_status(
+            qb_invoice,
+            local_invoice,
+            us_company=uses_us_line_tax_codes(self),
+        )
+
+        finalize_sales_transaction_for_qbo(self, qb_invoice)
 
         if local_invoice.estimate_id and LinkedTxn is not None:
             estimate_mapping = QBOMapping.objects.filter(
@@ -833,9 +994,48 @@ class QuickBooksService:
                 }
             )
             from .attachment_sync import sync_invoice_attachment
-            sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
+            if is_new_qbo:
+                sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
             return qb_invoice
         except Exception as e:
+            from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
+
+            if _is_inv_start_before_txn_error(e):
+                invoice_lines = local_invoice.line_items.select_related('part').all()
+                qbo_txn_date = effective_sales_txn_date(
+                    self,
+                    invoice_lines,
+                    local_invoice.invoice_date,
+                )
+                qb_invoice.TxnDate = qbo_txn_date.isoformat()
+                qb_invoice.Line = self._build_sales_item_lines(
+                    invoice_lines,
+                    txn_date=qbo_txn_date,
+                )
+                try:
+                    self._save_qb(qb_invoice, client)
+                    QBOMapping.objects.update_or_create(
+                        content_type=ContentType.objects.get_for_model(local_invoice),
+                        object_id=local_invoice.id,
+                        defaults={
+                            'qbo_id': qb_invoice.Id,
+                            'qbo_sync_token': qb_invoice.SyncToken,
+                            'status': 'synced',
+                            'error_message': ''
+                        }
+                    )
+                    from .attachment_sync import sync_invoice_attachment
+                    if is_new_qbo:
+                        sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
+                    return qb_invoice
+                except Exception as retry_exc:
+                    logger.error('QBO Invoice Sync retry failed: %s', retry_exc)
+                    QBOMapping.objects.update_or_create(
+                        content_type=ContentType.objects.get_for_model(local_invoice),
+                        object_id=local_invoice.id,
+                        defaults={'status': 'failed', 'error_message': str(retry_exc)}
+                    )
+                    return None
             logger.error(f"QBO Invoice Sync Error: {e}")
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_invoice),
@@ -875,35 +1075,86 @@ class QuickBooksService:
             object_id=local_estimate.id,
         ).first()
 
-        qb_estimate = QBEstimate()
-        if mapping and mapping.qbo_id:
-            try:
-                qb_estimate = QBEstimate.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                qb_estimate = QBEstimate()
+        qb_estimate, is_new_qbo, load_error = self._load_qbo_entity(
+            QBEstimate,
+            local_estimate,
+            doc_number=local_estimate.estimate_number,
+        )
+        if load_error:
+            self._update_qbo_mapping(local_estimate, None, error=load_error)
+            return None
 
         qb_estimate.CustomerRef = Ref()
         qb_estimate.CustomerRef.value = qb_customer.Id
         qb_estimate.DocNumber = local_estimate.estimate_number
-        qb_estimate.TxnDate = local_estimate.estimate_date.isoformat()
+        estimate_lines = list(local_estimate.line_items.select_related('part').all())
+        from .item_sync import effective_sales_txn_date
+
+        qbo_txn_date = effective_sales_txn_date(
+            self,
+            estimate_lines,
+            local_estimate.estimate_date,
+        )
+        qb_estimate.TxnDate = qbo_txn_date.isoformat()
         if local_estimate.valid_until:
             qb_estimate.ExpirationDate = local_estimate.valid_until.isoformat()
         if local_estimate.notes:
             qb_estimate.PrivateNote = local_estimate.notes
         if local_estimate.customer_notes:
-            qb_estimate.CustomerMemo = {'value': local_estimate.customer_notes}
+            from .invoice_status_sync_helpers import set_qbo_customer_memo
+
+            set_qbo_customer_memo(qb_estimate, local_estimate.customer_notes)
 
         self._apply_department_ref(qb_estimate, local_estimate.branch)
-        qb_estimate.Line = self._build_sales_item_lines(local_estimate.line_items.all())
-        self._apply_mapped_tax(qb_estimate, local_estimate)
+        qb_estimate.Line = self._build_sales_item_lines(
+            estimate_lines,
+            txn_date=qbo_txn_date,
+        )
+        self._apply_mapped_tax(
+            qb_estimate,
+            local_estimate,
+            sales_lines=qb_estimate.Line,
+            line_items=estimate_lines,
+        )
+        self._apply_estimate_txn_status(qb_estimate, local_estimate)
+
+        from .tax_sync_helpers import finalize_sales_transaction_for_qbo
+
+        finalize_sales_transaction_for_qbo(self, qb_estimate)
 
         try:
             self._save_qb(qb_estimate, client)
             self._update_qbo_mapping(local_estimate, qb_estimate)
             from .attachment_sync import sync_estimate_attachment
-            sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
+            if is_new_qbo:
+                sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
             return qb_estimate
         except Exception as exc:
+            from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
+
+            if _is_inv_start_before_txn_error(exc):
+                estimate_lines = local_estimate.line_items.select_related('part').all()
+                qbo_txn_date = effective_sales_txn_date(
+                    self,
+                    estimate_lines,
+                    local_estimate.estimate_date,
+                )
+                qb_estimate.TxnDate = qbo_txn_date.isoformat()
+                qb_estimate.Line = self._build_sales_item_lines(
+                    estimate_lines,
+                    txn_date=qbo_txn_date,
+                )
+                try:
+                    self._save_qb(qb_estimate, client)
+                    self._update_qbo_mapping(local_estimate, qb_estimate)
+                    from .attachment_sync import sync_estimate_attachment
+                    if is_new_qbo:
+                        sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
+                    return qb_estimate
+                except Exception as retry_exc:
+                    logger.error('QBO Estimate Sync retry failed: %s', retry_exc)
+                    self._update_qbo_mapping(local_estimate, None, error=str(retry_exc))
+                    return None
             logger.error('QBO Estimate Sync Error: %s', exc)
             self._update_qbo_mapping(local_estimate, None, error=str(exc))
             return None
@@ -939,35 +1190,52 @@ class QuickBooksService:
             )
             return None
 
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_credit_note),
-            object_id=local_credit_note.id,
-        ).first()
-
-        qb_credit_memo = QBCreditMemo()
-        if mapping and mapping.qbo_id:
-            try:
-                qb_credit_memo = QBCreditMemo.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                qb_credit_memo = QBCreditMemo()
+        qb_credit_memo, _is_new, load_error = self._load_qbo_entity(
+            QBCreditMemo,
+            local_credit_note,
+            doc_number=local_credit_note.credit_note_number,
+        )
+        if load_error:
+            self._update_qbo_mapping(local_credit_note, None, error=load_error)
+            return None
 
         qb_credit_memo.CustomerRef = Ref()
         qb_credit_memo.CustomerRef.value = qb_customer.Id
         qb_credit_memo.DocNumber = local_credit_note.credit_note_number
-        qb_credit_memo.TxnDate = local_credit_note.credit_date.isoformat()
+        credit_lines = list(local_credit_note.line_items.all())
+        from .item_sync import effective_sales_txn_date
+
+        qbo_txn_date = effective_sales_txn_date(
+            self,
+            credit_lines,
+            local_credit_note.credit_date,
+        )
+        qb_credit_memo.TxnDate = qbo_txn_date.isoformat()
         if local_credit_note.reason:
             qb_credit_memo.PrivateNote = local_credit_note.reason
         if local_credit_note.notes:
-            qb_credit_memo.CustomerMemo = {'value': local_credit_note.notes}
+            from .invoice_status_sync_helpers import set_qbo_customer_memo
+
+            set_qbo_customer_memo(qb_credit_memo, local_credit_note.notes)
 
         self._apply_department_ref(qb_credit_memo, local_credit_note.branch)
 
         qb_credit_memo.Line = self._build_sales_item_lines(
-            local_credit_note.line_items.all(),
+            credit_lines,
             default_item_type='other',
+            txn_date=qbo_txn_date,
         )
 
-        self._apply_mapped_tax(qb_credit_memo, local_credit_note)
+        self._apply_mapped_tax(
+            qb_credit_memo,
+            local_credit_note,
+            sales_lines=qb_credit_memo.Line,
+            line_items=credit_lines,
+        )
+
+        from .tax_sync_helpers import finalize_sales_transaction_for_qbo
+
+        finalize_sales_transaction_for_qbo(self, qb_credit_memo)
 
         if local_credit_note.invoice_id and LinkedTxn is not None:
             invoice_mapping = QBOMapping.objects.filter(
@@ -989,6 +1257,29 @@ class QuickBooksService:
             self._update_qbo_mapping(local_credit_note, qb_credit_memo)
             return qb_credit_memo
         except Exception as exc:
+            from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
+
+            if _is_inv_start_before_txn_error(exc):
+                credit_lines = local_credit_note.line_items.all()
+                qbo_txn_date = effective_sales_txn_date(
+                    self,
+                    credit_lines,
+                    local_credit_note.credit_date,
+                )
+                qb_credit_memo.TxnDate = qbo_txn_date.isoformat()
+                qb_credit_memo.Line = self._build_sales_item_lines(
+                    credit_lines,
+                    default_item_type='other',
+                    txn_date=qbo_txn_date,
+                )
+                try:
+                    self._save_qb(qb_credit_memo, client)
+                    self._update_qbo_mapping(local_credit_note, qb_credit_memo)
+                    return qb_credit_memo
+                except Exception as retry_exc:
+                    logger.error('QBO Credit Memo Sync retry failed: %s', retry_exc)
+                    self._update_qbo_mapping(local_credit_note, None, error=str(retry_exc))
+                    return None
             logger.error('QBO Credit Memo Sync Error: %s', exc)
             self._update_qbo_mapping(local_credit_note, None, error=str(exc))
             return None
@@ -1023,18 +1314,14 @@ class QuickBooksService:
             )
             return None
 
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_payment),
-            object_id=local_payment.id
-        ).first()
-
-        qb_payment = QBPayment()
-        if mapping:
-            try:
-                qb_payment = QBPayment.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                mapping = None
-                qb_payment = QBPayment()
+        qb_payment, _is_new, load_error = self._load_qbo_entity(
+            QBPayment,
+            local_payment,
+            allow_create=True,
+        )
+        if load_error:
+            self._fail_qbo_mapping(local_payment, load_error)
+            return None
 
         qb_payment.CustomerRef = Ref()
         qb_payment.CustomerRef.value = qb_customer.Id
@@ -1126,20 +1413,17 @@ class QuickBooksService:
             )
             return None
             
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_supplier),
-            object_id=local_supplier.id
-        ).first()
-        
-        qb_vendor = QBVendor()
-        if mapping:
-            try:
-                qb_vendor = QBVendor.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                mapping = None
-                qb_vendor = QBVendor()
+        display_name = f"{local_supplier.name} ({local_supplier.supplier_code})"
+        qb_vendor, _is_new, load_error = self._load_qbo_entity(
+            QBVendor,
+            local_supplier,
+            display_name=display_name,
+        )
+        if load_error:
+            self._fail_qbo_mapping(local_supplier, load_error)
+            return None
                 
-        qb_vendor.DisplayName = f"{local_supplier.name} ({local_supplier.supplier_code})"
+        qb_vendor.DisplayName = display_name
         qb_vendor.CompanyName = local_supplier.name
         
         if local_supplier.email:
@@ -1174,113 +1458,27 @@ class QuickBooksService:
 
     def sync_purchase_order(self, local_po):
         """
-        Sync a local PurchaseOrder to QBO Bill.
+        Delegate PO-linked AP to the vendor bill.
+
+        POs are not pushed as standalone QBO bills. If a vendor bill exists for
+        this PO, sync that bill (one QBO Bill for the procurement flow).
         """
-        client = self.get_client()
-        if not client:
-            QBOMapping.objects.update_or_create(
-                content_type=ContentType.objects.get_for_model(local_po),
-                object_id=local_po.id,
-                defaults={
-                    'status': 'failed',
-                    'error_message': 'QuickBooks not connected or unauthorized.'
-                }
-            )
-            return None
-            
-        qb_vendor = self.sync_supplier(local_po.supplier)
-        if not qb_vendor:
-            logger.error(f"Cannot sync PO {local_po.po_number}: Supplier sync failed.")
-            return None
-            
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_po),
-            object_id=local_po.id
-        ).first()
-        
-        qb_bill = QBBill()
-        if mapping:
-            try:
-                qb_bill = QBBill.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                mapping = None
-                qb_bill = QBBill()
-                
-        qb_bill.VendorRef = Ref()
-        qb_bill.VendorRef.value = qb_vendor.Id
-        qb_bill.DocNumber = local_po.po_number
-        qb_bill.TxnDate = local_po.order_date.isoformat()
-        if local_po.expected_delivery_date:
-            qb_bill.DueDate = local_po.expected_delivery_date.isoformat()
-            
-        if local_po.notes:
-            qb_bill.PrivateNote = local_po.notes
-            
-        if local_po.branch:
-            qb_dept = self.sync_branch(local_po.branch)
-            if qb_dept:
-                qb_bill.DepartmentRef = Ref()
-                qb_bill.DepartmentRef.value = qb_dept.Id
-                
-        qb_bill.Line = []
-        mapping_service = None
-        try:
-            from .mapping_services import get_account_mapping_service
-            mapping_service = get_account_mapping_service()
-        except Exception:
-            mapping_service = None
+        from apps.billing.models import Bill
 
-        for item in local_po.items.all():
-            line = DetailLine()
-            line.Amount = float(item.total)
-            line.Description = item.part.name if item.part_id else "PO Item"
+        linked_bill = (
+            Bill.objects.filter(purchase_order=local_po)
+            .exclude(status='void')
+            .order_by('-id')
+            .first()
+        )
+        if linked_bill:
+            return self.sync_vendor_bill(linked_bill)
 
-            is_inventory_line = bool(item.part_id)
-            account_id = None
-            if mapping_service:
-                account_id = mapping_service.resolve_bill_line_account_id(
-                    is_inventory_line=is_inventory_line,
-                )
-
-            if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
-                line.DetailType = "AccountBasedExpenseLineDetail"
-                expense_detail = AccountBasedExpenseLineDetail()
-                expense_detail.AccountRef = Ref()
-                expense_detail.AccountRef.value = account_id
-                line.AccountBasedExpenseLineDetail = expense_detail
-            else:
-                line.DetailType = "ItemBasedExpenseLineDetail"
-                exp_item = ItemBasedExpenseLineDetail()
-                exp_item.Qty = float(item.quantity)
-                exp_item.UnitPrice = float(item.unit_cost)
-                line.ItemBasedExpenseLineDetail = exp_item
-            
-            qb_bill.Line.append(line)
-            
-        try:
-            self._save_qb(qb_bill, client)
-            QBOMapping.objects.update_or_create(
-                content_type=ContentType.objects.get_for_model(local_po),
-                object_id=local_po.id,
-                defaults={
-                    'qbo_id': qb_bill.Id,
-                    'qbo_sync_token': qb_bill.SyncToken,
-                    'status': 'synced',
-                    'error_message': ''
-                }
-            )
-            return qb_bill
-        except Exception as e:
-            logger.error(f"QBO PO Sync Error: {e}")
-            QBOMapping.objects.update_or_create(
-                content_type=ContentType.objects.get_for_model(local_po),
-                object_id=local_po.id,
-                defaults={
-                    'status': 'failed',
-                    'error_message': str(e)
-                }
-            )
-            return None
+        logger.info(
+            'Skipping QBO sync for PO %s — create the vendor bill from this PO to push AP to QuickBooks.',
+            local_po.po_number,
+        )
+        return None
 
     def sync_vendor_bill(self, local_bill):
         """Sync a local AP Bill to QBO as a Bill."""
@@ -1298,17 +1496,31 @@ class QuickBooksService:
             logger.error('Cannot sync vendor bill %s: Supplier sync failed.', local_bill.bill_number)
             return None
 
+        notes = (local_bill.notes or '').strip()
+        if local_bill.purchase_order_id:
+            po_line = f'SVR PO: {local_bill.purchase_order.po_number}'
+            notes = f'{notes}\n{po_line}'.strip() if notes else po_line
+
         try:
+            qb_bill, load_error = self._resolve_vendor_bill_qbo_bill(
+                local_bill,
+                doc_number=local_bill.bill_number,
+            )
+            if load_error:
+                self._fail_qbo_mapping(local_bill, load_error)
+                return None
+
             return self._sync_qbo_bill_document(
                 local_bill,
                 qb_vendor=qb_vendor,
                 doc_number=local_bill.bill_number,
                 txn_date=local_bill.bill_date,
                 due_date=local_bill.due_date,
-                notes=local_bill.notes,
+                notes=notes or None,
                 branch=local_bill.branch,
                 line_items=local_bill.line_items.all(),
                 inventory_relation='inventory_item',
+                qb_bill=qb_bill,
             )
         except Exception as exc:
             logger.error('QBO Vendor Bill Sync Error: %s', exc)
@@ -1338,17 +1550,14 @@ class QuickBooksService:
             )
             return None
 
-        mapping = QBOMapping.objects.filter(
-            content_type=ContentType.objects.get_for_model(local_vendor_credit),
-            object_id=local_vendor_credit.id,
-        ).first()
-
-        qb_vendor_credit = QBVendorCredit()
-        if mapping and mapping.qbo_id:
-            try:
-                qb_vendor_credit = QBVendorCredit.get(int(mapping.qbo_id), qb=client)
-            except Exception:
-                qb_vendor_credit = QBVendorCredit()
+        qb_vendor_credit, _is_new, load_error = self._load_qbo_entity(
+            QBVendorCredit,
+            local_vendor_credit,
+            doc_number=local_vendor_credit.credit_number,
+        )
+        if load_error:
+            self._update_qbo_mapping(local_vendor_credit, None, error=load_error)
+            return None
 
         qb_vendor_credit.VendorRef = Ref()
         qb_vendor_credit.VendorRef.value = qb_vendor.Id
@@ -1437,6 +1646,8 @@ class QuickBooksService:
                 else:
                     # New vendor in QBO with no local match — create it locally
                     try:
+                        from .sync_context import suppress_outbound_qbo_signals
+
                         # Build a unique supplier_code from the vendor name
                         base_code = slugify(vendor.DisplayName or vendor.CompanyName or f"QBO-{vendor.Id}")[:45].upper().replace('-', '')
                         supplier_code = base_code[:50]
@@ -1446,20 +1657,21 @@ class QuickBooksService:
                             supplier_code = f"{base_code[:50 - len(suffix)]}{suffix}"
                             counter += 1
 
-                        local_supplier = Supplier.objects.create(
-                            name=vendor.CompanyName or vendor.DisplayName or f"QBO Vendor {vendor.Id}",
-                            supplier_code=supplier_code,
-                            email=vendor.PrimaryEmailAddr.Address if vendor.PrimaryEmailAddr else '',
-                            phone=vendor.PrimaryPhone.FreeFormNumber if vendor.PrimaryPhone else '',
-                        )
+                        with suppress_outbound_qbo_signals():
+                            local_supplier = Supplier.objects.create(
+                                name=vendor.CompanyName or vendor.DisplayName or f"QBO Vendor {vendor.Id}",
+                                supplier_code=supplier_code,
+                                email=vendor.PrimaryEmailAddr.Address if vendor.PrimaryEmailAddr else '',
+                                phone=vendor.PrimaryPhone.FreeFormNumber if vendor.PrimaryPhone else '',
+                            )
 
-                        QBOMapping.objects.create(
-                            content_type=supplier_ct,
-                            object_id=local_supplier.id,
-                            qbo_id=str(vendor.Id),
-                            qbo_sync_token=vendor.SyncToken or '',
-                            status='synced',
-                        )
+                            QBOMapping.objects.create(
+                                content_type=supplier_ct,
+                                object_id=local_supplier.id,
+                                qbo_id=str(vendor.Id),
+                                qbo_sync_token=vendor.SyncToken or '',
+                                status='synced',
+                            )
                         log.records_created += 1
                         logger.info(f"Created local Supplier '{local_supplier.name}' from QBO Vendor {vendor.Id}")
                     except Exception as create_err:
@@ -1528,28 +1740,42 @@ class QuickBooksService:
                     qbo_total = Decimal(str(qb_inv.TotalAmt or 0))
                     qbo_paid = qbo_total - qbo_balance
 
-                    # Conflict resolution: if local shows MORE paid than QBO,
-                    # local data wins (payment may not have synced to QBO yet).
-                    # If QBO shows MORE paid, QBO wins (payment confirmed externally).
+                    from .invoice_sync_helpers import should_apply_qbo_payment_pull
+
                     if local_invoice.amount_paid != qbo_paid:
-                        if qbo_paid > local_invoice.amount_paid:
-                            # QBO has more payment info — trust QBO
+                        if should_apply_qbo_payment_pull(
+                            local_invoice,
+                            qbo_total=qbo_total,
+                            qbo_paid=qbo_paid,
+                            qbo_balance=qbo_balance,
+                        ):
                             local_invoice.amount_paid = qbo_paid
                             local_invoice.amount_due = qbo_balance
                             updated = True
                             logger.info(
-                                f"Conflict resolved (QBO wins): Invoice {local_invoice.invoice_number} "
-                                f"local_paid={local_invoice.amount_paid} qbo_paid={qbo_paid}"
+                                'Updated payment amounts from QBO for invoice %s '
+                                '(paid=%s due=%s)',
+                                local_invoice.invoice_number,
+                                qbo_paid,
+                                qbo_balance,
                             )
                         else:
-                            # Local is ahead of QBO — keep local, just update sync meta
                             logger.debug(
-                                f"Conflict resolved (local wins): Invoice {local_invoice.invoice_number} "
-                                f"local_paid={local_invoice.amount_paid} qbo_paid={qbo_paid}"
+                                'Conflict resolved (local wins): Invoice %s '
+                                'local_paid=%s qbo_paid=%s',
+                                local_invoice.invoice_number,
+                                local_invoice.amount_paid,
+                                qbo_paid,
                             )
 
-                    # Update status if QBO shows as fully paid
-                    if qbo_balance == 0 and local_invoice.status not in ('paid', 'void', 'refunded'):
+                    # Update status if QBO shows as fully paid and totals align
+                    from .invoice_sync_helpers import invoice_totals_aligned
+
+                    if (
+                        qbo_balance == 0
+                        and local_invoice.status not in ('paid', 'void', 'refunded')
+                        and invoice_totals_aligned(local_invoice.total, qbo_total)
+                    ):
                         local_invoice.status = 'paid'
                         updated = True
 

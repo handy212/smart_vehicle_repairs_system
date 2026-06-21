@@ -328,16 +328,16 @@ DJANGO_PID=$!
 sleep 3
 
 # Start Next.js development server
-echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
-cd "$FRONTEND_DIR"
-NEXT_DEV_ARGS=(dev --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-if [ "${USE_TURBOPACK:-0}" = "1" ]; then
-    NEXT_DEV_ARGS=(dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-else
-    NEXT_DEV_ARGS=(dev --webpack --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-fi
-NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next "${NEXT_DEV_ARGS[@]}" > /tmp/nextjs-dev.log 2>&1 &
-NEXTJS_PID=$!
+# echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
+# cd "$FRONTEND_DIR"
+# NEXT_DEV_ARGS=(dev --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+# if [ "${USE_TURBOPACK:-0}" = "1" ]; then
+#     NEXT_DEV_ARGS=(dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+# else
+#     NEXT_DEV_ARGS=(dev --webpack --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+# fi
+# NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next "${NEXT_DEV_ARGS[@]}" > /tmp/nextjs-dev.log 2>&1 &
+# NEXTJS_PID=$!
 
 # Start Celery Worker
 echo -e "${GREEN}Starting Celery Worker...${NC}"

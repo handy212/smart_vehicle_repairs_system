@@ -159,6 +159,8 @@ export interface Part {
   minimum_stock: number;
   maximum_stock?: number;
   unit: string;
+  item_type?: "inventory" | "non_inventory" | "service";
+  inventory_start_date?: string | null;
   cost_price?: string;
   selling_price?: string;
   markup_percentage?: string;
@@ -382,6 +384,7 @@ export const inventoryApi = {
     needs_reorder?: boolean;
     is_active?: boolean;
     branch?: number;
+    item_type?: string;
     ordering?: string;
   }): Promise<PartListResponse> => {
     const response = await apiClient.get("/inventory/parts/", { params });

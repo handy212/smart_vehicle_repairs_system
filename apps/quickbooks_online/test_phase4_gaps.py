@@ -143,11 +143,8 @@ class Phase4PaymentHelperTests(TestCase):
         invoice_a = self._invoice()
         invoice_b = self._invoice()
         payment = self._payment(invoice_a, amount=Decimal('100.00'))
-        PaymentAllocation.objects.create(
-            payment=payment,
-            invoice=invoice_a,
+        PaymentAllocation.objects.filter(payment=payment, invoice=invoice_a).update(
             amount=Decimal('60.00'),
-            allocated_by=self.admin,
         )
         PaymentAllocation.objects.create(
             payment=payment,
@@ -287,20 +284,25 @@ class Phase4PartSyncTests(TestCase):
             refresh_token_expires_at=timezone.now() + timedelta(days=1),
         )
 
+    @patch('apps.quickbooks_online.account_requirements.validate_inventory_part_account_ids', return_value=None)
     @patch.object(QuickBooksService, 'get_client')
     @patch.object(QuickBooksService, '_save_qb')
     @patch('apps.quickbooks_online.item_sync.QBItem')
     @patch('apps.quickbooks_online.item_sync.Ref')
-    def test_sync_part_creates_qbo_mapping(self, mock_ref, mock_qb_item_cls, mock_save, mock_client):
+    def test_sync_part_creates_qbo_mapping(
+        self, mock_ref, mock_qb_item_cls, mock_save, mock_client, _mock_validate
+    ):
         mock_client.return_value = MagicMock()
         income_ref = MagicMock()
         expense_ref = MagicMock()
-        mock_ref.side_effect = [income_ref, expense_ref]
+        asset_ref = MagicMock()
+        mock_ref.side_effect = [income_ref, expense_ref, asset_ref]
         qb_item = MagicMock()
-        qb_item.Id = 'ITEM-42'
+        qb_item.Id = '42'
         qb_item.SyncToken = '0'
         mock_qb_item_cls.return_value = qb_item
-        mock_save.side_effect = lambda obj, _client: setattr(obj, 'Id', 'ITEM-42') or setattr(
+        mock_qb_item_cls.__name__ = 'Item'
+        mock_save.side_effect = lambda obj, _client: setattr(obj, 'Id', '42') or setattr(
             obj, 'SyncToken', '0'
         )
 
@@ -309,7 +311,8 @@ class Phase4PartSyncTests(TestCase):
         mock_mapping.resolve_control_account_qbo_id.side_effect = lambda key: {
             'sales_revenue_account': 'INC-1',
             'default_expense_account': 'EXP-1',
-            'cost_of_goods_sold_account': None,
+            'cost_of_goods_sold_account': 'COGS-1',
+            'inventory_asset_account': 'ASSET-1',
         }.get(key)
         with patch.object(service, '_get_mapping_service', return_value=mock_mapping):
             result = service.sync_part(self.part)
@@ -319,14 +322,106 @@ class Phase4PartSyncTests(TestCase):
             content_type=ContentType.objects.get_for_model(self.part),
             object_id=self.part.id,
         )
-        self.assertEqual(mapping.qbo_id, 'ITEM-42')
+        self.assertEqual(mapping.qbo_id, '42')
         self.assertEqual(mapping.status, 'synced')
-        self.assertEqual(qb_item.Type, 'NonInventory')
+        self.assertEqual(qb_item.Type, 'Inventory')
         self.assertEqual(qb_item.Sku, 'OIL-001')
         self.assertEqual(qb_item.IncomeAccountRef, income_ref)
         self.assertEqual(qb_item.ExpenseAccountRef, expense_ref)
+        self.assertEqual(qb_item.AssetAccountRef, asset_ref)
         self.assertEqual(income_ref.value, 'INC-1')
-        self.assertEqual(expense_ref.value, 'EXP-1')
+        self.assertEqual(expense_ref.value, 'COGS-1')
+        self.assertEqual(asset_ref.value, 'ASSET-1')
+        self.assertEqual(qb_item.QtyOnHand, 0.0)
+        self.assertTrue(qb_item.TrackQtyOnHand)
+
+    @patch('apps.quickbooks_online.account_requirements.validate_inventory_part_account_ids', return_value=None)
+    @patch.object(QuickBooksService, 'get_client')
+    @patch.object(QuickBooksService, '_save_qb')
+    @patch('apps.quickbooks_online.item_sync.QBItem')
+    @patch('apps.quickbooks_online.item_sync.Ref')
+    def test_sync_part_converts_non_inventory_qbo_item(
+        self, mock_ref, mock_qb_item_cls, mock_save, mock_client, _mock_validate
+    ):
+        mock_client.return_value = MagicMock()
+        income_ref = MagicMock()
+        expense_ref = MagicMock()
+        asset_ref = MagicMock()
+        mock_ref.side_effect = [income_ref, expense_ref, asset_ref]
+
+        existing_qb_item = MagicMock()
+        existing_qb_item.Id = '99'
+        existing_qb_item.SyncToken = '2'
+        existing_qb_item.Type = 'NonInventory'
+        mock_qb_item_cls.get.return_value = existing_qb_item
+        mock_qb_item_cls.__name__ = 'Item'
+        mock_save.side_effect = lambda obj, _client: obj
+
+        QBOMapping.objects.create(
+            content_type=ContentType.objects.get_for_model(self.part),
+            object_id=self.part.id,
+            qbo_id='99',
+            status='synced',
+        )
+
+        service = QuickBooksService()
+        mock_mapping = MagicMock()
+        mock_mapping.resolve_control_account_qbo_id.side_effect = lambda key: {
+            'sales_revenue_account': 'INC-1',
+            'cost_of_goods_sold_account': 'COGS-1',
+            'inventory_asset_account': 'ASSET-1',
+        }.get(key)
+        with patch.object(service, '_get_mapping_service', return_value=mock_mapping):
+            result = service.sync_part(self.part)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(existing_qb_item.Type, 'Inventory')
+        self.assertTrue(existing_qb_item.TrackQtyOnHand)
+        self.assertIsNotNone(existing_qb_item.InvStartDate)
+        self.assertEqual(
+            existing_qb_item.InvStartDate,
+            timezone.now().date().isoformat(),
+        )
+
+    @patch('apps.quickbooks_online.account_requirements.validate_inventory_part_account_ids', return_value=None)
+    @patch.object(QuickBooksService, 'get_client')
+    @patch.object(QuickBooksService, '_save_qb')
+    @patch('apps.quickbooks_online.item_sync.QBItem')
+    @patch('apps.quickbooks_online.item_sync.Ref')
+    def test_sync_part_skips_inv_start_date_when_already_inventory(
+        self, mock_ref, mock_qb_item_cls, mock_save, mock_client, _mock_validate
+    ):
+        mock_client.return_value = MagicMock()
+        mock_ref.side_effect = [MagicMock(), MagicMock(), MagicMock()]
+
+        existing_qb_item = MagicMock()
+        existing_qb_item.Id = '100'
+        existing_qb_item.SyncToken = '3'
+        existing_qb_item.Type = 'Inventory'
+        existing_qb_item.InvStartDate = '2024-01-01'
+        mock_qb_item_cls.get.return_value = existing_qb_item
+        mock_qb_item_cls.__name__ = 'Item'
+        mock_save.side_effect = lambda obj, _client: obj
+
+        QBOMapping.objects.create(
+            content_type=ContentType.objects.get_for_model(self.part),
+            object_id=self.part.id,
+            qbo_id='100',
+            status='synced',
+        )
+
+        service = QuickBooksService()
+        mock_mapping = MagicMock()
+        mock_mapping.resolve_control_account_qbo_id.side_effect = lambda key: {
+            'sales_revenue_account': 'INC-1',
+            'cost_of_goods_sold_account': 'COGS-1',
+            'inventory_asset_account': 'ASSET-1',
+        }.get(key)
+        with patch.object(service, '_get_mapping_service', return_value=mock_mapping):
+            result = service.sync_part(self.part)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(existing_qb_item.InvStartDate, '2024-01-01')
 
     @patch.object(QuickBooksService, 'get_client')
     @patch('apps.quickbooks_online.item_sync.QBItem')

@@ -16,11 +16,12 @@ from .tasks import (
     task_sync_credit_note_to_qbo,
     task_sync_vendor_bill_to_qbo,
     task_sync_vendor_credit_to_qbo,
-    task_sync_part_to_qbo,
     task_resync_payments_for_invoice,
 )
 from .sync_policy import is_outbound_eligible, INVOICE_QBO_SYNC_STATUSES
+from .sync_context import outbound_signals_suppressed
 from .payment_helpers import _is_proforma_numbered_invoice
+from .task_dispatch import schedule_entity_sync, schedule_part_sync
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,44 +30,41 @@ logger = logging.getLogger(__name__)
 def _auto_sync_enabled():
     return getattr(settings, 'QUICKBOOKS_AUTO_SYNC_ENABLED', True)
 
+
+def _skip_signal():
+    return not _auto_sync_enabled() or outbound_signals_suppressed()
+
 @receiver(post_save, sender=Customer)
 def sync_customer_on_save(sender, instance, created, **kwargs):
-    """
-    Trigger QBO sync when a Customer is saved.
-    """
-    if not _auto_sync_enabled():
+    """Trigger QBO sync when a Customer is saved."""
+    if _skip_signal():
         return
     if not is_outbound_eligible('customer', instance):
         return
-        
-    logger.info(f"Triggering QBO sync for Customer {instance.id}")
-    task_sync_customer_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Customer {instance.id}")
+    schedule_entity_sync('customer', instance.id, task=task_sync_customer_to_qbo)
 
 
 @receiver(post_save, sender=Invoice)
 def sync_invoice_on_save(sender, instance, created, **kwargs):
-    """
-    Trigger QBO sync when a finalized Invoice is saved.
-    """
-    if not _auto_sync_enabled():
+    """Trigger QBO sync when a finalized Invoice is saved."""
+    if _skip_signal():
         return
     if not is_outbound_eligible('invoice', instance):
         return
-    logger.info(f"Triggering QBO sync for Invoice {instance.id}")
-    task_sync_invoice_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Invoice {instance.id}")
+    schedule_entity_sync('invoice', instance.id, task=task_sync_invoice_to_qbo)
 
 
 @receiver(post_save, sender=Payment)
 def sync_payment_on_save(sender, instance, created, **kwargs):
-    """
-    Trigger QBO sync when a completed Payment is saved.
-    """
-    if not _auto_sync_enabled():
+    """Trigger QBO sync when a completed Payment is saved."""
+    if _skip_signal():
         return
     if not is_outbound_eligible('payment', instance):
         return
-    logger.info(f"Triggering QBO sync for Payment {instance.id}")
-    task_sync_payment_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Payment {instance.id}")
+    schedule_entity_sync('payment', instance.id, task=task_sync_payment_to_qbo)
 
 
 @receiver(pre_save, sender=Invoice)
@@ -87,7 +85,7 @@ PROFORMA_FINALIZED_STATUSES = INVOICE_QBO_SYNC_STATUSES - {'partial'}
 @receiver(post_save, sender=Invoice)
 def resync_payments_when_invoice_finalized(sender, instance, created, **kwargs):
     """Re-sync proforma deposits to apply against the issued QBO invoice."""
-    if created:
+    if created or _skip_signal():
         return
     prev = getattr(instance, '_qbo_prev_status', None)
     leaving_deposit_stage = (
@@ -95,95 +93,90 @@ def resync_payments_when_invoice_finalized(sender, instance, created, **kwargs):
         or (prev == 'partial' and _is_proforma_numbered_invoice(instance))
     )
     if leaving_deposit_stage and instance.status in PROFORMA_FINALIZED_STATUSES:
-        task_resync_payments_for_invoice.delay(instance.id)
+        schedule_entity_sync(
+            'invoice_payments',
+            instance.id,
+            task=task_resync_payments_for_invoice,
+        )
 
 
 @receiver(post_save, sender=Part)
 def sync_part_on_save(sender, instance, created, **kwargs):
     """Push active parts catalog to QBO Items when auto-sync is enabled."""
-    if not _auto_sync_enabled():
+    if _skip_signal() or not instance.is_active:
         return
-    if not instance.is_active:
-        return
-    logger.info('Triggering QBO sync for Part %s', instance.id)
-    task_sync_part_to_qbo.delay(instance.id)
+    logger.info('Scheduling QBO sync for Part %s', instance.id)
+    schedule_part_sync(instance.id)
 
 
 @receiver(post_save, sender=Supplier)
 def sync_supplier_on_save(sender, instance, created, **kwargs):
-    """
-    Trigger QBO sync when a Supplier is saved.
-    """
-    if not _auto_sync_enabled():
+    """Trigger QBO sync when a Supplier is saved."""
+    if _skip_signal():
         return
-    logger.info(f"Triggering QBO sync for Supplier {instance.id}")
-    task_sync_supplier_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Supplier {instance.id}")
+    schedule_entity_sync('supplier', instance.id, task=task_sync_supplier_to_qbo)
 
 
 @receiver(post_save, sender=PurchaseOrder)
 def sync_purchase_order_on_save(sender, instance, created, **kwargs):
-    """
-    Trigger QBO sync when an approved PurchaseOrder is saved.
-    """
-    if not _auto_sync_enabled():
+    """Trigger QBO sync when an approved PurchaseOrder is saved."""
+    if _skip_signal():
         return
     if not is_outbound_eligible('purchase_order', instance):
         return
-    logger.info(f"Triggering QBO sync for PurchaseOrder {instance.id}")
-    task_sync_purchase_order_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for PurchaseOrder {instance.id}")
+    schedule_entity_sync('purchase_order', instance.id, task=task_sync_purchase_order_to_qbo)
 
 
 @receiver(post_save, sender=Branch)
 def sync_branch_on_save(sender, instance, created, **kwargs):
-    """
-    Trigger QBO sync when a Branch is created or updated.
-    Branches map to QBO Departments (Locations).
-    """
-    if not _auto_sync_enabled():
+    """Trigger QBO sync when a Branch is created or updated."""
+    if _skip_signal():
         return
-    logger.info(f"Triggering QBO sync for Branch {instance.id} ({instance.name})")
-    task_sync_branch_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Branch {instance.id} ({instance.name})")
+    schedule_entity_sync('branch', instance.id, task=task_sync_branch_to_qbo)
 
 
 @receiver(post_save, sender=Estimate)
 def sync_estimate_on_save(sender, instance, created, **kwargs):
     """Trigger QBO sync when an estimate is sent or approved."""
-    if not _auto_sync_enabled():
+    if _skip_signal():
         return
     if not is_outbound_eligible('estimate', instance):
         return
-    logger.info(f"Triggering QBO sync for Estimate {instance.id}")
-    task_sync_estimate_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Estimate {instance.id}")
+    schedule_entity_sync('estimate', instance.id, task=task_sync_estimate_to_qbo)
 
 
 @receiver(post_save, sender=CreditNote)
 def sync_credit_note_on_save(sender, instance, created, **kwargs):
     """Trigger QBO sync when a credit note is issued."""
-    if not _auto_sync_enabled():
+    if _skip_signal():
         return
     if not is_outbound_eligible('credit_note', instance):
         return
-    logger.info(f"Triggering QBO sync for CreditNote {instance.id}")
-    task_sync_credit_note_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for CreditNote {instance.id}")
+    schedule_entity_sync('credit_note', instance.id, task=task_sync_credit_note_to_qbo)
 
 
 @receiver(post_save, sender=Bill)
 def sync_vendor_bill_on_save(sender, instance, created, **kwargs):
     """Trigger QBO sync when a vendor bill is open or paid."""
-    if not _auto_sync_enabled():
+    if _skip_signal():
         return
     if not is_outbound_eligible('vendor_bill', instance):
         return
-    logger.info(f"Triggering QBO sync for Bill {instance.id}")
-    task_sync_vendor_bill_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for Bill {instance.id}")
+    schedule_entity_sync('vendor_bill', instance.id, task=task_sync_vendor_bill_to_qbo)
 
 
 @receiver(post_save, sender=VendorCredit)
 def sync_vendor_credit_on_save(sender, instance, created, **kwargs):
     """Trigger QBO sync when a vendor credit is issued."""
-    if not _auto_sync_enabled():
+    if _skip_signal():
         return
     if not is_outbound_eligible('vendor_credit', instance):
         return
-    logger.info(f"Triggering QBO sync for VendorCredit {instance.id}")
-    task_sync_vendor_credit_to_qbo.delay(instance.id)
+    logger.info(f"Scheduling QBO sync for VendorCredit {instance.id}")
+    schedule_entity_sync('vendor_credit', instance.id, task=task_sync_vendor_credit_to_qbo)

@@ -117,15 +117,15 @@ class VendorBillOutboundApiTests(APITestCase):
         )
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
-    @patch('apps.quickbooks_online.tasks.task_sync_vendor_bill_to_qbo.delay')
-    def test_outbound_sync_queues_vendor_bill(self, mock_delay, _mock_sdk):
+    @patch('apps.quickbooks_online.task_dispatch.schedule_entity_sync')
+    def test_outbound_sync_queues_vendor_bill(self, mock_schedule, _mock_sdk):
         response = self.client.post(
             '/api/quickbooks/sync-outbound/',
             {'entity_type': 'vendor_bill', 'object_id': self.bill.id},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_delay.assert_called_once_with(self.bill.id)
+        mock_schedule.assert_called_once()
 
 
 class VendorBillSerializerQboTests(APITestCase):

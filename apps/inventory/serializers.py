@@ -125,7 +125,7 @@ class PartListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'part_number', 'barcode', 'name', 'category', 'category_name', 'category_path',
             'manufacturer', 'quantity_in_stock', 'available_quantity', 'quantity_reserved',
-            'quantity_on_order', 'reorder_point', 'unit', 'cost_price', 'selling_price',
+            'quantity_on_order', 'reorder_point', 'unit', 'item_type', 'cost_price', 'selling_price',
             'markup_percentage', 'profit_margin', 'bin_location', 'preferred_supplier',
             'preferred_supplier_name', 'is_low_stock', 'is_out_of_stock', 'needs_reorder',
             'image', 'is_active', 'created_at'
@@ -263,12 +263,21 @@ class PartBarcodeSerializerMixin(serializers.Serializer):
 
 
 class PartCreateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializer):
+    initial_quantity = serializers.IntegerField(
+        required=False, default=0, min_value=0, write_only=True,
+        help_text='Opening on-hand quantity for the active branch (inventory items only).',
+    )
+
     class Meta:
         model = Part
-        exclude = ['created_by', 'last_cost_update', 'last_price_update', 
+        exclude = ['created_by', 'last_cost_update', 'last_price_update',
                    'created_at', 'updated_at', 'quantity_reserved', 'quantity_on_order']
 
     def create(self, validated_data):
+        from apps.inventory.models import StockItem
+        from apps.inventory.services import InventoryService
+
+        initial_quantity = validated_data.pop('initial_quantity', 0)
         validated_data['created_by'] = self.context['request'].user
         branch = validated_data.get('branch')
         if not branch:
@@ -277,7 +286,36 @@ class PartCreateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializ
                 branch = resolve_branch(request)
         if branch:
             validated_data['branch'] = branch
-        return super().create(validated_data)
+
+        part = super().create(validated_data)
+
+        if part.tracks_inventory() and branch:
+            stock_defaults = {
+                'reorder_point': part.reorder_point,
+                'reorder_quantity': part.reorder_quantity,
+                'minimum_stock': part.minimum_stock,
+                'maximum_stock': part.maximum_stock,
+                'bin_location': part.bin_location or '',
+                'shelf': part.shelf or '',
+            }
+            if initial_quantity > 0:
+                InventoryService.record_transaction(
+                    part,
+                    initial_quantity,
+                    'adjustment',
+                    self.context['request'].user,
+                    branch=branch,
+                    reason='Opening stock',
+                    notes='Initial quantity on part create',
+                )
+            else:
+                StockItem.objects.get_or_create(
+                    part=part,
+                    branch=branch,
+                    defaults=stock_defaults,
+                )
+
+        return part
 
 
 class PartUpdateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializer):
@@ -286,6 +324,7 @@ class PartUpdateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializ
         fields = [
             'part_number', 'name', 'description', 'category', 'branch', 'manufacturer',
             'manufacturer_part_number', 'barcode', 'suppliers', 'preferred_supplier',
+            'item_type', 'inventory_start_date',
             'reorder_point', 'reorder_quantity', 'minimum_stock', 'maximum_stock',
             'unit', 'cost_price', 'selling_price', 'markup_percentage', 'list_price',
             'bin_location', 'shelf', 'weight', 'dimensions', 'compatible_makes',

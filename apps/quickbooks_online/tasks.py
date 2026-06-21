@@ -79,25 +79,9 @@ def task_sync_vendor_credit_to_qbo(vendor_credit_id):
 @shared_task
 def task_sync_branch_to_qbo(branch_id):
     """Background task to sync a Branch to QBO as a Department (Location)."""
-    from django.apps import apps
-    from .services import QuickBooksService
-
-    try:
-        Branch = apps.get_model('branches', 'Branch')
-        branch = Branch.objects.get(id=branch_id)
-
-        service = QuickBooksService()
-        qb_dept = service.sync_branch(branch)
-
-        if qb_dept:
-            logger.info(f"Successfully synced Branch {branch_id} to QBO Department ID {qb_dept.Id}")
-        else:
-            logger.warning(f"Failed to sync Branch {branch_id} to QBO (no result returned)")
-
-    except Branch.DoesNotExist:
-        logger.error(f"Branch {branch_id} does not exist.")
-    except Exception as e:
-        logger.error(f"Error syncing Branch {branch_id} to QBO: {e}", exc_info=True)
+    run_outbound_entity_sync(
+        'branch', branch_id, 'branches', 'Branch', 'sync_branch',
+    )
 
 
 @shared_task
@@ -111,14 +95,16 @@ def task_sync_part_to_qbo(part_id):
 @shared_task
 def task_resync_payments_for_invoice(invoice_id):
     """Re-push completed payments after a proforma invoice is finalized."""
-    from apps.billing.models import Invoice, Payment
+    from apps.billing.models import Invoice
+
+    from .task_dispatch import schedule_entity_sync
 
     try:
         invoice = Invoice.objects.get(pk=invoice_id)
     except Invoice.DoesNotExist:
         return
     for payment_id in invoice.payments.filter(status='completed').values_list('id', flat=True):
-        task_sync_payment_to_qbo.delay(payment_id)
+        schedule_entity_sync('payment', payment_id, task=task_sync_payment_to_qbo)
 
 
 @shared_task

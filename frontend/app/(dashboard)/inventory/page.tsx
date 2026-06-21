@@ -15,8 +15,8 @@ import { exportPartsForImport } from "@/lib/utils/export-templates";
 import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
-import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
@@ -38,6 +38,8 @@ import { getMediaUrl } from "@/lib/api/utils";
 import { getUserFacingError } from "@/lib/api/errors";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
+import { productServiceTypeLabel } from "@/components/inventory/product-service-types";
+import { CreateProductServiceDrawer } from "@/components/inventory/CreateProductServiceDrawer";
 
 // Stats Grid Component
 const StatsGrid = ({ stats, loading }: { stats: any; loading: boolean }) => {
@@ -88,8 +90,18 @@ const CurrencyValue = ({ value }: { value: any }) => {
 };
 
 export default function InventoryPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading products…</div>}>
+      <InventoryPageContent />
+    </Suspense>
+  );
+}
+
+function InventoryPageContent() {
   const { formatCurrency } = useCurrency();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const queryClient = useQueryClient();
@@ -106,6 +118,13 @@ export default function InventoryPage() {
     setSortConfig((current) => toggleSortConfig(current, field));
   };
 
+  useEffect(() => {
+    if (searchParams.get("createProduct") === "1") {
+      setShowCreateDrawer(true);
+      router.replace("/inventory", { scroll: false });
+    }
+  }, [searchParams, router]);
+
   // Fetch Lists
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery<PartListResponse>({
     queryKey: ["inventory", searchQuery, advancedFilters, sortConfig],
@@ -119,6 +138,7 @@ export default function InventoryPage() {
         out_of_stock: advancedFilters.stock_status === 'out_of_stock' ? true : undefined,
         needs_reorder: advancedFilters.stock_status === 'needs_reorder' ? true : undefined,
         branch: advancedFilters.branch ? parseInt(advancedFilters.branch) : undefined,
+        item_type: advancedFilters.item_type || undefined,
         ordering: sortOrderingParam(sortConfig) || "part_number",
       }),
     getNextPageParam: (lastPage, allPages) => {
@@ -248,18 +268,30 @@ export default function InventoryPage() {
       type: "select",
       options: branches.map(b => ({ value: String(b.id), label: b.name })),
     },
+    {
+      key: "item_type",
+      label: "Type",
+      type: "select",
+      options: [
+        { value: "inventory", label: "Inventory" },
+        { value: "non_inventory", label: "Non-inventory" },
+        { value: "service", label: "Service" },
+      ],
+    },
   ];
 
   if (error) {
     return (
-      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
-        Error loading inventory. Please try again.
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded space-y-2">
+        <p>Error loading inventory. Please try again.</p>
+        <p className="text-sm opacity-90">{getUserFacingError(error, "Unable to load products.")}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <CreateProductServiceDrawer open={showCreateDrawer} onOpenChange={setShowCreateDrawer} />
       {/* Header with Stats */}
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center pt-2">
@@ -270,7 +302,7 @@ export default function InventoryPage() {
               <span className="text-foreground font-medium">Inventory</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Inventory Parts
+              Products & services
             </h1>
           </div>
         </div>
@@ -430,12 +462,14 @@ export default function InventoryPage() {
           </DropdownMenu>
 
           <PermissionGuard permission="create_parts">
-            <Link href="/inventory/new">
-              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Part
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm"
+              onClick={() => setShowCreateDrawer(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create product/service
+            </Button>
           </PermissionGuard>
         </div>
       </div>
@@ -455,12 +489,10 @@ export default function InventoryPage() {
                   : "Get started by adding a new part to your inventory."}
               </p>
               <PermissionGuard permission="create_parts">
-                <Link href="/inventory/new">
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Part
-                  </Button>
-                </Link>
+                <Button size="sm" onClick={() => setShowCreateDrawer(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create product/service
+                </Button>
               </PermissionGuard>
             </div>
           ) : (
@@ -536,8 +568,13 @@ export default function InventoryPage() {
                         {part.part_number || "-"}
                       </TableCell>
                       <TableCell className="px-4 py-2">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-col gap-1">
                           <span className="text-sm font-medium text-foreground truncate max-w-[200px]">{part.name}</span>
+                          {part.item_type && (
+                            <Badge variant="outline" className="w-fit text-[9px] uppercase tracking-wide">
+                              {productServiceTypeLabel(part.item_type)}
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2 text-xs text-muted-foreground capitalize">

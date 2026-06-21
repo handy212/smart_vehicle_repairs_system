@@ -536,7 +536,22 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         
-        updated_count = self.get_queryset().filter(id__in=ids).update(status=new_status)
+        queryset = self.get_queryset().filter(id__in=ids)
+        estimate_ids = list(queryset.values_list('id', flat=True))
+        updated_count = queryset.update(status=new_status)
+
+        if new_status in {'sent', 'viewed', 'approved', 'declined'}:
+            from apps.quickbooks_online.sync_policy import ESTIMATE_QBO_SYNC_STATUSES
+            from apps.quickbooks_online.task_dispatch import schedule_entity_sync
+            from apps.quickbooks_online.tasks import task_sync_estimate_to_qbo
+
+            if new_status in ESTIMATE_QBO_SYNC_STATUSES:
+                for estimate_id in estimate_ids:
+                    schedule_entity_sync(
+                        'estimate',
+                        estimate_id,
+                        task=task_sync_estimate_to_qbo,
+                    )
         
         return Response({
             "message": f"Successfully updated {updated_count} estimates",
@@ -1193,16 +1208,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def unallocated_amount(self, request, pk=None):
-        """Get the unallocated amount for this payment (sum of allocation rows only)."""
+        """Get the unallocated prepayment credit remaining on this payment."""
+        from apps.billing.balance_utils import payment_allocated_total, payment_net_amount, payment_unallocated_balance
+
         payment = self.get_object()
-        allocated = payment.allocations.aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0')
-        unallocated = (payment.amount - allocated).quantize(Decimal('0.01'))
-        if unallocated < 0:
-            unallocated = Decimal('0')
+        unallocated = payment_unallocated_balance(payment)
+        allocated = payment_allocated_total(payment)
         return Response({
-            'payment_amount': str(payment.amount),
+            'payment_amount': str(payment_net_amount(payment)),
             'allocated': str(allocated),
             'unallocated': str(unallocated),
         })
@@ -2002,7 +2015,9 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
             )
         
         # Auto-allocate payment to invoices
-        remaining_amount = payment.amount
+        from apps.billing.balance_utils import payment_unallocated_balance
+
+        remaining_amount = payment_unallocated_balance(payment)
         created_allocations = []
         
         try:

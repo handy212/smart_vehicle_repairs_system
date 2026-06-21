@@ -254,7 +254,7 @@ export default function CustomersPage() {
     if (format === "xlsx") {
       exportToExcel(
         [
-          ["Name", "Email", "Phone", "Type", "Vehicles", "Status", "Balance", "Last Visit"],
+          ["Name", "Email", "Phone", "Type", "Vehicles", "Status", "Open Balance", "Last Visit"],
           ...rows.map((row) => [row.name, row.email, row.phone, row.type, row.vehicles, row.status, row.balance, row.last_visit]),
         ],
         `customers_${dateStamp}.xlsx`,
@@ -269,7 +269,7 @@ export default function CustomersPage() {
       );
     } else {
       const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const headers = ["Name", "Email", "Phone", "Type", "Vehicles", "Status", "Balance", "Last Visit"];
+      const headers = ["Name", "Email", "Phone", "Type", "Vehicles", "Status", "Open Balance", "Last Visit"];
       const widths = [140, 160, 90, 70, 55, 70, 80, 80];
       let y = 72;
 

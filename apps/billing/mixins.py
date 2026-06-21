@@ -341,6 +341,16 @@ class EstimateActionMixin:
 
         return None
 
+    def _schedule_estimate_qbo_sync(self, estimate_id: int) -> None:
+        from django.conf import settings
+
+        if not getattr(settings, 'QUICKBOOKS_AUTO_SYNC_ENABLED', True):
+            return
+        from apps.quickbooks_online.task_dispatch import schedule_entity_sync
+        from apps.quickbooks_online.tasks import task_sync_estimate_to_qbo
+
+        schedule_entity_sync('estimate', estimate_id, task=task_sync_estimate_to_qbo)
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         """Approve estimate"""
@@ -378,6 +388,8 @@ class EstimateActionMixin:
             estimate.refresh_from_db()
             if estimate.status == 'approved':
                 estimate.apply_quoted_prices_to_work_order()
+
+        self._schedule_estimate_qbo_sync(estimate.id)
         
         # Trigger notification
         try:
@@ -420,6 +432,7 @@ class EstimateActionMixin:
                     work_order.save(update_fields=['diagnosis_completed_at'])
                     work_order.transition_to('diagnosis', user=request.user)
 
+        self._schedule_estimate_qbo_sync(estimate.id)
         return Response({"message": "Estimate declined", "data": self.get_serializer(estimate).data})
 
     @action(detail=True, methods=['post'])

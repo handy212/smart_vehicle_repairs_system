@@ -5,6 +5,9 @@ from django.utils import timezone
 
 from apps.accounting.models import AccountingControl, DocumentNumberSequence
 
+# {PREFIX}-{YYYY}-{branch_code up to 10}-{seq:06} → 27 chars max (BILL prefix)
+DOCUMENT_NUMBER_MAX_LENGTH = 32
+
 
 class DocumentNumberService:
     PREFIXES = {

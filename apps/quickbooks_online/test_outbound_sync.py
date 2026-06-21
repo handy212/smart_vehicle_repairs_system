@@ -97,8 +97,8 @@ class QBOOutboundSyncApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
-    @patch('apps.quickbooks_online.tasks.task_sync_invoice_to_qbo.delay')
-    def test_outbound_sync_queues_invoice(self, mock_delay, _mock_sdk):
+    @patch('apps.quickbooks_online.task_dispatch.schedule_entity_sync')
+    def test_outbound_sync_queues_invoice(self, mock_schedule, _mock_sdk):
         response = self.client.post(
             '/api/quickbooks/sync-outbound/',
             {'entity_type': 'invoice', 'object_id': self.invoice.id},
@@ -107,11 +107,11 @@ class QBOOutboundSyncApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['queued'])
         self.assertEqual(response.data['entity_type'], 'invoice')
-        mock_delay.assert_called_once_with(self.invoice.id)
+        mock_schedule.assert_called_once_with('invoice', self.invoice.id, task=mock_schedule.call_args.kwargs['task'])
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
-    @patch('apps.quickbooks_online.tasks.task_sync_part_to_qbo.delay')
-    def test_outbound_sync_queues_part(self, mock_delay, _mock_sdk):
+    @patch('apps.quickbooks_online.task_dispatch.schedule_entity_sync')
+    def test_outbound_sync_queues_part(self, mock_schedule, _mock_sdk):
         response = self.client.post(
             '/api/quickbooks/sync-outbound/',
             {'entity_type': 'part', 'object_id': self.part.id},
@@ -120,21 +120,19 @@ class QBOOutboundSyncApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['queued'])
         self.assertEqual(response.data['entity_type'], 'part')
-        mock_delay.assert_called_once_with(self.part.id)
+        mock_schedule.assert_called_once()
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
-    @patch('apps.quickbooks_online.tasks.task_sync_supplier_to_qbo')
-    def test_outbound_sync_falls_back_to_inline_task(self, mock_task, _mock_sdk):
-        mock_task.delay.side_effect = Exception('broker unavailable')
-
+    @patch('apps.quickbooks_online.task_dispatch.schedule_entity_sync')
+    def test_outbound_sync_schedules_supplier(self, mock_schedule, _mock_sdk):
         response = self.client.post(
             '/api/quickbooks/sync-outbound/',
             {'entity_type': 'supplier', 'object_id': self.supplier.id},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.data['queued'])
-        mock_task.assert_called_once_with(self.supplier.id)
+        self.assertTrue(response.data['queued'])
+        mock_schedule.assert_called_once()
 
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
     @patch.object(QuickBooksService, 'sync_customer')

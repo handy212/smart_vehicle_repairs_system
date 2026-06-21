@@ -51,6 +51,7 @@ export interface QboMappingRow {
   qbo_item_name: string;
   status: string;
   error_message: string;
+  qbo_account_hint?: string;
 }
 
 export interface QboMappingGroup {

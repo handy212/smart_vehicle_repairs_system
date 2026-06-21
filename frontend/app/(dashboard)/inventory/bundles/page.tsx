@@ -107,7 +107,7 @@ export default function ServiceBundlesPage() {
 
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     <PermissionGuard permission="manage_inventory">
-                        <Link href="/inventory/bundles/new">
+                        <Link href="/inventory/products/new/bundle">
                             <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                                 <Plus className="w-4 h-4 mr-2" />
                                 New Bundle
@@ -216,7 +216,7 @@ export default function ServiceBundlesPage() {
                                 Service bundles make it easy to add common parts to work orders in one click.
                             </p>
                             <PermissionGuard permission="manage_inventory">
-                                <Link href="/inventory/bundles/new">
+                                <Link href="/inventory/products/new/bundle">
                                     <Button variant="outline" size="sm">
                                         <Plus className="w-3.5 h-3.5 mr-2" />
                                         Create First Bundle

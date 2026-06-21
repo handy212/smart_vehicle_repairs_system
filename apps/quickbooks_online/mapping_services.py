@@ -10,6 +10,11 @@ from .mapping_specs import (
     TAX_CODE_MAPPING_KINDS,
     all_mapping_rows,
 )
+from .account_requirements import (
+    CONTROL_ACCOUNT_QBO_HINTS,
+    INVENTORY_PART_CONTROL_REQUIREMENTS,
+    validate_control_account_for_inventory_item,
+)
 from .models import QBOAccountMapping
 
 logger = logging.getLogger(__name__)
@@ -174,6 +179,7 @@ class QBOAccountMappingService:
                 'uses_tax_code': spec.get('uses_tax_code', False),
                 'status': mapping.status if mapping else 'unmapped',
                 'error_message': mapping.error_message if mapping else '',
+                'qbo_account_hint': CONTROL_ACCOUNT_QBO_HINTS.get(spec.get('control_field') or '', ''),
             }
             rows.append(row)
             groups.setdefault(spec['group'], []).append(row)
@@ -243,6 +249,13 @@ class QBOAccountMappingService:
                 account = self._fetch_qbo_account(client, qbo_account_id)
             except Exception as exc:
                 return False, f'QBO account {qbo_account_id} was not found: {exc}'
+            if (
+                mapping_kind == MAPPING_KIND_CONTROL
+                and mapping_key in INVENTORY_PART_CONTROL_REQUIREMENTS
+            ):
+                validation_error = validate_control_account_for_inventory_item(account, mapping_key)
+                if validation_error:
+                    return False, validation_error
             defaults = {
                 'qbo_account_id': str(account.Id),
                 'qbo_account_name': account.Name or '',

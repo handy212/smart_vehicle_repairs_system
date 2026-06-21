@@ -85,7 +85,7 @@ class Estimate(models.Model):
     ]
     
     # Auto-generated estimate number
-    estimate_number = models.CharField(max_length=20, unique=True, editable=False)
+    estimate_number = models.CharField(max_length=32, unique=True, editable=False)
     
     # Branch assignment
     branch = models.ForeignKey(
@@ -739,7 +739,7 @@ class Invoice(models.Model):
     ]
     
     # Auto-generated invoice number
-    invoice_number = models.CharField(max_length=20, unique=True, editable=False)
+    invoice_number = models.CharField(max_length=32, unique=True, editable=False)
     
     # Branch assignment
     branch = models.ForeignKey(
@@ -1441,7 +1441,7 @@ class Payment(models.Model):
     ]
     
     # Auto-generated payment number
-    payment_number = models.CharField(max_length=20, unique=True, editable=False)
+    payment_number = models.CharField(max_length=32, unique=True, editable=False)
     
     # References
     invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='payments')
@@ -1588,6 +1588,9 @@ class Payment(models.Model):
         if self.processed_by_id:
             self.invoice._status_change_user = self.processed_by
         self.invoice.recalculate_amount_paid_from_collections()
+        from apps.billing.balance_utils import sync_direct_invoice_allocation
+
+        sync_direct_invoice_allocation(self)
     
     @property
     def net_amount(self):
@@ -2054,7 +2057,7 @@ class Refund(models.Model):
         super().save(*args, **kwargs)
 
 class CreditNote(models.Model):
-    credit_note_number = models.CharField(max_length=20, unique=True, editable=False)
+    credit_note_number = models.CharField(max_length=32, unique=True, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='credit_notes')
     invoice = models.ForeignKey(
         Invoice, on_delete=models.SET_NULL, null=True, blank=True, 
@@ -2621,7 +2624,7 @@ class SalesOrder(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
-    sales_order_number = models.CharField(max_length=30, unique=True, editable=False)
+    sales_order_number = models.CharField(max_length=32, unique=True, editable=False)
     branch = models.ForeignKey(
         Branch,
         on_delete=models.PROTECT,

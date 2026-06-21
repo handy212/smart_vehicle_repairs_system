@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Link2, RefreshCcw, Unlink } from "lucide-react";
-import { qboMappingsApi, type QboMappingRow } from "@/lib/api/qbo-mappings";
+import { qboMappingsApi, type QboAccountOption, type QboMappingRow } from "@/lib/api/qbo-mappings";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,47 @@ import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
 const UNMAPPED_VALUE = "__unmapped__";
+
+const INVENTORY_QBO_MAPPING_KEYS = new Set([
+  "inventory_asset_account",
+  "cost_of_goods_sold_account",
+  "sales_revenue_account",
+]);
+
+/** QBO account filters for inventory product sync mappings. */
+function accountMatchesInventoryMapping(row: QboMappingRow, account: QboAccountOption): boolean {
+  const subtype = (account.account_sub_type || "").toLowerCase();
+  const type = account.account_type || "";
+
+  switch (row.mapping_key) {
+    case "inventory_asset_account":
+      return type === "Other Current Asset" && subtype.includes("inventory");
+    case "cost_of_goods_sold_account":
+      return type === "Cost of Goods Sold" && /supplies.*material|suppliesmaterials/i.test(subtype);
+    case "sales_revenue_account":
+      return type === "Income" && /sales.*product|salesofproduct/i.test(subtype);
+    default:
+      return true;
+  }
+}
+
+function accountsForRow(row: QboMappingRow, accounts: QboAccountOption[]): QboAccountOption[] {
+  if (row.uses_item || row.uses_tax_code) {
+    return accounts;
+  }
+  if (!INVENTORY_QBO_MAPPING_KEYS.has(row.mapping_key)) {
+    return accounts;
+  }
+  const filtered = accounts.filter((account) => accountMatchesInventoryMapping(row, account));
+  const currentId = row.qbo_account_id;
+  if (currentId && !filtered.some((account) => account.id === currentId)) {
+    const current = accounts.find((account) => account.id === currentId);
+    if (current) {
+      return [current, ...filtered];
+    }
+  }
+  return filtered;
+}
 
 type DraftValue = string;
 
@@ -277,6 +318,11 @@ export function QboAccountMappingPanel() {
                               SVR account: {row.svr_account.code} — {row.svr_account.name}
                             </p>
                           )}
+                          {row.qbo_account_hint && (
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              {row.qbo_account_hint}
+                            </p>
+                          )}
                           {(row.qbo_account_name || row.qbo_item_name) && (
                             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
                               <Link2 className="w-3 h-3" />
@@ -327,15 +373,21 @@ export function QboAccountMappingPanel() {
                                         {taxCode.description ? ` — ${taxCode.description}` : ""}
                                       </SelectItem>
                                     ))
-                                  : accounts.map((account) => {
+                                  : accountsForRow(row, accounts).map((account) => {
                                     const taken =
                                       mappedAccountIds.has(account.id) &&
                                       account.id !== row.qbo_account_id;
+                                    const invalidForInventory =
+                                      INVENTORY_QBO_MAPPING_KEYS.has(row.mapping_key) &&
+                                      !accountMatchesInventoryMapping(row, account);
                                     return (
                                       <SelectItem key={account.id} value={account.id} disabled={taken}>
                                         {account.name}
-                                        {account.account_type ? ` (${account.account_type})` : ""}
+                                        {account.account_type
+                                          ? ` (${account.account_type}${account.account_sub_type ? ` / ${account.account_sub_type}` : ""})`
+                                          : ""}
                                         {taken ? " — mapped elsewhere" : ""}
+                                        {invalidForInventory ? " — wrong type for inventory" : ""}
                                       </SelectItem>
                                     );
                                   })}

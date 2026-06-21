@@ -43,7 +43,24 @@ Configure under **Admin → Integrations** and **Accounting → Controls**:
 
 ## Outbound sync (SVR → QBO)
 
-Automatic sync runs on `post_save` when `QUICKBOOKS_AUTO_SYNC_ENABLED` is true (default in production). Manual push is available on entity detail pages and via `POST /api/quickbooks/sync-outbound/`.
+Automatic sync runs on save when `QUICKBOOKS_AUTO_SYNC_ENABLED` is true (default). In development, `QUICKBOOKS_SYNC_INLINE=true` (default when `DEBUG`) runs sync in a **background thread** after the DB commit so API requests are not blocked waiting on QuickBooks. Use a Celery worker in production (`QUICKBOOKS_SYNC_INLINE=false`). Manual **Retry QBO sync** uses `inline: true` on the sync API and waits for completion.
+
+### Duplicate prevention (QBO API alignment)
+
+Intuit expects **update-in-place** using the stored QBO `Id` and latest `SyncToken`. SVR enforces this as follows:
+
+| Mechanism | Purpose |
+|-----------|---------|
+| **`QBOMapping`** | One QBO `Id` per SVR row (`unique_together` on content type + object id) |
+| **Entity resolver** | Outbound sync: GET by mapped id → query by `DocNumber` / SKU / `DisplayName` → create only when no match exists |
+| **No blind re-create** | If a mapped QBO id is missing and no natural-key match is found, sync **fails** instead of creating a duplicate document |
+| **Outbound sync lock** | Cache lock per entity prevents concurrent Celery/manual sync from double-creating |
+| **`transaction.on_commit`** | All auto-sync signals schedule work after DB commit (same pattern as parts) |
+| **Inbound vendor import** | New suppliers from QBO pull suppress outbound signals so SVR does not push a duplicate Vendor back |
+| **PDF attachments** | Uploaded only on **first** QBO create for invoices/estimates, not every update |
+| **Part debounce** | Rapid part + stock saves coalesce into one Item sync within 5 seconds |
+
+If duplicates already exist in QBO, delete or merge them in QuickBooks, then clear the failed `QBOMapping` in SVR and retry sync so the resolver can re-link by document number.
 
 ### Accounts receivable (customer documents)
 
@@ -57,32 +74,34 @@ Automatic sync runs on `post_save` when `QUICKBOOKS_AUTO_SYNC_ENABLED` is true (
 
 ### Accounts payable (vendor documents)
 
-| SVR entity | QBO object | Sync when status is |
-|------------|------------|------------------------|
-| Supplier | Vendor | Always (on save) |
-| Purchase order | Bill | Not `draft`, `pending_approval`, `rejected`, `cancelled` |
-| Vendor bill (`billing.Bill`) | Bill | Not `draft`, `pending_approval`, `rejected`, `void` |
+| SVR entity | QBO object | Sync when / notes |
+|------------|------------|-------------------|
+| Supplier | Vendor | On save |
+| **Purchase order** | — | **Not pushed to QBO.** Receive in SVR, then create the **vendor bill** from the PO. |
+| **Vendor bill** (`billing.Bill`) | Bill | Open or paid; **one QBO Bill per PO flow** — updates the existing PO bill if one was created earlier |
 | Vendor credit | Vendor Credit | `issued`, `applied` |
+
+**PO → Bill workflow:** SVR inventory receive updates stock. AP is recorded on the **vendor bill** (Billing → Bills). That bill syncs to QBO. If a QBO Bill already exists from an older PO push (`DocNumber` = PO number), the vendor bill sync **updates that same QBO Bill** instead of creating `BILL-…-000001` as a duplicate.
 
 ### Other
 
 | SVR entity | QBO object | Notes |
 |------------|------------|-------|
 | Branch | Department | Location / class tracking |
-| Part (catalog) | Item (`NonInventory`) | Active parts on save; SVR owns stock quantities |
+| Part (catalog) | Item (`Inventory`, `NonInventory`, or `Service`) | Type set per part; Inventory items sync qty on hand to QBO |
 
 ### Phase 4: items, deposits, payment allocation, attachments
 
 | Feature | Behavior |
 |---------|----------|
-| **Part → QBO Item** | Outbound push creates/updates a `NonInventory` Item (SKU = `part_number`). Invoice/estimate lines with a linked `Part` prefer the synced QBO Item over generic line-type mappings. |
-| **Inbound item metadata** | `pull_items` / webhook `item` events update mapped Part `name`, `part_number` (SKU), and `is_active` only — **never** quantities. |
+| **Part → QBO Item** | Outbound push creates/updates a QBO Item matching the part's **item type** (`Inventory`, `NonInventory`, or `Service`). Inventory parts include `QtyOnHand` (sum of branch stock), `AssetAccountRef`, COGS, and sales accounts. SKU = `part_number`. |
+| **Inbound item metadata** | `pull_items` / webhook `item` events update mapped Part name, SKU, active flag, item type, cost, and price — **not** branch-level stock (SVR remains source of truth for multi-branch qty). |
 | **Customer deposits** | Payments against **proforma** invoices push as **unapplied** QBO Payments (no `LinkedTxn`). `PrivateNote` is tagged as an SVR customer deposit. |
 | **Payment allocation** | When `PaymentAllocation` rows exist, QBO receives one `PaymentLine` per allocated invoice. Sync **fails** if any target invoice is not in QBO (no silent unapplied payments). |
 | **Invoice finalization** | When a proforma invoice moves to a finalized status, completed payments on that invoice are re-synced to apply against the QBO invoice. |
 | **PDF attachments** | After a successful invoice or estimate push, SVR renders the document PDF and uploads it as a QBO `Attachable` linked to the synced transaction. |
 
-**Intentionally not synced:** multi-branch stock levels, transfers, and inventory adjustments remain SVR-only (see [What is not synced](#what-is-not-synced)).
+**Intentionally not synced:** multi-branch stock breakdown, transfers between branches, and inventory adjustment audit detail remain SVR-only. QBO receives **total** qty on hand for Inventory-type parts only.
 
 ### Outbound logging
 
@@ -211,13 +230,14 @@ Use a **QuickBooks sandbox company** connected under **Admin → Integrations �
 
 | Step | SVR UI | What to expect |
 |------|--------|----------------|
-| 1 | **Inventory → New part** (or open existing **Inventory → [part]**) | Part saves with `part_number`, name, prices |
-| 2 | Confirm **Admin → Integrations → Account mappings** includes **Sales Revenue** and/or **Purchases / Operating Expense** control accounts mapped to QBO | Required for Part → QBO Item sync |
+| 1 | **Inventory → New part** (or open existing **Inventory → [part]**) | Set **QuickBooks item type** (Inventory / Non-inventory / Service). Inventory parts can set opening qty. |
+| 2 | Confirm **Accounting → Control Panel → QuickBooks Chart of Accounts Mapping** includes **Sales Revenue** (Income → Sales of Product Income), **Cost of Goods Sold** (COGS → Supplies and Materials), and **Inventory Asset** (Other Current Asset → Inventory) for Inventory parts | Required for Part → QBO Item sync; wrong account types are rejected before push |
 | 3 | Part detail header | **QBO: synced** badge (or **failed** with error text) |
 | 3 | Click **Sync QBO** | Toast success; badge updates after refresh |
-| 4 | Create/send an **invoice** with a line linked to that part | Line should use the synced QBO Item (not only generic line-type mapping) |
+| 4 | Adjust stock or receive a PO | Inventory-type parts re-sync **total qty on hand** to QBO when auto-sync is enabled |
+| 5 | Create/send an **invoice** with a line linked to that part | Line should use the synced QBO Item (not only generic line-type mapping) |
 
-**Verify in QBO:** **Sales → Products and services** (or **Gear → Products and services**). Find Item named like `PARTNO — Part Name`, type **NonInventory**, SKU = SVR `part_number`. Qty on hand is **not** synced from SVR.
+**Verify in QBO:** **Sales → Products and services**. Find Item named like `PARTNO — Part Name`. **Inventory** parts show qty on hand matching SVR total stock across branches; **Non-inventory** and **Service** parts do not track qty in QBO.
 
 ---
 

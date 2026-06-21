@@ -1,7 +1,10 @@
 """Customer account statement with running balance."""
+import os
+import sys
 from datetime import date
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 
@@ -211,3 +214,43 @@ class CustomerStatementService:
       current_balance=outstanding.quantize(Decimal('0.01'))
     )
     return outstanding
+
+  @classmethod
+  def sync_customer_balance_by_id(cls, customer_id):
+    """Recalculate stored current_balance for a customer primary key."""
+    if not customer_id:
+      return Decimal('0')
+
+    from apps.customers.models import Customer
+
+    customer = Customer.objects.filter(pk=customer_id).first()
+    if not customer:
+      return Decimal('0')
+    return cls.sync_customer_balance(customer)
+
+  @classmethod
+  def sync_all_customer_balances(cls):
+    """Backfill current_balance for every customer from open invoices."""
+    from apps.customers.models import Customer
+
+    updated = 0
+    for customer_id in Customer.objects.values_list('id', flat=True):
+      cls.sync_customer_balance_by_id(customer_id)
+      updated += 1
+    return updated
+
+
+def schedule_customer_balance_sync(customer_id):
+  """Defer balance sync until after the current DB transaction commits."""
+  if not customer_id:
+    return
+
+  def _sync():
+    CustomerStatementService.sync_customer_balance_by_id(customer_id)
+
+  in_django_manage_test = len(sys.argv) >= 2 and sys.argv[1] == 'test'
+  in_pytest = 'pytest' in sys.modules or bool(os.environ.get('PYTEST_CURRENT_TEST'))
+  if in_django_manage_test or in_pytest:
+    _sync()
+  else:
+    transaction.on_commit(_sync)

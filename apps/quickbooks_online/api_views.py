@@ -14,7 +14,7 @@ from apps.quickbooks_online.models import QBOMapping, QBOSyncLog
 from apps.quickbooks_online.serializers import QBOSyncLogSerializer
 from apps.quickbooks_online.services import QuickBooksService
 from apps.quickbooks_online import tasks as qbo_tasks
-from apps.quickbooks_online.outbound_log import get_mapping_error, record_outbound_sync
+from apps.quickbooks_online.outbound_log import run_outbound_entity_sync
 from apps.quickbooks_online.sync_policy import outbound_eligibility_reason
 
 OUTBOUND_SYNC_ENTITIES = {
@@ -414,33 +414,13 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
             )
 
         if inline:
-            service = QuickBooksService()
-            sync_method = getattr(service, entity_config['service_method'])
-            try:
-                result = sync_method(instance)
-            except Exception as exc:
-                record_outbound_sync(entity_type, success=False, error_message=str(exc))
-                return Response(
-                    {
-                        'status': 'error',
-                        'queued': False,
-                        'entity_type': entity_type,
-                        'object_id': object_id,
-                        'detail': str(exc),
-                        **self._get_mapping_payload(instance),
-                    },
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-
-            if result:
-                record_outbound_sync(entity_type, success=True)
-            else:
-                record_outbound_sync(
-                    entity_type,
-                    success=False,
-                    error_message=get_mapping_error(instance) or 'Sync returned no result from QuickBooks.',
-                )
-
+            result = run_outbound_entity_sync(
+                entity_type,
+                object_id,
+                entity_config['app_label'],
+                entity_config['model_name'],
+                entity_config['service_method'],
+            )
             payload = {
                 'status': 'success' if result else 'failed',
                 'queued': False,
@@ -454,14 +434,11 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
             return Response(payload)
 
         task = getattr(qbo_tasks, entity_config['task_name'])
-        try:
-            task.delay(object_id)
-            queued = True
-            message = 'Outbound sync queued. Status should update shortly.'
-        except Exception:
-            task(object_id)
-            queued = False
-            message = 'Outbound sync completed directly because the background worker was unavailable.'
+        from .task_dispatch import schedule_entity_sync
+
+        schedule_entity_sync(entity_type, object_id, task=task)
+        queued = True
+        message = 'Outbound sync queued. Status should update shortly.'
 
         return Response({
             'status': 'success',

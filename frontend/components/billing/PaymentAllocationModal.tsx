@@ -64,7 +64,7 @@ export function PaymentAllocationModal({
     });
 
     const outstandingInvoices = invoicesData?.results?.filter(
-        (inv) => parseFloat(inv.balance_due || inv.total || "0") > 0
+        (inv) => parseFloat(inv.amount_due || "0") > 0.01
     ) || [];
 
     // Initialize allocations from existing data
@@ -282,7 +282,7 @@ export function PaymentAllocationModal({
                                 </TableHeader>
                                 <TableBody>
                                     {outstandingInvoices.map((invoice) => {
-                                        const balanceDue = parseFloat(invoice.balance_due || invoice.total || "0");
+                                        const balanceDue = parseFloat(invoice.amount_due || "0");
                                         const currentAllocation = parseFloat(allocations[invoice.id] || "0");
                                         const isInvalid = currentAllocation > balanceDue;
 
@@ -321,7 +321,7 @@ export function PaymentAllocationModal({
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => handleAllocateAll(invoice.id, invoice.balance_due || invoice.total)}
+                                                        onClick={() => handleAllocateAll(invoice.id, invoice.amount_due || "0")}
                                                         disabled={remainingAmount <= 0}
                                                     >
                                                         Max

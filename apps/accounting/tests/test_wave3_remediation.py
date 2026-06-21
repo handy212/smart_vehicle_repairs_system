@@ -169,6 +169,31 @@ class Wave3RemediationTests(TestCase):
         year = timezone.now().year
         self.assertTrue(invoice.invoice_number.startswith(f'INV-{year}-HQ-'))
 
+    def test_invoice_number_fits_long_branch_code(self):
+        long_branch = Branch.objects.create(
+            name='Long Code Branch',
+            code='MAINBRANCH',
+            phone='555-4001',
+            address='5 Long St',
+            city='Wave',
+            state='WV',
+            zip_code='40005',
+            created_by=self.user,
+        )
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            branch=long_branch,
+            status='draft',
+            subtotal=Decimal('50.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('50.00'),
+            invoice_date=timezone.now().date(),
+            created_by=self.user,
+        )
+        year = timezone.now().year
+        self.assertEqual(invoice.invoice_number, f'INV-{year}-MAINBRANCH-000001')
+        self.assertLessEqual(len(invoice.invoice_number), 32)
+
     def test_payment_and_bill_use_document_number_service(self):
         invoice = Invoice.objects.create(
             customer=self.customer,

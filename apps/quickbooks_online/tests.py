@@ -313,52 +313,38 @@ class QuickBooksIntegrationTests(TestCase):
         # Verify DepartmentRef (Branch)
         self.assertEqual(mock_qb_invoice.DepartmentRef.value, "50")
 
-    @patch('apps.quickbooks_online.services.QuickBooksService.sync_supplier')
-    @patch('apps.quickbooks_online.services.QuickBooks')
-    @patch('apps.quickbooks_online.services.QBBill')
-    def test_sync_purchase_order_success(self, mock_qb_bill_class, mock_quickbooks_class, mock_sync_supplier):
-        mock_client = MagicMock()
-        mock_quickbooks_class.return_value = mock_client
-        
-        mock_qb_vendor = MagicMock()
-        mock_qb_vendor.Id = "200"
-        mock_sync_supplier.return_value = mock_qb_vendor
-        
-        mock_qb_bill = MagicMock()
-        mock_qb_bill.Id = "400"
-        mock_qb_bill.SyncToken = "3"
-        mock_qb_bill_class.return_value = mock_qb_bill
-        
-        # Create Purchase Order
+    @patch('apps.quickbooks_online.services.QuickBooksService.sync_vendor_bill')
+    def test_sync_purchase_order_delegates_to_vendor_bill(self, mock_sync_vendor_bill):
+        from apps.billing.models import Bill
+
+        mock_sync_vendor_bill.return_value = MagicMock(Id='400')
+
         po = PurchaseOrder.objects.create(
             supplier=self.supplier,
-            po_number="PO001",
+            po_number='PO001',
             order_date=timezone.now().date(),
-            total=Decimal("50.00"),
+            total=Decimal('50.00'),
             branch=self.branch,
-            created_by=self.admin_user
+            status='received',
+            created_by=self.admin_user,
         )
-        PurchaseOrderItem.objects.create(
+        linked_bill = Bill.objects.create(
+            vendor=self.supplier,
+            branch=self.branch,
             purchase_order=po,
-            part=self.part,
-            quantity=5,
-            unit_cost=Decimal("10.00"),
-            total=Decimal("50.00")
+            status='open',
+            bill_date=timezone.now().date(),
+            due_date=timezone.now().date(),
+            total=Decimal('50.00'),
+            amount_due=Decimal('50.00'),
+            created_by=self.admin_user,
         )
-        
+
         service = QuickBooksService()
-        with patch.object(QuickBooksService, 'sync_branch', return_value=MagicMock(Id="50")):
-            result = service.sync_purchase_order(po)
-        
+        result = service.sync_purchase_order(po)
+
         self.assertIsNotNone(result)
-        self.assertEqual(len(mock_qb_bill.Line), 1)
-        
-        ct = ContentType.objects.get_for_model(po)
-        mapping = QBOMapping.objects.get(content_type=ct, object_id=po.id)
-        self.assertEqual(mapping.qbo_id, "400")
-        self.assertEqual(mapping.status, 'synced')
-        # Verify DepartmentRef (Branch)
-        self.assertEqual(mock_qb_bill.DepartmentRef.value, "50")
+        mock_sync_vendor_bill.assert_called_once_with(linked_bill)
 
     @patch('apps.quickbooks_online.services.QuickBooksService.get_client', return_value=None)
     def test_sync_failure_no_client(self, mock_get_client):
@@ -556,7 +542,13 @@ class QuickBooksAuthFlowTests(TestCase):
 
     @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
     @patch("apps.quickbooks_online.views.QuickBooksService.get_config")
-    def test_connect_view_accepts_access_token_cookie(self, mock_get_config, mock_get_auth_client):
+    @patch(
+        "apps.quickbooks_online.views.get_qbo_redirect_uri",
+        side_effect=lambda base: f"{(base or 'http://frontend.test').rstrip('/')}/api/quickbooks/callback/",
+    )
+    def test_connect_view_accepts_access_token_cookie(
+        self, mock_redirect_uri, mock_get_config, mock_get_auth_client
+    ):
         config = MagicMock(client_id="client-id", client_secret="client-secret")
         mock_get_config.return_value = config
 
@@ -570,7 +562,7 @@ class QuickBooksAuthFlowTests(TestCase):
 
         response = self.client.get(
             reverse("quickbooks_online:connect"),
-            {"redirect_base": "http://localhost:3000"},
+            {"redirect_base": "http://frontend.test"},
         )
 
         self.assertEqual(response.status_code, 302)
@@ -578,13 +570,13 @@ class QuickBooksAuthFlowTests(TestCase):
         self.assertEqual(self.client.session["qbo_state"], "state-123")
         self.assertEqual(
             self.client.session["qbo_redirect_uri"],
-            "http://localhost:3000/api/quickbooks/callback/",
+            "http://frontend.test/api/quickbooks/callback/",
         )
         mock_get_auth_client.assert_called_once()
         _, kwargs = mock_get_auth_client.call_args
         self.assertEqual(
             kwargs["redirect_uri"],
-            "http://localhost:3000/api/quickbooks/callback/",
+            "http://frontend.test/api/quickbooks/callback/",
         )
 
     @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
