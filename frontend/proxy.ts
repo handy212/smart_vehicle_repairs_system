@@ -136,13 +136,15 @@ export function proxy(request: NextRequest) {
         request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
 
     if (!isAccessTokenUsable(token)) {
+        // Expired access cookie is still refreshable via /api/auth/refresh (HttpOnly
+        // refresh cookie). Only redirect when there is no session cookie at all.
+        if (token) {
+            return NextResponse.next();
+        }
+
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('next', pathname);
-        const response = NextResponse.redirect(loginUrl);
-        if (token) {
-            response.cookies.delete('access_token');
-        }
-        return response;
+        return NextResponse.redirect(loginUrl);
     }
 
     return NextResponse.next();

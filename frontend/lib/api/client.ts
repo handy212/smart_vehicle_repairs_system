@@ -219,7 +219,7 @@ apiClient.interceptors.response.use(
             return Promise.reject(refreshError);
           }
 
-          processQueue(null, null);
+          processQueue(null, true);
 
           return apiClient(originalRequest);
         } catch (refreshError) {

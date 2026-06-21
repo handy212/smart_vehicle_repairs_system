@@ -1,8 +1,10 @@
 import logging
 from urllib.parse import urlparse
-from django.utils import timezone
 from datetime import timedelta
+
 from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from apps.accounts.settings_utils import get_site_url
 from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
@@ -242,38 +244,72 @@ class QuickBooksService:
             if not auth_client or QuickBooks is None:
                 logger.warning(_quickbooks_sdk_message())
                 return None
-            
+
+            # Seed AuthClient before QuickBooks init — otherwise the SDK calls
+            # auth_client.refresh() on every get_client() when access_token is None.
+            auth_client.access_token = token.access_token
+            auth_client.refresh_token = token.refresh_token
+
             client = QuickBooks(
                 auth_client=auth_client,
                 refresh_token=token.refresh_token,
                 company_id=config.realm_id,
             )
-            
-            client.access_token = token.access_token
-            
+
+            if cls._auth_client_tokens_changed(token, auth_client):
+                cls._persist_token_from_auth_client(token, auth_client)
+
+            client.access_token = auth_client.access_token
+
             return client
         except Exception as e:
             logger.error(f"Error initializing QBO client: {e}")
             return None
 
+    @staticmethod
+    def _auth_client_tokens_changed(token, auth_client) -> bool:
+        return (
+            auth_client.access_token != token.access_token
+            or auth_client.refresh_token != token.refresh_token
+        )
+
+    @classmethod
+    def _persist_token_from_auth_client(cls, token, auth_client):
+        token.access_token = auth_client.access_token
+        token.refresh_token = auth_client.refresh_token
+        token.expires_at = timezone.now() + timedelta(seconds=auth_client.expires_in)
+        token.refresh_token_expires_at = timezone.now() + timedelta(
+            seconds=auth_client.x_refresh_token_expires_in
+        )
+        token.save()
+
     @classmethod
     def refresh_token(cls, config, token):
-        """Refresh the OAuth2 token."""
+        """Refresh the OAuth2 token (serialized per token row to avoid invalid_grant races)."""
         try:
-            auth_client = cls.get_auth_client(config)
-            auth_client.refresh(token.refresh_token)
-            
-            token.access_token = auth_client.access_token
-            token.refresh_token = auth_client.refresh_token
-            token.expires_at = timezone.now() + timedelta(seconds=auth_client.expires_in)
-            token.refresh_token_expires_at = timezone.now() + timedelta(seconds=auth_client.x_refresh_token_expires_in)
-            token.save()
-            
+            with transaction.atomic():
+                locked = QBOToken.objects.select_for_update().get(pk=token.pk)
+                if locked.expires_at > timezone.now() + timedelta(minutes=5):
+                    token.access_token = locked.access_token
+                    token.refresh_token = locked.refresh_token
+                    token.expires_at = locked.expires_at
+                    token.refresh_token_expires_at = locked.refresh_token_expires_at
+                    return True
+
+                auth_client = cls.get_auth_client(config)
+                auth_client.refresh(locked.refresh_token)
+                cls._persist_token_from_auth_client(locked, auth_client)
+
+                token.access_token = locked.access_token
+                token.refresh_token = locked.refresh_token
+                token.expires_at = locked.expires_at
+                token.refresh_token_expires_at = locked.refresh_token_expires_at
+
             logger.info("Successfully refreshed QBO token.")
             return True
         except Exception as e:
             logger.error(f"Failed to refresh QBO token: {e}")
-            if "invalid_grant" in str(e):
+            if "invalid_grant" in str(e).lower():
                 config.is_active = False
                 config.save()
             return False
