@@ -57,6 +57,15 @@ class WorkOrderStateTransitionMixin:
             if can_transition:
                 field_errors = wo.validate_before_status_change(new_status)
                 if not field_errors:
+                    from ..workflow_bridge import evaluate_workflow_guards_for_transition
+                    guard_error = evaluate_workflow_guards_for_transition(wo, new_status, user=request.user)
+                    if guard_error:
+                        errors.append({
+                            'work_order_id': wo.id,
+                            'work_order_number': wo.work_order_number,
+                            'error': guard_error,
+                        })
+                        continue
                     try:
                         wo.transition_to(new_status, request.user)
                         updated.append(wo.id)
@@ -386,21 +395,31 @@ class WorkOrderStateTransitionMixin:
 
         if work_order.is_diagnosis_paused:
             diagnosis = work_order.get_linked_diagnosis()
-            if not diagnosis.resume(user=request.user):
-                return Response(
-                    {'error': 'Unable to resume diagnosis.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            work_order.refresh_from_db()
-            serializer = self.get_serializer(work_order)
-            response_data = serializer.data
-            response_data['workflow_message'] = 'Diagnosis resumed.'
-            return Response(response_data)
+            if diagnosis:
+                if not diagnosis.resume(user=request.user):
+                    return Response(
+                        {'error': 'Unable to resume diagnosis.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                work_order.refresh_from_db()
+                serializer = self.get_serializer(work_order)
+                response_data = serializer.data
+                response_data['workflow_message'] = 'Diagnosis resumed.'
+                return Response(response_data)
 
         try:
-            work_order.transition_to('in_progress', user=request.user)
+            resume_status = work_order.paused_from_status or 'in_progress'
+            allowed = work_order.VALID_TRANSITIONS.get('paused', [])
+            if resume_status not in allowed:
+                resume_status = 'in_progress'
+            work_order.transition_to(resume_status, user=request.user)
             serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
+            response_data = serializer.data
+            if resume_status != 'in_progress':
+                response_data['workflow_message'] = (
+                    f'Work order resumed to {work_order.get_status_display()}.'
+                )
+            return Response(response_data)
         except ValidationError as e:
             return Response(
                 {'error': str(e)},

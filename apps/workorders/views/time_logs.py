@@ -56,8 +56,9 @@ from ..filters import WorkOrderFilter, TechnicianTimeLogFilter
 
 from ..mixins.document_mixins import WorkOrderDocumentMixin
 from ..mixins.transition_mixins import WorkOrderStateTransitionMixin
+from ..queryset_mixins import WorkOrderChildQuerysetMixin
 
-class TechnicianTimeLogViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
+class TechnicianTimeLogViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Technician Time Log management"""
     queryset = TechnicianTimeLog.objects.all().select_related('work_order', 'task', 'technician')
 

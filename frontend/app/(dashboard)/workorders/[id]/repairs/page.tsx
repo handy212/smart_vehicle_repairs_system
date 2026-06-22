@@ -150,6 +150,7 @@ export default function RepairsPage() {
   const [pauseReason, setPauseReason] = useState("");
   const [noteText, setNoteText] = useState("");
   const [completionNotes, setCompletionNotes] = useState("");
+  const [completionHours, setCompletionHours] = useState("");
   const [returnReason, setReturnReason] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoType, setPhotoType] = useState<"before" | "during" | "after" | "part" | "other">("during");
@@ -265,11 +266,12 @@ export default function RepairsPage() {
   });
 
   const completeTaskMutation = useMutation({
-    mutationFn: ({ taskId, data }: { taskId: number; data?: { notes?: string } }) =>
+    mutationFn: ({ taskId, data }: { taskId: number; data?: { notes?: string; actual_hours?: number } }) =>
       workOrderTasksApi.complete(taskId, data),
     onSuccess: () => {
       setCompleteTask(null);
       setCompletionNotes("");
+      setCompletionHours("");
       refreshRepairs();
       toast({ title: "Task completed" });
     },
@@ -417,10 +419,20 @@ export default function RepairsPage() {
 
   const submitTaskCompletion = () => {
     if (!completeTask) return;
+    const hours = completionHours.trim() ? Number(completionHours) : undefined;
+    if (completionHours.trim() && (!Number.isFinite(hours) || (hours ?? 0) <= 0)) {
+      toast({
+        title: "Invalid hours",
+        description: "Enter a positive number of actual labor hours, or leave blank to use clocked time.",
+        variant: "destructive",
+      });
+      return;
+    }
     completeTaskMutation.mutate({
       taskId: completeTask.id,
       data: {
         notes: completionNotes.trim() || undefined,
+        actual_hours: hours,
       },
     });
   };
@@ -652,6 +664,13 @@ export default function RepairsPage() {
                       onComplete={() => {
                         setCompleteTask(task);
                         setCompletionNotes(task.detailed_notes || "");
+                        setCompletionHours(
+                          task.actual_hours && task.actual_hours > 0
+                            ? String(task.actual_hours)
+                            : task.calculated_hours && task.calculated_hours > 0
+                              ? String(task.calculated_hours)
+                              : ""
+                        );
                       }}
                       isBusy={startTaskMutation.isPending || completeTaskMutation.isPending}
                     />
@@ -823,6 +842,21 @@ export default function RepairsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm font-medium text-foreground">{completeTask?.description}</p>
+            <div className="space-y-2">
+              <Label htmlFor="completion-hours">Actual hours</Label>
+              <Input
+                id="completion-hours"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={completionHours}
+                onChange={(event) => setCompletionHours(event.target.value)}
+                placeholder="Leave blank to use clocked time"
+              />
+              <p className="text-xs text-muted-foreground">
+                Required when the task was not started with a time clock. Otherwise optional.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="completion-notes">Completion notes</Label>
               <Textarea id="completion-notes" value={completionNotes} onChange={(event) => setCompletionNotes(event.target.value)} rows={4} />

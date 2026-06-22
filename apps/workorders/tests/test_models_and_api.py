@@ -469,7 +469,6 @@ class WorkOrderModelTest(TestCase):
         workorder.refresh_from_db()
         self.assertIsNone(workorder.paused_from_status)
 
-
     def test_flag_additional_work_resets_approval(self):
         workorder = WorkOrder.objects.create(
             customer=self.customer,
@@ -488,6 +487,69 @@ class WorkOrderModelTest(TestCase):
         self.assertEqual(workorder.status, 'additional_work_found')
         self.assertFalse(workorder.approved_by_customer)
         self.assertTrue(workorder.requires_approval)
+
+
+class WorkOrderResumeAPITest(APITestCase):
+    """Resume action should restore paused_from_status, not always in_progress."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email='resume-admin@test.com',
+            username='resume-admin',
+            password='admin123',
+            role='admin',
+            is_staff=True,
+        )
+        self.customer = baker.make(Customer)
+        self.vehicle = baker.make(Vehicle, owner=self.customer)
+
+    def test_resume_api_returns_to_paused_from_diagnosis(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='paused',
+            paused_from_status='diagnosis',
+            customer_concerns='Engine noise',
+            odometer_in=50000,
+        )
+        baker.make(
+            Diagnosis,
+            work_order=workorder,
+            technician=self.admin_user,
+            status='paused',
+        )
+
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(f'/api/workorders/work-orders/{workorder.id}/resume/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        workorder.refresh_from_db()
+        self.assertEqual(workorder.status, 'diagnosis')
+        self.assertIsNone(workorder.paused_from_status)
+        self.assertEqual(response.data.get('workflow_message'), 'Diagnosis resumed.')
+
+    def test_resume_api_defaults_to_in_progress_when_paused_from_missing(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='paused',
+            paused_from_status=None,
+            customer_concerns='Brake noise',
+            odometer_in=50000,
+            approved_by_customer=True,
+            requires_approval=True,
+            primary_technician=self.admin_user,
+        )
+
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(f'/api/workorders/work-orders/{workorder.id}/resume/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        workorder.refresh_from_db()
+        self.assertEqual(workorder.status, 'in_progress')
+        self.assertIsNone(workorder.paused_from_status)
 
 
 class ServiceTaskModelTest(TestCase):

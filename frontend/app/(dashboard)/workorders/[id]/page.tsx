@@ -36,6 +36,7 @@ import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommen
 import { inspectionsApi } from "@/lib/api/inspections";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import { getUserFacingError } from "@/lib/api/errors";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 
 const VALID_TABS = new Set([
   "overview",
@@ -65,6 +66,7 @@ export default function WorkOrderDetailPage() {
   const { addRecentItem } = useRecentItems();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const { data: workOrder, isLoading, error, refetch } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -268,10 +270,14 @@ export default function WorkOrderDetailPage() {
             documentNumber: workOrder.work_order_number,
           })
         }
-        onDelete={() => {
-          if (confirm(`Delete work order "${workOrder.work_order_number}"?`)) {
-            deleteMutation.mutate();
-          }
+        onDelete={async () => {
+          const ok = await confirm({
+            title: "Delete work order?",
+            description: `Delete "${workOrder.work_order_number}"? This cannot be undone.`,
+            confirmLabel: "Delete",
+            variant: "destructive",
+          });
+          if (ok) deleteMutation.mutate();
         }}
         canDelete={canDeleteWorkOrder}
         isDeleting={deleteMutation.isPending}
@@ -335,6 +341,7 @@ export default function WorkOrderDetailPage() {
             tasks={tasks}
             onRefresh={refreshData}
             workOrder={workOrder}
+            isLoading={tasksLoading}
           />
         </TabsContent>
 
@@ -375,6 +382,7 @@ export default function WorkOrderDetailPage() {
         workOrderId={workOrderId}
         onPrintRecommendations={handlePrintRecommendations}
       />
+      <ConfirmDialog />
     </div>
   );
 }

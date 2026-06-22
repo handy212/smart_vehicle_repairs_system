@@ -238,11 +238,20 @@ export default function WorkOrdersPage() {
       const response = await workordersApi.bulkUpdateStatus(ids, status);
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
       bulkSelection.clearSelection();
       setShowStatusDialog(false);
-      toast({ title: "Success", description: `Status updated for ${bulkSelection.selectedCount} work orders` });
+      if (response.error_count > 0) {
+        const firstError = response.errors[0];
+        toast({
+          title: "Partial update",
+          description: `Updated ${response.updated_count}. ${response.error_count} failed${firstError ? `: ${firstError.work_order_number} — ${firstError.error}` : ""}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Success", description: `Status updated for ${response.updated_count} work order(s)` });
+      }
     },
 
     onError: (error: any) => {
@@ -863,22 +872,14 @@ export default function WorkOrdersPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="inspection">Initial Inspection</SelectItem>
-                <SelectItem value="intake">Intake</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="diagnosis">Diagnosis</SelectItem>
-                <SelectItem value="awaiting_approval">Awaiting Customer Approval</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="additional_work_found">Additional Work Found</SelectItem>
                 <SelectItem value="paused">Paused</SelectItem>
-                <SelectItem value="quality_check">Quality Check</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="invoiced">Invoiced</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
+                <SelectItem value="in_progress">In Progress (resume)</SelectItem>
+                <SelectItem value="discontinued_pending_bill">Discontinued (pending bill)</SelectItem>
               </SelectContent>
             </Select>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Only common administrative transitions are listed. Invalid moves are rejected per work order with an error summary.
+            </p>
           </div>
           <DialogFooter>
             <Button

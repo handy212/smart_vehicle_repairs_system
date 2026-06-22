@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from apps.accounts.models import User
+from apps.accounts.permission_models import Permission, Role
 from apps.branches.models import Branch
 from apps.inventory.models import Part, PurchaseOrder, Supplier, PartCategory, StockItem
 from apps.workorders.models import WorkOrder, WorkOrderPart, ServiceTask
@@ -34,12 +35,6 @@ class POIntegrationTests(TestCase):
             password='testpassword',
             role='admin',
         )
-        self.technician = User.objects.create_user(
-            username='techuser',
-            email='tech@example.com',
-            password='testpassword',
-            role='technician',
-        )
         self.client.force_authenticate(user=self.user)
         
         # Create Branch
@@ -49,6 +44,27 @@ class POIntegrationTests(TestCase):
             created_by=self.user
         )
         self.user.managed_branches.add(self.branch)
+
+        self.technician = User.objects.create_user(
+            username='techuser',
+            email='tech@example.com',
+            password='testpassword',
+            role='technician',
+            branch=self.branch,
+        )
+        view_own_wo, _ = Permission.objects.update_or_create(
+            code='view_own_workorders',
+            defaults={
+                'name': 'View Own Work Orders',
+                'category': 'workorders',
+                'is_active': True,
+            },
+        )
+        tech_role, _ = Role.objects.update_or_create(
+            code='technician',
+            defaults={'name': 'Technician', 'is_active': True},
+        )
+        tech_role.permissions.add(view_own_wo)
         
         # Create Customer User
         self.customer_user = User.objects.create_user(
@@ -111,7 +127,8 @@ class POIntegrationTests(TestCase):
             approved_at=datetime.datetime.now(datetime.timezone.utc),
             odometer_in=10000,
             customer_concerns="Need oil change",
-            created_by=self.user
+            created_by=self.user,
+            primary_technician=self.technician,
         )
         
         # Create WorkOrderPart (Part Request)

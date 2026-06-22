@@ -16,8 +16,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, CheckCircle2, Clock, Play, Workflow, User, Info, Wrench, MoreVertical, type LucideIcon } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Play, Workflow, User, Info, Wrench, MoreVertical, ExternalLink, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
+import Link from "next/link";
 import AddTaskDialog from "./AddTaskDialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
@@ -26,6 +27,7 @@ interface TasksTabProps {
   workOrderId: number;
   tasks: ServiceTask[];
   onRefresh: () => void;
+  isLoading?: boolean;
   workOrder?: {
     status?: string;
     branch?: number | { id: number; name?: string } | null;
@@ -44,13 +46,15 @@ type TaskCompletionError = {
 };
 type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "secondary" | "outline";
 
-export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workOrder }: TasksTabProps) {
+export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoading = false, workOrder }: TasksTabProps) {
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [completeTask, setCompleteTask] = useState<ServiceTask | null>(null);
   const [completeHours, setCompleteHours] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
+  const repairExecutionStatuses = ["approved", "in_progress", "paused", "additional_work_found", "quality_check"];
+  const useRepairWorkspace = repairExecutionStatuses.includes(workOrder?.status || "");
 
   // Separate workflow tasks from manual tasks and sort them
   const { workflowTasks, manualTasks } = useMemo(() => {
@@ -292,7 +296,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           </div>
         </TableCell>
         <TableCell className="w-[64px] py-3 text-right">
-          {!isWorkflow ? (
+          {!isWorkflow && !useRepairWorkspace ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open task actions">
@@ -325,6 +329,8 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : !isWorkflow && useRepairWorkspace ? (
+            <span className="text-[10px] text-muted-foreground">Repair workspace</span>
           ) : (
             <div className="flex justify-end">
               {task.status === "completed" ? (
@@ -401,13 +407,28 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 {manualTasks.length > 0 ? `${manualTasks.length} ${manualTasks.length === 1 ? "task" : "tasks"} added manually` : "No manual service tasks yet"}
               </p>
             </div>
-            <Button size="sm" onClick={() => setShowAddDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Task
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {useRepairWorkspace && (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`/workorders/${workOrderId}/repairs`}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Repair workspace
+                  </Link>
+                </Button>
+              )}
+              <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={useRepairWorkspace}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Task
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            {manualTasks.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-10">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <p className="mt-3 text-sm text-muted-foreground">Loading tasks…</p>
+              </div>
+            ) : manualTasks.length === 0 && !useRepairWorkspace ? (
               <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-10 text-center">
                 <Wrench className="mb-3 h-10 w-10 text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">No manual tasks yet</p>
@@ -420,6 +441,16 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 </Button>
               </div>
             ) : (
+              <>
+              {useRepairWorkspace && (
+                <div className="mb-3 rounded-md border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+                  Start, complete, and track repair tasks in the{" "}
+                  <Link href={`/workorders/${workOrderId}/repairs`} className="font-medium text-primary hover:underline">
+                    repair workspace
+                  </Link>
+                  . This tab is a read-only summary while repairs are active.
+                </div>
+              )}
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -438,6 +469,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 </TableBody>
               </Table>
               </div>
+              </>
             )}
           </CardContent>
         </Card>

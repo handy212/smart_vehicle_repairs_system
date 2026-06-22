@@ -440,6 +440,53 @@ export default function WorkOrderOverviewTab({
 
         {/* Right rail */}
         <div className="space-y-4 lg:w-72">
+          {(invoiceSummary?.id || canCreateInvoice) && (
+            <Card className="border-primary/15 shadow-sm">
+              <CardHeader className="px-4 py-3">
+                <CardTitle className="text-sm font-semibold">Billing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 px-4 pb-4 pt-0">
+                {invoiceSummary?.id ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/billing/invoices/${invoiceSummary.id}`}
+                        className="font-mono text-sm font-semibold text-primary hover:underline"
+                      >
+                        {invoiceSummary.invoice_number}
+                      </Link>
+                      {invoicePayment && (
+                        <Badge variant={invoicePayment.badgeVariant} className="text-[10px]">
+                          {invoicePayment.paymentLabel}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Total {formatCurrency(parseFloat(invoiceSummary.total || "0"))}
+                      {invoiceSummary.amount_due != null && parseFloat(invoiceSummary.amount_due) > 0.01 ? (
+                        <> · Due {formatCurrency(parseFloat(invoiceSummary.amount_due))}</>
+                      ) : null}
+                    </p>
+                    <Button asChild size="sm" className="w-full">
+                      <Link href={`/billing/invoices/${invoiceSummary.id}`}>View invoice</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      No invoice linked yet. Create one when repair work is ready to bill.
+                    </p>
+                    {canCreateInvoice && (
+                      <Button asChild size="sm" className="w-full">
+                        <Link href={`/billing/invoices/new?work_order=${wo.id}`}>Create invoice</Link>
+                      </Button>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
               <CardTitle className="text-sm font-semibold">Financial</CardTitle>

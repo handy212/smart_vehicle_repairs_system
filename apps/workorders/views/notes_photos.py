@@ -56,8 +56,9 @@ from ..filters import WorkOrderFilter, TechnicianTimeLogFilter
 
 from ..mixins.document_mixins import WorkOrderDocumentMixin
 from ..mixins.transition_mixins import WorkOrderStateTransitionMixin
+from ..queryset_mixins import WorkOrderChildQuerysetMixin
 
-class WorkOrderNoteViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
+class WorkOrderNoteViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Note management"""
     queryset = WorkOrderNote.objects.all().select_related('work_order', 'created_by')
 
@@ -76,7 +77,7 @@ class WorkOrderNoteViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
         return WorkOrderNoteSerializer
 
 
-class WorkOrderPhotoViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
+class WorkOrderPhotoViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Photo management"""
     queryset = WorkOrderPhoto.objects.all().select_related('work_order', 'taken_by')
     filter_backends = [DjangoFilterBackend]

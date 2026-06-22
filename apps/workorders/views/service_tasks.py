@@ -56,8 +56,9 @@ from ..filters import WorkOrderFilter, TechnicianTimeLogFilter
 
 from ..mixins.document_mixins import WorkOrderDocumentMixin
 from ..mixins.transition_mixins import WorkOrderStateTransitionMixin
+from ..queryset_mixins import WorkOrderChildQuerysetMixin
 
-class ServiceTaskViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
+class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Service Task management"""
     queryset = ServiceTask.objects.all().select_related('work_order', 'assigned_to').prefetch_related('time_logs')
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]

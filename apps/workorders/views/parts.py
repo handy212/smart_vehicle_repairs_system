@@ -57,7 +57,9 @@ from ..filters import WorkOrderFilter, TechnicianTimeLogFilter
 from ..mixins.document_mixins import WorkOrderDocumentMixin
 from ..mixins.transition_mixins import WorkOrderStateTransitionMixin
 
-class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
+from ..queryset_mixins import WorkOrderChildQuerysetMixin
+
+class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Work Order Part management"""
     queryset = WorkOrderPart.objects.all().select_related('work_order', 'task', 'installed_by')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -152,38 +154,6 @@ class WorkOrderPartViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSe
         
         serializer = self.get_serializer(part)
         return Response(serializer.data)
-
-    def get_queryset(self):
-        from apps.accounts.permissions import filter_workorders_for_user
-        from apps.workorders.models import WorkOrder
-
-        queryset = super().get_queryset()
-        user = self.request.user
-
-        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-            return queryset.filter(work_order__customer=user.customer_profile)
-
-        scoped_work_orders = filter_workorders_for_user(WorkOrder.objects.all(), user)
-        queryset = queryset.filter(work_order__in=scoped_work_orders)
-        
-        # Admin can view all if requested
-        if getattr(user, 'role', None) == 'admin' and \
-           self.request.query_params.get('all_branches', 'false').lower() == 'true':
-            return queryset
-
-        # Filter by active branch
-        active_branch = resolve_branch(self.request)
-        if active_branch:
-            queryset = queryset.filter(work_order__branch=active_branch)
-        elif getattr(user, 'role', None) != 'admin':
-             # If no active branch and not admin, return empty or default restrictions
-             # Usually resolve_branch returns *something* if logged in, but safe to handle.
-             pass
-             
-        # Explicit status filtering if provided (though filterset_fields handles this usually)
-        # But we ensure we DON'T filter by status unless asked
-        
-        return queryset
 
     @property
     def paginator(self):
