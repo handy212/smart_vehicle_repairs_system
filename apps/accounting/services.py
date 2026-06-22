@@ -517,6 +517,10 @@ class AccountingService:
         
         for line in invoice.line_items.all():
             if line.part:
+                from apps.inventory.part_catalog import part_contributes_inventory_cogs
+
+                if not part_contributes_inventory_cogs(line.part):
+                    continue
                 # Calculate cost: quantity * part.cost_price
                 qty = line.quantity or 0
                 cost = line.part.cost_price or 0
@@ -528,13 +532,14 @@ class AccountingService:
 
         if cogs_total == 0 and invoice.work_order_id:
             from apps.inventory.models import Part
+            from apps.inventory.part_catalog import part_contributes_inventory_cogs
 
             wo = invoice.work_order
             for wo_part in wo.parts.filter(status='installed'):
                 if not wo_part.inventory_part_id:
                     continue
                 part = Part.objects.filter(pk=wo_part.inventory_part_id).first()
-                if not part:
+                if not part or not part_contributes_inventory_cogs(part):
                     continue
                 qty = wo_part.quantity or Decimal('1')
                 unit_cost = part.cost_price or Decimal('0')

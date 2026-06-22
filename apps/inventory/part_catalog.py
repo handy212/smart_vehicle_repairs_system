@@ -20,3 +20,17 @@ def part_tracks_stock(part) -> bool:
     if callable(tracks):
         return bool(tracks())
     return getattr(part, 'item_type', 'inventory') == 'inventory'
+
+
+def part_contributes_inventory_cogs(part) -> bool:
+    """Only stocked catalog parts reduce inventory asset on invoice COGS."""
+    if part is None:
+        return False
+    return part_tracks_stock(part)
+
+
+def part_contributes_expense_cogs(part) -> bool:
+    """Non-inventory catalog parts may post cost to expense (not inventory asset)."""
+    if part is None:
+        return False
+    return getattr(part, 'item_type', None) == 'non_inventory'

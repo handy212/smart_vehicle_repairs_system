@@ -43,10 +43,17 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
             setIsUploadDialogOpen(false);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
+            const apiError = error as { response?: { data?: { file?: string; existing_document_id?: number } } };
+            const duplicateId = apiError.response?.data?.existing_document_id;
             toast({
-                title: "Error",
-                description: getUserFacingError(error, "Failed to upload document"),
+                title: duplicateId ? "Already attached" : "Error",
+                description: getUserFacingError(
+                    error,
+                    duplicateId
+                        ? "This file is already attached to this work order."
+                        : "Failed to upload document"
+                ),
                 variant: "destructive",
             });
         },

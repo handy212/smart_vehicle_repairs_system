@@ -11,6 +11,22 @@ from apps.workorders.models import WorkOrder, WorkOrderNote
 class WorkOrderStateTransitionMixin:
     """Mixin for work order state transitions"""
 
+    def _try_start_repair_work(self, work_order, user):
+        """
+        Convert approved recommendations to tasks and move to in_progress.
+
+        Shared by start_work and complete_diagnosis auto-start paths.
+        Returns (started, errors, tasks_created, parts_linked).
+        """
+        can_start, errors = work_order.can_start_work()
+        if not can_start:
+            return False, errors, 0, 0
+
+        tasks_created, parts_linked = work_order.convert_recommendations_to_tasks(user=user)
+        work_order.transition_to('in_progress', user=user)
+        work_order.refresh_from_db()
+        return True, [], tasks_created, parts_linked
+
     def _transition_error_response(self, work_order, new_status, error, http_status=status.HTTP_400_BAD_REQUEST):
         if hasattr(error, 'messages'):
             message = '; '.join(error.messages)
@@ -516,44 +532,36 @@ class WorkOrderStateTransitionMixin:
                 # Assign to existing tasks if they are unassigned
                 work_order.tasks.filter(assigned_to__isnull=True).update(assigned_to=request.user)
         
-        # Check if work can be started
-        can_start, errors = work_order.can_start_work()
-        if not can_start:
-            error_msg = '; '.join(errors) if errors else "Cannot start work - validation failed"
-            logger.warning(f"Start work failed for WO {work_order.work_order_number}: {errors}")
-            unavailable_parts = work_order.check_parts_availability()
-            return Response(
-                {
-                    'error': error_msg,
-                    'errors': errors,
-                    'next_step': 'Open the Parts tab and allocate or receive the parts needed for the first repair tasks.',
-                    'blocking_parts': [
-                        {
-                            'id': item['part'].id,
-                            'part_name': item['part'].part_name,
-                            'status': item['part'].get_status_display(),
-                        }
-                        for item in unavailable_parts[:10]
-                    ],
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         try:
-            # Convert approved repair recommendations to tasks before starting
-            tasks_created, parts_linked = work_order.convert_recommendations_to_tasks(user=request.user)
-            
-            # Transition to in_progress
-            work_order.transition_to('in_progress', user=request.user)
-            
-            # Refresh work order to get updated data
-            work_order.refresh_from_db()
-            
+            started, start_errors, tasks_created, parts_linked = self._try_start_repair_work(
+                work_order, request.user
+            )
+            if not started:
+                error_msg = '; '.join(start_errors) if start_errors else "Cannot start work - validation failed"
+                logger.warning(f"Start work failed for WO {work_order.work_order_number}: {start_errors}")
+                unavailable_parts = work_order.check_parts_availability()
+                return Response(
+                    {
+                        'error': error_msg,
+                        'errors': start_errors,
+                        'next_step': 'Open the Parts tab and allocate or receive the parts needed for the first repair tasks.',
+                        'blocking_parts': [
+                            {
+                                'id': item['part'].id,
+                                'part_name': item['part'].part_name,
+                                'status': item['part'].get_status_display(),
+                            }
+                            for item in unavailable_parts[:10]
+                        ],
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             serializer = self.get_serializer(work_order)
             response_data = serializer.data
             response_data['tasks_created'] = tasks_created
             response_data['parts_linked'] = parts_linked
-            
+
             return Response(response_data)
         except ValidationError as e:
             # Django ValidationError - convert to string message
@@ -771,33 +779,47 @@ class WorkOrderStateTransitionMixin:
         work_order.save()
         
         # Determine next status using transition_to
+        tasks_created = 0
+        parts_linked = 0
         try:
             if requires_approval:
                 work_order.approval_requested_at = timezone.now()
                 work_order.transition_to('awaiting_approval', user=request.user)
             else:
-                # Auto-approve if approval not required
-                work_order.approved_by_customer = True
-                work_order.approved_at = timezone.now()
-                work_order.save()
                 work_order.approve_pending_recommendations(
                     user=request.user,
                     method='supervisor_instruction',
                     notes='Approval not required for this work order.',
                 )
+                work_order.approved_by_customer = True
+                work_order.approved_at = timezone.now()
+                work_order.approval_method = 'supervisor_instruction'
+                work_order.save(
+                    update_fields=[
+                        'approved_by_customer',
+                        'approved_at',
+                        'approval_method',
+                        'updated_at',
+                    ]
+                )
+                work_order.transition_to('awaiting_approval', user=request.user)
+                work_order.approve_customer_work(
+                    user=request.user,
+                    method='supervisor_instruction',
+                    notes='Auto-approved after diagnosis completion.',
+                )
 
-                can_start, start_errors = work_order.can_start_work()
-                if can_start:
-                    work_order.transition_to('in_progress', user=request.user)
-                else:
-                    # Keep the work order in diagnosis until recommendations are quoted or tasks are added.
+                started, start_errors, tasks_created, parts_linked = self._try_start_repair_work(
+                    work_order, request.user
+                )
+                if not started:
                     WorkOrderNote.objects.create(
                         work_order=work_order,
                         note_type='internal',
                         note='Diagnosis completed and auto-approved. Repairs cannot start yet: '
                              + '; '.join(start_errors),
                         created_by=request.user,
-                        is_important=True
+                        is_important=True,
                     )
         except (ValidationError, DRFValidationError) as e:
             # Handle both Django and DRF ValidationErrors
@@ -827,7 +849,11 @@ class WorkOrderStateTransitionMixin:
         
         try:
             serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
+            response_data = serializer.data
+            if tasks_created or parts_linked:
+                response_data['tasks_created'] = tasks_created
+                response_data['parts_linked'] = parts_linked
+            return Response(response_data)
         except Exception as e:
             import logging
             import traceback

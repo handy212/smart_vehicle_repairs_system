@@ -32,6 +32,7 @@ import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { cn } from "@/lib/utils";
 import { productServiceTypeLabel } from "@/components/inventory/product-service-types";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -167,33 +168,17 @@ export default function PartDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {isQboConnected && (
-            <div className="flex items-center gap-2">
-              {part.qbo_sync_status && (
-                <Badge
-                  variant={
-                    part.qbo_sync_status === "synced"
-                      ? "success"
-                      : part.qbo_sync_status === "failed"
-                        ? "danger"
-                        : "secondary"
-                  }
-                  className="capitalize"
-                >
-                  QBO: {part.qbo_sync_status}
-                </Badge>
-              )}
-              {(part.qbo_sync_status === "failed" || part.qbo_sync_status === "pending") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleQboSync}
-                  disabled={isQboSyncing}
-                >
-                  <Database className={cn("w-4 h-4 mr-2", isQboSyncing && "animate-spin")} />
-                  {isQboSyncing ? "Syncing…" : "Retry QBO sync"}
-                </Button>
-              )}
-            </div>
+            <QboSyncBadge
+              status={part.qbo_sync_status}
+              error={part.qbo_sync_error}
+              connected={isQboConnected}
+              onRetry={
+                part.qbo_sync_status === "failed" || part.qbo_sync_status === "pending"
+                  ? handleQboSync
+                  : undefined
+              }
+              isRetrying={isQboSyncing}
+            />
           )}
           {canAdjustStock && tracksStock && (
             <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
@@ -245,14 +230,6 @@ export default function PartDetailPage() {
           )}
         </div>
       </div>
-
-      {isQboConnected && part.qbo_sync_status === "failed" && part.qbo_sync_error && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="py-3 text-sm text-destructive">
-            QuickBooks sync failed: {part.qbo_sync_error}
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (Main Info) */}

@@ -85,6 +85,8 @@ export interface WorkOrder {
     invoice_date?: string | null;
     paid_at?: string | null;
     created_at?: string | null;
+    qbo_sync_status?: string | null;
+    qbo_sync_error?: string | null;
   } | null;
   /** Prior revisions when a voided invoice was re-issued (detail API). */
   related_invoices?: Array<{

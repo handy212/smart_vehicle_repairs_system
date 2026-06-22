@@ -91,6 +91,67 @@ class WorkOrderInvoiceLineItemsTests(TestCase):
         self.assertEqual(part_lines[0].part_id, self.catalog_part.id)
         self.assertIn("installed", part_lines[0].description.lower())
 
+    def test_populate_line_items_maps_service_catalog_to_other(self):
+        service_part = Part.objects.create(
+            name="Disposal fee",
+            part_number="SVC-WO-1",
+            category=PartCategory.objects.create(name="Fees"),
+            item_type="service",
+            cost_price=Decimal("2.00"),
+            selling_price=Decimal("10.00"),
+        )
+        WorkOrderPart.objects.create(
+            work_order=self.work_order,
+            part_name="Disposal fee",
+            part_number="SVC-WO-1",
+            inventory_part=service_part,
+            quantity=Decimal("1"),
+            unit_cost=Decimal("10.00"),
+            status="installed",
+        )
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=self.work_order,
+            branch=self.branch,
+            status="draft",
+            created_by=self.manager,
+            invoice_date=timezone.now().date(),
+        )
+        invoice.populate_line_items_from_work_order()
+
+        service_lines = [line for line in invoice.line_items.all() if line.item_type == "other"]
+        self.assertEqual(len(service_lines), 1)
+        self.assertEqual(service_lines[0].part_id, service_part.id)
+
+    def test_calculate_totals_uses_installed_parts_only(self):
+        pending_part = Part.objects.create(
+            name="Pending filter",
+            part_number="PEND-1",
+            category=PartCategory.objects.get(name="Brakes"),
+            cost_price=Decimal("5.00"),
+            selling_price=Decimal("12.00"),
+        )
+        WorkOrderPart.objects.create(
+            work_order=self.work_order,
+            part_name="Pending filter",
+            inventory_part=pending_part,
+            quantity=Decimal("1"),
+            unit_cost=Decimal("12.00"),
+            status="pending",
+        )
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=self.work_order,
+            branch=self.branch,
+            status="draft",
+            created_by=self.manager,
+            invoice_date=timezone.now().date(),
+        )
+        invoice.calculate_totals_from_work_order()
+        self.assertEqual(invoice.parts_subtotal, Decimal("35.00"))
+
     def test_can_transition_to_closed_uses_primary_invoice_after_void_revision(self):
         from apps.billing.work_order_invoices import get_primary_invoice
 

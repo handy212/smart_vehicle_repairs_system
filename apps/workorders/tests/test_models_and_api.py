@@ -552,6 +552,83 @@ class WorkOrderResumeAPITest(APITestCase):
         self.assertIsNone(workorder.paused_from_status)
 
 
+class CompleteDiagnosisAutoStartAPITest(APITestCase):
+    """complete_diagnosis without approval should route through start_work pipeline."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email='diag-auto-admin@test.com',
+            username='diag-auto-admin',
+            password='admin123',
+            role='admin',
+            is_staff=True,
+        )
+        self.customer = baker.make(Customer)
+        self.vehicle = baker.make(Vehicle, owner=self.customer)
+
+    def test_complete_diagnosis_auto_start_moves_to_in_progress_with_tasks(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='diagnosis',
+            customer_concerns='Engine noise',
+            odometer_in=50000,
+            primary_technician=self.admin_user,
+            requires_approval=False,
+        )
+        baker.make(
+            ServiceTask,
+            work_order=workorder,
+            description='Inspect belts',
+            is_workflow_task=False,
+            status='pending',
+            labor_rate=Decimal('80.00'),
+            estimated_hours=Decimal('1.0'),
+        )
+
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(
+            f'/api/workorders/work-orders/{workorder.id}/complete_diagnosis/',
+            {
+                'diagnosis_notes': 'Worn serpentine belt identified.',
+                'requires_approval': False,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        workorder.refresh_from_db()
+        self.assertEqual(workorder.status, 'in_progress')
+        self.assertTrue(workorder.approved_by_customer)
+
+    def test_complete_diagnosis_without_start_blockers_stays_approved(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='diagnosis',
+            customer_concerns='Intermittent stall',
+            odometer_in=50000,
+            requires_approval=False,
+        )
+
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(
+            f'/api/workorders/work-orders/{workorder.id}/complete_diagnosis/',
+            {
+                'diagnosis_notes': 'Needs further testing before repairs.',
+                'requires_approval': False,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        workorder.refresh_from_db()
+        self.assertEqual(workorder.status, 'approved')
+        self.assertTrue(workorder.approved_by_customer)
+
+
 class ServiceTaskModelTest(TestCase):
     """Test cases for ServiceTask model."""
 

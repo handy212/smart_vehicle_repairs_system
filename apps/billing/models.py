@@ -1079,7 +1079,9 @@ class Invoice(models.Model):
             self.labor_subtotal = sum(
                 task.labor_cost for task in self.work_order.tasks.all()
             ) or Decimal('0')
-            self.parts_subtotal = self.work_order.actual_parts_cost or Decimal('0')
+            from apps.billing.work_order_invoices import installed_parts_subtotal_for_work_order
+
+            self.parts_subtotal = installed_parts_subtotal_for_work_order(self.work_order)
         
         # Sublet would come from service tasks marked as sublet (if implemented)
         # For now, set to 0
@@ -1141,6 +1143,13 @@ class Invoice(models.Model):
 
         wo = self.work_order
         order_idx = 0
+        from apps.inventory.part_catalog import billing_line_type_for_part
+
+        def part_line_item_type(part_id):
+            if not part_id:
+                return 'part'
+            part = Part.objects.filter(pk=part_id).only('item_type').first()
+            return billing_line_type_for_part(part) if part else 'part'
 
         def add_labor_from_task(task, discontinued=False):
             nonlocal order_idx
@@ -1199,7 +1208,7 @@ class Invoice(models.Model):
                 InvoiceLineItem.objects.create(
                     invoice=self,
                     order=order_idx,
-                    item_type='part',
+                    item_type=part_line_item_type(p.inventory_part_id),
                     description=desc,
                     part_id=p.inventory_part_id,
                     part_number=p.part_number or '',
@@ -1223,7 +1232,7 @@ class Invoice(models.Model):
                 InvoiceLineItem.objects.create(
                     invoice=self,
                     order=order_idx,
-                    item_type='part',
+                    item_type=part_line_item_type(p.inventory_part_id),
                     description=desc,
                     part_id=p.inventory_part_id,
                     part_number=p.part_number or '',

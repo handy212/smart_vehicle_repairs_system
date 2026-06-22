@@ -23,6 +23,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -129,26 +130,17 @@ export default function SupplierDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {isQboConnected && supplier.qbo_sync_status && (
-            <div className="flex items-center gap-2 mr-2">
-              <Badge 
-                variant={supplier.qbo_sync_status === 'synced' ? 'success' : supplier.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} 
-                className="capitalize"
-              >
-                QBO: {supplier.qbo_sync_status}
-              </Badge>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleQBOSync}
-                disabled={isSyncing}
-                className="h-9 px-3"
-              >
-                <Database className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
-                {isSyncing ? "Syncing..." : "Sync QBO"}
-              </Button>
-            </div>
-          )}
+          {isQboConnected && supplier.qbo_sync_status ? (
+            <QboSyncBadge
+              status={supplier.qbo_sync_status}
+              error={supplier.qbo_sync_error}
+              connected={isQboConnected}
+              onRetry={handleQBOSync}
+              isRetrying={isSyncing}
+              retryLabel={isSyncing ? "Syncing..." : "Sync QBO"}
+              className="mr-2"
+            />
+          ) : null}
           <Link href={`/inventory/suppliers/${id}/edit`}>
             <Button size="sm">
               <Edit className="w-4 h-4 mr-2" />
@@ -157,14 +149,6 @@ export default function SupplierDetailPage() {
           </Link>
         </div>
       </div>
-
-      {isQboConnected && supplier.qbo_sync_status === "failed" && supplier.qbo_sync_error && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="py-3 text-sm text-destructive">
-            QuickBooks sync failed: {supplier.qbo_sync_error}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

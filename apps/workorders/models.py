@@ -650,7 +650,7 @@ class WorkOrder(models.Model):
                 return False, "Diagnosis notes are required before requesting approval"
         
         if new_status == 'approved':
-            if not self.requires_approval:
+            if not self.requires_approval and not self.approved_by_customer:
                 return False, "Work order does not require approval"
         
         if new_status == 'diagnosis' and self.status == 'paused':

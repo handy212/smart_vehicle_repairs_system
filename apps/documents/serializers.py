@@ -398,6 +398,28 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
                     'asset_acquisition_request': 'Cannot attach invoice or receipt to a rejected acquisition request',
                 })
 
+        file_obj = data.get('file')
+        work_order = data.get('work_order')
+        if file_obj and work_order is not None:
+            wo_id = getattr(work_order, 'pk', work_order)
+            filename = getattr(file_obj, 'name', '') or ''
+            size = getattr(file_obj, 'size', None)
+            duplicate_qs = Document.objects.filter(
+                work_order_id=wo_id,
+                original_filename=filename,
+                status='active',
+            )
+            if size is not None:
+                duplicate_qs = duplicate_qs.filter(file_size=size)
+            duplicate = duplicate_qs.order_by('-uploaded_at').first()
+            if duplicate:
+                raise serializers.ValidationError({
+                    'file': (
+                        'A document with the same filename and size is already attached to this work order.'
+                    ),
+                    'existing_document_id': duplicate.id,
+                })
+
         return data
     
     def create(self, validated_data):

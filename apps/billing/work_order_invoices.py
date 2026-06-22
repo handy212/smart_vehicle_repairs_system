@@ -58,8 +58,21 @@ def active_invoice_exists_for_work_order(work_order: WorkOrder, *, exclude_invoi
     return qs.exists()
 
 
+def installed_parts_subtotal_for_work_order(work_order: WorkOrder | None):
+    """Sum selling price for installed parts — matches invoice line population."""
+    from decimal import Decimal
+    from django.db.models import Sum
+
+    if not work_order or not work_order.pk:
+        return Decimal('0')
+    total = work_order.parts.filter(status='installed').aggregate(
+        total=Sum('selling_price'),
+    )['total']
+    return total or Decimal('0')
+
+
 def invoice_summary_payload(invoice: Invoice, *, include_internal: bool = True) -> dict:
-    return {
+    payload = {
         'id': invoice.id,
         'invoice_number': invoice.invoice_number,
         'status': invoice.status,
@@ -75,6 +88,30 @@ def invoice_summary_payload(invoice: Invoice, *, include_internal: bool = True) 
             if include_internal
             else {}
         ),
+    }
+    payload.update(qbo_sync_fields_for(invoice))
+    return payload
+
+
+def qbo_sync_fields_for(obj) -> dict:
+    """Return QBO sync status fields when QuickBooks is connected."""
+    try:
+        from apps.quickbooks_online.services import QuickBooksService
+        from django.contrib.contenttypes.models import ContentType
+        from apps.quickbooks_online.models import QBOMapping
+    except ImportError:
+        return {}
+
+    if not QuickBooksService.is_connected():
+        return {}
+
+    mapping = QBOMapping.objects.filter(
+        content_type=ContentType.objects.get_for_model(obj),
+        object_id=obj.pk,
+    ).first()
+    return {
+        'qbo_sync_status': mapping.status if mapping else 'un-synced',
+        'qbo_sync_error': mapping.error_message if mapping else '',
     }
 
 
