@@ -69,7 +69,26 @@ class BranchModelTest(TestCase):
         
         wo_number2 = self.branch.get_next_workorder_number()
         self.assertEqual(wo_number2, 'MAIN-WO000002')
-    
+
+    def test_allocate_sequence_uses_select_for_update(self):
+        """Sequence allocation must lock the branch row."""
+        from unittest.mock import MagicMock, patch
+
+        locked_branch = Branch.objects.get(pk=self.branch.pk)
+        locked_branch.next_workorder_number = self.branch.next_workorder_number
+
+        with patch.object(Branch.objects, 'select_for_update') as mock_select:
+            mock_qs = MagicMock()
+            mock_select.return_value = mock_qs
+            mock_qs.get.return_value = locked_branch
+
+            number = self.branch.get_next_workorder_number()
+
+        mock_select.assert_called_once()
+        mock_qs.get.assert_called_once_with(pk=self.branch.pk)
+        self.assertEqual(number, 'MAIN-WO000001')
+        self.assertEqual(locked_branch.next_workorder_number, 2)
+
     def test_headquarters_enforcement(self):
         """Test that only one branch can be headquarters"""
         branch2 = Branch.objects.create(

@@ -165,14 +165,25 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_technician_assignment(self, obj):
-        return bool(obj.primary_technician_id or obj.assigned_technicians.exists())
+        if obj.primary_technician_id:
+            return True
+        annotated = getattr(obj, 'assigned_technician_count', None)
+        if annotated is not None:
+            return annotated > 0
+        return obj.assigned_technicians.exists()
     
     @extend_schema_field(OpenApiTypes.INT)
     def get_task_count(self, obj):
+        annotated = getattr(obj, 'task_count_annotated', None)
+        if annotated is not None:
+            return annotated
         return obj.tasks.count()
     
     @extend_schema_field(OpenApiTypes.INT)
     def get_parts_count(self, obj):
+        annotated = getattr(obj, 'parts_count_annotated', None)
+        if annotated is not None:
+            return annotated
         return obj.parts.count()
 
     def _get_estimate(self, obj):

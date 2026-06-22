@@ -304,11 +304,14 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
     
     def validate_file(self, value):
         """Validate file upload"""
-        # Check file size (max 50MB)
-        max_size = 50 * 1024 * 1024  # 50 MB
+        from apps.accounts.settings_utils import get_setting
+
+        max_mb = int(get_setting('max_file_size', '10') or '10')
+        max_size = max_mb * 1024 * 1024
         if value.size > max_size:
             raise serializers.ValidationError(
-                f"File size exceeds maximum allowed size of 50 MB. Your file is {value.size / (1024*1024):.1f} MB."
+                f"File size exceeds maximum allowed size of {max_mb} MB. "
+                f"Your file is {value.size / (1024*1024):.1f} MB."
             )
         
         # Check file type (basic validation)

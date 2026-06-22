@@ -44,7 +44,11 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     healthcheck:
-      disable: true
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME 2>/dev/null | grep -q OK || celery -A config inspect ping 2>/dev/null | grep -q OK"]
+      interval: 30s
+      timeout: 15s
+      start_period: 90s
+      retries: 3
 
   celerybeat:
     environment:
@@ -52,7 +56,11 @@ services:
       DATABASE_URL: postgresql://${DB_USER:-svr_user}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-svr_db}
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
     healthcheck:
-      disable: true
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
 
   nginx:
     ports:

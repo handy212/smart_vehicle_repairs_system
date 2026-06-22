@@ -77,6 +77,19 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         )),
         Prefetch('invoices', queryset=Invoice.objects.order_by('-created_at')),
     )
+    list_queryset = WorkOrder.objects.all().select_related(
+        'customer', 'customer__user', 'vehicle', 'primary_technician',
+        'service_coordinator', 'branch', 'estimate', 'diagnosis',
+    ).prefetch_related(
+        'assigned_technicians',
+        'gate_passes',
+        Prefetch('inspections', queryset=VehicleInspection.objects.order_by('-created_at')),
+        Prefetch('invoices', queryset=Invoice.objects.exclude(status='void').order_by('-created_at')),
+    ).annotate(
+        task_count_annotated=Count('tasks', distinct=True),
+        parts_count_annotated=Count('parts', distinct=True),
+        assigned_technician_count=Count('assigned_technicians', distinct=True),
+    )
     permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
@@ -191,7 +204,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     
     def get_queryset(self):
         """Filter work orders by active branch and customer profile"""
-        queryset = self._annotate_invoice_total(super().get_queryset())
+        base_queryset = self.list_queryset if self.action == 'list' else self.queryset
+        queryset = self._annotate_invoice_total(base_queryset)
         user = self.request.user
 
         # For customers, filter by their customer profile

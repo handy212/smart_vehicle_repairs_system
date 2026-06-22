@@ -279,7 +279,7 @@ class NotificationAdmin(admin.ModelAdmin):
         for notification in queryset.filter(status='failed'):
             notification.status = 'pending'
             notification.save()
-            service.send_notification(notification)
+            service.send_notification(notification, force_sync=True)
             count += 1
         self.message_user(request, f'{count} failed notifications resent')
     resend_failed.short_description = 'Resend failed notifications'
