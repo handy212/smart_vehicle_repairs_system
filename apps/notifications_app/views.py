@@ -106,7 +106,7 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
         
         # Send immediately
         service = NotificationService()
-        result = service.send_notification(notification)
+        result = service.send_notification(notification, force_sync=True)
         
         return Response({
             'notification_id': notification.id,
@@ -428,7 +428,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         service = NotificationService()
         results = []
         for notification in notifications:
-            result = service.send_notification(notification)
+            result = service.send_notification(notification, force_sync=True)
             results.append({
                 'notification_id': notification.id,
                 'recipient_id': notification.recipient.id,
@@ -461,7 +461,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         
         # Attempt to send again
         service = NotificationService()
-        result = service.send_notification(notification)
+        result = service.send_notification(notification, force_sync=True)
         
         return Response({
             'status': 'success' if result else 'failed',
@@ -835,7 +835,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                 )
                 
                 service = NotificationService()
-                success = service.send_notification(notification)
+                success = service.send_notification(notification, force_sync=True)
 
                 if not success:
                     return Response(
@@ -1033,7 +1033,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             status='pending',
             data={**notification.data, 'resent_from': notification.id},
         )
-        success = NotificationService().send_notification(resent)
+        success = NotificationService().send_notification(resent, force_sync=True)
         if not success:
             return Response({
                 'status': 'failed',

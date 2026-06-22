@@ -2,6 +2,7 @@
 Branch models for multi-branch support
 """
 from django.db import models
+from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
@@ -139,55 +140,65 @@ class Branch(models.Model):
             self.code = self.code.upper()
         
         super().save(*args, **kwargs)
+
+    def _allocate_sequence(self, counter_field: str, formatter):
+        """Atomically increment a branch counter and return the formatted number."""
+        with transaction.atomic():
+            locked = Branch.objects.select_for_update().get(pk=self.pk)
+            current = getattr(locked, counter_field)
+            setattr(locked, counter_field, current + 1)
+            locked.save(update_fields=[counter_field])
+            setattr(self, counter_field, current + 1)
+        return formatter(current)
     
     def get_next_workorder_number(self):
         """Get and increment the next work order number for this branch"""
-        current = self.next_workorder_number
-        self.next_workorder_number += 1
-        self.save(update_fields=['next_workorder_number'])
-        return f"{self.code}-WO{current:06d}"
+        return self._allocate_sequence(
+            'next_workorder_number',
+            lambda current: f"{self.code}-WO{current:06d}",
+        )
     
     def get_next_estimate_number(self):
         """Get and increment the next estimate number for this branch"""
-        current = self.next_estimate_number
-        self.next_estimate_number += 1
-        self.save(update_fields=['next_estimate_number'])
-        return f"{self.code}-EST{current:06d}"
+        return self._allocate_sequence(
+            'next_estimate_number',
+            lambda current: f"{self.code}-EST{current:06d}",
+        )
     
     def get_next_invoice_number(self):
         """Get and increment the next invoice number for this branch"""
-        current = self.next_invoice_number
-        self.next_invoice_number += 1
-        self.save(update_fields=['next_invoice_number'])
-        return f"{self.code}-INV{current:06d}"
+        return self._allocate_sequence(
+            'next_invoice_number',
+            lambda current: f"{self.code}-INV{current:06d}",
+        )
     
     def get_next_proforma_number(self):
         """Get and increment the next proforma invoice number for this branch"""
-        current = self.next_proforma_number
-        self.next_proforma_number += 1
-        self.save(update_fields=['next_proforma_number'])
-        return f"{self.code}-PRO{current:06d}"
+        return self._allocate_sequence(
+            'next_proforma_number',
+            lambda current: f"{self.code}-PRO{current:06d}",
+        )
     
     def get_next_diagnosis_number(self):
         """Get and increment the next diagnosis number for this branch"""
-        current = self.next_diagnosis_number
-        self.next_diagnosis_number += 1
-        self.save(update_fields=['next_diagnosis_number'])
-        return f"{self.code}-DGN{current:06d}"
+        return self._allocate_sequence(
+            'next_diagnosis_number',
+            lambda current: f"{self.code}-DGN{current:06d}",
+        )
     
     def get_next_inspection_number(self):
         """Get and increment the next inspection number for this branch"""
-        current = self.next_inspection_number
-        self.next_inspection_number += 1
-        self.save(update_fields=['next_inspection_number'])
-        return f"{self.code}-INS{current:06d}"
+        return self._allocate_sequence(
+            'next_inspection_number',
+            lambda current: f"{self.code}-INS{current:06d}",
+        )
     
     def get_next_gatepass_number(self):
         """Get and increment the next gate pass number for this branch"""
-        current = self.next_gatepass_number
-        self.next_gatepass_number += 1
-        self.save(update_fields=['next_gatepass_number'])
-        return f"{self.code}-GP{current:06d}"
+        return self._allocate_sequence(
+            'next_gatepass_number',
+            lambda current: f"{self.code}-GP{current:06d}",
+        )
     
     @property
     def staff_count(self):

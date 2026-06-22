@@ -6,6 +6,12 @@ from .base import *
 # Production security settings
 DEBUG = False
 
+# Integration defaults — production should use live services unless overridden.
+QUICKBOOKS_SANDBOX_ENABLED = env.bool('QUICKBOOKS_SANDBOX_ENABLED', default=False)
+QUICKBOOKS_SYNC_INLINE = env.bool('QUICKBOOKS_SYNC_INLINE', default=False)
+HUBTEL_SANDBOX = env.bool('HUBTEL_SANDBOX', default=False)
+NOTIFICATIONS_ASYNC = env.bool('NOTIFICATIONS_ASYNC', default=True)
+
 # Required: Must be set via environment variables
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')  # No default - force explicit setting
 
@@ -115,6 +121,9 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
+        'json': {
+            '()': 'config.json_logging.JsonFormatter',
+        },
     },
     'filters': {
         'skip_maintenance_mode_503': {
@@ -128,7 +137,7 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'production.log',
             'maxBytes': 1024*1024*10,  # 10 MB
             'backupCount': 5,
-            'formatter': 'verbose',
+            'formatter': 'json',
         },
         'error_file': {
             'level': 'ERROR',
@@ -136,7 +145,7 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'error.log',
             'maxBytes': 1024*1024*10,  # 10 MB
             'backupCount': 5,
-            'formatter': 'verbose',
+            'formatter': 'json',
         },
         'security_file': {
             'level': 'WARNING',
@@ -144,7 +153,7 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'security.log',
             'maxBytes': 1024*1024*10,  # 10 MB
             'backupCount': 10,
-            'formatter': 'verbose',
+            'formatter': 'json',
         },
     },
     'root': {

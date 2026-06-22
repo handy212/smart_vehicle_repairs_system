@@ -6,6 +6,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 @shared_task
+def deliver_notification(notification_id):
+    """Deliver a single notification asynchronously."""
+    from .models import Notification
+    from .services import NotificationService
+
+    try:
+        notification = Notification.objects.get(pk=notification_id)
+    except Notification.DoesNotExist:
+        logger.warning('Notification %s no longer exists; skipping delivery', notification_id)
+        return f'Notification {notification_id} not found'
+
+    NotificationService().send_notification(notification, force_sync=True)
+    return f'Delivered notification {notification_id}'
+
+@shared_task
 def process_scheduled_notifications():
     """
     Process notifications that are scheduled for delivery.
@@ -26,7 +41,7 @@ def process_scheduled_notifications():
 
         for notification in pending_notifications:
             try:
-                service.send_notification(notification)
+                service.send_notification(notification, force_sync=True)
                 logger.info(f"Processed scheduled notification {notification.id}")
             except Exception as e:
                 logger.error(f"Failed to process notification {notification.id}: {str(e)}")
@@ -191,7 +206,7 @@ def send_bulk_sms_async(recipients, message, scheduled_for=None):
                     scheduled_for=scheduled_for
                 )
                 service = NotificationService()
-                service.send_notification(notification)
+                service.send_notification(notification, force_sync=True)
             except Exception as e:
                 logger.error(f"Async bulk SMS failed for user {recipient.get('value')}: {e}")
         elif recipient.get('type') == 'phone':

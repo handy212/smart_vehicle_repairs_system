@@ -28,10 +28,15 @@ class NotificationService:
     Service for sending notifications via various channels
     """
     
-    def send_notification(self, notification):
+    def send_notification(self, notification, *, force_sync=False):
         """
         Send a notification based on its channel
         """
+        if not force_sync:
+            from .dispatch import dispatch_notification
+            if dispatch_notification(notification.id):
+                return True
+
         try:
             # Check if scheduled
             if notification.scheduled_for and notification.scheduled_for > timezone.now():
@@ -247,12 +252,26 @@ class NotificationService:
                     logger.warning(f"Hubtel SMS failed: {response}")
             
             # Fallback to Twilio (if configured)
-            # TODO: Add Twilio integration
-            # For now, if Hubtel is not available/failed and Twilio is not configured, we must FAIL.
+            from .sms_service import TwilioSMSService
+
+            twilio = TwilioSMSService()
+            if twilio.client:
+                success, result = twilio.send_sms(phone_number, message)
+                if success:
+                    notification.mark_as_sent()
+                    notification.mark_as_delivered()
+                    self._log_action(
+                        notification,
+                        'sent',
+                        f'SMS sent via Twilio to {phone_number}',
+                    )
+                    logger.info("SMS sent via Twilio to %s: %s", phone_number, result)
+                    return True
+                logger.warning("Twilio SMS failed for %s: %s", phone_number, result)
             
             error_msg = "No SMS provider available or configured"
             if is_hubtel_available():
-                error_msg = "Hubtel SMS failed and no fallback available"
+                error_msg = "Hubtel SMS failed and Twilio fallback unavailable"
                 
             logger.error(f"SMS failed to {phone_number}: {error_msg}")
             notification.mark_as_failed(error_msg)

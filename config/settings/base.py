@@ -443,7 +443,7 @@ CARAPI_SECRET = env('CARAPI_SECRET', default='')
 # QuickBooks Online Configuration
 QUICKBOOKS_CLIENT_ID = env('QUICKBOOKS_CLIENT_ID', default='')
 QUICKBOOKS_CLIENT_SECRET = env('QUICKBOOKS_CLIENT_SECRET', default='')
-QUICKBOOKS_SANDBOX_ENABLED = env.bool('QUICKBOOKS_SANDBOX_ENABLED', default=True)
+QUICKBOOKS_SANDBOX_ENABLED = env.bool('QUICKBOOKS_SANDBOX_ENABLED', default=DEBUG)
 # Push customers, invoices, parts, etc. to QBO on save (requires QBO connected).
 QUICKBOOKS_AUTO_SYNC_ENABLED = env.bool('QUICKBOOKS_AUTO_SYNC_ENABLED', default=True)
 # When True, QBO outbound sync runs in-process after save (no Celery worker required).
@@ -481,7 +481,10 @@ HUBTEL_MERCHANT_ID = env('HUBTEL_MERCHANT_ID', default='')
 HUBTEL_API_KEY = env('HUBTEL_API_KEY', default='')
 HUBTEL_API_SECRET = env('HUBTEL_API_SECRET', default='')
 HUBTEL_PAYMENT_ENABLED = env.bool('HUBTEL_PAYMENT_ENABLED', default=False)
-HUBTEL_SANDBOX = env.bool('HUBTEL_SANDBOX', default=True)
+HUBTEL_SANDBOX = env.bool('HUBTEL_SANDBOX', default=DEBUG)
+
+# Queue event-driven notification delivery via Celery (inline when DEBUG).
+NOTIFICATIONS_ASYNC = env.bool('NOTIFICATIONS_ASYNC', default=not DEBUG)
 
 # Paystack Payment Gateway Configuration (Ghana)
 PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY', default='')
