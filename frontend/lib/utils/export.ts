@@ -1,17 +1,34 @@
-import * as XLSX from "xlsx-js-style";
-import jsPDF from "jspdf";
-
 /**
  * Utility functions for exporting data.
- * Kept exportToCSV name for existing callers, but it now writes real Excel workbooks.
+ * Heavy libraries (xlsx-js-style, jspdf) are loaded on demand so list pages compile faster in dev.
  */
 
+type ExportHeader<T extends object> = { key: keyof T; label: string };
 
-export function exportToCSV<T extends object>(
+let xlsxModule: typeof import("xlsx-js-style") | null = null;
+let jsPdfModule: typeof import("jspdf") | null = null;
+
+async function loadXlsx() {
+  if (!xlsxModule) {
+    xlsxModule = await import("xlsx-js-style");
+  }
+  return xlsxModule;
+}
+
+async function loadJsPdf() {
+  if (!jsPdfModule) {
+    jsPdfModule = await import("jspdf");
+  }
+  return jsPdfModule.default;
+}
+
+/** Kept exportToCSV name for existing callers, but it now writes real Excel workbooks. */
+export async function exportToCSV<T extends object>(
   data: T[],
   filename: string,
-  headers: { key: keyof T; label: string }[]
+  headers: ExportHeader<T>[]
 ) {
+  const XLSX = await loadXlsx();
   const rows = [
     headers.map((header) => header.label),
     ...data.map((row) => headers.map((header) => formatExportValue(row[header.key]))),
@@ -24,7 +41,7 @@ export function exportToCSV<T extends object>(
 }
 
 /** Excel workbook with multiple sheets (e.g. till summary + drawer movements). */
-export function exportMultiSheetXlsx(
+export async function exportMultiSheetXlsx(
   sheets: {
     name: string;
     headers: { key: string; label: string }[];
@@ -32,6 +49,7 @@ export function exportMultiSheetXlsx(
   }[],
   filename: string
 ) {
+  const XLSX = await loadXlsx();
   const dateStamp = new Date().toISOString().split("T")[0];
   const workbook = XLSX.utils.book_new();
 
@@ -53,12 +71,13 @@ export function exportMultiSheetXlsx(
   XLSX.writeFile(workbook, `${filename}_${dateStamp}.xlsx`);
 }
 
-export function exportToPDF<T extends object>(
+export async function exportToPDF<T extends object>(
   data: T[],
   filename: string,
-  headers: { key: keyof T; label: string }[],
+  headers: ExportHeader<T>[],
   title = filename
 ) {
+  const jsPDF = await loadJsPdf();
   const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const dateStamp = new Date().toISOString().split("T")[0];
   const usableWidth = 760;
@@ -113,9 +132,7 @@ function formatExportValue(value: unknown): string {
   return String(value);
 }
 
-/**
- * Format date for CSV export
- */
+/** Format date for CSV export */
 export function formatDateForCSV(date: string | Date | null | undefined): string {
   if (!date) return "";
   try {
@@ -130,9 +147,7 @@ export function formatDateForCSV(date: string | Date | null | undefined): string
   }
 }
 
-/**
- * Format currency for CSV export
- */
+/** Format currency for CSV export */
 export function formatCurrencyForCSV(amount: string | number | null | undefined): string {
   if (amount === null || amount === undefined) return "";
   const num = typeof amount === "string" ? parseFloat(amount) : amount;

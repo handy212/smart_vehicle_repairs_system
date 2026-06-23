@@ -10,9 +10,9 @@ import {
     Tooltip,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Legend,
-    ResponsiveContainer,
     Cell,
 } from "recharts";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface TurnoverItem {
@@ -52,9 +52,8 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
 
     return (
         <div className="space-y-6">
-            <div className="h-[350px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
+            <ChartContainer className="h-[350px]">
+                <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} strokeOpacity={0.1} />
                         <XAxis type="number" hide />
                         <YAxis
@@ -75,9 +74,8 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                         </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
+                </BarChart>
+            </ChartContainer>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {data.slice(0, 6).map((item) => (

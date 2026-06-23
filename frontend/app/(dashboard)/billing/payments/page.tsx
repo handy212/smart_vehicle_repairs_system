@@ -81,7 +81,7 @@ export default function PaymentsPage() {
         return variants[status] || 'default';
     };
 
-    const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
+    const handleExport = async (format: "xlsx" | "pdf" = "xlsx") => {
         if (!filteredPayments || filteredPayments.length === 0) {
             toast({
                 title: "No Data",
@@ -91,7 +91,7 @@ export default function PaymentsPage() {
             return;
         }
 
-        (format === "pdf" ? exportToPDF : exportToCSV)(
+        await (format === "pdf" ? exportToPDF : exportToCSV)(
             filteredPayments,
             "payments",
             [

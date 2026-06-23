@@ -30,13 +30,15 @@ const nextConfig: NextConfig = {
   // Dispose idle route bundles in dev to reduce memory pressure and dev-server crashes.
   onDemandEntries: isDev
     ? {
-        maxInactiveAge: 60 * 1000,
-        pagesBufferLength: 5,
+        // Keep more routes warm — default eviction forces slow recompiles on navigation.
+        maxInactiveAge: 15 * 60 * 1000,
+        pagesBufferLength: 20,
       }
     : undefined,
   experimental: {
     // Extra barrel-import packages beyond Next.js defaults (lucide-react, date-fns, recharts).
     optimizePackageImports: [
+      "recharts",
       "framer-motion",
       "@radix-ui/react-alert-dialog",
       "@radix-ui/react-avatar",

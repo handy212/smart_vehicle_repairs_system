@@ -18,9 +18,10 @@ export default function DashboardLayoutWrapper({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, setUser, isAuthenticated } = useAuthStore();
+  const { user, setUser, isAuthenticated, hasHydrated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
-  const { isModuleEnabled, isLoading: modulesLoading } = useModules();
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const { isModuleEnabled, isLoading: modulesLoading, canViewModuleManagement } = useModules();
 
   useEffect(() => {
     setMounted(true);
@@ -30,6 +31,8 @@ export default function DashboardLayoutWrapper({
     let isMounted = true;
 
     const checkAuth = async () => {
+      const hadCachedSession = useAuthStore.getState().isAuthenticated && !!useAuthStore.getState().user;
+
       try {
         await ensureApiSession();
         const currentUser = await authApi.getCurrentUser();
@@ -46,33 +49,34 @@ export default function DashboardLayoutWrapper({
         }
       } catch {
         if (!isMounted) return;
-        const cachedUser = useAuthStore.getState().user;
-        if (!cachedUser) {
+        if (!hadCachedSession) {
           router.push("/login");
+        }
+      } finally {
+        if (isMounted) {
+          setSessionChecked(true);
         }
       }
     };
 
-    if (mounted) {
+    if (mounted && hasHydrated) {
       checkAuth();
     }
 
     return () => {
       isMounted = false;
     };
-  }, [mounted, router, setUser]);
+  }, [mounted, hasHydrated, router, setUser]);
 
   // Module protection logic
   useEffect(() => {
-    if (!mounted || modulesLoading || !user) return;
+    if (!mounted || !sessionChecked || (canViewModuleManagement && modulesLoading) || !user) return;
 
-    // Get the top-level segment (e.g., /hr/employees -> hr)
     const segments = pathname.split("/").filter(Boolean);
     const topSegment = segments[0];
 
-    // List of segments that correspond to modules
     const moduleSegments = [
-      "hr", "inventory", "accounting", "billing", "roadside", 
+      "hr", "inventory", "accounting", "billing", "roadside",
       "diagnosis", "inspections", "fixed-assets", "subscriptions",
       "reports", "sms", "appointments", "workorders", "gatepass",
       "customers", "vehicles", "chat"
@@ -83,9 +87,12 @@ export default function DashboardLayoutWrapper({
         router.push("/dashboard");
       }
     }
-  }, [pathname, mounted, modulesLoading, user, isModuleEnabled, router]);
+  }, [pathname, mounted, sessionChecked, canViewModuleManagement, modulesLoading, user, isModuleEnabled, router]);
 
-  if (!mounted || !isAuthenticated || modulesLoading) {
+  const waitingForModules = canViewModuleManagement && modulesLoading;
+  const waitingForAuth = !hasHydrated || (!isAuthenticated && !sessionChecked);
+
+  if (!mounted || waitingForAuth || waitingForModules) {
     return <AppShellSkeleton />;
   }
 
@@ -95,4 +102,3 @@ export default function DashboardLayoutWrapper({
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }
-

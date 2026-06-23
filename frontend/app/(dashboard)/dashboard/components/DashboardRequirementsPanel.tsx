@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
@@ -15,6 +15,35 @@ import type { NavGroup, NavGroupItem, NavIcon } from "@/components/layout/nav-gr
 import { useModules } from "@/lib/hooks/useModules";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { cn } from "@/lib/utils/cn";
+
+function splitIntoGridColumns<T>(items: T[], columnCount: number): T[][] {
+  if (columnCount <= 1) {
+    return [items];
+  }
+
+  const columns = Array.from({ length: columnCount }, () => [] as T[]);
+  items.forEach((item, index) => {
+    columns[index % columnCount].push(item);
+  });
+  return columns;
+}
+
+function useDashboardRequirementsColumnCount() {
+  const [columnCount, setColumnCount] = useState(1);
+
+  useEffect(() => {
+    const update = () => {
+      const width = window.innerWidth;
+      setColumnCount(width >= 1280 ? 3 : width >= 640 ? 2 : 1);
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return columnCount;
+}
 
 function itemIsVisible(
   item: NavGroupItem,
@@ -74,9 +103,42 @@ function RequirementLink({
   );
 }
 
+function RequirementGroup({
+  group,
+}: {
+  group: NavGroup;
+}) {
+  const GroupIcon = group.icon;
+
+  return (
+    <AccordionItem
+      value={group.id}
+      className="h-auto rounded-md border border-border/70 border-b border-border/70 bg-background/70 px-2"
+    >
+      <AccordionTrigger
+        className={cn(
+          "rounded-md px-2 py-2.5 text-sm font-medium hover:no-underline [&>svg]:h-3.5 [&>svg]:w-3.5",
+          "text-foreground"
+        )}
+      >
+        <span className="flex items-center gap-2 text-left">
+          <GroupIcon className="h-4 w-4 shrink-0 text-primary" />
+          <span>{group.label}</span>
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-0.5 pb-2 pt-0">
+        {group.items.map((item) => (
+          <RequirementLink key={`${group.id}-${item.href}-${item.name}`} item={item} Icon={item.icon} />
+        ))}
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
 export function DashboardRequirementsPanel() {
   const { hasPermission, hasAnyPermission } = usePermissions();
   const { isModuleEnabled, canViewModuleManagement } = useModules();
+  const columnCount = useDashboardRequirementsColumnCount();
 
   const visibleGroups = useMemo(
     () =>
@@ -87,6 +149,11 @@ export function DashboardRequirementsPanel() {
         canViewModuleManagement,
       }),
     [hasPermission, hasAnyPermission, isModuleEnabled, canViewModuleManagement]
+  );
+
+  const groupedColumns = useMemo(
+    () => splitIntoGridColumns(visibleGroups, columnCount),
+    [visibleGroups, columnCount]
   );
 
   const [openGroup, setOpenGroup] = useState(visibleGroups[0]?.id ?? "");
@@ -106,35 +173,24 @@ export function DashboardRequirementsPanel() {
           collapsible
           value={openGroup}
           onValueChange={(value) => setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)}
-          className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-3"
         >
-          {visibleGroups.map((group) => {
-            const GroupIcon = group.icon;
-            return (
-              <AccordionItem
-                key={group.id}
-                value={group.id}
-                className="h-auto self-start rounded-md border border-border/70 bg-background/70 px-2"
+          <div
+            className={cn(
+              "flex items-start gap-2",
+              columnCount > 1 ? "flex-row" : "flex-col"
+            )}
+          >
+            {groupedColumns.map((columnGroups, columnIndex) => (
+              <div
+                key={`requirements-column-${columnIndex}`}
+                className="flex min-w-0 flex-1 flex-col gap-2"
               >
-                <AccordionTrigger
-                  className={cn(
-                    "rounded-md px-2 py-2.5 text-sm font-medium hover:no-underline [&>svg]:h-3.5 [&>svg]:w-3.5",
-                    "text-foreground"
-                  )}
-                >
-                  <span className="flex items-center gap-2 text-left">
-                    <GroupIcon className="h-4 w-4 shrink-0 text-primary" />
-                    <span>{group.label}</span>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-0.5 pb-2 pt-0">
-                  {group.items.map((item) => (
-                    <RequirementLink key={`${group.id}-${item.href}-${item.name}`} item={item} Icon={item.icon} />
-                  ))}
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
+                {columnGroups.map((group) => (
+                  <RequirementGroup key={group.id} group={group} />
+                ))}
+              </div>
+            ))}
+          </div>
         </Accordion>
       </CardContent>
     </Card>

@@ -35,11 +35,11 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { accountingApi, type AccountingCommandCenterSnapshot } from "@/lib/api/accounting";
 import { reportingApi } from "@/lib/api/reporting";
 import { branchesApi, type Branch } from "@/lib/api/branches";
@@ -419,8 +419,8 @@ export default function AccountingDashboardPage() {
     success("Accounting dashboard refreshed.");
   };
 
-  const handleExportExcel = () => {
-    exportToCSV(
+  const handleExportExcel = async () => {
+    await exportToCSV(
       alerts.map((alert) => ({
         severity: alert.severity,
         title: alert.title,
@@ -436,8 +436,8 @@ export default function AccountingDashboardPage() {
     success("Excel export generated.");
   };
 
-  const handleExportPdf = () => {
-    exportToPDF(
+  const handleExportPdf = async () => {
+    await exportToPDF(
       statementSnapshot.map((row) => ({
         metric: row.label,
         value: formatCurrency(row.value),
@@ -687,7 +687,7 @@ export default function AccountingDashboardPage() {
               <CardTitle className={COMPACT_CARD_TITLE}>Revenue Trend</CardTitle>
             </CardHeader>
             <CardContent className="h-[260px] p-3 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer className="h-full">
                 <AreaChart data={revenueTrend.map((point) => ({
                   label: format(parseISO(point.period), revenueGranularity === "daily" ? "MMM d" : revenueGranularity === "weekly" ? "MMM d" : "MMM yyyy"),
                   revenue: toNumber(point.revenue),
@@ -704,7 +704,7 @@ export default function AccountingDashboardPage() {
                   <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
                   <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="url(#revenueFill)" strokeWidth={2.5} />
                 </AreaChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
 
@@ -714,7 +714,7 @@ export default function AccountingDashboardPage() {
                 <CardTitle className={COMPACT_CARD_TITLE}>Revenue By Branch</CardTitle>
               </CardHeader>
               <CardContent className="h-[260px] p-3 pt-2">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer className="h-full">
                   <BarChart data={snapshot?.revenue_analytics.by_branch ?? []} layout="vertical" margin={{ left: 12, right: 12 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
@@ -722,7 +722,7 @@ export default function AccountingDashboardPage() {
                     <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
                     <Bar dataKey="invoiced" fill="#10b981" radius={[0, 4, 4, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           ) : null}
@@ -734,8 +734,8 @@ export default function AccountingDashboardPage() {
               <CardTitle className={COMPACT_CARD_TITLE}>Revenue By Service Type</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 p-3 lg:grid-cols-[170px_1fr]">
-              <div className="h-[160px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[160px] min-w-0">
+                <ChartContainer className="h-full">
                   <PieChart>
                     <Pie
                       data={(snapshot?.revenue_analytics.by_service_type ?? []).map((entry) => ({
@@ -754,7 +754,7 @@ export default function AccountingDashboardPage() {
                     </Pie>
                     <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
                   </PieChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
               <div className="space-y-3">
                 {(snapshot?.revenue_analytics.by_service_type ?? []).map((entry, index) => (
@@ -801,8 +801,8 @@ export default function AccountingDashboardPage() {
               <CardTitle className={COMPACT_CARD_TITLE}>Expense Analytics</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 p-3 xl:grid-cols-[1.35fr_0.65fr]">
-              <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[250px] min-w-0">
+                <ChartContainer className="h-full">
                   <AreaChart data={expenseTrend}>
                     <defs>
                       <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
@@ -816,13 +816,13 @@ export default function AccountingDashboardPage() {
                     <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
                     <Area type="monotone" dataKey="expense" stroke="#ef4444" fill="url(#expenseFill)" strokeWidth={2.25} />
                   </AreaChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
               <div className="space-y-3">
                 {hasExpenseCategoryData ? (
                   <>
-                    <div className="h-[130px]">
-                      <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[130px] min-w-0">
+                      <ChartContainer className="h-full">
                         <PieChart>
                           <Pie data={expenseCategoryChart} dataKey="value" nameKey="name" innerRadius={34} outerRadius={60}>
                             {expenseCategoryChart.map((entry, index) => (
@@ -831,7 +831,7 @@ export default function AccountingDashboardPage() {
                           </Pie>
                           <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
                         </PieChart>
-                      </ResponsiveContainer>
+                      </ChartContainer>
                     </div>
                     <div className="space-y-2">
                       {topExpenseCategories.slice(0, 5).map((expense) => (

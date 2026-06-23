@@ -7,7 +7,9 @@ import { clearTokens } from "@/lib/utils/token";
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   setUser: (user: User | null) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
   logout: () => void;
 }
 
@@ -16,11 +18,13 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      hasHydrated: false,
       setUser: (user) =>
         set({
           user,
           isAuthenticated: !!user,
         }),
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       logout: () => {
         clearTokens();
         useBranchStore.getState().clearBranch();
@@ -34,6 +38,9 @@ export const useAuthStore = create<AuthState>()(
       name: "auth-storage",
       storage: typeof window !== "undefined" ? createJSONStorage(() => localStorage) : undefined,
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

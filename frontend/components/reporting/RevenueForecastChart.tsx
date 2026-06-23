@@ -9,9 +9,9 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
-    ResponsiveContainer,
     ReferenceArea,
 } from "recharts";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { format, addDays, parseISO } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
@@ -73,9 +73,8 @@ export function RevenueForecastChart({ data, forecastDays = 30 }: RevenueForecas
     const lastActualIndex = data.length - 1;
 
     return (
-        <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={forecastData}>
+        <ChartContainer className="h-[400px]">
+            <LineChart data={forecastData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                     <XAxis
                         dataKey="period"
@@ -123,8 +122,7 @@ export function RevenueForecastChart({ data, forecastDays = 30 }: RevenueForecas
                         dot={false}
                         name="Forecasted Trend"
                     />
-                </LineChart>
-            </ResponsiveContainer>
-        </div>
+            </LineChart>
+        </ChartContainer>
     );
 }

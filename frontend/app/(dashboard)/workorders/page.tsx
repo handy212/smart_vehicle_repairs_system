@@ -295,7 +295,7 @@ export default function WorkOrdersPage() {
     }
 
     if (format === "pdf") {
-      exportToPDF(
+      await exportToPDF(
         data.results,
         "workorders",
         [

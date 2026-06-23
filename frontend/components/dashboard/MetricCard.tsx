@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, DollarSign, TrendingUp, TrendingDown, Activity, Wallet } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
+import { Area, AreaChart, YAxis } from "recharts";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { useTheme } from "@/lib/hooks/useTheme";
 
 interface MetricCardProps {
@@ -119,8 +120,8 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
 
                 {/* Sparkline Background */}
                 {data && data.length > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 opacity-[0.08]" style={{ height: "56px", minWidth: 0 }}>
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="absolute bottom-0 left-0 right-0 opacity-[0.08] h-14 min-w-0">
+                        <ChartContainer className="h-full">
                             <AreaChart data={data}>
                                 <Area
                                     type="monotone"
@@ -130,7 +131,7 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
                                     strokeWidth={2}
                                 />
                             </AreaChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                     </div>
                 )}
             </CardContent>

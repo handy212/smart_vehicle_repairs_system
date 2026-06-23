@@ -35,13 +35,19 @@ export function useModules() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const canViewModuleManagement = user?.role === "super-admin";
-  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionReady, setSessionReady] = useState(canViewModuleManagement ? false : true);
 
   useEffect(() => {
+    if (!canViewModuleManagement) {
+      setSessionReady(true);
+      return;
+    }
+
     if (!isAuthenticated) {
       setSessionReady(false);
       return;
     }
+
     let cancelled = false;
     ensureApiSession().then((ok) => {
       if (!cancelled) setSessionReady(ok);
@@ -49,7 +55,7 @@ export function useModules() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [canViewModuleManagement, isAuthenticated]);
 
   const { data: moduleData, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "modules"],

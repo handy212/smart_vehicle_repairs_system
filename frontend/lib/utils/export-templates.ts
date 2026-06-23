@@ -8,7 +8,7 @@ import { exportToCSV } from "./export";
  * Export customers in import-compatible format
  */
 
-export function exportCustomersForImport(customers: any[]) {
+export async function exportCustomersForImport(customers: any[]) {
   const headers = [
     { key: "first_name" as const, label: "first_name" },
     { key: "last_name" as const, label: "last_name" },
@@ -52,14 +52,14 @@ export function exportCustomersForImport(customers: any[]) {
     };
   });
 
-  exportToCSV(exportData, "customers_export", headers);
+  await exportToCSV(exportData, "customers_export", headers);
 }
 
 /**
  * Export vehicles in import-compatible format
  */
 
-export function exportVehiclesForImport(vehicles: any[]) {
+export async function exportVehiclesForImport(vehicles: any[]) {
   const headers = [
     { key: "vin" as const, label: "vin" },
     { key: "make" as const, label: "make" },
@@ -94,14 +94,14 @@ export function exportVehiclesForImport(vehicles: any[]) {
     };
   });
 
-  exportToCSV(exportData, "vehicles_export", headers);
+  await exportToCSV(exportData, "vehicles_export", headers);
 }
 
 /**
  * Export parts in import-compatible format
  */
 
-export function exportPartsForImport(parts: any[]) {
+export async function exportPartsForImport(parts: any[]) {
   const headers = [
     { key: "part_number" as const, label: "part_number" },
     { key: "name" as const, label: "name" },
@@ -148,6 +148,6 @@ export function exportPartsForImport(parts: any[]) {
     };
   });
 
-  exportToCSV(exportData, "parts_export", headers);
+  await exportToCSV(exportData, "parts_export", headers);
 }
 

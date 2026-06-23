@@ -264,7 +264,7 @@ export default function AppointmentsPage() {
     });
   };
 
-  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
+  const handleExport = async (format: "xlsx" | "pdf" = "xlsx") => {
     if (!data?.results || data.results.length === 0) {
       toast({
         title: "No Data",
@@ -274,7 +274,7 @@ export default function AppointmentsPage() {
       return;
     }
 
-    (format === "pdf" ? exportToPDF : exportToCSV)(
+    await (format === "pdf" ? exportToPDF : exportToCSV)(
       data.results,
       "appointments",
       [

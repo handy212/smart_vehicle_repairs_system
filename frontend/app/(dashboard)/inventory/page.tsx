@@ -224,12 +224,12 @@ function InventoryPageContent() {
     }
   };
 
-  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
+  const handleExport = async (format: "xlsx" | "pdf" = "xlsx") => {
     if (!parts || parts.length === 0) {
       toast({ title: "No Data", description: "No parts to export", variant: "destructive" });
       return;
     }
-    (format === "pdf" ? exportToPDF : exportToCSV)(parts, "inventory", [
+    await (format === "pdf" ? exportToPDF : exportToCSV)(parts, "inventory", [
       { key: "part_number", label: "Part Number" },
       { key: "name", label: "Name" },
       { key: "category", label: "Category" },

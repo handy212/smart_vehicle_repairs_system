@@ -54,7 +54,7 @@ export default function ImportHistoryPage() {
       }),
   });
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!data?.results || data.results.length === 0) {
       toast({
         title: "No Data",
@@ -80,7 +80,7 @@ export default function ImportHistoryPage() {
       };
     });
 
-    exportToCSV(
+    await exportToCSV(
       rows,
       "import_history",
       [

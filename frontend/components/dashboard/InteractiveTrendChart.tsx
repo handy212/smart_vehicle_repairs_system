@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -83,9 +84,8 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                         No trend data for this period.
                     </p>
                 ) : (
-                <div style={{ height: "340px", width: "100%", minWidth: 0 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        {activeTab === "profitability" ? (
+                <ChartContainer className="h-[340px]">
+                    {activeTab === "profitability" ? (
                             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -199,9 +199,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                 />
                             </AreaChart>
                         )}
-                        {/* ... (chart content remains) ... */}
-                    </ResponsiveContainer>
-                </div>
+                </ChartContainer>
                 )}
             </CardContent>
         </Card>

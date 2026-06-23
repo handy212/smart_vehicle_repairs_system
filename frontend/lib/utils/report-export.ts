@@ -217,8 +217,8 @@ export function exportTableToPdf(payload: TableExportPayload) {
 }
 
 /** Multi-sheet workbook for reports with several tables (numeric cells preserved) */
-export function exportSheetsToExcel(sections: SheetExportSection[], filename: string) {
-  exportMultiSheetXlsx(
+export async function exportSheetsToExcel(sections: SheetExportSection[], filename: string) {
+  await exportMultiSheetXlsx(
     sections.map((section) => ({
       name: section.name,
       headers: section.headers,

@@ -31,8 +31,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from "recharts";
+import { ChartContainer } from "@/components/ui/chart-container";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -766,7 +766,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         <RevenueForecastChart data={revenueData.revenue_by_period} />
                       ) : (
                         <>
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ChartContainer className="h-[300px]">
                           <LineChart data={revenueData.revenue_by_period}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis
@@ -788,7 +788,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                               strokeWidth={2}
                             />
                           </LineChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                         <ChartAccessibleTable
                           title="Revenue trend"
                           columns={[
@@ -822,7 +822,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                   <CardContent className="px-2 sm:px-6">
                     {revenueData.revenue_by_payment_method.length > 0 ? (
                       <>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ChartContainer className="h-[300px]">
                         <PieChart>
                           <Pie
                             data={revenueData.revenue_by_payment_method}
@@ -842,7 +842,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                           </Pie>
                           <Tooltip formatter={formatCurrencyTooltip} />
                         </PieChart>
-                      </ResponsiveContainer>
+                      </ChartContainer>
                       <ChartAccessibleTable
                         title="Revenue by payment method"
                         columns={[
@@ -872,7 +872,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 <CardContent className="px-2 sm:px-6">
                   {revenueData.revenue_by_technician.length > 0 ? (
                     <>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ChartContainer className="h-[300px]">
                       <BarChart data={revenueData.revenue_by_technician}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
@@ -887,7 +887,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         <Legend />
                         <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                     <ChartAccessibleTable
                       title="Revenue by technician"
                       columns={[
@@ -938,7 +938,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                   </div>
                 </div>
                 <div className="px-2 sm:px-0">
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ChartContainer className="h-[200px]">
                     <BarChart
                       data={[
                         { name: "Labor", value: profitMarginData.revenue.labor },
@@ -951,7 +951,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                       <Tooltip formatter={formatCurrencyTooltip} />
                       <Bar dataKey="value" fill="#3B82F6" />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                   <ChartAccessibleTable
                     title="Revenue breakdown"
                     columns={[
@@ -986,7 +986,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 <CardContent className="px-2 sm:px-6">
                   {workOrderStats.by_status && workOrderStats.by_status.length > 0 ? (
                     <>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ChartContainer className="h-[300px]">
                       <PieChart>
                         <Pie
                           data={workOrderStats.by_status}
@@ -1008,7 +1008,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         </Pie>
                         <Tooltip />
                       </PieChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                     <ChartAccessibleTable
                       title="Work orders by status"
                       columns={[
@@ -1163,7 +1163,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 </div>
                 {appointmentStats.by_status && appointmentStats.by_status.length > 0 && (
                   <div className="px-2 sm:px-0">
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ChartContainer className="h-[300px]">
                       <BarChart data={appointmentStats.by_status}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="status" style={{ fontSize: "12px" }} />
@@ -1172,7 +1172,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         <Legend />
                         <Bar dataKey="count" fill="#3B82F6" />
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                     <ChartAccessibleTable
                       title="Appointments by status"
                       columns={[
@@ -1223,7 +1223,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 </div>
                 {inventoryValuation.by_category && inventoryValuation.by_category.length > 0 && (
                   <div className="px-2 sm:px-0">
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ChartContainer className="h-[300px]">
                       <BarChart data={inventoryValuation.by_category}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="category" style={{ fontSize: "12px" }} />
@@ -1232,7 +1232,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         <Legend />
                         <Bar dataKey="value" fill="#8B5CF6" name="Value" />
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                     <ChartAccessibleTable
                       title="Inventory valuation by category"
                       columns={[
@@ -1503,7 +1503,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 </div>
                 {vehicleStats.by_make && vehicleStats.by_make.length > 0 && (
                   <div className="px-2 sm:px-0">
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ChartContainer className="h-[300px]">
                       <BarChart data={vehicleStats.by_make}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="make" angle={-45} textAnchor="end" height={80} style={{ fontSize: "12px" }} />
@@ -1512,7 +1512,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         <Legend />
                         <Bar dataKey="count" fill="#06B6D4" />
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                     <ChartAccessibleTable
                       title="Vehicles by make"
                       columns={[

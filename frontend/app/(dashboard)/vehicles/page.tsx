@@ -195,9 +195,9 @@ export default function VehiclesPage() {
     }
   };
 
-  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
+  const handleExport = async (format: "xlsx" | "pdf" = "xlsx") => {
     if (!data?.results?.length) return;
-    (format === "pdf" ? exportToPDF : exportToCSV)(data.results, "vehicles_export", [
+    await (format === "pdf" ? exportToPDF : exportToCSV)(data.results, "vehicles_export", [
       { key: "vin", label: "VIN" },
       { key: "make", label: "Make" },
       { key: "model", label: "Model" },
