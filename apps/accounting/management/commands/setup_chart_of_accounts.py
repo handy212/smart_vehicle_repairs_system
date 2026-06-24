@@ -31,6 +31,10 @@ DEFAULT_ACCOUNTS = [
     ('2200', 'Input Sales Tax', 'asset', 'debit', 'current_asset', 'A100', False),
     ('2300', 'PAYE Tax Payable', 'liability', 'credit', 'tax_payable', 'L100', False),
     ('2310', 'Payroll Deductions Payable', 'liability', 'credit', 'current_liability', 'L100', False),
+    ('2315', 'Employer Statutory Payable', 'liability', 'credit', 'current_liability', 'L100', False),
+    ('2320', 'Withholding Tax Payable', 'liability', 'credit', 'tax_payable', 'L100', False),
+    ('1250', 'Accrued Revenue', 'asset', 'debit', 'current_asset', 'A100', False),
+    ('2050', 'Accrued Liabilities', 'liability', 'credit', 'current_liability', 'L100', False),
     ('2900', 'Due To Other Branches', 'liability', 'credit', 'current_liability', 'L100', False),
     ('Q000', 'Equity', 'equity', 'credit', 'category', None, False),
     ('3100', 'Owner Equity (Common)', 'equity', 'credit', 'category', 'Q000', False),
@@ -51,6 +55,7 @@ DEFAULT_ACCOUNTS = [
     ('6000', 'Salary Expense', 'expense', 'debit', 'expense', 'E000', False),
     ('6010', 'Overtime Expense', 'expense', 'debit', 'expense', 'E000', False),
     ('6020', 'Allowances Expense', 'expense', 'debit', 'expense', 'E000', False),
+    ('6030', 'Employer Statutory Expense', 'expense', 'debit', 'expense', 'E000', False),
     ('6100', 'Fuel', 'expense', 'debit', 'expense', 'E000', False),
     ('6200', 'Office Expenses', 'expense', 'debit', 'expense', 'E000', False),
 ]

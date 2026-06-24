@@ -448,3 +448,46 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
             'object_id': object_id,
             **self._get_mapping_payload(instance),
         })
+
+
+class QBOOwnerCoaSetupView(QBOConnectedMixin, APIView):
+    """Apply owner legacy COA template mappings to QuickBooks (SVR GL stays lean)."""
+
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('manage_accounting_periods'),
+    ]
+
+    def post(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+
+        from apps.accounting.wire_controls import wire_accounting_controls
+        from apps.quickbooks_online.owner_coa_services import get_owner_coa_setup_service
+
+        dry_run = bool(request.data.get('dry_run', False))
+        overwrite = bool(request.data.get('overwrite', False))
+        wire_svr = bool(request.data.get('wire_svr', False))
+
+        if wire_svr and not dry_run:
+            wire_accounting_controls()
+
+        service = get_owner_coa_setup_service()
+        result = service.run_full_setup(
+            dry_run=dry_run,
+            overwrite=overwrite,
+            user=request.user,
+        )
+
+        if not result.get('success'):
+            return Response({'detail': result.get('error')}, status=status.HTTP_400_BAD_REQUEST)
+
+        overview = get_account_mapping_service().get_mapping_overview()
+        return Response({
+            'is_connected': True,
+            'dry_run': dry_run,
+            **result,
+            **overview,
+        })

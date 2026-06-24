@@ -18,6 +18,11 @@ urlpatterns = [
     path('sync-logs/', api_views.QBOSyncLogsListView.as_view(), name='sync_logs'),
     path('account-mappings/', api_views.QBOAccountMappingsView.as_view(), name='account_mappings'),
     path(
+        'account-mappings/apply-owner-template/',
+        api_views.QBOOwnerCoaSetupView.as_view(),
+        name='account_mappings_apply_owner_template',
+    ),
+    path(
         'account-mappings/<str:mapping_kind>/<str:mapping_key>/',
         api_views.QBOAccountMappingDetailView.as_view(),
         name='account_mapping_detail',
