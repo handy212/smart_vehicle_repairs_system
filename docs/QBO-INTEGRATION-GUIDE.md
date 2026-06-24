@@ -120,6 +120,15 @@ Each **Part** has a catalog `item_type` (distinct from billing line types like l
 
 Configure part types under **Inventory → Products & services** (typed create flow). Map QBO accounts under **Accounting → Controls → QuickBooks mapping**.
 
+For the owner's legacy workshop chart (650/700 series, branch banks, Ghana tax), see **[OWNER-QBO-COA-MAPPING.md](OWNER-QBO-COA-MAPPING.md)** and run:
+
+```bash
+python manage.py setup_owner_qbo_chart
+python manage.py apply_owner_qbo_mappings --wire-svr
+```
+
+Or `POST /api/quickbooks/account-mappings/apply-owner-template/` when QBO is connected.
+
 ### Outbound logging
 
 Each outbound Celery task writes a `QBOSyncLog` row with `direction=outbound`. Per-entity sync status is stored in `QBOMapping` (`synced`, `failed`, `pending`) and exposed on API serializers as `qbo_sync_status` / `qbo_sync_error` when QBO is connected.

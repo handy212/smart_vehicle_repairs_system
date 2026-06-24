@@ -110,4 +110,13 @@ export const qboMappingsApi = {
     );
     return response.data;
   },
+
+  applyOwnerTemplate: async (payload?: {
+    dry_run?: boolean;
+    overwrite?: boolean;
+    wire_svr?: boolean;
+  }): Promise<QboMappingsOverview & Record<string, unknown>> => {
+    const response = await apiClient.post("/quickbooks/account-mappings/apply-owner-template/", payload ?? {});
+    return response.data;
+  },
 };
