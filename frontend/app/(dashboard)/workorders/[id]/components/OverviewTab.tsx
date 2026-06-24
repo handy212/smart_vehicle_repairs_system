@@ -75,6 +75,7 @@ export default function WorkOrderOverviewTab({
     refetchOnWindowFocus: true,
   });
   const wo = workOrderFresh ?? workOrder;
+  const isRoutine = wo.maintenance_type === "routine";
   const estimateSummary = wo.estimate_summary;
   const invoiceSummary = wo.invoice_summary;
   const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
@@ -283,16 +284,30 @@ export default function WorkOrderOverviewTab({
                     </p>
                   </AccordionContent>
                 </AccordionItem>
-                <AccordionItem value="diagnosis" className="border-b-0">
-                  <AccordionTrigger className="py-2 text-sm hover:no-underline">
-                    Diagnosis notes
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="whitespace-pre-wrap text-sm text-foreground">
-                      {workOrder.diagnosis_notes || "No diagnosis notes yet."}
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
+                {!isRoutine && (
+                  <AccordionItem value="diagnosis" className="border-b-0">
+                    <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                      Diagnosis notes
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <p className="whitespace-pre-wrap text-sm text-foreground">
+                        {wo.diagnosis_notes || "No diagnosis notes yet."}
+                      </p>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+                {isRoutine && wo.diagnosis_notes && (
+                  <AccordionItem value="service-plan" className="border-b-0">
+                    <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                      Service plan
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <p className="whitespace-pre-wrap text-sm text-foreground">
+                        {wo.diagnosis_notes}
+                      </p>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
                 <AccordionItem value="instructions" className="border-b-0">
                   <AccordionTrigger className="py-2 text-sm hover:no-underline">
                     Special instructions

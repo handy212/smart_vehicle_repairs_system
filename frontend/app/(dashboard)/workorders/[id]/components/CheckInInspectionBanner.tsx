@@ -39,6 +39,7 @@ export function CheckInInspectionBanner({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const fromCheckIn = searchParams.get("from") === "check-in";
+  const routineFlow = searchParams.get("flow") === "routine";
 
   useEffect(() => {
     if (fromCheckIn) {
@@ -59,6 +60,8 @@ export function CheckInInspectionBanner({
 
   const visible =
     !dismissed &&
+    !routineFlow &&
+    workOrder.maintenance_type !== "routine" &&
     needsInspection &&
     (fromCheckIn || (!hasInspection && workOrder.status === "draft"));
 

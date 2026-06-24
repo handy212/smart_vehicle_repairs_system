@@ -461,7 +461,7 @@ export default function RepairsPage() {
     );
   }
 
-  if (isDiagnosisPausedWorkOrder(workOrder)) {
+  if (workOrder.maintenance_type !== "routine" && isDiagnosisPausedWorkOrder(workOrder)) {
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => router.push(`/workorders/${workOrderId}`)} className="-ml-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -31,6 +31,7 @@ import { WorkOrderCommandBar } from "./components/WorkOrderCommandBar";
 import { WorkOrderProgress } from "./components/WorkOrderProgress";
 import { GatePassBanner } from "./components/GatePassBanner";
 import { CheckInInspectionBanner } from "./components/CheckInInspectionBanner";
+import { RoutineCheckInBanner } from "./components/RoutineCheckInBanner";
 import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
@@ -97,9 +98,13 @@ export default function WorkOrderDetailPage() {
 
   useEffect(() => {
     if (requestedTab && VALID_TABS.has(requestedTab)) {
+      if (workOrder?.maintenance_type === "routine" && requestedTab === "diagnosis") {
+        setActiveTab("parts");
+        return;
+      }
       setActiveTab(requestedTab);
     }
-  }, [requestedTab]);
+  }, [requestedTab, workOrder?.maintenance_type]);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
@@ -116,7 +121,7 @@ export default function WorkOrderDetailPage() {
   const { data: diagnosis } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId,
+    enabled: !!workOrderId && workOrder?.maintenance_type !== "routine",
   });
 
   const { data: inspectionsData } = useQuery({
@@ -138,6 +143,37 @@ export default function WorkOrderDetailPage() {
     queryFn: () => workOrderNotesApi.list({ work_order: workOrderId }),
     enabled: !!workOrderId,
   });
+
+  const routineRecoveryAttempted = useRef(false);
+
+  useEffect(() => {
+    routineRecoveryAttempted.current = false;
+  }, [workOrderId]);
+
+  const routineFastTrackMutation = useMutation({
+    mutationFn: () => workordersApi.updateStatus(workOrderId, "approved"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+    },
+  });
+
+  useEffect(() => {
+    if (!workOrder || workOrder.maintenance_type !== "routine") return;
+    if (workOrder.status !== "draft") return;
+    if (routineRecoveryAttempted.current || routineFastTrackMutation.isPending) return;
+
+    const mechanicalTasks = tasks.filter((task) => !task.is_workflow_task);
+    if (parts.length === 0 || mechanicalTasks.length === 0) return;
+
+    routineRecoveryAttempted.current = true;
+    routineFastTrackMutation.mutate();
+  }, [
+    workOrder,
+    workOrderId,
+    parts.length,
+    tasks,
+    routineFastTrackMutation,
+  ]);
 
   const deleteMutation = useMutation({
     mutationFn: () => workordersApi.delete(workOrderId),
@@ -236,7 +272,10 @@ export default function WorkOrderDetailPage() {
     ["completed", "invoiced", "closed"].includes(workOrder.status) &&
     unapprovedRecommendations.length > 0;
 
+  const isRoutine = workOrder.maintenance_type === "routine";
+
   const tabsLocked =
+    !isRoutine &&
     !workOrder.has_completed_inspection &&
     ["draft", "inspection"].includes(workOrder.status);
 
@@ -290,6 +329,7 @@ export default function WorkOrderDetailPage() {
         status={stagePresentation.workflowStatus}
         labelOverride={statusLabelOverride}
         diagnosisStatus={workOrder.diagnosis_status}
+        maintenanceType={workOrder.maintenance_type}
       />
 
       {(workOrder.customer_rating || workOrder.customer_feedback) && (
@@ -315,6 +355,13 @@ export default function WorkOrderDetailPage() {
         </Card>
       )}
 
+      <RoutineCheckInBanner
+        workOrder={workOrder}
+        workOrderId={workOrderId}
+        partsCount={parts.length}
+        tasksCount={tasks.length}
+      />
+
       <CheckInInspectionBanner
         workOrder={workOrder}
         workOrderId={workOrderId}
@@ -329,6 +376,7 @@ export default function WorkOrderDetailPage() {
           partsCount={parts.length}
           notesCount={notes.length}
           tabsLocked={tabsLocked}
+          isRoutine={isRoutine}
         />
 
         <TabsContent value="overview" className="mt-4">
@@ -367,9 +415,11 @@ export default function WorkOrderDetailPage() {
           <DocumentsTab workOrderId={workOrderId} />
         </TabsContent>
 
-        <TabsContent value="diagnosis" className="mt-4">
-          <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
-        </TabsContent>
+        {!isRoutine && (
+          <TabsContent value="diagnosis" className="mt-4">
+            <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
+          </TabsContent>
+        )}
 
         <TabsContent value="timeline" className="mt-4">
           <WorkOrderTimeline workOrder={workOrder} notes={notes} />

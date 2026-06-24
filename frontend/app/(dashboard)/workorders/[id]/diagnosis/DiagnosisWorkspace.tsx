@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
@@ -89,10 +89,17 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
   const [pauseReason, setPauseReason] = useState("");
 
   // Fetch work order
-  const { data: workOrder } = useQuery({
+  const { data: workOrder, isLoading: workOrderLoading } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(workOrderId),
   });
+
+  useEffect(() => {
+    if (workOrderLoading || !workOrder) return;
+    if (workOrder.maintenance_type === "routine") {
+      router.replace(`${workOrderBackHref}?tab=parts`);
+    }
+  }, [workOrder, workOrderLoading, router, workOrderBackHref]);
 
   // Fetch or create diagnosis
   const { data: diagnosis, isLoading, error: diagnosisError } = useQuery({
@@ -353,6 +360,14 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
             <p className="text-destructive">Error loading work order. Please try again.</p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (workOrder.maintenance_type === "routine") {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }

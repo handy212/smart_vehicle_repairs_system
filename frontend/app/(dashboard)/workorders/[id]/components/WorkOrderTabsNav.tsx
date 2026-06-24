@@ -26,6 +26,7 @@ interface WorkOrderTabsNavProps {
   partsCount: number;
   notesCount: number;
   tabsLocked: boolean;
+  isRoutine?: boolean;
 }
 
 function TabSeparator({ label }: { label: string }) {
@@ -45,12 +46,14 @@ function LockedTabTrigger({
   icon: Icon,
   count,
   locked,
+  lockMessage,
 }: {
   value: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
   locked: boolean;
+  lockMessage: string;
 }) {
   const trigger = (
     <TabsTrigger
@@ -76,7 +79,7 @@ function LockedTabTrigger({
         <span className="inline-flex shrink-0">{trigger}</span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs">
-        {LOCK_MSG}
+        {lockMessage}
       </TooltipContent>
     </Tooltip>
   );
@@ -87,7 +90,10 @@ export function WorkOrderTabsNav({
   partsCount,
   notesCount,
   tabsLocked,
+  isRoutine = false,
 }: WorkOrderTabsNavProps) {
+  const lockMessage = LOCK_MSG;
+  const effectiveLocked = isRoutine ? false : tabsLocked;
   return (
     <TooltipProvider delayDuration={300}>
       <TabsList
@@ -96,35 +102,40 @@ export function WorkOrderTabsNav({
           "scrollbar-thin"
         )}
       >
-        <LockedTabTrigger value="overview" label="Overview" icon={FileText} locked={false} />
+        <LockedTabTrigger value="overview" label="Overview" icon={FileText} locked={false} lockMessage={lockMessage} />
         <TabSeparator label="Work" />
         <LockedTabTrigger
           value="tasks"
           label="Tasks"
           icon={Wrench}
           count={tasksCount}
-          locked={tabsLocked}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
         />
         <LockedTabTrigger
           value="parts"
           label="Parts"
           icon={Package}
           count={partsCount}
-          locked={tabsLocked}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
         />
-        <LockedTabTrigger value="diagnosis" label="Diagnosis" icon={Search} locked={tabsLocked} />
+        {!isRoutine && (
+          <LockedTabTrigger value="diagnosis" label="Diagnosis" icon={Search} locked={effectiveLocked} lockMessage={lockMessage} />
+        )}
         <TabSeparator label="Records" />
         <LockedTabTrigger
           value="notes"
           label="Notes"
           icon={MessageSquare}
           count={notesCount}
-          locked={tabsLocked}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
         />
-        <LockedTabTrigger value="photos" label="Photos" icon={Image} locked={tabsLocked} />
-        <LockedTabTrigger value="documents" label="Documents" icon={FileText} locked={tabsLocked} />
+        <LockedTabTrigger value="photos" label="Photos" icon={Image} locked={effectiveLocked} lockMessage={lockMessage} />
+        <LockedTabTrigger value="documents" label="Documents" icon={FileText} locked={effectiveLocked} lockMessage={lockMessage} />
         <TabSeparator label="History" />
-        <LockedTabTrigger value="timeline" label="Timeline" icon={Clock} locked={tabsLocked} />
+        <LockedTabTrigger value="timeline" label="Timeline" icon={Clock} locked={effectiveLocked} lockMessage={lockMessage} />
       </TabsList>
     </TooltipProvider>
   );

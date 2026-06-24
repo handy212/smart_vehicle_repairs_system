@@ -155,8 +155,20 @@ if command -v docker &> /dev/null; then
     fi
 fi
 
-# Start Docker services (PostgreSQL and Redis) if docker-compose exists
-if [ "$USE_DOCKER" = true ] && [ ! -z "$DOCKER_COMPOSE_CMD" ] && [ -f "$PROJECT_DIR/docker-compose.dev.yml" ]; then
+# Start Docker services (PostgreSQL and Redis)
+if [ "$USE_DOCKER" = true ] && [ -f "$PROJECT_DIR/scripts/start-docker-dev.sh" ]; then
+    echo -e "${BLUE}Starting Docker services (PostgreSQL & Redis)...${NC}"
+    bash "$PROJECT_DIR/scripts/start-docker-dev.sh" 2>&1
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Docker services started${NC}"
+        echo ""
+    else
+        echo -e "${YELLOW}Warning: Failed to start Docker services${NC}"
+        echo -e "${YELLOW}Run: bash scripts/start-docker-dev.sh${NC}"
+        echo ""
+    fi
+elif [ "$USE_DOCKER" = true ] && [ ! -z "$DOCKER_COMPOSE_CMD" ] && [ -f "$PROJECT_DIR/docker-compose.dev.yml" ]; then
     echo -e "${BLUE}Starting Docker services (PostgreSQL & Redis)...${NC}"
     cd "$PROJECT_DIR"
     $DOCKER_COMPOSE_CMD -f docker-compose.dev.yml up -d 2>&1
@@ -328,16 +340,16 @@ DJANGO_PID=$!
 sleep 3
 
 # Start Next.js development server
-# echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
-# cd "$FRONTEND_DIR"
-# NEXT_DEV_ARGS=(dev --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-# if [ "${USE_TURBOPACK:-0}" = "1" ]; then
-#     NEXT_DEV_ARGS=(dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-# else
-#     NEXT_DEV_ARGS=(dev --webpack --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-# fi
-# NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next "${NEXT_DEV_ARGS[@]}" > /tmp/nextjs-dev.log 2>&1 &
-# NEXTJS_PID=$!
+echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
+cd "$FRONTEND_DIR"
+NEXT_DEV_ARGS=(dev --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+if [ "${USE_TURBOPACK:-0}" = "1" ]; then
+    NEXT_DEV_ARGS=(dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+else
+    NEXT_DEV_ARGS=(dev --webpack --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
+fi
+NEXT_PUBLIC_API_URL="http://127.0.0.1:$DJANGO_PORT/api" npx next "${NEXT_DEV_ARGS[@]}" > /tmp/nextjs-dev.log 2>&1 &
+NEXTJS_PID=$!
 
 # Start Celery Worker
 echo -e "${GREEN}Starting Celery Worker...${NC}"

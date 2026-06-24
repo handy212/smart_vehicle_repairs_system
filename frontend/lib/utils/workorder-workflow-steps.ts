@@ -59,12 +59,64 @@ export const WORKFLOW_STATUS_ORDER: Record<string, number> = {
   closed: 12,
 };
 
+export const ROUTINE_WORKFLOW_STEPS: WorkflowStep[] = [
+  { key: "check_in", label: "Check-in", icon: FileEdit },
+  { key: "approved", label: "Ready for Service", icon: CheckCircle2 },
+  { key: "in_progress", label: "Service In Progress", icon: Cog },
+  { key: "completed", label: "Complete", icon: PartyPopper },
+  { key: "invoiced", label: "Invoiced", icon: Receipt },
+  { key: "closed", label: "Closed", icon: Lock },
+];
+
+export const ROUTINE_STATUS_ORDER: Record<string, number> = {
+  draft: 0,
+  inspection: 0,
+  intake: 0,
+  assigned: 0,
+  diagnosis: 0,
+  awaiting_approval: 0,
+  approved: 1,
+  in_progress: 2,
+  additional_work_found: 2,
+  paused: 2,
+  quality_check: 2,
+  discontinued_pending_bill: 3,
+  completed: 3,
+  invoiced: 4,
+  closed: 5,
+};
+
+export function isRoutineMaintenanceWorkOrder(
+  workOrder?: { maintenance_type?: string } | null
+): boolean {
+  return workOrder?.maintenance_type === "routine";
+}
+
+export function getWorkflowStepsForWorkOrder(
+  workOrder?: { maintenance_type?: string } | null
+): WorkflowStep[] {
+  return isRoutineMaintenanceWorkOrder(workOrder) ? ROUTINE_WORKFLOW_STEPS : WORKFLOW_STEPS;
+}
+
 export function getWorkflowStepIndex(
   status: string,
-  context?: { diagnosisStatus?: string | null }
+  context?: { diagnosisStatus?: string | null; maintenanceType?: string | null }
 ): number {
+  if (context?.maintenanceType === "routine") {
+    return ROUTINE_STATUS_ORDER[status] ?? 0;
+  }
   if (status === "paused" && context?.diagnosisStatus === "paused") {
     return WORKFLOW_STATUS_ORDER.diagnosis;
   }
   return WORKFLOW_STATUS_ORDER[status] ?? 0;
+}
+
+export function getWorkflowStepIndexForWorkOrder(
+  status: string,
+  workOrder?: { maintenance_type?: string; diagnosis_status?: string | null } | null
+): number {
+  return getWorkflowStepIndex(status, {
+    diagnosisStatus: workOrder?.diagnosis_status,
+    maintenanceType: workOrder?.maintenance_type,
+  });
 }

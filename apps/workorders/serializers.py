@@ -734,7 +734,14 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                 validated_data['warranty_reason'] = warranty_reason
         
         # Create work order
-        validated_data.setdefault('requires_approval', True)
+        if (
+            validated_data.get('maintenance_type') == 'routine'
+            and (validated_data.get('service_bundle') or validated_data.get('service_type'))
+        ):
+            validated_data['requires_approval'] = False
+            validated_data['quality_check_required'] = False
+        else:
+            validated_data.setdefault('requires_approval', True)
         work_order = WorkOrder.objects.create(**validated_data)
         
         # Add assigned technicians
@@ -791,8 +798,15 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                 pass  # Related work order not found, skip alert creation
         
         # Apply service bundle if applicable
-        from .services import apply_service_bundle
+        from .services import apply_service_bundle, prepare_routine_service_workflow
         apply_service_bundle(work_order)
+        work_order.refresh_from_db()
+        if work_order.maintenance_type == 'routine' and work_order.service_bundle_id:
+            prepare_routine_service_workflow(
+                work_order,
+                user=request.user if request and request.user.is_authenticated else None,
+            )
+            work_order.refresh_from_db()
         
         return work_order
 

@@ -7,6 +7,7 @@ import { WorkOrder } from "@/lib/api/workorders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface TimelineProps {
   workOrder: WorkOrder;
@@ -64,7 +65,10 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
       });
     }
 
-    if (workOrder.diagnosis_completed_at) {
+    if (
+      !isRoutineMaintenanceWorkOrder(workOrder) &&
+      workOrder.diagnosis_completed_at
+    ) {
       rows.push({
         id: "diagnosis-completed",
         timestamp: workOrder.diagnosis_completed_at,

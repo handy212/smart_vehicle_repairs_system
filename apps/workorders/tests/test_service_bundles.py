@@ -150,6 +150,43 @@ class ServiceBundleTests(TestCase):
         oil_part = updated_wo.parts.get(part_number='EO5W30')
         self.assertEqual(oil_part.quantity, Decimal('4.50'))
 
+    def test_routine_fast_tracks_to_approved(self):
+        """Routine check-in skips inspection/diagnosis and lands on approved."""
+        data = {
+            'work_order_number': 'WO-TEST-004',
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'branch': self.branch.id,
+            'status': 'draft',
+            'priority': 'normal',
+            'maintenance_type': 'routine',
+            'service_type': self.service_type.id,
+            'service_bundle': self.bundle.id,
+            'estimated_completion': timezone.now() + timezone.timedelta(days=1),
+            'customer_concerns': 'Oil change service',
+            'odometer_in': 10000,
+        }
+
+        request = mock.Mock()
+        request.user = self.user
+        request.data = data
+        request.GET = {}
+        request.headers = {}
+        request.META = {}
+        request.session = {}
+
+        serializer = WorkOrderCreateSerializer(data=data, context={'request': request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        work_order = serializer.save()
+
+        work_order.refresh_from_db()
+        self.assertEqual(work_order.status, 'approved')
+        self.assertTrue(work_order.approved_by_customer)
+        self.assertFalse(work_order.requires_approval)
+        self.assertEqual(work_order.approval_method, 'routine_service')
+        self.assertGreater(work_order.parts.count(), 0)
+        self.assertTrue(work_order.tasks.filter(is_workflow_task=False).exists())
+
     def test_no_bundle_application_if_general(self):
         """Test that parts are NOT applied if maintenance_type is general"""
         

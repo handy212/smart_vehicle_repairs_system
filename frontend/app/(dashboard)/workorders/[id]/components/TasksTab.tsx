@@ -30,6 +30,7 @@ interface TasksTabProps {
   isLoading?: boolean;
   workOrder?: {
     status?: string;
+    maintenance_type?: string;
     branch?: number | { id: number; name?: string } | null;
     service_coordinator?: number | { id: number; first_name: string; last_name: string };
     service_coordinator_name?: string;
@@ -53,13 +54,27 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
   const [completeHours, setCompleteHours] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
+  const isRoutine = workOrder?.maintenance_type === "routine";
+  const routineSkipWorkflowPhases = new Set([
+    "inspection",
+    "intake",
+    "assigned",
+    "diagnosis",
+    "awaiting_approval",
+  ]);
   const repairExecutionStatuses = ["approved", "in_progress", "paused", "additional_work_found", "quality_check"];
   const useRepairWorkspace = repairExecutionStatuses.includes(workOrder?.status || "");
 
   // Separate workflow tasks from manual tasks and sort them
   const { workflowTasks, manualTasks } = useMemo(() => {
     const workflow = tasks
-      .filter((task) => task.is_workflow_task === true)
+      .filter((task) => {
+        if (task.is_workflow_task !== true) return false;
+        if (isRoutine && task.workflow_phase && routineSkipWorkflowPhases.has(task.workflow_phase)) {
+          return false;
+        }
+        return true;
+      })
       .sort((a, b) => {
         // Sort by sequence_order if available, otherwise by creation time
         if (a.sequence_order !== undefined && b.sequence_order !== undefined) {
@@ -69,7 +84,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
       });
     const manual = tasks.filter((task) => !task.is_workflow_task);
     return { workflowTasks: workflow, manualTasks: manual };
-  }, [tasks]);
+  }, [tasks, isRoutine]);
 
   const getStatusVariant = (status: string): BadgeVariant => {
     switch (status) {

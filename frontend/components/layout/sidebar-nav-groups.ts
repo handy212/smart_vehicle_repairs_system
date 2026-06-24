@@ -24,13 +24,6 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     icon: PremiumIcons.Wrench,
     items: [
       {
-        name: "Vehicle Check-in",
-        href: "/check-in",
-        icon: PremiumIcons.ClipboardList,
-        permission: "create_workorders",
-        module: "workorders",
-      },
-      {
         name: "Customers",
         href: "/customers",
         icon: PremiumIcons.Users,

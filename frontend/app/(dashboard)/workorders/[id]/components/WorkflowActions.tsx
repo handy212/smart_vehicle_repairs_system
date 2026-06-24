@@ -118,6 +118,17 @@ export default function WorkflowActions({
   });
 
   const currentWorkOrder = workOrderData ?? workOrder;
+  const isRoutine = currentWorkOrder?.maintenance_type === "routine";
+  const preServiceStatuses = new Set([
+    "draft",
+    "inspection",
+    "intake",
+    "assigned",
+    "diagnosis",
+    "awaiting_approval",
+  ]);
+  const effectiveStatus =
+    isRoutine && preServiceStatuses.has(status) ? "approved" : status;
   const invoiceSummary = currentWorkOrder?.invoice_summary;
   const estimateSummary = currentWorkOrder?.estimate_summary;
   const existingInvoiceId = invoiceSummary?.id;
@@ -198,6 +209,7 @@ export default function WorkflowActions({
     currentQuoteStage === "approved_waiting_for_repairs" ||
     currentQuoteStage === "quotation_ready" ||
     !currentQuoteStage;
+  const routineReadyForService = isRoutine && effectiveStatus === "approved";
 
   // Fetch inspections for this work order
   const { data: inspectionsData } = useQuery({
@@ -800,9 +812,19 @@ export default function WorkflowActions({
       description?: string;
     }> = [];
 
-    switch (status) {
-      // Phase 1: Customer Intake & Diagnosis
+    switch (effectiveStatus) {
+      // Phase 1: Customer Intake & Diagnosis (general repair only)
       case "draft":
+        if (isRoutine) {
+          actions.push({
+            label: "View parts & tasks",
+            icon: Wrench,
+            onClick: () => router.push(`/workorders/${workOrderId}?tab=parts`),
+            variant: "outline",
+            description: "Bundle parts and service tasks are already on this job",
+          });
+          break;
+        }
         actions.push(
           {
             label: "Start Initial Inspection",
@@ -825,6 +847,7 @@ export default function WorkflowActions({
         break;
 
       case "inspection":
+        if (isRoutine) break;
         actions.push({
           label: "Start Intake",
           icon: Play,
@@ -837,6 +860,7 @@ export default function WorkflowActions({
         break;
 
       case "intake":
+        if (isRoutine) break;
         actions.push({
           label: "Assign Service Coordinator",
           icon: User,
@@ -846,6 +870,7 @@ export default function WorkflowActions({
         break;
 
       case "assigned":
+        if (isRoutine) break;
         actions.push({
           label: "Start Diagnosis",
           icon: ClipboardCheck,
@@ -856,6 +881,7 @@ export default function WorkflowActions({
         break;
 
       case "diagnosis":
+        if (isRoutine) break;
         // If diagnosis is completed, prioritize next stage actions
         if (isDiagnosisCompleted) {
           // Diagnosis is complete - show next stage action as primary
@@ -916,6 +942,7 @@ export default function WorkflowActions({
 
       // Phase 2: Quotation & Customer Approval
       case "awaiting_approval":
+        if (isRoutine) break;
         actions.push({
           label: "Approve",
           icon: CheckCircle,
@@ -926,6 +953,15 @@ export default function WorkflowActions({
         break;
 
       case "approved":
+        if (isRoutine) {
+          actions.push({
+            label: "View service plan",
+            icon: Wrench,
+            onClick: () => router.push(`/workorders/${workOrderId}?tab=parts`),
+            variant: "outline",
+            description: "Review bundle parts and service tasks",
+          });
+        }
         if (waitingForPartsAllocation) {
           actions.push(
             {
@@ -944,21 +980,26 @@ export default function WorkflowActions({
               description: "Allocate or receive the remaining parts while ready repair work continues",
             }
           );
-        } else if (readyForRepairs) {
+        } else if (readyForRepairs || routineReadyForService) {
           actions.push(
             {
-              label: "Start Repairs",
+              label: isRoutine ? "Start service" : "Start Repairs",
               icon: Play,
               onClick: () => startWorkMutation.mutate(),
               disabled: startWorkMutation.isPending,
-              description: "Begin repair work",
+              description: isRoutine ? "Begin routine maintenance work" : "Begin repair work",
             },
             {
-              label: "Open Repairs",
+              label: isRoutine ? "View parts & tasks" : "Open Repairs",
               icon: Wrench,
-              onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
+              onClick: () =>
+                isRoutine
+                  ? router.push(`/workorders/${workOrderId}?tab=parts`)
+                  : router.push(`/workorders/${workOrderId}/repairs`),
               variant: "outline",
-              description: "Review tasks, parts, and readiness before starting",
+              description: isRoutine
+                ? "Review bundle parts and service tasks"
+                : "Review tasks, parts, and readiness before starting",
             }
           );
         }
@@ -1025,7 +1066,7 @@ export default function WorkflowActions({
         break;
 
       case "paused":
-        if (isDiagnosisPaused) {
+        if (isDiagnosisPaused && !isRoutine) {
           actions.push(
             {
               label: "Resume Diagnosis",

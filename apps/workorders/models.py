@@ -610,6 +610,19 @@ class WorkOrder(models.Model):
         if blocked_message:
             return False, blocked_message
 
+        # Routine maintenance check-in: skip inspection/intake/diagnosis pipeline
+        if (
+            self.maintenance_type == 'routine'
+            and self.service_bundle_id
+            and self.status == 'draft'
+            and new_status == 'approved'
+        ):
+            if not self.tasks.filter(is_workflow_task=False).exists():
+                return False, "Routine service must include service tasks before starting work."
+            if not self.parts.exists():
+                return False, "Routine service must include bundle parts before starting work."
+            return True, None
+
         # Validate transition graph. When the workflow builder app is enabled, its
         # default definition becomes the allowed edge list; otherwise use the
         # explicit map below until the repair flow is fully stable.

@@ -27,6 +27,22 @@ def apply_service_bundle(work_order):
                     work_order.save(update_fields=['service_bundle'])
             
             if bundle:
+                update_fields = []
+                if not work_order.diagnosis_notes:
+                    work_order.diagnosis_notes = (
+                        f"Routine maintenance: {bundle.name}. "
+                        "Pre-defined service bundle applied at check-in."
+                    )
+                    update_fields.append('diagnosis_notes')
+                if work_order.requires_approval:
+                    work_order.requires_approval = False
+                    update_fields.append('requires_approval')
+                if work_order.quality_check_required:
+                    work_order.quality_check_required = False
+                    update_fields.append('quality_check_required')
+                if update_fields:
+                    work_order.save(update_fields=update_fields)
+
                 # Create note
                 WorkOrderNote.objects.create(
                     work_order=work_order,
@@ -53,6 +69,29 @@ def apply_service_bundle(work_order):
                 if work_order.branch:
                     from apps.inventory.services import InventoryService
                     InventoryService.reserve_parts_for_work_order(work_order)
+
+                # Mechanical tasks for routine bundle (skip full diagnosis path)
+                if not work_order.tasks.filter(is_workflow_task=False).exists():
+                    max_seq = work_order.tasks.filter(is_workflow_task=False).aggregate(
+                        max_seq=Max('sequence_order')
+                    )['max_seq'] or 0
+                    ServiceTask.objects.create(
+                        work_order=work_order,
+                        task_type='maintenance',
+                        description=f"Perform {bundle.name}",
+                        detailed_notes="Routine maintenance service bundle applied at check-in.",
+                        sequence_order=max_seq + 1,
+                        is_workflow_task=False,
+                    )
+                    for index, item in enumerate(bundle.items.select_related('part').all(), start=1):
+                        ServiceTask.objects.create(
+                            work_order=work_order,
+                            task_type='maintenance',
+                            description=f"Install {item.part.name}",
+                            detailed_notes=f"Included in {bundle.name}",
+                            sequence_order=max_seq + 1 + index,
+                            is_workflow_task=False,
+                        )
                 
                 return True
         except Exception as e:
@@ -61,6 +100,68 @@ def apply_service_bundle(work_order):
             logger.error(f"Failed to apply service bundle for WO {work_order.work_order_number}: {e}")
             return False
     return False
+
+
+def prepare_routine_service_workflow(work_order, user=None):
+    """
+    Fast-track routine maintenance from check-in to approved.
+    Skips inspection, intake, and diagnosis — the service bundle defines the work.
+    """
+    if work_order.maintenance_type != 'routine' or not work_order.service_bundle_id:
+        return False
+    if work_order.status != 'draft':
+        return False
+    if not work_order.tasks.filter(is_workflow_task=False).exists():
+        return False
+
+    bundle = work_order.service_bundle
+    bundle_name = bundle.name if bundle else 'Routine service'
+    update_fields = []
+
+    if work_order.requires_approval:
+        work_order.requires_approval = False
+        update_fields.append('requires_approval')
+    if work_order.quality_check_required:
+        work_order.quality_check_required = False
+        update_fields.append('quality_check_required')
+    if not work_order.approved_by_customer:
+        work_order.approved_by_customer = True
+        work_order.approved_at = timezone.now()
+        work_order.approval_method = 'routine_service'
+        update_fields.extend(['approved_by_customer', 'approved_at', 'approval_method'])
+    if not work_order.diagnosis_notes:
+        work_order.diagnosis_notes = (
+            f"Routine maintenance: {bundle_name}. "
+            "Pre-defined service bundle applied at check-in."
+        )
+        update_fields.append('diagnosis_notes')
+
+    if update_fields:
+        update_fields.append('updated_at')
+        work_order.save(update_fields=update_fields)
+
+    try:
+        work_order.transition_to('approved', user=user)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"Routine fast-track failed for WO {work_order.work_order_number}: {e}",
+            exc_info=True,
+        )
+        return False
+
+    WorkOrderNote.objects.create(
+        work_order=work_order,
+        note_type='internal',
+        note=(
+            f"Routine service fast-track: skipped inspection and diagnosis for {bundle_name}. "
+            "Assign a technician and start service from the Parts/Tasks tabs."
+        ),
+        created_by=user,
+        is_important=False,
+    )
+    return True
 
 
 

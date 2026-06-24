@@ -371,7 +371,7 @@ export function PerfexDashboard({
       const tag = (e.target as HTMLElement).tagName;
       const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(tag);
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "n") {
-        e.preventDefault(); router.push("/workorders/new");
+        e.preventDefault(); router.push("/check-in");
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
         e.preventDefault(); router.push("/appointments/new");
@@ -549,13 +549,6 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               <span className="hidden sm:inline">{formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             </button>
           )}
-          {roleConfig?.showCheckIn && (
-            <Button variant="default" size="sm" asChild>
-              <Link href="/check-in">
-                <UserCheck className="h-3.5 w-3.5 mr-1" /> Check-in
-              </Link>
-            </Button>
-          )}
           <Button variant="outline" size="sm" asChild>
             <Link href="/appointments/new" title="New appointment (Ctrl+Shift+A)">
               <Plus className="h-3.5 w-3.5 mr-1" /> Appointment
@@ -575,8 +568,8 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
             </Button>
           ) : (
             <Button size="sm" asChild>
-              <Link href="/workorders/new" title="New work order (Ctrl+N)">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Work Order
+              <Link href="/check-in" title="Vehicle check-in (Ctrl+N)">
+                <Plus className="h-3.5 w-3.5 mr-1" /> Check-in
               </Link>
             </Button>
           )}
@@ -744,7 +737,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                           {woSearch ? `No results for "${woSearch}"` : "No work orders found"}
                         </p>
                         {!woSearch && woFilter === "all" && woDateRange === "all" && (
-                          <Button size="sm" asChild><Link href="/workorders/new"><Plus className="h-3.5 w-3.5 mr-1" />Create work order</Link></Button>
+                          <Button size="sm" asChild><Link href="/check-in"><Plus className="h-3.5 w-3.5 mr-1" />Vehicle check-in</Link></Button>
                         )}
                         {(woSearch || woFilter !== "all" || woDateRange !== "all") && (
                           <button onClick={() => { setWoSearch(""); setWoFilter("all"); setWoDateRange("all"); }}

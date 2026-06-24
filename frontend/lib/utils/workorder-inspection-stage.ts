@@ -155,6 +155,25 @@ export function getWorkOrderStagePresentation(
   inspection?: VehicleInspection | null
 ): WorkOrderStagePresentation {
   const workflowStatus = workOrder?.status || "draft";
+  const isRoutine = (workOrder as { maintenance_type?: string } | null | undefined)?.maintenance_type === "routine";
+
+  if (isRoutine) {
+    if (["draft", "inspection", "intake", "assigned", "diagnosis", "awaiting_approval"].includes(workflowStatus)) {
+      return {
+        workflowStatus,
+        label: workflowStatus === "draft" ? "Routine check-in" : "Ready for service",
+      };
+    }
+    if (workflowStatus === "approved") {
+      return { workflowStatus, label: "Ready for service" };
+    }
+    if (workflowStatus === "in_progress") {
+      return { workflowStatus, label: "Routine service in progress" };
+    }
+    if (workflowStatus === "paused") {
+      return { workflowStatus, label: "Service paused" };
+    }
+  }
 
   if (workflowStatus === "diagnosis") {
     return {

@@ -4,8 +4,8 @@ import { useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { getStatusLabel } from "@/lib/utils/workorder-status";
 import {
-  WORKFLOW_STEPS,
-  getWorkflowStepIndex,
+  getWorkflowStepIndexForWorkOrder,
+  getWorkflowStepsForWorkOrder,
 } from "@/lib/utils/workorder-workflow-steps";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ interface WorkOrderProgressProps {
   status: string;
   labelOverride?: string;
   diagnosisStatus?: string | null;
+  maintenanceType?: string | null;
   className?: string;
 }
 
@@ -26,12 +27,17 @@ export function WorkOrderProgress({
   status,
   labelOverride,
   diagnosisStatus,
+  maintenanceType,
   className,
 }: WorkOrderProgressProps) {
   const [stepsOpen, setStepsOpen] = useState(false);
-  const currentIndex = getWorkflowStepIndex(status, { diagnosisStatus });
-  const currentStep = WORKFLOW_STEPS[currentIndex] ?? WORKFLOW_STEPS[0];
-  const progressPct = Math.round(((currentIndex + 1) / WORKFLOW_STEPS.length) * 100);
+  const workflowSteps = getWorkflowStepsForWorkOrder({ maintenance_type: maintenanceType ?? undefined });
+  const currentIndex = getWorkflowStepIndexForWorkOrder(status, {
+    maintenance_type: maintenanceType ?? undefined,
+    diagnosis_status: diagnosisStatus,
+  });
+  const currentStep = workflowSteps[currentIndex] ?? workflowSteps[0];
+  const progressPct = Math.round(((currentIndex + 1) / workflowSteps.length) * 100);
   const CurrentIcon = currentStep.icon;
   const currentLabel = labelOverride || getStatusLabel(status);
 
@@ -45,7 +51,7 @@ export function WorkOrderProgress({
               {currentLabel}
             </p>
             <p className="text-xs text-muted-foreground">
-              Step {currentIndex + 1} of {WORKFLOW_STEPS.length}
+              Step {currentIndex + 1} of {workflowSteps.length}
               <span className="hidden sm:inline"> · {labelOverride || currentStep.label}</span>
             </p>
           </div>
@@ -59,7 +65,7 @@ export function WorkOrderProgress({
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" align="end">
             <ul className="max-h-64 space-y-1 overflow-y-auto">
-              {WORKFLOW_STEPS.map((step, index) => {
+              {workflowSteps.map((step, index) => {
                 const done = index < currentIndex;
                 const current = index === currentIndex;
                 const Icon = step.icon;
