@@ -284,12 +284,12 @@ function EditInterviewDialog({ interview, open, onOpenChange, onUpdated }: { int
                         <div className="space-y-2"><Label>Time</Label><Input type="time" value={time} onChange={e => setTime(e.target.value)} /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Type</Label><Select value={type} onValueChange={setType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="phone">Phone</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="in_person">In Person</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Type</Label><Select value={type} onValueChange={(value) => setType(value as typeof type)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="phone">Phone</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="in_person">In Person</SelectItem></SelectContent></Select></div>
                         <div className="space-y-2"><Label>Duration (mins)</Label><Input type="number" value={duration} onChange={e => setDuration(e.target.value)} /></div>
                     </div>
                     <div className="space-y-2">
                         <Label>Status</Label>
-                        <Select value={status} onValueChange={setStatus}>
+                        <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="scheduled">Scheduled</SelectItem>

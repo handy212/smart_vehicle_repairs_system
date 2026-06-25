@@ -607,7 +607,7 @@ export const hrApi = {
             apiClient.post<AttendanceRecord>(`${BASE}/attendance/clock_out/`),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/attendance/${id}/`),
-        myAttendance: (params?: { start_date?: string; end_date?: string }) =>
+        myAttendance: (params?: { start_date?: string; end_date?: string; ordering?: string }) =>
             apiClient.get<PaginatedResponse<AttendanceRecord>>(`${BASE}/attendance/my_attendance/`, { params }),
         todaySummary: () =>
             apiClient.get<AttendanceSummary>(`${BASE}/attendance/today_summary/`),

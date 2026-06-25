@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, PaySlip } from "@/lib/api/hr";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Banknote, Download, FileText } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
