@@ -118,6 +118,10 @@ Run tests:
 pytest apps/quickbooks_online/test_owner_coa_separation.py apps/accounting/tests/test_posting_standard.py --no-cov
 ```
 
+## Go-live checklist
+
+Before production cutover, complete **[OWNER-QBO-GO-LIVE-CHECKLIST.md](OWNER-QBO-GO-LIVE-CHECKLIST.md)** (branch smoke tests + owner/accountant sign-off).
+
 ## Reference modules
 
 - Match patterns: [`apps/quickbooks_online/owner_coa_specs.py`](../apps/quickbooks_online/owner_coa_specs.py)

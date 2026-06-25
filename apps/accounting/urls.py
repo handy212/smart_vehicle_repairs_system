@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import management_report_views as mgmt_views
 from . import report_print_views
+from .revenue_product_views import RevenueProductViewSet
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -14,6 +15,7 @@ router.register(r'budgets', views.BudgetViewSet, basename='budget')
 router.register(r'budget-lines', views.BudgetLineViewSet, basename='budgetline')
 router.register(r'accruals', views.AccrualViewSet, basename='accrual')
 router.register(r'vat-returns', views.VatReturnViewSet, basename='vat-return')
+router.register(r'revenue-products', RevenueProductViewSet, basename='revenue-product')
 
 urlpatterns = [
     # Financial Reports
@@ -38,6 +40,7 @@ urlpatterns = [
     path('reports/supplier-ap-aging/', mgmt_views.SupplierAPAgingView.as_view(), name='supplier-ap-aging'),
     path('reports/cash-collection/', mgmt_views.CashCollectionReportView.as_view(), name='cash-collection'),
     path('reports/revenue-mix/', mgmt_views.RevenueMixReportView.as_view(), name='revenue-mix'),
+    path('reports/revenue-by-product/', mgmt_views.RevenueByProductReportView.as_view(), name='revenue-by-product'),
     path('reports/opex-variance/', mgmt_views.OpexVarianceView.as_view(), name='opex-variance'),
     path('reports/cost-control/', mgmt_views.CostControlReportView.as_view(), name='cost-control'),
     path('reports/till-reconciliation/', views.TillReconciliationReportView.as_view(), name='till-reconciliation'),

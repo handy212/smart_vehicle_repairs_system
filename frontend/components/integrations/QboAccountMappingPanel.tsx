@@ -134,6 +134,26 @@ export function QboAccountMappingPanel() {
     },
   });
 
+  const applyOwnerMutation = useMutation({
+    mutationFn: () => qboMappingsApi.applyOwnerTemplate({ wire_svr: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["qbo", "account-mappings"] });
+      queryClient.invalidateQueries({ queryKey: ["qbo", "accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["qbo", "items"] });
+      toast({
+        title: "Owner COA template applied",
+        description: "QuickBooks mappings were updated from the owner chart template.",
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Apply failed",
+        description: getUserFacingError(error, "Could not apply owner COA template."),
+        variant: "destructive",
+      });
+    },
+  });
+
   const mappedAccountIds = useMemo(() => {
     const ids = new Set<string>();
     overview?.rows.forEach((row) => {
@@ -263,6 +283,15 @@ export function QboAccountMappingPanel() {
           >
             <RefreshCcw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh QBO
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={applyOwnerMutation.isPending}
+            onClick={() => applyOwnerMutation.mutate()}
+          >
+            {applyOwnerMutation.isPending ? "Applying…" : "Apply owner COA template"}
           </Button>
         </div>
       </CardHeader>

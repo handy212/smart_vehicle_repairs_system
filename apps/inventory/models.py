@@ -20,6 +20,15 @@ class PartCategory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='part_categories',
+        help_text='Default owner revenue type for parts in this category.',
+    )
+
     class Meta:
         verbose_name = 'Part Category'
         verbose_name_plural = 'Part Categories'
@@ -225,6 +234,14 @@ class Part(models.Model):
         null=True,
         blank=True,
         help_text='Opening inventory date sent to QBO when first synced as an Inventory item.',
+    )
+    revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='catalog_parts',
+        help_text='Override category default owner revenue classification.',
     )
     
     # Pricing
