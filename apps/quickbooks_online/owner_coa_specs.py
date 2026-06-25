@@ -164,6 +164,48 @@ CONTROL_ACCOUNT_QBO_PATTERNS = {
         'account_types': ['Bank'],
         'exclude_substrings': ['lpo', 'momo', 'receipt', 'petty', 'cash receipt'],
     },
+    'salary_expense_account': {
+        'name_substrings': ['salary', 'salaries', 'wages', 'payroll expense'],
+        'account_numbers': ['600', '800'],
+        'account_types': ['Expense'],
+        'exclude_substrings': ['overtime', 'allowance', 'statutory', 'employer'],
+    },
+    'overtime_expense_account': {
+        'name_substrings': ['overtime', 'ot pay', 'over time'],
+        'account_numbers': ['601'],
+        'account_types': ['Expense'],
+        'exclude_substrings': [],
+    },
+    'allowances_expense_account': {
+        'name_substrings': ['allowance', 'allowances', 'staff benefit'],
+        'account_numbers': ['602'],
+        'account_types': ['Expense'],
+        'exclude_substrings': ['employer statutory'],
+    },
+    'employer_statutory_expense_account': {
+        'name_substrings': ['employer statutory', 'ssnit employer', 'employer contribution'],
+        'account_numbers': ['603'],
+        'account_types': ['Expense'],
+        'exclude_substrings': ['payable'],
+    },
+    'paye_tax_payable_account': {
+        'name_substrings': ['paye', 'pay as you earn', 'income tax payable'],
+        'account_numbers': ['430', '230'],
+        'account_types': ['Other Current Liability'],
+        'exclude_substrings': ['receivable', 'withholding'],
+    },
+    'payroll_deductions_payable_account': {
+        'name_substrings': ['payroll deduction', 'employee deduction', 'ssnit employee'],
+        'account_numbers': ['431', '231'],
+        'account_types': ['Other Current Liability'],
+        'exclude_substrings': ['employer'],
+    },
+    'employer_statutory_payable_account': {
+        'name_substrings': ['employer statutory payable', 'ssnit payable', 'employer contribution payable'],
+        'account_numbers': ['432', '2315'],
+        'account_types': ['Other Current Liability'],
+        'exclude_substrings': ['expense', 'receivable'],
+    },
 }
 
 # Customer payment method → QBO deposit account patterns.

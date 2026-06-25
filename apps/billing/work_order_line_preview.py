@@ -16,6 +16,7 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
         resolve_revenue_product_for_part,
         resolve_revenue_product_for_task,
     )
+    from apps.inventory.part_catalog import billing_line_type_for_part
 
     payloads: list[dict] = []
     wo = work_order
@@ -51,6 +52,7 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
         line_fields = build_invoice_line_fields(
             revenue_product=revenue_product,
             description=desc,
+            item_type='labor',
         )
         payload = {
             'order': order_idx,
@@ -84,10 +86,16 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
                 'category', 'category__revenue_product', 'revenue_product',
             ).first()
         revenue_product = resolve_revenue_product_for_part(inventory_part)
+        part_item_type = (
+            billing_line_type_for_part(inventory_part)
+            if inventory_part is not None
+            else 'part'
+        )
         line_fields = build_invoice_line_fields(
             revenue_product=revenue_product,
             description=desc,
             inventory_part=inventory_part,
+            item_type=part_item_type,
         )
         payload = {
             'order': order_idx,
