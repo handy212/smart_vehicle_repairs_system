@@ -359,6 +359,11 @@ export interface ServiceBundle {
   updated_at: string;
 }
 
+export type ServiceBundleCreatePayload = Omit<Partial<ServiceBundle>, "items" | "service_type"> & {
+  service_type?: number | null;
+  items?: Array<{ part_id: number; quantity: number }>;
+};
+
 export const inventoryApi = {
   // Service Packages
   listPackages: async (params?: {
@@ -744,7 +749,7 @@ export const inventoryApi = {
     return response.data;
   },
 
-  createBundle: async (data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
+  createBundle: async (data: ServiceBundleCreatePayload): Promise<ServiceBundle> => {
     const response = await apiClient.post("/inventory/service-bundles/", data);
     return response.data;
   },

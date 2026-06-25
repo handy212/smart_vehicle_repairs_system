@@ -77,6 +77,7 @@ export default function PackagesPage() {
   const [packageRevenueProduct, setPackageRevenueProduct] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
 
   const { data: packagesData, isLoading } = useQuery({

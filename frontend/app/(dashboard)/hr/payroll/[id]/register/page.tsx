@@ -62,23 +62,23 @@ function PayrollRegisterContent() {
     const rows = register?.rows ?? [];
     const totals = register?.totals;
 
-    const handleExport = () => {
+    const handleExport = async () => {
         if (!register) return;
-        exportToCSV({
-            filename: `payroll-register-${register.period.name}`,
-            headers: ["Employee", "Department", "Basic", "Overtime", "Gross", "Tax", "Deductions", "Net", "Status"],
-            rows: rows.map((r) => [
-                r.employee_name,
-                r.department ?? "",
-                r.basic_salary,
-                r.overtime_pay,
-                r.gross_pay,
-                r.tax_amount,
-                r.deductions,
-                r.net_pay,
-                r.status,
-            ]),
-        });
+        await exportToCSV(
+            rows,
+            `payroll-register-${register.period.name}`,
+            [
+                { key: "employee_name", label: "Employee" },
+                { key: "department", label: "Department" },
+                { key: "basic_salary", label: "Basic" },
+                { key: "overtime_pay", label: "Overtime" },
+                { key: "gross_pay", label: "Gross" },
+                { key: "tax_amount", label: "Tax" },
+                { key: "deductions", label: "Deductions" },
+                { key: "net_pay", label: "Net" },
+                { key: "status", label: "Status" },
+            ]
+        );
     };
 
     return (

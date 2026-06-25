@@ -788,7 +788,7 @@ export default function InvoiceDetailPage() {
                               </TableCell>
                               <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
                               <TableCell className="text-right align-top py-3">
-                                {item.unit_price ? formatCurrency(parseFloat(item.unit_price)) : "-"}
+                                {item.unit_price ? formatCurrency(parseAmount(item.unit_price)) : "-"}
                               </TableCell>
                               <TableCell className="text-right align-top py-3">
                                 {hasLineDiscount ? (

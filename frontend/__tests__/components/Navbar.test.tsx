@@ -76,7 +76,9 @@ describe('Navbar Component', () => {
                 role: 'admin',
             },
             isAuthenticated: true,
+            hasHydrated: true,
             setUser: vi.fn(),
+            setHasHydrated: vi.fn(),
             logout: vi.fn(),
         };
 

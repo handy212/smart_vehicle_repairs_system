@@ -211,7 +211,7 @@ apiClient.interceptors.response.use(
           const refreshed = await refreshAccessToken();
           if (!refreshed) {
             const refreshError = new Error("Session expired");
-            processQueue(refreshError, null);
+            processQueue(refreshError, false);
             clearTokens();
             if (window.location.pathname !== "/login") {
               window.location.href = "/login";
@@ -223,7 +223,7 @@ apiClient.interceptors.response.use(
 
           return apiClient(originalRequest);
         } catch (refreshError) {
-          processQueue(refreshError, null);
+          processQueue(refreshError, false);
           clearTokens();
           if (window.location.pathname !== "/login") {
             window.location.href = "/login";

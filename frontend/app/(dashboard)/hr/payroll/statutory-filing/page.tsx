@@ -41,24 +41,43 @@ function StatutoryFilingContent() {
 
   const pack = packResponse?.data;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!pack) return;
-    const rows = pack.employees.map((e: {
+    type StatutorySummaryItem = { code: string; label: string; total: number };
+    type StatutoryEmployee = {
       employee_name: string;
       gross_pay: number;
       paye: number;
       statutory_deductions: Record<string, number>;
-    }) => [
-      e.employee_name,
-      e.gross_pay,
-      e.paye,
-      ...pack.summary.map((s: { code: string }) => e.statutory_deductions[s.code] || 0),
-    ]);
-    exportToCSV({
-      filename: `statutory-pack-${pack.period.name}`,
-      headers: ["Employee", "Gross", "PAYE", ...pack.summary.map((s: { label: string }) => s.label)],
-      rows,
+    };
+    type StatutoryExportRow = {
+      employee_name: string;
+      gross_pay: number;
+      paye: number;
+      [key: string]: string | number;
+    };
+    const summary = pack.summary as StatutorySummaryItem[];
+    const rows: StatutoryExportRow[] = (pack.employees as StatutoryEmployee[]).map((e) => {
+      const row: StatutoryExportRow = {
+        employee_name: e.employee_name,
+        gross_pay: e.gross_pay,
+        paye: e.paye,
+      };
+      for (const item of summary) {
+        row[item.code] = e.statutory_deductions[item.code] || 0;
+      }
+      return row;
     });
+    await exportToCSV(
+      rows,
+      `statutory-pack-${pack.period.name}`,
+      [
+        { key: "employee_name", label: "Employee" },
+        { key: "gross_pay", label: "Gross" },
+        { key: "paye", label: "PAYE" },
+        ...summary.map((s) => ({ key: s.code, label: s.label })),
+      ]
+    );
   };
 
   return (

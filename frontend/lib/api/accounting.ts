@@ -287,6 +287,13 @@ export interface AccountingSettings {
     cash_over_short_account?: number | null;
     till_counterparty_cash_account?: number | null;
     default_bank_account?: number | null;
+    salary_expense_account?: number | null;
+    overtime_expense_account?: number | null;
+    allowances_expense_account?: number | null;
+    employer_statutory_expense_account?: number | null;
+    paye_tax_payable_account?: number | null;
+    payroll_deductions_payable_account?: number | null;
+    employer_statutory_payable_account?: number | null;
     updated_at?: string;
     updated_by?: number | null;
 }

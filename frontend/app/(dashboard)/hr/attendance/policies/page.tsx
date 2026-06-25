@@ -281,7 +281,7 @@ function PolicyFormDialog({
                             work_end_time: workEnd,
                             late_threshold_minutes: lateThreshold,
                             half_day_hours: halfDayHours,
-                            overtime_multiplier: overtimeMultiplier,
+                            overtime_multiplier: Number(overtimeMultiplier),
                             is_default: isDefault,
                             is_active: isActive,
                         })}
