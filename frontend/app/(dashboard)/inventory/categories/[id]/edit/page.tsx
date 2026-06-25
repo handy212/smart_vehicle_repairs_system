@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
+import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ const categorySchema = z.object({
   description: z.string().optional(),
   parent: z.number().optional().nullable(),
   is_active: z.boolean(),
+  revenue_product: z.number().optional().nullable(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -49,6 +51,8 @@ export default function EditCategoryPage() {
     reset,
     formState: { errors, isSubmitting },
     setError,
+    setValue,
+    watch,
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: { is_active: true, parent: null },
@@ -62,6 +66,7 @@ export default function EditCategoryPage() {
 
       parent: (category.parent as any) || null,
       is_active: category.is_active,
+      revenue_product: category.revenue_product ?? null,
     });
   }, [category, reset]);
 
@@ -186,6 +191,19 @@ export default function EditCategoryPage() {
                       </option>
                     ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Revenue product</label>
+                <RevenueProductSelect
+                  value={watch("revenue_product") ?? null}
+                  onChange={(value) => setValue("revenue_product", value)}
+                  revenueClass="part"
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Default owner income account for parts in this category.
+                </p>
               </div>
 
               <div className="flex items-center">

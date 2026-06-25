@@ -40,6 +40,9 @@ export interface ServiceTaskType {
   default_labor_rate?: string;
   is_billable?: boolean;
   is_active?: boolean;
+  revenue_product?: number | null;
+  revenue_product_name?: string | null;
+  owner_account_code?: string | null;
   sort_order?: number;
 }
 

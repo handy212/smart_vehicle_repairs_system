@@ -32,6 +32,7 @@ import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { Undo2, Database } from "lucide-react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
+import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -749,7 +750,8 @@ export default function InvoiceDetailPage() {
                   <Table>
                     <TableHeader className="bg-muted/50">
                       <TableRow className="h-8">
-                        <TableHead className="w-[40%] py-2">Item / Description</TableHead>
+                        <TableHead className="w-[34%] py-2">Item / Description</TableHead>
+                        <TableHead className="py-2">Revenue</TableHead>
                         <TableHead className="text-right py-2">Qty</TableHead>
                         <TableHead className="text-right py-2">Rate</TableHead>
                         <TableHead className="text-right py-2">Discount</TableHead>
@@ -776,6 +778,13 @@ export default function InvoiceDetailPage() {
                                   </div>
                                 )}
                                 {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
+                              </TableCell>
+                              <TableCell className="align-top py-3">
+                                <RevenueProductBadge
+                                  name={item.revenue_product_name}
+                                  ownerAccountCode={item.owner_account_code}
+                                  code={item.revenue_product_code}
+                                />
                               </TableCell>
                               <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
                               <TableCell className="text-right align-top py-3">
@@ -808,7 +817,7 @@ export default function InvoiceDetailPage() {
                         })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             No line items found.
                           </TableCell>
                         </TableRow>

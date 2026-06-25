@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
+import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 
 const packageSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -48,6 +49,7 @@ const packageSchema = z.object({
   price: z.string().min(1, "Price is required"),
   duration_months: z.number().min(1, "Duration must be at least 1 month"),
   is_active: z.boolean().optional(),
+  revenue_product: z.number().optional().nullable(),
   features: z.object({
     roadside_first_aid: z.number().min(0).optional(),
     towing_services_km: z.number().min(0).optional(),
@@ -72,7 +74,7 @@ export default function PackagesPage() {
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
-  const [search, setSearch] = useState("");
+  const [packageRevenueProduct, setPackageRevenueProduct] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const debouncedSearch = useDebounce(search, 500);
 
@@ -202,15 +204,17 @@ export default function PackagesPage() {
   });
 
   const onSubmit = (data: PackageFormData) => {
+    const payload = { ...data, revenue_product: packageRevenueProduct };
     if (editingPackage) {
-      updateMutation.mutate({ id: editingPackage.id, data });
+      updateMutation.mutate({ id: editingPackage.id, data: payload });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload);
     }
   };
 
   const handleEdit = (pkg: Package) => {
     setEditingPackage(pkg);
+    setPackageRevenueProduct(pkg.revenue_product ?? null);
     reset({
       name: pkg.name,
       code: pkg.code,
@@ -225,6 +229,7 @@ export default function PackagesPage() {
 
   const handleNew = () => {
     setEditingPackage(null);
+    setPackageRevenueProduct(null);
     reset({
       name: "",
       code: "",
@@ -507,6 +512,16 @@ export default function PackagesPage() {
                   {...register("description")}
                   placeholder="Package description..."
                   className="min-h-[80px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Revenue product (owner account)</Label>
+                <RevenueProductSelect
+                  value={packageRevenueProduct}
+                  onChange={setPackageRevenueProduct}
+                  revenueClass="subscription"
+                  className="w-full"
                 />
               </div>
 

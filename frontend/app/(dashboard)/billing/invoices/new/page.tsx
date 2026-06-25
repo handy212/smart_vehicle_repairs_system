@@ -30,7 +30,8 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
 import { Badge } from "@/components/ui/badge";
 import { useBranchStore } from "@/store/branchStore";
-import { buildInvoiceNotesFromWorkOrder, buildLineItemsFromWorkOrder, resolveWorkOrderCustomerId, resolveWorkOrderVehicleId, selectNumericFieldString } from "@/lib/billing/workOrderInvoicePrefill";
+import { buildInvoiceNotesFromWorkOrder, resolveWorkOrderCustomerId, resolveWorkOrderVehicleId, selectNumericFieldString } from "@/lib/billing/workOrderInvoicePrefill";
+import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
@@ -45,6 +46,7 @@ const lineItemSchema = z.object({
   is_taxable: z.boolean(),
   part: z.number().optional(),
   part_number: z.string().optional(),
+  revenue_product: z.number().optional().nullable(),
   notes: z.string().optional(),
 });
 
@@ -91,7 +93,7 @@ export default function NewInvoicePage() {
   const [dueDateManual, setDueDateManual] = useState(false);
   const { formatCurrency } = useCurrency();
   const { activeBranchId } = useBranchStore();
-  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string; notes?: string }>>([
+  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string; revenue_product?: number | null; notes?: string }>>([
     { item_type: "labor", description: "", quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true },
   ]);
   const [partSearchTerm, setPartSearchTerm] = useState("");
@@ -192,7 +194,6 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     if (!workOrder || !Number.isFinite(woNumericId)) return;
-    if (!woTasksFetched || !woPartsFetched) return;
     if (workOrderPrefillApplied.current === workOrder.id) return;
     workOrderPrefillApplied.current = workOrder.id;
 
@@ -207,14 +208,34 @@ export default function NewInvoicePage() {
     setValue("work_order", woNumericId, { shouldValidate: true });
     setValue("notes", buildInvoiceNotesFromWorkOrder(workOrder), { shouldValidate: true });
 
-    const built = buildLineItemsFromWorkOrder(workOrder, woTasks, woParts);
-    setLineItems(built);
-    setValue(
-      "line_items",
-      built.map((row) => ({ ...row, is_taxable: row.is_taxable ?? true })) as InvoiceFormData["line_items"],
-      { shouldValidate: true },
-    );
-  }, [workOrder, woTasks, woParts, woTasksFetched, woPartsFetched, woNumericId, setValue]);
+    billingApi.invoices.workOrderLinePreview(woNumericId).then((preview) => {
+      const built = preview.line_items.map((item) => ({
+        item_type: item.item_type,
+        description: item.description,
+        quantity: item.quantity ? parseFloat(item.quantity) : 1,
+        unit_price: item.unit_price ? parseFloat(item.unit_price) : 0,
+        labor_hours: item.labor_hours ? parseFloat(item.labor_hours) : undefined,
+        labor_rate: item.labor_rate ? parseFloat(item.labor_rate) : undefined,
+        part: item.part ?? undefined,
+        part_number: item.part_number,
+        revenue_product: item.revenue_product ?? undefined,
+        discount_percentage: 0,
+        is_taxable: item.is_taxable ?? true,
+        revenue_product_name: item.revenue_product_name,
+        owner_account_code: item.owner_account_code,
+      }));
+      setLineItems(built);
+      setValue(
+        "line_items",
+        built.map((row) => ({ ...row, is_taxable: row.is_taxable ?? true })) as InvoiceFormData["line_items"],
+        { shouldValidate: true },
+      );
+    }).catch(() => {
+      setLineItems([
+        { item_type: "labor", description: `Labor / services — ${workOrder.work_order_number}`, quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true },
+      ]);
+    });
+  }, [workOrder, woNumericId, setValue]);
 
   useEffect(() => {
     const existingInvoiceId = workOrder?.invoice_summary?.id;
@@ -368,6 +389,7 @@ export default function NewInvoicePage() {
           is_taxable: item.is_taxable,
           part: item.part,
           part_number: item.part_number,
+          revenue_product: item.revenue_product ?? undefined,
           notes: item.notes,
           order: idx,
         })),

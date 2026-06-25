@@ -658,7 +658,7 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
     queryset = Invoice.objects.select_related(
         'customer', 'vehicle', 'work_order', 'estimate',
         'created_by', 'sent_by', 'voided_by'
-    ).prefetch_related('payments', 'line_items')
+    ).prefetch_related('payments', 'line_items__revenue_product', 'line_items__part')
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
     
     def get_permissions(self):
@@ -672,7 +672,7 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_invoices')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
-        elif self.action in ['history', 'pdf', 'print', 'unpaid', 'overdue']:
+        elif self.action in ['history', 'pdf', 'print', 'unpaid', 'overdue', 'work_order_line_preview']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action in ['bulk_update_status', 'send', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]

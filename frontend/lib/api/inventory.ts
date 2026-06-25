@@ -9,6 +9,7 @@ export interface PartCategory {
   parent_name?: string;
   full_path?: string;
   is_active: boolean;
+  revenue_product?: number | null;
   subcategories_count?: number;
   parts_count?: number;
   created_at?: string;

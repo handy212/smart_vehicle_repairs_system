@@ -11,6 +11,7 @@ import {
   PieChart,
   Shield,
   Scale,
+  Tags,
 } from "lucide-react";
 
 import type { NavGroup, NavGroupItem } from "./nav-group-types";
@@ -133,6 +134,13 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
         permission: "manage_accounting_periods",
         icon: Shield,
         description: "Control accounts, period lock, and close",
+      },
+      {
+        name: "Revenue Products",
+        href: "/accounting/revenue-products",
+        permission: "view_accounting",
+        icon: Tags,
+        description: "Owner income account mapping for billing lines",
       },
       {
         name: "Subledger Integrity",

@@ -215,12 +215,16 @@ class EstimateLineItemSerializer(serializers.ModelSerializer):
     """Serializer for estimate line items"""
     
     part_name = serializers.CharField(source='part.name', read_only=True)
+    revenue_product_code = serializers.CharField(source='revenue_product.code', read_only=True, default=None)
+    revenue_product_name = serializers.CharField(source='revenue_product.name', read_only=True, default=None)
+    owner_account_code = serializers.CharField(source='revenue_product.owner_account_code', read_only=True, default=None)
     
     class Meta:
         model = EstimateLineItem
         fields = [
             'id', 'item_type', 'description', 'notes',
             'part', 'part_name', 'part_number',
+            'revenue_product', 'revenue_product_code', 'revenue_product_name', 'owner_account_code',
             'quantity', 'unit_price', 'discount_percentage', 'discount_amount', 'total',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order',
@@ -236,13 +240,19 @@ class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
         model = EstimateLineItem
         fields = [
             'item_type', 'description', 'notes',
-            'part', 'part_number',
+            'part', 'part_number', 'revenue_product',
             'quantity', 'unit_price', 'discount_percentage',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order'
         ]
     
     def validate(self, data):
+        from apps.billing.revenue_resolution import resolve_revenue_product_for_part
+
+        if not data.get('revenue_product'):
+            part = data.get('part')
+            if part is not None:
+                data['revenue_product'] = resolve_revenue_product_for_part(part)
         item_type = data.get('item_type')
         
         # If item_type is labor, labor_hours and labor_rate should be provided
@@ -613,13 +623,16 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
 
 class InvoiceLineItemSerializer(serializers.ModelSerializer):
     part_name = serializers.CharField(source='part.name', read_only=True)
+    revenue_product_code = serializers.CharField(source='revenue_product.code', read_only=True, default=None)
+    revenue_product_name = serializers.CharField(source='revenue_product.name', read_only=True, default=None)
+    owner_account_code = serializers.CharField(source='revenue_product.owner_account_code', read_only=True, default=None)
     
     class Meta:
         model = InvoiceLineItem
         fields = [
             'id', 'item_type', 'description', 'notes',
             'part', 'part_name', 'part_number',
-            'revenue_product',
+            'revenue_product', 'revenue_product_code', 'revenue_product_name', 'owner_account_code',
             'quantity', 'unit_price', 'discount_percentage', 'discount_amount', 'total',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order',
@@ -869,8 +882,27 @@ class InvoiceLineItemCreateSerializer(serializers.Serializer):
     discount_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=Decimal('0'), min_value=Decimal('0'), max_value=Decimal('100'))
     part = serializers.PrimaryKeyRelatedField(queryset=Part.objects.all(), required=False, allow_null=True)
     part_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    revenue_product = serializers.PrimaryKeyRelatedField(
+        queryset=Part.objects.none(),
+        required=False,
+        allow_null=True,
+    )
     is_taxable = serializers.BooleanField(default=True)
     total = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.accounting.models import RevenueProduct
+        self.fields['revenue_product'].queryset = RevenueProduct.objects.filter(is_active=True)
+
+    def validate(self, data):
+        from apps.billing.revenue_resolution import resolve_revenue_product_for_part
+
+        if not data.get('revenue_product'):
+            part = data.get('part')
+            if part is not None:
+                data['revenue_product'] = resolve_revenue_product_for_part(part)
+        return data
 
 
 class InvoiceCreateSerializer(serializers.ModelSerializer):

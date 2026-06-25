@@ -10,6 +10,7 @@ export interface Package {
     price: string;
     duration_months: number;
     is_active: boolean;
+    revenue_product?: number | null;
     features: {
         // AA Membership entitlement keys
         roadside_first_aid?: number;

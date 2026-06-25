@@ -1066,13 +1066,15 @@ class ServiceTaskTypeSerializer(serializers.ModelSerializer):
     """Manage service task types used by service tasks."""
     value = serializers.CharField(source='code', read_only=True)
     label = serializers.CharField(source='name', read_only=True)
+    revenue_product_name = serializers.CharField(source='revenue_product.name', read_only=True, default=None)
+    owner_account_code = serializers.CharField(source='revenue_product.owner_account_code', read_only=True, default=None)
 
     class Meta:
         model = ServiceTaskType
         fields = [
             'id', 'code', 'name', 'value', 'label', 'description',
             'default_labor_rate', 'is_billable', 'is_active',
-            'revenue_product',
+            'revenue_product', 'revenue_product_name', 'owner_account_code',
             'sort_order', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'value', 'label']
