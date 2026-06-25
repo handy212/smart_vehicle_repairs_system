@@ -870,6 +870,10 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             return None
 
         from apps.billing.models import Invoice, InvoiceLineItem
+        from apps.billing.revenue_resolution import (
+            build_invoice_line_fields,
+            resolve_revenue_product_for_roadside,
+        )
 
         branch = roadside_request.branch or resolve_branch(request)
         if not branch:
@@ -895,13 +899,17 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             created_by=request.user
         )
 
+        revenue_product = resolve_revenue_product_for_roadside(roadside_request.service_type)
+        line_fields = build_invoice_line_fields(
+            revenue_product=revenue_product,
+            description=f"{roadside_request.get_service_type_display()} - {roadside_request.request_number}",
+        )
         InvoiceLineItem.objects.create(
             invoice=invoice,
-            item_type='other',
-            description=f"{roadside_request.get_service_type_display()} - {roadside_request.request_number}",
             quantity=1,
             unit_price=roadside_request.charge_amount,
             total=roadside_request.charge_amount,
+            **line_fields,
         )
 
         roadside_request.invoice = invoice

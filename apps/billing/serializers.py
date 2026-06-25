@@ -619,6 +619,7 @@ class InvoiceLineItemSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'item_type', 'description', 'notes',
             'part', 'part_name', 'part_number',
+            'revenue_product',
             'quantity', 'unit_price', 'discount_percentage', 'discount_amount', 'total',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order',

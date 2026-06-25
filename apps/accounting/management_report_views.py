@@ -117,6 +117,19 @@ class RevenueMixReportView(_ManagementReportBase):
         return Response(report)
 
 
+class RevenueByProductReportView(_ManagementReportBase):
+    @extend_schema(summary="Revenue by owner-aligned revenue product (invoice lines)")
+    def get(self, request):
+        start_date, end_date = _parse_period(request)
+        if not start_date:
+            return Response({'error': 'Invalid date format.'}, status=400)
+        branch_id = get_report_branch_id(request)
+        report = ManagementReportingService.get_revenue_by_product(
+            start_date, end_date, branch_id=branch_id
+        )
+        return Response(report)
+
+
 class CostControlReportView(_ManagementReportBase):
     @extend_schema(summary="Cost control — expenses and return/rework jobs")
     def get(self, request):

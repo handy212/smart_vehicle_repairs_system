@@ -1852,6 +1852,15 @@ class ServiceTask(models.Model):
         default=False,
         help_text="Indicates if this task was automatically created by the workflow system"
     )
+
+    revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='service_tasks',
+        help_text='Override task-type default revenue classification for billing.',
+    )
     
     # Tracking
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1992,6 +2001,15 @@ class ServiceTaskType(models.Model):
     sort_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='service_task_types',
+        help_text='Default owner revenue product when billing tasks of this type.',
+    )
 
     class Meta:
         ordering = ['sort_order', 'name']

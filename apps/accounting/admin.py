@@ -10,6 +10,7 @@ from .models import (
     BudgetLine,
     FundTransfer,
     JournalEntry,
+    RevenueProduct,
     Transaction,
 )
 
@@ -131,3 +132,15 @@ class AuditLogAdmin(admin.ModelAdmin):
     autocomplete_fields = ('user',)
     readonly_fields = ('timestamp',)
     date_hierarchy = 'timestamp'
+
+
+@admin.register(RevenueProduct)
+class RevenueProductAdmin(admin.ModelAdmin):
+    list_display = (
+        'code', 'name', 'owner_account_code', 'revenue_class',
+        'default_billing_line_type', 'catalog_part', 'is_active', 'sort_order',
+    )
+    list_filter = ('revenue_class', 'is_active', 'default_billing_line_type')
+    search_fields = ('code', 'name', 'owner_account_code', 'owner_account_label')
+    autocomplete_fields = ('catalog_part',)
+    ordering = ('sort_order', 'name')

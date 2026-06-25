@@ -840,3 +840,86 @@ class Accrual(models.Model):
 
     def __str__(self):
         return f"{self.get_accrual_type_display()} - {self.description} - {self.amount}"
+
+
+class RevenueProduct(models.Model):
+    """
+    Sellable revenue classification aligned with the owner's external chart (QBO).
+
+    Each row maps an operational revenue type (labour discipline, workshop service,
+  AA roadside type, subscription, parts category, etc.) to an optional catalog Part
+    for QBO Item sync and an owner income account code for reporting.
+    """
+
+    REVENUE_CLASS_CHOICES = [
+        ('labor', 'Labour'),
+        ('service', 'Workshop service'),
+        ('part', 'Parts & materials'),
+        ('aa_roadside', 'AA / roadside'),
+        ('subscription', 'Subscription'),
+        ('sublet_revenue', 'Sublet revenue (customer charge)'),
+        ('sublet_cost', 'Sublet cost (vendor)'),
+        ('fee', 'Fee'),
+        ('other', 'Other'),
+    ]
+
+    BILLING_LINE_TYPE_CHOICES = [
+        ('labor', 'Labor'),
+        ('part', 'Part'),
+        ('fee', 'Fee'),
+        ('sublet', 'Sublet/Outsource'),
+        ('other', 'Other'),
+    ]
+
+    code = models.SlugField(max_length=64, unique=True)
+    name = models.CharField(max_length=200)
+    owner_account_code = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Owner legacy income account code (e.g. 680, 658).',
+    )
+    owner_account_label = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Owner legacy income account label from their chart.',
+    )
+    revenue_class = models.CharField(max_length=32, choices=REVENUE_CLASS_CHOICES, default='service')
+    default_billing_line_type = models.CharField(
+        max_length=20,
+        choices=BILLING_LINE_TYPE_CHOICES,
+        default='other',
+    )
+    catalog_part = models.ForeignKey(
+        'inventory.Part',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='revenue_products',
+        help_text='Service/non-inventory catalog item synced to QBO for this revenue type.',
+    )
+    roadside_service_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text='Matches roadside.RoadsideRequest.service_type when set.',
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name = 'Revenue product'
+        verbose_name_plural = 'Revenue products'
+        indexes = [
+            models.Index(fields=['revenue_class', 'is_active']),
+            models.Index(fields=['owner_account_code']),
+        ]
+
+    def __str__(self):
+        code = self.owner_account_code
+        if code:
+            return f'{self.name} ({code})'
+        return self.name

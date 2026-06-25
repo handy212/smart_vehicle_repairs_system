@@ -702,6 +702,13 @@ class QuickBooksService:
             part = getattr(item, part_attr, None) if part_attr else None
             if part is not None and getattr(part, 'pk', None):
                 qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
+            if not qbo_item_id:
+                revenue_product = getattr(item, 'revenue_product', None)
+                template_part = (
+                    getattr(revenue_product, 'catalog_part', None) if revenue_product else None
+                )
+                if template_part is not None and getattr(template_part, 'pk', None):
+                    qbo_item_id = resolve_part_qbo_item_id(self, template_part, txn_date=txn_date)
             if not qbo_item_id and mapping_service and Ref is not None:
                 qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type)
             if qbo_item_id and Ref is not None:
@@ -968,7 +975,11 @@ class QuickBooksService:
         qb_invoice.CustomerRef.value = qb_customer.Id
         
         qb_invoice.DocNumber = local_invoice.invoice_number
-        invoice_lines = list(local_invoice.line_items.select_related('part').all())
+        invoice_lines = list(
+            local_invoice.line_items.select_related(
+                'part', 'revenue_product', 'revenue_product__catalog_part',
+            ).all()
+        )
         from .item_sync import effective_sales_txn_date
 
         qbo_txn_date = effective_sales_txn_date(
@@ -1041,7 +1052,9 @@ class QuickBooksService:
             from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
 
             if _is_inv_start_before_txn_error(e):
-                invoice_lines = local_invoice.line_items.select_related('part').all()
+                invoice_lines = local_invoice.line_items.select_related(
+                    'part', 'revenue_product', 'revenue_product__catalog_part',
+                ).all()
                 qbo_txn_date = effective_sales_txn_date(
                     self,
                     invoice_lines,
@@ -1127,7 +1140,11 @@ class QuickBooksService:
         qb_estimate.CustomerRef = Ref()
         qb_estimate.CustomerRef.value = qb_customer.Id
         qb_estimate.DocNumber = local_estimate.estimate_number
-        estimate_lines = list(local_estimate.line_items.select_related('part').all())
+        estimate_lines = list(
+            local_estimate.line_items.select_related(
+                'part', 'revenue_product', 'revenue_product__catalog_part',
+            ).all()
+        )
         from .item_sync import effective_sales_txn_date
 
         qbo_txn_date = effective_sales_txn_date(
@@ -1173,7 +1190,9 @@ class QuickBooksService:
             from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
 
             if _is_inv_start_before_txn_error(exc):
-                estimate_lines = local_estimate.line_items.select_related('part').all()
+                estimate_lines = local_estimate.line_items.select_related(
+                    'part', 'revenue_product', 'revenue_product__catalog_part',
+                ).all()
                 qbo_txn_date = effective_sales_txn_date(
                     self,
                     estimate_lines,

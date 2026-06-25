@@ -1072,6 +1072,7 @@ class ServiceTaskTypeSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'name', 'value', 'label', 'description',
             'default_labor_rate', 'is_billable', 'is_active',
+            'revenue_product',
             'sort_order', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'value', 'label']
