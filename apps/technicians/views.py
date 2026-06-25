@@ -1,7 +1,9 @@
-from rest_framework import viewsets, permissions, status, parsers, filters
+from rest_framework import viewsets, permissions, status
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework import parsers, filters
+from rest_framework.response import Response
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from django.utils import timezone
 from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from .serializers import TechnicianSerializer, SkillSerializer, TimeOffRequestSerializer, ShiftSerializer, TechnicianJobHistorySerializer, CertificationSerializer
@@ -221,36 +223,42 @@ class TechnicianViewSet(viewsets.ModelViewSet):
         })
 
 class TimeOffRequestViewSet(viewsets.ModelViewSet):
+    """Legacy read-only view. New leave requests use HR → Leave Management."""
+
     queryset = TimeOffRequest.objects.all()
     serializer_class = TimeOffRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'head', 'options']
 
-    def get_permissions(self):
-        action = getattr(self, 'action', None)
-        if action in ['create', 'list', 'retrieve']:
-            return [permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
+    _HR_LEAVE_MESSAGE = (
+        'Leave is managed in HR. Use **HR → Leave Management** (managers) or **My HR** (employees) '
+        'to apply, approve, and track leave.'
+    )
+
+    def create(self, request, *args, **kwargs):
+        raise DRFValidationError({'detail': self._HR_LEAVE_MESSAGE})
+
+    def update(self, request, *args, **kwargs):
+        raise DRFValidationError({'detail': self._HR_LEAVE_MESSAGE})
+
+    def partial_update(self, request, *args, **kwargs):
+        raise DRFValidationError({'detail': self._HR_LEAVE_MESSAGE})
+
+    def destroy(self, request, *args, **kwargs):
+        raise DRFValidationError({'detail': self._HR_LEAVE_MESSAGE})
 
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        
-        # Filter by branch first
         queryset = filter_queryset_for_user_branches(
             queryset,
             user,
             self.request,
-            branch_lookup='technician__user__branch'
+            branch_lookup='technician__user__branch',
         )
-        
         if getattr(user, 'is_technician', False):
             return queryset.filter(technician__user=user)
         return queryset
-
-    def perform_create(self, serializer):
-        # Auto-assign the technician based on the logged-in user
-        technician = Technician.objects.get(user=self.request.user)
-        serializer.save(technician=technician)
 
 
 class ShiftViewSet(viewsets.ModelViewSet):

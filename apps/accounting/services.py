@@ -1807,15 +1807,36 @@ class AccountingService:
         salary_expense_amount = total_basic - total_unpaid_absence
 
         with transaction.atomic():
-            # 1. Get or create GL accounts
-            salary_expense = cls.get_or_create_account('6000', 'Salary Expense', 'expense', 'debit')
-            overtime_expense = cls.get_or_create_account('6010', 'Overtime Expense', 'expense', 'debit')
-            allowances_expense = cls.get_or_create_account('6020', 'Allowances Expense', 'expense', 'debit')
-            tax_payable = cls.get_or_create_account('2300', 'PAYE Tax Payable', 'liability', 'credit')
-            deductions_payable = cls.get_or_create_account('2310', 'Payroll Deductions Payable', 'liability', 'credit')
-            employer_statutory_payable = cls.get_or_create_account('2315', 'Employer Statutory Payable', 'liability', 'credit')
-            employer_statutory_expense = cls.get_or_create_account('6030', 'Employer Statutory Expense', 'expense', 'debit')
-            cash_account = cls._control_account('default_bank_account', 'Default Bank Account')
+            def _payroll_account(field_name, code, name, account_type, balance_type):
+                account = cls._optional_control_account(field_name)
+                if account is not None:
+                    return account
+                return cls.get_or_create_account(code, name, account_type, balance_type)
+
+            salary_expense = _payroll_account(
+                'salary_expense_account', '6000', 'Salary Expense', 'expense', 'debit',
+            )
+            overtime_expense = _payroll_account(
+                'overtime_expense_account', '6010', 'Overtime Expense', 'expense', 'debit',
+            )
+            allowances_expense = _payroll_account(
+                'allowances_expense_account', '6020', 'Allowances Expense', 'expense', 'debit',
+            )
+            tax_payable = _payroll_account(
+                'paye_tax_payable_account', '2300', 'PAYE Tax Payable', 'liability', 'credit',
+            )
+            deductions_payable = _payroll_account(
+                'payroll_deductions_payable_account', '2310', 'Payroll Deductions Payable', 'liability', 'credit',
+            )
+            employer_statutory_payable = _payroll_account(
+                'employer_statutory_payable_account', '2315', 'Employer Statutory Payable', 'liability', 'credit',
+            )
+            employer_statutory_expense = _payroll_account(
+                'employer_statutory_expense_account', '6030', 'Employer Statutory Expense', 'expense', 'debit',
+            )
+            cash_account = cls._optional_control_account('default_bank_account') or cls.get_or_create_account(
+                '1100', 'Operating Bank Account', 'asset', 'debit',
+            )
 
             je = cls._create_posted_journal_header(
                 user=payroll_period.approved_by or payroll_period.created_by,

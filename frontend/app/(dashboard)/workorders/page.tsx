@@ -1019,11 +1019,10 @@ function TaskTypesDialog({
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             />
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Revenue product (owner account)</label>
+              <label className="text-xs text-muted-foreground">Income category (QBO income account)</label>
               <RevenueProductSelect
                 value={form.revenue_product}
                 onChange={(value) => setForm((current) => ({ ...current, revenue_product: value }))}
-                revenueClass="labor"
                 className="w-full"
               />
             </div>

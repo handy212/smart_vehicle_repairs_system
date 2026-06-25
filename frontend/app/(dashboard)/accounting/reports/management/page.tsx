@@ -187,9 +187,9 @@ export default function ManagementReportsPage() {
         if (activeTab === "owner" && ownerProducts.length > 0) {
             return {
                 filename: `revenue-by-owner-product_${stamp}`,
-                reportTitle: "Revenue by owner product",
+                reportTitle: "Revenue by income category",
                 dateInfo,
-                headers: ["Product", "Owner account", "Invoiced", "Share %"],
+                headers: ["Category", "Income acct #", "Invoiced", "Share %"],
                 rows: ownerProducts.map((p) => [p.name, p.owner_account_code, p.invoiced, p.share_percent]),
                 currencyColumnIndexes: [2],
             };
@@ -260,7 +260,7 @@ export default function ManagementReportsPage() {
                     <TabsTrigger value="consolidated">Consolidated P&L</TabsTrigger>
                     <TabsTrigger value="cash">Cash Collection</TabsTrigger>
                     <TabsTrigger value="mix">Revenue Mix</TabsTrigger>
-                    <TabsTrigger value="owner">Owner revenue</TabsTrigger>
+                    <TabsTrigger value="owner">Income detail</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="executive" className="space-y-4">
@@ -548,18 +548,18 @@ export default function ManagementReportsPage() {
                 <TabsContent value="owner">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Revenue by owner product</CardTitle>
+                            <CardTitle>Revenue by income category</CardTitle>
                             <CardDescription>
-                                Invoice line totals mapped to owner income accounts (e.g. 680, 658).
+                                Invoice line totals mapped to QuickBooks income accounts (e.g. 680, 658).
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {unclassifiedOwner && unclassifiedOwner.invoiced > 0 && (
                                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                                    {formatCurrency(unclassifiedOwner.invoiced)} invoiced on lines without a revenue product.
+                                    {formatCurrency(unclassifiedOwner.invoiced)} invoiced on lines without an income category.
                                     Map task types, categories, and packages under{" "}
                                     <Link href="/accounting/revenue-products" className="underline font-medium">
-                                        Revenue Products
+                                        Income Categories
                                     </Link>
                                     .
                                 </p>
@@ -571,7 +571,7 @@ export default function ManagementReportsPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Product</TableHead>
-                                            <TableHead>Owner acct</TableHead>
+                                            <TableHead>Income acct #</TableHead>
                                             <TableHead className="text-right">Invoiced</TableHead>
                                             <TableHead className="text-right">Share %</TableHead>
                                         </TableRow>

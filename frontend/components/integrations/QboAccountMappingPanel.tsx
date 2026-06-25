@@ -141,14 +141,14 @@ export function QboAccountMappingPanel() {
       queryClient.invalidateQueries({ queryKey: ["qbo", "accounts"] });
       queryClient.invalidateQueries({ queryKey: ["qbo", "items"] });
       toast({
-        title: "Owner COA template applied",
-        description: "QuickBooks mappings were updated from the owner chart template.",
+        title: "Workshop income template applied",
+        description: "QuickBooks mappings were updated from the legacy income chart template.",
       });
     },
     onError: (error: unknown) => {
       toast({
         title: "Apply failed",
-        description: getUserFacingError(error, "Could not apply owner COA template."),
+        description: getUserFacingError(error, "Could not apply workshop income template."),
         variant: "destructive",
       });
     },
@@ -168,7 +168,7 @@ export function QboAccountMappingPanel() {
     onError: (error: unknown) => {
       toast({
         title: "Preview failed",
-        description: getUserFacingError(error, "Could not preview owner COA template."),
+        description: getUserFacingError(error, "Could not preview workshop income template."),
         variant: "destructive",
       });
     },
@@ -311,7 +311,7 @@ export function QboAccountMappingPanel() {
             disabled={previewOwnerMutation.isPending}
             onClick={() => previewOwnerMutation.mutate()}
           >
-            {previewOwnerMutation.isPending ? "Previewing…" : "Preview owner template"}
+            {previewOwnerMutation.isPending ? "Previewing…" : "Preview income template"}
           </Button>
           <Button
             variant="default"
@@ -320,7 +320,7 @@ export function QboAccountMappingPanel() {
             disabled={applyOwnerMutation.isPending}
             onClick={() => applyOwnerMutation.mutate()}
           >
-            {applyOwnerMutation.isPending ? "Applying…" : "Apply owner COA template"}
+            {applyOwnerMutation.isPending ? "Applying…" : "Apply income template"}
           </Button>
         </div>
       </CardHeader>

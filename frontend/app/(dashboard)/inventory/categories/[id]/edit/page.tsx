@@ -202,7 +202,7 @@ export default function EditCategoryPage() {
                   className="w-full"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Default owner income account for parts in this category.
+                  Default QuickBooks income account for parts in this category.
                 </p>
               </div>
 

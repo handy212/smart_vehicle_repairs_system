@@ -376,9 +376,9 @@ export default function ControlPanelPage() {
             Map SVR roles to QuickBooks accounts, items, and tax codes. Configure{" "}
             <Link href="/accounting/revenue-products" className="text-primary hover:underline inline-flex items-center gap-1">
               <Tags className="w-3.5 h-3.5" />
-              revenue products
+              income categories
             </Link>{" "}
-            (owner income accounts per service type) before syncing invoices. Connect QuickBooks under{" "}
+            (detailed QuickBooks income accounts per service type) before syncing invoices. Connect QuickBooks under{" "}
             <Link href="/admin/integrations" className="text-primary hover:underline">
               Admin → Integrations
             </Link>
