@@ -53,6 +53,27 @@ CONTROL_ACCOUNT_SPECS = {
     'withholding_tax_payable_account': (
         '2320', 'Withholding Tax Payable', 'liability', 'credit', 'tax_payable', 'L100',
     ),
+    'salary_expense_account': (
+        '6000', 'Salary Expense', 'expense', 'debit', 'expense', 'E000',
+    ),
+    'overtime_expense_account': (
+        '6010', 'Overtime Expense', 'expense', 'debit', 'expense', 'E000',
+    ),
+    'allowances_expense_account': (
+        '6020', 'Allowances Expense', 'expense', 'debit', 'expense', 'E000',
+    ),
+    'employer_statutory_expense_account': (
+        '6030', 'Employer Statutory Expense', 'expense', 'debit', 'expense', 'E000',
+    ),
+    'paye_tax_payable_account': (
+        '2300', 'PAYE Tax Payable', 'liability', 'credit', 'tax_payable', 'L100',
+    ),
+    'payroll_deductions_payable_account': (
+        '2310', 'Payroll Deductions Payable', 'liability', 'credit', 'current_liability', 'L100',
+    ),
+    'employer_statutory_payable_account': (
+        '2315', 'Employer Statutory Payable', 'liability', 'credit', 'current_liability', 'L100',
+    ),
 }
 
 # Historical postings often used parent clearing account 1000 instead of a leaf bank/cash account.

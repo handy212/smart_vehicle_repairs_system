@@ -261,6 +261,13 @@ class AccountingControl(models.Model):
         'cash_over_short_account',
         'till_counterparty_cash_account',
         'default_bank_account',
+        'salary_expense_account',
+        'overtime_expense_account',
+        'allowances_expense_account',
+        'employer_statutory_expense_account',
+        'paye_tax_payable_account',
+        'payroll_deductions_payable_account',
+        'employer_statutory_payable_account',
     ]
 
     period_lock_date = models.DateField(null=True, blank=True, help_text="Transactions on or before this date cannot be modified.")
@@ -348,6 +355,41 @@ class AccountingControl(models.Model):
         Account, on_delete=models.PROTECT, null=True, blank=True,
         related_name='control_default_bank',
         help_text="Optional default bank/cash-equivalent account for non-cash settlement."
+    )
+    salary_expense_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_salary_expense',
+        help_text="Payroll basic salary expense account.",
+    )
+    overtime_expense_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_overtime_expense',
+        help_text="Payroll overtime expense account.",
+    )
+    allowances_expense_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_allowances_expense',
+        help_text="Payroll allowances expense account.",
+    )
+    employer_statutory_expense_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_employer_statutory_expense',
+        help_text="Employer SSNIT and tier contributions expense.",
+    )
+    paye_tax_payable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_paye_tax_payable',
+        help_text="PAYE withheld on payroll.",
+    )
+    payroll_deductions_payable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_payroll_deductions_payable',
+        help_text="Employee payroll deductions payable (SSNIT, pension, etc.).",
+    )
+    employer_statutory_payable_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='control_employer_statutory_payable',
+        help_text="Employer statutory contributions payable.",
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)

@@ -9,7 +9,7 @@
 
 ## About this guide
 
-This manual is written for **people who use SVR every day** — not for developers. It explains where to click, what to configure, and how to check that QuickBooks is receiving the right information.
+This manual is written for **people who use SVR every day** — not for developers or IT staff. It explains where to click, what to configure, and how to check that QuickBooks is receiving the right information.
 
 **You will learn:**
 
@@ -53,7 +53,8 @@ The integration is a **document bridge**:
 1. **SVR remains the source of truth for workshop work.** You create and edit invoices, estimates, and bills in SVR first.  
 2. **QuickBooks receives copies** of those documents for your accountant, tax filing, and bank reconciliation.  
 3. **SVR’s internal chart of accounts** (the lean general ledger inside SVR) is separate from the detailed income accounts in QuickBooks. You do not need to duplicate every QuickBooks account inside SVR.  
-4. **Work orders, vehicles, and appointments do not sync** to QuickBooks — only financial documents and catalog items that accounting needs.
+4. **Work orders, vehicles, and appointments do not sync** to QuickBooks — only financial documents and catalog items that accounting needs.  
+5. **Payroll and HR records do not sync** to QuickBooks. Payroll is handled in SVR’s HR module and posts to SVR’s own accounts when marked paid.
 
 ---
 
@@ -61,7 +62,7 @@ The integration is a **document bridge**:
 
 | Role | Responsibility |
 |------|----------------|
-| **Administrator** | Enter QuickBooks app credentials, connect the company, manage integrations |
+| **Administrator** | Enter QuickBooks connection details, connect the company, manage integrations |
 | **Finance manager / head bookkeeper** | Map control accounts, income categories, branches, and tax codes |
 | **Accountant / billing clerk** | Day-to-day sync checks, retry failed documents, reconcile with QuickBooks |
 | **Parts manager** | Ensure parts are synced as QuickBooks Items before they appear on synced invoices |
@@ -74,10 +75,10 @@ Most staff only need to know how to **read the QuickBooks sync badge** on invoic
 
 ### 3.1 What you need
 
-- A **QuickBooks Online** subscription (Production for live books, or Sandbox for testing).  
-- **Administrator access** in SVR (`manage_settings` permission).  
-- **QuickBooks app credentials** (Client ID and Client Secret) from the Intuit Developer portal — your IT provider or Intuit partner usually supplies these.  
-- A clear decision on whether you are in **Sandbox** (test) or **Production** (live) mode.
+- A **QuickBooks Online** subscription (a test company for training, or your live company for real operations).  
+- **Administrator access** in SVR so you can open **Admin → Integrations**.  
+- **QuickBooks app credentials** (Client ID and Client Secret) — your IT provider or Intuit partner usually supplies these.  
+- A clear decision on whether you are connecting a **test (sandbox)** company or your **live production** company.
 
 ### 3.2 Recommended order
 
@@ -89,7 +90,7 @@ Complete setup in this order to avoid sync errors:
 4. Review or create **Income Categories** under **Accounting → Income Categories**  
 5. Link **task types**, **part categories**, and **subscription packages** to income categories  
 6. Map **branches** to QuickBooks Locations under **Admin → Branches**  
-7. Test with one customer, one estimate, one invoice, and one payment before going live  
+7. Send one test customer, estimate, invoice, and payment before relying on the link for daily work  
 
 ---
 
@@ -103,7 +104,7 @@ Complete setup in this order to avoid sync errors:
 2. Under the **QuickBooks Online** section, enter:  
    - **Client ID**  
    - **Client secret**  
-   - **Sandbox mode** — turn **on** for testing, **off** for your live QuickBooks company  
+   - **Sandbox mode** — turn **on** when connecting a test company, **off** for your live QuickBooks company  
 3. Click **Save Changes** at the top of the page.
 
 ### 4.2 Link your QuickBooks company
@@ -157,7 +158,7 @@ Many sync failures happen because these two screens are mixed up. They solve **d
 | Sales tax | Tax codes (VAT, NHIL, GETFund, etc.) |
 | Inventory asset, COGS, sales revenue (for parts) | Correct account types for inventory items |
 
-**When to use:** Once at go-live, then when you add a new payment method, tax code, or change your chart structure.
+**When to use:** Once at initial setup, then when you add a new payment method, tax code, or change your chart structure.
 
 **Helpful buttons on this screen:**
 
@@ -185,7 +186,7 @@ Each row shows **Mapped**, **Unmapped**, or **Failed**. Select a QuickBooks acco
 | **Class** | Labour, workshop service, parts, AA/roadside, subscription, etc. |
 | **Line type** | How it appears on invoices (labour, part, fee, other) |
 
-You can add, edit, and deactivate categories here. A seed/bootstrap list may exist from initial setup; ongoing maintenance is done in this screen.
+You can add, edit, and deactivate categories here. A seed list may exist from initial setup; ongoing maintenance is done in this screen.
 
 ### 5.3 How they work together
 
@@ -222,7 +223,7 @@ When technicians add tasks to a work order, SVR uses this mapping when building 
 
 **Path:** **Inventory → Categories** → create or edit a category
 
-Set **Revenue product / Income category** to the default category for parts in that group (e.g. mechanical parts, tyres, A/C materials).
+Set **Income category** to the default category for parts in that group (e.g. mechanical parts, tyres, A/C materials).
 
 ### 6.3 Subscription packages
 
@@ -294,6 +295,7 @@ Sync parts **before** invoicing them so invoice lines use the correct QuickBooks
 - Work orders, tasks, inspections, diagnoses  
 - Vehicles and appointments  
 - Internal journal entries (SVR general ledger postings)  
+- Payroll, payslips, and employee HR records  
 - Multi-branch stock transfers (SVR holds detailed stock; QuickBooks gets catalog totals for inventory items only)  
 
 ---
@@ -322,20 +324,24 @@ On most financial document detail pages, a **Sync with QuickBooks** (or refresh)
 - Auto-sync was delayed  
 - A document failed and you corrected the underlying data  
 
-### 9.3 Typical daily checklist (billing clerk)
+### 9.3 Everyday habits for billing staff
 
-1. Finalize and send invoices from completed work orders.  
-2. Confirm each invoice shows **QuickBooks: Synced** (or retry if failed).  
-3. Record payments and confirm payment sync.  
-4. Check **Admin → Integrations → Sync History** for any failed runs.  
-5. Resolve **Unclassified** income lines before month-end (see Income detail report below).
+When you finish work on a customer account:
 
-### 9.4 Month-end checklist (bookkeeper)
+1. Send the invoice from the completed work order.  
+2. Glance at the **QuickBooks** badge — it should show **Synced** once processing finishes. If it shows **Failed**, open the message and fix the cause (often a missing customer, part, or mapping).  
+3. When you record a payment, check that the payment badge also syncs.  
+4. If several documents failed at once, open **Admin → Integrations → QuickBooks Sync History** to see what went wrong.  
+5. Before month-end, clear any **Unclassified** income lines on invoices (see section 11).
 
-1. **Accounting → Controls** — all critical mappings still show **Mapped**.  
-2. **Accounting → Income Categories** — new service types from the month have categories assigned.  
-3. **Accounting → Reports → Management** → **Income detail** tab — investigate unclassified revenue.  
-4. Reconcile QuickBooks AR/AP with SVR aging reports.  
+### 9.4 What finance leads review at month-end
+
+Your finance lead or bookkeeper will typically:
+
+1. Confirm critical mappings under **Accounting → Controls** still show **Mapped**.  
+2. Check that new service types from the month have income categories assigned on **Work Orders → Manage Service Task Types**.  
+3. Run the **Income detail** report (section 11) and follow up on unclassified revenue.  
+4. Reconcile QuickBooks receivables and payables with SVR aging reports.  
 5. Lock the accounting period under **Controls → Periods** after sign-off.
 
 ---
@@ -426,7 +432,7 @@ Invoice and estimate PDFs from SVR may attach to the QuickBooks transaction afte
 ### QuickBooks badge missing entirely
 
 - QuickBooks is not connected — go to **Admin → Integrations**  
-- You lack permission to view integration status  
+- You may not have access to view integration status — ask your administrator  
 - Refresh the page after connecting  
 
 ### Numbers differ between SVR and QuickBooks
@@ -438,37 +444,28 @@ Invoice and estimate PDFs from SVR may attach to the QuickBooks transaction afte
 
 ---
 
-## 14. Sandbox vs production
+## 14. Test company vs live company
 
 | Environment | Use for |
 |-------------|---------|
-| **Sandbox** | Training, mapping tests, dry runs, UAT before go-live |
-| **Production** | Live daily operations and real financial data |
+| **Sandbox (test)** | Training, mapping trials, and practice before touching live books |
+| **Production (live)** | Real daily operations and real financial data |
 
-Always complete a full test cycle in Sandbox before switching Sandbox mode **off** and connecting Production.
-
-**Sandbox test script (recommended):**
-
-1. Connect Sandbox QuickBooks.  
-2. Apply or verify mappings under Controls.  
-3. Create a test customer → estimate → approve → invoice → payment.  
-4. Create a test supplier → vendor bill → payment.  
-5. Create one inventory part and one service part; sync both.  
-6. Confirm sync history shows success and documents appear in QuickBooks Sandbox.
+Work through a full practice cycle in your test company — connect, map accounts, send a customer through estimate to invoice to payment, and confirm documents appear in QuickBooks — before you turn **Sandbox mode** off and connect your live company.
 
 ---
 
-## 15. Roles and permissions (summary)
+## 15. Who can do what (summary)
 
-| Task | Typical permission |
-|------|-------------------|
-| Connect / disconnect QuickBooks | Administrator (`manage_settings`) |
-| Edit Controls and income categories | Accounting manager (`manage_accounting_periods`) |
-| View accounting and reports | `view_accounting` / `view_financial_reports` |
-| Create invoices and sync | Billing staff with invoice access |
-| Map branches | Administrator or branch manager |
+| Task | Who usually does it |
+|------|---------------------|
+| Connect or disconnect QuickBooks | Workshop administrator |
+| Edit Controls mappings and income categories | Finance manager or head bookkeeper |
+| View accounting reports | Finance team |
+| Create invoices and check sync badges | Billing staff |
+| Map branches to QuickBooks Locations | Administrator or branch manager |
 
-Your administrator assigns these in **Admin → Users**.
+Your administrator assigns access in **Admin → Users**. If you cannot open a screen mentioned in this guide, ask your manager to adjust your role.
 
 ---
 
@@ -496,7 +493,7 @@ Your administrator assigns these in **Admin → Users**.
    - Screenshot of the QuickBooks sync badge and error text  
    - Date and time of the failure  
 
-For technical integration credentials (Client ID, Secret, Intuit app setup), contact your IT provider or SVR implementation partner.
+For connection credentials (Client ID, Secret, Intuit app setup), contact your IT provider or SVR implementation partner.
 
 ---
 

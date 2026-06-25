@@ -16,13 +16,20 @@ export type ControlAccountField =
   | "cost_of_goods_sold_account"
   | "cash_over_short_account"
   | "till_counterparty_cash_account"
-  | "default_bank_account";
+  | "default_bank_account"
+  | "salary_expense_account"
+  | "overtime_expense_account"
+  | "allowances_expense_account"
+  | "employer_statutory_expense_account"
+  | "paye_tax_payable_account"
+  | "payroll_deductions_payable_account"
+  | "employer_statutory_payable_account";
 
 export type ControlAccountSpec = {
   field: ControlAccountField;
   label: string;
   defaultCode: string;
-  group: "Receivables & Payables" | "Revenue & Tax" | "Purchasing & Inventory" | "Cash & Banking";
+  group: "Receivables & Payables" | "Revenue & Tax" | "Purchasing & Inventory" | "Cash & Banking" | "Payroll";
   description: string;
 };
 
@@ -139,6 +146,55 @@ export const CONTROL_ACCOUNT_SPECS: ControlAccountSpec[] = [
     group: "Cash & Banking",
     description: "Default non-cash settlement account.",
   },
+  {
+    field: "salary_expense_account",
+    label: "Salary Expense",
+    defaultCode: "6000",
+    group: "Payroll",
+    description: "Basic salaries when payroll is marked paid.",
+  },
+  {
+    field: "overtime_expense_account",
+    label: "Overtime Expense",
+    defaultCode: "6010",
+    group: "Payroll",
+    description: "Overtime pay on payroll.",
+  },
+  {
+    field: "allowances_expense_account",
+    label: "Allowances Expense",
+    defaultCode: "6020",
+    group: "Payroll",
+    description: "Housing, transport, and other allowances.",
+  },
+  {
+    field: "employer_statutory_expense_account",
+    label: "Employer Statutory Expense",
+    defaultCode: "6030",
+    group: "Payroll",
+    description: "Employer SSNIT and tier contributions.",
+  },
+  {
+    field: "paye_tax_payable_account",
+    label: "PAYE Tax Payable",
+    defaultCode: "2300",
+    group: "Payroll",
+    description: "Income tax withheld from employees.",
+  },
+  {
+    field: "payroll_deductions_payable_account",
+    label: "Payroll Deductions Payable",
+    defaultCode: "2310",
+    group: "Payroll",
+    description: "Employee SSNIT, pension, and other deductions.",
+  },
+  {
+    field: "employer_statutory_payable_account",
+    label: "Employer Statutory Payable",
+    defaultCode: "2315",
+    group: "Payroll",
+    description: "Employer statutory contributions owed.",
+  },
 ];
 
 export const CONTROL_ACCOUNT_GROUPS = [
@@ -146,6 +202,7 @@ export const CONTROL_ACCOUNT_GROUPS = [
   "Revenue & Tax",
   "Purchasing & Inventory",
   "Cash & Banking",
+  "Payroll",
 ] as const;
 
 type AccountingSettingsLike = Partial<Record<ControlAccountField, number | null | undefined>>;
