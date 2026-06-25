@@ -46,15 +46,19 @@ fi
 if [ "$ENVIRONMENT" = "production" ] || [ "$ENVIRONMENT" = "staging" ]; then
   require_var SECRET_KEY
   require_var ALLOWED_HOSTS
-  require_var DB_PASSWORD
-  require_var REDIS_PASSWORD
 
-  if [ -z "${DATABASE_URL:-}" ] && [ -z "${DB_NAME:-}" ]; then
-    errors+=("Set DATABASE_URL or DB_NAME for database configuration")
+  # Docker Compose builds DATABASE_URL from DB_*; bare-metal installs often set DATABASE_URL directly.
+  if [ -n "${DATABASE_URL:-}" ]; then
+    :
+  elif [ -n "${DB_NAME:-}" ]; then
+    require_var DB_PASSWORD
+  else
+    errors+=("Set DATABASE_URL or DB_NAME+DB_PASSWORD for database configuration")
   fi
 
+  # Docker Compose builds REDIS_URL from REDIS_PASSWORD; bare-metal may use REDIS_URL directly (with or without auth).
   if [ -z "${REDIS_URL:-}" ]; then
-    warnings+=("REDIS_URL not set — compose files construct it from REDIS_PASSWORD")
+    require_var REDIS_PASSWORD
   fi
 
   if [ "$ENVIRONMENT" = "production" ]; then
@@ -70,8 +74,12 @@ if [ "$ENVIRONMENT" = "production" ] || [ "$ENVIRONMENT" = "staging" ]; then
   fi
 
   warn_if_placeholder SECRET_KEY
-  warn_if_placeholder DB_PASSWORD
-  warn_if_placeholder REDIS_PASSWORD
+  if [ -n "${DB_PASSWORD:-}" ]; then
+    warn_if_placeholder DB_PASSWORD
+  fi
+  if [ -n "${REDIS_PASSWORD:-}" ]; then
+    warn_if_placeholder REDIS_PASSWORD
+  fi
 fi
 
 if [ "${#errors[@]}" -gt 0 ]; then

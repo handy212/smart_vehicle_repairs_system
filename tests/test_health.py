@@ -99,6 +99,28 @@ def test_validate_env_script_handles_dollar_signs_in_secrets(tmp_path):
     assert result.returncode == 0, result.stderr or result.stdout
 
 
+def test_validate_env_script_passes_for_legacy_database_and_redis_urls(tmp_path):
+  """Bare-metal /var/www/svr installs often set DATABASE_URL and REDIS_URL directly."""
+  env_file = tmp_path / '.env'
+  env_file.write_text(
+      '\n'.join([
+          'DJANGO_ENVIRONMENT=production',
+          'DEBUG=False',
+          'SECRET_KEY=super-secret-production-key',
+          'ALLOWED_HOSTS=example.com',
+          'DATABASE_URL=postgresql://app:secret@localhost:5432/app',
+          'REDIS_URL=redis://localhost:6379/0',
+      ])
+  )
+  result = subprocess.run(
+      ['bash', str(ROOT / 'scripts' / 'validate-env.sh'), str(env_file)],
+      capture_output=True,
+      text=True,
+      check=False,
+  )
+  assert result.returncode == 0, result.stderr or result.stdout
+
+
 def test_validate_env_script_fails_when_required_vars_missing(tmp_path):
     env_file = tmp_path / '.env'
     env_file.write_text('DJANGO_ENVIRONMENT=production\n')
