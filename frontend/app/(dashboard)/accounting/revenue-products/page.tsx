@@ -41,6 +41,12 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import {
+  CONTROLS_VS_INCOME_CATEGORIES_HELP,
+  INCOME_CATEGORY_PAGE_TITLE,
+  QBO_INCOME_ACCOUNT_LABEL,
+  QBO_INCOME_ACCOUNT_SHORT,
+} from "@/lib/accounting/income-category-labels";
 
 const EMPTY_FORM: RevenueProductPayload = {
   code: "",
@@ -119,12 +125,12 @@ export default function RevenueProductsPage() {
       queryClient.invalidateQueries({ queryKey: ["revenue-products"] });
       setDialogOpen(false);
       resetDialog();
-      toast({ title: editing ? "Revenue product updated" : "Revenue product created", variant: "success" });
+      toast({ title: editing ? "Income category updated" : "Income category created", variant: "success" });
     },
     onError: (error: unknown) => {
       toast({
         title: "Save failed",
-        description: getUserFacingError(error, "Could not save revenue product."),
+        description: getUserFacingError(error, "Could not save income category."),
         variant: "destructive",
       });
     },
@@ -144,17 +150,20 @@ export default function RevenueProductsPage() {
             </Link>
             <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
               <Tags className="w-5 h-5 text-primary" />
-              Revenue Products
+              {INCOME_CATEGORY_PAGE_TITLE}
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Map workshop services, labour, parts, and AA offerings to the owner&apos;s QuickBooks income
+              Map workshop services, labour, parts, and AA offerings to QuickBooks income
               accounts. Used on invoice lines and QBO item sync — SVR GL stays lean.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 max-w-3xl rounded-md border border-border bg-muted/40 px-3 py-2">
+              {CONTROLS_VS_INCOME_CATEGORIES_HELP}
             </p>
           </div>
           <PermissionGuard permission="manage_accounting_periods">
             <Button size="sm" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-1.5" />
-              Add product
+              Add category
             </Button>
           </PermissionGuard>
         </div>
@@ -162,7 +171,7 @@ export default function RevenueProductsPage() {
         <Card>
           <CardHeader className="py-3 px-4 border-b">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-sm font-semibold">Owner revenue catalog</CardTitle>
+              <CardTitle className="text-sm font-semibold">Income category catalog</CardTitle>
               <Input
                 placeholder="Search code, name, account…"
                 value={search}
@@ -180,8 +189,8 @@ export default function RevenueProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Owner acct</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>{QBO_INCOME_ACCOUNT_SHORT}</TableHead>
                     <TableHead>Class</TableHead>
                     <TableHead>Line type</TableHead>
                     <TableHead>Status</TableHead>
@@ -226,7 +235,7 @@ export default function RevenueProductsPage() {
                   {filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-sm text-muted-foreground">
-                        No revenue products found. Run seed or add your first product.
+                        No income categories found. Run seed or add your first category.
                       </TableCell>
                     </TableRow>
                   )}
@@ -239,7 +248,7 @@ export default function RevenueProductsPage() {
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetDialog(); }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit revenue product" : "New revenue product"}</DialogTitle>
+              <DialogTitle>{editing ? "Edit income category" : "New income category"}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-3 py-2">
               <div className="grid grid-cols-2 gap-3">
@@ -254,7 +263,7 @@ export default function RevenueProductsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Owner account code</Label>
+                  <Label className="text-xs">{QBO_INCOME_ACCOUNT_LABEL}</Label>
                   <Input
                     value={form.owner_account_code ?? ""}
                     onChange={(e) => setForm((f) => ({ ...f, owner_account_code: e.target.value }))}
@@ -273,7 +282,7 @@ export default function RevenueProductsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Owner account label</Label>
+                <Label className="text-xs">QBO account name</Label>
                 <Input
                   value={form.owner_account_label ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, owner_account_label: e.target.value }))}

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import type { NavGroup, NavGroupItem } from "./nav-group-types";
+import { INCOME_CATEGORY_NAV_DESCRIPTION } from "@/lib/accounting/income-category-labels";
 
 /** Accounting module navigation — grouped for collapsible sub-nav. */
 export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
@@ -136,11 +137,11 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
         description: "Control accounts, period lock, and close",
       },
       {
-        name: "Revenue Products",
+        name: "Income Categories",
         href: "/accounting/revenue-products",
         permission: "view_accounting",
         icon: Tags,
-        description: "Owner income account mapping for billing lines",
+        description: INCOME_CATEGORY_NAV_DESCRIPTION,
       },
       {
         name: "Subledger Integrity",

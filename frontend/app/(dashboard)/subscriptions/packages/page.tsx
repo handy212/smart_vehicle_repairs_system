@@ -516,7 +516,7 @@ export default function PackagesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Revenue product (owner account)</Label>
+                <Label>Income category</Label>
                 <RevenueProductSelect
                   value={packageRevenueProduct}
                   onChange={setPackageRevenueProduct}

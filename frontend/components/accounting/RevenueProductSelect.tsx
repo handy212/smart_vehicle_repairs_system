@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Select,
@@ -9,6 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { revenueProductsApi, type RevenueClass } from "@/lib/api/revenue-products";
+import {
+  INCOME_CATEGORY_SELECT_PLACEHOLDER,
+  INCOME_CATEGORY_UNMAPPED,
+} from "@/lib/accounting/income-category-labels";
 
 const UNMAPPED = "__none__";
 
@@ -25,7 +30,7 @@ export function RevenueProductSelect({
   value,
   onChange,
   disabled,
-  placeholder = "Select revenue product",
+  placeholder = INCOME_CATEGORY_SELECT_PLACEHOLDER,
   revenueClass,
   className,
 }: Props) {
@@ -38,20 +43,37 @@ export function RevenueProductSelect({
       }),
   });
 
+  const selectedMissingFromList =
+    value != null && !products.some((product) => product.id === value);
+
+  const { data: selectedProduct, isLoading: selectedLoading } = useQuery({
+    queryKey: ["revenue-products", "selected", value],
+    queryFn: () => revenueProductsApi.get(value!),
+    enabled: selectedMissingFromList,
+  });
+
+  const options = useMemo(() => {
+    if (!selectedProduct || products.some((product) => product.id === selectedProduct.id)) {
+      return products;
+    }
+    return [selectedProduct, ...products];
+  }, [products, selectedProduct]);
+
   const selected = value != null ? String(value) : UNMAPPED;
+  const loading = isLoading || (selectedMissingFromList && selectedLoading);
 
   return (
     <Select
       value={selected}
       onValueChange={(next) => onChange(next === UNMAPPED ? null : Number(next))}
-      disabled={disabled || isLoading}
+      disabled={disabled || loading}
     >
       <SelectTrigger className={className ?? "h-8 text-xs bg-card"}>
-        <SelectValue placeholder={isLoading ? "Loading…" : placeholder} />
+        <SelectValue placeholder={loading ? "Loading…" : placeholder} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={UNMAPPED}>Not mapped</SelectItem>
-        {products.map((product) => (
+        <SelectItem value={UNMAPPED}>{INCOME_CATEGORY_UNMAPPED}</SelectItem>
+        {options.map((product) => (
           <SelectItem key={product.id} value={String(product.id)}>
             {product.name}
             {product.owner_account_code ? ` (${product.owner_account_code})` : ""}

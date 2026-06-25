@@ -162,7 +162,7 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
               )}
               {selectedTaskType?.revenue_product_name || selectedTaskType?.owner_account_code ? (
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Billing revenue:</span>
+                  <span className="text-xs text-muted-foreground">Billing income:</span>
                   <RevenueProductBadge
                     name={selectedTaskType.revenue_product_name}
                     ownerAccountCode={selectedTaskType.owner_account_code}
@@ -170,7 +170,7 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
                 </div>
               ) : selectedTaskType ? (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  No revenue product mapped for this task type — billing will use description keywords or mechanical labor default.
+                  No income category mapped for this task type — billing will use description keywords or the mechanical labour default.
                 </p>
               ) : null}
             </div>

@@ -18,7 +18,7 @@ export function RevenueProductBadge({ name, ownerAccountCode, code, className }:
     );
   }
 
-  const label = name || code || "Revenue product";
+  const label = name || code || "Income category";
   const acct = ownerAccountCode ? ` · ${ownerAccountCode}` : "";
 
   return (
