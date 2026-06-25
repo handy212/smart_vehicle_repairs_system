@@ -76,6 +76,29 @@ def test_validate_env_script_passes_for_minimal_production_env(tmp_path):
     assert result.returncode == 0, result.stderr or result.stdout
 
 
+def test_validate_env_script_handles_dollar_signs_in_secrets(tmp_path):
+    """Secrets must not be shell-sourced — $7 in a value breaks `set -u`."""
+    env_file = tmp_path / '.env'
+    env_file.write_text(
+        '\n'.join([
+            'DJANGO_ENVIRONMENT=production',
+            'DEBUG=False',
+            'SECRET_KEY=prefix$7suffix',
+            'ALLOWED_HOSTS=example.com',
+            'DB_PASSWORD=secure-db-password',
+            'REDIS_PASSWORD=secure-redis-password',
+            'DB_NAME=svr_db',
+        ])
+    )
+    result = subprocess.run(
+        ['bash', str(ROOT / 'scripts' / 'validate-env.sh'), str(env_file)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
 def test_validate_env_script_fails_when_required_vars_missing(tmp_path):
     env_file = tmp_path / '.env'
     env_file.write_text('DJANGO_ENVIRONMENT=production\n')

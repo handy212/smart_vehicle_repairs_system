@@ -10,9 +10,10 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-# shellcheck disable=SC1090
+# shellcheck source=scripts/load-env.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/load-env.sh"
 set -a
-source "$ENV_FILE"
+load_env_file "$ENV_FILE"
 set +a
 
 errors=()
