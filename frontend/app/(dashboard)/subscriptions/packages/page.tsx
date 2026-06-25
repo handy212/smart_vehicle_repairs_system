@@ -75,6 +75,7 @@ export default function PackagesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
   const [packageRevenueProduct, setPackageRevenueProduct] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const debouncedSearch = useDebounce(search, 500);
 
