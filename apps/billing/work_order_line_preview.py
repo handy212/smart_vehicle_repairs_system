@@ -113,7 +113,8 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
         for work_order_part in wo.parts.filter(status='installed').order_by('id'):
             add_part_line(work_order_part, discontinued=True)
     else:
-        for task in wo.tasks.all().order_by('sequence_order', 'id'):
+        tasks_qs = wo.tasks.filter(is_workflow_task=False).order_by('sequence_order', 'id')
+        for task in tasks_qs:
             add_labor_from_task(task, discontinued=False)
         installed_part_lines = 0
         for work_order_part in wo.parts.filter(status='installed').order_by('id'):

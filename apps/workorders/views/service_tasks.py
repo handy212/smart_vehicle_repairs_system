@@ -60,7 +60,11 @@ from ..queryset_mixins import WorkOrderChildQuerysetMixin
 
 class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """Service Task management"""
-    queryset = ServiceTask.objects.all().select_related('work_order', 'assigned_to').prefetch_related('time_logs')
+    queryset = (
+        ServiceTask.objects.all()
+        .select_related('work_order', 'assigned_to', 'revenue_product')
+        .prefetch_related('time_logs')
+    )
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['work_order', 'status', 'task_type', 'assigned_to']
     ordering_fields = ['sequence_order', 'created_at']
@@ -79,6 +83,14 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
         if self.action == 'create':
             return ServiceTaskCreateSerializer
         return ServiceTaskSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        task = serializer.save()
+        output = ServiceTaskSerializer(task, context=self.get_serializer_context())
+        headers = self.get_success_headers(output.data)
+        return Response(output.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=False, methods=['get'])
     def task_types(self, request):
@@ -222,7 +234,7 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
 
 class ServiceTaskTypeViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
     """CRUD for service task types."""
-    queryset = ServiceTaskType.objects.all().order_by('sort_order', 'name')
+    queryset = ServiceTaskType.objects.all().select_related('revenue_product').order_by('sort_order', 'name')
     serializer_class = ServiceTaskTypeSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_billable']

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
+import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 
 const taskSchema = z.object({
   task_type: z.string().min(1, "Task type is required"),
@@ -105,6 +106,10 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
     },
   });
 
+  const selectedTaskType = taskTypes.find(
+    (type) => type.value === watch("task_type") || type.code === watch("task_type"),
+  );
+
   const onSubmit = async (data: TaskFormData) => {
     setServerError(null);
     await createMutation.mutateAsync(data);
@@ -155,6 +160,19 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
               {errors.task_type && (
                 <p className="mt-1 text-sm text-destructive">{errors.task_type.message}</p>
               )}
+              {selectedTaskType?.revenue_product_name || selectedTaskType?.owner_account_code ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Billing revenue:</span>
+                  <RevenueProductBadge
+                    name={selectedTaskType.revenue_product_name}
+                    ownerAccountCode={selectedTaskType.owner_account_code}
+                  />
+                </div>
+              ) : selectedTaskType ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No revenue product mapped for this task type — billing will use description keywords or mechanical labor default.
+                </p>
+              ) : null}
             </div>
 
             <div>

@@ -12,7 +12,6 @@ import { inventoryApi } from "@/lib/api/inventory";
 import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
 import { adminApi } from "@/lib/api/admin";
 import { workordersApi } from "@/lib/api/workorders";
-import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,7 @@ import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
+import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -48,6 +48,7 @@ const lineItemSchema = z.object({
   part: optionalNumber(),
   part_number: z.string().optional(),
   part_name: z.string().optional(),
+  revenue_product: optionalNumber(),
   notes: z.string().optional(),
 });
 
@@ -81,6 +82,9 @@ type ExtendedLineItem = Omit<LineItemFormData, 'is_taxable'> & {
   part_number?: string;
   part_name?: string;
   part_id?: number;// legacy support if needed
+  revenue_product?: number;
+  revenue_product_name?: string | null;
+  owner_account_code?: string | null;
 };
 
 const fieldLabels: Record<string, string> = {
@@ -203,66 +207,35 @@ export default function NewEstimatePage() {
     const wId = parseInt(workOrderIdStr);
     setValue("work_order", wId, { shouldValidate: true });
 
-    // Fetch WO details to get line items
     try {
-      const [tasks, parts] = await Promise.all([
-        workOrderTasksApi.list({ work_order: wId }),
-        workordersApi.parts.list({ work_order: wId })
-      ]);
-
-      const newLineItems: ExtendedLineItem[] = [];
-
-      // Labor from Tasks
-      if (Array.isArray(tasks)) {
-
-        tasks.forEach((t: any) => {
-          newLineItems.push({
-            item_type: 'labor',
-            description: t.description || "Labor Service",
-            quantity: 1,
-            labor_hours: parseFloat(t.estimated_hours || "1"),
-            labor_rate: 0,
-            unit_price: 0,
-            discount_percentage: 0,
-            is_taxable: true,
-            notes: t.detailed_notes
-          });
-        });
-      }
-
-      // Parts
-      if (Array.isArray(parts)) {
-
-        parts.forEach((p: any) => {
-          newLineItems.push({
-            item_type: 'part',
-            description: p.part_name || "Part",
-            quantity: p.quantity || 1,
-            unit_price: parseFloat(p.selling_price || "0"),
-            discount_percentage: 0,
-            part: p.part,
-            part_number: p.part_number,
-            part_name: p.part_name,
-            is_taxable: true
-          });
-        });
-      }
+      const preview = await billingApi.invoices.workOrderLinePreview(wId);
+      const newLineItems: ExtendedLineItem[] = preview.line_items.map((item) => ({
+        item_type: item.item_type,
+        description: item.description,
+        quantity: item.quantity ? parseFloat(item.quantity) : 1,
+        unit_price: item.unit_price ? parseFloat(item.unit_price) : 0,
+        labor_hours: item.labor_hours ? parseFloat(item.labor_hours) : undefined,
+        labor_rate: item.labor_rate ? parseFloat(item.labor_rate) : undefined,
+        part: item.part ?? undefined,
+        part_number: item.part_number,
+        revenue_product: item.revenue_product ?? undefined,
+        revenue_product_name: item.revenue_product_name,
+        owner_account_code: item.owner_account_code,
+        discount_percentage: 0,
+        is_taxable: item.is_taxable ?? true,
+      }));
 
       if (newLineItems.length > 0) {
         setLineItems(newLineItems);
         setValue("line_items", newLineItems, { shouldValidate: true });
-
-        // Auto-select vehicle if available in WO
-        // use query cache or finding in list
-
-        const wo = workOrdersData?.results?.find((w: any) => w.id === wId);
-        if (wo && wo.vehicle) {
-          setValue("vehicle", typeof wo.vehicle === 'object' ? wo.vehicle.id : wo.vehicle, { shouldValidate: true });
-        }
       }
 
+      const wo = workOrdersData?.results?.find((w: any) => w.id === wId);
+      if (wo && wo.vehicle) {
+        setValue("vehicle", typeof wo.vehicle === 'object' ? wo.vehicle.id : wo.vehicle, { shouldValidate: true });
+      }
     } catch (e) {
-      console.error("Failed to fetch WO details", e);
+      console.error("Failed to fetch WO billing preview", e);
     }
   };
 
@@ -423,6 +396,7 @@ export default function NewEstimatePage() {
 
       if (item.part) lineItem.part = item.part;
       if (item.part_number) lineItem.part_number = item.part_number;
+      if (item.revenue_product) lineItem.revenue_product = item.revenue_product;
 
       return lineItem;
     });
@@ -692,6 +666,7 @@ export default function NewEstimatePage() {
                     <TableRow className="h-8">
                       <TableHead className="w-[120px] py-1 px-2 h-8">Type</TableHead>
                       <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
+                      <TableHead className="w-[140px] py-1 px-2 h-8">Revenue</TableHead>
                       <TableHead className="w-[100px] py-1 px-2 h-8">Qty</TableHead>
                       <TableHead className="w-[120px] py-1 px-2 h-8">Rate</TableHead>
                       <TableHead className="w-[100px] py-1 px-2 h-8">Disc %</TableHead>
@@ -732,6 +707,12 @@ export default function NewEstimatePage() {
                             value={item.description}
                             onChange={(e) => updateLineItem(index, "description", e.target.value)}
                             className="h-8 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <RevenueProductBadge
+                            name={item.revenue_product_name}
+                            ownerAccountCode={item.owner_account_code}
                           />
                         </TableCell>
                         <TableCell className="py-1 px-2">
