@@ -2,12 +2,13 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .authentication import JWTCookieAuthentication
 from .recaptcha_views import RecaptchaTokenObtainPairView
 from .jwt_cookies import (
     get_refresh_from_request,
@@ -76,3 +77,16 @@ class LogoutView(APIView):
         clear_refresh_cookie(response)
         clear_access_cookie(response)
         return response
+
+
+class SessionView(APIView):
+    """BFF session check — verify access cookie and return current user profile."""
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTCookieAuthentication]
+
+    def get(self, request, *args, **kwargs):
+        from .serializers import UserSerializer
+
+        serializer = UserSerializer(request.user, context={'request': request})
+        return Response({'ok': True, 'user': serializer.data})

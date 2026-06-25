@@ -5,7 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenVerifyView
 from .views import UserViewSet, GoogleAuthView, ManualRegistrationView
-from .jwt_views import CookieTokenObtainPairView, CookieTokenRefreshView, LogoutView
+from .jwt_views import CookieTokenObtainPairView, CookieTokenRefreshView, LogoutView, SessionView
 from .two_factor_views import TwoFactorViewSet
 from .admin_api_views import (
     SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet,
@@ -41,6 +41,16 @@ urlpatterns = [
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('logout', LogoutView.as_view(), name='token_logout_no_slash'),
     path('logout/', LogoutView.as_view(), name='token_logout'),
+
+    # BFF-compatible aliases when /api/* is routed directly to Django (bypassing Next.js).
+    path('login', CookieTokenObtainPairView.as_view(), name='bff_login_no_slash'),
+    path('login/', CookieTokenObtainPairView.as_view(), name='bff_login'),
+    path('refresh', CookieTokenRefreshView.as_view(), name='bff_refresh_no_slash'),
+    path('refresh/', CookieTokenRefreshView.as_view(), name='bff_refresh'),
+    path('verify', TokenVerifyView.as_view(), name='bff_verify_no_slash'),
+    path('verify/', TokenVerifyView.as_view(), name='bff_verify'),
+    path('session', SessionView.as_view(), name='bff_session_no_slash'),
+    path('session/', SessionView.as_view(), name='bff_session'),
 
     # Profile (no-slash variant for Next.js /api proxy without trailing-slash redirects)
     path(
