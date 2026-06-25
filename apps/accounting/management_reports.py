@@ -416,6 +416,77 @@ class ManagementReportingService:
         }
 
     @classmethod
+    def get_revenue_by_product(cls, start_date, end_date, branch_id=None):
+        """Revenue breakdown by owner-aligned RevenueProduct on invoice lines."""
+        from django.db.models import Sum
+
+        from apps.billing.models import InvoiceLineItem
+
+        line_qs = InvoiceLineItem.objects.filter(
+            invoice__invoice_date__gte=start_date,
+            invoice__invoice_date__lte=end_date,
+        ).exclude(invoice__status='void')
+        if branch_id:
+            line_qs = line_qs.filter(invoice__branch_id=branch_id)
+
+        rows = (
+            line_qs.values(
+                'revenue_product_id',
+                'revenue_product__code',
+                'revenue_product__name',
+                'revenue_product__owner_account_code',
+                'revenue_product__owner_account_label',
+                'revenue_product__revenue_class',
+            )
+            .annotate(invoiced=Sum('total'))
+            .order_by('revenue_product__sort_order', 'revenue_product__name')
+        )
+
+        unclassified = line_qs.filter(revenue_product__isnull=True).aggregate(
+            invoiced=Sum('total'),
+        )['invoiced'] or Decimal('0')
+
+        product_rows = []
+        total_invoiced = Decimal('0')
+        for row in rows:
+            invoiced = row['invoiced'] or Decimal('0')
+            total_invoiced += invoiced
+            product_rows.append({
+                'revenue_product_id': row['revenue_product_id'],
+                'code': row['revenue_product__code'],
+                'name': row['revenue_product__name'],
+                'owner_account_code': row['revenue_product__owner_account_code'] or '',
+                'owner_account_label': row['revenue_product__owner_account_label'] or '',
+                'revenue_class': row['revenue_product__revenue_class'] or '',
+                'invoiced': _decimal_to_float(invoiced),
+            })
+
+        if unclassified > 0:
+            total_invoiced += unclassified
+            product_rows.append({
+                'revenue_product_id': None,
+                'code': 'unclassified',
+                'name': 'Unclassified',
+                'owner_account_code': '',
+                'owner_account_label': '',
+                'revenue_class': 'other',
+                'invoiced': _decimal_to_float(unclassified),
+            })
+
+        for row in product_rows:
+            invoiced = Decimal(str(row['invoiced']))
+            row['share_percent'] = round(
+                float((invoiced / total_invoiced * 100) if total_invoiced > 0 else 0), 2,
+            )
+
+        return {
+            'period': {'start': start_date, 'end': end_date},
+            'branch_id': branch_id,
+            'products': product_rows,
+            'totals': {'invoiced': _decimal_to_float(total_invoiced)},
+        }
+
+    @classmethod
     def get_opex_variance(cls, budget_id, start_date=None, end_date=None):
         from .models import Account
         from .services import ReportingService

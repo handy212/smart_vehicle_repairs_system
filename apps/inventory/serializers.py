@@ -24,7 +24,8 @@ class PartCategorySerializer(serializers.ModelSerializer):
         model = PartCategory
         fields = [
             'id', 'name', 'description', 'parent', 'parent_name', 
-            'full_path', 'is_active', 'subcategories_count', 'parts_count',
+            'full_path', 'is_active', 'revenue_product',
+            'subcategories_count', 'parts_count',
             'created_at', 'updated_at'
         ]
 

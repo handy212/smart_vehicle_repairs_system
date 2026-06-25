@@ -140,19 +140,28 @@ class SubscriptionService:
         )
         
         # Add line item
+        from apps.billing.revenue_resolution import (
+            build_invoice_line_fields,
+            resolve_revenue_product_for_package,
+        )
+
         desc = f"Subscription Package: {package.name}"
         if discount_percentage > 0:
             desc += f" ({discount_percentage}% {discount_reason} discount applied)"
-            
+
+        revenue_product = resolve_revenue_product_for_package(package)
+        line_fields = build_invoice_line_fields(
+            revenue_product=revenue_product,
+            description=desc,
+        )
         InvoiceLineItem.objects.create(
             invoice=invoice,
-            item_type='other',
-            description=desc,
             quantity=1,
             unit_price=purchase_price,
             total=purchase_price,
             is_taxable=False,
-            order=1
+            order=1,
+            **line_fields,
         )
         
         # Store invoice_id in subscription metadata for reliable linking
@@ -300,16 +309,24 @@ class SubscriptionService:
         desc = f"Subscription Renewal: {subscription.package.name}"
         if discount_percentage > 0:
             desc += f" ({discount_percentage}% {discount_reason} discount applied)"
-            
+
+        from apps.billing.revenue_resolution import (
+            build_invoice_line_fields,
+            resolve_revenue_product_for_package,
+        )
+        revenue_product = resolve_revenue_product_for_package(subscription.package)
+        line_fields = build_invoice_line_fields(
+            revenue_product=revenue_product,
+            description=desc,
+        )
         InvoiceLineItem.objects.create(
             invoice=invoice,
-            item_type='other',
-            description=desc,
             quantity=1,
             unit_price=purchase_price,
             total=purchase_price,
             is_taxable=False,
-            order=1
+            order=1,
+            **line_fields,
         )
         
         # Store pending renewal terms without interrupting current paid coverage.

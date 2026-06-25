@@ -19,6 +19,7 @@ class PackageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'code', 'description',
             'price', 'duration_months', 'is_active',
+            'revenue_product',
             'features', 'metadata',
             'feature_kilometers', 'feature_call_out_charges', 'feature_towing_services',
             'created_by', 'created_by_name',

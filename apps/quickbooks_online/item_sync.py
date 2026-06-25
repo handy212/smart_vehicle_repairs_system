@@ -69,6 +69,36 @@ def _accounts_from_mapped_part_line_item(mapping_service, client):
     return income_id, expense_id, asset_id
 
 
+def _income_from_revenue_product_template(local_part, mapping_service, client):
+    """Use revenue product catalog Part's synced QBO Item income account when available."""
+    if mapping_service is None or client is None or local_part is None or QBItem is None:
+        return None
+
+    from apps.billing.revenue_resolution import resolve_revenue_product_for_part
+
+    revenue_product = resolve_revenue_product_for_part(local_part)
+    template_part = getattr(revenue_product, 'catalog_part', None) if revenue_product else None
+    if template_part is None or not getattr(template_part, 'pk', None):
+        return None
+    if template_part.pk == local_part.pk:
+        return None
+
+    mapping = QBOMapping.objects.filter(
+        content_type=ContentType.objects.get_for_model(template_part),
+        object_id=template_part.pk,
+        status='synced',
+    ).first()
+    if not mapping or not mapping.qbo_id:
+        return None
+
+    try:
+        qb_item = QBItem.get(int(mapping.qbo_id), qb=client)
+        income_ref = getattr(qb_item, 'IncomeAccountRef', None)
+        return getattr(income_ref, 'value', None) if income_ref else None
+    except Exception:
+        return None
+
+
 def _resolve_item_account_ids(mapping_service, local_part, client=None):
     income_id = None
     expense_id = None
@@ -92,6 +122,7 @@ def _resolve_item_account_ids(mapping_service, local_part, client=None):
         income_id = income_id or fallback_income
         expense_id = expense_id or fallback_expense
         asset_id = asset_id or fallback_asset
+        income_id = income_id or _income_from_revenue_product_template(local_part, mapping_service, client)
 
     return income_id, expense_id, asset_id
 

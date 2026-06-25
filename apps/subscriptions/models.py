@@ -98,6 +98,14 @@ class Package(models.Model):
         blank=True,
         help_text="Additional package metadata"
     )
+    revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='subscription_packages',
+        help_text='Owner revenue product for subscription sales (e.g. AA 654).',
+    )
     
     # Timestamps
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
