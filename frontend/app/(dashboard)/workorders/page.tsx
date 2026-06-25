@@ -4,6 +4,7 @@ import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
 import { serviceTaskTypesApi, type ServiceTaskType } from "@/lib/api/workorder-tasks";
+import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -927,6 +928,7 @@ function TaskTypesDialog({
     default_labor_rate: "0.00",
     is_billable: true,
     is_active: true,
+    revenue_product: null as number | null,
     sort_order: 0,
   });
 
@@ -945,6 +947,7 @@ function TaskTypesDialog({
       default_labor_rate: "0.00",
       is_billable: true,
       is_active: true,
+      revenue_product: null,
       sort_order: 0,
     });
   };
@@ -985,6 +988,7 @@ function TaskTypesDialog({
       default_labor_rate: taskType.default_labor_rate || "0.00",
       is_billable: taskType.is_billable ?? true,
       is_active: taskType.is_active ?? true,
+      revenue_product: taskType.revenue_product ?? null,
       sort_order: taskType.sort_order || 0,
     });
   };
@@ -1014,6 +1018,15 @@ function TaskTypesDialog({
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             />
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Revenue product (owner account)</label>
+              <RevenueProductSelect
+                value={form.revenue_product}
+                onChange={(value) => setForm((current) => ({ ...current, revenue_product: value }))}
+                revenueClass="labor"
+                className="w-full"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 type="number"
@@ -1065,6 +1078,7 @@ function TaskTypesDialog({
                 <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Revenue</TableHead>
                     <TableHead>Rate</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -1076,6 +1090,16 @@ function TaskTypesDialog({
                       <TableCell>
                         <div className="font-medium">{taskType.name || taskType.label}</div>
                         <div className="text-xs text-muted-foreground">{taskType.code || taskType.value}</div>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {taskType.revenue_product_name ? (
+                          <span>
+                            {taskType.revenue_product_name}
+                            {taskType.owner_account_code ? ` (${taskType.owner_account_code})` : ""}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>{taskType.default_labor_rate || "0.00"}</TableCell>
                       <TableCell>

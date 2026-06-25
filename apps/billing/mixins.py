@@ -618,6 +618,38 @@ class InvoiceActionMixin:
             return self.get_paginated_response(self.get_serializer(page, many=True).data)
         return Response(self.get_serializer(overdue, many=True).data)
 
+    @action(detail=False, methods=['get'], url_path='work-order-line-preview')
+    def work_order_line_preview(self, request):
+        """Preview resolved invoice lines (incl. revenue products) for a work order."""
+        from decimal import Decimal
+
+        from apps.billing.work_order_line_preview import build_work_order_invoice_line_payloads
+        from apps.workorders.models import WorkOrder
+
+        work_order_id = request.query_params.get('work_order')
+        if not work_order_id:
+            return Response({'error': 'work_order query parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        work_order = (
+            WorkOrder.objects.filter(pk=work_order_id)
+            .select_related('customer', 'vehicle', 'branch')
+            .prefetch_related('tasks', 'parts')
+            .first()
+        )
+        if work_order is None:
+            return Response({'error': 'Work order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        lines = []
+        for payload in build_work_order_invoice_line_payloads(work_order):
+            row = {}
+            for key, value in payload.items():
+                if isinstance(value, Decimal):
+                    row[key] = str(value)
+                else:
+                    row[key] = value
+            lines.append(row)
+        return Response({'work_order_id': work_order.id, 'line_items': lines})
+
     @action(detail=True, methods=['post'])
     def convert_to_invoice(self, request, pk=None):
         """Convert a proforma invoice to a real invoice"""

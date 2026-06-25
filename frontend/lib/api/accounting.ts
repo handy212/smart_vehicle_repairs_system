@@ -1065,6 +1065,27 @@ export const accountingApi = {
         return response.data;
     },
 
+    getRevenueByProduct: async (startDate: string, endDate: string, branchId?: number): Promise<{
+        period: { start: string; end: string };
+        branch_id?: number;
+        products: Array<{
+            revenue_product_id: number | null;
+            code: string;
+            name: string;
+            owner_account_code: string;
+            owner_account_label: string;
+            revenue_class: string;
+            invoiced: number;
+            share_percent: number;
+        }>;
+        totals: { invoiced: number };
+    }> => {
+        const params: QueryParams = { start_date: startDate, end_date: endDate };
+        if (branchId) params.branch_id = branchId;
+        const response = await apiClient.get("/accounting/reports/revenue-by-product/", { params });
+        return response.data;
+    },
+
     getExpenseBreakdown: async (startDate: string, endDate: string, branchId?: number): Promise<unknown> => {
         const params: QueryParams = { start_date: startDate, end_date: endDate };
         if (branchId) params.branch_id = branchId;

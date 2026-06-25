@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useState } from "react";
-import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink, Link2, BookOpen } from "lucide-react";
+import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink, Link2, BookOpen, Tags } from "lucide-react";
 import { endOfYear, format, startOfYear } from "date-fns";
 import {
   Table,
@@ -373,8 +373,12 @@ export default function ControlPanelPage() {
 
         <TabsContent value="quickbooks" className="mt-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Map SVR roles to QuickBooks accounts, items, and tax codes. Required for invoice sync, part
-            catalog push, and payment deposit accounts. Connect QuickBooks under{" "}
+            Map SVR roles to QuickBooks accounts, items, and tax codes. Configure{" "}
+            <Link href="/accounting/revenue-products" className="text-primary hover:underline inline-flex items-center gap-1">
+              <Tags className="w-3.5 h-3.5" />
+              revenue products
+            </Link>{" "}
+            (owner income accounts per service type) before syncing invoices. Connect QuickBooks under{" "}
             <Link href="/admin/integrations" className="text-primary hover:underline">
               Admin → Integrations
             </Link>

@@ -692,6 +692,15 @@ class EstimateLineItem(models.Model):
     
     # Taxability
     is_taxable = models.BooleanField(default=True)
+
+    revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='estimate_line_items',
+        help_text='Owner-aligned revenue classification for reporting and QBO.',
+    )
     
     # Order
     order = models.PositiveIntegerField(default=0)
@@ -1029,6 +1038,7 @@ class Invoice(models.Model):
                 discount_percentage=item.discount_percentage,
                 discount_amount=item.discount_amount,
                 is_taxable=item.is_taxable,
+                revenue_product=item.revenue_product,
             )
 
         self.save()
@@ -1131,140 +1141,26 @@ class Invoice(models.Model):
         _, self.amount_due = operational_collection_balances(self.total, self.amount_paid)
 
     def populate_line_items_from_work_order(self):
-        """Create InvoiceLineItem rows from billable work order tasks and parts.
-
-        Mirrors :meth:`calculate_totals_from_work_order` so stored line items match
-        how totals are derived (incl. discontinued + installed-parts rules).
-        """
+        """Create InvoiceLineItem rows from billable work order tasks and parts."""
         if not self.work_order_id:
             return
 
-        from decimal import Decimal
+        from apps.billing.work_order_line_preview import build_work_order_invoice_line_payloads
 
-        from apps.billing.revenue_resolution import (
-            build_invoice_line_fields,
-            merge_labor_pricing_fields,
-            resolve_revenue_product_for_part,
-            resolve_revenue_product_for_task,
-        )
-
-        wo = self.work_order
-        order_idx = 0
-
-        def add_labor_from_task(task, discontinued=False):
-            nonlocal order_idx
-            cost = task.labor_cost or Decimal('0')
-            if cost <= 0:
-                return
-            wo_ref = wo.work_order_number
-            if discontinued:
-                desc = f"{task.description or 'Labor'} — WO {wo_ref} (customer discontinued; billable)"
-            else:
-                desc = f"{task.description or 'Labor'} — WO {wo_ref}"
-
-            revenue_product = resolve_revenue_product_for_task(task)
-            line_fields = build_invoice_line_fields(
-                revenue_product=revenue_product,
-                description=desc,
-            )
-            kwargs = {
-                'invoice': self,
-                'order': order_idx,
-                'is_taxable': True,
-                'discount_percentage': Decimal('0'),
-                **line_fields,
-                **merge_labor_pricing_fields(
-                    cost=cost,
-                    hours=task.actual_hours or task.estimated_hours,
-                    rate=task.labor_rate,
-                ),
-            }
-            InvoiceLineItem.objects.create(**kwargs)
-            order_idx += 1
-
-        def add_part_line(work_order_part, *, discontinued=False):
-            nonlocal order_idx
-            sp = work_order_part.selling_price or Decimal('0')
-            if sp <= 0:
-                return
-            qty = work_order_part.quantity or Decimal('1')
-            unit = (sp / qty).quantize(Decimal('0.01')) if qty > 0 else sp
-            suffix = ' (installed)' if not discontinued else ' (customer discontinued; billable)'
-            desc = f"{work_order_part.part_name} — WO {wo.work_order_number}{suffix}"[:500]
-            inventory_part = None
-            if work_order_part.inventory_part_id:
-                inventory_part = Part.objects.filter(pk=work_order_part.inventory_part_id).select_related(
-                    'category', 'category__revenue_product', 'revenue_product',
-                ).first()
-            revenue_product = resolve_revenue_product_for_part(inventory_part)
-            line_fields = build_invoice_line_fields(
-                revenue_product=revenue_product,
-                description=desc,
-                inventory_part=inventory_part,
-            )
+        self.line_items.all().delete()
+        for payload in build_work_order_invoice_line_payloads(self.work_order):
+            order = payload.pop('order', 0)
+            payload.pop('revenue_product_code', None)
+            payload.pop('revenue_product_name', None)
+            payload.pop('owner_account_code', None)
+            revenue_product_id = payload.pop('revenue_product', None)
+            part_id = payload.pop('part', None)
             InvoiceLineItem.objects.create(
                 invoice=self,
-                order=order_idx,
-                quantity=qty,
-                unit_price=unit,
-                is_taxable=True,
-                discount_percentage=Decimal('0'),
-                **line_fields,
-            )
-            order_idx += 1
-
-        if wo.status == 'discontinued_pending_bill':
-            tasks_qs = wo.tasks.filter(
-                is_workflow_task=False,
-                status__in=['completed', 'skipped'],
-            ).order_by('sequence_order', 'id')
-            for t in tasks_qs:
-                add_labor_from_task(t, discontinued=True)
-            for p in wo.parts.filter(status='installed').order_by('id'):
-                add_part_line(p, discontinued=True)
-        else:
-            for t in wo.tasks.all().order_by('sequence_order', 'id'):
-                add_labor_from_task(t, discontinued=False)
-            installed_part_lines = 0
-            for p in wo.parts.filter(status='installed').order_by('id'):
-                add_part_line(p)
-                installed_part_lines += 1
-            if installed_part_lines == 0:
-                parts_sub = wo.actual_parts_cost or Decimal('0')
-                if parts_sub > 0:
-                    from apps.billing.revenue_resolution import _active_product
-                    revenue_product = _active_product(code='parts_general')
-                    line_fields = build_invoice_line_fields(
-                        revenue_product=revenue_product,
-                        description=f"Parts & materials — WO {wo.work_order_number}"[:500],
-                    )
-                    InvoiceLineItem.objects.create(
-                        invoice=self,
-                        order=order_idx,
-                        quantity=Decimal('1'),
-                        unit_price=parts_sub,
-                        is_taxable=True,
-                        discount_percentage=Decimal('0'),
-                        **line_fields,
-                    )
-                    order_idx += 1
-
-        if order_idx == 0:
-            from apps.billing.revenue_resolution import _active_product
-            revenue_product = _active_product(code='labor_mechanical')
-            line_fields = build_invoice_line_fields(
-                revenue_product=revenue_product,
-                description=f"Labor / services — WO {wo.work_order_number}"[:500],
-                item_type='labor',
-            )
-            InvoiceLineItem.objects.create(
-                invoice=self,
-                order=0,
-                quantity=Decimal('1'),
-                unit_price=Decimal('0'),
-                is_taxable=True,
-                discount_percentage=Decimal('0'),
-                **line_fields,
+                order=order,
+                revenue_product_id=revenue_product_id,
+                part_id=part_id,
+                **payload,
             )
     
     @property

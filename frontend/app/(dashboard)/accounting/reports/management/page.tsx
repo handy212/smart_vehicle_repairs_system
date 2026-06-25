@@ -24,7 +24,7 @@ import { AccountingReportPrintHeader } from "../../components/AccountingReportPr
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import Link from "next/link";
 
-type MgmtTab = "executive" | "scorecard" | "consolidated" | "cash" | "mix";
+type MgmtTab = "executive" | "scorecard" | "consolidated" | "cash" | "mix" | "owner";
 
 type ScorecardBranch = {
     rank: number;
@@ -69,6 +69,12 @@ export default function ManagementReportsPage() {
         queryKey: ["mgmt", "mix", startDate, endDate, activeBranchId],
         queryFn: () => accountingApi.getRevenueMix(startDate, endDate, activeBranchId || undefined)});
 
+    const { data: revenueByProduct, isLoading: loadingOwner } = useQuery({
+        queryKey: ["mgmt", "owner-product", startDate, endDate, activeBranchId],
+        queryFn: () => accountingApi.getRevenueByProduct(startDate, endDate, activeBranchId || undefined),
+        enabled: activeTab === "owner",
+    });
+
     const { data: mgmtMetrics, isLoading: loadingMetrics } = useQuery({
         queryKey: ["mgmt", "dashboard", startDate, endDate, activeBranchId],
         queryFn: () => accountingApi.getManagementMetrics(startDate, endDate)});
@@ -81,6 +87,8 @@ export default function ManagementReportsPage() {
         ?.consolidated?.totals;
     const cashSegments = (cashCollection as { segments?: CashSegment[] })?.segments ?? [];
     const cashTotals = (cashCollection as { totals?: { collection_rate_percent?: number } })?.totals;
+    const ownerProducts = revenueByProduct?.products ?? [];
+    const unclassifiedOwner = ownerProducts.find((p) => p.code === "unclassified");
     const byProduct = (revenueMix as { by_product?: Array<{ label: string; invoiced: number; collected: number }> })
         ?.by_product ?? [];
     const byBranch = (revenueMix as { by_branch?: Array<{ branch_name: string; invoiced: number; share_percent: number }> })
@@ -176,6 +184,16 @@ export default function ManagementReportsPage() {
                 rows: byProduct.map((p) => [p.label, p.invoiced, p.collected]),
                 currencyColumnIndexes: [1, 2]};
         }
+        if (activeTab === "owner" && ownerProducts.length > 0) {
+            return {
+                filename: `revenue-by-owner-product_${stamp}`,
+                reportTitle: "Revenue by owner product",
+                dateInfo,
+                headers: ["Product", "Owner account", "Invoiced", "Share %"],
+                rows: ownerProducts.map((p) => [p.name, p.owner_account_code, p.invoiced, p.share_percent]),
+                currencyColumnIndexes: [2],
+            };
+        }
         return null;
     };
 
@@ -242,6 +260,7 @@ export default function ManagementReportsPage() {
                     <TabsTrigger value="consolidated">Consolidated P&L</TabsTrigger>
                     <TabsTrigger value="cash">Cash Collection</TabsTrigger>
                     <TabsTrigger value="mix">Revenue Mix</TabsTrigger>
+                    <TabsTrigger value="owner">Owner revenue</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="executive" className="space-y-4">
@@ -521,6 +540,57 @@ export default function ManagementReportsPage() {
                                         </Table>
                                     </div>
                                 </>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="owner">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Revenue by owner product</CardTitle>
+                            <CardDescription>
+                                Invoice line totals mapped to owner income accounts (e.g. 680, 658).
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {unclassifiedOwner && unclassifiedOwner.invoiced > 0 && (
+                                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                    {formatCurrency(unclassifiedOwner.invoiced)} invoiced on lines without a revenue product.
+                                    Map task types, categories, and packages under{" "}
+                                    <Link href="/accounting/revenue-products" className="underline font-medium">
+                                        Revenue Products
+                                    </Link>
+                                    .
+                                </p>
+                            )}
+                            {loadingOwner ? (
+                                <AccountingReportSkeleton compact rows={4} />
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Product</TableHead>
+                                            <TableHead>Owner acct</TableHead>
+                                            <TableHead className="text-right">Invoiced</TableHead>
+                                            <TableHead className="text-right">Share %</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {ownerProducts.map((row) => (
+                                            <TableRow key={`${row.code}-${row.name}`}>
+                                                <TableCell>{row.name}</TableCell>
+                                                <TableCell className="font-mono text-xs">
+                                                    {row.owner_account_code || "—"}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {formatCurrency(row.invoiced)}
+                                                </TableCell>
+                                                <TableCell className="text-right">{row.share_percent}%</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             )}
                         </CardContent>
                     </Card>

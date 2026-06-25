@@ -186,3 +186,28 @@ class WorkOrderRevenueProductBillingTests(TestCase):
         mech_row = next(row for row in report['products'] if row['code'] == 'labor_mechanical')
         self.assertEqual(mech_row['owner_account_code'], '658')
         self.assertGreater(mech_row['invoiced'], 0)
+
+    def test_work_order_line_preview_api(self):
+        from rest_framework.test import APIClient
+
+        from apps.workorders.models import ServiceTask
+
+        ServiceTask.objects.create(
+            work_order=self.work_order,
+            task_type='repair',
+            description='Oil change',
+            labor_cost=Decimal('80.00'),
+            actual_hours=Decimal('1.00'),
+            labor_rate=Decimal('80.00'),
+            status='completed',
+        )
+        client = APIClient()
+        client.force_authenticate(user=self.manager)
+        response = client.get(
+            '/api/billing/invoices/work-order-line-preview/',
+            {'work_order': self.work_order.id},
+        )
+        self.assertEqual(response.status_code, 200)
+        lines = response.data['line_items']
+        self.assertGreaterEqual(len(lines), 1)
+        self.assertEqual(lines[0].get('revenue_product_code'), 'labor_mechanical')

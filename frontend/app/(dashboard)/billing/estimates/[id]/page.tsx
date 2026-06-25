@@ -28,6 +28,7 @@ import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
+import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 
@@ -878,7 +879,8 @@ export default function EstimateDetailPage() {
                   <Table>
                     <TableHeader className="bg-muted/50">
                       <TableRow className="h-8">
-                        <TableHead className="w-[40%] py-2">Item / Description</TableHead>
+                        <TableHead className="w-[34%] py-2">Item / Description</TableHead>
+                        <TableHead className="py-2">Revenue</TableHead>
                         <TableHead className="text-right py-2">Qty/Hrs</TableHead>
                         <TableHead className="text-right py-2">Rate</TableHead>
                         <TableHead className="text-right py-2">Discount</TableHead>
@@ -900,6 +902,13 @@ export default function EstimateDetailPage() {
                                   <span className="font-medium text-foreground">{item.description}</span>
                                   <span className="text-xs text-muted-foreground capitalize mt-0.5">{item.item_type?.replace("_", " ")}</span>
                                 </div>
+                              </TableCell>
+                              <TableCell className="align-top py-3">
+                                <RevenueProductBadge
+                                  name={item.revenue_product_name}
+                                  ownerAccountCode={item.owner_account_code}
+                                  code={item.revenue_product_code}
+                                />
                               </TableCell>
                               <TableCell className="text-right align-top py-3">
                                 {item.item_type === "labor" ? `${item.labor_hours || 0}h` : (item.quantity || "-")}

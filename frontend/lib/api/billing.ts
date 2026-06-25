@@ -23,18 +23,42 @@ export interface InvoiceLineItem {
   item_type: "labor" | "part" | "fee" | "discount" | "sublet" | "other";
   description: string;
   quantity?: number;
-  unit_price?: string;
+  unit_price?: string | number;
   discount_percentage?: string;
   discount_amount?: string;
   total?: string;
   labor_hours?: number;
   labor_rate?: string;
-  part?: number; // Link to inventory Part
-  part_number?: string; // Part number for reference
+  part?: number;
+  part_number?: string;
   part_name?: string;
+  revenue_product?: number | null;
+  revenue_product_code?: string | null;
+  revenue_product_name?: string | null;
+  owner_account_code?: string | null;
   is_taxable?: boolean;
   notes?: string;
   order?: number;
+}
+
+export interface WorkOrderInvoiceLinePreview {
+  work_order_id: number;
+  line_items: Array<{
+    item_type: InvoiceLineItem["item_type"];
+    description: string;
+    quantity?: string;
+    unit_price?: string;
+    labor_hours?: string;
+    labor_rate?: string;
+    part?: number | null;
+    part_number?: string;
+    revenue_product?: number | null;
+    revenue_product_code?: string | null;
+    revenue_product_name?: string | null;
+    owner_account_code?: string | null;
+    is_taxable?: boolean;
+    discount_percentage?: string;
+  }>;
 }
 
 export interface Invoice {
@@ -168,9 +192,13 @@ export interface EstimateLineItem {
   total?: string;
   labor_hours?: number;
   labor_rate?: string;
-  part?: number; // Link to inventory Part (ForeignKey)
-  part_number?: string; // Part number for reference
-  part_name?: string; // Part name (read-only from part)
+  part?: number;
+  part_number?: string;
+  part_name?: string;
+  revenue_product?: number | null;
+  revenue_product_code?: string | null;
+  revenue_product_name?: string | null;
+  owner_account_code?: string | null;
   is_taxable?: boolean;
   notes?: string;
   order?: number;
@@ -667,6 +695,13 @@ export const billingApi = {
       financials: { total_paid: number; past_due_total: number; outstanding_total: number };
     }> => {
       const response = await apiClient.get("/billing/invoices/stats/");
+      return response.data;
+    },
+
+    workOrderLinePreview: async (workOrderId: number): Promise<WorkOrderInvoiceLinePreview> => {
+      const response = await apiClient.get("/billing/invoices/work-order-line-preview/", {
+        params: { work_order: workOrderId },
+      });
       return response.data;
     },
 

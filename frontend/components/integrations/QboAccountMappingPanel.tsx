@@ -154,6 +154,26 @@ export function QboAccountMappingPanel() {
     },
   });
 
+  const previewOwnerMutation = useMutation({
+    mutationFn: () => qboMappingsApi.applyOwnerTemplate({ dry_run: true }),
+    onSuccess: (result) => {
+      const mapped = (result as { mapped?: unknown[] }).mapped?.length ?? 0;
+      const items = (result as { invoice_line_items?: { items?: unknown[] } }).invoice_line_items?.items?.length ?? 0;
+      const warnings = (result as { warnings?: unknown[] }).warnings?.length ?? 0;
+      toast({
+        title: "Dry-run preview",
+        description: `Would map ${mapped} control/payment rows, ${items} invoice line templates${warnings ? `, ${warnings} warnings` : ""}.`,
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Preview failed",
+        description: getUserFacingError(error, "Could not preview owner COA template."),
+        variant: "destructive",
+      });
+    },
+  });
+
   const mappedAccountIds = useMemo(() => {
     const ids = new Set<string>();
     overview?.rows.forEach((row) => {
@@ -283,6 +303,15 @@ export function QboAccountMappingPanel() {
           >
             <RefreshCcw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh QBO
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={previewOwnerMutation.isPending}
+            onClick={() => previewOwnerMutation.mutate()}
+          >
+            {previewOwnerMutation.isPending ? "Previewing…" : "Preview owner template"}
           </Button>
           <Button
             variant="default"
