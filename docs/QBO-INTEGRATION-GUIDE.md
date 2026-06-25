@@ -129,6 +129,8 @@ python manage.py apply_owner_qbo_mappings --wire-svr
 
 Or `POST /api/quickbooks/account-mappings/apply-owner-template/` when QBO is connected.
 
+**Go-live:** use the branch-by-branch checklist in **[OWNER-QBO-GO-LIVE-CHECKLIST.md](OWNER-QBO-GO-LIVE-CHECKLIST.md)** before production cutover.
+
 ### Outbound logging
 
 Each outbound Celery task writes a `QBOSyncLog` row with `direction=outbound`. Per-entity sync status is stored in `QBOMapping` (`synced`, `failed`, `pending`) and exposed on API serializers as `qbo_sync_status` / `qbo_sync_error` when QBO is connected.
