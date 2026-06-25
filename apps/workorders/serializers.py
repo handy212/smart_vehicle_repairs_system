@@ -1009,6 +1009,9 @@ class ServiceTaskSerializer(serializers.ModelSerializer):
     """Service task with technician info"""
     assigned_to_name = serializers.SerializerMethodField()
     calculated_hours = serializers.SerializerMethodField()
+    billing_revenue_product_name = serializers.SerializerMethodField()
+    billing_owner_account_code = serializers.SerializerMethodField()
+    billing_revenue_product_code = serializers.SerializerMethodField()
     
     class Meta:
         model = ServiceTask
@@ -1033,6 +1036,35 @@ class ServiceTaskSerializer(serializers.ModelSerializer):
         except (AttributeError, TypeError):
             return 0.0
 
+    def _billing_revenue_product(self, obj):
+        from apps.billing.revenue_resolution import resolve_revenue_product_for_task
+
+        return resolve_revenue_product_for_task(obj)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_billing_revenue_product_name(self, obj):
+        product = self._billing_revenue_product(obj)
+        return product.name if product else None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_billing_owner_account_code(self, obj):
+        product = self._billing_revenue_product(obj)
+        return product.owner_account_code if product else None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_billing_revenue_product_code(self, obj):
+        product = self._billing_revenue_product(obj)
+        return product.code if product else None
+
+    def update(self, instance, validated_data):
+        if 'revenue_product' not in validated_data and 'task_type' in validated_data:
+            from apps.billing.revenue_resolution import revenue_product_from_task_type_code
+
+            product = revenue_product_from_task_type_code(validated_data['task_type'])
+            if product:
+                validated_data['revenue_product'] = product
+        return super().update(instance, validated_data)
+
 
 class ServiceTaskCreateSerializer(serializers.ModelSerializer):
     """Create service task"""
@@ -1042,9 +1074,19 @@ class ServiceTaskCreateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'work_order', 'task_type', 'description', 'detailed_notes',
             'sequence_order', 'assigned_to',
-            'estimated_hours', 'labor_rate'
+            'estimated_hours', 'labor_rate', 'revenue_product',
         ]
         read_only_fields = ['id']
+        extra_kwargs = {'revenue_product': {'required': False, 'allow_null': True}}
+
+    def create(self, validated_data):
+        if validated_data.get('revenue_product') is None:
+            from apps.billing.revenue_resolution import revenue_product_from_task_type_code
+
+            product = revenue_product_from_task_type_code(validated_data.get('task_type'))
+            if product:
+                validated_data['revenue_product'] = product
+        return super().create(validated_data)
 
     def validate_assigned_to(self, value):
         if value and value.role != 'technician':

@@ -21,6 +21,10 @@ export interface ServiceTask {
   // Workflow task fields
   is_workflow_task?: boolean;
   workflow_phase?: string;
+  revenue_product?: number | null;
+  billing_revenue_product_name?: string | null;
+  billing_owner_account_code?: string | null;
+  billing_revenue_product_code?: string | null;
 }
 
 export interface ServiceTaskListResponse {

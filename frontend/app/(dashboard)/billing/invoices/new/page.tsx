@@ -93,7 +93,15 @@ export default function NewInvoicePage() {
   const [dueDateManual, setDueDateManual] = useState(false);
   const { formatCurrency } = useCurrency();
   const { activeBranchId } = useBranchStore();
-  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string; revenue_product?: number | null; notes?: string }>>([
+  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & {
+    is_taxable: boolean;
+    part?: number;
+    part_number?: string;
+    revenue_product?: number | null;
+    revenue_product_name?: string | null;
+    owner_account_code?: string | null;
+    notes?: string;
+  }>>([
     { item_type: "labor", description: "", quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true },
   ]);
   const [partSearchTerm, setPartSearchTerm] = useState("");
@@ -709,6 +717,7 @@ export default function NewInvoicePage() {
                     <TableRow className="h-8">
                       <TableHead className="w-[120px] py-1 px-2 h-8">Type</TableHead>
                       <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
+                      <TableHead className="w-[140px] py-1 px-2 h-8">Revenue</TableHead>
                       <TableHead className="w-[100px] py-1 px-2 h-8">Qty</TableHead>
                       <TableHead className="w-[120px] py-1 px-2 h-8">Rate</TableHead>
                       <TableHead className="w-[100px] py-1 px-2 h-8">Disc %</TableHead>
@@ -750,6 +759,13 @@ export default function NewInvoicePage() {
                             value={item.description}
                             onChange={(e) => updateLineItem(index, "description", e.target.value)}
                             className="h-8 text-sm"
+                          />
+                        </TableCell>
+
+                        <TableCell className="py-1 px-2">
+                          <RevenueProductBadge
+                            name={item.revenue_product_name}
+                            ownerAccountCode={item.owner_account_code}
                           />
                         </TableCell>
 

@@ -17,6 +17,24 @@ def _active_product(**filters):
     )
 
 
+def revenue_product_from_task_type_code(task_type_code: str) -> RevenueProduct | None:
+    """Resolve revenue product configured on a ServiceTaskType row."""
+    task_type_code = (task_type_code or '').strip()
+    if not task_type_code:
+        return None
+
+    from apps.workorders.models import ServiceTaskType
+
+    task_type = (
+        ServiceTaskType.objects.filter(code=task_type_code, is_active=True)
+        .select_related('revenue_product', 'revenue_product__catalog_part')
+        .first()
+    )
+    if task_type and task_type.revenue_product_id and task_type.revenue_product.is_active:
+        return task_type.revenue_product
+    return None
+
+
 def resolve_revenue_product_for_task(task) -> RevenueProduct | None:
     """Map a work-order task to a revenue product."""
     revenue_product_id = getattr(task, 'revenue_product_id', None)
@@ -29,15 +47,9 @@ def resolve_revenue_product_for_task(task) -> RevenueProduct | None:
 
     task_type_code = (getattr(task, 'task_type', '') or '').strip()
     if task_type_code:
-        from apps.workorders.models import ServiceTaskType
-
-        task_type = (
-            ServiceTaskType.objects.filter(code=task_type_code, is_active=True)
-            .select_related('revenue_product', 'revenue_product__catalog_part')
-            .first()
-        )
-        if task_type and task_type.revenue_product_id and task_type.revenue_product.is_active:
-            return task_type.revenue_product
+        product = revenue_product_from_task_type_code(task_type_code)
+        if product:
+            return product
 
     description = (getattr(task, 'description', '') or '').lower()
     keyword_map = (

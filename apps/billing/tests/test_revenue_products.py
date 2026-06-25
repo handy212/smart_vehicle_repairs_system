@@ -211,3 +211,38 @@ class WorkOrderRevenueProductBillingTests(TestCase):
         lines = response.data['line_items']
         self.assertGreaterEqual(len(lines), 1)
         self.assertEqual(lines[0].get('revenue_product_code'), 'labor_mechanical')
+
+    def test_work_order_line_preview_excludes_workflow_tasks(self):
+        from apps.billing.work_order_line_preview import build_work_order_invoice_line_payloads
+
+        ServiceTask.objects.create(
+            work_order=self.work_order,
+            task_type='coordination',
+            description='Workflow coordination',
+            labor_cost=Decimal('50.00'),
+            status='completed',
+            is_workflow_task=True,
+        )
+        payloads = build_work_order_invoice_line_payloads(self.work_order)
+        descriptions = [p['description'] for p in payloads]
+        self.assertFalse(any('Workflow coordination' in d for d in descriptions))
+
+    def test_service_task_create_sets_revenue_product_from_task_type(self):
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(user=self.manager)
+        response = client.post(
+            '/api/workorders/tasks/',
+            {
+                'work_order': self.work_order.id,
+                'task_type': 'repair',
+                'description': 'Timing belt',
+                'estimated_hours': '2.0',
+                'labor_rate': '60.00',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['revenue_product'], self.mechanical.id)
+        self.assertEqual(response.data['billing_owner_account_code'], '658')

@@ -22,6 +22,7 @@ import Link from "next/link";
 import AddTaskDialog from "./AddTaskDialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 
 interface TasksTabProps {
   workOrderId: number;
@@ -265,7 +266,16 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
           </div>
         </TableCell>
         <TableCell className="py-3">
-          <span className="text-sm capitalize">{task.task_type?.replace(/_/g, " ")}</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm capitalize">{task.task_type?.replace(/_/g, " ")}</span>
+            {!isWorkflow && (
+              <RevenueProductBadge
+                name={task.billing_revenue_product_name}
+                ownerAccountCode={task.billing_owner_account_code}
+                code={task.billing_revenue_product_code}
+              />
+            )}
+          </div>
         </TableCell>
         <TableCell className="py-3">
           <div className="flex items-center gap-1">
