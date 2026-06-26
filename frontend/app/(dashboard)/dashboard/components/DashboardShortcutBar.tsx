@@ -1,7 +1,14 @@
 "use client";
 
 import { DashboardRequirementsPanel } from "./DashboardRequirementsPanel";
+import { useDashboardQuickAccess } from "@/lib/hooks/useDashboardQuickAccess";
 
 export function DashboardShortcutBar() {
-  return <DashboardRequirementsPanel />;
+  const { isHidden, hide } = useDashboardQuickAccess();
+
+  if (isHidden) {
+    return null;
+  }
+
+  return <DashboardRequirementsPanel onHide={hide} />;
 }

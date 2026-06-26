@@ -32,8 +32,8 @@ Group=svr
 WorkingDirectory=$APP_DIR
 Environment="PATH=$APP_DIR/venv/bin"
 EnvironmentFile=$APP_DIR/.env
-ExecStartPre=/bin/bash -c 'timeout=30; elapsed=0; while ! /usr/bin/pg_isready -h localhost -p 5432 >/dev/null 2>&1 && [ $elapsed -lt $timeout ]; do /bin/sleep 1; elapsed=$((elapsed+1)); done; [ $elapsed -lt $timeout ]'
-ExecStartPre=/bin/bash -c 'timeout=30; elapsed=0; while ! /usr/bin/redis-cli ping >/dev/null 2>&1 && [ $elapsed -lt $timeout ]; do /bin/sleep 1; elapsed=$((elapsed+1)); done; [ $elapsed -lt $timeout ]'
+ExecStartPre=/bin/bash -c 'timeout=30; elapsed=0; while ! /usr/bin/pg_isready -h localhost -p 5432 >/dev/null 2>&1 && [ $$elapsed -lt $$timeout ]; do /bin/sleep 1; elapsed=$$((elapsed+1)); done; [ $$elapsed -lt $$timeout ]'
+ExecStartPre=/bin/bash -c 'timeout=30; elapsed=0; while ! /usr/bin/redis-cli ping >/dev/null 2>&1 && [ $$elapsed -lt $$timeout ]; do /bin/sleep 1; elapsed=$$((elapsed+1)); done; [ $$elapsed -lt $$timeout ]'
 ExecStart=$APP_DIR/venv/bin/gunicorn \
     --access-logfile - \
     --workers 3 \
@@ -115,12 +115,9 @@ EOF
 if [ -d "$APP_DIR/frontend" ]; then
     echo -e "${YELLOW}Creating Next.js service...${NC}"
     
-    read -p "Frontend domain [yourdomain.com]: " FRONTEND_DOMAIN
-    FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-yourdomain.com}
-    
-    read -p "API URL [https://api.$FRONTEND_DOMAIN/api]: " API_URL
-    API_URL=${API_URL:-https://api.$FRONTEND_DOMAIN/api}
-    
+    FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-workshop.aapgh.com}
+    API_URL=${API_URL:-https://${FRONTEND_DOMAIN}/api}
+
     cat > /etc/systemd/system/svr-nextjs.service << EOF
 [Unit]
 Description=Smart Vehicle Repairs Next.js
@@ -130,10 +127,12 @@ After=network.target
 Type=simple
 User=svr
 Group=svr
-WorkingDirectory=$APP_DIR/frontend
+WorkingDirectory=$APP_DIR/frontend/.next/standalone
 Environment="NODE_ENV=production"
+Environment="PORT=3000"
+Environment="HOSTNAME=0.0.0.0"
 Environment="NEXT_PUBLIC_API_URL=$API_URL"
-ExecStart=/usr/bin/npm start
+ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
 

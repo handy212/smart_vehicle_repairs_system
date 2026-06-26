@@ -97,6 +97,10 @@ rsync -av \
     --exclude='.git' \
     --exclude='.gitignore' \
     --exclude='.cursor' \
+    --exclude='.agent' \
+    --exclude='.codex' \
+    --exclude='.config' \
+    --exclude='coverage.xml' \
     --exclude='.venv' \
     --exclude='venv' \
     --exclude='__pycache__' \
@@ -172,6 +176,11 @@ if [ "$REBUILD_FRONTEND" = true ]; then
 
     echo -e "${YELLOW}Building Next.js application...${NC}"
     sudo -u svr npm run build
+
+    echo -e "${YELLOW}Preparing standalone server assets...${NC}"
+    cp -r .next/static .next/standalone/.next/static
+    cp -r public .next/standalone/public
+    chown -R svr:svr .next/standalone
 
     echo -e "${GREEN}✓ Frontend rebuilt!${NC}"
     echo ""

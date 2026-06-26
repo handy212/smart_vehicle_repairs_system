@@ -131,9 +131,11 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
         return redirect(auth_url)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Handles the callback from QBO after user approves access.
+    Intuit redirects the browser here without a Referer; exempt CSRF checks.
     """
     def get(self, request):
         state = request.GET.get('state')

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -135,7 +137,7 @@ function RequirementGroup({
   );
 }
 
-export function DashboardRequirementsPanel() {
+export function DashboardRequirementsPanel({ onHide }: { onHide?: () => void }) {
   const { hasPermission, hasAnyPermission } = usePermissions();
   const { isModuleEnabled, canViewModuleManagement } = useModules();
   const columnCount = useDashboardRequirementsColumnCount();
@@ -156,7 +158,7 @@ export function DashboardRequirementsPanel() {
     [visibleGroups, columnCount]
   );
 
-  const [openGroup, setOpenGroup] = useState(visibleGroups[0]?.id ?? "");
+  const [openGroup, setOpenGroup] = useState("");
 
   if (visibleGroups.length === 0) {
     return null;
@@ -164,8 +166,21 @@ export function DashboardRequirementsPanel() {
 
   return (
     <Card className="rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-      <CardHeader className="border-b border-border/60 px-4 py-3">
-        <CardTitle className="text-sm font-semibold">Dashboard Requirements</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border/60 px-4 py-3">
+        <CardTitle className="text-sm font-semibold">Quick Access</CardTitle>
+        {onHide ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground"
+            onClick={onHide}
+            aria-label="Hide Quick Access"
+          >
+            <EyeOff className="mr-1 h-3.5 w-3.5" />
+            Hide
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="p-3">
         <Accordion

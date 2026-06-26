@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link2, RefreshCcw, Unplug, ExternalLink } from "lucide-react";
+import { Link2, RefreshCcw, Unplug, ExternalLink, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useToast } from "@/lib/hooks/useToast";
@@ -14,6 +14,7 @@ export function QuickBooksOnlineCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
 
   const { data: status, isLoading } = useQuery({
     queryKey: ["qbo", "status"],
@@ -147,6 +148,36 @@ export function QuickBooksOnlineCard() {
                   : "Securely link your QuickBooks account to synchronize invoices, customers, and payments."}
               </p>
             </div>
+            {status?.has_keys && status.oauth_redirect_uri && (
+              <div className="text-left rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30 p-3 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 dark:text-amber-300">
+                  Intuit redirect URI (register exactly)
+                </p>
+                <p className="text-[10px] text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                  In the Intuit Developer Portal, open your app&apos;s <strong>Keys</strong> tab and add this
+                  URL under <strong>Redirect URIs</strong> for{" "}
+                  {status.oauth_keys_environment === "production" ? "Production" : "Sandbox"} keys.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-[10px] font-mono break-all bg-background/80 px-2 py-1.5 rounded border">
+                    {status.oauth_redirect_uri}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(status.oauth_redirect_uri ?? "");
+                      setCopiedRedirectUri(true);
+                      setTimeout(() => setCopiedRedirectUri(false), 2000);
+                    }}
+                  >
+                    {copiedRedirectUri ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+              </div>
+            )}
             <Button
               size="sm"
               className="w-full h-9 text-xs bg-[#2ca01c] hover:bg-[#2ca01c]/90 text-white font-bold shadow-md transition-all active:scale-95"

@@ -8,12 +8,13 @@ import {
   DollarSign, Wrench, Calendar, AlertTriangle, TrendingUp, TrendingDown,
   Package, FileText, Truck, ArrowRight, ChevronRight, Users, Car,
   RefreshCw, Search, X, ChevronDown, ChevronUp, ChevronsUpDown,
-  Clock, AlertCircle, Plus, Receipt, UserCheck,
+  Clock, AlertCircle, Plus, Receipt, UserCheck, LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { DashboardShortcutBar } from "./DashboardShortcutBar";
 import { FinanceAtAGlancePanel } from "./FinanceAtAGlancePanel";
+import { useDashboardQuickAccess } from "@/lib/hooks/useDashboardQuickAccess";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import {
   type DashboardRoleConfig,
@@ -327,6 +328,7 @@ export function PerfexDashboard({
 }: PerfexDashboardProps) {
 
   const router = useRouter();
+  const { isHidden: quickAccessHidden, show: showQuickAccess } = useDashboardQuickAccess();
   const showSection = (section: Parameters<typeof dashboardShowsSection>[1]) =>
     !roleConfig || dashboardShowsSection(roleConfig, section);
 
@@ -540,6 +542,12 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
           </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
+          {quickAccessHidden && (
+            <Button variant="outline" size="sm" onClick={showQuickAccess} aria-label="Show Quick Access">
+              <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+              Quick Access
+            </Button>
+          )}
           {onRefresh && (
             <button onClick={handleRefresh} disabled={isRefreshing}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 mr-1"

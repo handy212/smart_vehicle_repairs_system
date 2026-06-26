@@ -17,6 +17,7 @@ import { useModules } from "@/lib/hooks/useModules";
 
 describe("DashboardShortcutBar", () => {
   beforeEach(() => {
+    localStorage.clear();
     (usePermissions as Mock).mockReturnValue({
       hasPermission: () => true,
       hasAnyPermission: () => true,
@@ -27,13 +28,17 @@ describe("DashboardShortcutBar", () => {
     });
   });
 
-  it("renders dashboard requirements with grouped navigation", async () => {
+  it("renders quick access with grouped navigation collapsed by default", async () => {
     const user = userEvent.setup();
     render(<DashboardShortcutBar />);
 
-    expect(screen.getByRole("heading", { name: /dashboard requirements/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /quick access/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /customers & sales/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /financial overview/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /sales summary/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /financial overview/i }));
+    expect(screen.getByRole("link", { name: /sales summary/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /customers & sales/i }));
 
@@ -61,5 +66,15 @@ describe("DashboardShortcutBar", () => {
 
     expect(screen.queryByRole("link", { name: /create invoices/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /customer centre/i })).toBeInTheDocument();
+  });
+
+  it("can hide quick access from the dashboard", async () => {
+    const user = userEvent.setup();
+    render(<DashboardShortcutBar />);
+
+    await user.click(screen.getByRole("button", { name: /hide quick access/i }));
+
+    expect(screen.queryByRole("heading", { name: /quick access/i })).not.toBeInTheDocument();
+    expect(localStorage.getItem("dashboardQuickAccessHidden")).toBe("true");
   });
 });
