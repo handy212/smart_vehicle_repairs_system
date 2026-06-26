@@ -17,7 +17,11 @@ class DocumentNumberService:
         'bill': 'BILL',
         'vendor_credit': 'VC',
         'sales_order': 'SO',
+        'customer': 'CUS',
     }
+
+    # Customer numbers are identifiers, not GL documents — never block on period lock.
+    SKIP_PERIOD_LOCK = frozenset({'customer'})
 
     @classmethod
     def _assert_not_locked(cls, document_date):
@@ -45,7 +49,8 @@ class DocumentNumberService:
         if hasattr(doc_date, 'date') and callable(doc_date.date):
             doc_date = doc_date.date()
 
-        cls._assert_not_locked(doc_date)
+        if document_type not in cls.SKIP_PERIOD_LOCK:
+            cls._assert_not_locked(doc_date)
         fiscal_year = doc_date.year
         branch_code = (branch.code or 'HQ').upper()
         prefix = cls.PREFIXES[document_type]
@@ -60,3 +65,16 @@ class DocumentNumberService:
             sequence.last_sequence += 1
             sequence.save(update_fields=['last_sequence', 'updated_at'])
             return f"{prefix}-{fiscal_year}-{branch_code}-{sequence.last_sequence:06d}"
+
+
+def resolve_numbering_branch(explicit=None):
+    """Return the branch to use for customer/document numbering."""
+    if explicit is not None:
+        return explicit
+
+    from apps.branches.models import Branch
+
+    return (
+        Branch.objects.filter(is_active=True, is_headquarters=True).first()
+        or Branch.objects.filter(is_active=True).order_by('name').first()
+    )

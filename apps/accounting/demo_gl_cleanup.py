@@ -1,35 +1,45 @@
-"""Helpers for purging demo / client-demo GL journal entries."""
+"""Helpers for purging seeded GL journal entries."""
 
 from django.db.models import Q
 
-# References created by client demo billing and accounting seeders.
-DEMO_JE_REFERENCE_PREFIXES = (
-    'CDINV',
-    'CDPAY',
-    'CDJE-',
-    'AR-FIX-',
-    'AP-FIX-',
+# References created by client seed billing and accounting loaders.
+SEED_JE_REFERENCE_PREFIXES = (
+    "INV-",
+    "PAY-",
+    "JE-SEED-",
+    "AR-FIX-",
+    "AP-FIX-",
+)
+
+# Backward compatibility with older demo prefixes.
+LEGACY_JE_REFERENCE_PREFIXES = (
+    "CDINV",
+    "CDPAY",
+    "CDJE-",
 )
 
 
-def demo_journal_entry_queryset():
-    """Journal entries that belong to client demo data (marker or known prefixes)."""
+def seed_journal_entry_queryset():
+    """Journal entries created by the sample data seeder."""
     from apps.accounting.models import JournalEntry
-
-    from apps.accounts.client_demo_data import DEMO_MARKER
+    from apps.accounts.seed_identity import SEED_MARKER
 
     prefix_q = Q()
-    for prefix in DEMO_JE_REFERENCE_PREFIXES:
+    for prefix in (*SEED_JE_REFERENCE_PREFIXES, *LEGACY_JE_REFERENCE_PREFIXES):
         prefix_q |= Q(reference__startswith=prefix)
 
     return JournalEntry.objects.filter(
-        Q(description__contains=DEMO_MARKER) | prefix_q
+        Q(description__contains=SEED_MARKER) | prefix_q
     ).distinct()
 
 
 def purge_demo_journal_entries():
-    """Delete demo journal entries. Returns count purged."""
-    qs = demo_journal_entry_queryset()
+    """Delete seeded journal entries. Returns count purged."""
+    qs = seed_journal_entry_queryset()
     count = qs.count()
     qs.delete()
     return count
+
+
+# Backward-compatible aliases
+demo_journal_entry_queryset = seed_journal_entry_queryset

@@ -340,7 +340,7 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
         has_keys = config and config.client_id and config.client_secret
         last_sync = QBOSyncLog.objects.order_by('-finished_at').first()
 
-        return JsonResponse({
+        payload = {
             'is_connected': QuickBooksService.is_connected(),
             'has_keys': bool(has_keys),
             'realm_id': config.realm_id if config else None,
@@ -349,7 +349,12 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             'company_name': config.company_name if config and hasattr(config, 'company_name') else None,
             'oauth_redirect_uri': get_qbo_redirect_uri(_infer_redirect_base(request)),
             'oauth_keys_environment': 'sandbox' if (config.is_sandbox if config else True) else 'production',
-        })
+        }
+        if payload['is_connected']:
+            from apps.quickbooks_online.bulk_outbound_sync import count_pending_outbound_syncs
+            payload['outbound_pending'] = count_pending_outbound_syncs()
+
+        return JsonResponse(payload)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

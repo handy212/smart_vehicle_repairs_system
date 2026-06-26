@@ -116,13 +116,38 @@ export default function BranchesPage() {
     return true;
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, confirmation }: { id: number; confirmation: string }) =>
+      branchesApi.permanentDelete(id, confirmation),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["branches"] });
+      toast({
+        title: "Branch deleted",
+        description: data.detail,
+      });
+      setDeleteDialogOpen(false);
+      setBranchToDelete(null);
+      setDeleteConfirmationName("");
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not delete branch",
+        description: getUserFacingError(
+          error,
+          "This branch still has linked records. Archive it instead, or remove related data first.",
+        ),
+        variant: "destructive",
+      });
+    },
+  });
+
   const archiveMutation = useMutation({
     mutationFn: (id: number) => branchesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches"] });
       toast({
-        title: "Success",
-        description: "Branch archived successfully",
+        title: "Branch archived",
+        description: "The branch was deactivated and historical records were preserved.",
       });
       setDeleteDialogOpen(false);
       setBranchToDelete(null);
@@ -439,24 +464,24 @@ export default function BranchesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
-              Archive Branch?
+              Delete Branch?
             </AlertDialogTitle>
             <AlertDialogDescription asChild className="text-base text-foreground mt-4">
               <div>
                 <p className="font-semibold mb-2">
-                  This will deactivate the branch and preserve all history.
+                  Permanently delete <strong className="text-foreground">{branchToDelete?.name}</strong> from the system.
                 </p>
                 <ul className="list-disc pl-6 space-y-1 mb-4 text-muted-foreground">
-                  <li><strong className="text-foreground">{branchToDelete?.name}</strong> will no longer be available for new documents.</li>
-                  <li>Existing work orders, invoices, inspections, inventory history, and reports stay intact.</li>
-                  <li>Assigned staff remain linked for audit/reporting until you reassign them.</li>
+                  <li>Use this only when the branch has no work orders, invoices, stock, or other linked records.</li>
+                  <li>Assigned staff will be moved to another active branch when one is available.</li>
+                  <li>If the branch still has history, use <strong className="text-foreground">Archive instead</strong>.</li>
                 </ul>
               </div>
             </AlertDialogDescription>
 
             <div className="mt-6 space-y-2">
               <label className="text-sm font-medium">
-                Please type <strong className="text-foreground select-all">{branchToDelete?.name}</strong> to confirm.
+                Type <strong className="text-foreground select-all">{branchToDelete?.name}</strong> to confirm permanent deletion.
               </label>
               <Input
                 value={deleteConfirmationName}
@@ -466,19 +491,45 @@ export default function BranchesPage() {
               />
             </div>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6">
-            <AlertDialogCancel disabled={archiveMutation.isPending}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (branchToDelete) {
-                  archiveMutation.mutate(branchToDelete.id);
+          <AlertDialogFooter className="mt-6 gap-2 sm:justify-between">
+            <AlertDialogCancel disabled={deleteMutation.isPending || archiveMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <div className="flex flex-col-reverse sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (branchToDelete) {
+                    archiveMutation.mutate(branchToDelete.id);
+                  }
+                }}
+                disabled={
+                  deleteConfirmationName !== branchToDelete?.name ||
+                  archiveMutation.isPending ||
+                  deleteMutation.isPending
                 }
-              }}
-              disabled={deleteConfirmationName !== branchToDelete?.name || archiveMutation.isPending}
-            >
-              {archiveMutation.isPending ? "Archiving..." : "Archive Branch"}
-            </Button>
+              >
+                {archiveMutation.isPending ? "Archiving..." : "Archive Instead"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (branchToDelete) {
+                    deleteMutation.mutate({
+                      id: branchToDelete.id,
+                      confirmation: deleteConfirmationName,
+                    });
+                  }
+                }}
+                disabled={
+                  deleteConfirmationName !== branchToDelete?.name ||
+                  deleteMutation.isPending ||
+                  archiveMutation.isPending
+                }
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            </div>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

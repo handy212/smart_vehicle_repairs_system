@@ -2,19 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Link2, RefreshCcw, Unlink } from "lucide-react";
+import { BookOpen, Link2, RefreshCcw, Search, Unlink } from "lucide-react";
 import { qboMappingsApi, type QboAccountOption, type QboMappingRow } from "@/lib/api/qbo-mappings";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { QboSearchableSelect, type QboSearchableOption } from "@/components/integrations/QboSearchableSelect";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -70,11 +65,81 @@ function currentMappedValue(row: QboMappingRow): DraftValue {
   return row.qbo_account_id || UNMAPPED_VALUE;
 }
 
+function formatQboAccountLabel(account: QboAccountOption): string {
+  const typeSuffix = account.account_type
+    ? ` (${account.account_type}${account.account_sub_type ? ` / ${account.account_sub_type}` : ""})`
+    : "";
+  if (account.account_number) {
+    return `${account.account_number} · ${account.name}${typeSuffix}`;
+  }
+  return `${account.name}${typeSuffix}`;
+}
+
+function accountSearchText(account: QboAccountOption): string {
+  return [
+    account.account_number,
+    account.name,
+    account.account_type,
+    account.account_sub_type,
+    account.id,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function formatMappedQboTarget(
+  row: QboMappingRow,
+  accountNumberById: Map<string, string>,
+): string | null {
+  if (row.uses_item && row.qbo_item_name) {
+    return row.qbo_item_name;
+  }
+  if (!row.qbo_account_name && !row.qbo_account_id) {
+    return null;
+  }
+  const number =
+    row.qbo_account_number || accountNumberById.get(row.qbo_account_id) || "";
+  if (number) {
+    return `${number} · ${row.qbo_account_name}`;
+  }
+  return row.qbo_account_name;
+}
+
+function rowMatchesSearch(
+  row: QboMappingRow,
+  term: string,
+  accountNumberById: Map<string, string>,
+): boolean {
+  if (!term) {
+    return true;
+  }
+  const mappedTarget = formatMappedQboTarget(row, accountNumberById) || "";
+  const haystack = [
+    row.label,
+    row.mapping_kind,
+    row.mapping_key,
+    row.svr_account?.code,
+    row.svr_account?.name,
+    row.qbo_account_hint,
+    row.qbo_account_name,
+    row.qbo_account_number,
+    row.qbo_item_name,
+    mappedTarget,
+    accountNumberById.get(row.qbo_account_id),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(term);
+}
+
 export function QboAccountMappingPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isConnected, isLoading: qboStatusLoading } = useQuickBooksConnection();
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
+  const [rowSearch, setRowSearch] = useState("");
 
   const draftKey = (row: QboMappingRow) => `${row.mapping_kind}:${row.mapping_key}`;
 
@@ -190,6 +255,27 @@ export function QboAccountMappingPanel() {
     return ids;
   }, [overview?.rows]);
 
+  const accountNumberById = useMemo(() => {
+    const map = new Map<string, string>();
+    accounts.forEach((account) => {
+      if (account.account_number) {
+        map.set(account.id, account.account_number);
+      }
+    });
+    return map;
+  }, [accounts]);
+
+  const rowSearchTerm = rowSearch.trim().toLowerCase();
+
+  const filteredGroups = useMemo(() => {
+    return (overview?.groups ?? [])
+      .map((group) => ({
+        ...group,
+        rows: group.rows.filter((row) => rowMatchesSearch(row, rowSearchTerm, accountNumberById)),
+      }))
+      .filter((group) => group.rows.length > 0);
+  }, [overview?.groups, rowSearchTerm, accountNumberById]);
+
   if (qboStatusLoading) {
     return null;
   }
@@ -247,7 +333,9 @@ export function QboAccountMappingPanel() {
         const account = accounts.find((entry) => entry.id === selected);
         toast({
           title: "Account mapped",
-          description: account ? `${row.label} → ${account.name}` : `${row.label} mapped in QuickBooks.`,
+          description: account
+            ? `${row.label} → ${formatQboAccountLabel(account)}`
+            : `${row.label} mapped in QuickBooks.`,
         });
       }
       setDrafts((current) => {
@@ -280,6 +368,77 @@ export function QboAccountMappingPanel() {
 
   const isLoading = overviewLoading || accountsLoading || itemsLoading || taxCodesLoading;
   const isRefreshing = accountsFetching || itemsFetching || taxCodesFetching;
+
+  const buildAccountOptions = (row: QboMappingRow): QboSearchableOption[] => {
+    const base: QboSearchableOption[] = [
+      {
+        value: UNMAPPED_VALUE,
+        label: "Not mapped",
+        searchText: "not mapped unmapped",
+      },
+    ];
+    const rowAccounts = accountsForRow(row, accounts);
+    return base.concat(
+      rowAccounts.map((account) => {
+        const taken = mappedAccountIds.has(account.id) && account.id !== row.qbo_account_id;
+        const invalidForInventory =
+          INVENTORY_QBO_MAPPING_KEYS.has(row.mapping_key) &&
+          !accountMatchesInventoryMapping(row, account);
+        const disabled = taken;
+        const hints = [
+          taken ? "Mapped elsewhere" : null,
+          invalidForInventory ? "Wrong type for inventory mapping" : null,
+        ].filter(Boolean);
+        return {
+          value: account.id,
+          label: formatQboAccountLabel(account),
+          searchText: accountSearchText(account),
+          disabled,
+          hint: hints.length > 0 ? hints.join(" · ") : undefined,
+        };
+      }),
+    );
+  };
+
+  const buildItemOptions = (row: QboMappingRow): QboSearchableOption[] => {
+    const base: QboSearchableOption[] = [
+      {
+        value: UNMAPPED_VALUE,
+        label: "Not mapped",
+        searchText: "not mapped unmapped",
+      },
+    ];
+    return base.concat(
+      items.map((item) => {
+        const taken = mappedItemIds.has(item.id) && item.id !== row.qbo_item_id;
+        const label = `${item.name}${item.type ? ` (${item.type})` : ""}`;
+        return {
+          value: item.id,
+          label,
+          searchText: [item.name, item.type, item.income_account_name, item.id].join(" ").toLowerCase(),
+          disabled: taken,
+          hint: taken ? "Mapped elsewhere" : item.income_account_name || undefined,
+        };
+      }),
+    );
+  };
+
+  const buildTaxCodeOptions = (): QboSearchableOption[] => {
+    const base: QboSearchableOption[] = [
+      {
+        value: UNMAPPED_VALUE,
+        label: "Not mapped",
+        searchText: "not mapped unmapped",
+      },
+    ];
+    return base.concat(
+      taxCodes.map((taxCode) => ({
+        value: taxCode.id,
+        label: taxCode.description ? `${taxCode.name} — ${taxCode.description}` : taxCode.name,
+        searchText: [taxCode.name, taxCode.description, taxCode.id].join(" ").toLowerCase(),
+      })),
+    );
+  };
 
   return (
     <Card className="border shadow-sm">
@@ -327,15 +486,30 @@ export function QboAccountMappingPanel() {
       <CardContent className="p-0">
         <p className="px-4 py-3 text-xs text-muted-foreground border-b">
           Map SVR control accounts, invoice line types, payment methods, and sales tax codes to
-          QuickBooks accounts, service items, and tax codes. Outbound invoice, estimate, and credit
-          memo sync uses these mappings.
+          QuickBooks accounts, service items, and tax codes. Search by QBO account number or name.
         </p>
+
+        {!isLoading && (
+          <div className="px-4 py-3 border-b bg-muted/10">
+            <div className="relative max-w-md">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={rowSearch}
+                onChange={(event) => setRowSearch(event.target.value)}
+                placeholder="Search mappings by SVR label, account code, QBO number, or name…"
+                className="h-8 pl-8 text-xs bg-card"
+              />
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="p-6 text-sm text-muted-foreground">Loading QuickBooks accounts and mappings...</div>
+        ) : filteredGroups.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">No mappings match your search.</div>
         ) : (
           <div className="divide-y">
-            {(overview?.groups ?? []).map((group) => (
+            {filteredGroups.map((group) => (
               <div key={group.group} className="px-4 py-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                   {group.group}
@@ -346,6 +520,7 @@ export function QboAccountMappingPanel() {
                     const current = currentMappedValue(row);
                     const hasChanges = selected !== current;
                     const isMapped = current !== UNMAPPED_VALUE;
+                    const mappedTarget = formatMappedQboTarget(row, accountNumberById);
 
                     return (
                       <div
@@ -381,10 +556,10 @@ export function QboAccountMappingPanel() {
                               {row.qbo_account_hint}
                             </p>
                           )}
-                          {(row.qbo_account_name || row.qbo_item_name) && (
+                          {(mappedTarget || row.qbo_item_name) && (
                             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-                              <Link2 className="w-3 h-3" />
-                              QBO: {row.qbo_item_name || row.qbo_account_name}
+                              <Link2 className="w-3 h-3 shrink-0" />
+                              QBO: {mappedTarget || row.qbo_item_name}
                             </p>
                           )}
                           {row.error_message && (
@@ -392,65 +567,28 @@ export function QboAccountMappingPanel() {
                           )}
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto lg:min-w-[360px]">
-                          <Select
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto lg:min-w-[380px]">
+                          <QboSearchableSelect
                             value={selected}
                             onValueChange={(value) =>
                               setDrafts((current) => ({ ...current, [draftKey(row)]: value }))
                             }
-                          >
-                            <SelectTrigger className="w-full sm:w-[280px] h-8 text-xs bg-card">
-                              <SelectValue
-                                placeholder={
-                                  row.uses_item
-                                    ? "Select QBO item"
-                                    : row.uses_tax_code
-                                      ? "Select QBO tax code"
-                                      : "Select QBO account"
-                                }
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={UNMAPPED_VALUE}>Not mapped</SelectItem>
-                              {row.uses_item
-                                ? items.map((item) => {
-                                    const taken =
-                                      mappedItemIds.has(item.id) && item.id !== row.qbo_item_id;
-                                    return (
-                                      <SelectItem key={item.id} value={item.id} disabled={taken}>
-                                        {item.name}
-                                        {item.type ? ` (${item.type})` : ""}
-                                        {taken ? " — mapped elsewhere" : ""}
-                                      </SelectItem>
-                                    );
-                                  })
+                            options={
+                              row.uses_item
+                                ? buildItemOptions(row)
                                 : row.uses_tax_code
-                                  ? taxCodes.map((taxCode) => (
-                                      <SelectItem key={taxCode.id} value={taxCode.id}>
-                                        {taxCode.name}
-                                        {taxCode.description ? ` — ${taxCode.description}` : ""}
-                                      </SelectItem>
-                                    ))
-                                  : accountsForRow(row, accounts).map((account) => {
-                                    const taken =
-                                      mappedAccountIds.has(account.id) &&
-                                      account.id !== row.qbo_account_id;
-                                    const invalidForInventory =
-                                      INVENTORY_QBO_MAPPING_KEYS.has(row.mapping_key) &&
-                                      !accountMatchesInventoryMapping(row, account);
-                                    return (
-                                      <SelectItem key={account.id} value={account.id} disabled={taken}>
-                                        {account.name}
-                                        {account.account_type
-                                          ? ` (${account.account_type}${account.account_sub_type ? ` / ${account.account_sub_type}` : ""})`
-                                          : ""}
-                                        {taken ? " — mapped elsewhere" : ""}
-                                        {invalidForInventory ? " — wrong type for inventory" : ""}
-                                      </SelectItem>
-                                    );
-                                  })}
-                            </SelectContent>
-                          </Select>
+                                  ? buildTaxCodeOptions()
+                                  : buildAccountOptions(row)
+                            }
+                            placeholder={
+                              row.uses_item
+                                ? "Search QBO items…"
+                                : row.uses_tax_code
+                                  ? "Search QBO tax codes…"
+                                  : "Search QBO accounts…"
+                            }
+                            className="w-full sm:w-[320px]"
+                          />
 
                           <div className="flex items-center gap-2">
                             <Button

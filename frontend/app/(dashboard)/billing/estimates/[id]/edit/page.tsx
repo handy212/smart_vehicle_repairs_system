@@ -41,6 +41,8 @@ import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
+import { BillingLineIncomeCategorySelect } from "@/components/billing/BillingLineIncomeCategorySelect";
+import { resolveIncomeCategoryForPart } from "@/lib/billing/resolve-income-category";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
@@ -57,6 +59,7 @@ const lineItemSchema = z.object({
   is_taxable: z.boolean(),
   part: optionalNumber(),
   part_number: z.string().optional(),
+  revenue_product: optionalNumber(),
   notes: z.string().optional(),
 });
 
@@ -142,7 +145,15 @@ export default function EditEstimatePage() {
   const estimateId = parseInt(params.id as string);
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string; notes?: string }>>([]);
+  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & {
+    is_taxable: boolean;
+    part?: number;
+    part_number?: string;
+    revenue_product?: number;
+    revenue_product_name?: string | null;
+    owner_account_code?: string | null;
+    notes?: string;
+  }>>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
   const [partSearchTerm, setPartSearchTerm] = useState("");
 
@@ -247,6 +258,9 @@ export default function EditEstimatePage() {
         labor_rate: item.labor_rate ? parseFloat(item.labor_rate) : undefined,
         part: item.part || undefined,
         part_number: item.part_number || undefined,
+        revenue_product: item.revenue_product ?? undefined,
+        revenue_product_name: item.revenue_product_name,
+        owner_account_code: item.owner_account_code,
         is_taxable: item.is_taxable ?? true,
       }));
 
@@ -276,10 +290,10 @@ export default function EditEstimatePage() {
   }, [estimate, isLoading, reset, setValue]);
 
 
-  const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
+  const addLineItem = async (type: "labor" | "part" = "labor", partData?: any) => {
     if (type === "part" && partData) {
-
-      const newLineItem: any = {
+      const incomeCategory = await resolveIncomeCategoryForPart(partData);
+      const newLineItem = {
         item_type: billingLineTypeForPart(partData),
         description: partData.name,
         quantity: 1,
@@ -287,15 +301,38 @@ export default function EditEstimatePage() {
         part: partData.id,
         part_number: partData.part_number,
         is_taxable: true,
+        revenue_product: incomeCategory.revenue_product ?? undefined,
+        revenue_product_name: incomeCategory.revenue_product_name,
+        owner_account_code: incomeCategory.owner_account_code,
       };
-      setLineItems([...lineItems, newLineItem]);
-      setValue("line_items", [...lineItems, newLineItem], { shouldValidate: true });
+      const updated = [...lineItems, newLineItem];
+      setLineItems(updated);
+      setValue("line_items", updated, { shouldValidate: true });
     } else {
-
-      const newItem: any = { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true };
-      setLineItems([...lineItems, newItem]);
-      setValue("line_items", [...lineItems, newItem], { shouldValidate: true });
+      const newItem = { item_type: "labor" as const, description: "", quantity: 1, unit_price: 0, is_taxable: true };
+      const updated = [...lineItems, newItem];
+      setLineItems(updated);
+      setValue("line_items", updated, { shouldValidate: true });
     }
+  };
+
+  const applyLineIncomeCategory = (
+    index: number,
+    patch: {
+      revenue_product: number | null;
+      revenue_product_name?: string | null;
+      owner_account_code?: string | null;
+    },
+  ) => {
+    const updated = [...lineItems];
+    updated[index] = {
+      ...updated[index],
+      revenue_product: patch.revenue_product ?? undefined,
+      revenue_product_name: patch.revenue_product_name,
+      owner_account_code: patch.owner_account_code,
+    };
+    setLineItems(updated);
+    setValue("line_items", updated, { shouldValidate: true });
   };
 
   const removeLineItem = (index: number) => {
@@ -370,6 +407,7 @@ export default function EditEstimatePage() {
 
         if (item.part) lineItem.part = item.part;
         if (item.part_number) lineItem.part_number = item.part_number;
+        if (item.revenue_product) lineItem.revenue_product = item.revenue_product;
         if (item.notes) lineItem.notes = item.notes;
 
         return lineItem;
@@ -753,6 +791,7 @@ export default function EditEstimatePage() {
                   <TableRow className="h-8">
                     <TableHead className="w-[120px] py-1 px-2 h-8">Type</TableHead>
                     <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
+                    <TableHead className="w-[140px] py-1 px-2 h-8">Revenue</TableHead>
                     <TableHead className="w-[100px] py-1 px-2 h-8">Qty</TableHead>
                     <TableHead className="w-[120px] py-1 px-2 h-8">Rate</TableHead>
                     <TableHead className="w-[80px] text-center py-1 px-2 h-8">Tax</TableHead>
@@ -792,6 +831,13 @@ export default function EditEstimatePage() {
                           value={item.description}
                           onChange={(e) => updateLineItem(index, "description", e.target.value)}
                           className="h-8 text-sm"
+                        />
+                      </TableCell>
+                      <TableCell className="py-1 px-2">
+                        <BillingLineIncomeCategorySelect
+                          itemType={item.item_type}
+                          value={item.revenue_product ?? null}
+                          onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                         />
                       </TableCell>
                       <TableCell className="py-1 px-2">

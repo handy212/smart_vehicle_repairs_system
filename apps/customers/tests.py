@@ -191,3 +191,60 @@ class CustomerPrimaryContactCreationTest(TestCase):
         self.assertEqual(contact.email, 'legacy-fleet@example.com')
         self.assertEqual(contact.phone, '+233200000222')
         self.assertEqual(contact.job_title, 'Fleet Supervisor')
+
+
+class CustomerNumberingTest(TestCase):
+    def setUp(self):
+        from apps.branches.models import Branch
+
+        self.admin = User.objects.create_superuser(
+            username='numbering_admin',
+            email='numbering_admin@example.com',
+            password='password123',
+            role='admin',
+        )
+        self.branch = Branch.objects.create(
+            name='Kumasi',
+            code='KSI',
+            phone='555-0100',
+            address='1 High Street',
+            city='Kumasi',
+            state='Ashanti',
+            zip_code='00233',
+            country='Ghana',
+            is_active=True,
+            is_headquarters=True,
+            created_by=self.admin,
+        )
+
+    def test_auto_customer_number_uses_branch_fiscal_format(self):
+        user = User.objects.create_user(
+            username='cust001',
+            email='cust001@example.com',
+            password='password123',
+            role='customer',
+        )
+        customer = Customer(user=user, status='active')
+        customer._numbering_branch = self.branch
+        customer.save()
+
+        self.assertRegex(customer.customer_number, r'^CUS-\d{4}-KSI-\d{6}$')
+
+    def test_create_serializer_assigns_structured_customer_number(self):
+        from django.utils import timezone
+
+        serializer = CustomerCreateSerializer(
+            data={
+                'email': 'newcust@example.com',
+                'first_name': 'New',
+                'last_name': 'Customer',
+                'phone': '+233200000099',
+                'customer_type': 'individual',
+                'status': 'active',
+            },
+            context={'numbering_branch': self.branch},
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        customer = serializer.save()
+        year = timezone.now().year
+        self.assertEqual(customer.customer_number, f'CUS-{year}-KSI-000001')

@@ -4,6 +4,7 @@ Customer models for managing customer information and relationships
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 
@@ -70,9 +71,9 @@ class Customer(models.Model):
     
     # Customer identification
     customer_number = models.CharField(
-        max_length=20,
+        max_length=32,
         unique=True,
-        help_text="Unique customer identification number"
+        help_text="Unique customer identification number (e.g. CUS-2026-KSI-000001)"
     )
     
     # Business information (for business/fleet customers)
@@ -290,60 +291,16 @@ class Customer(models.Model):
         return f"{self.customer_number} - {self.user.get_full_name()}"
     
     def save(self, *args, **kwargs):
-        # Auto-generate customer number if not set
         if not self.customer_number:
-            from django.db import transaction
-            with transaction.atomic():
-                # Find the most recent customer with a CUST- style number to increment
-                last_customer = (
-                    Customer.objects
-                    .select_for_update()
-                    .filter(customer_number__startswith='CUST-')
-                    .order_by('-customer_number')
-                    .first()
+            from apps.accounting.document_numbering import DocumentNumberService, resolve_numbering_branch
+
+            branch = resolve_numbering_branch(getattr(self, '_numbering_branch', None))
+            if branch is None:
+                raise ValidationError(
+                    "Cannot assign a customer number without an active branch. "
+                    "Create a branch first."
                 )
-                
-                if last_customer:
-                    try:
-                        # Extract the numeric part after 'CUST-'
-                        # Using regex or simpler split to get the last numeric part if possible
-                        import re
-                        match = re.search(r'(\d+)$', last_customer.customer_number)
-                        if match:
-                            last_number = int(match.group(1))
-                            self.customer_number = f"CUST-{last_number + 1:05d}"
-                        else:
-                            raise ValueError("No numeric part found")
-                    except (ValueError, TypeError):
-                        # Fallback if numeric part is not cleanly extractable
-                        next_id = Customer.objects.count() + 1
-                        self.customer_number = f"CUST-{next_id:05d}"
-                else:
-                    # If no CUST- numbers exist, start from 00001
-                    self.customer_number = "CUST-00001"
-                
-                # FINAL SAFETY CHECK: Ensure the generated number is TRULY unique
-                # This handles cases where numbers might be out of sync or manually entered
-                attempts = 0
-                while Customer.objects.filter(customer_number=self.customer_number).exists() and attempts < 100:
-                    attempts += 1
-                    try:
-                        import re
-                        match = re.search(r'(\d+)$', self.customer_number)
-                        if match:
-                            num = int(match.group(1))
-                            self.customer_number = f"CUST-{num + 1:05d}"
-                        else:
-                            import uuid
-                            self.customer_number = f"CUST-{uuid.uuid4().hex[:6].upper()}"
-                    except:
-                        import uuid
-                        self.customer_number = f"CUST-{uuid.uuid4().hex[:6].upper()}"
-                
-                # Ultimate fallback to UUID if loop fails
-                if attempts >= 100:
-                    import uuid
-                    self.customer_number = f"CUST-{uuid.uuid4().hex[:8].upper()}"
+            self.customer_number = DocumentNumberService.allocate('customer', branch)
         super().save(*args, **kwargs)
     
     @property

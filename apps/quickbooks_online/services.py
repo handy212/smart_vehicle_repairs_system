@@ -359,6 +359,25 @@ class QuickBooksService:
             defaults={'status': 'failed', 'error_message': error_message},
         )
 
+    def clear_qbo_mapping(self, local_obj, *, delete: bool = False) -> bool:
+        """Remove stale QuickBooks link so the next sync can match or create in QBO."""
+        branch_ct = ContentType.objects.get_for_model(local_obj)
+        qs = QBOMapping.objects.filter(content_type=branch_ct, object_id=local_obj.id)
+        if delete:
+            deleted, _ = qs.delete()
+            return deleted > 0
+        updated = qs.update(
+            qbo_id='',
+            qbo_sync_token='',
+            status='pending',
+            error_message='',
+        )
+        return updated > 0
+
+    def clear_branch_qbo_mapping(self, local_branch):
+        """Remove the QBO mapping for a branch."""
+        return self.clear_qbo_mapping(local_branch, delete=True)
+
     def _load_qbo_entity(
         self,
         qb_class,
@@ -368,6 +387,7 @@ class QuickBooksService:
         display_name=None,
         sku=None,
         name=None,
+        company_name=None,
         allow_create=True,
     ):
         """
@@ -395,6 +415,7 @@ class QuickBooksService:
             display_name=display_name,
             sku=sku,
             name=name,
+            company_name=company_name,
             allow_create=allow_create,
         )
         if error:
@@ -425,6 +446,8 @@ class QuickBooksService:
             QBCustomer,
             local_customer,
             display_name=display_name,
+            company_name=local_customer.company_name or full_name,
+            name=full_name,
         )
         if load_error:
             logger.error('QBO Customer load failed: %s', load_error)
@@ -638,15 +661,6 @@ class QuickBooksService:
             },
         )
         return True, None
-
-    def clear_branch_qbo_mapping(self, local_branch):
-        """Remove the QBO mapping for a branch."""
-        branch_ct = ContentType.objects.get_for_model(local_branch)
-        deleted, _ = QBOMapping.objects.filter(
-            content_type=branch_ct,
-            object_id=local_branch.id,
-        ).delete()
-        return deleted > 0
 
     def _get_mapping_service(self):
         try:
@@ -1477,6 +1491,8 @@ class QuickBooksService:
             QBVendor,
             local_supplier,
             display_name=display_name,
+            company_name=local_supplier.name,
+            name=local_supplier.name,
         )
         if load_error:
             self._fail_qbo_mapping(local_supplier, load_error)

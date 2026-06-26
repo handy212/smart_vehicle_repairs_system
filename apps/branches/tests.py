@@ -247,6 +247,68 @@ class BranchApiPermissionTest(TestCase):
         self.assertFalse(second_branch.is_active)
         self.assertEqual(self.technician.branch_id, second_branch.id)
 
+    def test_branch_permanent_delete_removes_empty_branch(self):
+        second_branch = Branch.objects.create(
+            name='Delete Me',
+            code='DELME',
+            phone='555-0400',
+            address='100 Delete St',
+            city='Tema',
+            state='Greater Accra',
+            zip_code='00233',
+            created_by=self.admin,
+        )
+
+        client = APIClient()
+        client.force_authenticate(self.admin)
+        response = client.post(
+            f'/api/branches/{second_branch.id}/permanent-delete/',
+            {'confirmation': 'Delete Me'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(Branch.objects.filter(pk=second_branch.id).exists())
+
+    def test_branch_permanent_delete_blocks_when_records_exist(self):
+        from apps.workorders.models import WorkOrder
+        from apps.customers.models import Customer
+        from apps.vehicles.models import Vehicle
+
+        customer = Customer.objects.create(
+            customer_type='individual',
+            first_name='Test',
+            last_name='Customer',
+            phone='555-0001',
+            email='branch-delete@test.com',
+        )
+        vehicle = Vehicle.objects.create(
+            customer=customer,
+            make='Toyota',
+            model='Corolla',
+            year=2020,
+            vin='1HGCM82633A004352',
+            license_plate='BR-001',
+        )
+        WorkOrder.objects.create(
+            branch=self.branch,
+            customer=customer,
+            vehicle=vehicle,
+            status='pending',
+            customer_concerns='Branch delete blocker test',
+            created_by=self.admin,
+        )
+
+        client = APIClient()
+        client.force_authenticate(self.admin)
+        response = client.post(
+            f'/api/branches/{self.branch.id}/permanent-delete/',
+            {'confirmation': self.branch.name},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('work orders', response.data['detail'].lower())
+        self.assertTrue(Branch.objects.filter(pk=self.branch.id).exists())
+
 
 class PrintFooterTemplateTest(TestCase):
     def setUp(self):

@@ -132,6 +132,14 @@ export const branchesApi = {
     await apiClient.delete(`/branches/${id}/`);
   },
 
+  permanentDelete: async (
+    id: number,
+    confirmation: string,
+  ): Promise<{ detail: string; fallback_branch?: { id: number; name: string; code: string } }> => {
+    const response = await apiClient.post(`/branches/${id}/permanent-delete/`, { confirmation });
+    return response.data;
+  },
+
   forceDelete: async (id: number): Promise<{ detail: string }> => {
     const response = await apiClient.delete(`/branches/${id}/force_delete/`);
     return response.data;

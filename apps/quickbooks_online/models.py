@@ -163,6 +163,11 @@ class QBOAccountMapping(models.Model):
 
     qbo_account_id = models.CharField(max_length=50, blank=True)
     qbo_account_name = models.CharField(max_length=255, blank=True)
+    qbo_account_number = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text='QuickBooks chart account number (AcctNum) when mapped.',
+    )
     qbo_account_type = models.CharField(max_length=64, blank=True)
 
     qbo_item_id = models.CharField(max_length=50, blank=True)

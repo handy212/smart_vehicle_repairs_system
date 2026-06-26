@@ -22,6 +22,7 @@ from .sync_policy import is_outbound_eligible, INVOICE_QBO_SYNC_STATUSES
 from .sync_context import outbound_signals_suppressed
 from .payment_helpers import _is_proforma_numbered_invoice
 from .task_dispatch import schedule_entity_sync, schedule_part_sync
+from .status_sync import capture_status_before_save, status_became_eligible
 import logging
 
 logger = logging.getLogger(__name__)
@@ -81,19 +82,40 @@ def sync_payment_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('payment', instance):
         return
+    if status_became_eligible('payment', instance):
+        logger.info('Payment %s became eligible for QBO sync (status change)', instance.id)
     logger.info(f"Scheduling QBO sync for Payment {instance.id}")
     schedule_entity_sync('payment', instance.id, task=task_sync_payment_to_qbo)
 
 
 @receiver(pre_save, sender=Invoice)
 def capture_invoice_status_before_save(sender, instance, **kwargs):
-    if instance.pk:
-        try:
-            instance._qbo_prev_status = Invoice.objects.get(pk=instance.pk).status
-        except Invoice.DoesNotExist:
-            instance._qbo_prev_status = None
-    else:
-        instance._qbo_prev_status = None
+    capture_status_before_save(instance, Invoice)
+
+
+@receiver(pre_save, sender=Payment)
+def capture_payment_status_before_save(sender, instance, **kwargs):
+    capture_status_before_save(instance, Payment)
+
+
+@receiver(pre_save, sender=Estimate)
+def capture_estimate_status_before_save(sender, instance, **kwargs):
+    capture_status_before_save(instance, Estimate)
+
+
+@receiver(pre_save, sender=CreditNote)
+def capture_credit_note_status_before_save(sender, instance, **kwargs):
+    capture_status_before_save(instance, CreditNote)
+
+
+@receiver(pre_save, sender=Bill)
+def capture_vendor_bill_status_before_save(sender, instance, **kwargs):
+    capture_status_before_save(instance, Bill)
+
+
+@receiver(pre_save, sender=VendorCredit)
+def capture_vendor_credit_status_before_save(sender, instance, **kwargs):
+    capture_status_before_save(instance, VendorCredit)
 
 
 # Issued invoice statuses — exclude ``partial`` (auto-set when a proforma receives a deposit).
@@ -164,6 +186,8 @@ def sync_estimate_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('estimate', instance):
         return
+    if status_became_eligible('estimate', instance):
+        logger.info('Estimate %s became eligible for QBO sync (status change)', instance.id)
     logger.info(f"Scheduling QBO sync for Estimate {instance.id}")
     schedule_entity_sync('estimate', instance.id, task=task_sync_estimate_to_qbo)
 
@@ -175,6 +199,8 @@ def sync_credit_note_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('credit_note', instance):
         return
+    if status_became_eligible('credit_note', instance):
+        logger.info('CreditNote %s became eligible for QBO sync (status change)', instance.id)
     logger.info(f"Scheduling QBO sync for CreditNote {instance.id}")
     schedule_entity_sync('credit_note', instance.id, task=task_sync_credit_note_to_qbo)
 
@@ -186,6 +212,8 @@ def sync_vendor_bill_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('vendor_bill', instance):
         return
+    if status_became_eligible('vendor_bill', instance):
+        logger.info('Bill %s became eligible for QBO sync (status change)', instance.id)
     logger.info(f"Scheduling QBO sync for Bill {instance.id}")
     schedule_entity_sync('vendor_bill', instance.id, task=task_sync_vendor_bill_to_qbo)
 
@@ -197,5 +225,7 @@ def sync_vendor_credit_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('vendor_credit', instance):
         return
+    if status_became_eligible('vendor_credit', instance):
+        logger.info('VendorCredit %s became eligible for QBO sync (status change)', instance.id)
     logger.info(f"Scheduling QBO sync for VendorCredit {instance.id}")
     schedule_entity_sync('vendor_credit', instance.id, task=task_sync_vendor_credit_to_qbo)

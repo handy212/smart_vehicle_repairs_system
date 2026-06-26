@@ -85,6 +85,11 @@ export const workOrderTasksApi = {
     return response.data;
   },
 
+  patch: async (id: number, data: Partial<ServiceTask>): Promise<ServiceTask> => {
+    const response = await apiClient.patch(`/workorders/tasks/${id}/`, data);
+    return response.data;
+  },
+
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/workorders/tasks/${id}/`);
   },

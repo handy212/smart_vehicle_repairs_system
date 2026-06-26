@@ -15,98 +15,12 @@ from apps.quickbooks_online.serializers import QBOSyncLogSerializer
 from apps.quickbooks_online.services import QuickBooksService
 from apps.quickbooks_online import tasks as qbo_tasks
 from apps.quickbooks_online.outbound_log import run_outbound_entity_sync
+from apps.quickbooks_online.bulk_outbound_sync import (
+    count_pending_outbound_syncs,
+    sync_all_pending_outbound,
+)
+from apps.quickbooks_online.outbound_entities import OUTBOUND_SYNC_ENTITIES
 from apps.quickbooks_online.sync_policy import outbound_eligibility_reason
-
-OUTBOUND_SYNC_ENTITIES = {
-    'customer': {
-        'app_label': 'customers',
-        'model_name': 'Customer',
-        'module': 'customers',
-        'permission': 'view_customers',
-        'task_name': 'task_sync_customer_to_qbo',
-        'service_method': 'sync_customer',
-    },
-    'invoice': {
-        'app_label': 'billing',
-        'model_name': 'Invoice',
-        'module': 'billing',
-        'permission': 'view_billing',
-        'task_name': 'task_sync_invoice_to_qbo',
-        'service_method': 'sync_invoice',
-    },
-    'payment': {
-        'app_label': 'billing',
-        'model_name': 'Payment',
-        'module': 'billing',
-        'permission': 'view_billing',
-        'task_name': 'task_sync_payment_to_qbo',
-        'service_method': 'sync_payment',
-    },
-    'supplier': {
-        'app_label': 'inventory',
-        'model_name': 'Supplier',
-        'module': 'inventory',
-        'permission': 'view_inventory',
-        'task_name': 'task_sync_supplier_to_qbo',
-        'service_method': 'sync_supplier',
-    },
-    'purchase_order': {
-        'app_label': 'inventory',
-        'model_name': 'PurchaseOrder',
-        'module': 'inventory',
-        'permission': 'view_inventory',
-        'task_name': 'task_sync_purchase_order_to_qbo',
-        'service_method': 'sync_purchase_order',
-    },
-    'branch': {
-        'app_label': 'branches',
-        'model_name': 'Branch',
-        'module': None,
-        'permission': 'manage_branches',
-        'task_name': 'task_sync_branch_to_qbo',
-        'service_method': 'sync_branch',
-    },
-    'estimate': {
-        'app_label': 'billing',
-        'model_name': 'Estimate',
-        'module': 'billing',
-        'permission': 'view_billing',
-        'task_name': 'task_sync_estimate_to_qbo',
-        'service_method': 'sync_estimate',
-    },
-    'credit_note': {
-        'app_label': 'billing',
-        'model_name': 'CreditNote',
-        'module': 'billing',
-        'permission': 'view_billing',
-        'task_name': 'task_sync_credit_note_to_qbo',
-        'service_method': 'sync_credit_note',
-    },
-    'vendor_bill': {
-        'app_label': 'billing',
-        'model_name': 'Bill',
-        'module': 'billing',
-        'permission': 'view_billing',
-        'task_name': 'task_sync_vendor_bill_to_qbo',
-        'service_method': 'sync_vendor_bill',
-    },
-    'vendor_credit': {
-        'app_label': 'billing',
-        'model_name': 'VendorCredit',
-        'module': 'billing',
-        'permission': 'view_billing',
-        'task_name': 'task_sync_vendor_credit_to_qbo',
-        'service_method': 'sync_vendor_credit',
-    },
-    'part': {
-        'app_label': 'inventory',
-        'model_name': 'Part',
-        'module': 'inventory',
-        'permission': 'view_inventory',
-        'task_name': 'task_sync_part_to_qbo',
-        'service_method': 'sync_part',
-    },
-}
 
 
 class QBOConnectedMixin:
@@ -450,6 +364,44 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
         })
 
 
+class QBOBulkOutboundSyncView(QBOConnectedMixin, APIView):
+    """Queue outbound sync for all eligible failed/pending QBOMapping rows."""
+
+    permission_classes = [
+        IsAuthenticated,
+        HasPermission('manage_settings'),
+    ]
+
+    def post(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+
+        include_failed = bool(request.data.get('include_failed', True))
+        include_pending = bool(request.data.get('include_pending', True))
+        if not include_failed and not include_pending:
+            return Response(
+                {'detail': 'At least one of include_failed or include_pending must be true.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        queued, skipped = sync_all_pending_outbound(
+            include_failed=include_failed,
+            include_pending=include_pending,
+        )
+        counts = count_pending_outbound_syncs()
+        return Response({
+            'status': 'success',
+            'queued': queued,
+            'skipped_ineligible': len(skipped),
+            'message': (
+                f'Queued {queued} outbound sync(s). '
+                f'{len(skipped)} mapping(s) skipped because the local record is not eligible.'
+            ),
+            'counts': counts,
+        })
+
+
 class QBOOwnerCoaSetupView(QBOConnectedMixin, APIView):
     """Apply owner legacy COA template mappings to QuickBooks (SVR GL stays lean)."""
 
@@ -491,3 +443,62 @@ class QBOOwnerCoaSetupView(QBOConnectedMixin, APIView):
             **result,
             **overview,
         })
+
+
+class QBOMappingClearView(QBOConnectedMixin, APIView):
+    """Clear a stale SVR ↔ QBO entity link before retrying outbound sync."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+
+        entity_type = request.data.get('entity_type')
+        object_id = request.data.get('object_id')
+        delete = bool(request.data.get('delete', False))
+
+        entity_config = OUTBOUND_SYNC_ENTITIES.get(entity_type)
+        if not entity_config:
+            return Response(
+                {'detail': f'Unsupported entity_type "{entity_type}".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not self._has_entity_permission_for_config(request, entity_config):
+            return Response(
+                {'detail': 'You do not have permission to clear this mapping.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            object_id = int(object_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'detail': 'object_id must be a positive integer.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        model = apps.get_model(entity_config['app_label'], entity_config['model_name'])
+        try:
+            instance = model.objects.get(id=object_id)
+        except model.DoesNotExist:
+            return Response(
+                {'detail': f'{entity_config["model_name"]} {object_id} was not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        service = QuickBooksService()
+        cleared = service.clear_qbo_mapping(instance, delete=delete)
+        return Response({
+            'detail': 'Mapping cleared.' if cleared else 'No mapping existed.',
+            'entity_type': entity_type,
+            'object_id': object_id,
+            'deleted': delete,
+            **QBOOutboundSyncView()._get_mapping_payload(instance),
+        })
+
+    @staticmethod
+    def _has_entity_permission_for_config(request, entity_config):
+        return user_has_permission(request.user, entity_config['permission'])

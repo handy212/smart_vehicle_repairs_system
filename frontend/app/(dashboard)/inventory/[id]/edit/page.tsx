@@ -150,6 +150,7 @@ export default function EditPartPage() {
     is_taxable: part.is_taxable ?? true,
     is_core: part.is_core ?? false,
     core_charge: part.core_charge ? parseFloat(part.core_charge) : 0,
+    revenue_product: part.revenue_product ?? null,
     image: part.image,
   };
 

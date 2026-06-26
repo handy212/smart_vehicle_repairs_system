@@ -31,7 +31,8 @@ import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions"
 import { Badge } from "@/components/ui/badge";
 import { useBranchStore } from "@/store/branchStore";
 import { buildInvoiceNotesFromWorkOrder, resolveWorkOrderCustomerId, resolveWorkOrderVehicleId, selectNumericFieldString } from "@/lib/billing/workOrderInvoicePrefill";
-import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
+import { BillingLineIncomeCategorySelect } from "@/components/billing/BillingLineIncomeCategorySelect";
+import { resolveIncomeCategoryForPart } from "@/lib/billing/resolve-income-category";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
@@ -288,9 +289,10 @@ export default function NewInvoicePage() {
     }
   }, [invoiceDate, paymentTerms, dueDateManual, setValue]);
 
-  const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
+  const addLineItem = async (type: "labor" | "part" = "labor", partData?: any) => {
     let updated: typeof lineItems;
     if (type === "part" && partData) {
+      const incomeCategory = await resolveIncomeCategoryForPart(partData);
       updated = [
         ...lineItems,
         {
@@ -302,11 +304,33 @@ export default function NewInvoicePage() {
           part: partData.id,
           part_number: partData.part_number,
           is_taxable: true,
+          revenue_product: incomeCategory.revenue_product ?? undefined,
+          revenue_product_name: incomeCategory.revenue_product_name,
+          owner_account_code: incomeCategory.owner_account_code,
         },
       ];
     } else {
       updated = [...lineItems, { item_type: "labor", description: "", quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true }];
     }
+    setLineItems(updated);
+    setValue("line_items", updated as any, { shouldValidate: false });
+  };
+
+  const applyLineIncomeCategory = (
+    index: number,
+    patch: {
+      revenue_product: number | null;
+      revenue_product_name?: string | null;
+      owner_account_code?: string | null;
+    },
+  ) => {
+    const updated = [...lineItems];
+    updated[index] = {
+      ...updated[index],
+      revenue_product: patch.revenue_product ?? undefined,
+      revenue_product_name: patch.revenue_product_name,
+      owner_account_code: patch.owner_account_code,
+    };
     setLineItems(updated);
     setValue("line_items", updated as any, { shouldValidate: false });
   };
@@ -763,9 +787,10 @@ export default function NewInvoicePage() {
                         </TableCell>
 
                         <TableCell className="py-1 px-2">
-                          <RevenueProductBadge
-                            name={item.revenue_product_name}
-                            ownerAccountCode={item.owner_account_code}
+                          <BillingLineIncomeCategorySelect
+                            itemType={item.item_type}
+                            value={item.revenue_product ?? null}
+                            onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                           />
                         </TableCell>
 

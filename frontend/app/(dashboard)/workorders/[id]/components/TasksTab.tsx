@@ -16,13 +16,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, CheckCircle2, Clock, Play, Workflow, User, Info, Wrench, MoreVertical, ExternalLink, type LucideIcon } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Play, Workflow, User, Info, Wrench, MoreVertical, ExternalLink, Tags, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import AddTaskDialog from "./AddTaskDialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
+import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
+import { INCOME_CATEGORY_SHORT } from "@/lib/accounting/income-category-labels";
+import { Label } from "@/components/ui/label";
 
 interface TasksTabProps {
   workOrderId: number;
@@ -54,6 +57,8 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
   const [completeTask, setCompleteTask] = useState<ServiceTask | null>(null);
   const [completeHours, setCompleteHours] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
+  const [editBillingTask, setEditBillingTask] = useState<ServiceTask | null>(null);
+  const [billingCategoryId, setBillingCategoryId] = useState<number | null>(null);
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
   const isRoutine = workOrder?.maintenance_type === "routine";
   const routineSkipWorkflowPhases = new Set([
@@ -120,6 +125,24 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
       toast({
         title: "Task completion blocked",
         description: getUserFacingError(error, "Unable to complete task."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBillingCategoryMutation = useMutation({
+    mutationFn: ({ taskId, revenueProduct }: { taskId: number; revenueProduct: number | null }) =>
+      workOrderTasksApi.patch(taskId, { revenue_product: revenueProduct }),
+    onSuccess: () => {
+      setEditBillingTask(null);
+      setBillingCategoryId(null);
+      onRefresh();
+      toast({ title: "Income category updated", variant: "success" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Update failed",
+        description: getUserFacingError(error, "Could not update task income category."),
         variant: "destructive",
       });
     },
@@ -275,6 +298,9 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
                 code={task.billing_revenue_product_code}
               />
             )}
+            {!isWorkflow && task.revenue_product ? (
+              <span className="text-[10px] text-muted-foreground">Task override</span>
+            ) : null}
           </div>
         </TableCell>
         <TableCell className="py-3">
@@ -329,6 +355,15 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditBillingTask(task);
+                    setBillingCategoryId(task.revenue_product ?? null);
+                  }}
+                >
+                  <Tags className="mr-2 h-4 w-4" />
+                  Set {INCOME_CATEGORY_SHORT.toLowerCase()}
+                </DropdownMenuItem>
                 {task.status === "pending" && (
                   <DropdownMenuItem
                     onClick={() => handleStartTask(task.id)}
@@ -562,6 +597,60 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
             </Button>
             <Button onClick={submitCompleteTask} disabled={completeTaskMutation.isPending}>
               {completeTaskMutation.isPending ? "Completing..." : "Complete Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!editBillingTask}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditBillingTask(null);
+            setBillingCategoryId(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set income category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-6 pt-0">
+            <p className="text-sm text-muted-foreground">
+              Override the billing income category for{" "}
+              <span className="font-medium text-foreground">{editBillingTask?.description}</span>.
+              Leave unmapped to use the task type default.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{INCOME_CATEGORY_SHORT}</Label>
+              <RevenueProductSelect
+                value={billingCategoryId}
+                onChange={setBillingCategoryId}
+                revenueClass="labor"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditBillingTask(null);
+                setBillingCategoryId(null);
+              }}
+              disabled={updateBillingCategoryMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!editBillingTask) return;
+                updateBillingCategoryMutation.mutate({
+                  taskId: editBillingTask.id,
+                  revenueProduct: billingCategoryId,
+                });
+              }}
+              disabled={updateBillingCategoryMutation.isPending}
+            >
+              {updateBillingCategoryMutation.isPending ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

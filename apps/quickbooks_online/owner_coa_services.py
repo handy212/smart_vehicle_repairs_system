@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 
 from django.db import transaction
 
@@ -11,6 +10,7 @@ from apps.accounting.models import Account
 from apps.branches.models import Branch
 
 from .mapping_services import QBOAccountMappingService
+from .qbo_account_utils import account_number_from_name
 from .mapping_specs import (
     MAPPING_KIND_BILL_LINE,
     MAPPING_KIND_CONTROL,
@@ -52,11 +52,7 @@ def _normalize(value):
 
 
 def _account_number_from_name(name):
-    """Extract leading account number tokens like 650, 118.4, 12100 from QBO account name."""
-    if not name:
-        return ''
-    match = re.match(r'^[\s]*([0-9]+(?:[.\-][0-9a-z]+)?)', name.strip(), re.IGNORECASE)
-    return match.group(1).lower() if match else ''
+    return account_number_from_name(name)
 
 
 def _is_excluded_account(name):

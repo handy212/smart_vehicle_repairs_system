@@ -161,6 +161,7 @@ export interface Part {
   maximum_stock?: number;
   unit: string;
   item_type?: "inventory" | "non_inventory" | "service";
+  revenue_product?: number | null;
   inventory_start_date?: string | null;
   cost_price?: string;
   selling_price?: string;

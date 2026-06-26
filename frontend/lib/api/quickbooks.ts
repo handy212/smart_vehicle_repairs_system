@@ -1,5 +1,13 @@
 import apiClient from "./client";
 
+export interface QBOOutboundPendingCounts {
+  failed_mappings: number;
+  pending_mappings: number;
+  eligible_failed: number;
+  eligible_pending: number;
+  eligible_total: number;
+}
+
 export interface QBOStatus {
   is_connected: boolean;
   has_keys: boolean;
@@ -9,6 +17,7 @@ export interface QBOStatus {
   company_name: string | null;
   oauth_redirect_uri?: string | null;
   oauth_keys_environment?: "sandbox" | "production" | null;
+  outbound_pending?: QBOOutboundPendingCounts;
   error?: string;
 }
 
@@ -27,6 +36,26 @@ export const quickbooksApi = {
   syncInbound: async () => {
     const response = await apiClient.post("/quickbooks/sync-inbound/");
     return response.data;
+  },
+
+  /**
+   * Queues outbound sync for all eligible failed/pending QBO mappings.
+   */
+  syncOutboundBulk: async (params?: {
+    include_failed?: boolean;
+    include_pending?: boolean;
+  }) => {
+    const response = await apiClient.post("/quickbooks/sync-outbound/bulk/", {
+      include_failed: params?.include_failed ?? true,
+      include_pending: params?.include_pending ?? true,
+    });
+    return response.data as {
+      status: string;
+      queued: number;
+      skipped_ineligible: number;
+      message: string;
+      counts: QBOOutboundPendingCounts;
+    };
   },
 
   /**

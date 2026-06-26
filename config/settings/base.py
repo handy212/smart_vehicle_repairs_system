@@ -373,6 +373,15 @@ SYSTEM_UPDATE_RUN_SCRIPT = env(
 SYSTEM_UPDATE_ENABLED = env.bool('SYSTEM_UPDATE_ENABLED', default=False)
 SYSTEM_UPDATE_ASYNC = env.bool('SYSTEM_UPDATE_ASYNC', default=True)
 
+# QBO outbound failed-sync retry (used by Celery Beat below)
+QUICKBOOKS_RETRY_FAILED_OUTBOUND_ENABLED = env.bool(
+    'QUICKBOOKS_RETRY_FAILED_OUTBOUND_ENABLED', default=True,
+)
+QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL = env.int(
+    'QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL', default=900,
+)
+QUICKBOOKS_RETRY_FAILED_BATCH_SIZE = env.int('QUICKBOOKS_RETRY_FAILED_BATCH_SIZE', default=100)
+
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.
 from celery.schedules import crontab
@@ -389,6 +398,10 @@ CELERY_BEAT_SCHEDULE = {
     'qbo-pull-bills': {
         'task': 'apps.quickbooks_online.tasks.task_pull_bills_from_qbo',
         'schedule': 1800,
+    },
+    'qbo-retry-failed-outbound': {
+        'task': 'apps.quickbooks_online.tasks.task_retry_failed_outbound_syncs',
+        'schedule': QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL,
     },
 }
 

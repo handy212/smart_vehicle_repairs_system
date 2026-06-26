@@ -30,13 +30,28 @@ from apps.quickbooks_online.services import QuickBooksService
 User = get_user_model()
 
 
-def _mock_qbo_account(name, account_id='1', account_type='Income'):
+def _mock_qbo_account(name, account_id='1', account_type='Income', acct_num=''):
     account = MagicMock()
     account.Id = account_id
     account.Name = name
     account.AccountType = account_type
     account.Active = True
+    account.AcctNum = acct_num
     return account
+
+
+class QboAccountNumberTests(TestCase):
+    def test_extract_prefers_acctnum(self):
+        from apps.quickbooks_online.qbo_account_utils import extract_qbo_account_number
+
+        account = _mock_qbo_account('118.4 · Accra Absa', account_id='5', acct_num='1112')
+        self.assertEqual(extract_qbo_account_number(account), '1112')
+
+    def test_extract_falls_back_to_name_prefix(self):
+        from apps.quickbooks_online.qbo_account_utils import extract_qbo_account_number
+
+        account = _mock_qbo_account('650 · Operating Service/Sales Revenue', account_id='2')
+        self.assertEqual(extract_qbo_account_number(account), '650')
 
 
 class OwnerCOASpecTests(TestCase):

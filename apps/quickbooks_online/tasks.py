@@ -279,6 +279,30 @@ def task_pull_vendor_credits_from_qbo(triggered_by_id=None):
 
 
 @shared_task
+def task_retry_failed_outbound_syncs():
+    """
+    Periodic retry for outbound syncs that failed (stale mappings, transient QBO errors).
+
+    Scheduled via CELERY_BEAT_SCHEDULE; only queues mappings still eligible locally.
+    """
+    from django.conf import settings
+
+    from .bulk_outbound_sync import retry_failed_outbound_syncs
+    from .services import QuickBooksService
+
+    if not getattr(settings, 'QUICKBOOKS_RETRY_FAILED_OUTBOUND_ENABLED', True):
+        logger.info('[QBO Outbound] Failed-sync retry disabled by settings.')
+        return {'queued': 0, 'skipped': 'disabled'}
+
+    if not QuickBooksService.is_connected():
+        logger.info('[QBO Outbound] Skipping failed-sync retry — QuickBooks not connected.')
+        return {'queued': 0, 'skipped': 'not_connected'}
+
+    queued, skipped = retry_failed_outbound_syncs()
+    return {'queued': queued, 'skipped_ineligible': len(skipped)}
+
+
+@shared_task
 def task_full_inbound_sync(triggered_by_id=None):
     """
     Convenience task: runs all inbound pulls sequentially.

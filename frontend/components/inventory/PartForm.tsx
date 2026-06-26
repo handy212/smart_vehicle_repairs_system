@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
 import { getMediaUrl } from "@/lib/api/utils";
+import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
+import { INCOME_CATEGORY_SHORT } from "@/lib/accounting/income-category-labels";
 
 type PartProductType = "inventory" | "non_inventory" | "service";
 
@@ -30,6 +32,7 @@ export const partSchema = z.object({
     name: z.string().min(1, "Name is required"),
     description: z.string().optional(),
     category: z.number().min(1, "Category is required"),
+    revenue_product: z.number().optional().nullable(),
     branch: z.number().optional(),
     item_type: z.enum(["inventory", "non_inventory", "service"]),
     inventory_start_date: z.string().optional(),
@@ -107,6 +110,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
         handleSubmit,
         formState: { errors },
         watch,
+        setValue,
     } = useForm<PartFormData>({
         resolver: zodResolver(partSchema),
         defaultValues: {
@@ -121,6 +125,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
             is_taxable: true,
             is_core: false,
             core_charge: 0,
+            revenue_product: null,
             ...initialData,
             ...(productType ? { item_type: productType } : {}),
         },
@@ -245,6 +250,19 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                             </select>
                                             {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
                                         </div>
+                                        {!isService && (
+                                        <div className="space-y-2">
+                                            <Label>{INCOME_CATEGORY_SHORT} override</Label>
+                                            <RevenueProductSelect
+                                                value={watch("revenue_product") ?? null}
+                                                onChange={(value) => setValue("revenue_product", value, { shouldDirty: true })}
+                                                revenueClass="part"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Optional. When unset, billing uses the category default.
+                                            </p>
+                                        </div>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="name">{nameLabel} <span className="text-destructive">*</span></Label>

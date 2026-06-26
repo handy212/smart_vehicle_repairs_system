@@ -247,7 +247,9 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
                 user.save()
 
             # Create customer profile
-            customer = Customer.objects.create(user=user, **validated_data)
+            customer = Customer(user=user, **validated_data)
+            customer._numbering_branch = self.context.get('numbering_branch')
+            customer.save()
             sync_primary_contact(customer)
         
         # Send welcome email if requested

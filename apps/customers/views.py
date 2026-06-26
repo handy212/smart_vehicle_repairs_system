@@ -156,6 +156,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         """Add context for serializer"""
         context = super().get_serializer_context()
+        from apps.branches.utils import resolve_branch
+
+        context['numbering_branch'] = resolve_branch(self.request)
         # Add inactive threshold days to context if inactive_period is specified
         if self.action == 'list':
             inactive_period = self.request.query_params.get('inactive_period')
@@ -178,7 +181,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                     threshold_days = 180
                 context['inactive_threshold_days'] = threshold_days
         return context
-    
+
     def perform_create(self, serializer):
         """Create customer with user account"""
         serializer.save()

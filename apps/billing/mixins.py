@@ -66,7 +66,12 @@ class BillingStatusMixin:
         if new_status not in valid_statuses:
              return Response({"error": f"Invalid status. Choices: {', '.join(valid_statuses)}"}, status=status.HTTP_400_BAD_REQUEST)
         
+        record_ids = list(model_class.objects.filter(id__in=ids).values_list('id', flat=True))
         updated_count = model_class.objects.filter(id__in=ids).update(status=new_status)
+
+        from apps.quickbooks_online.status_sync import schedule_syncs_after_bulk_status_update
+        schedule_syncs_after_bulk_status_update(model_class, record_ids, new_status)
+
         return Response({"message": f"Successfully updated {updated_count} records", "updated_count": updated_count})
 
 class BillingCommunicationMixin:

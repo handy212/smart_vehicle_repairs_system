@@ -28,4 +28,10 @@ urlpatterns = [
         name='account_mapping_detail',
     ),
     path('sync-outbound/', api_views.QBOOutboundSyncView.as_view(), name='sync_outbound'),
+    path(
+        'sync-outbound/bulk/',
+        api_views.QBOBulkOutboundSyncView.as_view(),
+        name='sync_outbound_bulk',
+    ),
+    path('mappings/clear/', api_views.QBOMappingClearView.as_view(), name='mapping_clear'),
 ]

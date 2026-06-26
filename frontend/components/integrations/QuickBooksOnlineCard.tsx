@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link2, RefreshCcw, Unplug, ExternalLink, Copy, Check } from "lucide-react";
+import { Link2, RefreshCcw, Unplug, ExternalLink, Copy, Check, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useToast } from "@/lib/hooks/useToast";
@@ -14,6 +14,7 @@ export function QuickBooksOnlineCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const [pushingPending, setPushingPending] = useState(false);
   const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
 
   const { data: status, isLoading } = useQuery({
@@ -39,6 +40,37 @@ export function QuickBooksOnlineCard() {
       });
     },
   });
+
+  const handlePushPending = async () => {
+    const pendingTotal = status?.outbound_pending?.eligible_total ?? 0;
+    const message =
+      pendingTotal > 0
+        ? `Push ${pendingTotal} eligible record(s) to QuickBooks now?`
+        : "Push all eligible failed/pending records to QuickBooks?";
+    if (!confirm(message)) {
+      return;
+    }
+
+    setPushingPending(true);
+    try {
+      const result = await quickbooksApi.syncOutboundBulk();
+      toast({
+        title: "Push Started",
+        description: result.message,
+      });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["qbo", "status"] });
+      }, 5000);
+    } catch (error: unknown) {
+      toast({
+        title: "Push Failed",
+        description: getUserFacingError(error, "Could not queue outbound sync"),
+        variant: "destructive",
+      });
+    } finally {
+      setPushingPending(false);
+    }
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -106,15 +138,39 @@ export function QuickBooksOnlineCard() {
                   {status.last_sync ? format(new Date(status.last_sync), "MMM d, yyyy h:mm a") : "Never"}
                 </p>
               </div>
+              {status.outbound_pending && status.outbound_pending.eligible_total > 0 && (
+                <div className="col-span-2">
+                  <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Pending Push</p>
+                  <p className="text-foreground font-semibold">
+                    {status.outbound_pending.eligible_total} eligible
+                    {status.outbound_pending.failed_mappings > 0 && (
+                      <span className="text-destructive ml-1">
+                        ({status.outbound_pending.eligible_failed} failed)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-border">
+            <div className="flex flex-col gap-2 pt-2 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs w-full font-semibold group"
+                onClick={handlePushPending}
+                disabled={pushingPending || syncing}
+              >
+                <Upload className={`w-3.5 h-3.5 mr-2 ${pushingPending ? "animate-pulse" : ""}`} />
+                {pushingPending ? "Queuing…" : "Push All Pending to QBO"}
+              </Button>
+              <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 text-xs flex-1 font-semibold group"
                 onClick={handleSync}
-                disabled={syncing}
+                disabled={syncing || pushingPending}
               >
                 <RefreshCcw className={`w-3.5 h-3.5 mr-2 transition-transform duration-500 ${syncing ? "animate-spin" : "group-hover:rotate-180"}`} />
                 Pull from QBO
@@ -131,6 +187,7 @@ export function QuickBooksOnlineCard() {
               >
                 <Unplug className="w-4 h-4" />
               </Button>
+              </div>
             </div>
           </div>
         ) : (

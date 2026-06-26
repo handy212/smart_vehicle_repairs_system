@@ -44,7 +44,7 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_branches')]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('manage_branches')]
-        elif self.action in ['update', 'partial_update', 'destroy']:
+        elif self.action in ['update', 'partial_update', 'destroy', 'permanent_delete']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
@@ -156,6 +156,60 @@ class BranchViewSet(viewsets.ModelViewSet):
             {'detail': f'Branch "{instance.name}" has been archived. Historical records were preserved.'},
             status=status.HTTP_200_OK
         )
+
+    @action(detail=True, methods=['post'], url_path='permanent-delete')
+    def permanent_delete(self, request, pk=None):
+        """Permanently delete a branch that has no operational records."""
+        from rest_framework.exceptions import ValidationError
+
+        from .deletion import get_branch_delete_blockers, permanently_delete_branch
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to delete branches.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        instance = self.get_object()
+        confirmation = str(request.data.get('confirmation', '')).strip()
+        if confirmation != instance.name:
+            return Response(
+                {
+                    'detail': (
+                        f'Permanent deletion requires confirmation. '
+                        f'Type the exact branch name: {instance.name}'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        blockers = get_branch_delete_blockers(instance)
+        if blockers:
+            return Response(
+                {
+                    'detail': (
+                        'Cannot permanently delete this branch because it still has: '
+                        + ', '.join(blockers)
+                        + '. Archive it instead, or remove the related records first.'
+                    ),
+                    'blockers': blockers,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            fallback = permanently_delete_branch(instance)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+        payload = {'detail': f'Branch "{confirmation}" was permanently deleted.'}
+        if fallback:
+            payload['fallback_branch'] = {
+                'id': fallback.id,
+                'name': fallback.name,
+                'code': fallback.code,
+            }
+        return Response(payload, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['get'])
     def staff(self, request, pk=None):

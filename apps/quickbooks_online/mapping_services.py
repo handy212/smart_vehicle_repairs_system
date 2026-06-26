@@ -16,6 +16,7 @@ from .account_requirements import (
     validate_control_account_for_inventory_item,
 )
 from .models import QBOAccountMapping
+from .qbo_account_utils import account_number_from_name, extract_qbo_account_number
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +62,16 @@ class QBOAccountMappingService:
                 results.append({
                     'id': str(account.Id),
                     'name': account.Name,
+                    'account_number': extract_qbo_account_number(account),
                     'account_type': getattr(account, 'AccountType', '') or '',
                     'account_sub_type': getattr(account, 'AccountSubType', '') or '',
                     'active': bool(getattr(account, 'Active', True)),
                     'mapped_row': mapped_row,
                 })
-            results.sort(key=lambda row: (row['name'] or '').lower())
+            results.sort(key=lambda row: (
+                (row['account_number'] or 'zzz').lower(),
+                (row['name'] or '').lower(),
+            ))
             return results, None
         except Exception as exc:
             logger.error('Failed to list QBO accounts: %s', exc)
@@ -174,6 +179,13 @@ class QBOAccountMappingService:
                 'svr_account': svr_account,
                 'qbo_account_id': mapping.qbo_account_id if mapping else '',
                 'qbo_account_name': mapping.qbo_account_name if mapping else '',
+                'qbo_account_number': (
+                    mapping.qbo_account_number
+                    if mapping and mapping.qbo_account_number
+                    else account_number_from_name(mapping.qbo_account_name)
+                    if mapping and mapping.qbo_account_name
+                    else ''
+                ),
                 'qbo_item_id': mapping.qbo_item_id if mapping else '',
                 'qbo_item_name': mapping.qbo_item_name if mapping else '',
                 'uses_tax_code': spec.get('uses_tax_code', False),
@@ -259,6 +271,7 @@ class QBOAccountMappingService:
             defaults = {
                 'qbo_account_id': str(account.Id),
                 'qbo_account_name': account.Name or '',
+                'qbo_account_number': extract_qbo_account_number(account),
                 'qbo_account_type': getattr(account, 'AccountType', '') or '',
                 'qbo_item_id': '',
                 'qbo_item_name': '',

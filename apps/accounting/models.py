@@ -693,6 +693,8 @@ class DocumentNumberSequence(models.Model):
         ('payment', 'Payment'),
         ('bill', 'Bill'),
         ('vendor_credit', 'Vendor Credit'),
+        ('sales_order', 'Sales Order'),
+        ('customer', 'Customer'),
     ]
 
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)

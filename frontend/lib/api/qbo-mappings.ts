@@ -3,6 +3,7 @@ import apiClient from "./client";
 export interface QboAccountOption {
   id: string;
   name: string;
+  account_number: string;
   account_type: string;
   account_sub_type: string;
   active: boolean;
@@ -47,6 +48,7 @@ export interface QboMappingRow {
   svr_account?: { id: number; code: string; name: string } | null;
   qbo_account_id: string;
   qbo_account_name: string;
+  qbo_account_number: string;
   qbo_item_id: string;
   qbo_item_name: string;
   status: string;

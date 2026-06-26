@@ -26,7 +26,8 @@ import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
-import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
+import { BillingLineIncomeCategorySelect } from "@/components/billing/BillingLineIncomeCategorySelect";
+import { resolveIncomeCategoryForPart } from "@/lib/billing/resolve-income-category";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -264,9 +265,10 @@ export default function NewEstimatePage() {
   }
 
 
-  const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
+  const addLineItem = async (type: "labor" | "part" = "labor", partData?: any) => {
     let updatedLineItems: ExtendedLineItem[];
     if (type === "part" && partData) {
+      const incomeCategory = await resolveIncomeCategoryForPart(partData);
       updatedLineItems = [
         ...lineItems,
         {
@@ -279,6 +281,9 @@ export default function NewEstimatePage() {
           part_number: partData.part_number,
           part_name: partData.name,
           is_taxable: true,
+          revenue_product: incomeCategory.revenue_product ?? undefined,
+          revenue_product_name: incomeCategory.revenue_product_name,
+          owner_account_code: incomeCategory.owner_account_code,
         },
       ];
     } else {
@@ -289,6 +294,25 @@ export default function NewEstimatePage() {
     }
     setLineItems(updatedLineItems);
     setValue("line_items", updatedLineItems, { shouldValidate: true });
+  };
+
+  const applyLineIncomeCategory = (
+    index: number,
+    patch: {
+      revenue_product: number | null;
+      revenue_product_name?: string | null;
+      owner_account_code?: string | null;
+    },
+  ) => {
+    const updated = [...lineItems];
+    updated[index] = {
+      ...updated[index],
+      revenue_product: patch.revenue_product ?? undefined,
+      revenue_product_name: patch.revenue_product_name,
+      owner_account_code: patch.owner_account_code,
+    };
+    setLineItems(updated);
+    setValue("line_items", updated, { shouldValidate: true });
   };
 
   const removeLineItem = (index: number) => {
@@ -710,9 +734,10 @@ export default function NewEstimatePage() {
                           />
                         </TableCell>
                         <TableCell className="py-1 px-2">
-                          <RevenueProductBadge
-                            name={item.revenue_product_name}
-                            ownerAccountCode={item.owner_account_code}
+                          <BillingLineIncomeCategorySelect
+                            itemType={item.item_type}
+                            value={item.revenue_product ?? null}
+                            onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                           />
                         </TableCell>
                         <TableCell className="py-1 px-2">

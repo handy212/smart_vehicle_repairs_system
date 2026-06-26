@@ -8,10 +8,10 @@ from apps.accounts.client_demo_data import MODULES, ClientDemoDataService
 
 
 class Command(BaseCommand):
-    help = "Load or purge client demo data without touching non-demo records."
+    help = "Load or purge sample workshop data without touching real records."
 
     def add_arguments(self, parser):
-        parser.add_argument("--count", type=int, default=100, help="Primary demo records per module.")
+        parser.add_argument("--count", type=int, default=100, help="Primary sample records per module.")
         parser.add_argument(
             "--module",
             action="append",
@@ -21,17 +21,17 @@ class Command(BaseCommand):
         parser.add_argument(
             "--purge",
             action="store_true",
-            help="Purge demo records instead of loading them.",
+            help="Purge sample records instead of loading them.",
         )
         parser.add_argument(
             "--refresh",
             action="store_true",
-            help="Purge demo records and reload a clean demo dataset.",
+            help="Purge sample records and reload a clean dataset.",
         )
         parser.add_argument(
             "--permanent",
             action="store_true",
-            help="With --purge, delete real module data instead of demo-marked records only.",
+            help="With --purge, delete real module data instead of sample records only.",
         )
         parser.add_argument(
             "--confirm-permanent",
@@ -41,7 +41,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--status",
             action="store_true",
-            help="Show demo record status instead of loading data.",
+            help="Show sample record status instead of loading data.",
         )
         parser.add_argument(
             "--json",
@@ -70,7 +70,7 @@ class Command(BaseCommand):
             self.stdout.write(json.dumps(result, indent=2, default=str))
             return
 
-        self.stdout.write(self.style.SUCCESS(f"Client demo data {result['action']}:"))
+        self.stdout.write(self.style.SUCCESS(f"Sample data {result['action']}:"))
         for item in result["modules"]:
             self.stdout.write(
                 "  {module}: target={target} created={created} existing={existing} purged={purged} skipped={skipped}".format(

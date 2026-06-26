@@ -129,6 +129,7 @@ class PartListSerializer(serializers.ModelSerializer):
             'quantity_on_order', 'reorder_point', 'unit', 'item_type', 'cost_price', 'selling_price',
             'markup_percentage', 'profit_margin', 'bin_location', 'preferred_supplier',
             'preferred_supplier_name', 'is_low_stock', 'is_out_of_stock', 'needs_reorder',
+            'revenue_product',
             'image', 'is_active', 'created_at'
         ]
 
@@ -325,7 +326,7 @@ class PartUpdateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializ
         fields = [
             'part_number', 'name', 'description', 'category', 'branch', 'manufacturer',
             'manufacturer_part_number', 'barcode', 'suppliers', 'preferred_supplier',
-            'item_type', 'inventory_start_date',
+            'item_type', 'inventory_start_date', 'revenue_product',
             'reorder_point', 'reorder_quantity', 'minimum_stock', 'maximum_stock',
             'unit', 'cost_price', 'selling_price', 'markup_percentage', 'list_price',
             'bin_location', 'shelf', 'weight', 'dimensions', 'compatible_makes',

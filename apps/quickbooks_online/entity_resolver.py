@@ -77,6 +77,44 @@ def find_by_name(qb_class, client, name: str | None):
     return matches[0] if matches else None
 
 
+def find_by_company_name(qb_class, client, company_name: str | None):
+    if not company_name:
+        return None
+    table = _entity_table_name(qb_class)
+    if table not in ('Vendor', 'Customer'):
+        return None
+    escaped = _escape_qbo_literal(str(company_name))
+    matches = query_qbo_where(qb_class, client, f"CompanyName = '{escaped}'")
+    return matches[0] if matches else None
+
+
+def _clear_stale_mapping(mapping: QBOMapping | None) -> None:
+    if not mapping or not (mapping.qbo_id or '').strip():
+        return
+    mapping.qbo_id = ''
+    mapping.qbo_sync_token = ''
+    mapping.save(update_fields=['qbo_id', 'qbo_sync_token'])
+
+
+def _search_by_natural_keys(
+    qb_class,
+    client,
+    *,
+    doc_number=None,
+    display_name=None,
+    sku=None,
+    name=None,
+    company_name=None,
+):
+    return (
+        find_by_doc_number(qb_class, client, doc_number)
+        or find_by_sku(qb_class, client, sku)
+        or find_by_display_name(qb_class, client, display_name)
+        or find_by_name(qb_class, client, name)
+        or find_by_company_name(qb_class, client, company_name)
+    )
+
+
 def _relink_mapping(local_obj, qbo_id: str, sync_token: str = '') -> None:
     QBOMapping.objects.update_or_create(
         content_type=ContentType.objects.get_for_model(local_obj),
@@ -100,6 +138,7 @@ def resolve_qbo_entity(
     display_name: str | None = None,
     sku: str | None = None,
     name: str | None = None,
+    company_name: str | None = None,
     allow_create: bool = True,
 ):
     """
@@ -122,11 +161,14 @@ def resolve_qbo_entity(
                 mapped_id,
                 exc,
             )
-            found = (
-                find_by_doc_number(qb_class, client, doc_number)
-                or find_by_sku(qb_class, client, sku)
-                or find_by_display_name(qb_class, client, display_name)
-                or find_by_name(qb_class, client, name)
+            found = _search_by_natural_keys(
+                qb_class,
+                client,
+                doc_number=doc_number,
+                display_name=display_name,
+                sku=sku,
+                name=name,
+                company_name=company_name,
             )
             if found and getattr(found, 'Id', None):
                 _relink_mapping(
@@ -135,17 +177,26 @@ def resolve_qbo_entity(
                     getattr(found, 'SyncToken', '') or '',
                 )
                 return found, None
-            return None, (
-                f'Mapped QuickBooks {_entity_table_name(qb_class)} id {mapped_id} was not found '
-                f'and no matching record exists by document number or name. '
-                f'Clear the failed mapping or re-link in Admin before syncing again to avoid duplicates.'
+
+            _clear_stale_mapping(mapping)
+            if not allow_create:
+                return None, (
+                    f'Mapped QuickBooks {_entity_table_name(qb_class)} id {mapped_id} was not found '
+                    f'and no matching record exists by document number or name.'
+                )
+            logger.info(
+                'Cleared stale QBO mapping for %s; will create or match without mapped id.',
+                local_obj,
             )
 
-    found = (
-        find_by_doc_number(qb_class, client, doc_number)
-        or find_by_sku(qb_class, client, sku)
-        or find_by_display_name(qb_class, client, display_name)
-        or find_by_name(qb_class, client, name)
+    found = _search_by_natural_keys(
+        qb_class,
+        client,
+        doc_number=doc_number,
+        display_name=display_name,
+        sku=sku,
+        name=name,
+        company_name=company_name,
     )
     if found and getattr(found, 'Id', None):
         _relink_mapping(
