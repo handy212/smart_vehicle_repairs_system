@@ -138,6 +138,17 @@ echo ""
 echo -e "${GREEN}✓ Files synced successfully!${NC}"
 echo ""
 
+write_deployed_commit() {
+    if [ -d "$SOURCE_DIR/.git" ]; then
+        git -C "$SOURCE_DIR" rev-parse HEAD > "$TARGET_DIR/DEPLOYED_COMMIT"
+        chown svr:svr "$TARGET_DIR/DEPLOYED_COMMIT" 2>/dev/null || true
+    fi
+}
+
+write_deployed_commit
+
+echo ""
+
 run_bootstrap_data() {
     echo -e "${YELLOW}Running bootstrap data commands (first install / explicit re-seed)...${NC}"
     cd "$TARGET_DIR"

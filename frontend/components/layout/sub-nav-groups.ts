@@ -16,6 +16,7 @@ import {
   Clock,
   CreditCard,
   Database,
+  Download,
   FileCheck,
   FileText,
   GraduationCap,
@@ -152,6 +153,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: Database,
       items: [
         { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
+        { name: "Updates", href: "/admin/updates", permission: "manage_system_updates", icon: Download },
         { name: "Demo Data", href: "/admin/demo-data", permission: "manage_settings", icon: Database },
         { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_logs", icon: History },
         { name: "Import History", href: "/admin/import-history", permission: "view_audit_logs", icon: Inbox },

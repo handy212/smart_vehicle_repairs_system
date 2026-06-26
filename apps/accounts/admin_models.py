@@ -222,6 +222,41 @@ class SystemBackup(models.Model):
         return f"{size:.2f} PB"
 
 
+class SystemUpdateRun(models.Model):
+    """
+    Records bare-metal production update runs triggered from the admin UI.
+    """
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    status = models.CharField(_('status'), max_length=20, choices=STATUS_CHOICES, default='pending')
+    git_ref = models.CharField(_('git ref'), max_length=120, default='main')
+    from_commit = models.CharField(_('from commit'), max_length=64, blank=True)
+    to_commit = models.CharField(_('to commit'), max_length=64, blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='system_update_runs',
+    )
+    log_output = models.TextField(_('log output'), blank=True)
+    error_message = models.TextField(_('error message'), blank=True)
+    started_at = models.DateTimeField(_('started at'), auto_now_add=True)
+    completed_at = models.DateTimeField(_('completed at'), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _('system update run')
+        verbose_name_plural = _('system update runs')
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f"Update {self.git_ref} ({self.get_status_display()})"
+
+
 class EmailTemplate(models.Model):
     """
     Email templates for system notifications

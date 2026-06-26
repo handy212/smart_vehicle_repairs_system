@@ -106,6 +106,10 @@ done
 echo ""
 if [ "$READY" = true ]; then
     echo -e "${GREEN}✓ API readiness check passed${NC}"
+    if [ -d "$SOURCE_DIR/.git" ]; then
+        git -C "$SOURCE_DIR" rev-parse HEAD > "$TARGET_DIR/DEPLOYED_COMMIT"
+        chown svr:svr "$TARGET_DIR/DEPLOYED_COMMIT" 2>/dev/null || true
+    fi
 else
     echo -e "${RED}✗ API readiness check failed — inspect service logs${NC}"
     systemctl status svr svr-celery svr-celerybeat svr-nextjs nginx --no-pager -l || true

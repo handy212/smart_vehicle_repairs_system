@@ -234,6 +234,11 @@ class Command(BaseCommand):
                 'view_branches': ('system', 'View Branches', 'View branch information'),
                 'view_branch_data': ('system', 'View Branch Data', 'View data from assigned branches'),
                 'manage_backups': ('system', 'Manage Backups', 'Create and restore system backups'),
+                'manage_system_updates': (
+                    'system',
+                    'Manage System Updates',
+                    'Check for and apply application updates from the admin UI',
+                ),
                 'view_system_status': ('system', 'View System Status', 'View system health and status'),
                 'manage_api_keys': ('system', 'Manage API Keys', 'Manage API keys and integrations'),
                 'view_modules': ('system', 'View Modules', 'View module enablement status'),

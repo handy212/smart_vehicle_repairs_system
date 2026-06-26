@@ -358,6 +358,21 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 SYSTEM_BACKUP_ASYNC = env.bool('SYSTEM_BACKUP_ASYNC', default=False)
 
+# Bare-metal UI updater (/opt -> /var/www/svr). Requires deploy/sudoers-svr-system-update.
+SYSTEM_UPDATE_SOURCE_DIR = env('SYSTEM_UPDATE_SOURCE_DIR', default='/opt/smart_vehicle_repairs_system')
+SYSTEM_UPDATE_TARGET_DIR = env('SYSTEM_UPDATE_TARGET_DIR', default='/var/www/svr')
+SYSTEM_UPDATE_GIT_REF = env('SYSTEM_UPDATE_GIT_REF', default='main')
+SYSTEM_UPDATE_GIT_URL = env(
+    'SYSTEM_UPDATE_GIT_URL',
+    default='https://github.com/handy212/smart_vehicle_repairs_system.git',
+)
+SYSTEM_UPDATE_RUN_SCRIPT = env(
+    'SYSTEM_UPDATE_RUN_SCRIPT',
+    default=str(Path(SYSTEM_UPDATE_SOURCE_DIR) / 'deploy' / 'run-system-update.sh'),
+)
+SYSTEM_UPDATE_ENABLED = env.bool('SYSTEM_UPDATE_ENABLED', default=False)
+SYSTEM_UPDATE_ASYNC = env.bool('SYSTEM_UPDATE_ASYNC', default=True)
+
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.
 from celery.schedules import crontab

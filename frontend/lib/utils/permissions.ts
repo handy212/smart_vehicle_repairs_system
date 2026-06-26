@@ -165,6 +165,7 @@ export const PERMISSIONS = {
   MANAGE_PERMISSIONS: "manage_permissions",
   VIEW_AUDIT_LOGS: "view_audit_logs",
   MANAGE_BACKUPS: "manage_backups",
+  MANAGE_SYSTEM_UPDATES: "manage_system_updates",
 
   // Gate pass
   VIEW_GATEPASS: "view_gatepass",
