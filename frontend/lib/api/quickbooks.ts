@@ -10,6 +10,8 @@ export interface QBOOutboundPendingCounts {
 
 export interface QBOStatus {
   is_connected: boolean;
+  api_ready?: boolean;
+  connection_issue?: string | null;
   has_keys: boolean;
   realm_id: string | null;
   is_sandbox: boolean;

@@ -153,6 +153,13 @@ export function QuickBooksOnlineCard() {
               )}
             </div>
 
+            {status.is_connected && status.api_ready === false && (
+              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+                {status.connection_issue ||
+                  "QuickBooks is linked but the live API session is unavailable. Disconnect and reconnect to restore chart mapping and sync."}
+              </p>
+            )}
+
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
               <Button
                 variant="outline"

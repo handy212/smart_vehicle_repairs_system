@@ -93,7 +93,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
           isCollapsed ? "w-16" : "w-64"
         )}
       >
-        <nav className={cn("p-3 space-y-3", isCollapsed && "px-1.5")}>
+        <nav className={cn("p-3 space-y-3", isCollapsed && "flex flex-col items-stretch px-1 py-3")}>
           {navigationGroups.map((group) => {
             const groupActive = group.items.some(
               (item) =>
@@ -111,7 +111,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                   key={group.id}
                   href={item.href}
                   onClick={handleNavigate}
-                  className="mx-1.5 flex justify-center rounded-md p-1.5"
+                  className="flex w-full items-center justify-center rounded-md p-1"
                   title={item.name}
                   aria-current={isActive ? "page" : undefined}
                 >
@@ -131,7 +131,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="mx-1.5 flex w-[calc(100%-0.75rem)] items-center justify-center rounded-md p-1.5 transition-colors hover:bg-muted/50"
+                      className="flex w-full items-center justify-center rounded-md p-1 transition-colors hover:bg-muted/50"
                       title={group.name}
                     >
                       <NavCategoryBadge

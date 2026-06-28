@@ -52,7 +52,7 @@ def seed_customers_qs():
 def seed_vehicles_qs():
     from apps.vehicles.models import Vehicle
 
-    return Vehicle.objects.filter(customer__user__email__iendswith=f"@{SEED_EMAIL_DOMAIN}")
+    return Vehicle.objects.filter(owner__user__email__iendswith=f"@{SEED_EMAIL_DOMAIN}")
 
 
 def seed_workorders_qs():

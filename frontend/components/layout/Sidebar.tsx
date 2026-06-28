@@ -44,7 +44,7 @@ export function Sidebar({
         <div
           className={cn(
             "flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800",
-            isCollapsed && "px-2"
+            isCollapsed && "px-1 py-4"
           )}
         >
           <GroupedNavPanel

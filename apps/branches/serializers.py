@@ -1,14 +1,18 @@
 """
 Serializers for branches app
 """
+import logging
+
 from rest_framework import serializers
 from django.contrib.contenttypes.models import ContentType
 from .models import Branch
 from apps.accounts.models import User
 
+logger = logging.getLogger(__name__)
 
-class BranchQboFieldsMixin:
-    """Expose QuickBooks location mapping fields when QBO is connected."""
+
+class BranchQboFieldsMixin(serializers.Serializer):
+    """QuickBooks mapping fields mixed into branch serializers."""
 
     qbo_department_id = serializers.SerializerMethodField()
     qbo_department_name = serializers.SerializerMethodField()
@@ -17,17 +21,25 @@ class BranchQboFieldsMixin:
 
     def _qbo_is_connected(self):
         if not hasattr(self, '_qbo_connected_cache'):
-            from apps.quickbooks_online.services import QuickBooksService
-            self._qbo_connected_cache = QuickBooksService.is_connected()
+            try:
+                from apps.quickbooks_online.services import QuickBooksService
+                self._qbo_connected_cache = QuickBooksService.is_connected()
+            except Exception:
+                logger.exception('Unable to determine QuickBooks connection status for branch serializer')
+                self._qbo_connected_cache = False
         return self._qbo_connected_cache
 
     def _get_branch_qbo_mapping(self, obj):
-        mappings = self.context.get('qbo_branch_mappings')
-        if mappings is not None:
-            return mappings.get(obj.id)
-        from apps.quickbooks_online.models import QBOMapping
-        branch_ct = ContentType.objects.get_for_model(Branch)
-        return QBOMapping.objects.filter(content_type=branch_ct, object_id=obj.id).first()
+        try:
+            mappings = self.context.get('qbo_branch_mappings')
+            if mappings is not None:
+                return mappings.get(obj.id)
+            from apps.quickbooks_online.models import QBOMapping
+            branch_ct = ContentType.objects.get_for_model(Branch)
+            return QBOMapping.objects.filter(content_type=branch_ct, object_id=obj.id).first()
+        except Exception:
+            logger.exception('Unable to load QuickBooks mapping for branch %s', getattr(obj, 'id', None))
+            return None
 
     def get_qbo_department_id(self, obj):
         if not self._qbo_is_connected():

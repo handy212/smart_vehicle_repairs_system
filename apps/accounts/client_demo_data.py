@@ -356,8 +356,11 @@ class ClientDemoDataService:
         for module in modules:
             summary = self._summary(module, target=self.count)
             counter = getattr(self, f"_count_{module}", None)
-            if counter:
-                summary.existing = counter()
+            if counter and summary.installed:
+                try:
+                    summary.existing = counter()
+                except Exception as exc:  # pragma: no cover - summarized for API callers
+                    summary.errors.append(str(exc))
             data.append(summary.as_dict())
         return {"action": "status", "seed": SEED_TAG, "modules": data}
 

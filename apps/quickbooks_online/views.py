@@ -350,9 +350,20 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             'oauth_redirect_uri': get_qbo_redirect_uri(_infer_redirect_base(request)),
             'oauth_keys_environment': 'sandbox' if (config.is_sandbox if config else True) else 'production',
         }
+        payload['api_ready'] = False
+        payload['connection_issue'] = None
         if payload['is_connected']:
             from apps.quickbooks_online.bulk_outbound_sync import count_pending_outbound_syncs
             payload['outbound_pending'] = count_pending_outbound_syncs()
+            if QuickBooksService.get_client() is not None:
+                payload['api_ready'] = True
+            else:
+                payload['connection_issue'] = (
+                    'QuickBooks is linked but the live API session is unavailable. '
+                    'Reconnect under Admin → Integrations, or refresh the OAuth token.'
+                )
+        elif has_keys:
+            payload['connection_issue'] = 'QuickBooks credentials are saved but the company is not connected.'
 
         return JsonResponse(payload)
 

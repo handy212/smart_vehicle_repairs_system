@@ -23,7 +23,7 @@ const UNMAPPED_VALUE = "__unmapped__";
 export function BranchQboMappingPanel({ branches }: { branches: Branch[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected, isLoading: qboStatusLoading } = useQuickBooksConnection();
+  const { isConnected, isApiReady, connectionIssue, isLoading: qboStatusLoading } = useQuickBooksConnection();
   const [draftSelections, setDraftSelections] = useState<Record<number, string>>({});
 
   const {
@@ -34,7 +34,8 @@ export function BranchQboMappingPanel({ branches }: { branches: Branch[] }) {
   } = useQuery({
     queryKey: ["branches", "qbo-departments"],
     queryFn: () => branchesApi.listQboDepartments(),
-    enabled: isConnected,
+    enabled: isConnected && isApiReady,
+    retry: false,
   });
 
   const departments = departmentsData?.departments ?? [];
@@ -80,11 +81,33 @@ export function BranchQboMappingPanel({ branches }: { branches: Branch[] }) {
     );
   }
 
-  const getSelectionValue = (branch: Branch) => {
+  if (!isApiReady) {
+    return (
+      <Card className="mx-4 border shadow-sm border-amber-500/30 bg-amber-500/5">
+        <CardContent className="p-4 text-sm text-muted-foreground">
+          {connectionIssue ||
+            "QuickBooks is linked but the live API session is unavailable. Reconnect under Admin → Integrations."}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const getSelectionValue = (branch: Branch): string => {
     if (draftSelections[branch.id] !== undefined) {
-      return draftSelections[branch.id];
+      return draftSelections[branch.id] || UNMAPPED_VALUE;
     }
-    return branch.qbo_department_id ?? UNMAPPED_VALUE;
+    return branch.qbo_department_id || UNMAPPED_VALUE;
+  };
+
+  const selectValueForBranch = (branch: Branch, selected: string) => {
+    if (selected === UNMAPPED_VALUE) {
+      return UNMAPPED_VALUE;
+    }
+    const knownValues = new Set([
+      UNMAPPED_VALUE,
+      ...departmentOptions.map((option) => option.value),
+    ]);
+    return knownValues.has(selected) ? selected : UNMAPPED_VALUE;
   };
 
   const handleSaveMapping = async (branch: Branch) => {
@@ -244,7 +267,7 @@ export function BranchQboMappingPanel({ branches }: { branches: Branch[] }) {
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
                     <Select
-                      value={selected}
+                      value={selectValueForBranch(branch, selected)}
                       onValueChange={(value) =>
                         setDraftSelections((current) => ({ ...current, [branch.id]: value }))
                       }

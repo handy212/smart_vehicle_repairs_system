@@ -23,19 +23,35 @@ from .owner_coa_specs import CONTROL_ACCOUNT_QBO_PATTERNS
 
 logger = logging.getLogger(__name__)
 
+QBAccount = None
+QBItem = None
+QBTaxCode = None
+QBClass = None
+
+try:
+    from quickbooks.objects.account import Account as QBAccount
+except ModuleNotFoundError:
+    pass
+
+try:
+    from quickbooks.objects.item import Item as QBItem
+except ModuleNotFoundError:
+    pass
+
+try:
+    from quickbooks.objects.taxcode import TaxCode as QBTaxCode
+except ModuleNotFoundError:
+    pass
+
 try:
     from importlib import import_module
 
-    from quickbooks.objects.account import Account as QBAccount
-    from quickbooks.objects.item import Item as QBItem
-    from quickbooks.objects.taxcode import TaxCode as QBTaxCode
-
-    QBClass = import_module('quickbooks.objects.class').Class
+    try:
+        QBClass = import_module("quickbooks.objects.trackingclass").Class
+    except ModuleNotFoundError:
+        QBClass = import_module("quickbooks.objects.class").Class
 except ModuleNotFoundError:
-    QBAccount = None
-    QBItem = None
-    QBTaxCode = None
-    QBClass = None
+    pass
 
 
 class QBOAccountMappingService:

@@ -196,11 +196,15 @@ class QuickBooksService:
     @staticmethod
     def is_connected():
         """True when QBO config is active and has a valid OAuth token."""
-        config = QuickBooksService.get_config(active_only=False)
-        if not config:
+        try:
+            config = QuickBooksService.get_config(active_only=False)
+            if not config:
+                return False
+            has_token = hasattr(config, 'token') and config.token is not None
+            return bool(config.is_active and has_token)
+        except Exception:
+            logger.exception('Unable to determine QuickBooks connection status')
             return False
-        has_token = hasattr(config, 'token') and config.token is not None
-        return bool(config.is_active and has_token)
 
     @staticmethod
     def get_auth_client(config=None, redirect_uri: str | None = None):

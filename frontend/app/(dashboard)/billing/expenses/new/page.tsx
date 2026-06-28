@@ -263,10 +263,11 @@ export default function NewVendorExpensePage() {
     mutationFn: (payload: Record<string, unknown>) => billingApi.vendorExpenses.create(payload),
     onSuccess: (expense) => {
       toast({ title: "Expense recorded", description: "Vendor expense posted successfully." });
-      if (saveMode === "save_close") {
+      const expenseId = expense?.id;
+      if (saveMode === "save_close" || !expenseId) {
         router.push("/billing/expenses");
       } else {
-        router.push(`/billing/expenses/${expense.id}`);
+        router.push(`/billing/expenses/${expenseId}`);
       }
     },
     onError: (error: unknown) => {

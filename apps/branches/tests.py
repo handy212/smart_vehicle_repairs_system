@@ -516,3 +516,19 @@ class BranchListApiTest(TestCase):
         self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]['id'], self.branch.id)
         self.assertEqual(results[0]['name'], 'Portal Branch')
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', side_effect=RuntimeError('QBO unavailable'))
+    def test_staff_list_survives_qbo_failure(self, _mock_connected):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get('/api/branches/', {'ordering': 'name'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        self.assertGreaterEqual(len(results), 1)
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', side_effect=RuntimeError('QBO unavailable'))
+    def test_accessible_survives_qbo_failure(self, _mock_connected):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get('/api/branches/accessible/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['id'], self.branch.id)

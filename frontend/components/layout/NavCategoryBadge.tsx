@@ -42,7 +42,7 @@ export function NavCategoryBadge({
   return (
     <span
       className={cn(
-        "grid shrink-0 place-items-center overflow-hidden ring-1 ring-inset",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden leading-none ring-1 ring-inset [&>svg]:block [&>svg]:shrink-0",
         sizes.box,
         sizes.rounded,
         palette.bg,
@@ -53,8 +53,9 @@ export function NavCategoryBadge({
       aria-hidden
     >
       <Icon
-        className={cn("block shrink-0", palette.icon)}
-        style={{ width: sizes.iconPx, height: sizes.iconPx }}
+        className={palette.icon}
+        width={sizes.iconPx}
+        height={sizes.iconPx}
         strokeWidth={1.75}
         aria-hidden
       />

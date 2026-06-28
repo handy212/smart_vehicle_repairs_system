@@ -35,6 +35,17 @@ class QBOConnectedMixin:
                 {'detail': QuickBooksService.sdk_unavailable_message()},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+        if QuickBooksService.get_client() is None:
+            return Response(
+                {
+                    'detail': (
+                        'QuickBooks is linked but the live API session is unavailable. '
+                        'Reconnect under Admin → Integrations.'
+                    ),
+                    'code': 'qbo_api_unavailable',
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return None
 
 

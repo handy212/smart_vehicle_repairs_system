@@ -50,6 +50,8 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement', 'settlement_accounts']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action == 'accessible':
+            return [IsAuthenticated()]
         return [IsAuthenticated(), HasPermission('view_branches')()]
     
     def get_serializer_class(self):
@@ -73,7 +75,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         if user.is_anonymous or getattr(user, 'role', None) == 'customer':
             return Branch.objects.filter(is_active=True)
 
-        if user.role == 'super-admin' or user_has_permission(user, 'manage_branches'):
+        if user.role in ('admin', 'super-admin') or user_has_permission(user, 'manage_branches'):
             return Branch.objects.all()
         elif user.role == 'manager':
             return user.managed_branches.all()
@@ -85,16 +87,19 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        if self.action == 'list':
-            from apps.quickbooks_online.services import QuickBooksService
-            from apps.quickbooks_online.models import QBOMapping
+        if self.action in ('list', 'accessible'):
+            try:
+                from apps.quickbooks_online.services import QuickBooksService
+                from apps.quickbooks_online.models import QBOMapping
 
-            if QuickBooksService.is_connected():
-                branch_ct = ContentType.objects.get_for_model(Branch)
-                mappings = list(
-                    QBOMapping.objects.filter(content_type=branch_ct)
-                )
-                context['qbo_branch_mappings'] = {mapping.object_id: mapping for mapping in mappings}
+                if QuickBooksService.is_connected():
+                    branch_ct = ContentType.objects.get_for_model(Branch)
+                    mappings = list(
+                        QBOMapping.objects.filter(content_type=branch_ct)
+                    )
+                    context['qbo_branch_mappings'] = {mapping.object_id: mapping for mapping in mappings}
+            except Exception:
+                logger.exception('Unable to preload QuickBooks branch mappings')
         return context
     
     def perform_create(self, serializer):
@@ -372,7 +377,11 @@ class BranchViewSet(viewsets.ModelViewSet):
     def accessible(self, request):
         """Get all branches accessible to the current user"""
         branches = request.user.get_accessible_branches()
-        serializer = BranchListSerializer(branches, many=True)
+        serializer = BranchListSerializer(
+            branches,
+            many=True,
+            context=self.get_serializer_context(),
+        )
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'], url_path='provision-settlement')

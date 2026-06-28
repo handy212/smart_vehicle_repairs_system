@@ -2820,6 +2820,15 @@ class VendorExpenseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        expense = serializer.instance
+        output = VendorExpenseSerializer(expense, context=self.get_serializer_context())
+        headers = self.get_success_headers(output.data)
+        return Response(output.data, status=status.HTTP_201_CREATED, headers=headers)
+
     @action(detail=True, methods=['post'])
     def void(self, request, pk=None):
         """Void a vendor expense and reverse its GL posting."""

@@ -13,6 +13,8 @@ export function useQuickBooksConnection() {
 
   return {
     isConnected: data?.is_connected ?? false,
+    isApiReady: data?.api_ready ?? false,
+    connectionIssue: data?.connection_issue ?? null,
     hasKeys: data?.has_keys ?? false,
     companyName: data?.company_name ?? null,
     lastSync: data?.last_sync ?? null,

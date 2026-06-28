@@ -45,6 +45,9 @@ export interface GroupedNavPanelProps {
   onItemClick?: () => void;
 }
 
+const COLLAPSED_ICON_SLOT_CLASS =
+  "flex w-full items-center justify-center rounded-md p-1 transition-colors hover:bg-muted/50";
+
 function GuardedItem({
   item,
   children,
@@ -99,7 +102,7 @@ function NavLink({
       cn(
         "flex w-full items-center rounded-md text-sm",
         collapsed
-          ? "justify-center p-1.5"
+          ? cn(COLLAPSED_ICON_SLOT_CLASS, isActive && "bg-muted/60")
           : cn("py-1.5", nested ? "pl-3 pr-2" : "px-2.5 gap-2.5"),
         !collapsed && isActive
           ? "font-medium text-foreground bg-muted/80"
@@ -111,7 +114,7 @@ function NavLink({
       cn(
         "flex items-center rounded-md text-sm",
         collapsed
-          ? "mx-1.5 justify-center p-1.5"
+          ? cn(COLLAPSED_ICON_SLOT_CLASS, isActive && "bg-muted/60")
           : cn(nested ? "py-1.5 pr-2" : "mx-1.5 gap-2.5 px-2.5 py-2"),
         !collapsed && isActive
           ? cn(
@@ -347,10 +350,7 @@ export function GroupedNavPanel({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className={cn(
-              "mx-1.5 flex w-full max-w-full items-center justify-center rounded-md p-1.5 transition-colors hover:bg-muted/50",
-              groupActive && "bg-muted/60"
-            )}
+            className={cn(COLLAPSED_ICON_SLOT_CLASS, groupActive && "bg-muted/60")}
             title={group.label}
             aria-label={group.label}
           >
@@ -500,7 +500,7 @@ export function GroupedNavPanel({
 
   if (layout === "sidebar") {
     return (
-      <nav className={cn("space-y-1", isCollapsed && "px-0")}>
+      <nav className={cn("space-y-1", isCollapsed && "flex flex-col items-stretch px-0")}>
         {renderPinnedItems("sidebar")}
         {!isCollapsed ? (
           <Accordion

@@ -144,16 +144,18 @@ function rowMatchesSearch(
 export function QboAccountMappingPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected, isLoading: qboStatusLoading } = useQuickBooksConnection();
+  const { isConnected, isApiReady, connectionIssue, isLoading: qboStatusLoading } = useQuickBooksConnection();
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const [rowSearch, setRowSearch] = useState("");
 
   const draftKey = (row: QboMappingRow) => `${row.mapping_kind}:${row.mapping_key}`;
+  const catalogEnabled = isConnected && isApiReady;
 
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ["qbo", "account-mappings"],
     queryFn: () => qboMappingsApi.getOverview(),
-    enabled: isConnected,
+    enabled: catalogEnabled,
+    retry: false,
   });
 
   const {
@@ -164,7 +166,8 @@ export function QboAccountMappingPanel() {
   } = useQuery({
     queryKey: ["qbo", "accounts"],
     queryFn: () => qboMappingsApi.listAccounts(),
-    enabled: isConnected,
+    enabled: catalogEnabled,
+    retry: false,
   });
 
   const {
@@ -175,7 +178,8 @@ export function QboAccountMappingPanel() {
   } = useQuery({
     queryKey: ["qbo", "items"],
     queryFn: () => qboMappingsApi.listItems(),
-    enabled: isConnected,
+    enabled: catalogEnabled,
+    retry: false,
   });
 
   const {
@@ -186,7 +190,8 @@ export function QboAccountMappingPanel() {
   } = useQuery({
     queryKey: ["qbo", "tax-codes"],
     queryFn: () => qboMappingsApi.listTaxCodes(),
-    enabled: isConnected,
+    enabled: catalogEnabled,
+    retry: false,
   });
 
   const {
@@ -197,7 +202,8 @@ export function QboAccountMappingPanel() {
   } = useQuery({
     queryKey: ["qbo", "classes"],
     queryFn: () => qboMappingsApi.listClasses(),
-    enabled: isConnected,
+    enabled: catalogEnabled,
+    retry: false,
   });
 
   const accounts = accountsData?.accounts ?? [];
@@ -308,6 +314,20 @@ export function QboAccountMappingPanel() {
             Admin → Integrations
           </a>{" "}
           to map invoices, payments, and control accounts to the QBO chart of accounts.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isApiReady) {
+    return (
+      <Card className="border shadow-sm border-amber-500/30 bg-amber-500/5">
+        <CardContent className="p-4 text-sm text-muted-foreground">
+          {connectionIssue ||
+            "QuickBooks is linked but the live API session is unavailable. Reconnect under Admin → Integrations."}{" "}
+          <a href="/admin/integrations" className="text-primary hover:underline">
+            Open Integrations
+          </a>
         </CardContent>
       </Card>
     );

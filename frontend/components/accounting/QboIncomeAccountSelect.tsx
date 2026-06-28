@@ -33,12 +33,13 @@ export function QboIncomeAccountSelect({
   disabled,
   className,
 }: Props) {
-  const { isConnected } = useQuickBooksConnection();
+  const { isConnected, isApiReady } = useQuickBooksConnection();
 
   const { data: accountsData, isLoading } = useQuery({
     queryKey: ["qbo", "accounts", "income-picker"],
     queryFn: () => qboMappingsApi.listAccounts(),
-    enabled: isConnected,
+    enabled: isConnected && isApiReady,
+    retry: false,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -98,7 +99,7 @@ export function QboIncomeAccountSelect({
     return "";
   }, [accountCode, accountLabel, incomeAccounts]);
 
-  if (!isConnected) {
+  if (!isConnected || !isApiReady) {
     return null;
   }
 

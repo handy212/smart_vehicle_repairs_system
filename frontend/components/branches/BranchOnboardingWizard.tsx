@@ -46,7 +46,7 @@ export function BranchOnboardingWizard({
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected, isLoading: qboStatusLoading } = useQuickBooksConnection();
+  const { isConnected, isApiReady, isLoading: qboStatusLoading } = useQuickBooksConnection();
 
   const [locationMode, setLocationMode] = useState<LocationMode>("auto_sync");
   const [departmentId, setDepartmentId] = useState(UNMAPPED_VALUE);
@@ -57,7 +57,8 @@ export function BranchOnboardingWizard({
   const { data: departmentsData, isLoading: departmentsLoading } = useQuery({
     queryKey: ["branches", "qbo-departments"],
     queryFn: () => branchesApi.listQboDepartments(),
-    enabled: open && isConnected,
+    enabled: open && isConnected && isApiReady,
+    retry: false,
   });
 
   const departments = departmentsData?.departments ?? [];
@@ -175,7 +176,7 @@ export function BranchOnboardingWizard({
                   {departmentsLoading ? (
                     <p className="text-xs text-muted-foreground">Loading locations…</p>
                   ) : (
-                    <Select value={departmentId} onValueChange={setDepartmentId}>
+                    <Select value={departmentId || UNMAPPED_VALUE} onValueChange={setDepartmentId}>
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue placeholder="Select location" />
                       </SelectTrigger>
