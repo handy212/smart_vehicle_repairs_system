@@ -2,7 +2,7 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from apps.customers.models import Customer
-from apps.billing.models import Invoice, Payment, Estimate, CreditNote, Bill, VendorCredit, PaymentAllocation
+from apps.billing.models import Invoice, Payment, Estimate, CreditNote, Bill, VendorCredit, PaymentAllocation, BillPayment, VendorExpense
 from apps.inventory.models import Supplier, PurchaseOrder, Part
 from apps.branches.models import Branch
 from .tasks import (
@@ -16,6 +16,8 @@ from .tasks import (
     task_sync_credit_note_to_qbo,
     task_sync_vendor_bill_to_qbo,
     task_sync_vendor_credit_to_qbo,
+    task_sync_bill_payment_to_qbo,
+    task_sync_vendor_expense_to_qbo,
     task_sync_invoice_then_resync_payments,
 )
 from .sync_policy import is_outbound_eligible, INVOICE_QBO_SYNC_STATUSES
@@ -229,3 +231,25 @@ def sync_vendor_credit_on_save(sender, instance, created, **kwargs):
         logger.info('VendorCredit %s became eligible for QBO sync (status change)', instance.id)
     logger.info(f"Scheduling QBO sync for VendorCredit {instance.id}")
     schedule_entity_sync('vendor_credit', instance.id, task=task_sync_vendor_credit_to_qbo)
+
+
+@receiver(post_save, sender=BillPayment)
+def sync_bill_payment_on_save(sender, instance, created, **kwargs):
+    """Trigger QBO sync when a vendor bill payment is recorded."""
+    if _skip_signal():
+        return
+    if not is_outbound_eligible('bill_payment', instance):
+        return
+    logger.info('Scheduling QBO sync for BillPayment %s', instance.id)
+    schedule_entity_sync('bill_payment', instance.id, task=task_sync_bill_payment_to_qbo)
+
+
+@receiver(post_save, sender=VendorExpense)
+def sync_vendor_expense_on_save(sender, instance, created, **kwargs):
+    """Trigger QBO sync when a vendor expense is posted."""
+    if _skip_signal():
+        return
+    if not is_outbound_eligible('vendor_expense', instance):
+        return
+    logger.info('Scheduling QBO sync for VendorExpense %s', instance.id)
+    schedule_entity_sync('vendor_expense', instance.id, task=task_sync_vendor_expense_to_qbo)

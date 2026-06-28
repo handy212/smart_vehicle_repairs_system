@@ -83,6 +83,84 @@ class OwnerCOASpecTests(TestCase):
         self.assertIsNone(best)
         self.assertLessEqual(score, 0)
 
+    def test_find_best_qbo_account_prefers_inventory_asset_over_category_stock(self):
+        accounts = [
+            _mock_qbo_account('Tires Inventory', '1440', 'Other Current Asset'),
+            _mock_qbo_account('Inventory Asset', '84', 'Other Current Asset'),
+            _mock_qbo_account('Inventory Assets', '1400', 'Income'),
+        ]
+        accounts[0].AccountSubType = 'Inventory'
+        accounts[1].AccountSubType = 'Inventory'
+        accounts[2].AccountSubType = 'DiscountsRefundsGiven'
+        best, score = find_best_qbo_account(
+            accounts,
+            CONTROL_ACCOUNT_QBO_PATTERNS['inventory_asset_account'],
+        )
+        self.assertEqual(best.Id, '84')
+        self.assertGreater(score, 0)
+
+    @patch.object(QuickBooksService, 'get_client')
+    def test_resolve_control_account_pattern_fallback_persists_mapping(self, mock_get_client):
+        from apps.quickbooks_online.mapping_services import QBOAccountMappingService
+
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        inventory = _mock_qbo_account('Inventory Asset', '84', 'Other Current Asset')
+        inventory.AccountSubType = 'Inventory'
+        service = QBOAccountMappingService(QuickBooksService())
+
+        with patch.object(service, 'list_accounts', return_value=([
+            {
+                'id': '84',
+                'name': 'Inventory Asset',
+                'account_number': '',
+                'account_type': 'Other Current Asset',
+                'account_sub_type': 'Inventory',
+                'active': True,
+                'mapped_row': None,
+            },
+        ], None)):
+            with patch.object(service, '_fetch_qbo_account', return_value=inventory):
+                account_id = service.resolve_control_account_qbo_id('inventory_asset_account')
+
+        self.assertEqual(account_id, '84')
+        mapping = QBOAccountMapping.objects.filter(
+            mapping_kind='control_account',
+            mapping_key='inventory_asset_account',
+        ).first()
+        self.assertIsNotNone(mapping)
+        self.assertEqual(mapping.qbo_account_id, '84')
+
+    @patch.object(QuickBooksService, 'get_client')
+    def test_resolve_control_account_pattern_fallback_without_persist_for_ar(self, mock_get_client):
+        from apps.quickbooks_online.mapping_services import QBOAccountMappingService
+
+        mock_get_client.return_value = MagicMock()
+        service = QBOAccountMappingService(QuickBooksService())
+        ar = _mock_qbo_account('120 · Accounts Receivable', '120', 'Accounts Receivable')
+        ar.AccountSubType = 'AccountsReceivable'
+
+        with patch.object(service, 'list_accounts', return_value=([
+            {
+                'id': '120',
+                'name': '120 · Accounts Receivable',
+                'account_number': '120',
+                'account_type': 'Accounts Receivable',
+                'account_sub_type': 'AccountsReceivable',
+                'active': True,
+                'mapped_row': None,
+            },
+        ], None)):
+            account_id = service.resolve_control_account_qbo_id('accounts_receivable_account')
+
+        self.assertEqual(account_id, '120')
+        self.assertFalse(
+            QBOAccountMapping.objects.filter(
+                mapping_kind='control_account',
+                mapping_key='accounts_receivable_account',
+            ).exists(),
+        )
+
 
 class SVRLeanChartTests(TestCase):
     def test_setup_chart_does_not_import_owner_revenue_tree(self):

@@ -11,6 +11,8 @@ from django.utils.dateparse import parse_date
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, Count, Sum
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from decimal import Decimal
 
 from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled
@@ -169,6 +171,30 @@ class PositionViewSet(viewsets.ModelViewSet):
 # Employee Profile
 # =============================================================================
 
+def delete_staff_member(profile):
+    """
+    Delete a staff member by removing their user account.
+    The employee profile and related HR records cascade from the user.
+    """
+    user = profile.user
+    if not user:
+        profile.delete()
+        return
+    try:
+        with transaction.atomic():
+            user.delete()
+    except ProtectedError as exc:
+        protected_types = sorted({
+            obj._meta.verbose_name.title()
+            for obj in exc.protected_objects
+        })
+        types_str = ", ".join(protected_types)
+        raise DRFValidationError(
+            f"Cannot delete staff member because they are referenced by existing "
+            f"{types_str}. Terminate their employment or reassign those records first."
+        ) from exc
+
+
 class EmployeeProfileViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
@@ -315,22 +341,15 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
         if not ids:
             return Response({'detail': 'No staff IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
         qs = self.get_queryset().filter(id__in=ids).select_related('user')
-        count = qs.count()
+        deleted = 0
         for profile in qs:
-            user = profile.user
-            profile.delete()
-            if user:
-                user.delete()
-        return Response({'detail': f'Deleted {count} staff member(s).', 'deleted': count})
+            delete_staff_member(profile)
+            deleted += 1
+        return Response({'detail': f'Deleted {deleted} staff member(s).', 'deleted': deleted})
 
     def perform_destroy(self, instance):
-        """
-        Custom delete to ensure the associated User is also deleted.
-        """
-        user = instance.user
-        instance.delete()
-        if user:
-            user.delete()
+        """Delete the linked user account; cascades to the employee profile."""
+        delete_staff_member(instance)
 
 
 # =============================================================================

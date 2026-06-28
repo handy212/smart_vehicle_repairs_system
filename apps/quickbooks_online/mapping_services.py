@@ -18,6 +18,8 @@ from .account_requirements import (
 from .models import QBOAccountMapping
 from .qbo_account_utils import account_number_from_name, extract_qbo_account_number
 
+from .owner_coa_specs import CONTROL_ACCOUNT_QBO_PATTERNS
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -318,7 +320,73 @@ class QBOAccountMappingService:
         return None
 
     def resolve_control_account_qbo_id(self, control_field):
-        return self.resolve_qbo_account_id(MAPPING_KIND_CONTROL, control_field)
+        mapped = self.resolve_qbo_account_id(MAPPING_KIND_CONTROL, control_field)
+        if mapped:
+            return mapped
+        persist = control_field in INVENTORY_PART_CONTROL_REQUIREMENTS
+        return self._pattern_resolve_control_account_qbo_id(control_field, persist=persist)
+
+    def _account_rows_for_pattern_match(self, account_rows):
+        return [
+            type('QBOAccountRow', (), {
+                'Id': row['id'],
+                'Name': row['name'],
+                'AccountType': row['account_type'],
+                'AccountSubType': row['account_sub_type'],
+                'Active': row['active'],
+            })()
+            for row in account_rows
+        ]
+
+    def _pattern_resolve_control_account_qbo_id(self, control_field, *, persist=True):
+        """Best-effort match from live QBO chart when no saved mapping exists."""
+        from .owner_coa_services import find_best_qbo_account
+
+        patterns = CONTROL_ACCOUNT_QBO_PATTERNS.get(control_field)
+        if not patterns:
+            return None
+
+        account_rows, error = self.list_accounts()
+        if error or not account_rows:
+            return None
+
+        accounts = self._account_rows_for_pattern_match(account_rows)
+        best, score = find_best_qbo_account(accounts, patterns)
+        if not best or score <= 0:
+            return None
+
+        account_id = str(best.Id)
+        if control_field in INVENTORY_PART_CONTROL_REQUIREMENTS:
+            client = self.qb.get_client()
+            if client:
+                try:
+                    account = self._fetch_qbo_account(client, account_id)
+                except Exception:
+                    return None
+                if validate_control_account_for_inventory_item(account, control_field):
+                    return None
+
+        if persist and control_field in INVENTORY_PART_CONTROL_REQUIREMENTS:
+            ok, map_error = self.map_row(
+                MAPPING_KIND_CONTROL,
+                control_field,
+                qbo_account_id=account_id,
+            )
+            if not ok:
+                logger.warning(
+                    'Pattern-matched QBO account for %s but could not persist mapping: %s',
+                    control_field,
+                    map_error,
+                )
+            else:
+                logger.info(
+                    'Auto-mapped control_account:%s → %s (%s)',
+                    control_field,
+                    getattr(best, 'Name', ''),
+                    account_id,
+                )
+
+        return account_id
 
     def resolve_payment_deposit_account_id(self, payment):
         """Resolve QBO deposit account for a customer payment."""

@@ -6,6 +6,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 
 from .models import QBOMapping
+from .qbo_field_limits import qbo_doc_number
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ def query_qbo_where(qb_class, client, where_clause: str):
 
 
 def find_by_doc_number(qb_class, client, doc_number: str | None):
+    doc_number = qbo_doc_number(doc_number)
     if not doc_number:
         return None
     escaped = _escape_qbo_literal(str(doc_number))

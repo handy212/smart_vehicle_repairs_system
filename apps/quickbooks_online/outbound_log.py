@@ -25,6 +25,8 @@ ENTITY_LOG_TYPES = {
     'credit_note': 'credit_memo',
     'vendor_bill': 'vendor_bill',
     'vendor_credit': 'vendor_credit',
+    'bill_payment': 'payment',
+    'vendor_expense': 'vendor_bill',
     'part': 'item',
 }
 

@@ -48,7 +48,7 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
-        elif self.action in ['qbo_departments', 'qbo_mapping']:
+        elif self.action in ['qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement', 'settlement_accounts']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
         return [IsAuthenticated(), HasPermission('view_branches')()]
     
@@ -127,6 +127,16 @@ class BranchViewSet(viewsets.ModelViewSet):
         
         instance.is_active = False
         instance.save()
+
+        from apps.accounting.settlement_accounts import deactivate_branch_settlement_accounts
+
+        deactivated = deactivate_branch_settlement_accounts(instance)
+        if deactivated:
+            logger.info(
+                'Deactivated %s settlement account(s) for archived branch %s',
+                deactivated,
+                instance.name,
+            )
     
     @action(detail=True, methods=['delete'])
     def force_delete(self, request, pk=None):
@@ -152,6 +162,9 @@ class BranchViewSet(viewsets.ModelViewSet):
 
         instance.is_active = False
         instance.save(update_fields=['is_active', 'updated_at'])
+        from apps.accounting.settlement_accounts import deactivate_branch_settlement_accounts
+
+        deactivate_branch_settlement_accounts(instance)
         return Response(
             {'detail': f'Branch "{instance.name}" has been archived. Historical records were preserved.'},
             status=status.HTTP_200_OK
@@ -362,6 +375,72 @@ class BranchViewSet(viewsets.ModelViewSet):
         serializer = BranchListSerializer(branches, many=True)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['post'], url_path='provision-settlement')
+    def provision_settlement(self, request, pk=None):
+        """Create branch settlement GL accounts from QBO and map svr_account rows."""
+        from apps.quickbooks_online.branch_settlement_services import provision_branch_settlement_accounts
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to provision branch settlement accounts.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        branch = self.get_object()
+        dry_run = bool(request.data.get('dry_run', False))
+        map_qbo = not bool(request.data.get('no_map_qbo', False))
+        result = provision_branch_settlement_accounts(branch, dry_run=dry_run, map_qbo=map_qbo)
+        return Response({
+            'branch_id': branch.id,
+            'dry_run': dry_run,
+            **result,
+        })
+
+    @action(detail=True, methods=['get', 'patch'], url_path='settlement-accounts')
+    def settlement_accounts(self, request, pk=None):
+        """
+        List or update branch-scoped settlement (bank/cash) GL accounts.
+
+        PATCH body: { "assign": [account_id, ...], "unassign": [...], "provision_from_qbo": true }
+        """
+        from apps.accounting.settlement_accounts import (
+            branch_settlement_overview,
+            update_branch_settlement_accounts,
+        )
+        from apps.quickbooks_online.branch_settlement_services import provision_branch_settlement_accounts
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to manage branch settlement accounts.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        branch = self.get_object()
+
+        if request.method == 'GET':
+            return Response(branch_settlement_overview(branch))
+
+        assign_ids = request.data.get('assign') or []
+        unassign_ids = request.data.get('unassign') or []
+        if not isinstance(assign_ids, list) or not isinstance(unassign_ids, list):
+            return Response(
+                {'detail': 'assign and unassign must be lists of account ids.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = update_branch_settlement_accounts(
+            branch,
+            assign_ids=assign_ids,
+            unassign_ids=unassign_ids,
+        )
+
+        if request.data.get('provision_from_qbo'):
+            provision = provision_branch_settlement_accounts(branch, map_qbo=True)
+            result['provision'] = provision
+
+        overview = branch_settlement_overview(branch)
+        return Response({**overview, **result})
+
     @action(detail=False, methods=['get'], url_path='qbo-departments')
     def qbo_departments(self, request):
         """List QBO locations and show which SVR branch each one is mapped to."""
@@ -448,6 +527,37 @@ class BranchViewSet(viewsets.ModelViewSet):
             {'detail': 'Provide department_id or action (auto_sync, clear).'},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    @action(detail=True, methods=['post'], url_path='qbo-onboard')
+    def qbo_onboard(self, request, pk=None):
+        """
+        One-step QuickBooks onboarding for a branch.
+
+        Body:
+          {
+            "location_action": "auto_sync" | "map" | "skip",
+            "department_id": "12",
+            "provision_settlement": true,
+            "provision_main_cash": true,
+            "dry_run": false
+          }
+        """
+        from apps.quickbooks_online.branch_onboard_services import onboard_branch_quickbooks
+
+        branch = self.get_object()
+        dry_run = bool(request.data.get('dry_run', False))
+        result = onboard_branch_quickbooks(
+            branch,
+            location_action=request.data.get('location_action', 'auto_sync'),
+            department_id=request.data.get('department_id'),
+            provision_settlement=bool(request.data.get('provision_settlement', True)),
+            provision_main_cash=bool(request.data.get('provision_main_cash', True)),
+            dry_run=dry_run,
+        )
+
+        if result.get('errors') and not dry_run:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
     
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):

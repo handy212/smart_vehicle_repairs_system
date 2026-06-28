@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth } from "date-fns";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { QboListCell } from "@/components/integrations/QboListCell";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useToast } from "@/lib/hooks/useToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,9 +27,13 @@ import { Badge } from "@/components/ui/badge";
 
 export default function VendorPaymentsPage() {
   const { formatCurrency } = useCurrency();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [vendorId, setVendorId] = useState<string>("all");
+  const [syncingPaymentId, setSyncingPaymentId] = useState<number | null>(null);
 
   const { data: suppliersData } = useQuery({
     queryKey: ["suppliers", "vendor-payments-filter"],
@@ -45,6 +53,27 @@ export default function VendorPaymentsPage() {
   });
 
   const payments = data?.results ?? [];
+  const tableColSpan = isQboConnected ? 8 : 7;
+
+  const handlePushPayment = async (paymentId: number) => {
+    try {
+      setSyncingPaymentId(paymentId);
+      await quickbooksApi.syncOutbound({ entity_type: "bill_payment", object_id: paymentId });
+      toast({
+        title: "QuickBooks sync",
+        description: "Bill payment push triggered. Status should update shortly.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["billing", "bill-payments"] });
+    } catch {
+      toast({
+        title: "QuickBooks sync failed",
+        description: "Could not push bill payment to QuickBooks.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingPaymentId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -91,7 +120,7 @@ export default function VendorPaymentsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <TableSkeleton columns={7} rows={8} />
+            <TableSkeleton columns={tableColSpan} rows={8} />
           ) : payments.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">No payments found for the selected filters.</p>
           ) : (
@@ -105,12 +134,17 @@ export default function VendorPaymentsPage() {
                   <TableHead>Method</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Reference</TableHead>
+                  {isQboConnected ? <TableHead>QBO</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-mono text-xs">{payment.payment_number}</TableCell>
+                  <TableRow key={payment.id} className="hover:bg-muted/50">
+                    <TableCell className="font-mono text-xs">
+                      <Link href={`/billing/vendor-payments/${payment.id}`} className="text-primary hover:underline">
+                        {payment.payment_number}
+                      </Link>
+                    </TableCell>
                     <TableCell>{payment.payment_date}</TableCell>
                     <TableCell>{payment.vendor_name ?? "—"}</TableCell>
                     <TableCell>
@@ -125,6 +159,17 @@ export default function VendorPaymentsPage() {
                     <TableCell className="capitalize">{payment.payment_method.replace(/_/g, " ")}</TableCell>
                     <TableCell className="text-right font-mono">{formatCurrency(payment.amount)}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{payment.reference_number ?? "—"}</TableCell>
+                    {isQboConnected ? (
+                      <TableCell>
+                        <QboListCell
+                          connected={isQboConnected}
+                          status={payment.qbo_sync_status}
+                          error={payment.qbo_sync_error}
+                          onRetry={() => handlePushPayment(payment.id)}
+                          isRetrying={syncingPaymentId === payment.id}
+                        />
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>

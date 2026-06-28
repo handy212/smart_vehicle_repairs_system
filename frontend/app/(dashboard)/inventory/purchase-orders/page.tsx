@@ -30,6 +30,10 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { QboListCell } from "@/components/integrations/QboListCell";
+import { canConvertPoToBill } from "@/lib/billing/ap-flow";
+import { ApFlowHint } from "@/components/billing/ApFlowHint";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
@@ -96,6 +100,7 @@ export default function PurchaseOrdersPage() {
   const [page, setPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { toast } = useToast();
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
 
   const handleSort = (field: string) => {
     setSortConfig((current) => toggleSortConfig(current, field));
@@ -189,6 +194,7 @@ export default function PurchaseOrdersPage() {
         </div>
 
         <StatsGrid stats={stats} loading={statsLoading} />
+        {isQboConnected ? <ApFlowHint variant="po-qbo" /> : null}
       </div>
 
       {/* Unified Toolbar */}
@@ -330,6 +336,11 @@ export default function PurchaseOrdersPage() {
                     <SortableHeader field="total" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">
                       Total
                     </SortableHeader>
+                    {isQboConnected ? (
+                      <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
+                        QBO
+                      </TableHead>
+                    ) : null}
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -372,6 +383,15 @@ export default function PurchaseOrdersPage() {
                       <TableCell className="px-4 py-2 font-mono text-xs text-foreground text-right">
                         {po.total ? `${formatCurrency(parseFloat(po.total))}` : "-"}
                       </TableCell>
+                      {isQboConnected ? (
+                        <TableCell className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                          <QboListCell
+                            connected={isQboConnected}
+                            status={po.qbo_sync_status}
+                            error={po.qbo_sync_error}
+                          />
+                        </TableCell>
+                      ) : null}
                       <TableCell className="px-4 py-2 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

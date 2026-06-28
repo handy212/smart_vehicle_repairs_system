@@ -38,9 +38,25 @@ def task_sync_supplier_to_qbo(supplier_id):
 
 @shared_task
 def task_sync_purchase_order_to_qbo(po_id):
-    """Background task to sync a PurchaseOrder to QBO as a Bill."""
+    """Background task to sync a PurchaseOrder to QBO."""
     run_outbound_entity_sync(
         'purchase_order', po_id, 'inventory', 'PurchaseOrder', 'sync_purchase_order',
+    )
+
+
+@shared_task
+def task_sync_bill_payment_to_qbo(bill_payment_id):
+    """Background task to sync a BillPayment to QBO."""
+    run_outbound_entity_sync(
+        'bill_payment', bill_payment_id, 'billing', 'BillPayment', 'sync_bill_payment',
+    )
+
+
+@shared_task
+def task_sync_vendor_expense_to_qbo(vendor_expense_id):
+    """Background task to sync a VendorExpense to QBO Purchase."""
+    run_outbound_entity_sync(
+        'vendor_expense', vendor_expense_id, 'billing', 'VendorExpense', 'sync_vendor_expense',
     )
 
 
@@ -219,6 +235,25 @@ def task_pull_bills_from_qbo(triggered_by_id=None):
 
 
 @shared_task
+def task_pull_bill_payments_from_qbo(triggered_by_id=None):
+    """Pull BillPayments from QBO to refresh local bill balances."""
+    try:
+        from .services import QuickBooksService
+        service = QuickBooksService()
+        log = service.pull_bill_payments(triggered_by=triggered_by_id)
+        if log:
+            logger.info(
+                '[QBO Inbound] Bill payments pull complete: pulled=%s, updated=%s, skipped=%s, status=%s',
+                log.records_pulled,
+                log.records_updated,
+                log.records_skipped,
+                log.status,
+            )
+    except Exception as e:
+        logger.error('Error in task_pull_bill_payments_from_qbo: %s', e, exc_info=True)
+
+
+@shared_task
 def task_pull_estimates_from_qbo(triggered_by_id=None):
     """Pull Estimates from QBO → update status on existing local estimates."""
     try:
@@ -312,6 +347,7 @@ def task_full_inbound_sync(triggered_by_id=None):
     task_pull_vendors_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_invoices_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_bills_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_bill_payments_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_estimates_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_credit_memos_from_qbo(triggered_by_id=triggered_by_id)
     task_pull_vendor_credits_from_qbo(triggered_by_id=triggered_by_id)

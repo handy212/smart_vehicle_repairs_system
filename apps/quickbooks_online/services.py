@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from apps.accounts.settings_utils import get_site_url
 from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
+from .qbo_field_limits import qbo_doc_number
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,9 @@ try:
     from quickbooks.objects.vendor import Vendor as QBVendor
     from quickbooks.objects.bill import Bill as QBBill
     from quickbooks.objects.vendorcredit import VendorCredit as QBVendorCredit
+    from quickbooks.objects.purchaseorder import PurchaseOrder as QBPurchaseOrder
+    from quickbooks.objects.billpayment import BillPayment as QBBillPayment
+    from quickbooks.objects.purchase import Purchase as QBPurchase
     from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
     from quickbooks.objects.detailline import AccountBasedExpenseLineDetail
     from quickbooks.objects.tax import TxnTaxDetail
@@ -45,6 +49,9 @@ except ModuleNotFoundError as exc:
     QBVendor = None
     QBBill = None
     QBVendorCredit = None
+    QBPurchaseOrder = None
+    QBBillPayment = None
+    QBPurchase = None
     ItemBasedExpenseLineDetail = None
     AccountBasedExpenseLineDetail = None
     TxnTaxDetail = None
@@ -411,7 +418,7 @@ class QuickBooksService:
             qb_class=qb_class,
             local_obj=local_obj,
             mapping=mapping,
-            doc_number=doc_number,
+            doc_number=qbo_doc_number(doc_number),
             display_name=display_name,
             sku=sku,
             name=name,
@@ -677,6 +684,23 @@ class QuickBooksService:
         if txn_status:
             qb_estimate.TxnStatus = txn_status
 
+    def _schedule_converted_estimate_close_sync(self, local_invoice):
+        """Ensure a converted linked estimate is pushed as Closed in QBO."""
+        if not local_invoice.estimate_id:
+            return
+        from apps.billing.models import Estimate
+        from .sync_policy import is_outbound_eligible
+        from .task_dispatch import schedule_entity_sync
+        from .tasks import task_sync_estimate_to_qbo
+
+        try:
+            estimate = Estimate.objects.get(pk=local_invoice.estimate_id)
+        except Estimate.DoesNotExist:
+            return
+        if estimate.status != 'converted' or not is_outbound_eligible('estimate', estimate):
+            return
+        schedule_entity_sync('estimate', estimate.id, task=task_sync_estimate_to_qbo)
+
     def _build_sales_item_lines(
         self,
         line_items,
@@ -916,6 +940,7 @@ class QuickBooksService:
     ):
         """Create or update a QBO Bill for a PO or vendor bill."""
         client = self.get_client()
+        doc_number = qbo_doc_number(doc_number)
         if qb_bill is None:
             qb_bill, _is_new, load_error = self._load_qbo_entity(
                 QBBill,
@@ -935,14 +960,34 @@ class QuickBooksService:
         if notes:
             qb_bill.PrivateNote = notes
         self._apply_department_ref(qb_bill, branch)
+
+        mapping_service = self._get_mapping_service()
+        if mapping_service and Ref is not None:
+            ap_id = mapping_service.resolve_control_account_qbo_id('accounts_payable_account')
+            if ap_id:
+                qb_bill.APAccountRef = Ref()
+                qb_bill.APAccountRef.value = ap_id
+
+        line_items = list(line_items or [])
         qb_bill.Line = self._build_ap_expense_lines(
-            line_items or [],
+            line_items,
             inventory_relation=inventory_relation,
         )
-        self._save_qb(qb_bill, client)
-        self._update_qbo_mapping(local_obj, qb_bill)
+
         purchase_order = getattr(local_obj, 'purchase_order', None)
         if purchase_order is not None:
+            from .ap_sync_helpers import apply_bill_po_linked_txn
+
+            apply_bill_po_linked_txn(
+                qb_bill,
+                purchase_order,
+                line_items,
+                LinkedTxn=LinkedTxn,
+            )
+
+        self._save_qb(qb_bill, client)
+        self._update_qbo_mapping(local_obj, qb_bill)
+        if purchase_order is not None and hasattr(purchase_order, 'id'):
             self._mirror_po_qbo_bill_mapping(purchase_order, qb_bill)
         return qb_bill
 
@@ -988,7 +1033,7 @@ class QuickBooksService:
         qb_invoice.CustomerRef = Ref()
         qb_invoice.CustomerRef.value = qb_customer.Id
         
-        qb_invoice.DocNumber = local_invoice.invoice_number
+        qb_invoice.DocNumber = qbo_doc_number(local_invoice.invoice_number)
         invoice_lines = list(
             local_invoice.line_items.select_related(
                 'part', 'revenue_product', 'revenue_product__catalog_part',
@@ -1061,6 +1106,7 @@ class QuickBooksService:
             from .attachment_sync import sync_invoice_attachment
             if is_new_qbo:
                 sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
+            self._schedule_converted_estimate_close_sync(local_invoice)
             return qb_invoice
         except Exception as e:
             from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
@@ -1094,6 +1140,7 @@ class QuickBooksService:
                     from .attachment_sync import sync_invoice_attachment
                     if is_new_qbo:
                         sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
+                    self._schedule_converted_estimate_close_sync(local_invoice)
                     return qb_invoice
                 except Exception as retry_exc:
                     logger.error('QBO Invoice Sync retry failed: %s', retry_exc)
@@ -1153,7 +1200,7 @@ class QuickBooksService:
 
         qb_estimate.CustomerRef = Ref()
         qb_estimate.CustomerRef.value = qb_customer.Id
-        qb_estimate.DocNumber = local_estimate.estimate_number
+        qb_estimate.DocNumber = qbo_doc_number(local_estimate.estimate_number)
         estimate_lines = list(
             local_estimate.line_items.select_related(
                 'part', 'revenue_product', 'revenue_product__catalog_part',
@@ -1274,7 +1321,7 @@ class QuickBooksService:
 
         qb_credit_memo.CustomerRef = Ref()
         qb_credit_memo.CustomerRef.value = qb_customer.Id
-        qb_credit_memo.DocNumber = local_credit_note.credit_note_number
+        qb_credit_memo.DocNumber = qbo_doc_number(local_credit_note.credit_note_number)
         credit_lines = list(local_credit_note.line_items.all())
         from .item_sync import effective_sales_txn_date
 
@@ -1365,6 +1412,7 @@ class QuickBooksService:
             PaymentSyncError,
             build_qbo_payment_lines,
             payment_private_note,
+            resolve_payment_branch,
         )
 
         client = self.get_client()
@@ -1416,6 +1464,10 @@ class QuickBooksService:
                 qb_payment.DepositToAccountRef.value = deposit_account_id
         except Exception as mapping_error:
             logger.debug('Could not resolve QBO deposit account for payment: %s', mapping_error)
+
+        payment_branch = resolve_payment_branch(local_payment)
+        if payment_branch:
+            self._apply_department_ref(qb_payment, payment_branch)
 
         try:
             qb_payment.Line = build_qbo_payment_lines(
@@ -1532,28 +1584,87 @@ class QuickBooksService:
             return None
 
     def sync_purchase_order(self, local_po):
-        """
-        Delegate PO-linked AP to the vendor bill.
+        """Sync a local PurchaseOrder to QBO as a PurchaseOrder entity."""
+        client = self.get_client()
+        if not client:
+            self._fail_qbo_mapping(
+                local_po,
+                'QuickBooks not connected or unauthorized.',
+            )
+            return None
 
-        POs are not pushed as standalone QBO bills. If a vendor bill exists for
-        this PO, sync that bill (one QBO Bill for the procurement flow).
-        """
-        from apps.billing.models import Bill
+        if QBPurchaseOrder is None:
+            self._fail_qbo_mapping(local_po, _quickbooks_sdk_message())
+            return None
 
-        linked_bill = (
-            Bill.objects.filter(purchase_order=local_po)
-            .exclude(status='void')
-            .order_by('-id')
-            .first()
+        qb_vendor = self.sync_supplier(local_po.supplier)
+        if not qb_vendor:
+            logger.error('Cannot sync PO %s: Supplier sync failed.', local_po.po_number)
+            return None
+
+        qb_po, _is_new, load_error = self._load_qbo_entity(
+            QBPurchaseOrder,
+            local_po,
+            doc_number=local_po.po_number,
         )
-        if linked_bill:
-            return self.sync_vendor_bill(linked_bill)
+        if load_error:
+            self._fail_qbo_mapping(local_po, load_error)
+            return None
 
-        logger.info(
-            'Skipping QBO sync for PO %s — create the vendor bill from this PO to push AP to QuickBooks.',
-            local_po.po_number,
-        )
-        return None
+        qb_po.VendorRef = Ref()
+        qb_po.VendorRef.value = qb_vendor.Id
+        qb_po.DocNumber = qbo_doc_number(local_po.po_number)
+        qb_po.TxnDate = local_po.order_date.isoformat() if local_po.order_date else timezone.now().date().isoformat()
+        if local_po.due_date:
+            qb_po.DueDate = local_po.due_date.isoformat()
+        if local_po.notes:
+            qb_po.PrivateNote = local_po.notes
+        self._apply_department_ref(qb_po, local_po.branch)
+
+        po_lines = []
+        for item in local_po.items.select_related('part').all():
+            line = DetailLine()
+            line.Amount = float(item.total)
+            line.Description = item.part.name if item.part else 'Line item'
+            is_inventory_line = False
+            if item.part:
+                tracks = getattr(item.part, 'tracks_inventory', None)
+                is_inventory_line = tracks() if callable(tracks) else item.part.item_type == 'inventory'
+
+            mapping_service = self._get_mapping_service()
+            account_id = None
+            if mapping_service:
+                account_id = mapping_service.resolve_bill_line_account_id(
+                    is_inventory_line=is_inventory_line,
+                )
+
+            if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
+                line.DetailType = 'AccountBasedExpenseLineDetail'
+                expense_detail = AccountBasedExpenseLineDetail()
+                expense_detail.AccountRef = Ref()
+                expense_detail.AccountRef.value = account_id
+                line.AccountBasedExpenseLineDetail = expense_detail
+            else:
+                line.DetailType = 'ItemBasedExpenseLineDetail'
+                exp_item = ItemBasedExpenseLineDetail()
+                exp_item.Qty = float(item.quantity)
+                exp_item.UnitPrice = float(item.unit_cost)
+                line.ItemBasedExpenseLineDetail = exp_item
+            po_lines.append(line)
+
+        qb_po.Line = po_lines
+
+        try:
+            self._save_qb(qb_po, client)
+            from .ap_sync_helpers import persist_po_line_qbo_ids
+
+            persist_po_line_qbo_ids(local_po, qb_po)
+            self._update_qbo_mapping(local_po, qb_po)
+            return qb_po
+        except Exception as exc:
+            logger.error('QBO Purchase Order Sync Error: %s', exc)
+            self._fail_qbo_mapping(local_po, str(exc))
+            return None
 
     def sync_vendor_bill(self, local_bill):
         """Sync a local AP Bill to QBO as a Bill."""
@@ -1584,6 +1695,13 @@ class QuickBooksService:
             if load_error:
                 self._fail_qbo_mapping(local_bill, load_error)
                 return None
+
+            if local_bill.purchase_order_id:
+                from .sync_policy import is_outbound_eligible
+
+                po = local_bill.purchase_order
+                if is_outbound_eligible('purchase_order', po):
+                    self.sync_purchase_order(po)
 
             return self._sync_qbo_bill_document(
                 local_bill,
@@ -1636,7 +1754,7 @@ class QuickBooksService:
 
         qb_vendor_credit.VendorRef = Ref()
         qb_vendor_credit.VendorRef.value = qb_vendor.Id
-        qb_vendor_credit.DocNumber = local_vendor_credit.credit_number
+        qb_vendor_credit.DocNumber = qbo_doc_number(local_vendor_credit.credit_number)
         qb_vendor_credit.TxnDate = local_vendor_credit.credit_date.isoformat()
         if local_vendor_credit.notes:
             qb_vendor_credit.PrivateNote = local_vendor_credit.notes
@@ -1668,6 +1786,234 @@ class QuickBooksService:
         except Exception as exc:
             logger.error('QBO Vendor Credit Sync Error: %s', exc)
             self._update_qbo_mapping(local_vendor_credit, None, error=str(exc))
+            return None
+
+    def sync_bill_payment(self, local_bill_payment):
+        """Sync one or more local BillPayments (batch) to QBO as BillPayment."""
+        if local_bill_payment.payment_batch:
+            from apps.billing.models import BillPayment
+
+            leader = (
+                BillPayment.objects.filter(payment_batch=local_bill_payment.payment_batch)
+                .order_by('id')
+                .first()
+            )
+            if leader and leader.id != local_bill_payment.id:
+                return None
+            return self.sync_bill_payment_batch(local_bill_payment.payment_batch)
+
+        return self._sync_bill_payments_to_qbo([local_bill_payment])
+
+    def sync_bill_payment_batch(self, payment_batch: str):
+        """Sync all BillPayments sharing payment_batch to one QBO BillPayment."""
+        from apps.billing.models import BillPayment
+
+        if not payment_batch:
+            return None
+
+        payments = list(
+            BillPayment.objects.filter(payment_batch=payment_batch)
+            .select_related('bill', 'bill__vendor', 'till', 'bank_account')
+            .order_by('id')
+        )
+        if not payments:
+            return None
+        return self._sync_bill_payments_to_qbo(payments)
+
+    def _sync_bill_payments_to_qbo(self, bill_payments):
+        """Create/update QBO BillPayment for one or more local bill payments (same vendor)."""
+        from apps.billing.models import BillPayment
+
+        if QBBillPayment is None or DetailLine is None or LinkedTxn is None:
+            anchor = bill_payments[0]
+            self._fail_qbo_mapping(anchor, _quickbooks_sdk_message())
+            return None
+
+        client = self.get_client()
+        if not client:
+            for bp in bill_payments:
+                self._fail_qbo_mapping(bp, 'QuickBooks not connected or unauthorized.')
+            return None
+
+        anchor = bill_payments[0]
+        vendor = anchor.bill.vendor
+        qb_vendor = self.sync_supplier(vendor)
+        if not qb_vendor:
+            self._fail_qbo_mapping(anchor, 'Supplier sync failed.')
+            return None
+
+        from .bill_payment_helpers import (
+            BillPaymentSyncError,
+            bill_payment_private_note,
+            build_qbo_bill_payment_lines,
+            qbo_pay_type_for_method,
+            resolve_vendor_payment_bank_account_id,
+        )
+
+        mapping_service = self._get_mapping_service()
+        bank_account_id = resolve_vendor_payment_bank_account_id(mapping_service, anchor)
+        if not bank_account_id:
+            self._fail_qbo_mapping(anchor, 'No QBO bank/cash account mapped for vendor payment.')
+            return None
+
+        existing_mapping = None
+        for bp in bill_payments:
+            existing_mapping = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(bp),
+                object_id=bp.id,
+            ).exclude(qbo_id='').first()
+            if existing_mapping:
+                break
+
+        if existing_mapping and existing_mapping.qbo_id:
+            try:
+                qb_payment = QBBillPayment.get(int(existing_mapping.qbo_id), qb=client)
+            except Exception as exc:
+                logger.warning('Could not load QBO BillPayment %s: %s', existing_mapping.qbo_id, exc)
+                qb_payment = QBBillPayment()
+        else:
+            qb_payment = QBBillPayment()
+
+        pay_type = qbo_pay_type_for_method(anchor.payment_method)
+        qb_payment.VendorRef = Ref()
+        qb_payment.VendorRef.value = qb_vendor.Id
+        qb_payment.PayType = pay_type
+        qb_payment.TxnDate = anchor.payment_date.isoformat()
+
+        if pay_type == 'CreditCard':
+            qb_payment.CreditCardPayment = {'CCAccountRef': {'value': bank_account_id}}
+        else:
+            qb_payment.CheckPayment = {'BankAccountRef': {'value': bank_account_id}}
+            if anchor.reference_number:
+                qb_payment.CheckPayment['PrintStatus'] = 'NotSet'
+
+        try:
+            qb_payment.Line = build_qbo_bill_payment_lines(
+                self,
+                bill_payments,
+                DetailLine=DetailLine,
+                LinkedTxn=LinkedTxn,
+            )
+        except BillPaymentSyncError as exc:
+            for bp in bill_payments:
+                self._fail_qbo_mapping(bp, str(exc))
+            return None
+
+        total = sum(float(bp.amount) for bp in bill_payments)
+        qb_payment.TotalAmt = total
+        note = bill_payment_private_note(bill_payments)
+        if note:
+            qb_payment.PrivateNote = note
+        payment_doc = qbo_doc_number(anchor.reference_number) or qbo_doc_number(anchor.payment_number)
+        if payment_doc:
+            qb_payment.DocNumber = payment_doc
+
+        try:
+            self._save_qb(qb_payment, client)
+            for bp in bill_payments:
+                self._update_qbo_mapping(bp, qb_payment)
+            return qb_payment
+        except Exception as exc:
+            logger.error('QBO Bill Payment Sync Error: %s', exc)
+            for bp in bill_payments:
+                self._fail_qbo_mapping(bp, str(exc))
+            return None
+
+    def sync_vendor_expense(self, local_expense):
+        """Sync a posted VendorExpense to QBO as a Purchase (Expense)."""
+        client = self.get_client()
+        if not client:
+            self._fail_qbo_mapping(
+                local_expense,
+                'QuickBooks not connected or unauthorized.',
+            )
+            return None
+
+        if QBPurchase is None:
+            self._fail_qbo_mapping(local_expense, _quickbooks_sdk_message())
+            return None
+
+        qb_vendor = self.sync_supplier(local_expense.vendor)
+        if not qb_vendor:
+            self._fail_qbo_mapping(local_expense, 'Supplier sync failed.')
+            return None
+
+        qb_purchase, _is_new, load_error = self._load_qbo_entity(
+            QBPurchase,
+            local_expense,
+            doc_number=local_expense.expense_number,
+        )
+        if load_error:
+            self._fail_qbo_mapping(local_expense, load_error)
+            return None
+
+        from .bill_payment_helpers import (
+            qbo_pay_type_for_method,
+            resolve_vendor_payment_bank_account_id,
+        )
+
+        mapping_service = self._get_mapping_service()
+        bank_account_id = resolve_vendor_payment_bank_account_id(mapping_service, local_expense)
+        if not bank_account_id:
+            self._fail_qbo_mapping(local_expense, 'No QBO pay-from account mapped for vendor expense.')
+            return None
+
+        payment_type_map = {
+            'cash': 'Cash',
+            'check': 'Check',
+            'credit_card': 'CreditCard',
+            'bank_transfer': 'Check',
+            'mobile_money': 'Cash',
+            'other': 'Cash',
+        }
+        qb_purchase.PaymentType = payment_type_map.get(local_expense.payment_method, 'Cash')
+        qb_purchase.TxnDate = local_expense.expense_date.isoformat()
+        qb_purchase.DocNumber = qbo_doc_number(local_expense.expense_number)
+        if local_expense.notes:
+            qb_purchase.PrivateNote = local_expense.notes
+
+        qb_purchase.AccountRef = Ref()
+        qb_purchase.AccountRef.value = bank_account_id
+        qb_purchase.EntityRef = Ref()
+        qb_purchase.EntityRef.value = qb_vendor.Id
+        qb_purchase.EntityRef.type = 'Vendor'
+
+        lines = []
+        for item in local_expense.line_items.select_related('expense_account', 'inventory_item').all():
+            line = DetailLine()
+            line.Amount = float(item.total)
+            line.Description = item.description
+            account_id = None
+            if item.expense_account_id and mapping_service:
+                acct_mapping = mapping_service.get_mapping('svr_account', str(item.expense_account_id))
+                if acct_mapping and acct_mapping.qbo_account_id:
+                    account_id = acct_mapping.qbo_account_id
+            if not account_id and mapping_service:
+                account_id = mapping_service.resolve_bill_line_account_id(is_inventory_line=False)
+            if account_id and AccountBasedExpenseLineDetail is not None:
+                line.DetailType = 'AccountBasedExpenseLineDetail'
+                detail = AccountBasedExpenseLineDetail()
+                detail.AccountRef = Ref()
+                detail.AccountRef.value = account_id
+                line.AccountBasedExpenseLineDetail = detail
+            else:
+                line.DetailType = 'ItemBasedExpenseLineDetail'
+                exp_item = ItemBasedExpenseLineDetail()
+                exp_item.Qty = float(item.quantity)
+                exp_item.UnitPrice = float(item.unit_price)
+                line.ItemBasedExpenseLineDetail = exp_item
+            lines.append(line)
+
+        qb_purchase.Line = lines
+        self._apply_department_ref(qb_purchase, local_expense.branch)
+
+        try:
+            self._save_qb(qb_purchase, client)
+            self._update_qbo_mapping(local_expense, qb_purchase)
+            return qb_purchase
+        except Exception as exc:
+            logger.error('QBO Vendor Expense Sync Error: %s', exc)
+            self._fail_qbo_mapping(local_expense, str(exc))
             return None
 
     # -------------------------------------------------------------------------
@@ -1971,6 +2317,94 @@ class QuickBooksService:
             logger.error(f"QBO pull_bills failed: {e}")
             log.status = 'failed'
             log.error_message = str(e)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log
+
+    def pull_bill_payments(self, triggered_by=None):
+        """
+        Pull BillPayments from QBO and refresh mapped local bill payment status via bill balances.
+        Does not create local BillPayment rows from QBO — SVR is source of truth for payment docs.
+        """
+        from apps.billing.models import Bill, BillPayment
+        from decimal import Decimal
+
+        if QBBillPayment is None:
+            log = QBOSyncLog.objects.create(entity_type='payment', triggered_by=triggered_by)
+            log.status = 'failed'
+            log.error_message = _quickbooks_sdk_message()
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        log = QBOSyncLog.objects.create(entity_type='payment', triggered_by=triggered_by)
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        try:
+            qb_payments = QBBillPayment.all(qb=client)
+            log.records_pulled = len(qb_payments)
+            bill_payment_ct = ContentType.objects.get_for_model(BillPayment)
+            bill_ct = ContentType.objects.get_for_model(Bill)
+
+            for qb_pay in qb_payments:
+                mapping = QBOMapping.objects.filter(
+                    content_type=bill_payment_ct,
+                    qbo_id=str(qb_pay.Id),
+                ).first()
+                if mapping:
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = getattr(qb_pay, 'SyncToken', '') or ''
+                    mapping.error_message = ''
+                    mapping.save()
+                    log.records_updated += 1
+                    continue
+
+                for line in getattr(qb_pay, 'Line', []) or []:
+                    for linked in getattr(line, 'LinkedTxn', []) or []:
+                        if getattr(linked, 'TxnType', None) != 'Bill':
+                            continue
+                        bill_mapping = QBOMapping.objects.filter(
+                            content_type=bill_ct,
+                            qbo_id=str(linked.TxnId),
+                        ).first()
+                        if not bill_mapping:
+                            continue
+                        try:
+                            local_bill = Bill.objects.get(id=bill_mapping.object_id)
+                        except Bill.DoesNotExist:
+                            continue
+                        qb_bill = QBBill.get(int(linked.TxnId), qb=client)
+                        qbo_balance = Decimal(str(getattr(qb_bill, 'Balance', 0) or 0))
+                        qbo_total = Decimal(str(getattr(qb_bill, 'TotalAmt', 0) or 0))
+                        qbo_paid = qbo_total - qbo_balance
+                        if qbo_paid > local_bill.amount_paid:
+                            amount_due = max(qbo_balance, Decimal('0'))
+                            new_status = local_bill.status
+                            if qbo_balance == Decimal('0'):
+                                new_status = 'paid'
+                            elif qbo_paid > Decimal('0') and local_bill.status == 'open':
+                                new_status = 'partially_paid'
+                            Bill.objects.filter(id=local_bill.id).update(
+                                amount_paid=qbo_paid,
+                                amount_due=amount_due,
+                                status=new_status,
+                            )
+                            log.records_updated += 1
+                        else:
+                            log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as exc:
+            logger.error('QBO pull_bill_payments failed: %s', exc)
+            log.status = 'failed'
+            log.error_message = str(exc)
 
         log.finished_at = timezone.now()
         log.save()

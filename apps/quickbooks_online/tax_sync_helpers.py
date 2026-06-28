@@ -57,15 +57,87 @@ def uses_us_line_tax_codes(service) -> bool:
     return uses_us
 
 
+# Read-only / response-only fields returned by GET that QBO rejects on update (error 2010).
+_QBO_READONLY_SALES_TXN_ATTRS = (
+    'Balance',
+    'TotalAmt',
+    'HomeBalance',
+    'HomeTotalAmt',
+    'MetaData',
+    'InvoiceLink',
+    'domain',
+    'DeliveryInfo',
+    'PrintStatus',
+    'ExchangeRate',
+    'AllowIPNPayment',
+    'AllowOnlineACHPayment',
+    'AllowOnlineCreditCardPayment',
+    'AllowOnlinePayment',
+    'ApplyTaxAfterDiscount',
+    'FreeFormAddress',
+    'Deposit',
+    'ShipFromAddr',
+    'CustomField',
+    'sparse',
+)
+
+
+def _strip_empty_ref_fields(ref):
+    if ref is None:
+        return
+    for attr in ('name', 'type'):
+        if getattr(ref, attr, None) == '':
+            setattr(ref, attr, None)
+
+
+def _sanitize_sales_lines(qb_txn):
+    for line in getattr(qb_txn, 'Line', None) or []:
+        for attr in ('LinkedTxn', 'CustomField'):
+            if getattr(line, attr, None) == []:
+                setattr(line, attr, None)
+
+        detail = getattr(line, 'SalesItemLineDetail', None)
+        if detail is None:
+            continue
+        if getattr(detail, 'TaxInclusiveAmt', None) == 0:
+            detail.TaxInclusiveAmt = None
+        if getattr(detail, 'ServiceDate', None) == '':
+            detail.ServiceDate = None
+        _strip_empty_ref_fields(getattr(detail, 'ItemRef', None))
+        _strip_empty_ref_fields(getattr(detail, 'TaxCodeRef', None))
+
+
 def finalize_sales_transaction_for_qbo(service, qb_txn):
     """
-    Remove fields US Automated Sales Tax rejects (QBO error 2010).
+    Sanitize outbound invoice/estimate/credit-memo payloads before save.
 
-    The python-quickbooks Invoice defaults GlobalTaxCalculation='TaxExcluded',
-    serializes TaxInclusiveAmt=0 on lines, and empty TaxLine arrays — all invalid
-    for US locales.
+    - Updates: strip read-only fields loaded from QBO GET (error 2010).
+    - All locales: remove empty strings, zero TaxInclusiveAmt, empty Ref names.
+    - US AST: also drop GlobalTaxCalculation, EmailStatus, and manual tax fields.
     """
-    if not uses_us_line_tax_codes(service):
+    us_company = uses_us_line_tax_codes(service)
+
+    if getattr(qb_txn, 'Id', None):
+        for attr in _QBO_READONLY_SALES_TXN_ATTRS:
+            if hasattr(qb_txn, attr):
+                setattr(qb_txn, attr, None)
+
+    for attr in ('DueDate', 'ShipDate', 'TxnDate', 'TrackingNum', 'PrivateNote'):
+        if getattr(qb_txn, attr, None) == '':
+            setattr(qb_txn, attr, None)
+
+    _sanitize_sales_lines(qb_txn)
+
+    txn_tax = getattr(qb_txn, 'TxnTaxDetail', None)
+    if txn_tax is not None:
+        if not getattr(txn_tax, 'TaxLine', None):
+            txn_tax.TaxLine = None
+        _strip_empty_ref_fields(getattr(txn_tax, 'TxnTaxCodeRef', None))
+
+    for ref_attr in ('CustomerRef', 'DepartmentRef', 'CurrencyRef'):
+        _strip_empty_ref_fields(getattr(qb_txn, ref_attr, None))
+
+    if not us_company:
         return
 
     if hasattr(qb_txn, 'GlobalTaxCalculation'):
@@ -74,35 +146,6 @@ def finalize_sales_transaction_for_qbo(service, qb_txn):
     for attr in ('EmailStatus', 'BillEmail', 'BillEmailCc', 'BillEmailBcc'):
         if hasattr(qb_txn, attr):
             setattr(qb_txn, attr, None)
-
-    for attr in ('DueDate', 'ShipDate', 'TxnDate'):
-        if getattr(qb_txn, attr, None) == '':
-            setattr(qb_txn, attr, None)
-
-    txn_tax = getattr(qb_txn, 'TxnTaxDetail', None)
-    if txn_tax is not None and not getattr(txn_tax, 'TaxLine', None):
-        txn_tax.TaxLine = None
-
-    for line in getattr(qb_txn, 'Line', None) or []:
-        detail = getattr(line, 'SalesItemLineDetail', None)
-        if detail is None:
-            continue
-        if getattr(detail, 'TaxInclusiveAmt', None) == 0:
-            detail.TaxInclusiveAmt = None
-        if getattr(detail, 'ServiceDate', None) == '':
-            detail.ServiceDate = None
-        item_ref = getattr(detail, 'ItemRef', None)
-        if item_ref is not None:
-            if getattr(item_ref, 'name', None) == '':
-                item_ref.name = None
-            if getattr(item_ref, 'type', None) == '':
-                item_ref.type = None
-        tax_ref = getattr(detail, 'TaxCodeRef', None)
-        if tax_ref is not None:
-            if getattr(tax_ref, 'name', None) == '':
-                tax_ref.name = None
-            if getattr(tax_ref, 'type', None) == '':
-                tax_ref.type = None
 
 
 def stamp_us_sales_line_tax_codes(qb_lines, local_line_items):

@@ -30,12 +30,14 @@ class AccountSimpleSerializer(serializers.ModelSerializer):
     children_count = serializers.IntegerField(source='children.count', read_only=True)
     parent_code = serializers.CharField(source='parent.code', read_only=True)
     parent_name = serializers.CharField(source='parent.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True, allow_null=True)
     
     class Meta:
         model = Account
         fields = [
             'id', 'code', 'name', 'account_type', 'balance_type',
             'account_subtype', 'parent', 'parent_code', 'parent_name',
+            'branch', 'branch_name',
             'description', 'is_active', 'is_till_enabled', 'children_count', 'balance'
         ]
     
@@ -56,7 +58,7 @@ class AccountSerializer(serializers.ModelSerializer):
         model = Account
         fields = [
             'id', 'code', 'name', 'account_type', 'balance_type',
-            'account_subtype', 'parent', 'is_till_enabled',
+            'account_subtype', 'parent', 'branch', 'is_till_enabled',
             'description', 'is_active', 'children_count',
             'created_at', 'updated_at'
         ]
@@ -90,6 +92,14 @@ class AccountSerializer(serializers.ModelSerializer):
             if not is_active or account_type != 'asset' or account_subtype not in Account.TILL_ELIGIBLE_SUBTYPES or has_children:
                 raise serializers.ValidationError({
                     'is_till_enabled': 'Only active leaf Asset accounts classified as Cash, Bank, or Cash Equivalent can be till-enabled.'
+                })
+        branch = attrs.get('branch', getattr(instance, 'branch', None) if instance else None)
+        if branch is not None:
+            from apps.accounting.settlement_accounts import SETTLEMENT_ACCOUNT_SUBTYPES
+
+            if account_type != 'asset' or account_subtype not in SETTLEMENT_ACCOUNT_SUBTYPES:
+                raise serializers.ValidationError({
+                    'branch': 'Branch assignment is only supported for bank and cash settlement accounts.',
                 })
         return attrs
 

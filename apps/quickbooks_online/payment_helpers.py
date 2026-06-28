@@ -148,3 +148,36 @@ def payment_private_note(local_payment) -> str | None:
         marker = 'SVR customer deposit (proforma / prepayment)'
         return f'{base} — {marker}'.strip(' —') if base else marker
     return local_payment.notes or None
+
+
+def resolve_payment_branch(local_payment):
+    """
+    Return the SVR branch for QBO DepartmentRef on a customer payment.
+
+    Prefer a single branch across allocations; when multiple branches appear,
+    fall back to the payment's primary invoice branch, then the open till branch.
+    """
+    from apps.branches.models import Branch
+
+    branch_ids = set()
+    if hasattr(local_payment, 'allocations'):
+        for allocation in local_payment.allocations.select_related('invoice').all():
+            invoice = allocation.invoice
+            if invoice and invoice.branch_id:
+                branch_ids.add(invoice.branch_id)
+
+    invoice = getattr(local_payment, 'invoice', None)
+    if invoice and invoice.branch_id:
+        branch_ids.add(invoice.branch_id)
+
+    if len(branch_ids) == 1:
+        return Branch.objects.filter(pk=branch_ids.pop()).first()
+
+    if invoice and invoice.branch_id:
+        return invoice.branch
+
+    till = getattr(local_payment, 'till', None)
+    if till and till.branch_id:
+        return till.branch
+
+    return None

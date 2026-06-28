@@ -86,6 +86,17 @@ def _score_account_match(account, patterns):
         if substring in normalized_name:
             score += 50
 
+    account_sub_type = getattr(account, 'AccountSubType', '') or ''
+    if account_sub_type == 'Inventory':
+        score += 30
+
+    if normalized_name == 'inventory asset':
+        score += 200
+    elif normalized_name.startswith('inventory asset'):
+        score += 120
+    elif normalized_name == 'inventory':
+        score += 80
+
     return score
 
 

@@ -113,6 +113,8 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: CreditCard,
       items: [
         { name: "Bills", href: "/billing/bills", permission: "view_billing", icon: CreditCard },
+        { name: "Pay Bills", href: "/billing/pay-bills", permission: "view_billing", icon: Wallet },
+        { name: "Vendor Expenses", href: "/billing/expenses", permission: "view_billing", icon: Receipt },
         { name: "Vendor Credits", href: "/billing/vendor-credits", permission: "view_billing", icon: MinusSquare },
         { name: "Vendor Payments", href: "/billing/vendor-payments", permission: "view_billing", icon: Wallet },
         { name: "AP Due", href: "/billing/ap-due", permission: "view_billing", icon: Clock },

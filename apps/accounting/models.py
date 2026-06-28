@@ -56,6 +56,17 @@ class Account(models.Model):
         help_text="Classification used for reporting and till eligibility."
     )
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='settlement_accounts',
+        help_text=(
+            'When set, this bank/cash settlement account is restricted to the branch '
+            'for payments, tills, and refunds. Null = shared across branches.'
+        ),
+    )
     is_active = models.BooleanField(default=True)
     is_till_enabled = models.BooleanField(default=False)
     description = models.TextField(blank=True)
@@ -69,6 +80,7 @@ class Account(models.Model):
             models.Index(fields=['account_type']),
             models.Index(fields=['parent']),
             models.Index(fields=['is_till_enabled']),
+            models.Index(fields=['branch', 'is_active']),
         ]
 
     def __str__(self):

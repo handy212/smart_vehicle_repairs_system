@@ -18,7 +18,8 @@ import {
   MoreVertical,
   Eye,
   Filter,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -48,6 +49,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { getUserFacingError } from "@/lib/api/errors";
 import { BranchQboMappingPanel } from "@/components/branches/BranchQboMappingPanel";
+import { BranchSettlementAccountsPanel } from "@/components/branches/BranchSettlementAccountsPanel";
+import { BranchOnboardingWizard } from "@/components/branches/BranchOnboardingWizard";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -87,6 +90,7 @@ export default function BranchesPage() {
   // State for the strong delete warning
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [onboardBranch, setOnboardBranch] = useState<Branch | null>(null);
   const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -265,6 +269,10 @@ export default function BranchesPage() {
         <BranchQboMappingPanel branches={filteredBranches} />
       </PermissionGuard>
 
+      <PermissionGuard permission="manage_branches">
+        <BranchSettlementAccountsPanel branches={filteredBranches} />
+      </PermissionGuard>
+
       {/* Branches Table */}
       <Card className="mx-4 border-t shadow-sm">
         <CardHeader className="py-3 px-4 border-b bg-muted/30">
@@ -415,6 +423,15 @@ export default function BranchesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => setOnboardBranch(branch)}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                              title="QuickBooks branch setup"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => setEditingBranch(branch)}
                               className="h-7 w-7 p-0 text-muted-foreground hover:text-success"
                             >
@@ -450,13 +467,22 @@ export default function BranchesPage() {
             setIsCreateDialogOpen(false);
             setEditingBranch(null);
           }}
-          onSuccess={() => {
+          onSuccess={(createdBranch) => {
             queryClient.invalidateQueries({ queryKey: ["branches"] });
             setIsCreateDialogOpen(false);
             setEditingBranch(null);
+            if (createdBranch) {
+              setOnboardBranch(createdBranch);
+            }
           }}
         />
       )}
+
+      <BranchOnboardingWizard
+        branch={onboardBranch}
+        open={Boolean(onboardBranch)}
+        onClose={() => setOnboardBranch(null)}
+      />
 
       {/* Strict Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -546,7 +572,7 @@ function BranchDialog({
   branch: Branch | null;
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (createdBranch?: Branch) => void;
 }) {
   const { toast } = useToast();
   const {
@@ -616,9 +642,12 @@ function BranchDialog({
 
   const createMutation = useMutation({
     mutationFn: (data: BranchFormData) => branchesApi.create(data),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Branch created successfully" });
-      onSuccess();
+    onSuccess: (created) => {
+      toast({
+        title: "Branch created",
+        description: "Run QuickBooks setup next to map location and settlement accounts.",
+      });
+      onSuccess(created);
       reset();
     },
 

@@ -20,9 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QboListCell } from "@/components/integrations/QboListCell";
 import { billingApi } from "@/lib/api/billing";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useDebounce } from "@/lib/hooks/useDebounce";
+import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -41,6 +43,7 @@ function getStatusVariant(status: string) {
 
 function VendorCreditsContent() {
   const { formatCurrency } = useCurrency();
+  const { isConnected: isQboConnected } = useQuickBooksConnection();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -67,6 +70,7 @@ function VendorCreditsContent() {
   });
 
   const credits = data?.results ?? [];
+  const tableColSpan = isQboConnected ? 8 : 7;
 
   return (
     <div className="min-h-screen bg-background">
@@ -171,6 +175,7 @@ function VendorCreditsContent() {
                   <TableHead>Vendor</TableHead>
                   <TableHead>Bill</TableHead>
                   <TableHead>Status</TableHead>
+                  {isQboConnected ? <TableHead>QBO</TableHead> : null}
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Unused</TableHead>
                 </TableRow>
@@ -178,13 +183,13 @@ function VendorCreditsContent() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={tableColSpan} className="py-10 text-center text-sm text-muted-foreground">
                       Loading vendor credits...
                     </TableCell>
                   </TableRow>
                 ) : credits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={tableColSpan} className="py-10 text-center text-sm text-muted-foreground">
                       No vendor credits found.
                     </TableCell>
                   </TableRow>
@@ -218,6 +223,15 @@ function VendorCreditsContent() {
                       <TableCell>
                         <Badge variant={getStatusVariant(credit.status)}>{credit.status}</Badge>
                       </TableCell>
+                      {isQboConnected ? (
+                        <TableCell>
+                          <QboListCell
+                            connected={isQboConnected}
+                            status={credit.qbo_sync_status}
+                            error={credit.qbo_sync_error}
+                          />
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-right">{formatCurrency(credit.total)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(credit.unused_amount)}</TableCell>
                     </TableRow>

@@ -18,6 +18,8 @@ import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
+import { canConvertPoToBill } from "@/lib/billing/ap-flow";
+import { ApFlowHint } from "@/components/billing/ApFlowHint";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
@@ -421,11 +423,11 @@ export default function PurchaseOrderDetailPage() {
             </Button>
           )}
 
-          {purchaseOrder.items && purchaseOrder.items.length > 0 && purchaseOrder.status === "received" && (
+          {purchaseOrder.items && purchaseOrder.items.length > 0 && canConvertPoToBill(purchaseOrder.status) && (
             <Link href={`/billing/bills/new?po=${id}`}>
               <Button variant="outline" size="sm" className="h-8 text-xs font-bold">
                 <ReceiptText className="w-4 h-4 mr-2" />
-                Create Bill
+                {purchaseOrder.status === "partially_received" ? "Bill Received Items" : "Convert to Bill"}
               </Button>
             </Link>
           )}
@@ -549,6 +551,10 @@ export default function PurchaseOrderDetailPage() {
         </div>
       </div>
 
+      {purchaseOrder.status === "confirmed" ? (
+        <ApFlowHint variant="po-receive-first" />
+      ) : null}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="border-l-2 border-l-blue-500 shadow-sm">
@@ -599,12 +605,10 @@ export default function PurchaseOrderDetailPage() {
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <Database className="h-6 w-6 text-success/30" />
-                  {purchaseOrder.qbo_sync_status && (
-                    <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={handleQBOSync} disabled={isSyncing}>
-                      <Database className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")} />
-                      {isSyncing ? "Syncing" : "Push"}
-                    </Button>
-                  )}
+                  <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={handleQBOSync} disabled={isSyncing}>
+                    <Database className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")} />
+                    {isSyncing ? "Syncing" : "Push"}
+                  </Button>
                 </div>
               </div>
             </CardContent>

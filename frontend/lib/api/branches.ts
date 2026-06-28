@@ -53,6 +53,66 @@ export interface BranchQboMappingResult {
   qbo_department_name?: string;
 }
 
+export interface BranchSettlementAccount {
+  id: number;
+  code: string;
+  name: string;
+  account_subtype: string;
+  is_till_enabled: boolean;
+  is_active: boolean;
+  branch_id: number | null;
+  branch_name: string | null;
+  qbo_mapped: boolean;
+}
+
+export interface BranchSettlementAccountsOverview {
+  branch_id: number;
+  branch_name: string;
+  assigned: BranchSettlementAccount[];
+  available: BranchSettlementAccount[];
+  shared: BranchSettlementAccount[];
+  unassigned?: BranchSettlementAccount[];
+  errors?: string[];
+  provision?: {
+    created?: string[];
+    updated?: string[];
+    mapped?: string[];
+    skipped?: string[];
+    errors?: string[];
+  };
+}
+
+export interface BranchQboOnboardResult {
+  branch_id: number;
+  branch_name: string;
+  dry_run: boolean;
+  location?: {
+    skipped?: boolean;
+    dry_run?: boolean;
+    action?: string;
+    detail?: string;
+    qbo_department_id?: string;
+    qbo_department_name?: string | null;
+  } | null;
+  settlement?: {
+    created?: string[];
+    updated?: string[];
+    mapped?: string[];
+    skipped?: string[];
+    errors?: string[];
+  } | null;
+  main_cash?: {
+    created?: string[];
+    updated?: string[];
+    mapped?: string[];
+    skipped?: string[];
+    errors?: string[];
+  } | null;
+  settlement_overview?: BranchSettlementAccountsOverview | null;
+  errors?: string[];
+  warnings?: string[];
+}
+
 export interface BranchListResponse {
   count: number;
   next: string | null;
@@ -189,6 +249,41 @@ export const branchesApi = {
     payload: { department_id?: string; action?: "auto_sync" | "clear" },
   ): Promise<BranchQboMappingResult> => {
     const response = await apiClient.post(`/branches/${id}/qbo-mapping/`, payload);
+    return response.data;
+  },
+
+  getSettlementAccounts: async (id: number): Promise<BranchSettlementAccountsOverview> => {
+    const response = await apiClient.get(`/branches/${id}/settlement-accounts/`);
+    return response.data;
+  },
+
+  updateSettlementAccounts: async (
+    id: number,
+    payload: { assign?: number[]; unassign?: number[]; provision_from_qbo?: boolean },
+  ): Promise<BranchSettlementAccountsOverview> => {
+    const response = await apiClient.patch(`/branches/${id}/settlement-accounts/`, payload);
+    return response.data;
+  },
+
+  provisionSettlement: async (
+    id: number,
+    payload?: { dry_run?: boolean; no_map_qbo?: boolean },
+  ): Promise<Record<string, unknown>> => {
+    const response = await apiClient.post(`/branches/${id}/provision-settlement/`, payload ?? {});
+    return response.data;
+  },
+
+  onboardQuickBooks: async (
+    id: number,
+    payload?: {
+      location_action?: "auto_sync" | "map" | "skip";
+      department_id?: string;
+      provision_settlement?: boolean;
+      provision_main_cash?: boolean;
+      dry_run?: boolean;
+    },
+  ): Promise<BranchQboOnboardResult> => {
+    const response = await apiClient.post(`/branches/${id}/qbo-onboard/`, payload ?? {});
     return response.data;
   },
 

@@ -42,6 +42,7 @@ from apps.billing.models import (
     BillLineItem,
     BillPayment,
     SalesOrder,
+    VendorExpense,
 )
 from apps.billing.services import PDFService, BillingService
 from apps.billing.mixins import (
@@ -83,6 +84,10 @@ from apps.billing.serializers import (
     BillPaymentSerializer,
     BillPaymentCreateSerializer,
     BillPaymentListSerializer,
+    PayBillsBatchSerializer,
+    VendorExpenseSerializer,
+    VendorExpenseCreateSerializer,
+    VendorExpenseUpdateSerializer,
     SalesOrderListSerializer,
     SalesOrderDetailSerializer,
     SalesOrderCreateSerializer,
@@ -1318,7 +1323,7 @@ class TillViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def open(self, request):
         """Open a new till"""
-        serializer = OpenTillSerializer(data=request.data)
+        serializer = OpenTillSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         
         branch = resolve_branch(request)
@@ -2711,6 +2716,124 @@ class BillPaymentViewSet(viewsets.ReadOnlyModelViewSet):
         if date_to:
             qs = qs.filter(payment_date__lte=date_to)
         return qs
+
+
+class PayBillsBatchView(APIView):
+    """Pay multiple open vendor bills in one batch (QBO Pay Bills workflow)."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('manage_billing')]
+
+    @transaction.atomic
+    def post(self, request):
+        import uuid
+
+        serializer = PayBillsBatchSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        vendor_id = data['vendor']
+        lines = data['lines']
+        payment_batch = f'batch-{uuid.uuid4().hex[:16]}'
+
+        bills = {
+            b.id: b
+            for b in Bill.objects.filter(
+                id__in=[line['bill_id'] for line in lines],
+                vendor_id=vendor_id,
+            ).select_related('vendor', 'branch')
+        }
+
+        if len(bills) != len(lines):
+            return Response(
+                {'error': 'One or more bills were not found for the selected vendor.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        created_payments = []
+        for line in lines:
+            bill = bills[line['bill_id']]
+            if bill.status in ['draft', 'pending_approval', 'rejected', 'void']:
+                return Response(
+                    {'error': f'Bill {bill.bill_number} is not payable.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            amount = line['amount']
+            if amount <= 0 or amount > bill.amount_due:
+                return Response(
+                    {'error': f'Invalid payment amount for bill {bill.bill_number}.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            pay_data = {
+                'amount': amount,
+                'payment_date': data['payment_date'],
+                'payment_method': data['payment_method'],
+                'reference_number': data.get('reference_number', ''),
+                'notes': data.get('notes', ''),
+            }
+            if data['payment_method'] == 'cash':
+                pay_data['cash_account'] = data.get('cash_account')
+            else:
+                pay_data['bank_account'] = data.get('bank_account')
+
+            pay_serializer = BillPaymentCreateSerializer(
+                data=pay_data,
+                context={'request': request, 'bill': bill},
+            )
+            pay_serializer.is_valid(raise_exception=True)
+            payment = pay_serializer.save(bill=bill, paid_by=request.user, payment_batch=payment_batch)
+            created_payments.append(payment)
+
+        return Response(
+            BillPaymentListSerializer(created_payments, many=True).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class VendorExpenseViewSet(viewsets.ModelViewSet):
+    """Immediate vendor expenses (QBO Purchase / Expense)."""
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status', 'vendor', 'branch', 'payment_method']
+    search_fields = ['expense_number', 'vendor__name', 'reference_number', 'notes']
+    ordering_fields = ['expense_date', 'expense_number', 'total', 'created_at']
+    ordering = ['-expense_date', '-created_at']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'void']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        qs = VendorExpense.objects.select_related(
+            'vendor', 'branch', 'created_by', 'till', 'till__till_account', 'bank_account',
+        ).prefetch_related('line_items')
+        return filter_queryset_for_user_branches(qs, self.request.user, branch_field='branch')
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return VendorExpenseCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return VendorExpenseUpdateSerializer
+        return VendorExpenseSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def void(self, request, pk=None):
+        """Void a vendor expense and reverse its GL posting."""
+        expense = self.get_object()
+        if expense.status == 'void':
+            return Response({'error': 'Expense is already void.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.accounting.services import AccountingService
+
+        reason = (request.data.get('reason') or '').strip() or f'Void vendor expense {expense.expense_number}'
+        AccountingService.reverse_vendor_expense_journal_entries(expense, request.user, reason=reason)
+        expense.status = 'void'
+        expense.save(update_fields=['status', 'updated_at'])
+        return Response(VendorExpenseSerializer(expense, context={'request': request}).data)
 
 
 class SalesOrderViewSet(viewsets.ModelViewSet):

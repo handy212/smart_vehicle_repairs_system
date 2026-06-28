@@ -2488,6 +2488,13 @@ class BillPayment(models.Model):
     )
     reference_number = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
+    payment_batch = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Groups multiple bill payments into one QBO BillPayment sync batch',
+    )
     
     paid_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='bill_payments_made')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -2521,6 +2528,122 @@ class BillPayment(models.Model):
     def update_bill_status(self):
         """Update parent bill amount_paid and status from payments and vendor credits."""
         self.bill.recalculate_amount_paid_from_collections()
+
+
+class VendorExpense(models.Model):
+    """Immediate vendor spend (QBO Purchase / Expense) — paid at time of entry, no AP bill."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('posted', 'Posted'),
+        ('void', 'Void'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = BillPayment.PAYMENT_METHOD_CHOICES
+
+    expense_number = models.CharField(max_length=50, unique=True, editable=False)
+    vendor = models.ForeignKey(
+        'inventory.Supplier',
+        on_delete=models.PROTECT,
+        related_name='vendor_expenses',
+    )
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='vendor_expenses',
+    )
+    expense_date = models.DateField(default=timezone.now)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    till = models.ForeignKey(
+        CashierTill,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_expenses',
+    )
+    bank_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='vendor_expenses',
+    )
+    reference_number = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='vendor_expenses_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-expense_date', '-created_at']
+        indexes = [
+            models.Index(fields=['expense_number']),
+            models.Index(fields=['vendor', 'status']),
+            models.Index(fields=['expense_date']),
+        ]
+
+    def __str__(self):
+        return f'{self.expense_number} - {self.vendor.name}'
+
+    def calculate_totals(self):
+        total = sum((line.total for line in self.line_items.all()), Decimal('0'))
+        self.subtotal = total.quantize(Decimal('0.01'))
+        self.total = self.subtotal
+        VendorExpense.objects.filter(pk=self.pk).update(subtotal=self.subtotal, total=self.total)
+
+    def save(self, *args, **kwargs):
+        if not self.expense_number:
+            last_id = VendorExpense.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
+            self.expense_number = f'VEXP{(last_id + 1):06d}'
+        super().save(*args, **kwargs)
+
+
+class VendorExpenseLineItem(models.Model):
+    vendor_expense = models.ForeignKey(
+        VendorExpense,
+        on_delete=models.CASCADE,
+        related_name='line_items',
+    )
+    description = models.CharField(max_length=255)
+    expense_account = models.ForeignKey(
+        'accounting.Account',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='vendor_expense_lines',
+    )
+    inventory_item = models.ForeignKey(
+        Part,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_expense_lines',
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('1'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    unit_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+    )
+    total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
+
+    class Meta:
+        ordering = ['id']
+
+    def save(self, *args, **kwargs):
+        self.total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
+        super().save(*args, **kwargs)
+        self.vendor_expense.calculate_totals()
 
 
 class SalesOrder(models.Model):

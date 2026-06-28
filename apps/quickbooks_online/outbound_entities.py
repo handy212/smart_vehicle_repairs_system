@@ -81,6 +81,22 @@ OUTBOUND_SYNC_ENTITIES = {
         'task_name': 'task_sync_vendor_credit_to_qbo',
         'service_method': 'sync_vendor_credit',
     },
+    'bill_payment': {
+        'app_label': 'billing',
+        'model_name': 'BillPayment',
+        'module': 'billing',
+        'permission': 'view_billing',
+        'task_name': 'task_sync_bill_payment_to_qbo',
+        'service_method': 'sync_bill_payment',
+    },
+    'vendor_expense': {
+        'app_label': 'billing',
+        'model_name': 'VendorExpense',
+        'module': 'billing',
+        'permission': 'view_billing',
+        'task_name': 'task_sync_vendor_expense_to_qbo',
+        'service_method': 'sync_vendor_expense',
+    },
     'part': {
         'app_label': 'inventory',
         'model_name': 'Part',

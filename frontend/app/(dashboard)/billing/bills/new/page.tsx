@@ -48,6 +48,8 @@ import { inventoryApi } from "@/lib/api/inventory";
 import { branchesApi } from "@/lib/api/branches";
 import { useBranchStore } from "@/store/branchStore";
 import Link from "next/link";
+import { canConvertPoToBill } from "@/lib/billing/ap-flow";
+import { ApFlowHint } from "@/components/billing/ApFlowHint";
 
 const lineItemSchema = z.object({
     description: z.string().min(1, "Description is required"),
@@ -193,7 +195,7 @@ export default function NewBillPage() {
         : purchaseOrdersResponse?.results || [];
 
     const billablePurchaseOrders = purchaseOrders.filter((po) =>
-        po.status === "received"
+        canConvertPoToBill(po.status)
     );
 
     const { data: purchaseOrderDetail, isLoading: isPurchaseOrderDetailLoading } = useQuery({
@@ -357,6 +359,12 @@ export default function NewBillPage() {
                     <p className="text-sm text-muted-foreground">Enter vendor bill details and line items.</p>
                 </div>
             </div>
+
+            {selectedPurchaseOrder || isPurchaseOrderPrefill ? (
+                <ApFlowHint variant="bill-from-po" />
+            ) : (
+                <ApFlowHint variant="bill-standalone" />
+            )}
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 import { getUserFacingError } from "@/lib/api/errors";
+import { branchesApi } from "@/lib/api/branches";
 
 type AccountFormData = {
     code: string;
@@ -32,6 +33,7 @@ type AccountFormData = {
     balance_type: string;
     account_subtype: string;
     parent: string;
+    branch: string;
     description: string;
     is_active: boolean;
     is_till_enabled: boolean;
@@ -50,6 +52,8 @@ type Account = {
     description?: string | null;
     is_active: boolean;
     is_till_enabled?: boolean;
+    branch?: number | null;
+    branch_name?: string | null;
     children_count?: number;
     balance?: number | string;
 };
@@ -84,6 +88,7 @@ const emptyForm: AccountFormData = {
     balance_type: "debit",
     account_subtype: "",
     parent: "",
+    branch: "",
     description: "",
     is_active: true,
     is_till_enabled: false,
@@ -145,6 +150,11 @@ export default function ChartOfAccountsPage() {
         queryFn: () => accountingApi.getAccountingSettings(),
     });
 
+    const { data: branches = [] } = useQuery({
+        queryKey: ["branches", "accessible"],
+        queryFn: () => branchesApi.getAccessible(),
+    });
+
     const controlRoleMap = useMemo(
         () => buildControlAccountRoleMap(controlSettings),
         [controlSettings]
@@ -191,6 +201,7 @@ export default function ChartOfAccountsPage() {
                 balance_type: account.balance_type,
                 account_subtype: account.account_subtype || "",
                 parent: account.parent ? String(account.parent) : "",
+                branch: account.branch ? String(account.branch) : "",
                 description: account.description || "",
                 is_active,
                 is_till_enabled: Boolean(account.is_till_enabled) && is_active,
@@ -205,9 +216,13 @@ export default function ChartOfAccountsPage() {
     });
 
     function normalizePayload(data: AccountFormData) {
+        const isSettlement =
+            data.account_type === "asset" &&
+            ["bank", "cash", "cash_equivalent"].includes(data.account_subtype);
         return {
             ...data,
             parent: data.parent ? Number(data.parent) : null,
+            branch: isSettlement && data.branch ? Number(data.branch) : null,
         };
     }
 
@@ -233,6 +248,7 @@ export default function ChartOfAccountsPage() {
             balance_type: account.balance_type,
             account_subtype: account.account_subtype || "",
             parent: account.parent ? String(account.parent) : "",
+            branch: account.branch ? String(account.branch) : "",
             description: account.description || "",
             is_active: account.is_active,
             is_till_enabled: Boolean(account.is_till_enabled),
@@ -309,6 +325,24 @@ export default function ChartOfAccountsPage() {
                                 </div>
                             </div>
 
+                            {formData.account_type === "asset" &&
+                                ["bank", "cash", "cash_equivalent"].includes(formData.account_subtype) && (
+                                <div>
+                                    <Label htmlFor="branch" className="mb-2 block text-sm font-medium">Branch (settlement)</Label>
+                                    <select
+                                        id="branch"
+                                        className="h-9 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                        value={formData.branch}
+                                        onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                                    >
+                                        <option value="">Shared (all branches)</option>
+                                        {branches.map((branch) => (
+                                            <option key={branch.id} value={branch.id}>{branch.name} ({branch.code})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
                                 <Label htmlFor="description" className="mb-2 block text-sm font-medium">Description</Label>
                                 <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} className="resize-none text-sm" />
@@ -380,6 +414,11 @@ export default function ChartOfAccountsPage() {
                                                 <div className="flex flex-wrap gap-1">
                                                     <Badge variant="outline" className={account.is_active ? "border-success/20 bg-success/10 text-success" : "border-border bg-muted text-muted-foreground"}>{account.is_active ? "Active" : "Inactive"}</Badge>
                                                     {account.is_till_enabled && <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">Till</Badge>}
+                                                    {account.branch_name && (
+                                                        <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                                                            {account.branch_name}
+                                                        </Badge>
+                                                    )}
                                                     {hasChildren && <Badge variant="secondary">Parent</Badge>}
                                                     {controlRoles.map((role) => (
                                                         <Link key={role} href="/accounting/controls" title={`Control account: ${role}`}>

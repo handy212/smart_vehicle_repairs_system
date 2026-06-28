@@ -426,6 +426,9 @@ export interface BillPayment {
   notes?: string;
   paid_by?: number;
   paid_by_name?: string;
+  payment_batch?: string | null;
+  qbo_sync_status?: string | null;
+  qbo_sync_error?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -441,6 +444,37 @@ export interface BillPaymentCreatePayload {
   bank_account?: string;
   reference_number?: string;
   notes?: string;
+}
+
+export interface VendorExpenseLineItem {
+  id: number;
+  description: string;
+  quantity: string;
+  unit_price: string;
+  total: string;
+  expense_account?: number | null;
+  inventory_item?: number | null;
+}
+
+export interface VendorExpense {
+  id: number;
+  expense_number: string;
+  vendor: number;
+  vendor_name?: string;
+  branch?: number | null;
+  expense_date: string;
+  payment_method: string;
+  till?: number | null;
+  bank_account?: number | null;
+  cash_account?: number | null;
+  reference_number?: string;
+  notes?: string;
+  status: string;
+  subtotal: string;
+  total: string;
+  line_items?: VendorExpenseLineItem[];
+  qbo_sync_status?: string | null;
+  qbo_sync_error?: string | null;
 }
 
 export interface Bill {
@@ -1046,6 +1080,7 @@ export const billingApi = {
   billPayments: {
     list: async (params?: {
       page?: number;
+      page_size?: number;
       vendor?: number;
       bill?: number;
       date_from?: string;
@@ -1097,6 +1132,50 @@ export const billingApi = {
 
     convertToWorkOrder: async (id: number): Promise<SalesOrder> => {
       const response = await apiClient.post(`/billing/sales-orders/${id}/convert_to_work_order/`);
+      return response.data;
+    },
+  },
+
+  payBills: async (data: {
+    vendor: number;
+    payment_date: string;
+    payment_method: string;
+    cash_account?: number;
+    bank_account?: number;
+    reference_number?: string;
+    notes?: string;
+    lines: { bill_id: number; amount: string | number }[];
+  }): Promise<BillPayment[]> => {
+    const response = await apiClient.post("/billing/pay-bills/", data);
+    return response.data;
+  },
+
+  vendorExpenses: {
+    list: async (params?: {
+      page?: number;
+      page_size?: number;
+      status?: string;
+      vendor?: number;
+      search?: string;
+      ordering?: string;
+    }): Promise<{ count: number; next: string | null; previous: string | null; results: VendorExpense[] }> => {
+      const response = await apiClient.get("/billing/vendor-expenses/", { params });
+      return response.data;
+    },
+    get: async (id: number): Promise<VendorExpense> => {
+      const response = await apiClient.get(`/billing/vendor-expenses/${id}/`);
+      return response.data;
+    },
+    create: async (data: Record<string, unknown>): Promise<VendorExpense> => {
+      const response = await apiClient.post("/billing/vendor-expenses/", data);
+      return response.data;
+    },
+    update: async (id: number, data: Record<string, unknown>): Promise<VendorExpense> => {
+      const response = await apiClient.patch(`/billing/vendor-expenses/${id}/`, data);
+      return response.data;
+    },
+    void: async (id: number, reason?: string): Promise<VendorExpense> => {
+      const response = await apiClient.post(`/billing/vendor-expenses/${id}/void/`, { reason });
       return response.data;
     },
   },

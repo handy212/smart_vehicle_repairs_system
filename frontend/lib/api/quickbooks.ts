@@ -73,6 +73,8 @@ export const quickbooksApi = {
       | "credit_note"
       | "vendor_bill"
       | "vendor_credit"
+      | "bill_payment"
+      | "vendor_expense"
       | "part";
     object_id: number;
     inline?: boolean;

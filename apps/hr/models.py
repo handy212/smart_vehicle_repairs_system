@@ -1015,6 +1015,7 @@ class Applicant(models.Model):
         ('job_board', 'Job Board'),
         ('social_media', 'Social Media'),
         ('walk_in', 'Walk-in'),
+        ('manual', 'Manual Entry'),
         ('other', 'Other'),
     ]
 

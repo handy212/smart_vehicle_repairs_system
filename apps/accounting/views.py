@@ -1223,6 +1223,24 @@ class AccountListView(ListCreateAPIView):
         till_enabled = self.request.query_params.get('is_till_enabled')
         if till_enabled is not None:
             queryset = queryset.filter(is_till_enabled=till_enabled.lower() == 'true')
+
+        from apps.accounting.settlement_accounts import (
+            SETTLEMENT_ACCOUNT_SUBTYPES,
+            branch_settlement_enforcement_enabled,
+            settlement_accounts_for_branch,
+        )
+        from apps.branches.utils import resolve_branch
+
+        settlement_list = (
+            account_subtype in SETTLEMENT_ACCOUNT_SUBTYPES
+            or (till_enabled is not None and till_enabled.lower() == 'true')
+        )
+        if settlement_list and branch_settlement_enforcement_enabled():
+            branch = resolve_branch(self.request)
+            if branch is not None:
+                allowed_ids = settlement_accounts_for_branch(branch).values_list('pk', flat=True)
+                queryset = queryset.filter(pk__in=allowed_ids)
+
         ordering = self.request.query_params.get('ordering')
         allowed = {
             'code', '-code', 'name', '-name', 'account_type', '-account_type',

@@ -448,6 +448,10 @@ class QBOWebhookView(View):
                     from .tasks import task_pull_bills_from_qbo
                     task_pull_bills_from_qbo.delay()
                     queued.append('bill')
+                elif entity_name in ('billpayment', 'bill_payment'):
+                    from .tasks import task_pull_bill_payments_from_qbo
+                    task_pull_bill_payments_from_qbo.delay()
+                    queued.append('bill_payment')
                 elif entity_name == 'estimate':
                     from .tasks import task_pull_estimates_from_qbo
                     task_pull_estimates_from_qbo.delay()

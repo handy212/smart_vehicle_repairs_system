@@ -15,6 +15,7 @@ router.register(r'credit-notes', views.CreditNoteViewSet, basename='credit-note'
 router.register(r'vendor-credits', views.VendorCreditViewSet, basename='vendor-credit')
 router.register(r'bills', views.BillViewSet, basename='bill')
 router.register(r'bill-payments', views.BillPaymentViewSet, basename='bill-payment')
+router.register(r'vendor-expenses', views.VendorExpenseViewSet, basename='vendor-expense')
 router.register(r'sales-orders', views.SalesOrderViewSet, basename='sales-order')
 # Phase 2: Cash & Payment Management
 router.register(r'tills', views.TillViewSet, basename='till')
@@ -25,6 +26,7 @@ router.register(r'refunds', views.RefundViewSet, basename='refund')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('pay-bills/', views.PayBillsBatchView.as_view(), name='pay-bills-batch'),
     path('tax/config/', views.TaxConfigurationView.as_view(), name='tax-config'),
     
     # Hubtel Payment Gateway endpoints (API)

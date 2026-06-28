@@ -806,6 +806,13 @@ class PurchaseOrderItem(models.Model):
     
     # Notes
     notes = models.TextField(blank=True)
+
+    qbo_line_id = models.CharField(
+        max_length=32,
+        blank=True,
+        default='',
+        help_text='QuickBooks PurchaseOrder line Id for Bill LinkedTxn',
+    )
     
     # Tracking
     created_at = models.DateTimeField(auto_now_add=True)

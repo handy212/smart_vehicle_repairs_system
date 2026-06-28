@@ -98,6 +98,36 @@ def post_bill_payment_to_ledger(sender, instance, created, **kwargs):
     """Post AP clearing entry; defer until commit in production."""
     _schedule_post_bill_payment_ledger(instance.pk)
 
+
+def _schedule_post_vendor_expense_ledger(vendor_expense_pk: int):
+    def _post():
+        from apps.billing.models import VendorExpense as VendorExpenseModel
+
+        expense = VendorExpenseModel.objects.filter(pk=vendor_expense_pk).select_related(
+            'vendor', 'branch', 'created_by', 'till', 'till__till_account', 'bank_account',
+        ).prefetch_related('line_items__expense_account').first()
+        if expense and expense.status == 'posted':
+            AccountingService.post_vendor_expense(expense)
+
+    in_django_manage_test = len(sys.argv) >= 2 and sys.argv[1] == 'test'
+    in_pytest = 'pytest' in sys.modules or bool(os.environ.get('PYTEST_CURRENT_TEST'))
+    if in_django_manage_test or in_pytest:
+        _post()
+    else:
+        transaction.on_commit(_post)
+
+
+from apps.billing.models import VendorExpense
+
+
+@receiver(post_save, sender=VendorExpense)
+def post_vendor_expense_to_ledger(sender, instance, created, **kwargs):
+    """Post vendor expense to GL when posted."""
+    if instance.status != 'posted':
+        return
+    _schedule_post_vendor_expense_ledger(instance.pk)
+
+
 from django.core.exceptions import ValidationError
 from .models import JournalEntry, AccountingControl, AuditLog
 

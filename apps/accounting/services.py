@@ -256,6 +256,38 @@ class AccountingService:
         return reversals
 
     @classmethod
+    def reverse_vendor_expense_journal_entries(cls, vendor_expense, user, reason=''):
+        """Reverse posted journal entries linked to a vendor expense."""
+        ve_type = ContentType.objects.get_for_model(vendor_expense)
+        entries = JournalEntry.objects.filter(
+            content_type=ve_type,
+            object_id=vendor_expense.id,
+            posted=True,
+        ).order_by('id')
+
+        reversals = []
+        for journal_entry in entries:
+            reversal_type = ContentType.objects.get_for_model(journal_entry)
+            if JournalEntry.objects.filter(
+                content_type=reversal_type,
+                object_id=journal_entry.id,
+                reference=f"REV-JE-{journal_entry.id}",
+            ).exists():
+                continue
+            reversals.append(
+                cls.reverse_journal_entry(journal_entry, user, reason=reason)
+            )
+        return reversals
+
+    @classmethod
+    def repost_vendor_expense(cls, vendor_expense, user, reason='Vendor expense updated'):
+        """Reverse existing GL and post updated vendor expense amounts."""
+        if vendor_expense.status != 'posted':
+            return None
+        cls.reverse_vendor_expense_journal_entries(vendor_expense, user, reason=reason)
+        return cls.post_vendor_expense(vendor_expense)
+
+    @classmethod
     def close_income_statement_period(cls, user, start_date, end_date, branch=None):
         """
         Close income and expense activity for a period into retained earnings.
@@ -911,6 +943,76 @@ class AccountingService:
             if not je.validate_balanced():
                 raise ValidationError(f"Journal Entry for Bill Payment {bill_payment.payment_number} is not balanced.")
             
+            return je
+
+    @classmethod
+    def post_vendor_expense(cls, vendor_expense):
+        """Post GL for immediate vendor expense: Dr expense lines, Cr cash/bank."""
+        if vendor_expense.status != 'posted':
+            return None
+
+        ve_type = ContentType.objects.get_for_model(vendor_expense)
+        reference = vendor_expense.reference_number or vendor_expense.expense_number
+        if cls._has_unreversed_posted_journal(
+            content_type=ve_type,
+            object_id=vendor_expense.id,
+            reference=reference,
+        ):
+            return None
+
+        if not vendor_expense.line_items.exists():
+            return None
+
+        with transaction.atomic():
+            if vendor_expense.payment_method == 'cash':
+                cash_account = cls._cash_settlement_account(
+                    vendor_expense.till,
+                    f'Vendor expense {vendor_expense.expense_number}',
+                )
+            else:
+                cash_account = cls._bank_settlement_account(
+                    vendor_expense,
+                    f'Vendor expense {vendor_expense.expense_number}',
+                )
+            default_expense = cls._control_account('default_expense_account', 'Default Expense')
+
+            je = cls._create_posted_journal_header(
+                user=vendor_expense.created_by,
+                date=vendor_expense.expense_date,
+                description=f'Vendor Expense {vendor_expense.expense_number} — {vendor_expense.vendor.name}',
+                reference=vendor_expense.reference_number or vendor_expense.expense_number,
+                branch=vendor_expense.branch,
+                content_object=vendor_expense,
+            )
+
+            expense_by_account = defaultdict(lambda: Decimal('0'))
+            for line in vendor_expense.line_items.select_related('expense_account').all():
+                account = line.expense_account or default_expense
+                expense_by_account[account.id] += Decimal(str(line.total))
+
+            for account_id, amount in expense_by_account.items():
+                from apps.accounting.models import Account
+                account = Account.objects.get(pk=account_id)
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=account,
+                    amount=amount,
+                    transaction_type='debit',
+                    description='Vendor expense',
+                )
+
+            Transaction.objects.create(
+                journal_entry=je,
+                account=cash_account,
+                amount=vendor_expense.total,
+                transaction_type='credit',
+                description=f'Paid via {vendor_expense.payment_method}',
+            )
+
+            if not je.validate_balanced():
+                raise ValidationError(
+                    f'Journal Entry for Vendor Expense {vendor_expense.expense_number} is not balanced.'
+                )
             return je
 
     @classmethod

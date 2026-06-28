@@ -72,7 +72,7 @@ CONTROL_ACCOUNT_QBO_PATTERNS = {
         'name_substrings': ['accounts payable', 'account payable'],
         'account_numbers': ['400'],
         'account_types': ['Accounts Payable'],
-        'exclude_substrings': [],
+        'exclude_substrings': ['momo', 'absa', 'cash receipt', 'cash recepts', 'main cash', 'lpo'],
     },
     'customer_prepayment_account': {
         'name_substrings': ['customer prepayment', 'customer deposit', 'deferred revenue', 'unearned'],
@@ -211,9 +211,10 @@ CONTROL_ACCOUNT_QBO_PATTERNS = {
 # Customer payment method → QBO deposit account patterns.
 PAYMENT_METHOD_QBO_PATTERNS = {
     'cash': {
-        'name_substrings': ['main cash', 'cash receipt', 'petty cash'],
+        'name_substrings': ['cash reciept accounts', 'cash receipt accounts', 'main cash', 'petty cash'],
+        'account_numbers': ['1120'],
         'account_types': ['Bank'],
-        'exclude_substrings': ['lpo', 'momo'],
+        'exclude_substrings': ['lpo', 'momo', 'kumasi', 'accra', 'takoradi', 'tamale'],
     },
     'check': {
         'name_substrings': ['operating bank', 'absa', 'gcb', 'ecobank'],
@@ -296,12 +297,26 @@ TAX_CODE_QBO_PATTERNS = {
 }
 
 # SVR GL account code/name → QBO bank/cash deposit account (svr_account mappings).
+# Legacy generic codes remain for shared HQ accounts; branch leaves are mapped by
+# provision_branch_settlement using BRANCH_SETTLEMENT_KINDS + city name matching.
 SVR_ACCOUNT_QBO_PATTERNS = {
-    '1111': {'name_substrings': ['main cash'], 'account_types': ['Bank']},
-    '1112': {'name_substrings': ['petty cash'], 'account_types': ['Bank']},
-    '1113': {'name_substrings': ['lpo'], 'account_types': ['Bank']},
-    '1100': {'name_substrings': ['operating bank', 'absa', 'ecobank'], 'account_types': ['Bank']},
-    '1010': {'name_substrings': ['cash in safe', 'main cash'], 'account_types': ['Bank']},
+    '1111': {'name_substrings': ['kumasi absa'], 'account_numbers': ['1111'], 'account_types': ['Bank']},
+    '1112': {'name_substrings': ['takoradi absa', 'petty cash'], 'account_numbers': ['1112'], 'account_types': ['Bank']},
+    '1113': {'name_substrings': ['tamale absa', 'lpo'], 'account_numbers': ['1113'], 'account_types': ['Bank']},
+    '1114': {'name_substrings': ['accra absa'], 'account_numbers': ['1114'], 'account_types': ['Bank']},
+    '1121': {'name_substrings': ['kumasi cash receipt', 'kumasi cash reciept', 'kumasi cash recepts'], 'account_numbers': ['1121'], 'account_types': ['Bank']},
+    '1122': {'name_substrings': ['takoradi cash receipt', 'takoradi cash reciept'], 'account_numbers': ['1122'], 'account_types': ['Bank']},
+    '1123': {'name_substrings': ['accra cash receipt', 'accra cash recepts', 'accra cash reciept'], 'account_numbers': ['1123'], 'account_types': ['Bank']},
+    '1141': {'name_substrings': ['accra main cash'], 'account_numbers': ['1141'], 'account_types': ['Bank']},
+    '1142': {'name_substrings': ['takoradi main cash'], 'account_numbers': ['1142'], 'account_types': ['Bank']},
+    '1143': {'name_substrings': ['kumasi main cash'], 'account_numbers': ['1143'], 'account_types': ['Bank']},
+    '1144': {'name_substrings': ['tamale main cash'], 'account_numbers': ['1144'], 'account_types': ['Bank']},
+    '1151': {'name_substrings': ['accra momo'], 'account_numbers': ['1151'], 'account_types': ['Bank']},
+    '1152': {'name_substrings': ['kumasi momo'], 'account_numbers': ['1152'], 'account_types': ['Bank']},
+    '1153': {'name_substrings': ['takoradi momo'], 'account_numbers': ['1153'], 'account_types': ['Bank']},
+    '1154': {'name_substrings': ['tamale momo'], 'account_numbers': ['1154'], 'account_types': ['Bank']},
+    '1100': {'name_substrings': ['operating bank', 'ecobank'], 'account_types': ['Bank']},
+    '1010': {'name_substrings': ['cash in safe'], 'account_types': ['Bank']},
     '1000': {'name_substrings': ['treasury', 'clearing'], 'account_types': ['Bank']},
 }
 
@@ -369,12 +384,58 @@ INVOICE_LINE_ITEM_TEMPLATES = {
     },
 }
 
+BRANCH_MAIN_CASH_CODES = {
+    'accra': '1141',
+    'kumasi': '1143',
+    'takoradi': '1142',
+    'tamale': '1144',
+}
+
 # Branch city/name keywords → QBO Department name patterns.
 BRANCH_DEPARTMENT_PATTERNS = {
     'kumasi': ['kumasi'],
     'takoradi': ['takoradi'],
     'tamale': ['tamale'],
     'accra': ['accra'],
+}
+
+# Settlement account kinds matched in QBO by branch city + name substring.
+BRANCH_SETTLEMENT_KINDS = {
+    'absa': {
+        'label': 'Absa Bank',
+        'name_substrings': ['absa'],
+        'account_subtype': 'bank',
+        'is_till_enabled': False,
+        'qbo_account_types': ['Bank'],
+    },
+    'cash_receipts': {
+        'label': 'Cash Receipts',
+        'name_substrings': ['cash receipt', 'cash reciept', 'cash recepts'],
+        'account_subtype': 'cash_equivalent',
+        'is_till_enabled': False,
+        'qbo_account_types': ['Bank'],
+    },
+    'lpo': {
+        'label': 'LPO Cash',
+        'name_substrings': ['lpo'],
+        'account_subtype': 'cash',
+        'is_till_enabled': False,
+        'qbo_account_types': ['Bank'],
+    },
+    'main_cash': {
+        'label': 'Main Cash',
+        'name_substrings': ['main cash'],
+        'account_subtype': 'cash',
+        'is_till_enabled': True,
+        'qbo_account_types': ['Bank'],
+    },
+    'momo': {
+        'label': 'MOMO',
+        'name_substrings': ['momo', 'mobile money'],
+        'account_subtype': 'cash_equivalent',
+        'is_till_enabled': False,
+        'qbo_account_types': ['Bank'],
+    },
 }
 
 # Owner accounts that must NOT be auto-mapped (deprecated dimensions).

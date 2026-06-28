@@ -5,8 +5,11 @@ from .payment_helpers import is_deposit_stage_invoice
 
 INVOICE_QBO_SYNC_STATUSES = AccountingService.FINALIZED_INVOICE_STATUSES
 PAYMENT_QBO_SYNC_STATUSES = {'completed'}
+PO_QBO_SYNC_STATUSES = {'confirmed', 'partially_received', 'received'}
 PO_QBO_EXCLUDED_STATUSES = {'draft', 'pending_approval', 'rejected', 'cancelled'}
-ESTIMATE_QBO_SYNC_STATUSES = {'sent', 'viewed', 'approved'}
+BILL_PAYMENT_QBO_SYNC_STATUSES = {'cash', 'check', 'bank_transfer', 'mobile_money', 'credit_card', 'other'}
+VENDOR_EXPENSE_QBO_SYNC_STATUSES = {'posted'}
+ESTIMATE_QBO_SYNC_STATUSES = {'sent', 'viewed', 'approved', 'converted'}
 CREDIT_NOTE_QBO_SYNC_STATUSES = {'issued', 'applied', 'refunded'}
 VENDOR_BILL_QBO_EXCLUDED_STATUSES = {'draft', 'pending_approval', 'rejected', 'void'}
 VENDOR_CREDIT_QBO_SYNC_STATUSES = {'issued', 'applied'}
@@ -48,16 +51,40 @@ def outbound_eligibility_reason(entity_type, instance):
         return True, ''
 
     if entity_type == 'purchase_order':
-        return False, (
-            'Purchase orders are not pushed to QuickBooks as bills. '
-            'Receive the PO in SVR, create the linked vendor bill, and sync that bill to QBO.'
-        )
+        if status in PO_QBO_EXCLUDED_STATUSES:
+            return False, (
+                f'Purchase order status "{status}" is not eligible for QuickBooks sync. '
+                'Confirm the purchase order before pushing to QuickBooks.'
+            )
+        if status not in PO_QBO_SYNC_STATUSES:
+            return False, (
+                f'Purchase order status "{status}" is not eligible for QuickBooks sync. '
+                f'Status must be one of: {", ".join(sorted(PO_QBO_SYNC_STATUSES))}.'
+            )
+        return True, ''
+
+    if entity_type == 'bill_payment':
+        bill = getattr(instance, 'bill', None)
+        if bill and getattr(bill, 'status', None) in VENDOR_BILL_QBO_EXCLUDED_STATUSES:
+            return False, 'Cannot sync payment for a draft or void vendor bill.'
+        method = getattr(instance, 'payment_method', None)
+        if method and method not in BILL_PAYMENT_QBO_SYNC_STATUSES:
+            return False, f'Payment method "{method}" is not supported for QuickBooks sync.'
+        return True, ''
+
+    if entity_type == 'vendor_expense':
+        if status not in VENDOR_EXPENSE_QBO_SYNC_STATUSES:
+            return False, (
+                f'Vendor expense status "{status}" is not eligible for QuickBooks sync. '
+                'Post the expense before pushing.'
+            )
+        return True, ''
 
     if entity_type == 'estimate':
         if status not in ESTIMATE_QBO_SYNC_STATUSES:
             return False, (
                 f'Estimate status "{status}" is not eligible for QuickBooks sync. '
-                f'Send or approve the estimate first (status must be one of: '
+                f'Send, approve, or convert the estimate first (status must be one of: '
                 f'{", ".join(sorted(ESTIMATE_QBO_SYNC_STATUSES))}).'
             )
         return True, ''

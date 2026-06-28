@@ -49,12 +49,11 @@ def wire_accounting_controls(*, force=False, dry_run=False):
 
         current = getattr(controls, field_name, None)
         needs_update = current is None
-        if current is not None and force:
-            needs_update = (
-                not current.is_active
-                or current.children.exists()
-                or current.id != account.id
-            )
+        if current is not None:
+            if not current.is_active or not current.is_leaf:
+                needs_update = True
+            elif force and current.id != account.id:
+                needs_update = True
 
         if not needs_update:
             skipped.append(field_name)

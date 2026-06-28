@@ -77,11 +77,13 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 | SVR entity | QBO object | Sync when / notes |
 |------------|------------|-------------------|
 | Supplier | Vendor | On save |
-| **Purchase order** | — | **Not pushed to QBO.** Receive in SVR, then create the **vendor bill** from the PO. |
-| **Vendor bill** (`billing.Bill`) | Bill | Open or paid; **one QBO Bill per PO flow** — updates the existing PO bill if one was created earlier |
+| **Purchase order** | `PurchaseOrder` | On **confirmed** / received; lines store QBO `TxnLineId` for Bill linking |
+| **Vendor bill** (`billing.Bill`) | `Bill` | Open or paid; links to PO via `LinkedTxn` when PO is synced |
+| **Bill payment** (`billing.BillPayment`) | `BillPayment` | On save; batch payments share one QBO BillPayment via `payment_batch` |
+| **Vendor expense** (`billing.VendorExpense`) | `Purchase` (Expense) | On **posted** status — immediate pay, no AP bill |
 | Vendor credit | Vendor Credit | `issued`, `applied` |
 
-**PO → Bill workflow:** SVR inventory receive updates stock. AP is recorded on the **vendor bill** (Billing → Bills). That bill syncs to QBO. If a QBO Bill already exists from an older PO push (`DocNumber` = PO number), the vendor bill sync **updates that same QBO Bill** instead of creating `BILL-…-000001` as a duplicate.
+**PO → Bill → Pay workflow:** Confirm PO in SVR (syncs QBO PurchaseOrder) → receive items → create vendor bill (syncs QBO Bill with PO link) → Pay Bills (syncs QBO BillPayment).
 
 ### Other
 
@@ -172,7 +174,7 @@ Triggered by:
 
 ### Outbound `entity_type` values
 
-`customer`, `invoice`, `payment`, `supplier`, `purchase_order`, `vendor_bill`, `vendor_credit`, `branch`, `estimate`, `credit_note`, `part`
+`customer`, `invoice`, `payment`, `supplier`, `purchase_order`, `vendor_bill`, `bill_payment`, `vendor_expense`, `vendor_credit`, `branch`, `estimate`, `credit_note`, `part`
 
 ## Frontend UI
 

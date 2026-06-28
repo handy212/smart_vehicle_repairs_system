@@ -54,6 +54,8 @@ export interface Account {
     parent?: number | null;
     parent_code?: string | null;
     parent_name?: string | null;
+    branch?: number | null;
+    branch_name?: string | null;
     is_till_enabled?: boolean;
     children_count?: number;
     is_active?: boolean;
@@ -727,7 +729,9 @@ export const accountingApi = {
             params: { account_type: "asset", account_subtype: "cash_equivalent", is_active: true },
         });
         const cashEquivalents = cashEquivalentsResponse.data.results || cashEquivalentsResponse.data;
-        return [...bankAccounts, ...cashEquivalents].filter((account: Account) => (account.children_count || 0) === 0);
+        return [...bankAccounts, ...cashEquivalents].filter(
+            (account: Account) => (account.children_count || 0) === 0,
+        );
     },
 
 

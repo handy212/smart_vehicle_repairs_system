@@ -24,7 +24,7 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
-import { ApplyCreditToBillDialog } from "@/components/billing/ApplyCreditToBillDialog";
+import { ApplyVendorCreditDialog } from "@/components/billing/ApplyVendorCreditDialog";
 import { cn } from "@/lib/utils/cn";
 
 function getStatusVariant(status: string): BadgeProps["variant"] {
@@ -122,7 +122,7 @@ function VendorCreditDetailContent() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
-      <ApplyCreditToBillDialog
+      <ApplyVendorCreditDialog
         open={applyDialogOpen}
         onOpenChange={setApplyDialogOpen}
         vendorCreditId={id}
@@ -142,9 +142,9 @@ function VendorCreditDetailContent() {
               <FileMinus2 className="h-5 w-5 text-muted-foreground" />
               {credit.credit_number}
               <Badge variant={getStatusVariant(credit.status)}>{credit.status.toUpperCase()}</Badge>
-              {isQboConnected && credit.qbo_sync_status && (
+              {isQboConnected && (
                 <Badge variant={credit.qbo_sync_status === "synced" ? "default" : credit.qbo_sync_status === "failed" ? "destructive" : "secondary"} className="capitalize">
-                  QBO: {credit.qbo_sync_status}
+                  QBO: {credit.qbo_sync_status || "un-synced"}
                 </Badge>
               )}
             </h1>
@@ -154,7 +154,7 @@ function VendorCreditDetailContent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isQboConnected && credit.qbo_sync_status && (
+          {isQboConnected && (
             <Button variant="outline" onClick={handleQBOSync} disabled={isSyncing}>
               <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
               {isSyncing ? "Syncing..." : "Push to QuickBooks"}

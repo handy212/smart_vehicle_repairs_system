@@ -6,9 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Wallet } from "lucide-react";
 
 export default function VendorBalancesPage() {
   const { formatCurrency } = useCurrency();
@@ -32,11 +34,19 @@ export default function VendorBalancesPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Vendor Balances</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Suppliers ranked by open AP balance.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Vendor Balances</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Suppliers ranked by open AP balance.
+          </p>
+        </div>
+        <Link href="/billing/pay-bills">
+          <Button size="sm">
+            <Wallet className="mr-2 h-4 w-4" />
+            Pay Bills
+          </Button>
+        </Link>
       </div>
 
       <Card className="max-w-sm">
@@ -52,7 +62,7 @@ export default function VendorBalancesPage() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <TableSkeleton columns={5} rows={10} />
+            <TableSkeleton columns={6} rows={10} />
           ) : suppliers.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">No supplier balances found.</p>
           ) : (
@@ -64,6 +74,7 @@ export default function VendorBalancesPage() {
                   <TableHead className="text-right">Open Balance</TableHead>
                   <TableHead className="text-right">Overdue</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -73,7 +84,10 @@ export default function VendorBalancesPage() {
                   return (
                     <TableRow key={supplier.id}>
                       <TableCell>
-                        <Link href={`/inventory/suppliers/${supplier.id}`} className="font-medium hover:text-primary">
+                        <Link
+                          href={`/inventory/suppliers/${supplier.id}`}
+                          className="font-medium hover:text-primary"
+                        >
                           {supplier.name}
                         </Link>
                       </TableCell>
@@ -89,6 +103,24 @@ export default function VendorBalancesPage() {
                           <Badge variant="outline">Preferred</Badge>
                         ) : (
                           <Badge variant="secondary">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {openBalance > 0 ? (
+                          <div className="flex justify-end gap-2">
+                            <Link href={`/billing/pay-bills?vendor=${supplier.id}`}>
+                              <Button variant="outline" size="sm">
+                                Pay
+                              </Button>
+                            </Link>
+                            <Link href={`/billing/bills?vendor=${supplier.id}`}>
+                              <Button variant="ghost" size="sm">
+                                Bills
+                              </Button>
+                            </Link>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                     </TableRow>

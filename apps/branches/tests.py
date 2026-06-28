@@ -223,6 +223,78 @@ class BranchApiPermissionTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_map_branch.assert_called_once()
 
+    @patch('apps.quickbooks_online.branch_onboard_services.onboard_branch_quickbooks')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_onboard_runs_wizard(self, _mock_connected, mock_onboard):
+        mock_onboard.return_value = {
+            'branch_id': self.branch.id,
+            'branch_name': self.branch.name,
+            'dry_run': False,
+            'location': {'qbo_department_id': '99', 'qbo_department_name': 'Takoradi'},
+            'settlement': {'created': ['1122 (cash_receipts)'], 'mapped': [], 'skipped': [], 'errors': []},
+            'main_cash': {'created': ['1142 (main_cash)'], 'mapped': [], 'skipped': [], 'errors': []},
+            'settlement_overview': {'assigned': [], 'available': [], 'shared': []},
+            'errors': [],
+            'warnings': [],
+        }
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.post(
+            f'/api/branches/{self.branch.id}/qbo-onboard/',
+            {
+                'location_action': 'auto_sync',
+                'provision_settlement': True,
+                'provision_main_cash': True,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_onboard.assert_called_once()
+        self.assertEqual(response.data['location']['qbo_department_name'], 'Takoradi')
+
+    @patch('apps.quickbooks_online.branch_onboard_services.onboard_branch_quickbooks')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_onboard_returns_400_on_errors(self, _mock_connected, mock_onboard):
+        mock_onboard.return_value = {
+            'branch_id': self.branch.id,
+            'branch_name': self.branch.name,
+            'dry_run': False,
+            'errors': ['QuickBooks location sync failed.'],
+            'warnings': [],
+        }
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.post(
+            f'/api/branches/{self.branch.id}/qbo-onboard/',
+            {'location_action': 'auto_sync'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('errors', response.data)
+
+    @patch('apps.quickbooks_online.branch_onboard_services.onboard_branch_quickbooks')
+    def test_qbo_onboard_requires_connection(self, mock_onboard):
+        mock_onboard.return_value = {
+            'branch_id': self.branch.id,
+            'branch_name': self.branch.name,
+            'dry_run': False,
+            'errors': ['QuickBooks is not connected. Connect under Admin → Integrations first.'],
+            'warnings': [],
+        }
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.post(
+            f'/api/branches/{self.branch.id}/qbo-onboard/',
+            {},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_branch_delete_archives_without_removing_staff_assignment(self):
         second_branch = Branch.objects.create(
             name='Archive Target',

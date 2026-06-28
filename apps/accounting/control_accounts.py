@@ -12,7 +12,7 @@ CONTROL_ACCOUNT_SPECS = {
         '2150', 'Customer Prepayments', 'liability', 'credit', 'current_liability', 'L100',
     ),
     'sales_revenue_account': (
-        '4000', 'Sales Revenue', 'income', 'credit', 'revenue', 'I000',
+        '4010', 'Service Revenue', 'income', 'credit', 'revenue', 'I000',
     ),
     'sales_discount_account': (
         '4100', 'Sales Returns & Allowances', 'income', 'debit', 'revenue', 'I000',

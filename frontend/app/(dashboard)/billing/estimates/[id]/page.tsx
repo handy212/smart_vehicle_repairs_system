@@ -81,16 +81,28 @@ export default function EstimateDetailPage() {
   const handleQBOSync = async () => {
     try {
       setIsSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "estimate", object_id: estimateId });
+      const result = await quickbooksApi.syncOutbound({
+        entity_type: "estimate",
+        object_id: estimateId,
+        inline: true,
+      });
+      if (result.status === "failed") {
+        toast({
+          title: "Sync Failed",
+          description: result.detail || result.qbo_sync_error || "QuickBooks did not accept this estimate.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "QuickBooks Sync",
-        description: "Estimate push to QuickBooks triggered. Status should update shortly.",
+        description: "Estimate pushed to QuickBooks successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
-    } catch {
+    } catch (error) {
       toast({
         title: "Sync Failed",
-        description: "Failed to trigger QuickBooks synchronization.",
+        description: getUserFacingError(error, "Failed to trigger QuickBooks synchronization."),
         variant: "destructive",
       });
     } finally {

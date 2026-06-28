@@ -28,6 +28,8 @@ from apps.billing.models import (
     BillLineItem,
     BillPayment,
     SalesOrder,
+    VendorExpense,
+    VendorExpenseLineItem,
 )
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -47,11 +49,32 @@ BANK_SETTLEMENT_PAYMENT_METHODS = {
 }
 
 
-def bank_account_queryset():
-    return Account.objects.filter(
-        is_active=True,
-        account_type='asset',
-        account_subtype__in=['bank', 'cash_equivalent'],
+def bank_account_queryset(*, branch=None):
+    from apps.accounting.settlement_accounts import bank_account_queryset as branch_bank_qs
+
+    return branch_bank_qs(branch=branch)
+
+
+def till_account_queryset(*, branch=None):
+    from apps.accounting.settlement_accounts import till_enabled_account_queryset
+
+    return till_enabled_account_queryset(branch=branch)
+
+
+def _branch_from_invoice_value(invoice_value):
+    if not invoice_value:
+        return None
+    from apps.billing.models import Invoice
+
+    try:
+        invoice_id = int(invoice_value)
+    except (TypeError, ValueError):
+        return None
+    return (
+        Invoice.objects.filter(pk=invoice_id)
+        .select_related('branch')
+        .values_list('branch', flat=True)
+        .first()
     )
 
 
@@ -1329,15 +1352,26 @@ class PaymentSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
 class PaymentCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating payments"""
     cash_account = serializers.PrimaryKeyRelatedField(
-        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        queryset=Account.objects.none(),
         required=False,
         write_only=True,
     )
     bank_account = serializers.PrimaryKeyRelatedField(
-        queryset=bank_account_queryset(),
+        queryset=Account.objects.none(),
         required=False,
         allow_null=True,
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        branch_id = _branch_from_invoice_value(getattr(self, 'initial_data', {}).get('invoice'))
+        branch = None
+        if branch_id:
+            from apps.branches.models import Branch
+
+            branch = Branch.objects.filter(pk=branch_id).first()
+        self.fields['bank_account'].queryset = bank_account_queryset(branch=branch)
+        self.fields['cash_account'].queryset = till_account_queryset(branch=branch)
     
     class Meta:
         model = Payment
@@ -1403,6 +1437,15 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
                     "payment_method": "Open a till for the selected cash account before recording a cash payment."
                 })
 
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            validate_settlement_account_for_branch(
+                cash_account,
+                getattr(invoice, 'branch', None),
+                user=getattr(request, 'user', None) if request else None,
+                field_name='cash_account',
+            )
+
             if invoice_branch_id and open_till.branch_id != invoice_branch_id:
                 raise serializers.ValidationError({
                     "payment_method": "The active till must belong to the invoice branch."
@@ -1416,6 +1459,15 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "bank_account": "Select the bank or cash-equivalent account for this payment."
                 })
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            request = self.context.get('request')
+            validate_settlement_account_for_branch(
+                bank_account,
+                getattr(invoice, 'branch', None),
+                user=getattr(request, 'user', None) if request else None,
+                field_name='bank_account',
+            )
             data['till'] = None
         
         return data
@@ -1551,6 +1603,18 @@ class OpenTillSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 'till_account': 'Select an active leaf Cash, Bank, or Cash Equivalent asset account.'
             })
+        request = self.context.get('request')
+        if request:
+            from apps.branches.utils import resolve_branch
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            branch = resolve_branch(request)
+            validate_settlement_account_for_branch(
+                account,
+                branch,
+                user=request.user,
+                field_name='till_account',
+            )
         counts = data.get('cash_counts') or []
         if counts:
             counted_total = _sum_cash_count_lines(counts)
@@ -1734,6 +1798,19 @@ class RefundCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'bank_account': 'Select the bank or cash-equivalent account for this refund.'
                 })
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            payment = data.get('original_payment')
+            branch = None
+            if payment and payment.invoice_id:
+                branch = payment.invoice.branch
+            request = self.context.get('request')
+            validate_settlement_account_for_branch(
+                bank_account,
+                branch,
+                user=getattr(request, 'user', None) if request else None,
+                field_name='bank_account',
+            )
         return data
 
 # ============================================================================
@@ -1900,16 +1977,31 @@ class VendorCreditApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class VendorCreditListSerializer(serializers.ModelSerializer):
+class VendorCreditListSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     vendor_name = serializers.CharField(source='vendor.name', read_only=True)
     bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
 
     class Meta:
         model = VendorCredit
         fields = [
             'id', 'credit_number', 'credit_date', 'status', 'vendor', 'vendor_name',
             'bill', 'bill_number', 'total', 'unused_amount', 'reason', 'created_at',
+            'qbo_sync_status', 'qbo_sync_error',
         ]
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id,
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
 
 
 class VendorCreditDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
@@ -2208,7 +2300,7 @@ class BillCreateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class BillPaymentListSerializer(serializers.ModelSerializer):
+class BillPaymentListSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
     vendor_id = serializers.IntegerField(source='bill.vendor_id', read_only=True)
     vendor_name = serializers.CharField(source='bill.vendor.name', read_only=True)
@@ -2216,6 +2308,8 @@ class BillPaymentListSerializer(serializers.ModelSerializer):
     till_account_name = serializers.CharField(source='till.till_account.name', read_only=True)
     bank_account_name = serializers.CharField(source='bank_account.name', read_only=True, allow_null=True)
     gross_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
 
     class Meta:
         model = BillPayment
@@ -2224,8 +2318,21 @@ class BillPaymentListSerializer(serializers.ModelSerializer):
             'amount', 'gross_amount', 'wht_rate', 'wht_amount', 'wht_certificate',
             'payment_date', 'payment_method', 'till', 'till_account_name',
             'bank_account', 'bank_account_name', 'reference_number', 'notes',
-            'paid_by', 'paid_by_name', 'created_at',
+            'paid_by', 'paid_by_name', 'payment_batch', 'created_at',
+            'qbo_sync_status', 'qbo_sync_error',
         ]
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id,
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
 
 
 class BillPaymentSerializer(serializers.ModelSerializer):
@@ -2301,6 +2408,14 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'payment_method': 'Open a till for the selected cash account before recording a cash vendor payment.'
                 })
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            validate_settlement_account_for_branch(
+                cash_account,
+                getattr(bill, 'branch', None),
+                user=getattr(request, 'user', None) if request else None,
+                field_name='cash_account',
+            )
             data['till'] = till
             data['bank_account'] = None
         elif payment_method in BANK_SETTLEMENT_PAYMENT_METHODS:
@@ -2309,6 +2424,15 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'bank_account': 'Select the bank or cash-equivalent account for this vendor payment.'
                 })
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            request = self.context.get('request')
+            validate_settlement_account_for_branch(
+                bank_account,
+                getattr(bill, 'branch', None),
+                user=getattr(request, 'user', None) if request else None,
+                field_name='bank_account',
+            )
             data['till'] = None
         return data
 
@@ -2363,3 +2487,179 @@ class SalesOrderCreateSerializer(serializers.ModelSerializer):
         if work_order and customer and work_order.customer_id != customer.id:
             raise serializers.ValidationError({'work_order': 'Work order must belong to the same customer.'})
         return data
+
+
+class PayBillLineSerializer(serializers.Serializer):
+    bill_id = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class PayBillsBatchSerializer(serializers.Serializer):
+    vendor = serializers.IntegerField()
+    payment_date = serializers.DateField(default=timezone.now().date)
+    payment_method = serializers.ChoiceField(choices=BillPayment.PAYMENT_METHOD_CHOICES)
+    reference_number = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    cash_account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        required=False,
+    )
+    bank_account = serializers.PrimaryKeyRelatedField(
+        queryset=bank_account_queryset(),
+        required=False,
+        allow_null=True,
+    )
+    lines = PayBillLineSerializer(many=True)
+
+    def validate_lines(self, lines):
+        if not lines:
+            raise serializers.ValidationError('Select at least one bill to pay.')
+        return lines
+
+
+class VendorExpenseLineItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VendorExpenseLineItem
+        fields = ['id', 'description', 'expense_account', 'inventory_item', 'quantity', 'unit_price', 'total']
+        read_only_fields = ['id', 'total']
+
+
+class VendorExpenseSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    line_items = VendorExpenseLineItemSerializer(many=True, read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    cash_account = serializers.SerializerMethodField()
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VendorExpense
+        fields = [
+            'id', 'expense_number', 'vendor', 'vendor_name', 'branch', 'expense_date',
+            'payment_method', 'till', 'bank_account', 'cash_account', 'reference_number', 'notes',
+            'status', 'subtotal', 'total', 'line_items', 'created_by', 'created_by_name',
+            'created_at', 'updated_at', 'qbo_sync_status', 'qbo_sync_error',
+        ]
+        read_only_fields = [
+            'id', 'expense_number', 'subtotal', 'total', 'created_by', 'created_at', 'updated_at',
+            'cash_account',
+        ]
+
+    def get_cash_account(self, obj):
+        if obj.payment_method == 'cash' and obj.till_id and obj.till.till_account_id:
+            return obj.till.till_account_id
+        return None
+
+    def _get_qbo_mapping(self, obj):
+        from django.contrib.contenttypes.models import ContentType
+        from apps.quickbooks_online.models import QBOMapping
+
+        return QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(obj),
+            object_id=obj.id,
+        ).first()
+
+
+class VendorExpenseCreateSerializer(serializers.ModelSerializer):
+    line_items = VendorExpenseLineItemSerializer(many=True)
+    cash_account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        required=False,
+        write_only=True,
+    )
+
+    class Meta:
+        model = VendorExpense
+        fields = [
+            'vendor', 'branch', 'expense_date', 'payment_method', 'reference_number', 'notes',
+            'bank_account', 'cash_account', 'line_items',
+        ]
+
+    def validate(self, data):
+        payment_method = data.get('payment_method')
+        if payment_method == 'cash':
+            cash_account = data.pop('cash_account', None)
+            if not cash_account:
+                raise serializers.ValidationError({
+                    'cash_account': 'Select a till-enabled cash account for cash vendor expenses.',
+                })
+            branch = data.get('branch')
+            till_qs = CashierTill.objects.filter(status='open', till_account=cash_account)
+            if branch:
+                till_qs = till_qs.filter(branch_id=branch.id)
+            till = till_qs.order_by('-opened_at').first()
+            if not till:
+                raise serializers.ValidationError({
+                    'payment_method': 'Open a till for the selected cash account before recording the expense.',
+                })
+            data['till'] = till
+            data['bank_account'] = None
+        elif payment_method in BANK_SETTLEMENT_PAYMENT_METHODS:
+            data.pop('cash_account', None)
+            if not data.get('bank_account'):
+                raise serializers.ValidationError({
+                    'bank_account': 'Select the bank account for this vendor expense.',
+                })
+            data['till'] = None
+        else:
+            data.pop('cash_account', None)
+        line_items = data.get('line_items') or []
+        if not line_items:
+            raise serializers.ValidationError({'line_items': 'Add at least one expense line.'})
+        return data
+
+    @transaction.atomic
+    def create(self, validated_data):
+        line_items_data = validated_data.pop('line_items')
+        validated_data.pop('cash_account', None)
+        request = self.context.get('request')
+        validated_data['created_by'] = request.user
+        validated_data['status'] = 'posted'
+        expense = VendorExpense.objects.create(**validated_data)
+        for item_data in line_items_data:
+            VendorExpenseLineItem.objects.create(vendor_expense=expense, **item_data)
+        expense.calculate_totals()
+        expense.refresh_from_db()
+        return expense
+
+
+class VendorExpenseUpdateSerializer(VendorExpenseCreateSerializer):
+    """Update a posted vendor expense (reverses and reposts GL when amounts change)."""
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        if instance.status == 'void':
+            raise serializers.ValidationError({'status': 'Void expenses cannot be edited.'})
+
+        mapping = VendorExpenseSerializer()._get_qbo_mapping(instance)
+        if mapping and mapping.status == 'synced':
+            raise serializers.ValidationError({
+                'detail': 'Cannot edit an expense synced to QuickBooks. Void it in SVR and recreate, or adjust in QBO.',
+            })
+
+        line_items_data = validated_data.pop('line_items', None)
+        validated_data.pop('cash_account', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if line_items_data is not None:
+            instance.line_items.all().delete()
+            for item_data in line_items_data:
+                VendorExpenseLineItem.objects.create(vendor_expense=instance, **item_data)
+            instance.calculate_totals()
+            instance.refresh_from_db()
+
+        from apps.accounting.services import AccountingService
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) or instance.created_by
+        AccountingService.repost_vendor_expense(
+            instance,
+            user,
+            reason=f'Vendor expense {instance.expense_number} updated',
+        )
+        instance.refresh_from_db()
+        return instance
+
