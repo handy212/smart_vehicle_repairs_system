@@ -1,25 +1,26 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, subMonths, isBefore, parseISO, startOfDay } from "date-fns";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { billingApi, type Bill, type BillPayment } from "@/lib/api/billing";
-import { inventoryApi } from "@/lib/api/inventory";
-import { accountingApi } from "@/lib/api/accounting";
+import { accountingApi, type Account } from "@/lib/api/accounting";
+import { branchesApi } from "@/lib/api/branches";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
-import { QboListCell } from "@/components/integrations/QboListCell";
+import { useBranchStore } from "@/store/branchStore";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -33,188 +34,299 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
+import { getUserFacingError } from "@/lib/api/errors";
+import { ExternalLink, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 
 const PAYABLE_STATUSES = new Set(["open", "partially_paid", "overdue"]);
+const today = format(new Date(), "yyyy-MM-dd");
+
+function accountLabel(account: Account) {
+  return account.code ? `${account.code} — ${account.name}` : account.name;
+}
+
+function parseAmount(value: string | number | undefined) {
+  const n = parseFloat(String(value ?? "0"));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function isBillOverdue(bill: Bill) {
+  if (bill.status === "overdue") return true;
+  if (!bill.due_date) return false;
+  return isBefore(parseISO(bill.due_date), startOfDay(new Date()));
+}
+
+type DateRangeFilter = "12m" | "30d" | "all";
+type StatusFilter = "all_open" | "overdue";
 
 export default function PayBillsPage() {
+  const router = useRouter();
   const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const activeBranchId = useBranchStore((state) => state.activeBranchId);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
-  const [vendorId, setVendorId] = useState<string>("");
-  const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  const [paymentDate, setPaymentDate] = useState(today);
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const [paymentAccount, setPaymentAccount] = useState("");
   const [cashAccount, setCashAccount] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
+  const [branchId, setBranchId] = useState(activeBranchId ? String(activeBranchId) : "");
   const [selected, setSelected] = useState<Record<number, string>>({});
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const [dateRange, setDateRange] = useState<DateRangeFilter>("12m");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all_open");
+  const [vendorFilter, setVendorFilter] = useState<string>("");
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [lastPayments, setLastPayments] = useState<BillPayment[]>([]);
-  const [syncingPaymentId, setSyncingPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
     const vendorParam = searchParams.get("vendor");
-    if (vendorParam) {
-      setVendorId(vendorParam);
-    }
+    if (vendorParam) setVendorFilter(vendorParam);
   }, [searchParams]);
 
-  const { data: suppliersResponse } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: () => inventoryApi.listSuppliers({ is_active: true }),
-  });
-  const suppliers = Array.isArray(suppliersResponse)
-    ? suppliersResponse
-    : suppliersResponse?.results || [];
+  useEffect(() => {
+    if (activeBranchId && !branchId) {
+      setBranchId(String(activeBranchId));
+    }
+  }, [activeBranchId, branchId]);
 
-  const { data: tillAccounts = [], isLoading: tillAccountsLoading } = useQuery({
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches", "active"],
+    queryFn: () => branchesApi.list({ is_active: true }),
+  });
+
+  const { data: accountingSettings } = useQuery({
+    queryKey: ["accounting", "settings"],
+    queryFn: () => accountingApi.getAccountingSettings(),
+  });
+
+  const { data: tillAccounts = [] } = useQuery({
     queryKey: ["accounting", "till-enabled-accounts"],
     queryFn: () => accountingApi.getTillEnabledAccounts(),
-    enabled: paymentMethod === "cash",
   });
 
-  const { data: bankAccounts = [], isLoading: bankAccountsLoading } = useQuery({
+  const { data: bankAccounts = [] } = useQuery({
     queryKey: ["accounting", "bank-accounts"],
     queryFn: () => accountingApi.getBankAccounts(),
-    enabled: paymentMethod !== "cash",
   });
 
-  const { data: billsResponse, isLoading } = useQuery({
-    queryKey: ["pay-bills", vendorId],
+  const { data: openTills = [] } = useQuery({
+    queryKey: ["accounting", "open-tills", branchId],
     queryFn: () =>
-      billingApi.bills.list({
-        vendor: parseInt(vendorId, 10),
-        page_size: 100,
-        ordering: "due_date",
+      accountingApi.getTills({
+        status: "open",
+        ...(branchId ? { branch: branchId } : {}),
       }),
-    enabled: Boolean(vendorId),
+  });
+
+  const openTillAccountIds = useMemo(
+    () => new Set(openTills.map((till) => till.till_account)),
+    [openTills],
+  );
+
+  const paymentAccountOptions = useMemo(() => {
+    const cashOptions = tillAccounts
+      .filter((account) => openTillAccountIds.has(account.id))
+      .map((account) => ({
+        value: `cash:${account.id}`,
+        label: accountLabel(account),
+      }));
+
+    const bankOptions = bankAccounts.map((account) => ({
+      value: `bank:${account.id}`,
+      label: accountLabel(account),
+    }));
+
+    return { cashOptions, bankOptions, allValues: new Set([...cashOptions, ...bankOptions].map((o) => o.value)) };
+  }, [bankAccounts, openTillAccountIds, tillAccounts]);
+
+  const applyPaymentAccount = useCallback(
+    (value: string) => {
+      if (!value || !paymentAccountOptions.allValues.has(value)) return false;
+      setPaymentAccount(value);
+      const [kind, id] = value.split(":");
+      if (kind === "cash") {
+        setPaymentMethod("cash");
+        setCashAccount(id);
+        setBankAccount("");
+      } else {
+        setPaymentMethod("bank_transfer");
+        setBankAccount(id);
+        setCashAccount("");
+      }
+      return true;
+    },
+    [paymentAccountOptions.allValues],
+  );
+
+  useEffect(() => {
+    if (defaultsApplied) return;
+    if (!accountingSettings && openTills.length === 0 && bankAccounts.length === 0) return;
+
+    const openTill = openTills[0];
+    if (openTill?.till_account) {
+      applyPaymentAccount(`cash:${openTill.till_account}`);
+      setDefaultsApplied(true);
+      return;
+    }
+
+    const defaultBank = accountingSettings?.default_bank_account;
+    const defaultBankInList =
+      defaultBank && bankAccounts.some((account) => account.id === defaultBank);
+    if (defaultBankInList) {
+      applyPaymentAccount(`bank:${defaultBank}`);
+      setDefaultsApplied(true);
+      return;
+    }
+
+    if (bankAccounts[0]?.id) {
+      applyPaymentAccount(`bank:${bankAccounts[0].id}`);
+    }
+    setDefaultsApplied(true);
+  }, [
+    accountingSettings,
+    applyPaymentAccount,
+    bankAccounts,
+    defaultsApplied,
+    openTills,
+  ]);
+
+  useEffect(() => {
+    if (paymentAccount && !paymentAccountOptions.allValues.has(paymentAccount)) {
+      setPaymentAccount("");
+      setCashAccount("");
+      setBankAccount("");
+    }
+  }, [paymentAccount, paymentAccountOptions.allValues]);
+
+  const listParams = useMemo(() => {
+    const params: Parameters<typeof billingApi.bills.list>[0] = {
+      page_size: 200,
+      ordering: "due_date",
+    };
+    if (vendorFilter) params.vendor = parseInt(vendorFilter, 10);
+    if (branchId) params.branch = parseInt(branchId, 10);
+
+    const now = new Date();
+    if (dateRange === "12m") {
+      params.due_date_from = format(subMonths(now, 12), "yyyy-MM-dd");
+    } else if (dateRange === "30d") {
+      params.due_date_from = format(subMonths(now, 1), "yyyy-MM-dd");
+    }
+    return params;
+  }, [branchId, dateRange, vendorFilter]);
+
+  const { data: billsResponse, isLoading } = useQuery({
+    queryKey: ["pay-bills", listParams],
+    queryFn: () => billingApi.bills.list(listParams),
   });
 
   const openBills = useMemo(() => {
     const rows = billsResponse?.results ?? [];
     return rows.filter((bill: Bill) => {
       const status = bill.status?.toLowerCase() ?? "";
-      const due = parseFloat(String(bill.amount_due ?? 0));
-      return PAYABLE_STATUSES.has(status) && due > 0;
+      const due = parseAmount(bill.amount_due);
+      if (!PAYABLE_STATUSES.has(status) || due <= 0) return false;
+      if (statusFilter === "overdue" && !isBillOverdue(bill)) return false;
+      return true;
     });
-  }, [billsResponse]);
+  }, [billsResponse, statusFilter]);
 
   useEffect(() => {
     const billParam = searchParams.get("bill");
-    if (!billParam || !vendorId || openBills.length === 0) return;
+    if (!billParam || openBills.length === 0) return;
     const bill = openBills.find((row) => String(row.id) === billParam);
     if (bill) {
-      setSelected({ [bill.id]: String(bill.amount_due ?? 0) });
+      setChecked((prev) => ({ ...prev, [bill.id]: true }));
+      setSelected((prev) => ({ ...prev, [bill.id]: String(bill.amount_due ?? 0) }));
     }
-  }, [searchParams, vendorId, openBills]);
+  }, [searchParams, openBills]);
 
-  const totalSelected = useMemo(() => {
-    return Object.entries(selected).reduce((sum, [, amount]) => {
-      const parsed = parseFloat(amount || "0");
-      return sum + (Number.isNaN(parsed) ? 0 : parsed);
+  const totalOpenBalance = useMemo(
+    () => openBills.reduce((sum, bill) => sum + parseAmount(bill.amount_due), 0),
+    [openBills],
+  );
+
+  const totalPayment = useMemo(() => {
+    return Object.entries(selected).reduce((sum, [billId, amount]) => {
+      if (!checked[Number(billId)]) return sum;
+      return sum + parseAmount(amount);
     }, 0);
-  }, [selected]);
+  }, [checked, selected]);
+
+  const selectedBillIds = useMemo(
+    () =>
+      Object.entries(checked)
+        .filter(([, isChecked]) => isChecked)
+        .map(([id]) => Number(id)),
+    [checked],
+  );
 
   const payMutation = useMutation({
-    mutationFn: () => {
-      const payload: Parameters<typeof billingApi.payBills>[0] = {
-        vendor: parseInt(vendorId, 10),
-        payment_date: paymentDate,
-        payment_method: paymentMethod,
-        reference_number: referenceNumber,
-        lines: Object.entries(selected).map(([billId, amount]) => ({
-          bill_id: parseInt(billId, 10),
-          amount,
-        })),
-      };
-      if (paymentMethod === "cash") {
-        payload.cash_account = parseInt(cashAccount, 10);
-      } else {
-        payload.bank_account = parseInt(bankAccount, 10);
+    mutationFn: async () => {
+      const billsByVendor = new Map<number, { bill_id: number; amount: string }[]>();
+
+      for (const billId of selectedBillIds) {
+        const bill = openBills.find((b) => b.id === billId);
+        if (!bill) continue;
+        const amount = selected[billId];
+        if (!amount || parseAmount(amount) <= 0) continue;
+        const lines = billsByVendor.get(bill.vendor) ?? [];
+        lines.push({ bill_id: billId, amount });
+        billsByVendor.set(bill.vendor, lines);
       }
-      return billingApi.payBills(payload);
+
+      const allPayments: BillPayment[] = [];
+      for (const [vendor, lines] of billsByVendor) {
+        const payload: Parameters<typeof billingApi.payBills>[0] = {
+          vendor,
+          payment_date: paymentDate,
+          payment_method: paymentMethod,
+          reference_number: referenceNumber,
+          lines,
+        };
+        if (paymentMethod === "cash") {
+          payload.cash_account = parseInt(cashAccount, 10);
+        } else {
+          payload.bank_account = parseInt(bankAccount, 10);
+        }
+        const payments = await billingApi.payBills(payload);
+        allPayments.push(...payments);
+      }
+      return allPayments;
     },
     onSuccess: (payments) => {
       setLastPayments(payments);
       toast({
         title: "Payment recorded",
         description: isQboConnected
-          ? "Bills paid in SVR. QuickBooks sync runs in the background — check status below."
-          : "Vendor bills were paid successfully.",
+          ? `${payments.length} payment(s) recorded. QuickBooks sync runs in the background.`
+          : `${payments.length} payment(s) recorded successfully.`,
       });
       setSelected({});
+      setChecked({});
       queryClient.invalidateQueries({ queryKey: ["pay-bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["billing", "bill-payments"] });
     },
     onError: (error: unknown) => {
-      const apiError = error as { response?: { data?: Record<string, string | string[]> } };
-      const data = apiError.response?.data;
-      const firstFieldError = data
-        ? Object.values(data)
-            .map((value) => (Array.isArray(value) ? value.join(" ") : value))
-            .find(Boolean)
-        : undefined;
       toast({
         title: "Payment failed",
-        description: firstFieldError || "Could not record bill payment.",
+        description: getUserFacingError(error, "Could not record bill payment."),
         variant: "destructive",
       });
     },
   });
 
-  const handlePay = () => {
-    if (paymentMethod === "cash" && !cashAccount) {
-      toast({
-        title: "Cash account required",
-        description: "Select the till-enabled cash account for this payment.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (paymentMethod !== "cash" && !bankAccount) {
-      toast({
-        title: "Bank account required",
-        description: "Select the bank account to pay from.",
-        variant: "destructive",
-      });
-      return;
-    }
-    payMutation.mutate();
-  };
-
-  const handlePushPayment = async (paymentId: number) => {
-    try {
-      setSyncingPaymentId(paymentId);
-      await quickbooksApi.syncOutbound({ entity_type: "bill_payment", object_id: paymentId });
-      toast({
-        title: "QuickBooks sync",
-        description: "Bill payment push triggered. Status should update shortly.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["billing", "bill-payments"] });
-      setLastPayments((current) =>
-        current.map((payment) =>
-          payment.id === paymentId
-            ? { ...payment, qbo_sync_status: "pending", qbo_sync_error: null }
-            : payment
-        )
-      );
-    } catch {
-      toast({
-        title: "QuickBooks sync failed",
-        description: "Could not push bill payment to QuickBooks.",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncingPaymentId(null);
-    }
-  };
-
-  const toggleBill = (bill: Bill, checked: boolean) => {
+  const toggleBill = (bill: Bill, isChecked: boolean) => {
+    setChecked((prev) => ({ ...prev, [bill.id]: isChecked }));
     setSelected((prev) => {
       const next = { ...prev };
-      if (checked) {
+      if (isChecked) {
         next[bill.id] = String(bill.amount_due ?? 0);
       } else {
         delete next[bill.id];
@@ -223,266 +335,282 @@ export default function PayBillsPage() {
     });
   };
 
+  const handlePay = () => {
+    if (!paymentAccount) {
+      toast({
+        title: "Payment account required",
+        description: "Select the bank or cash account to pay from.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (selectedBillIds.length === 0) {
+      toast({
+        title: "No bills selected",
+        description: "Check one or more bills and enter a payment amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+    payMutation.mutate();
+  };
+
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-3">
-        <Link href="/billing/bills">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Bills
-          </Button>
-        </Link>
+    <div className="mx-auto flex max-w-6xl flex-col pb-24">
+      {/* Header — QBO-style title + total */}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-6">
         <div>
-          <h1 className="text-2xl font-bold">Pay Bills</h1>
-          <p className="text-sm text-muted-foreground">
-            Select open bills and pay one or more in a single payment run (QBO-style).
+          <h1 className="text-2xl font-semibold tracking-tight">Pay Bills</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Select bills to pay from your payment account.
           </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Total payment amount
+          </p>
+          <p className="text-3xl font-bold tabular-nums">{formatCurrency(totalPayment)}</p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Payment details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-2">
-            <Label>Vendor</Label>
-            <Select
-              value={vendorId}
-              onValueChange={(value) => {
-                setVendorId(value);
-                setSelected({});
-                setLastPayments([]);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select vendor" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((s: { id: number; name: string }) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Payment date</Label>
-            <Input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Payment method</Label>
-            <Select
-              value={paymentMethod}
-              onValueChange={(value) => {
-                setPaymentMethod(value);
-                setCashAccount("");
-                setBankAccount("");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bank_transfer">Bank transfer</SelectItem>
-                <SelectItem value="check">Check</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="credit_card">Credit card</SelectItem>
-                <SelectItem value="mobile_money">Mobile money</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Reference #</Label>
-            <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} />
-          </div>
-
-          {paymentMethod === "cash" ? (
-            <div className="space-y-2 md:col-span-2 lg:col-span-4">
-              <Label>Cash account (till)</Label>
-              <Select value={cashAccount} onValueChange={setCashAccount}>
-                <SelectTrigger>
-                  <SelectValue placeholder={tillAccountsLoading ? "Loading..." : "Select cash account"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {tillAccounts.map((account) => (
-                    <SelectItem key={account.id} value={String(account.id)}>
-                      {account.code ? `${account.code} — ` : ""}
-                      {account.name}
+      {/* Top fields — payment account, date, ref, location */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Payment account</Label>
+          <Select
+            value={paymentAccount || undefined}
+            onValueChange={(value) => applyPaymentAccount(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select an account" />
+            </SelectTrigger>
+            <SelectContent>
+              {paymentAccountOptions.cashOptions.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Cash — open till</SelectLabel>
+                  {paymentAccountOptions.cashOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Required for QBO sync. Cash payments need an open till on this account.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2 md:col-span-2 lg:col-span-4">
-              <Label>Bank account</Label>
-              <Select value={bankAccount} onValueChange={setBankAccount}>
-                <SelectTrigger>
-                  <SelectValue placeholder={bankAccountsLoading ? "Loading..." : "Select bank account"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={String(account.id)}>
-                      {account.code ? `${account.code} — ` : ""}
-                      {account.name}
+                </SelectGroup>
+              )}
+              {paymentAccountOptions.bankOptions.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Bank</SelectLabel>
+                  {paymentAccountOptions.bankOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Required for QBO Bill Payment sync — this is the account money leaves in QuickBooks.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </SelectGroup>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Open bills</CardTitle>
-          <span className="text-sm font-semibold">
-            Total selected: {formatCurrency(totalSelected)}
-          </span>
-        </CardHeader>
-        <CardContent>
-          {!vendorId ? (
-            <p className="text-sm text-muted-foreground">Select a vendor to see open bills.</p>
-          ) : isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : openBills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No open bills for this vendor.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10" />
-                  <TableHead>Bill #</TableHead>
-                  <TableHead>Due date</TableHead>
-                  <TableHead>Open balance</TableHead>
-                  {isQboConnected ? <TableHead>QBO</TableHead> : null}
-                  <TableHead>Payment</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {openBills.map((bill: Bill) => (
-                  <TableRow key={bill.id}>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Payment date</Label>
+          <Input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Ref no.</Label>
+          <Input
+            value={referenceNumber}
+            onChange={(e) => setReferenceNumber(e.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Location</Label>
+          <Select value={branchId || undefined} onValueChange={setBranchId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((branch) => (
+                <SelectItem key={branch.id} value={String(branch.id)}>
+                  {branch.name}
+                  {branch.code ? ` (${branch.code})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+          <SelectTrigger className="h-8 w-[140px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all_open">All open</SelectItem>
+            <SelectItem value="overdue">Overdue only</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangeFilter)}>
+          <SelectTrigger className="h-8 w-[140px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="12m">Last 12 months</SelectItem>
+            <SelectItem value="30d">Last 30 days</SelectItem>
+            <SelectItem value="all">All dates</SelectItem>
+          </SelectContent>
+        </Select>
+        {vendorFilter && (
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setVendorFilter("")}>
+            Clear vendor filter
+          </Button>
+        )}
+      </div>
+
+      {/* Bills table — QBO columns */}
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableHead className="w-10" />
+              <TableHead className="text-xs uppercase">Payee</TableHead>
+              <TableHead className="text-xs uppercase">Ref no.</TableHead>
+              <TableHead className="text-xs uppercase">Due date</TableHead>
+              <TableHead className="text-xs uppercase">Status</TableHead>
+              <TableHead className="text-right text-xs uppercase">Open balance</TableHead>
+              <TableHead className="text-right text-xs uppercase">Credit applied</TableHead>
+              <TableHead className="w-28 text-right text-xs uppercase">Payment</TableHead>
+              <TableHead className="text-right text-xs uppercase">Total amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center">
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                </TableCell>
+              </TableRow>
+            ) : openBills.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-32 text-center text-sm text-muted-foreground">
+                  No open bills to pay for this location and date range.
+                </TableCell>
+              </TableRow>
+            ) : (
+              openBills.map((bill) => {
+                const isChecked = Boolean(checked[bill.id]);
+                const paymentAmount = parseAmount(selected[bill.id]);
+                const overdue = isBillOverdue(bill);
+                return (
+                  <TableRow key={bill.id} className={isChecked ? "bg-primary/5" : undefined}>
                     <TableCell>
                       <Checkbox
-                        checked={bill.id in selected}
-                        onCheckedChange={(checked) => toggleBill(bill, Boolean(checked))}
+                        checked={isChecked}
+                        onCheckedChange={(value) => toggleBill(bill, Boolean(value))}
                       />
                     </TableCell>
                     <TableCell>
-                      <Link href={`/billing/bills/${bill.id}`} className="font-medium hover:underline">
+                      <div className="font-medium">{bill.vendor_name || "—"}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/billing/bills/${bill.id}`}
+                        className="text-sm text-primary hover:underline"
+                      >
                         {bill.bill_number}
                       </Link>
+                      {bill.reference_number && (
+                        <div className="text-xs text-muted-foreground">{bill.reference_number}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {bill.due_date ? format(parseISO(bill.due_date), "dd/MM/yyyy") : "—"}
                     </TableCell>
                     <TableCell>
-                      {bill.due_date ? format(new Date(bill.due_date), "MMM d, yyyy") : "—"}
+                      <span
+                        className={cn(
+                          "text-sm capitalize",
+                          overdue ? "font-medium text-amber-600" : "text-muted-foreground",
+                        )}
+                      >
+                        {overdue ? "Overdue" : bill.status.replace(/_/g, " ")}
+                      </span>
                     </TableCell>
-                    <TableCell>{formatCurrency(bill.amount_due ?? 0)}</TableCell>
-                    {isQboConnected ? (
-                      <TableCell>
-                        <QboListCell
-                          connected={isQboConnected}
-                          status={bill.qbo_sync_status}
-                          error={bill.qbo_sync_error}
-                        />
-                      </TableCell>
-                    ) : null}
-                    <TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(parseAmount(bill.amount_due))}
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+                    <TableCell className="text-right">
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
-                        disabled={!(bill.id in selected)}
+                        disabled={!isChecked}
                         value={selected[bill.id] ?? ""}
                         onChange={(e) =>
                           setSelected((prev) => ({ ...prev, [bill.id]: e.target.value }))
                         }
-                        className="h-8 w-32"
+                        className="ml-auto h-8 w-24 text-right tabular-nums"
                       />
                     </TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      {isChecked ? formatCurrency(paymentAmount) : formatCurrency(0)}
+                    </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                );
+              })
+            )}
 
-      {lastPayments.length > 0 ? (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Last payment recorded</CardTitle>
+            {openBills.length > 0 && (
+              <TableRow className="border-t-2 bg-muted/20 font-medium hover:bg-muted/20">
+                <TableCell colSpan={5} className="text-sm">
+                  Total payment
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatCurrency(totalOpenBalance)}
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">—</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(totalPayment)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCurrency(totalPayment)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {lastPayments.length > 0 && (
+        <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium">
+              {lastPayments.length} payment{lastPayments.length === 1 ? "" : "s"} recorded (
+              {formatCurrency(lastPayments.reduce((s, p) => s + parseAmount(p.amount), 0))})
+            </p>
             <Link href="/billing/vendor-payments">
               <Button variant="outline" size="sm">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Payment history
               </Button>
             </Link>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {lastPayments.length} bill{lastPayments.length === 1 ? "" : "s"} paid for{" "}
-              {formatCurrency(lastPayments.reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0))}.
-            </p>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Payment #</TableHead>
-                  <TableHead>Bill</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  {isQboConnected ? <TableHead>QBO</TableHead> : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lastPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-mono text-xs">
-                      <Link
-                        href={`/billing/vendor-payments/${payment.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        {payment.payment_number}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{payment.bill_number ?? `#${payment.bill}`}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                    {isQboConnected ? (
-                      <TableCell>
-                        <QboListCell
-                          connected={isQboConnected}
-                          status={payment.qbo_sync_status}
-                          error={payment.qbo_sync_error}
-                          onRetry={() => handlePushPayment(payment.id)}
-                          isRetrying={syncingPaymentId === payment.id}
-                        />
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : null}
+          </div>
+        </div>
+      )}
 
-      <div className="flex justify-end gap-2">
-        <Button
-          disabled={!vendorId || Object.keys(selected).length === 0 || payMutation.isPending}
-          onClick={handlePay}
-        >
-          {payMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save payment
-        </Button>
+      {/* Sticky footer */}
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+          <Button variant="outline" onClick={() => router.push("/billing/bills")}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handlePay}
+            disabled={selectedBillIds.length === 0 || payMutation.isPending}
+          >
+            {payMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save payment
+          </Button>
+        </div>
       </div>
     </div>
   );

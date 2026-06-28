@@ -20,8 +20,11 @@ export interface QboSyncBadgeProps {
   className?: string;
   showLabel?: boolean;
   onRetry?: () => void;
+  onClearMapping?: () => void;
   isRetrying?: boolean;
+  isClearing?: boolean;
   retryLabel?: string;
+  clearLabel?: string;
   compact?: boolean;
 }
 
@@ -32,8 +35,11 @@ export function QboSyncBadge({
   className,
   showLabel = true,
   onRetry,
+  onClearMapping,
   isRetrying = false,
+  isClearing = false,
   retryLabel = "Retry QBO sync",
+  clearLabel = "Clear link",
   compact = false,
 }: QboSyncBadgeProps) {
   if (!connected) return null;
@@ -46,12 +52,28 @@ export function QboSyncBadge({
       normalizedStatus === "pending" ||
       normalizedStatus === "un-synced");
 
+  const showClear =
+    Boolean(onClearMapping) &&
+    (normalizedStatus === "failed" || normalizedStatus === "synced");
+
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <div className={cn("flex flex-wrap items-center gap-2", compact && "gap-1.5")}>
         <Badge variant={badgeVariantForStatus(normalizedStatus)} className="capitalize">
           {showLabel ? `QBO: ${normalizedStatus.replace(/_/g, " ")}` : normalizedStatus.replace(/_/g, " ")}
         </Badge>
+        {showClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size={compact ? "sm" : "sm"}
+            onClick={onClearMapping}
+            disabled={isClearing || isRetrying}
+            className={compact ? "h-7 text-xs" : undefined}
+          >
+            {isClearing ? "Clearing…" : clearLabel}
+          </Button>
+        ) : null}
         {showRetry ? (
           <Button
             type="button"

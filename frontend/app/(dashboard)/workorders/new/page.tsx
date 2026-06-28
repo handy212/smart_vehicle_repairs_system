@@ -30,6 +30,13 @@ import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm"
 import { useToast } from "@/lib/hooks/useToast";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
+import {
+  JOB_TYPE_FIELD_LABEL,
+  JOB_TYPE_GENERAL_LABEL,
+  JOB_TYPE_ROUTINE_LABEL,
+  SERVICE_PACKAGE_LABEL,
+  SERVICE_PACKAGE_PLACEHOLDER,
+} from "@/lib/workorders/job-type-labels";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 import {
   Dialog,
@@ -57,7 +64,13 @@ const workOrderSchema = z.object({
   maintenance_type: z.enum(["general", "routine"]),
   service_type: z.number().optional(),
   service_bundle: z.number().optional(),
-});
+}).refine(
+  (data) => data.maintenance_type !== "routine" || !!data.service_bundle,
+  {
+    message: "Select a service package for routine service jobs",
+    path: ["service_bundle"],
+  }
+);
 
 type WorkOrderFormData = z.input<typeof workOrderSchema>;
 
@@ -709,6 +722,14 @@ export default function NewWorkOrderPage() {
   const onSubmit: SubmitHandler<WorkOrderFormData> = async (data) => {
     setServerError(null);
 
+    if (data.maintenance_type === "routine" && !data.service_bundle) {
+      setError("service_bundle", {
+        type: "manual",
+        message: "Select a service package for routine service jobs",
+      });
+      return;
+    }
+
     // Check for unapproved recommendations
     if (vehicle && (unapprovedRecommendationsData?.count ?? 0) > 0 && !acknowledgedUnapproved) {
       setShowUnapprovedRecommendationsDialog(true);
@@ -1292,44 +1313,44 @@ export default function NewWorkOrderPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {showAdvanced && (
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Maintenance Type */}
-                  <div className="col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-card-foreground mb-1">
-                      Maintenance Type
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-card-foreground">
+                      {JOB_TYPE_FIELD_LABEL}
                     </label>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      General repair follows inspection and diagnosis. Routine service uses a predefined package.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-4">
+                      <label className="flex cursor-pointer items-center space-x-2">
                         <input
                           type="radio"
                           value="general"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-border focus:ring-primary"
+                          className="h-4 w-4 border-border text-primary focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-foreground">General Repair</span>
+                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_GENERAL_LABEL}</span>
                       </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
+                      <label className="flex cursor-pointer items-center space-x-2">
                         <input
                           type="radio"
                           value="routine"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-border focus:ring-primary"
+                          className="h-4 w-4 border-border text-primary focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-foreground">Routine Service</span>
+                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_ROUTINE_LABEL}</span>
                       </label>
                     </div>
                   </div>
 
-                  {/* Service Type (only if routine) */}
                   {watch("maintenance_type") === "routine" && (
-                    <div className="col-span-2 md:col-span-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <label htmlFor="service_type" className="block text-sm font-medium text-card-foreground">
-                          Service Type
+                    <div>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <label htmlFor="service_bundle" className="block text-sm font-medium text-card-foreground">
+                          {SERVICE_PACKAGE_LABEL} *
                         </label>
                         {suggestedService && (
-                          <Badge variant="outline" className="text-[10px] bg-info/10 text-blue-700 border-info/20">
+                          <Badge variant="outline" className="border-info/20 bg-info/10 text-[10px] text-blue-700">
                             Suggested: {suggestedService.suggested_service_name}
                           </Badge>
                         )}
@@ -1338,14 +1359,12 @@ export default function NewWorkOrderPage() {
                         value={watch("service_bundle")?.toString()}
                         onValueChange={(val) => {
                           const bundleId = parseInt(val);
-                          setValue("service_bundle", bundleId);
+                          setValue("service_bundle", bundleId, { shouldValidate: true });
 
-                          // Find selected bundle and set service_type
                           const bundle = bundles.find((b: ServiceBundle) => b.id === bundleId);
                           if (bundle && bundle.service_type) {
                             setValue("service_type", bundle.service_type);
 
-                            // Check for progression logic
                             if (suggestedService) {
                               if (suggestedService.last_service_id === bundle.service_type) {
                                 setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
@@ -1356,26 +1375,29 @@ export default function NewWorkOrderPage() {
                               }
                             }
 
-                            // Auto-fill concerns if empty - use bundle name
                             if (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform")) {
                               setValue("customer_concerns", `Perform ${bundle.name}`);
                             }
                           }
                         }}
                       >
-                        <SelectTrigger id="service_type">
-                          <SelectValue placeholder="Select service bundle" />
+                        <SelectTrigger id="service_bundle">
+                          <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
                         </SelectTrigger>
                         <SelectContent>
                           {bundles.map((bundle: ServiceBundle) => (
                             <SelectItem key={bundle.id} value={bundle.id.toString()}>
                               {bundle.name}
+                              {bundle.service_type_name ? ` · ${bundle.service_type_name}` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {errors.service_bundle && (
+                        <p className="mt-1 text-sm text-destructive">{errors.service_bundle.message}</p>
+                      )}
                       {progressionWarning && (
-                        <p className="mt-1 text-xs font-medium text-primary flex items-center animate-in fade-in slide-in-from-top-1">
+                        <p className="mt-1 flex animate-in fade-in slide-in-from-top-1 items-center text-xs font-medium text-primary">
                           <AlertTriangle className="mr-1 h-3 w-3" />
                           {progressionWarning}
                         </p>
@@ -1383,7 +1405,6 @@ export default function NewWorkOrderPage() {
                     </div>
                   )}
                 </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

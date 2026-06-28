@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Printer, CheckCircle, Download, FileText, Database, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, CheckCircle, Download, FileText } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
@@ -25,8 +25,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ApplyCreditToInvoiceDialog } from "@/components/billing/ApplyCreditToInvoiceDialog";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 
 export default function CreditNoteDetailPage() {
     const { formatCurrency } = useCurrency();
@@ -36,8 +37,14 @@ export default function CreditNoteDetailPage() {
     const id = parseInt(params.id as string);
     const { openPrintWindow, isOpeningPrint } = usePrint();
     const [applyDialogOpen, setApplyDialogOpen] = useState(false);
-    const [isSyncing, setIsSyncing] = useState(false);
     const { isConnected: isQboConnected } = useQuickBooksConnection();
+
+    const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
+        entityType: "credit_note",
+        objectId: id,
+        queryKey: ["creditNote", id],
+        syncSuccessMessage: "Credit memo push to QuickBooks triggered. Status should update shortly.",
+    });
 
     // Validate ID to prevent NaN API calls
     const isValidId = !isNaN(id) && id > 0;
@@ -71,26 +78,6 @@ export default function CreditNoteDetailPage() {
             });
         },
     });
-
-    const handleQBOSync = async () => {
-        try {
-            setIsSyncing(true);
-            await quickbooksApi.syncOutbound({ entity_type: "credit_note", object_id: id });
-            toast({
-                title: "QuickBooks Sync",
-                description: "Credit memo push to QuickBooks triggered. Status should update shortly.",
-            });
-            queryClient.invalidateQueries({ queryKey: ["creditNote", id] });
-        } catch {
-            toast({
-                title: "Sync Failed",
-                description: "Failed to trigger QuickBooks synchronization.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     if (!isValidId) {
         return (
@@ -339,40 +326,19 @@ export default function CreditNoteDetailPage() {
                                 </div>
                             )}
 
-                            {isQboConnected && creditNote.qbo_sync_status && (
+                            {isQboConnected && (
                                 <div className="pt-4 border-t">
                                     <p className="text-sm text-muted-foreground mb-2">QuickBooks Sync</p>
-                                    <div className="flex items-center gap-2">
-                                        <Badge
-                                            variant={
-                                                creditNote.qbo_sync_status === "synced"
-                                                    ? "success"
-                                                    : creditNote.qbo_sync_status === "failed"
-                                                      ? "danger"
-                                                      : "secondary"
-                                            }
-                                            className="capitalize"
-                                        >
-                                            {creditNote.qbo_sync_status}
-                                        </Badge>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 px-2"
-                                            onClick={handleQBOSync}
-                                            disabled={isSyncing}
-                                            title="Push to QuickBooks"
-                                        >
-                                            {isSyncing ? (
-                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                            ) : (
-                                                <Database className="w-3.5 h-3.5" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                    {creditNote.qbo_sync_status === "failed" && creditNote.qbo_sync_error && (
-                                        <p className="text-xs text-destructive mt-2">{creditNote.qbo_sync_error}</p>
-                                    )}
+                                    <QboSyncBadge
+                                        status={creditNote.qbo_sync_status}
+                                        error={creditNote.qbo_sync_error}
+                                        connected={isQboConnected}
+                                        onRetry={handleSync}
+                                        onClearMapping={handleClearMapping}
+                                        isRetrying={isSyncing}
+                                        isClearing={isClearing}
+                                        compact
+                                    />
                                 </div>
                             )}
                         </CardContent>

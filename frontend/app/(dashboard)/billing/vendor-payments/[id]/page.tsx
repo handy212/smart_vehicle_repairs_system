@@ -6,8 +6,8 @@ import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { billingApi } from "@/lib/api/billing";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,9 +30,21 @@ export default function VendorPaymentDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isConnected: isQboConnected } = useQuickBooksConnection();
-  const [isSyncing, setIsSyncing] = useState(false);
   const params = useParams();
   const id = parseInt(params.id as string, 10);
+  const {
+    isSyncing,
+    isClearing,
+    handleSync: handleQBOSync,
+    handleClearMapping: handleQboClearMapping,
+  } = useQboEntitySync({
+    entityType: "bill_payment",
+    objectId: id,
+    queryKey: ["bill-payment", id],
+    extraQueryKeys: [["billing", "bill-payments"]],
+    syncSuccessMessage: "Bill payment push triggered. Status should update shortly.",
+    syncErrorMessage: "Could not push bill payment to QuickBooks.",
+  });
 
   const { data: payment, isLoading } = useQuery({
     queryKey: ["bill-payment", id],
@@ -53,27 +65,6 @@ export default function VendorPaymentDetailPage() {
   });
 
   const batchPayments = batchList && batchList.length > 1 ? batchList : payment ? [payment] : [];
-
-  const handleQBOSync = async () => {
-    try {
-      setIsSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "bill_payment", object_id: id });
-      toast({
-        title: "QuickBooks sync",
-        description: "Bill payment push triggered. Status should update shortly.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["bill-payment", id] });
-      queryClient.invalidateQueries({ queryKey: ["billing", "bill-payments"] });
-    } catch {
-      toast({
-        title: "QuickBooks sync failed",
-        description: "Could not push bill payment to QuickBooks.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   if (isLoading || !payment) {
     return <div className="p-6 text-sm text-muted-foreground">Loading payment…</div>;
@@ -105,6 +96,11 @@ export default function VendorPaymentDetailPage() {
                   status={payment.qbo_sync_status ?? "un-synced"}
                   error={payment.qbo_sync_error}
                   connected={isQboConnected}
+                  onRetry={handleQBOSync}
+                  onClearMapping={handleQboClearMapping}
+                  isRetrying={isSyncing}
+                  isClearing={isClearing}
+                  compact
                 />
               ) : null}
             </div>
@@ -117,18 +113,17 @@ export default function VendorPaymentDetailPage() {
           </div>
         </div>
         {isQboConnected ? (
-          <Button variant="outline" size="sm" onClick={handleQBOSync} disabled={isSyncing}>
-            <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-            {isSyncing ? "Syncing..." : "Push to QuickBooks"}
-          </Button>
+          <QboSyncBadge
+            status={payment.qbo_sync_status ?? "un-synced"}
+            error={payment.qbo_sync_error}
+            connected={isQboConnected}
+            onRetry={handleQBOSync}
+            onClearMapping={handleQboClearMapping}
+            isRetrying={isSyncing}
+            isClearing={isClearing}
+          />
         ) : null}
       </div>
-
-      {isQboConnected && payment.qbo_sync_status === "failed" && payment.qbo_sync_error ? (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="py-3 text-sm text-destructive">{payment.qbo_sync_error}</CardContent>
-        </Card>
-      ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

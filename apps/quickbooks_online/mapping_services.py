@@ -5,6 +5,7 @@ import logging
 from apps.accounting.models import AccountingControl
 
 from .mapping_specs import (
+    CLASS_MAPPING_KINDS,
     ITEM_MAPPING_KINDS,
     MAPPING_KIND_CONTROL,
     TAX_CODE_MAPPING_KINDS,
@@ -23,13 +24,18 @@ from .owner_coa_specs import CONTROL_ACCOUNT_QBO_PATTERNS
 logger = logging.getLogger(__name__)
 
 try:
+    from importlib import import_module
+
     from quickbooks.objects.account import Account as QBAccount
     from quickbooks.objects.item import Item as QBItem
     from quickbooks.objects.taxcode import TaxCode as QBTaxCode
+
+    QBClass = import_module('quickbooks.objects.class').Class
 except ModuleNotFoundError:
     QBAccount = None
     QBItem = None
     QBTaxCode = None
+    QBClass = None
 
 
 class QBOAccountMappingService:
@@ -155,6 +161,45 @@ class QBOAccountMappingService:
             logger.error('Failed to list QBO tax codes: %s', exc)
             return None, str(exc)
 
+    def list_classes(self):
+        client = self.qb.get_client()
+        if not client:
+            return None, 'QuickBooks not connected or unauthorized.'
+        if QBClass is None:
+            return None, self.qb.sdk_unavailable_message()
+
+        try:
+            classes = QBClass.all(qb=client)
+            class_mappings = {
+                row.qbo_class_id: row
+                for row in QBOAccountMapping.objects.exclude(qbo_class_id='')
+            }
+            results = []
+            for qb_class in classes:
+                mapping = class_mappings.get(str(qb_class.Id))
+                mapped_row = None
+                if mapping:
+                    mapped_row = {
+                        'mapping_kind': mapping.mapping_kind,
+                        'mapping_key': mapping.mapping_key,
+                    }
+                parent_name = ''
+                parent_ref = getattr(qb_class, 'ParentRef', None)
+                if parent_ref is not None:
+                    parent_name = getattr(parent_ref, 'name', '') or ''
+                results.append({
+                    'id': str(qb_class.Id),
+                    'name': qb_class.Name,
+                    'active': bool(getattr(qb_class, 'Active', True)),
+                    'parent_name': parent_name,
+                    'mapped_row': mapped_row,
+                })
+            results.sort(key=lambda row: (row['name'] or '').lower())
+            return results, None
+        except Exception as exc:
+            logger.error('Failed to list QBO classes: %s', exc)
+            return None, str(exc)
+
     def get_mapping_overview(self):
         controls = AccountingControl.get_settings()
         stored = {
@@ -190,7 +235,10 @@ class QBOAccountMappingService:
                 ),
                 'qbo_item_id': mapping.qbo_item_id if mapping else '',
                 'qbo_item_name': mapping.qbo_item_name if mapping else '',
+                'qbo_class_id': mapping.qbo_class_id if mapping else '',
+                'qbo_class_name': mapping.qbo_class_name if mapping else '',
                 'uses_tax_code': spec.get('uses_tax_code', False),
+                'uses_class': spec.get('uses_class', False),
                 'status': mapping.status if mapping else 'unmapped',
                 'error_message': mapping.error_message if mapping else '',
                 'qbo_account_hint': CONTROL_ACCOUNT_QBO_HINTS.get(spec.get('control_field') or '', ''),
@@ -210,7 +258,10 @@ class QBOAccountMappingService:
     def _fetch_qbo_tax_code(self, client, tax_code_id):
         return QBTaxCode.get(int(tax_code_id), qb=client)
 
-    def map_row(self, mapping_kind, mapping_key, *, qbo_account_id=None, qbo_item_id=None, user=None):
+    def _fetch_qbo_class(self, client, class_id):
+        return QBClass.get(int(class_id), qb=client)
+
+    def map_row(self, mapping_kind, mapping_key, *, qbo_account_id=None, qbo_item_id=None, qbo_class_id=None, user=None):
         client = self.qb.get_client()
         if not client:
             return False, 'QuickBooks not connected or unauthorized.'
@@ -228,6 +279,26 @@ class QBOAccountMappingService:
                 'qbo_account_id': '',
                 'qbo_account_name': '',
                 'qbo_account_type': '',
+                'status': 'synced',
+                'error_message': '',
+                'updated_by': user,
+            }
+        elif mapping_kind in CLASS_MAPPING_KINDS:
+            if not qbo_class_id:
+                return False, 'qbo_class_id is required for class mappings.'
+            try:
+                qb_class = self._fetch_qbo_class(client, qbo_class_id)
+            except Exception as exc:
+                return False, f'QBO class {qbo_class_id} was not found: {exc}'
+            defaults = {
+                'qbo_class_id': str(qb_class.Id),
+                'qbo_class_name': qb_class.Name or '',
+                'qbo_account_id': '',
+                'qbo_account_name': '',
+                'qbo_account_number': '',
+                'qbo_account_type': '',
+                'qbo_item_id': '',
+                'qbo_item_name': '',
                 'status': 'synced',
                 'error_message': '',
                 'updated_by': user,
@@ -317,6 +388,12 @@ class QBOAccountMappingService:
         mapping = self.get_mapping(mapping_kind, mapping_key)
         if mapping and mapping.qbo_item_id:
             return mapping.qbo_item_id
+        return None
+
+    def resolve_qbo_class_id(self, mapping_kind, mapping_key):
+        mapping = self.get_mapping(mapping_kind, mapping_key)
+        if mapping and mapping.qbo_class_id:
+            return mapping.qbo_class_id
         return None
 
     def resolve_control_account_qbo_id(self, control_field):

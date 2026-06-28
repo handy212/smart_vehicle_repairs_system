@@ -11,6 +11,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -30,6 +32,7 @@ import {
   getActiveNavGroupId,
   getActiveNavItem,
 } from "./nav-group-utils";
+import { NavCategoryBadge } from "./NavCategoryBadge";
 
 export interface GroupedNavPanelProps {
   groups: NavGroup[];
@@ -64,106 +67,164 @@ function NavLink({
   collapsed,
   variant,
   visiblePrimary,
-  brandingColor,
   layout,
   onItemClick,
   Icon,
+  groupId,
+  nested = false,
 }: {
   item: NavGroupItem;
   isActive: boolean;
   collapsed: boolean;
   variant: "mobile" | "desktop" | "dropdown" | "sidebar";
   visiblePrimary?: string;
-  brandingColor?: string;
   layout: "sidebar" | "subnav";
   onItemClick?: () => void;
   Icon?: NavIcon;
+  groupId?: string;
+  nested?: boolean;
 }) {
-  const isSidebar = layout === "sidebar";
-
   const className = cn(
+    "transition-colors duration-150",
     variant === "dropdown" &&
-      "flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
+      "flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none",
     variant === "mobile" &&
-      "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 transition-colors",
-    variant === "mobile" &&
-      (isActive
-        ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"),
+      cn(
+        "flex items-center gap-2 px-3 py-1.5 text-sm font-medium whitespace-nowrap shrink-0 rounded-full",
+        isActive
+          ? "font-semibold bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+      ),
     variant === "desktop" &&
       cn(
-        "flex items-center w-full transition-colors relative rounded-lg text-sm font-medium",
-        collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
-        isActive
-          ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+        "flex w-full items-center rounded-md text-sm",
+        collapsed
+          ? "justify-center p-1.5"
+          : cn("py-1.5", nested ? "pl-3 pr-2" : "px-2.5 gap-2.5"),
+        !collapsed && isActive
+          ? "font-medium text-foreground bg-muted/80"
+          : !collapsed
+            ? "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            : ""
       ),
     variant === "sidebar" &&
       cn(
-        "group relative mx-2 mb-1 flex items-center overflow-hidden rounded-xl transition-colors duration-200",
-        collapsed ? "justify-center px-2 py-2.5" : "px-3.5 py-2.5",
-        isActive
-          ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+        "flex items-center rounded-md text-sm",
+        collapsed
+          ? "mx-1.5 justify-center p-1.5"
+          : cn(nested ? "py-1.5 pr-2" : "mx-1.5 gap-2.5 px-2.5 py-2"),
+        !collapsed && isActive
+          ? cn(
+              "font-medium text-foreground",
+              nested ? "bg-muted/70" : "bg-muted/80"
+            )
+          : !collapsed
+            ? "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            : ""
       )
   );
 
-  const style =
-    isActive && variant !== "dropdown"
-      ? { backgroundColor: `${visiblePrimary}15`, color: visiblePrimary }
+  const style: React.CSSProperties | undefined =
+    isActive && visiblePrimary
+      ? {
+          ...(nested && !collapsed
+            ? { boxShadow: `inset 2px 0 0 ${visiblePrimary}` }
+            : {}),
+          ...(!nested && !collapsed ? { color: visiblePrimary } : {}),
+        }
       : undefined;
 
-  const link = (
-    <Link
-      href={item.href}
-      onClick={onItemClick}
-      className={className}
-      style={style}
-      title={collapsed ? item.name : item.description}
-    >
-      {isActive && variant === "sidebar" && (
-        <div className="absolute inset-0 opacity-10" style={{ backgroundColor: visiblePrimary }} />
-      )}
-      {Icon && (
-        <Icon
-          className={cn(
-            "shrink-0 transition-colors duration-200",
-            variant === "mobile" && "h-3.5 w-3.5",
-            variant === "dropdown" && "h-4 w-4 text-muted-foreground",
-            (variant === "desktop" || variant === "sidebar") &&
-              (collapsed
-                ? isSidebar
-                  ? "h-6 w-6"
-                  : "h-4 w-4"
-                : isSidebar
-                  ? "mr-3.5 h-5 w-5"
-                  : "mr-3 h-4 w-4"),
-            isActive && variant !== "dropdown" ? "" : "text-muted-foreground group-hover:text-foreground"
-          )}
-          style={isActive && variant !== "dropdown" ? { color: visiblePrimary } : undefined}
-        />
-      )}
-      {(variant === "mobile" || variant === "dropdown" || !collapsed) && (
-        <span className={cn(variant === "dropdown" && "flex-1", variant === "sidebar" && "flex-1 tracking-tight")}>
-          {item.name}
-        </span>
-      )}
-      {isActive && variant === "desktop" && !collapsed && brandingColor && (
-        <div
-          className="absolute right-2 top-1/2 h-1 w-1 -translate-y-1/2 rounded-full"
-          style={{ backgroundColor: brandingColor }}
-        />
-      )}
-      {isActive && variant === "sidebar" && !collapsed && (
-        <div
-          className="ml-auto h-1.5 w-1.5 rounded-full shadow-sm"
-          style={{ backgroundColor: visiblePrimary }}
-        />
-      )}
-    </Link>
+  return (
+    <GuardedItem item={item}>
+      <Link
+        href={item.href}
+        onClick={onItemClick}
+        className={className}
+        style={style}
+        title={collapsed ? item.name : item.description}
+        aria-current={isActive ? "page" : undefined}
+      >
+        {Icon && groupId && !nested && (
+          <NavCategoryBadge
+            icon={Icon}
+            groupId={groupId}
+            size="sm"
+            active={isActive}
+          />
+        )}
+        {(variant === "mobile" || variant === "dropdown" || !collapsed) && (
+          <span className={cn("truncate", variant === "dropdown" && "flex-1")}>
+            {item.name}
+          </span>
+        )}
+      </Link>
+    </GuardedItem>
   );
+}
 
-  return <GuardedItem item={item}>{link}</GuardedItem>;
+function NavGroupChildren({
+  group,
+  variant,
+  activeItem,
+  visiblePrimary,
+  layout,
+  onItemClick,
+}: {
+  group: NavGroup;
+  variant: "desktop" | "sidebar";
+  activeItem: NavGroupItem | null;
+  visiblePrimary?: string;
+  layout: "sidebar" | "subnav";
+  onItemClick?: () => void;
+}) {
+  return (
+    <div className="ml-[1.125rem] space-y-0.5 border-l border-border/60 pl-3">
+      {group.items.map((item) => (
+        <NavLink
+          key={item.href}
+          item={item}
+          isActive={item.href === activeItem?.href}
+          collapsed={false}
+          variant={variant}
+          visiblePrimary={visiblePrimary}
+          layout={layout}
+          onItemClick={onItemClick}
+          nested
+        />
+      ))}
+    </div>
+  );
+}
+
+function NavSectionLabel({
+  group,
+  groupActive,
+  compact = false,
+}: {
+  group: NavGroup;
+  groupActive: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+      <NavCategoryBadge
+        icon={group.icon}
+        groupId={group.id}
+        size={compact ? "xs" : "sm"}
+        active={groupActive}
+      />
+      <span
+        className={cn(
+          "truncate font-semibold leading-none",
+          compact
+            ? "text-[11px] uppercase tracking-wide text-muted-foreground"
+            : "text-sm text-foreground"
+        )}
+      >
+        {group.label}
+      </span>
+    </span>
+  );
 }
 
 export function GroupedNavPanel({
@@ -189,6 +250,7 @@ export function GroupedNavPanel({
     : isPerfexTheme
       ? "var(--sidebar-width)"
       : "256px";
+  const isSubnav = layout === "subnav";
 
   const visibleGroups = useMemo(
     () =>
@@ -210,16 +272,30 @@ export function GroupedNavPanel({
   const accordionGroups = visibleGroups.filter((group) => !group.pinned);
   const pinnedGroups = visibleGroups.filter((group) => group.pinned);
 
-  const defaultOpenGroup =
-    activeGroupId && accordionGroups.some((g) => g.id === activeGroupId)
-      ? activeGroupId
-      : accordionGroups[0]?.id ?? "";
+  const defaultOpenGroup = useMemo(() => {
+    if (activeGroupId && accordionGroups.some((g) => g.id === activeGroupId)) {
+      return activeGroupId;
+    }
+    return accordionGroups[0]?.id ?? "";
+  }, [accordionGroups, activeGroupId]);
+
+  const defaultOpenGroups = useMemo(() => {
+    const ids = accordionGroups.map((group) => group.id);
+    if (activeGroupId && ids.includes(activeGroupId)) {
+      return [activeGroupId];
+    }
+    return ids.length > 0 ? [ids[0]] : [];
+  }, [accordionGroups, activeGroupId]);
 
   const [openGroup, setOpenGroup] = useState(defaultOpenGroup);
+  const [openGroups, setOpenGroups] = useState<string[]>(defaultOpenGroups);
 
   useEffect(() => {
     if (activeGroupId) {
       setOpenGroup(activeGroupId);
+      setOpenGroups((current) =>
+        current.includes(activeGroupId) ? current : [...current, activeGroupId]
+      );
     }
   }, [activeGroupId]);
 
@@ -237,102 +313,102 @@ export function GroupedNavPanel({
           collapsed={variant !== "mobile" && isCollapsed}
           variant={variant}
           visiblePrimary={visiblePrimary}
-          brandingColor={primaryColor}
           layout={layout}
           onItemClick={onItemClick}
-          Icon={item.icon}
+          Icon={group.icon}
+          groupId={group.id}
         />
       ))
     );
   };
 
-  const renderAccordionGroup = (group: NavGroup, variant: "desktop" | "sidebar") => {
+  const renderCollapsedGroup = (group: NavGroup, variant: "desktop" | "sidebar") => {
     const groupActive = group.items.some((item) => item.href === activeItem?.href);
-    const GroupIcon = group.icon;
 
-    if (isCollapsed) {
-      if (group.items.length === 1) {
-        const item = group.items[0];
-        return (
-          <div key={group.id}>
-            <NavLink
-              item={item}
-              isActive={item.href === activeItem?.href}
-              collapsed
-              variant={variant}
-              visiblePrimary={visiblePrimary}
-              brandingColor={primaryColor}
-              layout={layout}
-              onItemClick={onItemClick}
-              Icon={item.icon}
-            />
-          </div>
-        );
-      }
-
+    if (group.items.length === 1) {
       return (
-        <div key={group.id}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full items-center justify-center rounded-lg px-2 py-2 transition-colors",
-                  layout === "sidebar" && "mx-2 mb-1 rounded-xl",
-                  groupActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                )}
-                title={group.label}
-                style={
-                  groupActive
-                    ? { backgroundColor: `${visiblePrimary}15`, color: visiblePrimary }
-                    : undefined
-                }
-              >
-                <GroupIcon className={cn("shrink-0", layout === "sidebar" ? "h-6 w-6" : "h-4 w-4")} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" className="w-52">
-              <p className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {group.label}
-              </p>
-              {group.items.map((item) => (
-                <GuardedItem key={item.href} item={item}>
-                  <DropdownMenuItem asChild>
-                    <NavLink
-                      item={item}
-                      isActive={item.href === activeItem?.href}
-                      collapsed={false}
-                      variant="dropdown"
-                      visiblePrimary={visiblePrimary}
-                      layout={layout}
-                      onItemClick={onItemClick}
-                      Icon={item.icon}
-                    />
-                  </DropdownMenuItem>
-                </GuardedItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <NavLink
+          key={group.id}
+          item={group.items[0]}
+          isActive={group.items[0].href === activeItem?.href}
+          collapsed
+          variant={variant}
+          visiblePrimary={visiblePrimary}
+          layout={layout}
+          onItemClick={onItemClick}
+          Icon={group.icon}
+          groupId={group.id}
+        />
       );
     }
+
+    return (
+      <DropdownMenu key={group.id} modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "mx-1.5 flex w-full max-w-full items-center justify-center rounded-md p-1.5 transition-colors hover:bg-muted/50",
+              groupActive && "bg-muted/60"
+            )}
+            title={group.label}
+            aria-label={group.label}
+          >
+            <NavCategoryBadge
+              icon={group.icon}
+              groupId={group.id}
+              size="sm"
+              active={groupActive}
+            />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side="right"
+          align="start"
+          sideOffset={8}
+          collisionPadding={12}
+          className="z-[200] max-h-[min(24rem,calc(100vh-var(--header-height)-2rem))] w-56 overflow-y-auto"
+        >
+          <DropdownMenuLabel className="text-sm font-semibold">{group.label}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {group.items.map((item) => (
+            <GuardedItem key={item.href} item={item}>
+              <DropdownMenuItem asChild>
+                <Link
+                  href={item.href}
+                  onClick={onItemClick}
+                  className={cn(
+                    "cursor-pointer text-sm",
+                    item.href === activeItem?.href && "font-medium text-foreground"
+                  )}
+                >
+                  {item.name}
+                </Link>
+              </DropdownMenuItem>
+            </GuardedItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderExpandedGroup = (group: NavGroup, variant: "desktop" | "sidebar") => {
+    const groupActive = group.items.some((item) => item.href === activeItem?.href);
 
     if (group.items.length === 1) {
       const item = group.items[0];
       return (
-        <div key={group.id} className={layout === "subnav" ? "px-1" : undefined}>
+        <div key={group.id}>
           <NavLink
             item={item}
             isActive={item.href === activeItem?.href}
             collapsed={false}
             variant={variant}
             visiblePrimary={visiblePrimary}
-            brandingColor={primaryColor}
             layout={layout}
             onItemClick={onItemClick}
-            Icon={item.icon}
+            Icon={group.icon}
+            groupId={group.id}
           />
         </div>
       );
@@ -342,33 +418,23 @@ export function GroupedNavPanel({
       <AccordionItem key={group.id} value={group.id} className="border-none">
         <AccordionTrigger
           className={cn(
-            "rounded-lg px-3 py-2 text-sm font-medium hover:no-underline [&>svg]:h-3.5 [&>svg]:w-3.5",
-            layout === "sidebar" && "mx-2 mb-0.5",
+            "rounded-md px-2.5 py-2 hover:no-underline [&>svg:last-child]:ml-2 [&>svg:last-child]:h-3.5 [&>svg:last-child]:w-3.5 [&>svg:last-child]:opacity-50",
+            layout === "sidebar" && "mx-1.5 w-[calc(100%-0.75rem)]",
+            isSubnav && variant === "desktop" && "w-full",
             groupActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          <span className="flex items-center gap-2.5">
-            <GroupIcon className="h-4 w-4 shrink-0" />
-            <span>{group.label}</span>
-          </span>
+          <NavSectionLabel group={group} groupActive={groupActive} compact={isSubnav} />
         </AccordionTrigger>
-        <AccordionContent
-          className={cn("space-y-0.5 pb-1 pt-0", layout === "subnav" ? "pl-2" : "pl-3")}
-        >
-          {group.items.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              isActive={item.href === activeItem?.href}
-              collapsed={false}
-              variant={variant}
-              visiblePrimary={visiblePrimary}
-              brandingColor={primaryColor}
-              layout={layout}
-              onItemClick={onItemClick}
-              Icon={item.icon}
-            />
-          ))}
+        <AccordionContent className="pb-1 pt-0 [&>div]:pb-1 [&>div]:pt-0">
+          <NavGroupChildren
+            group={group}
+            variant={variant}
+            activeItem={activeItem}
+            visiblePrimary={visiblePrimary}
+            layout={layout}
+            onItemClick={onItemClick}
+          />
         </AccordionContent>
       </AccordionItem>
     );
@@ -388,7 +454,8 @@ export function GroupedNavPanel({
           visiblePrimary={visiblePrimary}
           layout={layout}
           onItemClick={onItemClick}
-          Icon={group.items[0].icon}
+          Icon={group.icon}
+          groupId={group.id}
         />
       );
     }
@@ -399,35 +466,30 @@ export function GroupedNavPanel({
           <button
             type="button"
             className={cn(
-              "flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
+              "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
               groupActive
-                ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                ? "bg-muted font-semibold text-foreground"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             )}
-            style={
-              groupActive
-                ? { backgroundColor: `${visiblePrimary}15`, color: visiblePrimary }
-                : undefined
-            }
           >
             {group.label}
-            <ChevronDown className="h-3 w-3 opacity-60" />
+            <ChevronDown className="h-3.5 w-3.5 opacity-50" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuContent align="start" className="w-52">
           {group.items.map((item) => (
             <GuardedItem key={item.href} item={item}>
               <DropdownMenuItem asChild>
-                <NavLink
-                  item={item}
-                  isActive={item.href === activeItem?.href}
-                  collapsed={false}
-                  variant="dropdown"
-                  visiblePrimary={visiblePrimary}
-                  layout={layout}
-                  onItemClick={onItemClick}
-                  Icon={item.icon}
-                />
+                <Link
+                  href={item.href}
+                  onClick={onItemClick}
+                  className={cn(
+                    "cursor-pointer text-sm",
+                    item.href === activeItem?.href && "font-medium"
+                  )}
+                >
+                  {item.name}
+                </Link>
               </DropdownMenuItem>
             </GuardedItem>
           ))}
@@ -445,13 +507,15 @@ export function GroupedNavPanel({
             type="single"
             collapsible
             value={openGroup}
-            onValueChange={(value) => setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)}
+            onValueChange={(value) =>
+              setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)
+            }
             className="space-y-0.5"
           >
-            {accordionGroups.map((group) => renderAccordionGroup(group, "sidebar"))}
+            {accordionGroups.map((group) => renderExpandedGroup(group, "sidebar"))}
           </Accordion>
         ) : (
-          accordionGroups.map((group) => renderAccordionGroup(group, "sidebar"))
+          accordionGroups.map((group) => renderCollapsedGroup(group, "sidebar"))
         )}
       </nav>
     );
@@ -479,16 +543,22 @@ export function GroupedNavPanel({
         )}
         style={{ left: sidebarLeft }}
       >
-        <div className={cn(isPerfexTheme ? "pt-2" : "p-3", isCollapsed && "px-2")}>
+        <div
+          className={cn(
+            "flex h-full flex-col",
+            isPerfexTheme ? "pt-2" : "p-3",
+            isCollapsed && "px-1.5"
+          )}
+        >
           <div
             className={cn(
               "flex items-center",
-              isPerfexTheme ? "mb-1 px-3 py-2" : "mb-3",
+              isPerfexTheme ? "mb-1 px-2 py-1.5" : "mb-2",
               isCollapsed ? "justify-center" : "justify-between"
             )}
           >
             {!isCollapsed && title && (
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {title}
               </h2>
             )}
@@ -496,7 +566,7 @@ export function GroupedNavPanel({
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-6 w-6 shrink-0", !isCollapsed && "ml-auto")}
+                className={cn("h-7 w-7 shrink-0", !isCollapsed && "ml-auto")}
                 onClick={() => onToggleCollapse(!isCollapsed)}
                 title={isCollapsed ? "Expand" : "Collapse"}
               >
@@ -509,24 +579,25 @@ export function GroupedNavPanel({
             )}
           </div>
 
-          <div className={isPerfexTheme ? "space-y-0" : "space-y-1"}>
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
             {!isCollapsed && pinnedGroups.length > 0 && (
-              <div className="mb-1 space-y-0.5 px-1">{renderPinnedItems("desktop")}</div>
+              <div className="mb-2 space-y-0.5">{renderPinnedItems("desktop")}</div>
             )}
             {isCollapsed && renderPinnedItems("desktop")}
 
             {!isCollapsed ? (
               <Accordion
-                type="single"
-                collapsible
-                value={openGroup}
-                onValueChange={(value) => setOpenGroup(Array.isArray(value) ? value[0] ?? "" : value)}
+                type="multiple"
+                value={openGroups}
+                onValueChange={(value) =>
+                  setOpenGroups(Array.isArray(value) ? value : value ? [value] : [])
+                }
                 className="space-y-0.5"
               >
-                {accordionGroups.map((group) => renderAccordionGroup(group, "desktop"))}
+                {accordionGroups.map((group) => renderExpandedGroup(group, "desktop"))}
               </Accordion>
             ) : (
-              accordionGroups.map((group) => renderAccordionGroup(group, "desktop"))
+              accordionGroups.map((group) => renderCollapsedGroup(group, "desktop"))
             )}
           </div>
         </div>

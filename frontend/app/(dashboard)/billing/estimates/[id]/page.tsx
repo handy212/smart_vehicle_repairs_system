@@ -29,8 +29,9 @@ import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 
 const parseAmount = (value?: string | number | null) => {
   if (value === null || value === undefined) {
@@ -50,8 +51,20 @@ export default function EstimateDetailPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const {
+    isSyncing,
+    isClearing,
+    handleSync: handleQBOSync,
+    handleClearMapping: handleQboClearMapping,
+  } = useQboEntitySync({
+    entityType: "estimate",
+    objectId: estimateId,
+    queryKey: ["estimate", estimateId],
+    inline: true,
+    syncSuccessMessage: "Estimate pushed to QuickBooks successfully.",
+    syncErrorMessage: "Failed to trigger QuickBooks synchronization.",
+  });
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const [activeTab, setActiveTab] = useState("estimate");
   const { user: currentUser } = useAuthStore();
@@ -77,38 +90,6 @@ export default function EstimateDetailPage() {
   ]);
   const canConvertEstimateToWorkOrder = hasPermission("create_workorders");
   const currentStatus = estimate?.status ?? null;
-
-  const handleQBOSync = async () => {
-    try {
-      setIsSyncing(true);
-      const result = await quickbooksApi.syncOutbound({
-        entity_type: "estimate",
-        object_id: estimateId,
-        inline: true,
-      });
-      if (result.status === "failed") {
-        toast({
-          title: "Sync Failed",
-          description: result.detail || result.qbo_sync_error || "QuickBooks did not accept this estimate.",
-          variant: "destructive",
-        });
-        return;
-      }
-      toast({
-        title: "QuickBooks Sync",
-        description: "Estimate pushed to QuickBooks successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
-    } catch (error) {
-      toast({
-        title: "Sync Failed",
-        description: getUserFacingError(error, "Failed to trigger QuickBooks synchronization."),
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const canEditInUi = canEditEstimate && estimate?.status !== "converted";
 
@@ -806,44 +787,15 @@ export default function EstimateDetailPage() {
                       {isQboConnected && estimate.qbo_sync_status && (
                         <div className="flex flex-col mt-2">
                           <span className="text-sm text-muted-foreground mb-1">QuickBooks Sync</span>
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={
-                                  estimate.qbo_sync_status === "synced"
-                                    ? "success"
-                                    : estimate.qbo_sync_status === "failed"
-                                      ? "danger"
-                                      : "secondary"
-                                }
-                                className="w-fit capitalize"
-                              >
-                                {estimate.qbo_sync_status}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2"
-                                onClick={handleQBOSync}
-                                disabled={isSyncing}
-                                title="Push to QuickBooks"
-                              >
-                                {isSyncing ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Database className="w-3.5 h-3.5" />
-                                )}
-                              </Button>
-                            </div>
-                            {estimate.qbo_sync_status === "failed" && estimate.qbo_sync_error && (
-                              <span
-                                className="text-xs text-destructive line-clamp-2 max-w-[200px]"
-                                title={estimate.qbo_sync_error}
-                              >
-                                {estimate.qbo_sync_error}
-                              </span>
-                            )}
-                          </div>
+                          <QboSyncBadge
+                            status={estimate.qbo_sync_status}
+                            error={estimate.qbo_sync_error}
+                            onRetry={handleQBOSync}
+                            onClearMapping={handleQboClearMapping}
+                            isRetrying={isSyncing}
+                            isClearing={isClearing}
+                            compact
+                          />
                         </div>
                       )}
                       {latestInvoice && (

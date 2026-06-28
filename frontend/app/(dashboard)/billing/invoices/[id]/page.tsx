@@ -30,10 +30,11 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/lib/hooks/usePermissions";
-import { Undo2, Database } from "lucide-react";
-import { quickbooksApi } from "@/lib/api/quickbooks";
+import { Undo2 } from "lucide-react";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
@@ -86,29 +87,18 @@ export default function InvoiceDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
-  const [isSyncing, setIsSyncing] = useState(false);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
-
-  const handleQBOSync = async () => {
-    try {
-      setIsSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "invoice", object_id: invoiceId });
-      toast({
-        title: "QuickBooks Sync",
-        description: "Invoice push to QuickBooks triggered. Status should update shortly.",
-      });
-      // Invalidate query to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
-    } catch {
-      toast({
-        title: "Sync Failed",
-        description: "Failed to trigger QuickBooks synchronization.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  const {
+    isSyncing,
+    isClearing,
+    handleSync: handleQBOSync,
+    handleClearMapping: handleQboClearMapping,
+  } = useQboEntitySync({
+    entityType: "invoice",
+    objectId: invoiceId,
+    queryKey: ["invoice", invoiceId],
+    syncSuccessMessage: "Invoice push to QuickBooks triggered. Status should update shortly.",
+  });
 
   // Validate invoiceId to prevent NaN API calls
   const isValidId = !isNaN(invoiceId) && invoiceId > 0;
@@ -693,28 +683,15 @@ export default function InvoiceDetailPage() {
                       {isQboConnected && invoice.qbo_sync_status && (
                         <div className="flex flex-col mt-2">
                           <span className="text-sm text-muted-foreground mb-1">QuickBooks Sync</span>
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant={invoice.qbo_sync_status === 'synced' ? 'success' : invoice.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} className="w-fit capitalize">
-                                {invoice.qbo_sync_status}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={handleQBOSync}
-                                disabled={isSyncing}
-                                title="Sync with QuickBooks"
-                              >
-                                <Database className={cn("h-3 w-3", isSyncing && "animate-spin")} />
-                              </Button>
-                            </div>
-                            {invoice.qbo_sync_status === 'failed' && invoice.qbo_sync_error && (
-                              <span className="text-xs text-destructive line-clamp-2 max-w-[200px]" title={invoice.qbo_sync_error}>
-                                {invoice.qbo_sync_error}
-                              </span>
-                            )}
-                          </div>
+                          <QboSyncBadge
+                            status={invoice.qbo_sync_status}
+                            error={invoice.qbo_sync_error}
+                            onRetry={handleQBOSync}
+                            onClearMapping={handleQboClearMapping}
+                            isRetrying={isSyncing}
+                            isClearing={isClearing}
+                            compact
+                          />
                         </div>
                       )}
                     </div>

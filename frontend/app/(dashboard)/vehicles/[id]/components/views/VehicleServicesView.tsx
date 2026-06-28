@@ -220,7 +220,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead className="font-semibold text-card-foreground">Maintenance Type</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Service type</TableHead>
                   <TableHead className="font-semibold text-card-foreground">Last Service</TableHead>
                   <TableHead className="font-semibold text-card-foreground">Next Due</TableHead>
                   <TableHead className="font-semibold text-card-foreground">Interval Settings</TableHead>

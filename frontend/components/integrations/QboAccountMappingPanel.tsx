@@ -59,6 +59,9 @@ function accountsForRow(row: QboMappingRow, accounts: QboAccountOption[]): QboAc
 type DraftValue = string;
 
 function currentMappedValue(row: QboMappingRow): DraftValue {
+  if (row.uses_class) {
+    return row.qbo_class_id || UNMAPPED_VALUE;
+  }
   if (row.uses_item) {
     return row.qbo_item_id || UNMAPPED_VALUE;
   }
@@ -95,6 +98,9 @@ function formatMappedQboTarget(
   if (row.uses_item && row.qbo_item_name) {
     return row.qbo_item_name;
   }
+  if (row.uses_class && row.qbo_class_name) {
+    return row.qbo_class_name;
+  }
   if (!row.qbo_account_name && !row.qbo_account_id) {
     return null;
   }
@@ -125,6 +131,7 @@ function rowMatchesSearch(
     row.qbo_account_name,
     row.qbo_account_number,
     row.qbo_item_name,
+    row.qbo_class_name,
     mappedTarget,
     accountNumberById.get(row.qbo_account_id),
   ]
@@ -182,15 +189,27 @@ export function QboAccountMappingPanel() {
     enabled: isConnected,
   });
 
+  const {
+    data: classesData,
+    isLoading: classesLoading,
+    refetch: refetchClasses,
+    isFetching: classesFetching,
+  } = useQuery({
+    queryKey: ["qbo", "classes"],
+    queryFn: () => qboMappingsApi.listClasses(),
+    enabled: isConnected,
+  });
+
   const accounts = accountsData?.accounts ?? [];
   const items = itemsData?.items ?? [];
   const taxCodes = taxCodesData?.tax_codes ?? [];
+  const classes = classesData?.classes ?? [];
 
   const saveMutation = useMutation({
     mutationFn: ([mappingKind, mappingKey, payload]: [
       string,
       string,
-      { qbo_account_id?: string; qbo_item_id?: string; action?: "clear" },
+      { qbo_account_id?: string; qbo_item_id?: string; qbo_class_id?: string; action?: "clear" },
     ]) => qboMappingsApi.saveMapping(mappingKind, mappingKey, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["qbo", "account-mappings"] });
@@ -324,6 +343,17 @@ export function QboAccountMappingPanel() {
           title: "Item mapped",
           description: item ? `${row.label} → ${item.name}` : `${row.label} mapped in QuickBooks.`,
         });
+      } else if (row.uses_class) {
+        await saveMutation.mutateAsync([
+          row.mapping_kind,
+          row.mapping_key,
+          { qbo_class_id: selected },
+        ]);
+        const qbClass = classes.find((entry) => entry.id === selected);
+        toast({
+          title: "Class mapped",
+          description: qbClass ? `${row.label} → ${qbClass.name}` : `${row.label} mapped in QuickBooks.`,
+        });
       } else {
         await saveMutation.mutateAsync([
           row.mapping_kind,
@@ -366,8 +396,8 @@ export function QboAccountMappingPanel() {
     }
   };
 
-  const isLoading = overviewLoading || accountsLoading || itemsLoading || taxCodesLoading;
-  const isRefreshing = accountsFetching || itemsFetching || taxCodesFetching;
+  const isLoading = overviewLoading || accountsLoading || itemsLoading || taxCodesLoading || classesLoading;
+  const isRefreshing = accountsFetching || itemsFetching || taxCodesFetching || classesFetching;
 
   const buildAccountOptions = (row: QboMappingRow): QboSearchableOption[] => {
     const base: QboSearchableOption[] = [
@@ -440,6 +470,29 @@ export function QboAccountMappingPanel() {
     );
   };
 
+  const buildClassOptions = (row: QboMappingRow): QboSearchableOption[] => {
+    const base: QboSearchableOption[] = [
+      {
+        value: UNMAPPED_VALUE,
+        label: "Not mapped",
+        searchText: "not mapped unmapped",
+      },
+    ];
+    return base.concat(
+      classes.map((qbClass) => {
+        const label = qbClass.parent_name
+          ? `${qbClass.name} (${qbClass.parent_name})`
+          : qbClass.name;
+        return {
+          value: qbClass.id,
+          label,
+          searchText: [qbClass.name, qbClass.parent_name, qbClass.id].filter(Boolean).join(" ").toLowerCase(),
+          disabled: !qbClass.active,
+        };
+      }),
+    );
+  };
+
   return (
     <Card className="border shadow-sm">
       <CardHeader className="py-3 px-4 border-b bg-muted/30">
@@ -456,6 +509,7 @@ export function QboAccountMappingPanel() {
               refetchAccounts();
               refetchItems();
               refetchTaxCodes();
+              refetchClasses();
               queryClient.invalidateQueries({ queryKey: ["qbo", "account-mappings"] });
             }}
             disabled={isRefreshing}
@@ -578,14 +632,18 @@ export function QboAccountMappingPanel() {
                                 ? buildItemOptions(row)
                                 : row.uses_tax_code
                                   ? buildTaxCodeOptions()
-                                  : buildAccountOptions(row)
+                                  : row.uses_class
+                                    ? buildClassOptions(row)
+                                    : buildAccountOptions(row)
                             }
                             placeholder={
                               row.uses_item
                                 ? "Search QBO items…"
                                 : row.uses_tax_code
                                   ? "Search QBO tax codes…"
-                                  : "Search QBO accounts…"
+                                  : row.uses_class
+                                    ? "Search QBO classes…"
+                                    : "Search QBO accounts…"
                             }
                             className="w-full sm:w-[320px]"
                           />

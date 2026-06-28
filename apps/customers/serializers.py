@@ -95,8 +95,6 @@ class CustomerDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
     qbo_sync_status = serializers.SerializerMethodField()
     qbo_sync_error = serializers.SerializerMethodField()
-    qbo_sync_status = serializers.SerializerMethodField()
-    qbo_sync_error = serializers.SerializerMethodField()
 
     def _get_qbo_mapping(self, obj):
         if not hasattr(self, '_qbo_mapping_cache'):

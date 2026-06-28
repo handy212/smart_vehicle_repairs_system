@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
     Mail,
     Phone,
@@ -17,10 +14,9 @@ import {
     Database,
 } from "lucide-react";
 import { Customer } from "@/lib/api/customers";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
-import { useToast } from "@/lib/hooks/useToast";
-import { cn } from "@/lib/utils/cn";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 
 interface ProfileViewProps {
     customer: Customer;
@@ -29,29 +25,14 @@ interface ProfileViewProps {
 export function ProfileView({ customer }: ProfileViewProps) {
     const { currency, formatCurrency } = useCurrency();
     const { isConnected: isQboConnected } = useQuickBooksConnection();
-    const { toast } = useToast();
-    const queryClient = useQueryClient();
-    const [isSyncing, setIsSyncing] = useState(false);
 
-    const handleQBOSync = async () => {
-        try {
-            setIsSyncing(true);
-            await quickbooksApi.syncOutbound({ entity_type: "customer", object_id: customer.id });
-            toast({
-                title: "QuickBooks Sync",
-                description: "Customer push to QuickBooks triggered. Status should update shortly.",
-            });
-            queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
-        } catch {
-            toast({
-                title: "QuickBooks Sync Failed",
-                description: "Could not trigger customer sync with QuickBooks.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsSyncing(false);
-        }
-    };
+    const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
+        entityType: "customer",
+        objectId: customer.id,
+        queryKey: ["customer", customer.id],
+        syncSuccessMessage: "Customer push to QuickBooks triggered. Status should update shortly.",
+        syncErrorMessage: "Could not trigger customer sync with QuickBooks.",
+    });
 
     return (
         <div className="space-y-6">
@@ -231,7 +212,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
                     </CardContent>
                 </Card>
 
-                {isQboConnected && customer.qbo_sync_status && (
+                {isQboConnected && (
                     <Card className="shadow-sm border border-border md:col-span-2">
                         <CardHeader className="bg-muted/30 pb-4 border-b border-border">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -239,31 +220,16 @@ export function ProfileView({ customer }: ProfileViewProps) {
                                 QuickBooks Sync
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-6 flex flex-wrap items-center gap-3">
-                            <Badge
-                                variant={
-                                    customer.qbo_sync_status === "synced"
-                                        ? "default"
-                                        : customer.qbo_sync_status === "failed"
-                                          ? "destructive"
-                                          : "secondary"
-                                }
-                                className="capitalize"
-                            >
-                                {customer.qbo_sync_status}
-                            </Badge>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleQBOSync}
-                                disabled={isSyncing}
-                            >
-                                <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
-                                {isSyncing ? "Syncing..." : "Push to QuickBooks"}
-                            </Button>
-                            {customer.qbo_sync_status === "failed" && customer.qbo_sync_error && (
-                                <p className="w-full text-xs text-destructive">{customer.qbo_sync_error}</p>
-                            )}
+                        <CardContent className="pt-6">
+                            <QboSyncBadge
+                                status={customer.qbo_sync_status}
+                                error={customer.qbo_sync_error}
+                                connected={isQboConnected}
+                                onRetry={handleSync}
+                                onClearMapping={handleClearMapping}
+                                isRetrying={isSyncing}
+                                isClearing={isClearing}
+                            />
                         </CardContent>
                     </Card>
                 )}

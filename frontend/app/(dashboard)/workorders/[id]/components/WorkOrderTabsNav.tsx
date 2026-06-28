@@ -29,20 +29,19 @@ interface WorkOrderTabsNavProps {
   isRoutine?: boolean;
 }
 
-function TabSeparator({ label }: { label: string }) {
+function TabDivider() {
   return (
     <span
-      className="mx-1 hidden shrink-0 self-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:inline"
+      className="mx-0.5 hidden h-5 w-px shrink-0 self-center bg-border sm:inline"
       aria-hidden
-    >
-      {label}
-    </span>
+    />
   );
 }
 
 function LockedTabTrigger({
   value,
   label,
+  shortLabel,
   icon: Icon,
   count,
   locked,
@@ -50,6 +49,7 @@ function LockedTabTrigger({
 }: {
   value: string;
   label: string;
+  shortLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
   locked: boolean;
@@ -59,12 +59,17 @@ function LockedTabTrigger({
     <TabsTrigger
       value={value}
       disabled={locked}
-      className="h-9 shrink-0 gap-1.5 px-2.5 text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm"
+      className={cn(
+        "h-10 shrink-0 gap-2 px-3 text-sm font-medium",
+        "data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-foreground",
+        "data-[state=inactive]:text-muted-foreground"
+      )}
     >
-      <Icon className="hidden h-3.5 w-3.5 sm:block" />
-      {label}
+      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="hidden sm:inline">{label}</span>
+      <span className="sm:hidden">{shortLabel ?? label}</span>
       {count !== undefined && count > 0 && (
-        <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] font-normal">
+        <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[11px] font-medium tabular-nums">
           {count}
         </Badge>
       )}
@@ -94,19 +99,36 @@ export function WorkOrderTabsNav({
 }: WorkOrderTabsNavProps) {
   const lockMessage = LOCK_MSG;
   const effectiveLocked = isRoutine ? false : tabsLocked;
-  return (
-    <TooltipProvider delayDuration={300}>
-      <TabsList
-        className={cn(
-          "flex h-auto w-full min-h-9 justify-start gap-0.5 overflow-x-auto bg-muted/50 p-1",
-          "scrollbar-thin"
-        )}
-      >
-        <LockedTabTrigger value="overview" label="Overview" icon={FileText} locked={false} lockMessage={lockMessage} />
-        <TabSeparator label="Work" />
+
+  const workTabs = isRoutine
+    ? (
+      <>
+        <LockedTabTrigger
+          value="parts"
+          label="Parts"
+          shortLabel="Parts"
+          icon={Package}
+          count={partsCount}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
+        <LockedTabTrigger
+          value="tasks"
+          label="Service tasks"
+          shortLabel="Tasks"
+          icon={Wrench}
+          count={tasksCount}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
+      </>
+    )
+    : (
+      <>
         <LockedTabTrigger
           value="tasks"
           label="Tasks"
+          shortLabel="Tasks"
           icon={Wrench}
           count={tasksCount}
           locked={effectiveLocked}
@@ -115,28 +137,79 @@ export function WorkOrderTabsNav({
         <LockedTabTrigger
           value="parts"
           label="Parts"
+          shortLabel="Parts"
           icon={Package}
           count={partsCount}
           locked={effectiveLocked}
           lockMessage={lockMessage}
         />
-        {!isRoutine && (
-          <LockedTabTrigger value="diagnosis" label="Diagnosis" icon={Search} locked={effectiveLocked} lockMessage={lockMessage} />
-        )}
-        <TabSeparator label="Records" />
         <LockedTabTrigger
-          value="notes"
-          label="Notes"
-          icon={MessageSquare}
-          count={notesCount}
+          value="diagnosis"
+          label="Diagnosis"
+          shortLabel="Diag."
+          icon={Search}
           locked={effectiveLocked}
           lockMessage={lockMessage}
         />
-        <LockedTabTrigger value="photos" label="Photos" icon={Image} locked={effectiveLocked} lockMessage={lockMessage} />
-        <LockedTabTrigger value="documents" label="Documents" icon={FileText} locked={effectiveLocked} lockMessage={lockMessage} />
-        <TabSeparator label="History" />
-        <LockedTabTrigger value="timeline" label="Timeline" icon={Clock} locked={effectiveLocked} lockMessage={lockMessage} />
-      </TabsList>
+      </>
+    );
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div className="sticky top-[4.25rem] z-10 -mx-4 border-b border-border bg-background/95 px-4 pb-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6">
+        <TabsList
+          className={cn(
+            "flex h-auto w-full min-h-10 justify-start gap-1 overflow-x-auto rounded-lg bg-muted/60 p-1",
+            "scrollbar-thin"
+          )}
+        >
+          <LockedTabTrigger
+            value="overview"
+            label="Overview"
+            shortLabel="Info"
+            icon={FileText}
+            locked={false}
+            lockMessage={lockMessage}
+          />
+          <TabDivider />
+          {workTabs}
+          <TabDivider />
+          <LockedTabTrigger
+            value="notes"
+            label="Notes"
+            shortLabel="Notes"
+            icon={MessageSquare}
+            count={notesCount}
+            locked={effectiveLocked}
+            lockMessage={lockMessage}
+          />
+          <LockedTabTrigger
+            value="photos"
+            label="Photos"
+            shortLabel="Photos"
+            icon={Image}
+            locked={effectiveLocked}
+            lockMessage={lockMessage}
+          />
+          <LockedTabTrigger
+            value="documents"
+            label="Documents"
+            shortLabel="Docs"
+            icon={FileText}
+            locked={effectiveLocked}
+            lockMessage={lockMessage}
+          />
+          <TabDivider />
+          <LockedTabTrigger
+            value="timeline"
+            label="Timeline"
+            shortLabel="History"
+            icon={Clock}
+            locked={effectiveLocked}
+            lockMessage={lockMessage}
+          />
+        </TabsList>
+      </div>
     </TooltipProvider>
   );
 }

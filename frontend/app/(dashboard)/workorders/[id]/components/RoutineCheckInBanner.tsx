@@ -68,7 +68,9 @@ export function RoutineCheckInBanner({
       ? "Assign a technician and tap Start service when ready."
       : workOrder.status === "in_progress"
         ? "Service is underway — install parts and complete tasks."
-        : "Preparing service plan…";
+        : workOrder.status === "draft"
+          ? "Applying service package — this job will be ready for service shortly."
+          : "Ready for service.";
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
@@ -76,10 +78,10 @@ export function RoutineCheckInBanner({
         <Package className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" aria-hidden="true" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
-            Routine maintenance — {bundleName}
+            Routine service — {bundleName}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Inspection and diagnosis were skipped. Bundle parts ({partsCount}) and service tasks (
+            Inspection and diagnosis were skipped. Parts ({partsCount}) and service tasks (
             {tasksCount}) are on this job. {statusHint}
           </p>
         </div>

@@ -1,6 +1,6 @@
 """Metadata for QuickBooks Online account and item mappings."""
 
-from apps.accounting.models import AccountingControl
+from apps.accounting.models import AccountingControl, RevenueProduct
 from apps.billing.models import BillPayment, InvoiceLineItem, Payment
 
 # Human labels for AccountingControl fields (used in mapping UI).
@@ -59,6 +59,9 @@ MAPPING_KIND_PAYMENT_METHOD = 'payment_method'
 MAPPING_KIND_VENDOR_PAYMENT_METHOD = 'vendor_payment_method'
 MAPPING_KIND_BILL_LINE = 'bill_line_kind'
 MAPPING_KIND_TAX_CODE = 'tax_code'
+MAPPING_KIND_INCOME_CLASS = 'income_class'
+MAPPING_KIND_REVENUE_PRODUCT_CLASS = 'revenue_product_class'
+MAPPING_KIND_EXPENSE_CLASS = 'expense_class'
 
 TAX_CODE_LABELS = {
     'composite': 'Composite sales tax (all levies)',
@@ -71,6 +74,11 @@ TAX_CODE_LABELS = {
 
 # Invoice lines map to QBO Items; tax codes use qbo_account_id to store TaxCode.Id.
 ITEM_MAPPING_KINDS = {MAPPING_KIND_INVOICE_LINE}
+CLASS_MAPPING_KINDS = {
+    MAPPING_KIND_INCOME_CLASS,
+    MAPPING_KIND_REVENUE_PRODUCT_CLASS,
+    MAPPING_KIND_EXPENSE_CLASS,
+}
 TAX_CODE_MAPPING_KINDS = {MAPPING_KIND_TAX_CODE}
 ACCOUNT_MAPPING_KINDS = {
     MAPPING_KIND_CONTROL,
@@ -92,6 +100,7 @@ def all_mapping_rows():
             'group': CONTROL_ACCOUNT_GROUPS.get(field_name, 'Control Accounts'),
             'uses_item': False,
             'uses_tax_code': False,
+            'uses_class': False,
             'control_field': field_name,
         })
 
@@ -103,6 +112,7 @@ def all_mapping_rows():
             'group': 'Invoice Line Types',
             'uses_item': True,
             'uses_tax_code': False,
+            'uses_class': False,
             'control_field': None,
         })
 
@@ -114,6 +124,7 @@ def all_mapping_rows():
             'group': 'Customer Payment Methods',
             'uses_item': False,
             'uses_tax_code': False,
+            'uses_class': False,
             'control_field': None,
         })
 
@@ -125,6 +136,7 @@ def all_mapping_rows():
             'group': 'Vendor Payment Methods',
             'uses_item': False,
             'uses_tax_code': False,
+            'uses_class': False,
             'control_field': None,
         })
 
@@ -136,6 +148,7 @@ def all_mapping_rows():
             'group': 'Purchase Order / Bill Lines',
             'uses_item': False,
             'uses_tax_code': False,
+            'uses_class': False,
             'control_field': None,
         })
 
@@ -147,6 +160,46 @@ def all_mapping_rows():
             'group': 'Sales Tax Codes',
             'uses_item': False,
             'uses_tax_code': True,
+            'uses_class': False,
+            'control_field': None,
+        })
+
+    for key, label in INVOICE_LINE_TYPE_LABELS.items():
+        rows.append({
+            'mapping_kind': MAPPING_KIND_INCOME_CLASS,
+            'mapping_key': key,
+            'label': f'{label} (fallback class)',
+            'group': 'QuickBooks Classes — Income (by line type)',
+            'uses_item': False,
+            'uses_tax_code': False,
+            'uses_class': True,
+            'control_field': None,
+        })
+
+    for product in RevenueProduct.objects.filter(is_active=True).order_by('sort_order', 'name'):
+        label = product.name
+        if product.owner_account_code:
+            label = f'{product.name} ({product.owner_account_code})'
+        rows.append({
+            'mapping_kind': MAPPING_KIND_REVENUE_PRODUCT_CLASS,
+            'mapping_key': product.code,
+            'label': label,
+            'group': 'QuickBooks Classes — Income (by income category)',
+            'uses_item': False,
+            'uses_tax_code': False,
+            'uses_class': True,
+            'control_field': None,
+        })
+
+    for key, label in BILL_LINE_KIND_LABELS.items():
+        rows.append({
+            'mapping_kind': MAPPING_KIND_EXPENSE_CLASS,
+            'mapping_key': key,
+            'label': f'{label} (class)',
+            'group': 'QuickBooks Classes — Expenses',
+            'uses_item': False,
+            'uses_tax_code': False,
+            'uses_class': True,
             'control_field': None,
         })
 

@@ -83,6 +83,38 @@ export const quickbooksApi = {
     return response.data;
   },
 
+  /**
+   * Clear a stale SVR ↔ QBO entity link before retrying outbound sync.
+   */
+  clearMapping: async (params: {
+    entity_type:
+      | "customer"
+      | "invoice"
+      | "payment"
+      | "supplier"
+      | "purchase_order"
+      | "branch"
+      | "estimate"
+      | "credit_note"
+      | "vendor_bill"
+      | "vendor_credit"
+      | "bill_payment"
+      | "vendor_expense"
+      | "part";
+    object_id: number;
+    delete?: boolean;
+  }) => {
+    const response = await apiClient.post("/quickbooks/mappings/clear/", params);
+    return response.data as {
+      detail: string;
+      entity_type: string;
+      object_id: number;
+      deleted: boolean;
+      qbo_sync_status?: string | null;
+      qbo_sync_error?: string | null;
+    };
+  },
+
   listSyncLogs: async (params?: {
     entity_type?: string;
     direction?: string;

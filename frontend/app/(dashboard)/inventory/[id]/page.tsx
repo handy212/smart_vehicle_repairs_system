@@ -28,8 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
 import { cn } from "@/lib/utils";
 import { productServiceTypeLabel } from "@/components/inventory/product-service-types";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
@@ -46,10 +46,18 @@ export default function PartDetailPage() {
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [showImageModal, setShowImageModal] = useState(false);
-  const [isQboSyncing, setIsQboSyncing] = useState(false);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
 
-  const { data: part, isLoading, error, refetch } = useQuery({
+  const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
+    entityType: "part",
+    objectId: partId,
+    queryKey: ["part", partId],
+    inline: true,
+    syncSuccessMessage: "Retrying push to QuickBooks. Refresh in a moment to see status.",
+    syncErrorMessage: "Failed to trigger QuickBooks sync",
+  });
+
+  const { data: part, isLoading, error } = useQuery({
     queryKey: ["part", partId],
     queryFn: () => inventoryApi.get(partId),
   });
@@ -118,26 +126,6 @@ export default function PartDetailPage() {
   const canAdjustStock = hasPermission("adjust_inventory") || hasPermission("manage_inventory");
   const canDeletePart = hasAnyPermission(["delete_parts", "manage_inventory"]);
 
-  const handleQboSync = async () => {
-    try {
-      setIsQboSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "part", object_id: partId, inline: true });
-      toast({
-        title: "QuickBooks sync started",
-        description: "Retrying push to QuickBooks. Refresh in a moment to see status.",
-      });
-      refetch();
-    } catch (syncError: unknown) {
-      toast({
-        title: "QuickBooks sync failed",
-        description: getUserFacingError(syncError, "Failed to trigger QuickBooks sync"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsQboSyncing(false);
-    }
-  };
-
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -172,12 +160,10 @@ export default function PartDetailPage() {
               status={part.qbo_sync_status}
               error={part.qbo_sync_error}
               connected={isQboConnected}
-              onRetry={
-                part.qbo_sync_status === "failed" || part.qbo_sync_status === "pending"
-                  ? handleQboSync
-                  : undefined
-              }
-              isRetrying={isQboSyncing}
+              onRetry={handleSync}
+              onClearMapping={handleClearMapping}
+              isRetrying={isSyncing}
+              isClearing={isClearing}
             />
           )}
           {canAdjustStock && tracksStock && (

@@ -399,6 +399,26 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.quickbooks_online.tasks.task_pull_bills_from_qbo',
         'schedule': 1800,
     },
+    'qbo-pull-bill-payments': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_bill_payments_from_qbo',
+        'schedule': 1800,
+    },
+    'qbo-pull-estimates': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_estimates_from_qbo',
+        'schedule': 1800,
+    },
+    'qbo-pull-credit-memos': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_credit_memos_from_qbo',
+        'schedule': 1800,
+    },
+    'qbo-pull-vendor-credits': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_vendor_credits_from_qbo',
+        'schedule': 1800,
+    },
+    'qbo-pull-items': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_items_from_qbo',
+        'schedule': 1800,
+    },
     'qbo-retry-failed-outbound': {
         'task': 'apps.quickbooks_online.tasks.task_retry_failed_outbound_syncs',
         'schedule': QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL,

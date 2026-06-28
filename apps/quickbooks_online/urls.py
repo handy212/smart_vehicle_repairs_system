@@ -15,6 +15,7 @@ urlpatterns = [
     path('accounts/', api_views.QBOAccountsListView.as_view(), name='accounts'),
     path('items/', api_views.QBOItemsListView.as_view(), name='items'),
     path('tax-codes/', api_views.QBOTaxCodesListView.as_view(), name='tax_codes'),
+    path('classes/', api_views.QBOClassesListView.as_view(), name='classes'),
     path('sync-logs/', api_views.QBOSyncLogsListView.as_view(), name='sync_logs'),
     path('account-mappings/', api_views.QBOAccountMappingsView.as_view(), name='account_mappings'),
     path(

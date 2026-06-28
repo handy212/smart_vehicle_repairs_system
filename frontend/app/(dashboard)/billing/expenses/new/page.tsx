@@ -79,42 +79,6 @@ export default function NewVendorExpensePage() {
   const [saveMode, setSaveMode] = useState<"save" | "save_close">("save");
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
-  const applyPaymentAccountDefaults = (options?: { force?: boolean }) => {
-    if (defaultsApplied && !options?.force) return;
-
-    const openTill = openTills[0];
-    if (openTill?.till_account) {
-      const accountValue = `cash:${openTill.till_account}`;
-      setValue("payment_account", accountValue);
-      setValue("payment_method", "cash");
-      setValue("cash_account", String(openTill.till_account));
-      setValue("bank_account", "");
-      setDefaultsApplied(true);
-      return;
-    }
-
-    const defaultBank = accountingSettings?.default_bank_account;
-    if (defaultBank) {
-      const accountValue = `bank:${defaultBank}`;
-      setValue("payment_account", accountValue);
-      setValue("payment_method", "bank_transfer");
-      setValue("bank_account", String(defaultBank));
-      setValue("cash_account", "");
-      setDefaultsApplied(true);
-      return;
-    }
-
-    if (bankAccounts[0]?.id) {
-      const accountValue = `bank:${bankAccounts[0].id}`;
-      setValue("payment_account", accountValue);
-      setValue("payment_method", "bank_transfer");
-      setValue("bank_account", String(bankAccounts[0].id));
-      setValue("cash_account", "");
-    }
-
-    setDefaultsApplied(true);
-  };
-
   const { register, control, handleSubmit, watch, setValue, setError } = useForm<VendorExpenseForm>({
     defaultValues: {
       expense_date: today,

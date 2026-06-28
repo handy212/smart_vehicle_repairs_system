@@ -752,6 +752,14 @@ class QuickBooksService:
             if qbo_item_id and Ref is not None:
                 sales_item.ItemRef = Ref()
                 sales_item.ItemRef.value = qbo_item_id
+
+            from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_sales_line_class_id
+
+            client = self.get_client()
+            if class_tracking_enabled(client):
+                class_id = resolve_sales_line_class_id(mapping_service, item)
+                apply_class_ref_to_detail(sales_item, class_id)
+
             line.SalesItemLineDetail = sales_item
             lines.append(line)
         return lines
@@ -843,6 +851,11 @@ class QuickBooksService:
                 expense_detail = AccountBasedExpenseLineDetail()
                 expense_detail.AccountRef = Ref()
                 expense_detail.AccountRef.value = account_id
+                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+
+                if class_tracking_enabled(self.get_client()):
+                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
+                    apply_class_ref_to_detail(expense_detail, class_id)
                 line.AccountBasedExpenseLineDetail = expense_detail
             else:
                 line.DetailType = "ItemBasedExpenseLineDetail"
@@ -850,66 +863,45 @@ class QuickBooksService:
                 exp_item.Qty = float(item.quantity)
                 unit_price = getattr(item, 'unit_price', None) or getattr(item, 'unit_cost', 0)
                 exp_item.UnitPrice = float(unit_price)
+                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+
+                if class_tracking_enabled(self.get_client()):
+                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
+                    apply_class_ref_to_detail(exp_item, class_id)
                 line.ItemBasedExpenseLineDetail = exp_item
             lines.append(line)
         return lines
-
-    def _mirror_po_qbo_bill_mapping(self, purchase_order, qb_bill):
-        """Keep PO mapping aligned with the vendor bill's QBO Bill (inbound pull + UI)."""
-        if not purchase_order or not qb_bill or not getattr(qb_bill, 'Id', None):
-            return
-        QBOMapping.objects.update_or_create(
-            content_type=ContentType.objects.get_for_model(purchase_order),
-            object_id=purchase_order.id,
-            defaults={
-                'qbo_id': str(qb_bill.Id),
-                'qbo_sync_token': getattr(qb_bill, 'SyncToken', '') or '',
-                'status': 'synced',
-                'error_message': '',
-            },
-        )
 
     def _resolve_vendor_bill_qbo_bill(self, local_bill, *, doc_number):
         """
         Load the QBO Bill for a vendor bill.
 
         PO-linked bills reuse the Bill already created from an earlier PO push
-        (DocNumber = po_number) instead of creating a second QBO Bill.
+        (matched by DocNumber) instead of creating a second QBO Bill.
+        The PO mapping always stores the QBO PurchaseOrder Id — never the Bill Id.
         """
-        from apps.inventory.models import PurchaseOrder
-
         client = self.get_client()
         purchase_order = getattr(local_bill, 'purchase_order', None)
-
-        if purchase_order:
-            po_mapping = QBOMapping.objects.filter(
-                content_type=ContentType.objects.get_for_model(PurchaseOrder),
-                object_id=purchase_order.id,
-            ).exclude(qbo_id='').first()
-            if po_mapping:
-                try:
-                    return QBBill.get(int(po_mapping.qbo_id), qb=client), None
-                except Exception as exc:
-                    logger.warning(
-                        'Could not load QBO Bill %s from PO %s mapping: %s',
-                        po_mapping.qbo_id,
-                        purchase_order.po_number,
-                        exc,
-                    )
 
         qb_bill, _is_new, load_error = self._load_qbo_entity(
             QBBill,
             local_bill,
             doc_number=doc_number,
         )
-        if not load_error or not purchase_order:
+        if not load_error:
+            return qb_bill, None
+
+        if not purchase_order:
             return qb_bill, load_error
 
-        from .entity_resolver import find_by_doc_number
+        from .ap_sync_helpers import find_qbo_bill_for_po
 
-        found = find_by_doc_number(QBBill, client, purchase_order.po_number)
+        found = find_qbo_bill_for_po(
+            client,
+            purchase_order,
+            bill_number=local_bill.bill_number,
+        )
         if found and getattr(found, 'Id', None):
-            self._mirror_po_qbo_bill_mapping(purchase_order, found)
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_bill),
                 object_id=local_bill.id,
@@ -987,8 +979,6 @@ class QuickBooksService:
 
         self._save_qb(qb_bill, client)
         self._update_qbo_mapping(local_obj, qb_bill)
-        if purchase_order is not None and hasattr(purchase_order, 'id'):
-            self._mirror_po_qbo_bill_mapping(purchase_order, qb_bill)
         return qb_bill
 
     def sync_invoice(self, local_invoice):
@@ -1643,12 +1633,22 @@ class QuickBooksService:
                 expense_detail = AccountBasedExpenseLineDetail()
                 expense_detail.AccountRef = Ref()
                 expense_detail.AccountRef.value = account_id
+                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+
+                if class_tracking_enabled(client):
+                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
+                    apply_class_ref_to_detail(expense_detail, class_id)
                 line.AccountBasedExpenseLineDetail = expense_detail
             else:
                 line.DetailType = 'ItemBasedExpenseLineDetail'
                 exp_item = ItemBasedExpenseLineDetail()
                 exp_item.Qty = float(item.quantity)
                 exp_item.UnitPrice = float(item.unit_cost)
+                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+
+                if class_tracking_enabled(client):
+                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
+                    apply_class_ref_to_detail(exp_item, class_id)
                 line.ItemBasedExpenseLineDetail = exp_item
             po_lines.append(line)
 
@@ -1995,12 +1995,22 @@ class QuickBooksService:
                 detail = AccountBasedExpenseLineDetail()
                 detail.AccountRef = Ref()
                 detail.AccountRef.value = account_id
+                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+
+                if class_tracking_enabled(client):
+                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=False)
+                    apply_class_ref_to_detail(detail, class_id)
                 line.AccountBasedExpenseLineDetail = detail
             else:
                 line.DetailType = 'ItemBasedExpenseLineDetail'
                 exp_item = ItemBasedExpenseLineDetail()
                 exp_item.Qty = float(item.quantity)
                 exp_item.UnitPrice = float(item.unit_price)
+                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+
+                if class_tracking_enabled(client):
+                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=False)
+                    apply_class_ref_to_detail(exp_item, class_id)
                 line.ItemBasedExpenseLineDetail = exp_item
             lines.append(line)
 
@@ -2253,34 +2263,33 @@ class QuickBooksService:
             return log
 
         try:
+            from .ap_sync_helpers import build_po_doc_number_index
+
             qb_bills = QBBill.all(qb=client)
             log.records_pulled = len(qb_bills)
 
             po_ct = ContentType.objects.get_for_model(PurchaseOrder)
             bill_ct = ContentType.objects.get_for_model(Bill)
 
+            bill_mapping_by_qbo_id = {
+                m.qbo_id: m
+                for m in QBOMapping.objects.filter(content_type=bill_ct).exclude(qbo_id='')
+            }
+            po_by_doc_number = build_po_doc_number_index()
+            # Legacy deployments may have Bill Id stored on PO mapping (pre-fix).
+            legacy_po_by_bill_id = {
+                m.qbo_id: m
+                for m in QBOMapping.objects.filter(content_type=po_ct).exclude(qbo_id='')
+            }
+
             for qb_bill in qb_bills:
-                mapping = QBOMapping.objects.filter(qbo_id=str(qb_bill.Id)).filter(
-                    content_type__in=[po_ct, bill_ct],
-                ).first()
-
-                if not mapping:
-                    log.records_skipped += 1
-                    continue
-
+                qbo_id = str(qb_bill.Id)
+                qbo_doc = qbo_doc_number(getattr(qb_bill, 'DocNumber', None) or '')
                 qbo_balance = Decimal(str(qb_bill.Balance or 0))
                 updated = False
+                mapping = bill_mapping_by_qbo_id.get(qbo_id)
 
-                if mapping.content_type_id == po_ct.id:
-                    try:
-                        local_po = PurchaseOrder.objects.get(id=mapping.object_id)
-                        if qbo_balance == Decimal('0') and local_po.status not in ('received', 'cancelled'):
-                            PurchaseOrder.objects.filter(id=local_po.id).update(status='received')
-                            updated = True
-                    except PurchaseOrder.DoesNotExist:
-                        log.records_skipped += 1
-                        continue
-                elif mapping.content_type_id == bill_ct.id:
+                if mapping:
                     try:
                         local_bill = Bill.objects.get(id=mapping.object_id)
                         qbo_total = Decimal(str(getattr(qb_bill, 'TotalAmt', 0) or 0))
@@ -2302,15 +2311,38 @@ class QuickBooksService:
                         log.records_skipped += 1
                         continue
 
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = qb_bill.SyncToken or ''
+                    mapping.error_message = ''
+                    mapping.save(update_fields=['status', 'qbo_sync_token', 'error_message', 'last_synced_at'])
+                else:
+                    local_po = None
+                    legacy_mapping = legacy_po_by_bill_id.get(qbo_id)
+                    if legacy_mapping:
+                        try:
+                            local_po = PurchaseOrder.objects.get(id=legacy_mapping.object_id)
+                            logger.warning(
+                                'PO %s has legacy Bill Id in QBO mapping; re-sync the PO to restore PurchaseOrder Id.',
+                                local_po.po_number,
+                            )
+                        except PurchaseOrder.DoesNotExist:
+                            log.records_skipped += 1
+                            continue
+                    elif qbo_doc and qbo_doc in po_by_doc_number:
+                        local_po = po_by_doc_number[qbo_doc]
+
+                    if local_po is None:
+                        log.records_skipped += 1
+                        continue
+
+                    if qbo_balance == Decimal('0') and local_po.status not in ('received', 'cancelled'):
+                        PurchaseOrder.objects.filter(id=local_po.id).update(status='received')
+                        updated = True
+
                 if updated:
                     log.records_updated += 1
                 else:
                     log.records_skipped += 1
-
-                mapping.status = 'synced'
-                mapping.qbo_sync_token = qb_bill.SyncToken or ''
-                mapping.error_message = ''
-                mapping.save()
 
             log.status = 'success'
         except Exception as e:

@@ -5,11 +5,12 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, CheckCircle, Database, FileMinus2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, FileMinus2 } from "lucide-react";
 
 import { billingApi } from "@/lib/api/billing";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { ApplyVendorCreditDialog } from "@/components/billing/ApplyVendorCreditDialog";
-import { cn } from "@/lib/utils/cn";
 
 function getStatusVariant(status: string): BadgeProps["variant"] {
   switch (status) {
@@ -48,8 +48,16 @@ function VendorCreditDetailContent() {
   const id = parseInt(params.id as string, 10);
   const isValidId = !Number.isNaN(id) && id > 0;
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
+
+  const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
+    entityType: "vendor_credit",
+    objectId: id,
+    queryKey: ["vendorCredit", id],
+    extraQueryKeys: [["vendor-credits"]],
+    syncSuccessMessage: "Vendor credit push to QuickBooks triggered. Status should update shortly.",
+    syncErrorMessage: "Could not trigger vendor credit sync with QuickBooks.",
+  });
 
   const { data: credit, isLoading, error } = useQuery({
     queryKey: ["vendorCredit", id],
@@ -100,26 +108,6 @@ function VendorCreditDetailContent() {
   const unusedNum = parseFloat(credit.unused_amount || "0");
   const vendorId = Number(credit.vendor);
 
-  const handleQBOSync = async () => {
-    try {
-      setIsSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "vendor_credit", object_id: id });
-      toast({
-        title: "QuickBooks Sync",
-        description: "Vendor credit push to QuickBooks triggered. Status should update shortly.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["vendorCredit", id] });
-    } catch {
-      toast({
-        title: "QuickBooks Sync Failed",
-        description: "Could not trigger vendor credit sync with QuickBooks.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       <ApplyVendorCreditDialog
@@ -143,9 +131,15 @@ function VendorCreditDetailContent() {
               {credit.credit_number}
               <Badge variant={getStatusVariant(credit.status)}>{credit.status.toUpperCase()}</Badge>
               {isQboConnected && (
-                <Badge variant={credit.qbo_sync_status === "synced" ? "default" : credit.qbo_sync_status === "failed" ? "destructive" : "secondary"} className="capitalize">
-                  QBO: {credit.qbo_sync_status || "un-synced"}
-                </Badge>
+                <QboSyncBadge
+                  status={credit.qbo_sync_status}
+                  error={credit.qbo_sync_error}
+                  connected={isQboConnected}
+                  onRetry={handleSync}
+                  onClearMapping={handleClearMapping}
+                  isRetrying={isSyncing}
+                  isClearing={isClearing}
+                />
               )}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -154,12 +148,6 @@ function VendorCreditDetailContent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isQboConnected && (
-            <Button variant="outline" onClick={handleQBOSync} disabled={isSyncing}>
-              <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-              {isSyncing ? "Syncing..." : "Push to QuickBooks"}
-            </Button>
-          )}
           {credit.status === "draft" && (
             <Button
               onClick={() => issueMutation.mutate()}
@@ -175,14 +163,6 @@ function VendorCreditDetailContent() {
           )}
         </div>
       </div>
-
-      {isQboConnected && credit.qbo_sync_status === "failed" && credit.qbo_sync_error && (
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardContent className="py-3 text-sm text-destructive">
-            QuickBooks sync failed: {credit.qbo_sync_error}
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

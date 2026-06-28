@@ -38,6 +38,12 @@ import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
+import {
+  getJobTypeLabel,
+  getServicePackageName,
+  JOB_TYPE_FIELD_LABEL,
+  SERVICE_PACKAGE_LABEL,
+} from "@/lib/workorders/job-type-labels";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -201,6 +207,7 @@ export default function WorkOrderOverviewTab({
       : null;
   const customerDisplayName = getWorkOrderCustomerDisplayName(wo);
   const assignedTechnicians = getWorkOrderTechnicianAssignees(wo);
+  const servicePackageName = getServicePackageName(wo);
 
   return (
     <div className="space-y-4">
@@ -262,6 +269,18 @@ export default function WorkOrderOverviewTab({
               {getServiceCoordinatorName()}
             </span>
           </SummaryItem>
+          {isRoutine && (
+            <>
+              <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
+                <Badge variant="secondary" className="text-xs font-normal">
+                  {getJobTypeLabel(wo.maintenance_type)}
+                </Badge>
+              </SummaryItem>
+              <SummaryItem label={SERVICE_PACKAGE_LABEL}>
+                <span className="font-medium">{servicePackageName ?? "—"}</span>
+              </SummaryItem>
+            </>
+          )}
         </CardContent>
       </Card>
 

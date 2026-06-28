@@ -37,6 +37,17 @@ export interface QboTaxCodeOption {
   } | null;
 }
 
+export interface QboClassOption {
+  id: string;
+  name: string;
+  active: boolean;
+  parent_name?: string;
+  mapped_row?: {
+    mapping_kind: string;
+    mapping_key: string;
+  } | null;
+}
+
 export interface QboMappingRow {
   mapping_kind: string;
   mapping_key: string;
@@ -44,6 +55,7 @@ export interface QboMappingRow {
   group: string;
   uses_item: boolean;
   uses_tax_code?: boolean;
+  uses_class?: boolean;
   control_field?: string | null;
   svr_account?: { id: number; code: string; name: string } | null;
   qbo_account_id: string;
@@ -51,6 +63,8 @@ export interface QboMappingRow {
   qbo_account_number: string;
   qbo_item_id: string;
   qbo_item_name: string;
+  qbo_class_id: string;
+  qbo_class_name: string;
   status: string;
   error_message: string;
   qbo_account_hint?: string;
@@ -83,6 +97,11 @@ export const qboMappingsApi = {
     return response.data;
   },
 
+  listClasses: async (): Promise<{ classes: QboClassOption[]; is_connected: boolean }> => {
+    const response = await apiClient.get("/quickbooks/classes/");
+    return response.data;
+  },
+
   getOverview: async (): Promise<QboMappingsOverview> => {
     const response = await apiClient.get("/quickbooks/account-mappings/");
     return response.data;
@@ -94,6 +113,7 @@ export const qboMappingsApi = {
       mapping_key: string;
       qbo_account_id?: string;
       qbo_item_id?: string;
+      qbo_class_id?: string;
       action?: "clear";
     }>,
   ): Promise<QboMappingsOverview & { updated: number; errors: Array<{ detail: string }> }> => {
@@ -104,7 +124,7 @@ export const qboMappingsApi = {
   saveMapping: async (
     mappingKind: string,
     mappingKey: string,
-    payload: { qbo_account_id?: string; qbo_item_id?: string; action?: "clear" },
+    payload: { qbo_account_id?: string; qbo_item_id?: string; qbo_class_id?: string; action?: "clear" },
   ) => {
     const response = await apiClient.post(
       `/quickbooks/account-mappings/${mappingKind}/${mappingKey}/`,

@@ -56,7 +56,10 @@ class ResolveQboEntityTests(SimpleTestCase):
         mapping = MagicMock()
         mapping.qbo_id = '64'
 
-        with patch('apps.quickbooks_online.entity_resolver.QBOMapping') as mock_mapping_model:
+        with patch('apps.quickbooks_online.entity_resolver.QBOMapping') as mock_mapping_model, patch(
+            'apps.quickbooks_online.entity_resolver.ContentType'
+        ) as mock_ct:
+            mock_ct.objects.get_for_model.return_value = MagicMock()
             entity, error = resolve_qbo_entity(
                 client=MagicMock(),
                 qb_class=FakeQBO,

@@ -2808,7 +2808,7 @@ class VendorExpenseViewSet(viewsets.ModelViewSet):
         qs = VendorExpense.objects.select_related(
             'vendor', 'branch', 'created_by', 'till', 'till__till_account', 'bank_account',
         ).prefetch_related('line_items')
-        return filter_queryset_for_user_branches(qs, self.request.user, branch_field='branch')
+        return filter_queryset_for_user_branches(qs, self.request.user, request=self.request)
 
     def get_serializer_class(self):
         if self.action == 'create':

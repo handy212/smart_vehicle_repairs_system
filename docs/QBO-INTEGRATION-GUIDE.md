@@ -85,11 +85,16 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 
 **PO → Bill → Pay workflow:** Confirm PO in SVR (syncs QBO PurchaseOrder) → receive items → create vendor bill (syncs QBO Bill with PO link) → Pay Bills (syncs QBO BillPayment).
 
+**PO / Bill mapping rule:** Each entity keeps its own `QBOMapping`. The PO row stores the QBO **PurchaseOrder** Id; the vendor bill row stores the QBO **Bill** Id. They are never merged. If a PO mapping was previously overwritten with a Bill Id (legacy), re-sync the PO from SVR to restore the correct PurchaseOrder Id.
+
+**Scheduled inbound (Celery Beat, every 30 min):** vendors, invoices, bills, bill payments, estimates, credit memos, vendor credits, items, plus retry-failed-outbound. Webhooks also queue targeted pulls (including customer **Payment** events → invoice balance refresh).
+
 ### Other
 
 | SVR entity | QBO object | Notes |
 |------------|------------|-------|
-| Branch | Department | Location / class tracking |
+| Branch | Department | **Location** — where (branch P&L) |
+| Income category / line type | Class | **Class** — what (labour vs parts vs expense type) |
 | Part (catalog) | Item (`Inventory`, `NonInventory`, or `Service`) | Type set per part; Inventory items sync qty on hand to QBO |
 
 ### Phase 4: items, deposits, payment allocation, attachments

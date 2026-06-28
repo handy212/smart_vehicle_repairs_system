@@ -20,9 +20,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils";
@@ -35,9 +34,19 @@ export default function SupplierDetailPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
   const id = parseInt(params.id as string);
-  const { success: toastSuccess, error: toastError } = useToast();
-  const [isSyncing, setIsSyncing] = useState(false);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const {
+    isSyncing,
+    isClearing,
+    handleSync: handleQBOSync,
+    handleClearMapping: handleQboClearMapping,
+  } = useQboEntitySync({
+    entityType: "supplier",
+    objectId: id,
+    queryKey: ["supplier", id],
+    syncSuccessMessage: "Supplier push to QuickBooks triggered successfully.",
+    syncErrorMessage: "Failed to trigger QuickBooks sync",
+  });
 
   const { data: supplier, isLoading, refetch } = useQuery({
     queryKey: ["supplier", id],
@@ -49,19 +58,6 @@ export default function SupplierDetailPage() {
     queryFn: () => inventoryApi.listPurchaseOrders({ supplier: id }),
     enabled: !!supplier,
   });
-
-  const handleQBOSync = async () => {
-    try {
-      setIsSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "supplier", object_id: id });
-      toastSuccess("Supplier push to QuickBooks triggered successfully.");
-      refetch();
-    } catch {
-      toastError("Failed to trigger QuickBooks sync");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -136,7 +132,9 @@ export default function SupplierDetailPage() {
               error={supplier.qbo_sync_error}
               connected={isQboConnected}
               onRetry={handleQBOSync}
+              onClearMapping={handleQboClearMapping}
               isRetrying={isSyncing}
+              isClearing={isClearing}
               retryLabel={isSyncing ? "Syncing..." : "Sync QBO"}
               className="mr-2"
             />

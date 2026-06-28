@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import {
+  JOB_TYPE_FIELD_LABEL,
+  JOB_TYPE_GENERAL_LABEL,
+  JOB_TYPE_ROUTINE_LABEL,
+  SERVICE_PACKAGE_LABEL,
+  SERVICE_PACKAGE_PLACEHOLDER,
+} from "@/lib/workorders/job-type-labels";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -470,7 +477,7 @@ export function CheckInWizard() {
           <CardDescription>
             {step === 1 && "Search by name, phone, or customer number."}
             {step === 2 && "Choose the vehicle being dropped off today."}
-            {step === 3 && "Choose maintenance type, service bundle if routine, and record intake details."}
+            {step === 3 && "Choose job type, service package if routine, and record intake details."}
             {step === 4 && "Confirm details and open the work order."}
           </CardDescription>
         </CardHeader>
@@ -593,7 +600,7 @@ export function CheckInWizard() {
               )}
 
               <div>
-                <Label>Maintenance type</Label>
+                <Label>{JOB_TYPE_FIELD_LABEL}</Label>
                 <div className="mt-2 flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -603,7 +610,7 @@ export function CheckInWizard() {
                       onChange={() => handleMaintenanceTypeChange("general")}
                       className="h-4 w-4 text-primary border-border focus:ring-primary"
                     />
-                    <span className="text-sm font-medium">General repair</span>
+                    <span className="text-sm font-medium">{JOB_TYPE_GENERAL_LABEL}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -613,7 +620,7 @@ export function CheckInWizard() {
                       onChange={() => handleMaintenanceTypeChange("routine")}
                       className="h-4 w-4 text-primary border-border focus:ring-primary"
                     />
-                    <span className="text-sm font-medium">Routine service</span>
+                    <span className="text-sm font-medium">{JOB_TYPE_ROUTINE_LABEL}</span>
                   </label>
                 </div>
               </div>
@@ -621,7 +628,7 @@ export function CheckInWizard() {
               {maintenanceType === "routine" && (
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <Label htmlFor="check-in-service-type">Service type *</Label>
+                    <Label htmlFor="check-in-service-type">{SERVICE_PACKAGE_LABEL} *</Label>
                     {suggestedService && (
                       <Badge variant="outline" className="text-[10px]">
                         Suggested: {suggestedService.suggested_service_name}
@@ -633,7 +640,7 @@ export function CheckInWizard() {
                     onValueChange={(val) => handleServiceBundleChange(parseInt(val, 10))}
                   >
                     <SelectTrigger id="check-in-service-type">
-                      <SelectValue placeholder="Select service bundle" />
+                      <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
                     </SelectTrigger>
                     <SelectContent>
                       {bundles.map((bundle) => (
@@ -809,14 +816,14 @@ export function CheckInWizard() {
                   </span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Maintenance: </span>
+                  <span className="text-muted-foreground">{JOB_TYPE_FIELD_LABEL}: </span>
                   <span className="font-medium capitalize">
-                    {maintenanceType === "routine" ? "Routine service" : "General repair"}
+                    {maintenanceType === "routine" ? JOB_TYPE_ROUTINE_LABEL : JOB_TYPE_GENERAL_LABEL}
                   </span>
                 </p>
                 {maintenanceType === "routine" && selectedBundle && (
                   <p>
-                    <span className="text-muted-foreground">Service type: </span>
+                    <span className="text-muted-foreground">{SERVICE_PACKAGE_LABEL}: </span>
                     <span className="font-medium">
                       {selectedBundle.name}
                       {selectedBundle.service_type_name ? ` (${selectedBundle.service_type_name})` : ""}

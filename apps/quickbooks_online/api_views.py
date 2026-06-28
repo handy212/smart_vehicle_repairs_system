@@ -89,6 +89,23 @@ class QBOTaxCodesListView(QBOConnectedMixin, APIView):
         return Response({'tax_codes': tax_codes, 'is_connected': True})
 
 
+class QBOClassesListView(QBOConnectedMixin, APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('view_accounting'),
+    ]
+
+    def get(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+        classes, error = get_account_mapping_service().list_classes()
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'classes': classes, 'is_connected': True})
+
+
 class QBOSyncLogsListView(APIView):
     permission_classes = [
         IsAuthenticated,
@@ -170,6 +187,7 @@ class QBOAccountMappingsView(QBOConnectedMixin, APIView):
                 mapping_key,
                 qbo_account_id=entry.get('qbo_account_id'),
                 qbo_item_id=entry.get('qbo_item_id'),
+                qbo_class_id=entry.get('qbo_class_id'),
                 user=request.user,
             )
             if success:
@@ -214,6 +232,7 @@ class QBOAccountMappingDetailView(QBOConnectedMixin, APIView):
             mapping_key,
             qbo_account_id=request.data.get('qbo_account_id'),
             qbo_item_id=request.data.get('qbo_item_id'),
+            qbo_class_id=request.data.get('qbo_class_id'),
             user=request.user,
         )
         if not success:
@@ -228,6 +247,8 @@ class QBOAccountMappingDetailView(QBOConnectedMixin, APIView):
             'qbo_account_name': mapping.qbo_account_name if mapping else '',
             'qbo_item_id': mapping.qbo_item_id if mapping else '',
             'qbo_item_name': mapping.qbo_item_name if mapping else '',
+            'qbo_class_id': mapping.qbo_class_id if mapping else '',
+            'qbo_class_name': mapping.qbo_class_name if mapping else '',
         })
 
 

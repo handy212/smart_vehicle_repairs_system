@@ -88,11 +88,13 @@ class QBOSyncLog(models.Model):
         ('vendor', 'Vendors (Suppliers)'),
         ('invoice', 'Invoices'),
         ('bill', 'Bills (Purchase Orders)'),
+        ('purchase_order', 'Purchase Orders (Outbound)'),
         ('estimate', 'Estimates'),
         ('credit_memo', 'Credit Memos'),
         ('vendor_credit', 'Vendor Credits'),
         ('vendor_bill', 'Vendor Bills (AP)'),
-        ('payment', 'Payments'),
+        ('payment', 'Customer Payments'),
+        ('bill_payment', 'Vendor Bill Payments'),
         ('customer', 'Customers'),
         ('item', 'Items (Parts catalog)'),
         ('all', 'Full Inbound Sync'),
@@ -150,6 +152,9 @@ class QBOAccountMapping(models.Model):
         ('bill_line_kind', 'Bill Line Kind'),
         ('svr_account', 'SVR GL Account'),
         ('tax_code', 'Tax Code'),
+        ('income_class', 'Income Class'),
+        ('revenue_product_class', 'Revenue Product Class'),
+        ('expense_class', 'Expense Class'),
     ]
 
     STATUS_CHOICES = [
@@ -172,6 +177,9 @@ class QBOAccountMapping(models.Model):
 
     qbo_item_id = models.CharField(max_length=50, blank=True)
     qbo_item_name = models.CharField(max_length=255, blank=True)
+
+    qbo_class_id = models.CharField(max_length=50, blank=True)
+    qbo_class_name = models.CharField(max_length=255, blank=True)
 
     svr_account = models.ForeignKey(
         'accounting.Account',
@@ -199,10 +207,11 @@ class QBOAccountMapping(models.Model):
             models.Index(fields=['mapping_kind', 'mapping_key']),
             models.Index(fields=['qbo_account_id']),
             models.Index(fields=['qbo_item_id']),
+            models.Index(fields=['qbo_class_id']),
         ]
         verbose_name = 'QBO Account Mapping'
         verbose_name_plural = 'QBO Account Mappings'
 
     def __str__(self):
-        target = self.qbo_item_id or self.qbo_account_id or 'unmapped'
+        target = self.qbo_class_id or self.qbo_item_id or self.qbo_account_id or 'unmapped'
         return f'{self.mapping_kind}:{self.mapping_key} -> {target}'

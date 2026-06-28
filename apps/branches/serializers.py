@@ -73,10 +73,6 @@ class BranchSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
     manager_count = serializers.ReadOnlyField()
     full_address = serializers.ReadOnlyField()
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
-    qbo_department_id = serializers.SerializerMethodField()
-    qbo_department_name = serializers.SerializerMethodField()
-    qbo_sync_status = serializers.SerializerMethodField()
-    qbo_sync_error = serializers.SerializerMethodField()
     
     class Meta:
         model = Branch
@@ -103,10 +99,6 @@ class BranchListSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
     
     staff_count = serializers.ReadOnlyField()
     manager_count = serializers.ReadOnlyField()
-    qbo_department_id = serializers.SerializerMethodField()
-    qbo_department_name = serializers.SerializerMethodField()
-    qbo_sync_status = serializers.SerializerMethodField()
-    qbo_sync_error = serializers.SerializerMethodField()
     
     class Meta:
         model = Branch

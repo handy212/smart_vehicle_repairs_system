@@ -33,9 +33,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import ProcessRefundDialog from "@/app/(dashboard)/billing/invoices/[id]/components/ProcessRefundDialog";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
-import { useToast } from "@/lib/hooks/useToast";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { cn } from "@/lib/utils/cn";
 
 export default function PaymentDetailPage() {
@@ -47,9 +47,19 @@ export default function PaymentDetailPage() {
   const id = parseInt(params.id as string);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [allocationOpen, setAllocationOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const { isConnected: isQboConnected } = useQuickBooksConnection();
-  const { toast } = useToast();
+  const {
+    isSyncing,
+    isClearing,
+    handleSync: handleQBOSync,
+    handleClearMapping: handleQboClearMapping,
+  } = useQboEntitySync({
+    entityType: "payment",
+    objectId: id,
+    queryKey: ["payment", id],
+    syncSuccessMessage: "Payment push to QuickBooks triggered. Status should update shortly.",
+    syncErrorMessage: "Could not trigger payment sync with QuickBooks.",
+  });
 
   const isValidId = !Number.isNaN(id) && id > 0;
 
@@ -123,26 +133,6 @@ export default function PaymentDetailPage() {
     payment.status === "completed" && Boolean(payment.customer) && unallocatedAmount > 0.01;
   const canRequestRefund = payment.status === "completed" && maxRefundable > 0.01;
 
-  const handleQBOSync = async () => {
-    try {
-      setIsSyncing(true);
-      await quickbooksApi.syncOutbound({ entity_type: "payment", object_id: id });
-      toast({
-        title: "QuickBooks Sync",
-        description: "Payment push to QuickBooks triggered. Status should update shortly.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["payment", id] });
-    } catch {
-      toast({
-        title: "QuickBooks Sync Failed",
-        description: "Could not trigger payment sync with QuickBooks.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   return (
     <div className="min-h-screen space-y-6 p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -158,18 +148,16 @@ export default function PaymentDetailPage() {
                 {payment.status.replace("_", " ").toUpperCase()}
               </Badge>
               {isQboConnected && payment.qbo_sync_status && (
-                <Badge
-                  variant={
-                    payment.qbo_sync_status === "synced"
-                      ? "default"
-                      : payment.qbo_sync_status === "failed"
-                        ? "destructive"
-                        : "secondary"
-                  }
-                  className="capitalize"
-                >
-                  QBO: {payment.qbo_sync_status}
-                </Badge>
+                <QboSyncBadge
+                  status={payment.qbo_sync_status}
+                  error={payment.qbo_sync_error}
+                  connected={isQboConnected}
+                  onRetry={handleQBOSync}
+                  onClearMapping={handleQboClearMapping}
+                  isRetrying={isSyncing}
+                  isClearing={isClearing}
+                  compact
+                />
               )}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -203,10 +191,15 @@ export default function PaymentDetailPage() {
               </DropdownMenuItem>
 
               {isQboConnected && payment.qbo_sync_status && (
-                <DropdownMenuItem onClick={handleQBOSync} disabled={isSyncing}>
-                  <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                  {isSyncing ? "Syncing..." : "Push to QuickBooks"}
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={handleQBOSync} disabled={isSyncing || isClearing}>
+                    <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                    {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleQboClearMapping} disabled={isSyncing || isClearing}>
+                    {isClearing ? "Clearing link..." : "Clear QuickBooks link"}
+                  </DropdownMenuItem>
+                </>
               )}
 
               {canRequestRefund && (
@@ -226,12 +219,16 @@ export default function PaymentDetailPage() {
         </div>
       </div>
 
-      {isQboConnected && payment.qbo_sync_status === "failed" && payment.qbo_sync_error && (
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardContent className="py-3 text-sm text-destructive">
-            QuickBooks sync failed: {payment.qbo_sync_error}
-          </CardContent>
-        </Card>
+      {isQboConnected && (
+        <QboSyncBadge
+          status={payment.qbo_sync_status}
+          error={payment.qbo_sync_error}
+          connected={isQboConnected}
+          onRetry={handleQBOSync}
+          onClearMapping={handleQboClearMapping}
+          isRetrying={isSyncing}
+          isClearing={isClearing}
+        />
       )}
 
       {canRequestRefund && (

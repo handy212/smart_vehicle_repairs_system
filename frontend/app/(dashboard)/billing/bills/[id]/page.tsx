@@ -4,17 +4,30 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Calendar, CreditCard, Database, Download, Edit, FileText, FileMinus2, MoreVertical, Package, ReceiptText, Truck, XCircle } from "lucide-react";
+import {
+    ArrowLeft,
+    CreditCard,
+    Database,
+    Download,
+    Edit,
+    FileMinus2,
+    FileText,
+    Loader2,
+    MoreVertical,
+    Package,
+    XCircle,
+} from "lucide-react";
 import { useState } from "react";
 
 import { billingApi } from "@/lib/api/billing";
-import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { useQboEntitySync } from "@/hooks/useQboEntitySync";
+import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { ApplyVendorCreditDialog } from "@/components/billing/ApplyVendorCreditDialog";
 import { payBillsHref } from "@/lib/billing/ap-flow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
@@ -40,6 +53,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
@@ -72,8 +86,19 @@ export default function BillDetailPage() {
     const [isVendorCreditDialogOpen, setIsVendorCreditDialogOpen] = useState(false);
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
     const [selectedApproverId, setSelectedApproverId] = useState("");
-    const [isSyncing, setIsSyncing] = useState(false);
     const { isConnected: isQboConnected } = useQuickBooksConnection();
+    const {
+        isSyncing,
+        isClearing,
+        handleSync: handleQBOSync,
+        handleClearMapping: handleQboClearMapping,
+    } = useQboEntitySync({
+        entityType: "vendor_bill",
+        objectId: id,
+        queryKey: ["bill", id],
+        syncSuccessMessage: "Vendor bill push to QuickBooks triggered. Status should update shortly.",
+        syncErrorMessage: "Could not trigger vendor bill sync with QuickBooks.",
+    });
 
     const { data: bill, isLoading, error } = useQuery({
         queryKey: ["bill", id],
@@ -211,7 +236,11 @@ export default function BillDetailPage() {
     }
 
     if (isLoading) {
-        return <div className="p-8 text-sm text-muted-foreground">Loading bill details...</div>;
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
     }
 
     if (error || !bill) {
@@ -228,16 +257,25 @@ export default function BillDetailPage() {
         );
     }
 
-    const billDate = bill.bill_date ? format(new Date(bill.bill_date), "MMM d, yyyy") : "-";
-    const dueDate = bill.due_date ? format(new Date(bill.due_date), "MMM d, yyyy") : "-";
+    const billDate = bill.bill_date ? format(new Date(bill.bill_date), "MMM d, yyyy") : "—";
+    const dueDate = bill.due_date ? format(new Date(bill.due_date), "MMM d, yyyy") : "—";
     const statusLabel = bill.status.replace(/_/g, " ");
-    const canRecordPayment = hasPermission("edit_bills") && !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) && Number.parseFloat(bill.amount_due || "0") > 0;
     const amountDueNum = Number.parseFloat(bill.amount_due || "0");
+    const amountPaidNum = Number.parseFloat(bill.amount_paid || "0");
+    const totalNum = Number.parseFloat(bill.total || "0");
+
+    const canRecordPayment =
+        hasPermission("edit_bills") &&
+        !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) &&
+        amountDueNum > 0;
     const canApplyVendorCredit =
         hasPermission("edit_bills") &&
         !["draft", "pending_approval", "rejected", "paid", "void"].includes(bill.status) &&
         amountDueNum > 0;
-    const canEditBill = hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0;
+    const canEditBill =
+        hasPermission("edit_bills") &&
+        ["draft", "rejected"].includes(bill.status) &&
+        amountPaidNum === 0;
     const isStandaloneBill = !bill.purchase_order;
     const showSubmitApproval = isStandaloneBill && ["draft", "rejected"].includes(bill.status);
     const canOpenDraftBill =
@@ -247,33 +285,17 @@ export default function BillDetailPage() {
     const canApproveOrRejectBill =
         hasPermission("manage_billing") ||
         (hasAnyPermission(["edit_bills", "manage_billing"]) && bill.assigned_approver === user?.id);
+    const canVoidBill =
+        hasPermission("edit_bills") &&
+        ["draft", "rejected"].includes(bill.status) &&
+        amountPaidNum === 0;
     const canDeleteBill =
         hasAnyPermission(["delete_bills", "manage_billing"]) &&
         ["draft", "rejected"].includes(bill.status) &&
-        Number.parseFloat(bill.amount_paid || "0") === 0;
-
-    const handleQBOSync = async () => {
-        try {
-            setIsSyncing(true);
-            await quickbooksApi.syncOutbound({ entity_type: "vendor_bill", object_id: id });
-            toast({
-                title: "QuickBooks Sync",
-                description: "Vendor bill push to QuickBooks triggered. Status should update shortly.",
-            });
-            queryClient.invalidateQueries({ queryKey: ["bill", id] });
-        } catch {
-            toast({
-                title: "QuickBooks Sync Failed",
-                description: "Could not trigger vendor bill sync with QuickBooks.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsSyncing(false);
-        }
-    };
+        amountPaidNum === 0;
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6">
             <ApplyVendorCreditDialog
                 open={isVendorCreditDialogOpen}
                 onOpenChange={setIsVendorCreditDialogOpen}
@@ -281,155 +303,38 @@ export default function BillDetailPage() {
                 vendorId={bill.vendor}
                 amountDue={amountDueNum}
             />
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Link href="/billing/bills">
-                        <Button variant="ghost" size="icon">
-                            <ArrowLeft className="h-4 w-4" />
+                        <Button variant="secondary" size="sm">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
                         </Button>
                     </Link>
                     <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-2xl font-bold tracking-tight">Bill {bill.bill_number}</h1>
-                            <Badge className={`capitalize ${statusClassNames[bill.status] || statusClassNames.draft}`}>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-sm font-semibold">
+                                Bill {bill.bill_number}
+                            </span>
+                            <Badge className={cn("capitalize", statusClassNames[bill.status] || statusClassNames.draft)}>
                                 {statusLabel}
                             </Badge>
-                            {isQboConnected && (
-                                <Badge variant={bill.qbo_sync_status === "synced" ? "default" : bill.qbo_sync_status === "failed" ? "destructive" : "secondary"} className="capitalize">
-                                    QBO: {bill.qbo_sync_status || "un-synced"}
-                                </Badge>
-                            )}
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Vendor bill from {bill.vendor_name || "Unknown vendor"}
-                        </p>
+                        <p className="mt-1.5 text-sm text-muted-foreground">{bill.vendor_name || "Unknown vendor"}</p>
                     </div>
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2">
-                    {isQboConnected && (
-                        <Button variant="outline" size="sm" onClick={handleQBOSync} disabled={isSyncing}>
-                            <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                            {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+                    {canRecordPayment && (
+                        <Button size="sm" asChild>
+                            <Link href={payBillsHref(bill.vendor, bill.id)}>
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Pay Bill
+                            </Link>
                         </Button>
                     )}
-                    {showSubmitApproval && (
-                        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="sm" disabled={submitApprovalMutation.isPending}>
-                                    Submit Approval
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle>Select Bill Approver</DialogTitle>
-                                    <DialogDescription>
-                                        Choose the manager or billing approver who should review and release this vendor bill.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium text-foreground">Approver</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            The selected approver will receive the bill for review.
-                                        </p>
-                                    </div>
-                                    <Select value={selectedApproverId} onValueChange={setSelectedApproverId}>
-                                        <SelectTrigger className="bg-background">
-                                            <SelectValue placeholder="Choose manager or admin" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {approvers.map((approver) => (
-                                                <SelectItem key={approver.id} value={approver.id.toString()}>
-                                                    {approver.full_name || `${approver.first_name} ${approver.last_name}`.trim() || approver.email} ({approver.role})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {approvers.length === 0 && (
-                                        <p className="text-sm text-muted-foreground">No active manager/admin users found.</p>
-                                    )}
-                                </div>
-                                <DialogFooter>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => {
-                                            setIsApprovalDialogOpen(false);
-                                            setSelectedApproverId("");
-                                        }}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        disabled={!selectedApproverId || submitApprovalMutation.isPending}
-                                        onClick={() => submitApprovalMutation.mutate(Number.parseInt(selectedApproverId, 10))}
-                                    >
-                                        {submitApprovalMutation.isPending ? "Submitting..." : "Submit"}
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    )}
-                    {canOpenDraftBill && (
-                        <Button
-                            size="sm"
-                            onClick={() => openDraftMutation.mutate()}
-                            disabled={openDraftMutation.isPending}
-                        >
-                            {openDraftMutation.isPending ? "Opening..." : "Open Bill"}
-                        </Button>
-                    )}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                                <MoreVertical className="mr-2 h-4 w-4" />
-                                Actions
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem
-                                onClick={() => downloadPDF({ documentType: "bill", documentId: id, documentNumber: bill.bill_number })}
-                                disabled={isDownloading}
-                            >
-                                <Download className="mr-2 h-4 w-4" />
-                                {isDownloading ? "Downloading..." : "PDF"}
-                            </DropdownMenuItem>
-                            {canEditBill && (
-                                <DropdownMenuItem onClick={() => router.push(`/billing/bills/${id}/edit`)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                </DropdownMenuItem>
-                            )}
-                            {(hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0) && (
-                                <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive"
-                                        onClick={() => {
-                                            if (confirm("Void this bill?")) voidMutation.mutate();
-                                        }}
-                                        disabled={voidMutation.isPending}
-                                    >
-                                        <XCircle className="mr-2 h-4 w-4" />
-                                        {voidMutation.isPending ? "Voiding..." : "Void"}
-                                    </DropdownMenuItem>
-                                </>
-                            )}
-                            {canDeleteBill && (
-                                <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => {
-                                        if (confirm("Delete this bill permanently?")) deleteMutation.mutate();
-                                    }}
-                                    disabled={deleteMutation.isPending}
-                                >
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                     {canApproveOrRejectBill && isStandaloneBill && bill.status === "pending_approval" && (
                         <>
                             <Button
@@ -453,289 +358,397 @@ export default function BillDetailPage() {
                             </Button>
                         </>
                     )}
-                    {canApplyVendorCredit && (
-                        <Button size="sm" variant="outline" onClick={() => setIsVendorCreditDialogOpen(true)}>
-                            <FileMinus2 className="mr-2 h-4 w-4" />
-                            Apply vendor credit
+                    {showSubmitApproval && (
+                        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm" disabled={submitApprovalMutation.isPending}>
+                                    Submit for approval
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Select Bill Approver</DialogTitle>
+                                    <DialogDescription>
+                                        Choose the manager or billing approver who should review this vendor bill.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Select value={selectedApproverId} onValueChange={setSelectedApproverId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose manager or admin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {approvers.map((approver) => (
+                                            <SelectItem key={approver.id} value={approver.id.toString()}>
+                                                {approver.full_name ||
+                                                    `${approver.first_name} ${approver.last_name}`.trim() ||
+                                                    approver.email}{" "}
+                                                ({approver.role})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {approvers.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">No active manager/admin users found.</p>
+                                )}
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsApprovalDialogOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        disabled={!selectedApproverId || submitApprovalMutation.isPending}
+                                        onClick={() =>
+                                            submitApprovalMutation.mutate(Number.parseInt(selectedApproverId, 10))
+                                        }
+                                    >
+                                        {submitApprovalMutation.isPending ? "Submitting..." : "Submit"}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                    {canOpenDraftBill && (
+                        <Button size="sm" onClick={() => openDraftMutation.mutate()} disabled={openDraftMutation.isPending}>
+                            {openDraftMutation.isPending ? "Opening..." : "Open Bill"}
                         </Button>
                     )}
-                    {canRecordPayment && (
-                        <Button size="sm" asChild>
-                            <Link href={payBillsHref(bill.vendor, bill.id)}>
-                                <CreditCard className="mr-2 h-4 w-4" />
-                                Pay Bill
-                            </Link>
-                        </Button>
-                    )}
-                    {hasPermission("edit_bills") && ["draft", "rejected"].includes(bill.status) && Number.parseFloat(bill.amount_paid || "0") === 0 && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-destructive/30 text-destructive hover:bg-destructive/5"
-                            onClick={() => {
-                                if (confirm("Void this bill?")) voidMutation.mutate();
-                            }}
-                            disabled={voidMutation.isPending}
-                        >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Void
-                        </Button>
-                    )}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    downloadPDF({
+                                        documentType: "bill",
+                                        documentId: id,
+                                        documentNumber: bill.bill_number,
+                                    })
+                                }
+                                disabled={isDownloading}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                {isDownloading ? "Downloading..." : "Download PDF"}
+                            </DropdownMenuItem>
+                            {canEditBill && (
+                                <DropdownMenuItem onClick={() => router.push(`/billing/bills/${id}/edit`)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                            )}
+                            {canApplyVendorCredit && (
+                                <DropdownMenuItem onClick={() => setIsVendorCreditDialogOpen(true)}>
+                                    <FileMinus2 className="mr-2 h-4 w-4" />
+                                    Apply vendor credit
+                                </DropdownMenuItem>
+                            )}
+                            {isQboConnected && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={handleQBOSync} disabled={isSyncing || isClearing}>
+                                        <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                                        {isSyncing ? "Syncing..." : "Push to QuickBooks"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={handleQboClearMapping}
+                                        disabled={isSyncing || isClearing}
+                                    >
+                                        {isClearing ? "Clearing link..." : "Clear QuickBooks link"}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                            {(canVoidBill || canDeleteBill) && <DropdownMenuSeparator />}
+                            {canVoidBill && (
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => {
+                                        if (confirm("Void this bill?")) voidMutation.mutate();
+                                    }}
+                                    disabled={voidMutation.isPending}
+                                >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    {voidMutation.isPending ? "Voiding..." : "Void"}
+                                </DropdownMenuItem>
+                            )}
+                            {canDeleteBill && (
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => {
+                                        if (confirm("Delete this bill permanently?")) deleteMutation.mutate();
+                                    }}
+                                    disabled={deleteMutation.isPending}
+                                >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
-            {isQboConnected && bill.qbo_sync_status === "failed" && bill.qbo_sync_error && (
-                <Card className="border-destructive/20 bg-destructive/5">
-                    <CardContent className="py-3 text-sm text-destructive">
-                        QuickBooks sync failed: {bill.qbo_sync_error}
-                    </CardContent>
-                </Card>
+            {isQboConnected && (
+                <QboSyncBadge
+                    status={bill.qbo_sync_status}
+                    error={bill.qbo_sync_error}
+                    onRetry={handleQBOSync}
+                    onClearMapping={handleQboClearMapping}
+                    isRetrying={isSyncing}
+                    isClearing={isClearing}
+                />
             )}
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase text-muted-foreground">Total</p>
-                            <p className="text-xl font-bold">{formatCurrency(Number.parseFloat(bill.total || "0"))}</p>
-                        </div>
-                        <ReceiptText className="h-5 w-5 text-muted-foreground" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase text-muted-foreground">Amount Due</p>
-                            <p className="text-xl font-bold">{formatCurrency(Number.parseFloat(bill.amount_due || "0"))}</p>
-                        </div>
-                        <CreditCard className="h-5 w-5 text-muted-foreground" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase text-muted-foreground">Bill Date</p>
-                            <p className="text-sm font-medium">{billDate}</p>
-                        </div>
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase text-muted-foreground">Due Date</p>
-                            <p className="text-sm font-medium">{dueDate}</p>
-                        </div>
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
-                    </CardContent>
-                </Card>
-            </div>
+            <Tabs defaultValue="bill" className="w-full">
+                <TabsList className="mb-4 h-auto w-full flex-wrap justify-start bg-muted/50 p-1">
+                    <TabsTrigger value="bill" className="gap-2">
+                        <FileText className="h-4 w-4" />
+                        Bill
+                    </TabsTrigger>
+                    <TabsTrigger value="payments" className="gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Payments & credits
+                    </TabsTrigger>
+                </TabsList>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
+                <TabsContent value="bill" className="space-y-6">
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Package className="h-5 w-5 text-muted-foreground" />
-                                Bill Line Items
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                <div>
+                                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">Vendor</h3>
+                                    <p className="font-semibold">{bill.vendor_name || "—"}</p>
+                                    {bill.reference_number && (
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Ref: {bill.reference_number}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">Dates</h3>
+                                    <p className="text-sm">
+                                        <span className="text-muted-foreground">Bill date: </span>
+                                        <span className="font-medium">{billDate}</span>
+                                    </p>
+                                    <p className="mt-1 text-sm">
+                                        <span className="text-muted-foreground">Due date: </span>
+                                        <span className="font-medium">{dueDate}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">Amounts</h3>
+                                    <p className="text-sm">
+                                        <span className="text-muted-foreground">Total: </span>
+                                        <span className="font-semibold">{formatCurrency(totalNum)}</span>
+                                    </p>
+                                    <p className="mt-1 text-sm">
+                                        <span className="text-muted-foreground">Paid: </span>
+                                        <span className="font-medium">{formatCurrency(amountPaidNum)}</span>
+                                    </p>
+                                    <p className="mt-1 text-sm">
+                                        <span className="text-muted-foreground">Due: </span>
+                                        <span className="font-semibold text-foreground">{formatCurrency(amountDueNum)}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">Links</h3>
+                                    {bill.purchase_order ? (
+                                        <Link
+                                            href={`/inventory/purchase-orders/${bill.purchase_order}`}
+                                            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                                        >
+                                            <Package className="h-4 w-4" />
+                                            {bill.purchase_order_number || `PO #${bill.purchase_order}`}
+                                        </Link>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">Standalone bill</p>
+                                    )}
+                                    {bill.assigned_approver_name && (
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            Approver: {bill.assigned_approver_name}
+                                        </p>
+                                    )}
+                                    {bill.rejection_reason && (
+                                        <p className="mt-2 text-sm text-destructive">{bill.rejection_reason}</p>
+                                    )}
+                                </div>
+                            </div>
+                            {(bill.terms || bill.notes) && (
+                                <div className="mt-6 grid grid-cols-1 gap-4 border-t pt-6 md:grid-cols-2">
+                                    {bill.terms && (
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Terms</p>
+                                            <p className="mt-1 text-sm">{bill.terms}</p>
+                                        </div>
+                                    )}
+                                    {bill.notes && (
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Notes</p>
+                                            <p className="mt-1 text-sm whitespace-pre-wrap">{bill.notes}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardContent className="p-0">
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
+                                    <TableRow className="bg-muted/30 hover:bg-muted/30">
                                         <TableHead>Description</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead className="text-right">Qty</TableHead>
-                                        <TableHead className="text-right">Unit Price</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
+                                        <TableHead className="text-right">Rate</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {bill.line_items?.map((item) => (
-                                        <TableRow key={item.id || item.description}>
-                                            <TableCell className="font-medium">{item.description}</TableCell>
-                                            <TableCell>{item.expense_category || "-"}</TableCell>
-                                            <TableCell className="text-right">{Number(item.quantity).toLocaleString()}</TableCell>
-                                            <TableCell className="text-right">
-                                                {formatCurrency(Number.parseFloat(item.unit_price || "0"))}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatCurrency(Number.parseFloat(item.total || "0"))}
+                                    {bill.line_items?.length ? (
+                                        bill.line_items.map((item) => (
+                                            <TableRow key={item.id || item.description}>
+                                                <TableCell className="font-medium">{item.description}</TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {item.expense_category || "—"}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {Number(item.quantity).toLocaleString()}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {formatCurrency(Number.parseFloat(item.unit_price || "0"))}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {formatCurrency(Number.parseFloat(item.total || "0"))}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                                                No line items
                                             </TableCell>
                                         </TableRow>
-                                    ))}
-                                    <TableRow className="border-t-2">
-                                        <TableCell colSpan={4} className="text-right font-semibold">Subtotal</TableCell>
-                                        <TableCell className="text-right font-semibold">
+                                    )}
+                                    <TableRow className="border-t-2 hover:bg-transparent">
+                                        <TableCell colSpan={4} className="text-right text-sm text-muted-foreground">
+                                            Subtotal
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium">
                                             {formatCurrency(Number.parseFloat(bill.subtotal || "0"))}
                                         </TableCell>
                                     </TableRow>
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-right font-semibold">Tax</TableCell>
-                                        <TableCell className="text-right font-semibold">
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell colSpan={4} className="text-right text-sm text-muted-foreground">
+                                            Tax
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium">
                                             {formatCurrency(Number.parseFloat(bill.tax_amount || "0"))}
                                         </TableCell>
                                     </TableRow>
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-right text-lg font-bold">Total</TableCell>
-                                        <TableCell className="text-right text-lg font-bold">
-                                            {formatCurrency(Number.parseFloat(bill.total || "0"))}
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell colSpan={4} className="text-right text-base font-bold">
+                                            Total
+                                        </TableCell>
+                                        <TableCell className="text-right text-base font-bold">
+                                            {formatCurrency(totalNum)}
                                         </TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
                         </CardContent>
                     </Card>
-                </div>
+                </TabsContent>
 
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Truck className="h-5 w-5 text-muted-foreground" />
-                                Vendor & Procurement
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Vendor</p>
-                                <p className="font-medium">{bill.vendor_name || "-"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Vendor Reference</p>
-                                <p className="font-medium">{bill.reference_number || "-"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Assigned Approver</p>
-                                <p className="font-medium">{bill.assigned_approver_name || "-"}</p>
-                            </div>
-                            {bill.rejection_reason && (
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Rejection Reason</p>
-                                    <p className="font-medium text-destructive">{bill.rejection_reason}</p>
-                                </div>
-                            )}
-                            <div>
-                                <p className="text-sm text-muted-foreground">Purchase Order</p>
-                                {bill.purchase_order ? (
-                                    <Link
-                                        href={`/inventory/purchase-orders/${bill.purchase_order}`}
-                                        className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
-                                    >
-                                        <FileText className="h-4 w-4" />
-                                        {bill.purchase_order_number || `PO #${bill.purchase_order}`}
-                                    </Link>
-                                ) : (
-                                    <p className="font-medium">-</p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between gap-3">
-                                <CardTitle className="text-base">Payment Summary</CardTitle>
-                                {canRecordPayment && (
-                                    <Button size="sm" variant="outline" asChild>
-                                        <Link href={payBillsHref(bill.vendor, bill.id)}>
-                                            <CreditCard className="mr-2 h-4 w-4" />
-                                            Pay Bill
-                                        </Link>
-                                    </Button>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Amount Paid</span>
-                                <span className="font-medium">{formatCurrency(Number.parseFloat(bill.amount_paid || "0"))}</span>
-                            </div>
-                            <div className="flex justify-between border-t pt-3 text-sm">
-                                <span className="text-muted-foreground">Amount Due</span>
-                                <span className="font-semibold">{formatCurrency(Number.parseFloat(bill.amount_due || "0"))}</span>
-                            </div>
-                            {bill.terms && (
-                                <div className="border-t pt-3">
-                                    <p className="text-sm text-muted-foreground">Terms</p>
-                                    <p className="text-sm font-medium">{bill.terms}</p>
-                                </div>
-                            )}
-                            {bill.notes && (
-                                <div className="border-t pt-3">
-                                    <p className="text-sm text-muted-foreground">Notes</p>
-                                    <p className="text-sm">{bill.notes}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Vendor credits applied</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {bill.vendor_credit_applications && bill.vendor_credit_applications.length > 0 ? (
-                                bill.vendor_credit_applications.map((app) => (
-                                    <div key={app.id} className="rounded-md border p-3 text-sm">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <span className="font-medium">Credit application</span>
-                                            <span className="font-semibold">{formatCurrency(Number.parseFloat(app.amount || "0"))}</span>
-                                        </div>
-                                        <div className="mt-1 text-muted-foreground">
-                                            {app.applied_at
-                                                ? format(new Date(app.applied_at), "MMM d, yyyy")
-                                                : "—"}
-                                            {app.applied_by_name ? ` · ${app.applied_by_name}` : ""}
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground">No vendor credits applied to this bill.</p>
-                            )}
+                <TabsContent value="payments" className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-muted-foreground">
+                            {formatCurrency(amountPaidNum)} paid · {formatCurrency(amountDueNum)} remaining
+                        </p>
+                        <div className="flex gap-2">
                             {canApplyVendorCredit && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => setIsVendorCreditDialogOpen(true)}
-                                >
+                                <Button size="sm" variant="outline" onClick={() => setIsVendorCreditDialogOpen(true)}>
                                     <FileMinus2 className="mr-2 h-4 w-4" />
                                     Apply vendor credit
                                 </Button>
                             )}
+                            {canRecordPayment && (
+                                <Button size="sm" asChild>
+                                    <Link href={payBillsHref(bill.vendor, bill.id)}>
+                                        <CreditCard className="mr-2 h-4 w-4" />
+                                        Pay Bill
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    <Card>
+                        <CardContent className="pt-6">
+                            <h3 className="mb-3 text-sm font-semibold">Vendor payments</h3>
+                            {bill.payments && bill.payments.length > 0 ? (
+                                <div className="divide-y">
+                                    {bill.payments.map((payment) => (
+                                        <div
+                                            key={payment.id}
+                                            className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                                        >
+                                            <div>
+                                                <p className="font-medium">{payment.payment_number}</p>
+                                                <p className="text-sm capitalize text-muted-foreground">
+                                                    {payment.payment_method.replace(/_/g, " ")}
+                                                    {payment.reference_number ? ` · Ref ${payment.reference_number}` : ""}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold">
+                                                    {formatCurrency(Number.parseFloat(payment.amount || "0"))}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {format(new Date(payment.payment_date), "MMM d, yyyy")}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No vendor payments recorded yet.</p>
+                            )}
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Payments</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {bill.payments && bill.payments.length > 0 ? (
-                                bill.payments.map((payment) => (
-                                    <div key={payment.id} className="rounded-md border p-3 text-sm">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <span className="font-medium">{payment.payment_number}</span>
-                                            <span className="font-semibold">{formatCurrency(Number.parseFloat(payment.amount || "0"))}</span>
+                        <CardContent className="pt-6">
+                            <h3 className="mb-3 text-sm font-semibold">Vendor credits applied</h3>
+                            {bill.vendor_credit_applications && bill.vendor_credit_applications.length > 0 ? (
+                                <div className="divide-y">
+                                    {bill.vendor_credit_applications.map((app) => (
+                                        <div
+                                            key={app.id}
+                                            className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                                        >
+                                            <div>
+                                                <p className="font-medium">Credit application</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {app.applied_at
+                                                        ? format(new Date(app.applied_at), "MMM d, yyyy")
+                                                        : "—"}
+                                                    {app.applied_by_name ? ` · ${app.applied_by_name}` : ""}
+                                                </p>
+                                            </div>
+                                            <p className="font-semibold">
+                                                {formatCurrency(Number.parseFloat(app.amount || "0"))}
+                                            </p>
                                         </div>
-                                        <div className="mt-1 flex items-center justify-between gap-3 text-muted-foreground">
-                                            <span className="capitalize">{payment.payment_method.replace("_", " ")}</span>
-                                            <span>{format(new Date(payment.payment_date), "MMM d, yyyy")}</span>
-                                        </div>
-                                        {payment.reference_number && (
-                                            <p className="mt-1 text-muted-foreground">Ref: {payment.reference_number}</p>
-                                        )}
-                                    </div>
-                                ))
+                                    ))}
+                                </div>
                             ) : (
-                                <p className="text-sm text-muted-foreground">No vendor payments recorded.</p>
+                                <p className="text-sm text-muted-foreground">No vendor credits applied to this bill.</p>
                             )}
                         </CardContent>
                     </Card>
-                </div>
-            </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

@@ -8,6 +8,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
+import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
+import {
+  JOB_TYPE_FIELD_LABEL,
+  JOB_TYPE_GENERAL_LABEL,
+  JOB_TYPE_ROUTINE_LABEL,
+  SERVICE_PACKAGE_LABEL,
+  SERVICE_PACKAGE_PLACEHOLDER,
+} from "@/lib/workorders/job-type-labels";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,10 +40,16 @@ const workOrderSchema = z.object({
   customer_concerns: z.string().optional(),
   maintenance_type: z.enum(["general", "routine"]).optional(),
   service_type: z.number().optional(),
-});
+  service_bundle: z.number().optional(),
+}).refine(
+  (data) => data.maintenance_type !== "routine" || !!data.service_bundle,
+  {
+    message: "Select a service package for routine service jobs",
+    path: ["service_bundle"],
+  }
+);
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
-type ServiceTypeOption = { id: number; name: string };
 
 import { getValidNextStatuses } from "@/lib/utils/workorder-transitions";
 import { isDiagnosisPausedWorkOrder, type WorkOrderLike } from "@/lib/utils/workorder-inspection-stage";
@@ -104,11 +118,16 @@ export default function EditWorkOrderPage() {
     queryFn: () => workordersApi.get(workOrderId),
   });
 
-  // Fetch service types
-  const { data: serviceTypesData } = useQuery({
-    queryKey: ["serviceTypes"],
-    queryFn: () => vehiclesApi.getServiceTypes(),
+  // Fetch active service bundles for routine jobs
+  const { data: bundlesData } = useQuery({
+    queryKey: ["inventory", "bundles", "active"],
+    queryFn: () => inventoryApi.listBundles({ is_active: true }),
   });
+
+  const bundles = (() => {
+    if (!bundlesData) return [] as ServiceBundle[];
+    return Array.isArray(bundlesData) ? bundlesData : (bundlesData as { results?: ServiceBundle[] }).results || [];
+  })();
 
   // Fetch customers
   const { data: customersData } = useQuery({
@@ -226,6 +245,10 @@ export default function EditWorkOrderPage() {
         ? workOrder.service_type.id
         : (typeof workOrder.service_type === 'number' ? workOrder.service_type : undefined);
 
+      const serviceBundleId = typeof workOrder.service_bundle === 'object' && workOrder.service_bundle !== null
+        ? workOrder.service_bundle.id
+        : (typeof workOrder.service_bundle === 'number' ? workOrder.service_bundle : undefined);
+
       // Use setValue for critical fields to ensure they register
       setValue("customer", customerId || 0);
       setValue("vehicle", vehicleId || 0);
@@ -241,6 +264,7 @@ export default function EditWorkOrderPage() {
 
         maintenance_type: (workOrder.maintenance_type || "general") as WorkOrderFormData["maintenance_type"],
         service_type: serviceTypeId,
+        service_bundle: serviceBundleId,
       });
 
       // Explicitly sync local state for immediate feedback
@@ -612,64 +636,71 @@ export default function EditWorkOrderPage() {
                 <CardDescription>Priority, status, and description</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Maintenance Type */}
-                  <div className="col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-card-foreground mb-1">
-                      Maintenance Type
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-card-foreground">
+                      {JOB_TYPE_FIELD_LABEL}
                     </label>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      General repair follows inspection and diagnosis. Routine service uses a predefined package.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-4">
+                      <label className="flex cursor-pointer items-center space-x-2">
                         <input
                           type="radio"
                           value="general"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-border focus:ring-primary"
+                          className="h-4 w-4 border-border text-primary focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-foreground">General Repair</span>
+                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_GENERAL_LABEL}</span>
                       </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
+                      <label className="flex cursor-pointer items-center space-x-2">
                         <input
                           type="radio"
                           value="routine"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-border focus:ring-primary"
+                          className="h-4 w-4 border-border text-primary focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-foreground">Routine Service</span>
+                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_ROUTINE_LABEL}</span>
                       </label>
                     </div>
                   </div>
 
-                  {/* Service Type (only if routine) */}
                   {watch("maintenance_type") === "routine" && (
-                    <div className="col-span-2 md:col-span-1">
-                      <label htmlFor="service_type" className="block text-sm font-medium text-card-foreground mb-1">
-                        Service Type
+                    <div>
+                      <label htmlFor="service_bundle" className="mb-1 block text-sm font-medium text-card-foreground">
+                        {SERVICE_PACKAGE_LABEL} *
                       </label>
                       <Select
-                        value={watch("service_type")?.toString() || ""}
+                        value={watch("service_bundle")?.toString() || ""}
                         onValueChange={(val) => {
-                          setValue("service_type", parseInt(val));
-                          // Auto-fill concerns if empty
+                          const bundleId = parseInt(val, 10);
+                          setValue("service_bundle", bundleId, { shouldValidate: true });
 
-                          const type = serviceTypesData?.results?.find((t: ServiceTypeOption) => t.id === parseInt(val));
-                          if (type && !watch("customer_concerns")) {
-                            setValue("customer_concerns", `Perform ${type.name}`);
+                          const bundle = bundles.find((b) => b.id === bundleId);
+                          if (bundle?.service_type) {
+                            setValue("service_type", bundle.service_type);
+                          }
+                          if (bundle && !watch("customer_concerns")) {
+                            setValue("customer_concerns", `Perform ${bundle.name}`);
                           }
                         }}
                       >
-                        <SelectTrigger id="service_type">
-                          <SelectValue placeholder="Select service type" />
+                        <SelectTrigger id="service_bundle">
+                          <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
                         </SelectTrigger>
                         <SelectContent>
-
-                          {serviceTypesData?.results?.map((type: ServiceTypeOption) => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.name}
+                          {bundles.map((bundle) => (
+                            <SelectItem key={bundle.id} value={bundle.id.toString()}>
+                              {bundle.name}
+                              {bundle.service_type_name ? ` · ${bundle.service_type_name}` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {errors.service_bundle && (
+                        <p className="mt-1 text-sm text-destructive">{errors.service_bundle.message}</p>
+                      )}
                     </div>
                   )}
                 </div>
