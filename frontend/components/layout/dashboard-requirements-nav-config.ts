@@ -30,7 +30,7 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
     items: [
       {
         name: "Sales Summary",
-        href: "/billing/sales-reports",
+        href: "/billing/receivables",
         permission: "view_billing",
         module: "billing",
         icon: BarChart3,
@@ -44,14 +44,14 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
       },
       {
         name: "Outstanding Receivables",
-        href: "/billing/customer-balances",
+        href: "/billing/receivables?tab=balances",
         permission: "view_billing",
         module: "billing",
         icon: HandCoins,
       },
       {
         name: "Outstanding Payables",
-        href: "/billing/ap-due",
+        href: "/billing/payables?tab=due",
         permission: "view_billing",
         module: "billing",
         icon: Receipt,
@@ -177,7 +177,7 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
       },
       {
         name: "Purchase Reports",
-        href: "/billing/purchase-reports",
+        href: "/billing/payables?tab=reports",
         permission: "view_billing",
         module: "billing",
         icon: BarChart3,
@@ -189,13 +189,6 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
     label: "Banking & Cash",
     icon: Landmark,
     items: [
-      {
-        name: "Vendor Expense",
-        href: "/billing/expenses",
-        permission: "view_billing",
-        module: "billing",
-        icon: Receipt,
-      },
       {
         name: "Bank Reconciliation",
         href: "/accounting/banking/reconciliation",
@@ -275,7 +268,7 @@ export const DASHBOARD_REQUIREMENTS_NAV_GROUPS: NavGroup[] = [
     items: [
       {
         name: "Vendor Balances",
-        href: "/billing/vendor-balances",
+        href: "/billing/payables?tab=balances",
         permission: "view_billing",
         module: "billing",
         icon: Building2,

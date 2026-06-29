@@ -824,31 +824,121 @@ class QuickBooksService:
             defaults=defaults,
         )
 
+    def _resolve_ap_expense_account_id(
+        self,
+        mapping_service,
+        *,
+        expense_account_id=None,
+        is_inventory_line=False,
+    ):
+        """Resolve QBO expense account for AP lines (never use item-based without ItemRef)."""
+        account_id = None
+        if expense_account_id and mapping_service:
+            acct_mapping = mapping_service.get_mapping('svr_account', str(expense_account_id))
+            if acct_mapping and acct_mapping.qbo_account_id:
+                account_id = acct_mapping.qbo_account_id
+        if not account_id and mapping_service:
+            account_id = mapping_service.resolve_bill_line_account_id(
+                is_inventory_line=is_inventory_line,
+            )
+        if not account_id and mapping_service:
+            control_field = (
+                'inventory_asset_account' if is_inventory_line else 'default_expense_account'
+            )
+            account_id = mapping_service.resolve_control_account_qbo_id(control_field)
+        return account_id
+
+    def _try_item_based_ap_line(
+        self,
+        line,
+        item,
+        *,
+        part,
+        is_inventory_line=False,
+        txn_date=None,
+        client=None,
+    ) -> bool:
+        """Fall back to ItemBasedExpenseLineDetail when account mapping is unavailable."""
+        if ItemBasedExpenseLineDetail is None or Ref is None or part is None:
+            return False
+
+        from .item_sync import resolve_part_qbo_item_id
+
+        qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
+        if not qbo_item_id:
+            return False
+
+        line.DetailType = 'ItemBasedExpenseLineDetail'
+        exp_item = ItemBasedExpenseLineDetail()
+        exp_item.ItemRef = Ref()
+        exp_item.ItemRef.value = qbo_item_id
+        qty = float(getattr(item, 'quantity', 1) or 1)
+        unit_price = getattr(item, 'unit_price', None)
+        if unit_price is None:
+            unit_price = getattr(item, 'unit_cost', 0)
+        unit_price = float(unit_price or 0)
+        if unit_price <= 0 and line.Amount and qty:
+            unit_price = float(line.Amount) / qty
+        exp_item.Qty = qty
+        exp_item.UnitPrice = unit_price
+
+        mapping_service = self._get_mapping_service()
+        if client is None:
+            client = self.get_client()
+        if client and mapping_service:
+            from .class_sync_helpers import (
+                apply_class_ref_to_detail,
+                class_tracking_enabled,
+                resolve_ap_line_class_id,
+            )
+
+            if class_tracking_enabled(client):
+                class_id = resolve_ap_line_class_id(
+                    mapping_service,
+                    is_inventory_line=is_inventory_line,
+                )
+                apply_class_ref_to_detail(exp_item, class_id)
+
+        line.ItemBasedExpenseLineDetail = exp_item
+        return True
+
     def _build_ap_expense_lines(self, line_items, *, description_attr='description', inventory_relation=None):
-        """Build QBO Bill/VendorCredit expense lines from SVR AP line items."""
+        """Build QBO Bill/VendorCredit/PO expense lines from SVR AP line items."""
         lines = []
         mapping_service = self._get_mapping_service()
+        client = self.get_client()
         for item in line_items:
             line = DetailLine()
             line.Amount = float(item.total)
             description = getattr(item, description_attr, '') or 'Line item'
             is_inventory_line = False
+            related_part = None
             if inventory_relation:
                 related = getattr(item, inventory_relation, None)
                 if related is not None:
+                    related_part = related
                     tracks = getattr(related, 'tracks_inventory', None)
-                    is_inventory_line = tracks() if callable(tracks) else bool(getattr(related, 'item_type', None) == 'inventory')
+                    is_inventory_line = tracks() if callable(tracks) else bool(
+                        getattr(related, 'item_type', None) == 'inventory'
+                    )
                 else:
                     is_inventory_line = bool(getattr(item, f'{inventory_relation}_id', None))
                 if related and getattr(related, 'name', None):
                     description = related.name
             line.Description = description
 
-            account_id = None
-            if mapping_service:
-                account_id = mapping_service.resolve_bill_line_account_id(
-                    is_inventory_line=is_inventory_line,
+            expense_account_id = getattr(item, 'expense_account_id', None)
+            if not expense_account_id:
+                expense_account = getattr(item, 'expense_account', None)
+                expense_account_id = getattr(expense_account, 'id', None) or getattr(
+                    item, 'expense_account_id', None
                 )
+
+            account_id = self._resolve_ap_expense_account_id(
+                mapping_service,
+                expense_account_id=expense_account_id,
+                is_inventory_line=is_inventory_line,
+            )
 
             if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
                 line.DetailType = "AccountBasedExpenseLineDetail"
@@ -857,23 +947,25 @@ class QuickBooksService:
                 expense_detail.AccountRef.value = account_id
                 from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
 
-                if class_tracking_enabled(self.get_client()):
+                if class_tracking_enabled(client):
                     class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
                     apply_class_ref_to_detail(expense_detail, class_id)
                 line.AccountBasedExpenseLineDetail = expense_detail
+                lines.append(line)
+            elif self._try_item_based_ap_line(
+                line,
+                item,
+                part=related_part,
+                is_inventory_line=is_inventory_line,
+                client=client,
+            ):
+                lines.append(line)
             else:
-                line.DetailType = "ItemBasedExpenseLineDetail"
-                exp_item = ItemBasedExpenseLineDetail()
-                exp_item.Qty = float(item.quantity)
-                unit_price = getattr(item, 'unit_price', None) or getattr(item, 'unit_cost', 0)
-                exp_item.UnitPrice = float(unit_price)
-                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
-
-                if class_tracking_enabled(self.get_client()):
-                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
-                    apply_class_ref_to_detail(exp_item, class_id)
-                line.ItemBasedExpenseLineDetail = exp_item
-            lines.append(line)
+                logger.warning(
+                    'Skipping AP line without QBO account or item mapping: %s (inventory=%s)',
+                    description,
+                    is_inventory_line,
+                )
         return lines
 
     def _resolve_vendor_bill_qbo_bill(self, local_bill, *, doc_number):
@@ -1615,46 +1707,18 @@ class QuickBooksService:
             qb_po.PrivateNote = local_po.notes
         self._apply_department_ref(qb_po, local_po.branch)
 
-        po_lines = []
-        for item in local_po.items.select_related('part').all():
-            line = DetailLine()
-            line.Amount = float(item.total)
-            line.Description = item.part.name if item.part else 'Line item'
-            is_inventory_line = False
-            if item.part:
-                tracks = getattr(item.part, 'tracks_inventory', None)
-                is_inventory_line = tracks() if callable(tracks) else item.part.item_type == 'inventory'
+        po_lines = self._build_ap_expense_lines(
+            local_po.items.select_related('part').all(),
+            inventory_relation='part',
+        )
 
-            mapping_service = self._get_mapping_service()
-            account_id = None
-            if mapping_service:
-                account_id = mapping_service.resolve_bill_line_account_id(
-                    is_inventory_line=is_inventory_line,
-                )
-
-            if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
-                line.DetailType = 'AccountBasedExpenseLineDetail'
-                expense_detail = AccountBasedExpenseLineDetail()
-                expense_detail.AccountRef = Ref()
-                expense_detail.AccountRef.value = account_id
-                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
-
-                if class_tracking_enabled(client):
-                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
-                    apply_class_ref_to_detail(expense_detail, class_id)
-                line.AccountBasedExpenseLineDetail = expense_detail
-            else:
-                line.DetailType = 'ItemBasedExpenseLineDetail'
-                exp_item = ItemBasedExpenseLineDetail()
-                exp_item.Qty = float(item.quantity)
-                exp_item.UnitPrice = float(item.unit_cost)
-                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
-
-                if class_tracking_enabled(client):
-                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
-                    apply_class_ref_to_detail(exp_item, class_id)
-                line.ItemBasedExpenseLineDetail = exp_item
-            po_lines.append(line)
+        if not po_lines:
+            self._fail_qbo_mapping(
+                local_po,
+                'No QBO account or item mapping for purchase order lines. '
+                'Map default expense / inventory asset accounts or sync catalog items to QuickBooks.',
+            )
+            return None
 
         qb_po.Line = po_lines
 
@@ -1982,41 +2046,24 @@ class QuickBooksService:
         qb_purchase.EntityRef.value = qb_vendor.Id
         qb_purchase.EntityRef.type = 'Vendor'
 
-        lines = []
-        for item in local_expense.line_items.select_related('expense_account', 'inventory_item').all():
-            line = DetailLine()
-            line.Amount = float(item.total)
-            line.Description = item.description
-            account_id = None
-            if item.expense_account_id and mapping_service:
-                acct_mapping = mapping_service.get_mapping('svr_account', str(item.expense_account_id))
-                if acct_mapping and acct_mapping.qbo_account_id:
-                    account_id = acct_mapping.qbo_account_id
-            if not account_id and mapping_service:
-                account_id = mapping_service.resolve_bill_line_account_id(is_inventory_line=False)
-            if account_id and AccountBasedExpenseLineDetail is not None:
-                line.DetailType = 'AccountBasedExpenseLineDetail'
-                detail = AccountBasedExpenseLineDetail()
-                detail.AccountRef = Ref()
-                detail.AccountRef.value = account_id
-                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
+        lines = self._build_ap_expense_lines(
+            local_expense.line_items.select_related('expense_account', 'inventory_item').all(),
+            inventory_relation='inventory_item',
+        )
+        skipped = max(
+            0,
+            local_expense.line_items.count() - len(lines),
+        )
 
-                if class_tracking_enabled(client):
-                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=False)
-                    apply_class_ref_to_detail(detail, class_id)
-                line.AccountBasedExpenseLineDetail = detail
-            else:
-                line.DetailType = 'ItemBasedExpenseLineDetail'
-                exp_item = ItemBasedExpenseLineDetail()
-                exp_item.Qty = float(item.quantity)
-                exp_item.UnitPrice = float(item.unit_price)
-                from .class_sync_helpers import apply_class_ref_to_detail, class_tracking_enabled, resolve_ap_line_class_id
-
-                if class_tracking_enabled(client):
-                    class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=False)
-                    apply_class_ref_to_detail(exp_item, class_id)
-                line.ItemBasedExpenseLineDetail = exp_item
-            lines.append(line)
+        if not lines:
+            hint = (
+                'Map default expense account under Accounting → Controls → QuickBooks mapping, '
+                'or set an expense account on each line.'
+            )
+            if skipped:
+                hint = f'No QBO account mapped for {skipped} line(s). {hint}'
+            self._fail_qbo_mapping(local_expense, hint)
+            return None
 
         qb_purchase.Line = lines
         self._apply_department_ref(qb_purchase, local_expense.branch)

@@ -282,6 +282,7 @@ export interface AccountingSettings {
     shop_supplies_revenue_account?: number | null;
     environmental_fee_revenue_account?: number | null;
     input_tax_account?: number | null;
+    withholding_tax_payable_account?: number | null;
     default_expense_account?: number | null;
     purchase_returns_account?: number | null;
     inventory_asset_account?: number | null;
@@ -713,20 +714,21 @@ export const accountingApi = {
         return response.data.results || response.data;
     },
 
-    getTillEnabledAccounts: async (): Promise<Account[]> => {
+    getTillEnabledAccounts: async (params?: { branch?: number }): Promise<Account[]> => {
         const response = await apiClient.get("/accounting/accounts/", {
-            params: { is_till_enabled: true, is_active: true },
+            params: { is_till_enabled: true, is_active: true, ...(params?.branch ? { branch: params.branch } : {}) },
         });
         return response.data.results || response.data;
     },
 
-    getBankAccounts: async (): Promise<Account[]> => {
+    getBankAccounts: async (params?: { branch?: number }): Promise<Account[]> => {
+        const branchParam = params?.branch ? { branch: params.branch } : {};
         const response = await apiClient.get("/accounting/accounts/", {
-            params: { account_type: "asset", account_subtype: "bank", is_active: true },
+            params: { account_type: "asset", account_subtype: "bank", is_active: true, ...branchParam },
         });
         const bankAccounts = response.data.results || response.data;
         const cashEquivalentsResponse = await apiClient.get("/accounting/accounts/", {
-            params: { account_type: "asset", account_subtype: "cash_equivalent", is_active: true },
+            params: { account_type: "asset", account_subtype: "cash_equivalent", is_active: true, ...branchParam },
         });
         const cashEquivalents = cashEquivalentsResponse.data.results || cashEquivalentsResponse.data;
         return [...bankAccounts, ...cashEquivalents].filter(

@@ -10,6 +10,7 @@ export type ControlAccountField =
   | "shop_supplies_revenue_account"
   | "environmental_fee_revenue_account"
   | "input_tax_account"
+  | "withholding_tax_payable_account"
   | "default_expense_account"
   | "purchase_returns_account"
   | "inventory_asset_account"
@@ -96,6 +97,13 @@ export const CONTROL_ACCOUNT_SPECS: ControlAccountSpec[] = [
     defaultCode: "2200",
     group: "Revenue & Tax",
     description: "Recoverable input VAT on vendor bills.",
+  },
+  {
+    field: "withholding_tax_payable_account",
+    label: "Withholding Tax Payable",
+    defaultCode: "2250",
+    group: "Revenue & Tax",
+    description: "Withholding tax withheld on vendor payments.",
   },
   {
     field: "default_expense_account",

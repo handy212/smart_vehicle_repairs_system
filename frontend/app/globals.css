@@ -897,11 +897,29 @@ html.perfex aside nav button {
   color: var(--sidebar-foreground);
 }
 
-html.perfex aside nav a svg,
-html.perfex aside nav button svg {
+/* Legacy inline icon + label rows — direct-child svg only (not badge tiles) */
+html.perfex aside nav a > svg,
+html.perfex aside nav button > svg {
   width: 1rem !important;
   height: 1rem !important;
+  flex-shrink: 0;
+}
+
+html.perfex aside nav a > svg:first-child:not(:only-child),
+html.perfex aside nav button > svg:first-child:not(:only-child) {
   margin-right: 0.625rem !important;
+}
+
+html.perfex aside .nav-category-badge svg {
+  margin: 0 !important;
+}
+
+html.perfex aside nav a:has(> .nav-category-badge:only-child),
+html.perfex aside nav button:has(> .nav-category-badge:only-child) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px !important;
 }
 
 /* Sidebar active nav item — white bg + subtle border + shadow */

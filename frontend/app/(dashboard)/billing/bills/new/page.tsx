@@ -46,15 +46,18 @@ import { useToast } from "@/lib/hooks/useToast";
 import { billingApi, Bill } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
 import { branchesApi } from "@/lib/api/branches";
+import { accountingApi } from "@/lib/api/accounting";
 import { useBranchStore } from "@/store/branchStore";
 import Link from "next/link";
 import { canConvertPoToBill } from "@/lib/billing/ap-flow";
 import { ApFlowHint } from "@/components/billing/ApFlowHint";
 
 const lineItemSchema = z.object({
+    line_type: z.enum(["category", "item"]),
     description: z.string().min(1, "Description is required"),
-    quantity: z.number().min(1, "Quantity must be at least 1"),
+    quantity: z.number().min(0.01, "Quantity must be at least 0.01"),
     unit_price: z.number().min(0, "Price must be non-negative"),
+    expense_account_id: z.string().optional(),
     expense_category: z.string().optional(),
     inventory_item: z.number().optional(),
 });
@@ -122,7 +125,7 @@ export default function NewBillPage() {
             due_date: initialDueDate,
             terms: "Net 30",
             currency: "USD",
-            line_items: [{ description: "", quantity: 1, unit_price: 0, expense_category: "", inventory_item: undefined }],
+            line_items: [{ line_type: "category", description: "", quantity: 1, unit_price: 0, expense_account_id: "", expense_category: "", inventory_item: undefined }],
         },
     });
 
@@ -182,6 +185,34 @@ export default function NewBillPage() {
 
     const branches = branchesResponse ?? [];
 
+    const { data: expenseAccounts = [] } = useQuery({
+        queryKey: ["accounting", "expense-accounts", "bill-new"],
+        queryFn: async () => {
+            const accounts = await accountingApi.getAccounts({
+                account_type: "expense",
+                is_active: true,
+                page_size: 500,
+            });
+            return accounts.filter((account) => (account.children_count || 0) === 0);
+        },
+    });
+
+    const { data: accountingSettings } = useQuery({
+        queryKey: ["accounting", "settings", "bill-new"],
+        queryFn: () => accountingApi.getAccountingSettings(),
+    });
+
+    const { data: catalogPartsData } = useQuery({
+        queryKey: ["parts", "bill-lines"],
+        queryFn: () =>
+            inventoryApi.list({
+                is_active: true,
+                page_size: 200,
+                ordering: "part_number",
+            }),
+    });
+    const catalogParts = catalogPartsData?.results ?? [];
+
     const { data: purchaseOrdersResponse } = useQuery({
         queryKey: ["purchase-orders", "billable", selectedVendor],
         queryFn: () => inventoryApi.listPurchaseOrders({
@@ -221,17 +252,33 @@ export default function NewBillPage() {
             purchaseOrderDetail.due_date ||
             purchaseOrderDetail.expected_delivery_date ||
             resolvedBillDate;
+        const defaultExpenseAccountId = accountingSettings?.default_expense_account
+            ? String(accountingSettings.default_expense_account)
+            : "";
+        const defaultExpenseAccount = expenseAccounts.find(
+            (account) => String(account.id) === defaultExpenseAccountId
+        );
+
         const importedItems = (purchaseOrderDetail.items || []).map((item) => {
             const part = typeof item.part === "object" ? item.part : null;
             const partName = item.part_name || part?.name || item.part_number || "Inventory item";
             const partNumber = item.part_number || part?.part_number;
+            const isInventoryLine = part?.item_type === "inventory";
 
             return {
+                line_type: isInventoryLine ? ("item" as const) : ("category" as const),
                 description: partNumber ? `${partNumber} - ${partName}` : partName,
                 quantity: Number(item.quantity_received || item.quantity || 1),
                 unit_price: parseFloat(item.unit_cost || "0"),
-                expense_category: "Inventory",
-                inventory_item: part?.id || (typeof item.part === "number" ? item.part : undefined),
+                expense_category: isInventoryLine
+                    ? "Inventory"
+                    : defaultExpenseAccount
+                      ? `${defaultExpenseAccount.code} — ${defaultExpenseAccount.name}`
+                      : "",
+                expense_account_id: isInventoryLine ? "" : defaultExpenseAccountId,
+                inventory_item: isInventoryLine
+                    ? part?.id || (typeof item.part === "number" ? item.part : undefined)
+                    : undefined,
             };
         });
         const currentValues = form.getValues();
@@ -247,7 +294,7 @@ export default function NewBillPage() {
             notes: currentValues.notes || `Created from purchase order ${purchaseOrderDetail.po_number}.`,
             line_items: importedItems.length > 0 ? importedItems : currentValues.line_items,
         });
-    }, [activeBranchId, form, purchaseOrderDetail]);
+    }, [activeBranchId, accountingSettings, expenseAccounts, form, purchaseOrderDetail]);
 
     const isPurchaseOrderPrefillReady =
         !isPurchaseOrderPrefill ||
@@ -275,7 +322,10 @@ export default function NewBillPage() {
                 description: `Bill #${data.bill_number} created successfully.`,
                 variant: "success",
             });
-            router.push(`/billing/bills/${data.id}`);
+            const isStandaloneDraft = !data.purchase_order && data.status === "draft";
+            router.push(
+                isStandaloneDraft ? `/billing/bills/${data.id}?submit=1` : `/billing/bills/${data.id}`
+            );
         },
 
         onError: (error: unknown) => {
@@ -338,11 +388,22 @@ export default function NewBillPage() {
             terms: data.terms,
             notes: data.notes,
             currency: data.currency,
-            line_items: data.line_items.map(item => ({
-                ...item,
-                unit_price: item.unit_price.toString(),
-            })),
-            tax_amount: "0.00", // Simple tax handling for now
+            line_items: data.line_items.map((item) => {
+                const expenseAccount = expenseAccounts.find(
+                    (account) => String(account.id) === item.expense_account_id
+                );
+                return {
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price.toString(),
+                    inventory_item: item.line_type === "item" ? item.inventory_item : undefined,
+                    expense_category:
+                        item.line_type === "category" && expenseAccount
+                            ? `${expenseAccount.code} — ${expenseAccount.name}`
+                            : item.expense_category || "",
+                };
+            }),
+            tax_amount: "0.00",
         });
     };
 
@@ -560,27 +621,65 @@ export default function NewBillPage() {
                     {/* Line Items Card */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-base font-semibold">Line Items</CardTitle>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => append({ description: "", quantity: 1, unit_price: 0, expense_category: "", inventory_item: undefined })}
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Item
-                            </Button>
+                            <div>
+                                <CardTitle className="text-base font-semibold">Line items</CardTitle>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Category lines map to GL expense accounts (like QBO Category details). Product lines
+                                    link to catalog parts (like QBO Item details).
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        append({
+                                            line_type: "category",
+                                            description: "",
+                                            quantity: 1,
+                                            unit_price: 0,
+                                            expense_account_id: "",
+                                            expense_category: "",
+                                            inventory_item: undefined,
+                                        })
+                                    }
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Category line
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        append({
+                                            line_type: "item",
+                                            description: "",
+                                            quantity: 1,
+                                            unit_price: 0,
+                                            expense_account_id: "",
+                                            expense_category: "",
+                                            inventory_item: undefined,
+                                        })
+                                    }
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Product line
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-muted hover:bg-muted">
-                                            <TableHead className="w-[40%] pl-6">Description</TableHead>
-                                            <TableHead className="w-[15%]">Category</TableHead>
-                                            <TableHead className="w-[15%] text-right">Quantity</TableHead>
-                                            <TableHead className="w-[15%] text-right">Unit Price</TableHead>
-                                            <TableHead className="w-[10%] text-right">Total</TableHead>
+                                            <TableHead className="w-[10%] pl-6">Type</TableHead>
+                                            <TableHead className="w-[28%]">Description</TableHead>
+                                            <TableHead className="w-[22%]">Category / Product</TableHead>
+                                            <TableHead className="w-[10%] text-right">Qty</TableHead>
+                                            <TableHead className="w-[12%] text-right">Rate</TableHead>
+                                            <TableHead className="w-[10%] text-right">Amount</TableHead>
                                             <TableHead className="w-[5%]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -595,6 +694,37 @@ export default function NewBillPage() {
                                                     <TableCell className="pl-6 align-top pt-3">
                                                         <FormField
                                                             control={form.control}
+                                                            name={`line_items.${index}.line_type`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <Select
+                                                                        value={field.value}
+                                                                        onValueChange={(value) => {
+                                                                            field.onChange(value);
+                                                                            if (value === "category") {
+                                                                                form.setValue(`line_items.${index}.inventory_item`, undefined);
+                                                                            } else {
+                                                                                form.setValue(`line_items.${index}.expense_account_id`, "");
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <FormControl>
+                                                                            <SelectTrigger className="h-9">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="category">Category</SelectItem>
+                                                                            <SelectItem value="item">Product</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="align-top pt-3">
+                                                        <FormField
+                                                            control={form.control}
                                                             name={`line_items.${index}.description`}
                                                             render={({ field }) => (
                                                                 <FormItem>
@@ -607,18 +737,69 @@ export default function NewBillPage() {
                                                         />
                                                     </TableCell>
                                                     <TableCell className="align-top pt-3">
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={`line_items.${index}.expense_category`}
-                                                            render={({ field }) => (
-                                                                <FormItem>
-                                                                    <FormControl>
-                                                                        <Input placeholder="Category" {...field} />
-                                                                    </FormControl>
-                                                                    <FormMessage />
-                                                                </FormItem>
-                                                            )}
-                                                        />
+                                                        {lineItems?.[index]?.line_type === "item" ? (
+                                                            <FormField
+                                                                control={form.control}
+                                                                name={`line_items.${index}.inventory_item`}
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <Select
+                                                                            value={field.value ? String(field.value) : ""}
+                                                                            onValueChange={(value) => {
+                                                                                const partId = Number.parseInt(value, 10);
+                                                                                field.onChange(partId);
+                                                                                const part = catalogParts.find((p) => p.id === partId);
+                                                                                if (part) {
+                                                                                    form.setValue(
+                                                                                        `line_items.${index}.description`,
+                                                                                        `${part.part_number} — ${part.name}`
+                                                                                    );
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <FormControl>
+                                                                                <SelectTrigger>
+                                                                                    <SelectValue placeholder="Select product" />
+                                                                                </SelectTrigger>
+                                                                            </FormControl>
+                                                                            <SelectContent className="max-h-72">
+                                                                                {catalogParts.map((part) => (
+                                                                                    <SelectItem key={part.id} value={String(part.id)}>
+                                                                                        {part.part_number} — {part.name}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        ) : (
+                                                            <FormField
+                                                                control={form.control}
+                                                                name={`line_items.${index}.expense_account_id`}
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <Select
+                                                                            value={field.value || ""}
+                                                                            onValueChange={field.onChange}
+                                                                        >
+                                                                            <FormControl>
+                                                                                <SelectTrigger>
+                                                                                    <SelectValue placeholder="Expense account" />
+                                                                                </SelectTrigger>
+                                                                            </FormControl>
+                                                                            <SelectContent className="max-h-72">
+                                                                                {expenseAccounts.map((account) => (
+                                                                                    <SelectItem key={account.id} value={String(account.id)}>
+                                                                                        {account.code} — {account.name}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="align-top pt-3">
                                                         <FormField

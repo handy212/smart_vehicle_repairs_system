@@ -637,18 +637,58 @@ class AccountingService:
         if not bill.line_items.exists():
             return None
 
-        # Check if already posted
         bill_type = ContentType.objects.get_for_model(bill)
-        # Note: If we separate COGS in post_invoice, we don't need changes there.
-        # But here we replace the previous post_bill implementation
         if JournalEntry.objects.filter(content_type=bill_type, object_id=bill.id).exists():
             return None
 
         with transaction.atomic():
+            bill.refresh_from_db()
+            lines = list(bill.line_items.all())
+
             ap_account = cls._control_account('accounts_payable_account', 'Accounts Payable')
             expense_account = cls._control_account('default_expense_account', 'Default Expense')
             inventory_account = cls._control_account('inventory_asset_account', 'Inventory Asset')
             input_tax_account = cls._control_account('input_tax_account', 'Input Tax')
+
+            ap_total = Decimal(str(bill.total or 0)).quantize(cls.MONEY_QUANT)
+            if ap_total <= 0:
+                return None
+
+            tax_amount = Decimal(str(bill.tax_amount or 0)).quantize(cls.MONEY_QUANT)
+            subtotal = Decimal(str(bill.subtotal or 0)).quantize(cls.MONEY_QUANT)
+
+            inventory_total = Decimal('0')
+            expense_total = Decimal('0')
+
+            for line in lines:
+                line_amount = Decimal(str(line.total or 0)).quantize(cls.MONEY_QUANT)
+                if line.inventory_item_id:
+                    inventory_total += line_amount
+                else:
+                    expense_total += line_amount
+
+            inventory_total = inventory_total.quantize(cls.MONEY_QUANT)
+            expense_total = expense_total.quantize(cls.MONEY_QUANT)
+            line_subtotal = (inventory_total + expense_total).quantize(cls.MONEY_QUANT)
+
+            if line_subtotal != subtotal:
+                expense_total = (expense_total + (subtotal - line_subtotal)).quantize(cls.MONEY_QUANT)
+
+            split_total = (inventory_total + expense_total).quantize(cls.MONEY_QUANT)
+            if split_total != subtotal:
+                expense_total = (subtotal - inventory_total).quantize(cls.MONEY_QUANT)
+
+            if expense_total < 0:
+                inventory_total = (inventory_total + expense_total).quantize(cls.MONEY_QUANT)
+                expense_total = Decimal('0')
+
+            debit_total = (inventory_total + expense_total + tax_amount).quantize(cls.MONEY_QUANT)
+            if debit_total != ap_total:
+                adjustment = (ap_total - debit_total).quantize(cls.MONEY_QUANT)
+                expense_total = (expense_total + adjustment).quantize(cls.MONEY_QUANT)
+                if expense_total < 0:
+                    inventory_total = (inventory_total + expense_total).quantize(cls.MONEY_QUANT)
+                    expense_total = Decimal('0')
 
             je = cls._create_posted_journal_header(
                 user=bill.created_by,
@@ -659,78 +699,44 @@ class AccountingService:
                 content_object=bill,
             )
 
-            # 3. Create Transactions
-            
-            # Credit AP (Total Amount)
             Transaction.objects.create(
                 journal_entry=je,
                 account=ap_account,
-                amount=bill.total,
+                amount=ap_total,
                 transaction_type='credit',
-                description='Bill Total'
+                description='Bill Total',
             )
 
-            # Calculate Debits (Split by Expense vs Inventory)
-            # We iterate line items now
-            
-            inventory_total = Decimal('0.00')
-            expense_total = Decimal('0.00')
-            
-            for line in bill.line_items.all():
-                if line.inventory_item:
-                    inventory_total += line.total
-                else:
-                    expense_total += line.total
-
-            # Note: tax_amount is typically excluded from line item totals in many systems or included.
-            # In our Bill model (Step 696), line.total seems to be qty * price. 
-            # Bill.total = subtotal + tax.
-            # So line items sum to subtotal?
-            # Step 1595: self.total = self.quantity * self.unit_price.
-            # So line totals are PRE-TAX usually unless unit_price includes tax.
-            # Let's assume line totals sum to bill.subtotal.
-            
-            # Additional check: If (inventory + expense) != subtotal, we might have a gap.
-            # But let's trust line items for distribution.
-            
-            # If line items are empty but subtotal exist (legacy data?), default to expense.
-            if inventory_total == 0 and expense_total == 0 and bill.subtotal > 0:
-                expense_total = bill.subtotal
-            
-            # Create Debit for Inventory
             if inventory_total > 0:
-                 Transaction.objects.create(
+                Transaction.objects.create(
                     journal_entry=je,
                     account=inventory_account,
                     amount=inventory_total,
                     transaction_type='debit',
-                    description='Inventory Purchase'
+                    description='Inventory Purchase',
                 )
-            
-            # Create Debit for Expense
+
             if expense_total > 0:
-                 Transaction.objects.create(
+                Transaction.objects.create(
                     journal_entry=je,
                     account=expense_account,
                     amount=expense_total,
                     transaction_type='debit',
-                    description='General Expense'
+                    description='General Expense',
                 )
 
-            # Debit Input Tax (Tax Amount)
-            if bill.tax_amount > 0:
+            if tax_amount > 0:
                 Transaction.objects.create(
                     journal_entry=je,
                     account=input_tax_account,
-                    amount=bill.tax_amount,
+                    amount=tax_amount,
                     transaction_type='debit',
-                    description='Input Tax'
+                    description='Input Tax',
                 )
 
-            # Validate
             if not je.validate_balanced():
                 raise ValidationError(f"Journal Entry for Bill {bill.bill_number} is not balanced.")
-            
+
             return je
 
     @classmethod

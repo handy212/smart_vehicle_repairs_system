@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { refundApi } from "@/lib/api/till-refund";
 import {
@@ -129,7 +130,11 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
                     <DialogDescription>
                         Refund payment for Transaction #{payment.payment_number}.
                         Max available: {formatCurrency(maxRefund)}
-                        {" "}Track approval and completion under Billing → Refunds.
+                        {" "}Track approval and completion on the{" "}
+                        <Link href="/billing/refunds" className="text-primary hover:underline">
+                            Refunds
+                        </Link>{" "}
+                        page.
                     </DialogDescription>
                 </DialogHeader>
 

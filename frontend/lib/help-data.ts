@@ -325,7 +325,7 @@ export const helpContent: Record<string, HelpModule> = {
     billing: {
         id: "billing",
         title: "Billing",
-        description: "Invoices, estimates, payments, refunds, bills, credit notes, proformas, and tills.",
+        description: "Invoices, estimates, payments, refunds, bills, credit notes, and tills.",
         icon: CreditCard,
         keywords: ["invoice", "estimate", "payment", "refund", "till", "proforma", "bill"],
         topics: [
@@ -343,10 +343,10 @@ export const helpContent: Record<string, HelpModule> = {
             {
                 title: "Payments, refunds, bills, and tills",
                 steps: [
-                    "Open Payments to review receipts, allocations, and payment history.",
+                    "Open Payments to review receipts, allocations, and payment history — use Refunds from the Payments page for till refund approvals.",
                     "Payment details support printing receipts and processing a full or partial refund for completed payments.",
-                    "Open Refunds to create refunds and approve or reject pending refund records.",
-                    "Open Vendor Bills, Credit Notes, and Proforma Invoices for their dedicated list and creation flows.",
+                    "Open Vendor Bills and Credit Notes for AP documents and customer credit memos.",
+                    "Create proforma documents from Invoices (Proforma filter or New Proforma) when a formal quote is needed before work starts.",
                     "Open Accounting Till Management to open or close tills, record pay in and pay out movements, review daily reconciliation, and monitor shortages or excesses.",
                 ],
                 actionLink: "/billing/payments",

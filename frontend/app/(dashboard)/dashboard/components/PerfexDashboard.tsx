@@ -97,7 +97,7 @@ interface DailyRevenue {
 }
 
 interface InvoiceStats {
-  counts?: { total?: number; draft?: number; paid?: number; partially_paid?: number; overdue?: number; unpaid?: number };
+  counts?: { total?: number; draft?: number; paid?: number; partially_paid?: number; overdue?: number; unpaid?: number; proforma?: number };
   financials?: { total_paid?: number; past_due_total?: number; outstanding_total?: number };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi, type Payment } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, Eye, Filter, Download, HandCoins, Split } from "lucide-react";
+import { Plus, Search, Eye, Filter, Download, HandCoins, Split, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -23,6 +24,22 @@ import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
 export default function PaymentsPage() {
+    return (
+        <Suspense fallback={null}>
+            <PaymentsPageContent />
+        </Suspense>
+    );
+}
+
+function PaymentsPageContent() {
+    const searchParams = useSearchParams();
+    const initialInvoiceId = searchParams.get("invoice")
+        ? Number.parseInt(searchParams.get("invoice")!, 10)
+        : null;
+    const initialCustomerId = searchParams.get("customer")
+        ? Number.parseInt(searchParams.get("customer")!, 10)
+        : null;
+
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [methodFilter, setMethodFilter] = useState("");
@@ -35,6 +52,13 @@ export default function PaymentsPage() {
     const queryClient = useQueryClient();
     const canReceivePayment = hasAnyPermission(["process_payments", "create_payments", "manage_billing"]);
     const canAllocatePayment = hasAnyPermission(["process_payments", "create_payments", "manage_billing"]);
+
+    useEffect(() => {
+        if (!canReceivePayment) return;
+        if (initialInvoiceId || initialCustomerId) {
+            setReceivePaymentOpen(true);
+        }
+    }, [canReceivePayment, initialInvoiceId, initialCustomerId]);
 
     const parseUnallocated = (payment: Payment) => {
         if (payment.unallocated_balance !== undefined) {
@@ -144,6 +168,12 @@ export default function PaymentsPage() {
                                 Receive Payment
                         </Button>
                     ) : null}
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href="/billing/refunds">
+                            <Undo2 className="w-4 h-4 mr-2" />
+                            Refunds
+                        </Link>
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleExport()}>
                         <Download className="w-4 h-4 mr-2" />
                         Export Excel
@@ -312,6 +342,8 @@ export default function PaymentsPage() {
                 <ReceivePaymentDialog
                     open={receivePaymentOpen}
                     onOpenChange={setReceivePaymentOpen}
+                    initialCustomerId={initialCustomerId}
+                    initialInvoiceId={initialInvoiceId}
                     onSuccess={() => {
                         setReceivePaymentOpen(false);
                         queryClient.invalidateQueries({ queryKey: ["payments"] });

@@ -76,7 +76,7 @@ export function FinanceAtAGlancePanel() {
           label: "Outstanding AR",
           value: formatCurrency(outstandingAr),
           sub: overdueCount > 0 ? `${overdueCount} overdue · ${formatCurrency(overdueAmount)}` : "All current",
-          href: "/billing/customer-balances",
+          href: "/billing/receivables?tab=balances",
           icon: HandCoins,
           tone: overdueCount > 0 ? "text-destructive" : "text-emerald-600",
         }
@@ -87,7 +87,7 @@ export function FinanceAtAGlancePanel() {
           label: "Overdue Invoices",
           value: String(overdueCount),
           sub: overdueCount > 0 ? formatCurrency(overdueAmount) : "None overdue",
-          href: "/billing/collections",
+          href: "/billing/receivables?tab=overdue",
           icon: AlertTriangle,
           tone: overdueCount > 0 ? "text-destructive" : "text-muted-foreground",
         }
@@ -98,7 +98,7 @@ export function FinanceAtAGlancePanel() {
           label: "Outstanding AP",
           value: formatCurrency(outstandingAp),
           sub: "Supplier bills open",
-          href: "/billing/vendor-balances",
+          href: "/billing/payables?tab=balances",
           icon: Receipt,
           tone: "text-amber-600",
         }

@@ -2303,9 +2303,29 @@ class VendorCreditViewSet(viewsets.ModelViewSet):
         queryset = VendorCredit.objects.select_related(
             'vendor', 'bill', 'branch', 'created_by'
         ).prefetch_related('line_items', 'applications__bill')
-        branch = resolve_branch(self.request)
-        if branch:
-            queryset = queryset.filter(branch=branch)
+        queryset = filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            request=self.request,
+            use_active_branch=True,
+        )
+
+        bill_id = self.request.query_params.get('bill')
+        if bill_id:
+            accessible_bills = filter_queryset_for_user_branches(
+                Bill.objects.filter(pk=bill_id),
+                self.request.user,
+                request=self.request,
+                use_active_branch=False,
+            )
+            bill = accessible_bills.only('branch_id', 'vendor_id').first()
+            if bill is None:
+                return queryset.none()
+            if bill.branch_id:
+                queryset = queryset.filter(branch_id=bill.branch_id)
+            if bill.vendor_id:
+                queryset = queryset.filter(vendor_id=bill.vendor_id)
+
         return queryset
 
     def get_serializer_class(self):
@@ -2570,10 +2590,13 @@ class BillViewSet(viewsets.ModelViewSet):
                 {"error": "Only the assigned approver or a billing manager can approve this bill."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        bill.status = 'open'
-        bill.approved_by = request.user
-        bill.approved_at = timezone.now()
-        bill.save()
+        with transaction.atomic():
+            bill.calculate_totals()
+            bill.refresh_from_db()
+            bill.status = 'open'
+            bill.approved_by = request.user
+            bill.approved_at = timezone.now()
+            bill.save()
         return Response(BillSerializer(bill).data)
 
     @action(detail=True, methods=['post'], url_path='open-draft')
@@ -2595,8 +2618,11 @@ class BillViewSet(viewsets.ModelViewSet):
                 {"error": "Bill total must be greater than zero before opening this bill."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        bill.status = 'open'
-        bill.save()
+        with transaction.atomic():
+            bill.calculate_totals()
+            bill.refresh_from_db()
+            bill.status = 'open'
+            bill.save()
         return Response(BillSerializer(bill).data)
 
     @action(detail=True, methods=['post'])
@@ -2721,7 +2747,11 @@ class BillPaymentViewSet(viewsets.ReadOnlyModelViewSet):
 class PayBillsBatchView(APIView):
     """Pay multiple open vendor bills in one batch (QBO Pay Bills workflow)."""
 
-    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('manage_billing')]
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('billing'),
+        HasAnyPermission(['edit_bills', 'manage_billing']),
+    ]
 
     @transaction.atomic
     def post(self, request):
@@ -2730,41 +2760,14 @@ class PayBillsBatchView(APIView):
         serializer = PayBillsBatchSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        vendor_id = data['vendor']
-        lines = data['lines']
+        bills = data.pop('_bills', {})
         payment_batch = f'batch-{uuid.uuid4().hex[:16]}'
 
-        bills = {
-            b.id: b
-            for b in Bill.objects.filter(
-                id__in=[line['bill_id'] for line in lines],
-                vendor_id=vendor_id,
-            ).select_related('vendor', 'branch')
-        }
-
-        if len(bills) != len(lines):
-            return Response(
-                {'error': 'One or more bills were not found for the selected vendor.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         created_payments = []
-        for line in lines:
+        for line in data['lines']:
             bill = bills[line['bill_id']]
-            if bill.status in ['draft', 'pending_approval', 'rejected', 'void']:
-                return Response(
-                    {'error': f'Bill {bill.bill_number} is not payable.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            amount = line['amount']
-            if amount <= 0 or amount > bill.amount_due:
-                return Response(
-                    {'error': f'Invalid payment amount for bill {bill.bill_number}.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
             pay_data = {
-                'amount': amount,
+                'amount': line['amount'],
                 'payment_date': data['payment_date'],
                 'payment_method': data['payment_method'],
                 'reference_number': data.get('reference_number', ''),

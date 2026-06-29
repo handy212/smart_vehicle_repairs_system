@@ -2,10 +2,13 @@
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.inventory.models import Part
 
 from .models import RevenueProduct
 from .revenue_product_serializers import RevenueProductListSerializer, RevenueProductSerializer
@@ -20,7 +23,7 @@ class RevenueProductViewSet(viewsets.ModelViewSet):
     ordering = ['sort_order', 'name']
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'catalog_parts'):
             return [
                 IsAuthenticated(),
                 IsModuleEnabled('accounting'),
@@ -36,3 +39,25 @@ class RevenueProductViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return RevenueProductListSerializer
         return RevenueProductSerializer
+
+    @action(detail=False, methods=['get'], url_path='catalog-parts')
+    def catalog_parts(self, request):
+        """Service catalog parts usable as QBO item templates (accounting-scoped)."""
+        parts = (
+            Part.objects.filter(
+                is_active=True,
+                item_type='service',
+                part_number__startswith='REV-',
+            )
+            .order_by('part_number')[:100]
+        )
+        return Response(
+            [
+                {
+                    'id': part.id,
+                    'part_number': part.part_number,
+                    'name': part.name,
+                }
+                for part in parts
+            ]
+        )

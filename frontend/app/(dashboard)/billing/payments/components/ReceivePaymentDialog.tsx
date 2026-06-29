@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, isPast, startOfDay } from "date-fns";
 import { CheckCircle2, ChevronRight, Loader2, Search, Wallet } from "lucide-react";
 import { billingApi, type Invoice } from "@/lib/api/billing";
+import { customersApi } from "@/lib/api/customers";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,13 @@ type SelectedCustomer = {
   id: number;
   full_name?: string;
   company_name?: string;
+};
+
+const resolveCustomerId = (customer: Invoice["customer"]): number | null => {
+  if (typeof customer === "number") {
+    return customer;
+  }
+  return customer?.id ?? null;
 };
 
 const parseAmount = (value?: string | number | null) => {
@@ -60,18 +68,75 @@ interface ReceivePaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  initialCustomerId?: number | null;
+  initialInvoiceId?: number | null;
 }
 
 export function ReceivePaymentDialog({
   open,
   onOpenChange,
   onSuccess,
+  initialCustomerId = null,
+  initialInvoiceId = null,
 }: ReceivePaymentDialogProps) {
   const { formatCurrency } = useCurrency();
   const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null);
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
+  const [prefillApplied, setPrefillApplied] = useState(false);
+
+  const { data: initialInvoice } = useQuery({
+    queryKey: ["receive-payment-invoice", initialInvoiceId],
+    queryFn: () => billingApi.invoices.get(initialInvoiceId!),
+    enabled: open && !!initialInvoiceId,
+  });
+
+  const { data: initialCustomer } = useQuery({
+    queryKey: ["receive-payment-customer", initialCustomerId],
+    queryFn: () => customersApi.get(initialCustomerId!),
+    enabled: open && !!initialCustomerId && !initialInvoiceId,
+  });
+
+  useEffect(() => {
+    if (!open) {
+      setPrefillApplied(false);
+      return;
+    }
+    if (prefillApplied) return;
+
+    if (initialInvoiceId && initialInvoice) {
+      const customerId = resolveCustomerId(initialInvoice.customer);
+      if (customerId) {
+        setSelectedCustomer({
+          id: customerId,
+          full_name: initialInvoice.customer_name,
+        });
+      }
+      setSelectedInvoice(initialInvoice);
+      setRecordPaymentOpen(true);
+      onOpenChange(false);
+      setPrefillApplied(true);
+      return;
+    }
+
+    if (initialCustomerId && initialCustomer && !initialInvoiceId) {
+      setSelectedCustomer({
+        id: initialCustomer.id,
+        full_name: initialCustomer.full_name,
+        company_name: initialCustomer.company_name,
+      });
+      setPrefillApplied(true);
+    }
+  }, [
+    open,
+    prefillApplied,
+    initialInvoiceId,
+    initialInvoice,
+    initialCustomerId,
+    initialCustomer,
+    onOpenChange,
+  ]);
 
   const { data: invoiceResponse, isLoading } = useQuery({
     queryKey: ["receive-payment-invoices", selectedCustomer?.id],

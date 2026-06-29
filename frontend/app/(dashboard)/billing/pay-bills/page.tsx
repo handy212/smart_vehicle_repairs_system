@@ -104,14 +104,20 @@ export default function PayBillsPage() {
     queryFn: () => accountingApi.getAccountingSettings(),
   });
 
+  const settlementBranchId = branchId ? parseInt(branchId, 10) : undefined;
+
   const { data: tillAccounts = [] } = useQuery({
-    queryKey: ["accounting", "till-enabled-accounts"],
-    queryFn: () => accountingApi.getTillEnabledAccounts(),
+    queryKey: ["accounting", "till-enabled-accounts", settlementBranchId],
+    queryFn: () =>
+      accountingApi.getTillEnabledAccounts(
+        settlementBranchId ? { branch: settlementBranchId } : undefined,
+      ),
   });
 
   const { data: bankAccounts = [] } = useQuery({
-    queryKey: ["accounting", "bank-accounts"],
-    queryFn: () => accountingApi.getBankAccounts(),
+    queryKey: ["accounting", "bank-accounts", settlementBranchId],
+    queryFn: () =>
+      accountingApi.getBankAccounts(settlementBranchId ? { branch: settlementBranchId } : undefined),
   });
 
   const { data: openTills = [] } = useQuery({
@@ -196,6 +202,13 @@ export default function PayBillsPage() {
   ]);
 
   useEffect(() => {
+    setDefaultsApplied(false);
+    setPaymentAccount("");
+    setCashAccount("");
+    setBankAccount("");
+  }, [branchId]);
+
+  useEffect(() => {
     if (paymentAccount && !paymentAccountOptions.allValues.has(paymentAccount)) {
       setPaymentAccount("");
       setCashAccount("");
@@ -268,20 +281,25 @@ export default function PayBillsPage() {
 
   const payMutation = useMutation({
     mutationFn: async () => {
-      const billsByVendor = new Map<number, { bill_id: number; amount: string }[]>();
+      const billsByBatch = new Map<string, { vendor: number; lines: { bill_id: number; amount: string }[] }>();
 
       for (const billId of selectedBillIds) {
         const bill = openBills.find((b) => b.id === billId);
         if (!bill) continue;
-        const amount = selected[billId];
-        if (!amount || parseAmount(amount) <= 0) continue;
-        const lines = billsByVendor.get(bill.vendor) ?? [];
-        lines.push({ bill_id: billId, amount });
-        billsByVendor.set(bill.vendor, lines);
+        const amountDue = parseAmount(bill.amount_due);
+        let amount = parseAmount(selected[billId]);
+        if (!amount || amount <= 0) continue;
+        if (amountDue > 0 && amount > amountDue) {
+          amount = amountDue;
+        }
+        const batchKey = `${bill.vendor}:${bill.branch ?? "none"}`;
+        const batch = billsByBatch.get(batchKey) ?? { vendor: bill.vendor, lines: [] };
+        batch.lines.push({ bill_id: billId, amount: amount.toFixed(2) });
+        billsByBatch.set(batchKey, batch);
       }
 
       const allPayments: BillPayment[] = [];
-      for (const [vendor, lines] of billsByVendor) {
+      for (const { vendor, lines } of billsByBatch.values()) {
         const payload: Parameters<typeof billingApi.payBills>[0] = {
           vendor,
           payment_date: paymentDate,
@@ -290,9 +308,17 @@ export default function PayBillsPage() {
           lines,
         };
         if (paymentMethod === "cash") {
-          payload.cash_account = parseInt(cashAccount, 10);
+          const cashId = parseInt(cashAccount, 10);
+          if (!Number.isFinite(cashId)) {
+            throw new Error("Select a valid cash account.");
+          }
+          payload.cash_account = cashId;
         } else {
-          payload.bank_account = parseInt(bankAccount, 10);
+          const bankId = parseInt(bankAccount, 10);
+          if (!Number.isFinite(bankId)) {
+            throw new Error("Select a valid bank account.");
+          }
+          payload.bank_account = bankId;
         }
         const payments = await billingApi.payBills(payload);
         allPayments.push(...payments);
@@ -348,6 +374,24 @@ export default function PayBillsPage() {
       toast({
         title: "No bills selected",
         description: "Check one or more bills and enter a payment amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const selectedBills = openBills.filter((bill) => checked[bill.id]);
+    const branchIds = new Set(selectedBills.map((bill) => bill.branch).filter(Boolean));
+    if (branchIds.size > 1) {
+      toast({
+        title: "Multiple locations selected",
+        description: "Pay bills from one location at a time, or filter by branch first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (branchIds.size === 1 && branchId && selectedBills.some((bill) => String(bill.branch) !== branchId)) {
+      toast({
+        title: "Location mismatch",
+        description: "Selected bills do not match the Location filter. Adjust the filter or selection.",
         variant: "destructive",
       });
       return;

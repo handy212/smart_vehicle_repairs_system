@@ -42,7 +42,7 @@ export function NavCategoryBadge({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden leading-none ring-1 ring-inset [&>svg]:block [&>svg]:shrink-0",
+        "nav-category-badge inline-flex shrink-0 items-center justify-center overflow-hidden leading-none ring-1 ring-inset [&>svg]:block [&>svg]:shrink-0 [&>svg]:m-0",
         sizes.box,
         sizes.rounded,
         palette.bg,

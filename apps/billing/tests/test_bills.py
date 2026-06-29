@@ -330,3 +330,58 @@ class BillTests(TestCase):
         response = self.client.get(url, {'vendor': self.supplier.id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(response.data.get('count', len(response.data)), 1)
+
+    def test_pay_bills_batch_records_payment_for_open_bill(self):
+        from apps.accounting.models import AccountingControl
+
+        bill = self._create_bill(status='open', amount_due=Decimal('100.00'))
+        bank = AccountingControl.get_settings().default_bank_account
+        response = self.client.post(
+            reverse('api_billing:pay-bills-batch'),
+            {
+                'vendor': self.supplier.id,
+                'payment_date': timezone.now().date().isoformat(),
+                'payment_method': 'bank_transfer',
+                'bank_account': bank.id,
+                'lines': [{'bill_id': bill.id, 'amount': '100.00'}],
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, 'paid')
+        self.assertEqual(bill.amount_due, Decimal('0.00'))
+
+    def test_pay_bills_batch_rejects_wrong_branch_bank_account(self):
+        from apps.accounting.models import Account
+        from apps.branches.models import Branch
+
+        other_branch = Branch.objects.create(
+            name='Other Branch',
+            code='OTH',
+            is_active=True,
+            created_by=self.user,
+        )
+        other_bank = Account.objects.create(
+            code='1199',
+            name='Other Branch Bank',
+            account_type='asset',
+            account_subtype='bank',
+            normal_balance='debit',
+            branch=other_branch,
+            is_active=True,
+        )
+        bill = self._create_bill(status='open', amount_due=Decimal('75.00'))
+        response = self.client.post(
+            reverse('api_billing:pay-bills-batch'),
+            {
+                'vendor': self.supplier.id,
+                'payment_date': timezone.now().date().isoformat(),
+                'payment_method': 'bank_transfer',
+                'bank_account': other_bank.id,
+                'lines': [{'bill_id': bill.id, 'amount': '75.00'}],
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue('bank_account' in response.data or 'lines' in response.data)

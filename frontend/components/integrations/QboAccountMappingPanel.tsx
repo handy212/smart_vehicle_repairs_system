@@ -9,11 +9,73 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QboSearchableSelect, type QboSearchableOption } from "@/components/integrations/QboSearchableSelect";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
 const UNMAPPED_VALUE = "__unmapped__";
+
+const CONTROL_ACCOUNT_GROUPS = new Set([
+  "Receivables & Payables",
+  "Revenue & Tax",
+  "Purchasing & Inventory",
+  "Cash & Banking",
+  "Payroll",
+  "Control Accounts",
+]);
+
+const MAPPING_SECTIONS = [
+  {
+    id: "accounts",
+    label: "Control accounts",
+    hint: "SVR posting roles → QBO chart accounts (AR, AP, revenue, inventory, cash, payroll).",
+    groups: CONTROL_ACCOUNT_GROUPS,
+  },
+  {
+    id: "invoices",
+    label: "Invoice items",
+    hint: "Each invoice line type → a QBO service/non-inventory Item.",
+    groups: new Set(["Invoice items", "Invoice Line Types"]),
+  },
+  {
+    id: "payments",
+    label: "Payments",
+    hint: "Customer and vendor settlement methods → QBO bank/cash/clearing accounts.",
+    groups: new Set(["Customer payments", "Customer Payment Methods", "Vendor payments", "Vendor Payment Methods"]),
+  },
+  {
+    id: "purchasing",
+    label: "Bills & POs",
+    hint: "Purchase order / bill line kinds → QBO expense or inventory accounts.",
+    groups: new Set(["Bill & PO lines", "Purchase Order / Bill Lines"]),
+  },
+  {
+    id: "tax",
+    label: "Sales tax",
+    hint: "SVR tax buckets → QBO tax codes on synced invoices.",
+    groups: new Set(["Sales tax codes", "Sales Tax Codes"]),
+  },
+  {
+    id: "classes",
+    label: "Classes",
+    hint: "Optional QBO class tracking for income and expense lines (advanced).",
+    groups: new Set([
+      "QBO classes — income (line type)",
+      "QBO classes — income (category)",
+      "QBO classes — expenses",
+      "QuickBooks Classes — Income (by line type)",
+      "QuickBooks Classes — Income (by income category)",
+      "QuickBooks Classes — Expenses",
+    ]),
+  },
+] as const;
+
+type MappingSectionId = (typeof MAPPING_SECTIONS)[number]["id"];
+
+function groupInSection(groupName: string, sectionGroups: ReadonlySet<string> | Set<string>): boolean {
+  return sectionGroups.has(groupName);
+}
 
 const INVENTORY_QBO_MAPPING_KEYS = new Set([
   "inventory_asset_account",
@@ -147,6 +209,7 @@ export function QboAccountMappingPanel() {
   const { isConnected, isApiReady, connectionIssue, isLoading: qboStatusLoading } = useQuickBooksConnection();
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const [rowSearch, setRowSearch] = useState("");
+  const [activeSection, setActiveSection] = useState<MappingSectionId>("accounts");
 
   const draftKey = (row: QboMappingRow) => `${row.mapping_kind}:${row.mapping_key}`;
   const catalogEnabled = isConnected && isApiReady;
@@ -231,8 +294,8 @@ export function QboAccountMappingPanel() {
       queryClient.invalidateQueries({ queryKey: ["qbo", "accounts"] });
       queryClient.invalidateQueries({ queryKey: ["qbo", "items"] });
       toast({
-        title: "Workshop income template applied",
-        description: "QuickBooks mappings were updated from the legacy income chart template.",
+        title: "Workshop template applied",
+        description: "QuickBooks mappings were updated from the workshop chart template.",
       });
     },
     onError: (error: unknown) => {
@@ -300,6 +363,26 @@ export function QboAccountMappingPanel() {
       }))
       .filter((group) => group.rows.length > 0);
   }, [overview?.groups, rowSearchTerm, accountNumberById]);
+
+  const activeSectionConfig = MAPPING_SECTIONS.find((section) => section.id === activeSection) ?? MAPPING_SECTIONS[0];
+
+  const sectionGroups = useMemo(() => {
+    return filteredGroups.filter((group) => groupInSection(group.group, activeSectionConfig.groups));
+  }, [filteredGroups, activeSectionConfig]);
+
+  const sectionStats = useMemo(() => {
+    let mapped = 0;
+    let total = 0;
+    sectionGroups.forEach((group) => {
+      group.rows.forEach((row) => {
+        total += 1;
+        if (currentMappedValue(row) !== UNMAPPED_VALUE) {
+          mapped += 1;
+        }
+      });
+    });
+    return { mapped, total };
+  }, [sectionGroups]);
 
   if (qboStatusLoading) {
     return null;
@@ -423,8 +506,8 @@ export function QboAccountMappingPanel() {
     const base: QboSearchableOption[] = [
       {
         value: UNMAPPED_VALUE,
-        label: "Not mapped",
-        searchText: "not mapped unmapped",
+        label: "Not linked",
+        searchText: "not linked unmapped",
       },
     ];
     const rowAccounts = accountsForRow(row, accounts);
@@ -454,8 +537,8 @@ export function QboAccountMappingPanel() {
     const base: QboSearchableOption[] = [
       {
         value: UNMAPPED_VALUE,
-        label: "Not mapped",
-        searchText: "not mapped unmapped",
+        label: "Not linked",
+        searchText: "not linked unmapped",
       },
     ];
     return base.concat(
@@ -477,8 +560,8 @@ export function QboAccountMappingPanel() {
     const base: QboSearchableOption[] = [
       {
         value: UNMAPPED_VALUE,
-        label: "Not mapped",
-        searchText: "not mapped unmapped",
+        label: "Not linked",
+        searchText: "not linked unmapped",
       },
     ];
     return base.concat(
@@ -494,8 +577,8 @@ export function QboAccountMappingPanel() {
     const base: QboSearchableOption[] = [
       {
         value: UNMAPPED_VALUE,
-        label: "Not mapped",
-        searchText: "not mapped unmapped",
+        label: "Not linked",
+        searchText: "not linked unmapped",
       },
     ];
     return base.concat(
@@ -515,16 +598,26 @@ export function QboAccountMappingPanel() {
 
   return (
     <Card className="border shadow-sm">
-      <CardHeader className="py-3 px-4 border-b bg-muted/30">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-primary" />
-            QuickBooks Chart of Accounts Mapping
-          </CardTitle>
+      <CardHeader className="py-3 px-4 border-b bg-muted/30 space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-primary" />
+              QuickBooks mappings
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+              Link SVR roles to QuickBooks accounts, items, tax codes, and optional classes.
+              Detailed income accounts per service type are configured under{" "}
+              <a href="/accounting/revenue-products" className="text-primary hover:underline">
+                Income categories
+              </a>
+              .
+            </p>
+          </div>
           <Button
             variant="outline"
             size="sm"
-            className="h-8 text-xs"
+            className="h-8 text-xs shrink-0"
             onClick={() => {
               refetchAccounts();
               refetchItems();
@@ -535,55 +628,72 @@ export function QboAccountMappingPanel() {
             disabled={isRefreshing}
           >
             <RefreshCcw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
-            Refresh QBO
+            Refresh from QBO
           </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground mr-1">
+            Workshop template
+          </span>
           <Button
             variant="outline"
             size="sm"
-            className="h-8 text-xs"
+            className="h-7 text-xs"
             disabled={previewOwnerMutation.isPending}
             onClick={() => previewOwnerMutation.mutate()}
           >
-            {previewOwnerMutation.isPending ? "Previewing…" : "Preview income template"}
+            {previewOwnerMutation.isPending ? "Previewing…" : "Preview"}
           </Button>
           <Button
             variant="default"
             size="sm"
-            className="h-8 text-xs"
+            className="h-7 text-xs"
             disabled={applyOwnerMutation.isPending}
             onClick={() => applyOwnerMutation.mutate()}
           >
-            {applyOwnerMutation.isPending ? "Applying…" : "Apply income template"}
+            {applyOwnerMutation.isPending ? "Applying…" : "Apply template"}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <p className="px-4 py-3 text-xs text-muted-foreground border-b">
-          Map SVR control accounts, invoice line types, payment methods, and sales tax codes to
-          QuickBooks accounts, service items, and tax codes. Search by QBO account number or name.
-        </p>
-
         {!isLoading && (
-          <div className="px-4 py-3 border-b bg-muted/10">
-            <div className="relative max-w-md">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={rowSearch}
-                onChange={(event) => setRowSearch(event.target.value)}
-                placeholder="Search mappings by SVR label, account code, QBO number, or name…"
-                className="h-8 pl-8 text-xs bg-card"
-              />
+          <div className="px-4 py-3 border-b bg-muted/10 space-y-3">
+            <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as MappingSectionId)}>
+              <TabsList className="h-auto flex flex-wrap justify-start gap-1">
+                {MAPPING_SECTIONS.map((section) => (
+                  <TabsTrigger key={section.id} value={section.id} className="text-xs h-8">
+                    {section.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <p className="text-xs text-muted-foreground">{activeSectionConfig.hint}</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {sectionStats.mapped} of {sectionStats.total} linked in this section
+              </p>
+              <div className="relative w-full sm:max-w-md">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={rowSearch}
+                  onChange={(event) => setRowSearch(event.target.value)}
+                  placeholder="Search by label, SVR code, or QBO name…"
+                  className="h-8 pl-8 text-xs bg-card"
+                />
+              </div>
             </div>
           </div>
         )}
 
         {isLoading ? (
-          <div className="p-6 text-sm text-muted-foreground">Loading QuickBooks accounts and mappings...</div>
-        ) : filteredGroups.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">No mappings match your search.</div>
+          <div className="p-6 text-sm text-muted-foreground">Loading QuickBooks catalogs and mappings…</div>
+        ) : sectionGroups.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">
+            No mappings match your search in this section.
+          </div>
         ) : (
           <div className="divide-y">
-            {filteredGroups.map((group) => (
+            {sectionGroups.map((group) => (
               <div key={group.group} className="px-4 py-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                   {group.group}
@@ -604,41 +714,39 @@ export function QboAccountMappingPanel() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-foreground">{row.label}</span>
-                            {row.status === "synced" && isMapped && (
+                            {row.status === "synced" && isMapped ? (
                               <Badge variant="success" className="text-[10px] h-5">
-                                Mapped
+                                Linked
                               </Badge>
-                            )}
-                            {row.status === "failed" && (
+                            ) : null}
+                            {row.status === "failed" ? (
                               <Badge variant="danger" className="text-[10px] h-5">
-                                Failed
+                                Sync failed
                               </Badge>
-                            )}
-                            {(!isMapped || row.status === "unmapped") && (
+                            ) : null}
+                            {!isMapped && row.status !== "failed" ? (
                               <Badge variant="secondary" className="text-[10px] h-5">
-                                Unmapped
+                                Not linked
                               </Badge>
-                            )}
+                            ) : null}
                           </div>
-                          {row.svr_account && (
+                          {row.svr_account ? (
                             <p className="text-[11px] text-muted-foreground mt-1">
-                              SVR account: {row.svr_account.code} — {row.svr_account.name}
+                              SVR GL: {row.svr_account.code} — {row.svr_account.name}
                             </p>
-                          )}
-                          {row.qbo_account_hint && (
-                            <p className="text-[11px] text-muted-foreground mt-1">
-                              {row.qbo_account_hint}
-                            </p>
-                          )}
-                          {(mappedTarget || row.qbo_item_name) && (
+                          ) : null}
+                          {row.qbo_account_hint ? (
+                            <p className="text-[11px] text-muted-foreground mt-1">{row.qbo_account_hint}</p>
+                          ) : null}
+                          {mappedTarget ? (
                             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
                               <Link2 className="w-3 h-3 shrink-0" />
-                              QBO: {mappedTarget || row.qbo_item_name}
+                              QuickBooks: {mappedTarget}
                             </p>
-                          )}
-                          {row.error_message && (
+                          ) : null}
+                          {row.error_message ? (
                             <p className="text-[11px] text-destructive mt-1">{row.error_message}</p>
-                          )}
+                          ) : null}
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto lg:min-w-[380px]">
@@ -658,12 +766,12 @@ export function QboAccountMappingPanel() {
                             }
                             placeholder={
                               row.uses_item
-                                ? "Search QBO items…"
+                                ? "Select QBO item…"
                                 : row.uses_tax_code
-                                  ? "Search QBO tax codes…"
+                                  ? "Select tax code…"
                                   : row.uses_class
-                                    ? "Search QBO classes…"
-                                    : "Search QBO accounts…"
+                                    ? "Select class…"
+                                    : "Select QBO account…"
                             }
                             className="w-full sm:w-[320px]"
                           />
@@ -677,18 +785,18 @@ export function QboAccountMappingPanel() {
                             >
                               Save
                             </Button>
-                            {isMapped && (
+                            {isMapped ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                                 disabled={saveMutation.isPending}
                                 onClick={() => handleClear(row)}
-                                title="Clear mapping"
+                                title="Clear link"
                               >
                                 <Unlink className="w-4 h-4" />
                               </Button>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </div>

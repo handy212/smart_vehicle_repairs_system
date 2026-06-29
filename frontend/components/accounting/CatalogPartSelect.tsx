@@ -2,11 +2,12 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { inventoryApi } from "@/lib/api/inventory";
+import { revenueProductsApi } from "@/lib/api/revenue-products";
 import {
   QboSearchableSelect,
   type QboSearchableOption,
 } from "@/components/integrations/QboSearchableSelect";
+import { getUserFacingError } from "@/lib/api/errors";
 
 const NONE_VALUE = "__none__";
 
@@ -18,32 +19,11 @@ type Props = {
 };
 
 export function CatalogPartSelect({ value, onChange, disabled, className }: Props) {
-  const { data: searchData, isLoading: searchLoading } = useQuery({
-    queryKey: ["catalog-parts", "service"],
-    queryFn: () =>
-      inventoryApi.list({
-        search: "REV-",
-        item_type: "service",
-        is_active: true,
-        page: 1,
-        ordering: "part_number",
-      }),
+  const { data: parts = [], isLoading, isError, error } = useQuery({
+    queryKey: ["revenue-products", "catalog-parts"],
+    queryFn: () => revenueProductsApi.listCatalogParts(),
     staleTime: 60 * 1000,
   });
-
-  const { data: selectedPart, isLoading: selectedLoading } = useQuery({
-    queryKey: ["catalog-parts", "selected", value],
-    queryFn: () => inventoryApi.get(value!),
-    enabled: value != null,
-  });
-
-  const parts = useMemo(() => {
-    const rows = searchData?.results ?? [];
-    if (selectedPart && !rows.some((part) => part.id === selectedPart.id)) {
-      return [selectedPart, ...rows];
-    }
-    return rows;
-  }, [searchData?.results, selectedPart]);
 
   const options = useMemo<QboSearchableOption[]>(() => {
     const rows: QboSearchableOption[] = [
@@ -55,15 +35,28 @@ export function CatalogPartSelect({ value, onChange, disabled, className }: Prop
       ...parts.map((part) => ({
         value: String(part.id),
         label: `${part.part_number} · ${part.name}`,
-        searchText: `${part.part_number} ${part.name} ${part.item_type ?? ""}`.toLowerCase(),
-        hint: part.qbo_sync_status ? `QBO: ${part.qbo_sync_status}` : "Service catalog item",
+        searchText: `${part.part_number} ${part.name}`.toLowerCase(),
+        hint: "Service catalog item for QuickBooks sync",
       })),
     ];
     return rows;
   }, [parts]);
 
   const selectedValue = value != null ? String(value) : NONE_VALUE;
-  const loading = searchLoading || (value != null && selectedLoading);
+  const selectedPart = value != null ? parts.find((part) => part.id === value) : null;
+  const displayOptions =
+    selectedPart && !parts.some((part) => part.id === selectedPart.id)
+      ? [
+          ...options.slice(0, 1),
+          {
+            value: String(selectedPart.id),
+            label: `${selectedPart.part_number} · ${selectedPart.name}`,
+            searchText: `${selectedPart.part_number} ${selectedPart.name}`.toLowerCase(),
+            hint: "Currently linked template",
+          },
+          ...options.slice(1),
+        ]
+      : options;
 
   return (
     <div className="space-y-1.5">
@@ -75,14 +68,23 @@ export function CatalogPartSelect({ value, onChange, disabled, className }: Prop
           }
           onChange(next === NONE_VALUE ? null : Number(next));
         }}
-        options={options}
-        placeholder={loading ? "Loading catalog items…" : "Select service catalog item…"}
-        emptyMessage="No service catalog items found. Run seed or create REV-* service parts."
+        options={displayOptions}
+        placeholder={isLoading ? "Loading templates…" : "Select service catalog item…"}
+        emptyMessage={
+          isError
+            ? getUserFacingError(error, "Could not load item templates.")
+            : "No templates found. Run seed_owner_revenue_products on the server."
+        }
         className={className}
       />
       <p className="text-[10px] text-muted-foreground">
-        Service/non-inventory part synced to QuickBooks as the Item for this income category.
+        Links this income category to a service catalog part that syncs to QuickBooks as an Item.
       </p>
+      {isError ? (
+        <p className="text-[10px] text-destructive">
+          {getUserFacingError(error, "Could not load catalog templates.")}
+        </p>
+      ) : null}
     </div>
   );
 }

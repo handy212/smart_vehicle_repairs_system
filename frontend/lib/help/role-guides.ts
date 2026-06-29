@@ -550,7 +550,7 @@ export const roleGuides: HelpGuide[] = [
                             "Create estimates from the work order or **Billing → Estimates → New**.",
                             "Include parts, labor, taxes, and shop supplies as separate lines where required.",
                             "Send to customer — track status: **Draft**, **Sent**, **Viewed**, **Approved**, **Declined**.",
-                            "Use **Proforma Invoices** when the customer needs a formal quote document before work starts.",
+                            "Use **Invoices → Proforma** (filter or New Proforma) when the customer needs a formal quote document before work starts.",
                             "Convert approved estimates to invoices when the job is complete — avoid double-billing lines.",
                         ],
                     },
@@ -581,7 +581,7 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Process refunds from the payment detail page or **Billing → Refunds**.",
+                            "Process refunds from the payment detail page or **Payments → Refunds**.",
                             "Pending refunds require approval — check your branch policy on who approves.",
                             "Open **Accounting → Till Management** at the start of the day; close with counted cash vs. system total.",
                             "Record **Pay In** and **Pay Out** for petty cash movements.",

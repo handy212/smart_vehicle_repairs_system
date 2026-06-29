@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -17,7 +17,7 @@ import {
     Package,
     XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { billingApi } from "@/lib/api/billing";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
@@ -75,6 +75,7 @@ const statusClassNames: Record<string, string> = {
 export default function BillDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
@@ -100,16 +101,27 @@ export default function BillDetailPage() {
         syncErrorMessage: "Could not trigger vendor bill sync with QuickBooks.",
     });
 
+    const { data: approvers = [] } = useQuery({
+        queryKey: ["bill-approvers"],
+        queryFn: () => billingApi.bills.approvers(),
+    });
+
     const { data: bill, isLoading, error } = useQuery({
         queryKey: ["bill", id],
         queryFn: () => billingApi.bills.get(id),
         enabled: isValidId,
     });
 
-    const { data: approvers = [] } = useQuery({
-        queryKey: ["bill-approvers"],
-        queryFn: () => billingApi.bills.approvers(),
-    });
+    const isStandaloneBill = bill ? !bill.purchase_order : false;
+    const showSubmitApproval =
+        Boolean(bill) && isStandaloneBill && ["draft", "rejected"].includes(bill!.status);
+
+    const submitApprovalParam = searchParams.get("submit");
+    useEffect(() => {
+        if (submitApprovalParam === "1" && showSubmitApproval) {
+            setIsApprovalDialogOpen(true);
+        }
+    }, [submitApprovalParam, showSubmitApproval]);
 
     const voidMutation = useMutation({
         mutationFn: () => billingApi.bills.void(id),
@@ -276,8 +288,6 @@ export default function BillDetailPage() {
         hasPermission("edit_bills") &&
         ["draft", "rejected"].includes(bill.status) &&
         amountPaidNum === 0;
-    const isStandaloneBill = !bill.purchase_order;
-    const showSubmitApproval = isStandaloneBill && ["draft", "rejected"].includes(bill.status);
     const canOpenDraftBill =
         hasAnyPermission(["create_bills", "edit_bills", "manage_billing"]) &&
         Boolean(bill.purchase_order) &&
@@ -487,6 +497,32 @@ export default function BillDetailPage() {
                     </DropdownMenu>
                 </div>
             </div>
+
+            {showSubmitApproval && (
+                <Card className="border-amber-500/30 bg-amber-500/5">
+                    <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="font-medium text-foreground">Next step: submit for approval</p>
+                            <p className="text-sm text-muted-foreground">
+                                Draft standalone bills must be submitted and approved before they become Open and
+                                payable in Pay Bills.
+                            </p>
+                        </div>
+                        <Button size="sm" onClick={() => setIsApprovalDialogOpen(true)}>
+                            Submit for approval
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {bill.status === "pending_approval" && isStandaloneBill && (
+                <Card className="border-blue-500/30 bg-blue-500/5">
+                    <CardContent className="py-4 text-sm text-muted-foreground">
+                        Awaiting approval. An assigned approver can Approve or Reject this bill using the actions
+                        in the header.
+                    </CardContent>
+                </Card>
+            )}
 
             {isQboConnected && (
                 <QboSyncBadge

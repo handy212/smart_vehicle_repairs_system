@@ -18,7 +18,7 @@ const COPY: Record<ApFlowHintProps["variant"], { title: string; body: string }> 
   },
   "bill-standalone": {
     title: "Standalone vendor bill",
-    body: "This bill starts as Draft and needs approval before it becomes Open and payable. Use Pay Bills to record payment once open.",
+    body: "Saved as Draft. On the bill detail page, choose Submit for approval → an approver opens the bill → then Pay Bills once status is Open.",
   },
   "po-receive-first": {
     title: "Receive before billing",

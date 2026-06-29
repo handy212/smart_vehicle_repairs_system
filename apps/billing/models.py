@@ -2423,7 +2423,7 @@ class BillLineItem(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        self.total = self.quantity * self.unit_price
+        self.total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
         super().save(*args, **kwargs)
         self.bill.calculate_totals()
 

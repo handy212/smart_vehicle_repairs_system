@@ -58,7 +58,18 @@ export const REVENUE_CLASS_LABELS: Record<RevenueClass, string> = {
   other: "Other",
 };
 
+export type CatalogPartOption = {
+  id: number;
+  part_number: string;
+  name: string;
+};
+
 export const revenueProductsApi = {
+  listCatalogParts: async (): Promise<CatalogPartOption[]> => {
+    const response = await apiClient.get("/accounting/revenue-products/catalog-parts/");
+    return response.data;
+  },
+
   list: async (params?: { is_active?: boolean; revenue_class?: string }): Promise<RevenueProduct[]> => {
     const response = await apiClient.get("/accounting/revenue-products/", { params });
     return response.data.results ?? response.data;

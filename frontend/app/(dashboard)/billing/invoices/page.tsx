@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download, Mail, Edit, MoreVertical, ChevronDown, Eye, X, Printer, DollarSign, Ban, CreditCard } from "lucide-react";
+import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download, Mail, Edit, MoreVertical, ChevronDown, Eye, X, Printer, DollarSign, Ban, CreditCard, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
@@ -117,6 +117,13 @@ export default function InvoicesPage() {
             value: "unpaid",
             filters: {
                 status: "unpaid",
+            },
+        },
+        {
+            label: "Proforma",
+            value: "proforma",
+            filters: {
+                status: "proforma",
             },
         },
         {
@@ -482,6 +489,12 @@ export default function InvoicesPage() {
                         )}
                     </div>
                     <PermissionGuard permission="create_invoices">
+                        <Link href="/billing/invoices/new?type=proforma">
+                            <Button size="sm" variant="outline" className="h-9">
+                                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                New Proforma
+                            </Button>
+                        </Link>
                         <Link href="/billing/invoices/new">
                             <Button size="sm" className="h-9">
                                 <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -493,7 +506,7 @@ export default function InvoicesPage() {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-warning/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
@@ -571,6 +584,22 @@ export default function InvoicesPage() {
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-muted-foreground">{stats?.counts.draft || 0}</span>
                             <FileText className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'proforma' ? 'ring-2 ring-primary bg-primary/10 bg-muted' : 'bg-card'}`}
+                    onClick={() => {
+                        const newStatus = advancedFilters.status === 'proforma' ? null : 'proforma';
+                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
+                        setPage(1);
+                    }}
+                >
+                    <CardContent className="p-3 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Proforma</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold text-primary">{stats?.counts.proforma || 0}</span>
+                            <ClipboardList className="w-4 h-4 text-primary/50" />
                         </div>
                     </CardContent>
                 </Card>

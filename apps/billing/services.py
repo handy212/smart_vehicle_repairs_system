@@ -16,6 +16,7 @@ class BillingService:
         partial_count = queryset.filter(status='partial').count()
         overdue_count = queryset.filter(status='overdue').count()
         
+        proforma_count = queryset.filter(status='proforma').count()
         unpaid_count = queryset.filter(
             status__in=['sent', 'viewed', 'proforma']
         ).count()
@@ -38,7 +39,8 @@ class BillingService:
                 "paid": paid_count,
                 "partially_paid": partial_count,
                 "overdue": overdue_count,
-                "unpaid": unpaid_count
+                "unpaid": unpaid_count,
+                "proforma": proforma_count,
             },
             "financials": {
                 "total_paid": total_paid,

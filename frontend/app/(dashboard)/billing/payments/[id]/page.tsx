@@ -234,10 +234,11 @@ export default function PaymentDetailPage() {
       {canRequestRefund && (
         <Card className="border-amber-200/60 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20">
           <CardContent className="py-3 text-sm text-muted-foreground">
-            Refunds use the approval workflow: your request is reviewed, then completed under{" "}
+            Refunds use the approval workflow: your request is reviewed, then completed on the{" "}
             <Link href="/billing/refunds" className="font-medium text-primary hover:underline">
-              Billing → Refunds
-            </Link>
+              Refunds
+            </Link>{" "}
+            page (linked from Payments).
             . Funds are not returned until the refund is approved and completed.
           </CardContent>
         </Card>

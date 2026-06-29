@@ -384,6 +384,7 @@ export const inventoryApi = {
   // Parts
   list: async (params?: {
     page?: number;
+    page_size?: number;
     search?: string;
     category?: number;
     low_stock?: boolean;

@@ -278,3 +278,48 @@ class Wave4RemediationTests(TestCase):
         report = reconcile_subledgers(branch_id=self.branch.id)
         self.assertEqual(report['accounts_payable']['unapplied_vendor_credits'], 50.0)
         self.assertIn('subledger_net_of_credits', report['accounts_payable'])
+
+    def test_post_bill_balances_with_taxable_mixed_lines(self):
+        bill = Bill.objects.create(
+            vendor=self.vendor,
+            branch=self.branch,
+            due_date=timezone.now().date(),
+            status='open',
+            created_by=self.user,
+        )
+        BillLineItem.objects.create(
+            bill=bill,
+            description='Fuel',
+            quantity=Decimal('1'),
+            unit_price=Decimal('33.33'),
+            is_taxable=True,
+        )
+        BillLineItem.objects.create(
+            bill=bill,
+            description='Supplies',
+            quantity=Decimal('1'),
+            unit_price=Decimal('33.33'),
+            is_taxable=True,
+        )
+        BillLineItem.objects.create(
+            bill=bill,
+            description='Non-taxable fee',
+            quantity=Decimal('1'),
+            unit_price=Decimal('33.34'),
+            is_taxable=False,
+        )
+        bill.refresh_from_db()
+        self.assertGreater(bill.tax_amount, Decimal('0'))
+        self.assertGreater(bill.total, bill.subtotal)
+
+        entry = AccountingService.post_bill(bill)
+        self.assertIsNotNone(entry)
+        self.assertTrue(entry.validate_balanced())
+        debits = sum(
+            t.amount for t in entry.transactions.all() if t.transaction_type == 'debit'
+        )
+        credits = sum(
+            t.amount for t in entry.transactions.all() if t.transaction_type == 'credit'
+        )
+        self.assertEqual(debits, credits)
+        self.assertEqual(credits, bill.total)

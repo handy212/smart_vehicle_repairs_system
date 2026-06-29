@@ -2101,6 +2101,11 @@ class BillLineItemCreateSerializer(serializers.ModelSerializer):
             'inventory_item'
         ]
 
+    def validate_quantity(self, value):
+        if value is None or value <= 0:
+            raise serializers.ValidationError('Quantity must be greater than 0.')
+        return value
+
 
 class BillSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     """Serializer for bills (list/detail)"""
@@ -2516,12 +2521,103 @@ class PayBillsBatchSerializer(serializers.Serializer):
             raise serializers.ValidationError('Select at least one bill to pay.')
         return lines
 
+    def validate(self, data):
+        from apps.billing.models import Bill
+
+        lines = data.get('lines') or []
+        vendor_id = data['vendor']
+        bills = {
+            bill.id: bill
+            for bill in Bill.objects.filter(
+                id__in=[line['bill_id'] for line in lines],
+                vendor_id=vendor_id,
+            ).select_related('branch', 'vendor')
+        }
+        if len(bills) != len(lines):
+            raise serializers.ValidationError({
+                'lines': 'One or more bills were not found for the selected vendor.',
+            })
+
+        branch_ids = {bill.branch_id for bill in bills.values()}
+        if len(branch_ids) > 1:
+            raise serializers.ValidationError({
+                'lines': 'Pay bills from one branch at a time. Select bills for a single location.',
+            })
+
+        payment_method = data.get('payment_method')
+        request = self.context.get('request')
+        branch = next(iter(bills.values())).branch
+
+        if payment_method == 'cash':
+            cash_account = data.get('cash_account')
+            if cash_account is None:
+                raise serializers.ValidationError({
+                    'cash_account': 'Select the till-enabled cash account for this cash vendor payment.',
+                })
+            till_qs = CashierTill.objects.filter(status='open', till_account=cash_account)
+            if branch:
+                till_qs = till_qs.filter(branch_id=branch.id)
+            if not till_qs.exists():
+                raise serializers.ValidationError({
+                    'payment_method': (
+                        'Open a till for the selected cash account before recording a cash vendor payment.'
+                    ),
+                })
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            validate_settlement_account_for_branch(
+                cash_account,
+                branch,
+                user=getattr(request, 'user', None) if request else None,
+                field_name='cash_account',
+            )
+        elif payment_method in BANK_SETTLEMENT_PAYMENT_METHODS:
+            bank_account = validate_bank_account(data.get('bank_account'))
+            if bank_account is None:
+                raise serializers.ValidationError({
+                    'bank_account': 'Select the bank or cash-equivalent account for this vendor payment.',
+                })
+            data['bank_account'] = bank_account
+            from apps.accounting.settlement_accounts import validate_settlement_account_for_branch
+
+            validate_settlement_account_for_branch(
+                bank_account,
+                branch,
+                user=getattr(request, 'user', None) if request else None,
+                field_name='bank_account',
+            )
+
+        for line in lines:
+            bill = bills[line['bill_id']]
+            if bill.status in ['draft', 'pending_approval', 'rejected', 'void']:
+                raise serializers.ValidationError({
+                    'lines': f'Bill {bill.bill_number} is not payable.',
+                })
+            amount = Decimal(str(line['amount'])).quantize(Decimal('0.01'))
+            amount_due = Decimal(str(bill.amount_due or 0)).quantize(Decimal('0.01'))
+            if amount <= 0 or amount > amount_due:
+                raise serializers.ValidationError({
+                    'lines': (
+                        f'Invalid payment amount for bill {bill.bill_number}. '
+                        f'Balance due is {amount_due}.'
+                    ),
+                })
+            line['amount'] = amount
+
+        data['_bills'] = bills
+        return data
+
 
 class VendorExpenseLineItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorExpenseLineItem
         fields = ['id', 'description', 'expense_account', 'inventory_item', 'quantity', 'unit_price', 'total']
         read_only_fields = ['id', 'total']
+
+    def validate_quantity(self, value):
+        if value is None or value <= 0:
+            raise serializers.ValidationError('Quantity must be greater than 0.')
+        return value
 
 
 class VendorExpenseSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):

@@ -82,11 +82,11 @@ export function ApplyVendorCreditDialog(props: ApplyVendorCreditDialogProps) {
   });
 
   const { data: creditsData, isLoading: creditsLoading } = useQuery({
-    queryKey: ["vendor-credits", "apply-to-bill", vendorId],
+    queryKey: ["vendor-credits", "apply-to-bill", vendorId, billId],
     queryFn: () =>
       billingApi.vendorCredits.list({
         vendor: vendorId,
-        status: "issued",
+        bill: billId,
         page_size: 100,
         ordering: "-credit_date",
       }),
@@ -105,7 +105,9 @@ export function ApplyVendorCreditDialog(props: ApplyVendorCreditDialogProps) {
 
   const credits = useMemo(() => {
     return (creditsData?.results ?? []).filter(
-      (credit) => parseFloat(credit.unused_amount || "0") > 0.001
+      (credit) =>
+        ["issued", "applied"].includes(credit.status) &&
+        parseFloat(credit.unused_amount || "0") > 0.001
     );
   }, [creditsData]);
 
@@ -226,7 +228,7 @@ export function ApplyVendorCreditDialog(props: ApplyVendorCreditDialogProps) {
                 <SelectTrigger>
                   <SelectValue placeholder={billsLoading ? "Loading…" : "Select bill…"} />
                 </SelectTrigger>
-                <SelectContent className="max-h-72 z-[200]">
+                <SelectContent className="max-h-72 z-[250]">
                   {bills.map((bill) => {
                     const due = billBalanceDue(bill);
                     return (
@@ -252,7 +254,7 @@ export function ApplyVendorCreditDialog(props: ApplyVendorCreditDialogProps) {
                 <SelectTrigger>
                   <SelectValue placeholder={creditsLoading ? "Loading…" : "Select credit…"} />
                 </SelectTrigger>
-                <SelectContent className="max-h-72 z-[200]">
+                <SelectContent className="max-h-72 z-[250]">
                   {credits.map((credit) => (
                     <SelectItem key={credit.id} value={String(credit.id)}>
                       {credit.credit_number} — {formatCurrency(credit.unused_amount)} available
@@ -262,7 +264,8 @@ export function ApplyVendorCreditDialog(props: ApplyVendorCreditDialogProps) {
               </Select>
               {!creditsLoading && credits.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  No issued vendor credits with remaining balance for this vendor.
+                  No issued vendor credits with remaining balance for this vendor and branch. Issue a
+                  credit from Vendor Credits first.
                 </p>
               )}
             </div>

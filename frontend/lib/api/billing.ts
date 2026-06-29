@@ -725,7 +725,7 @@ export const billingApi = {
     },
 
     stats: async (): Promise<{
-      counts: { total: number; draft: number; paid: number; partially_paid: number; overdue: number; unpaid: number };
+      counts: { total: number; draft: number; paid: number; partially_paid: number; overdue: number; unpaid: number; proforma: number };
       financials: { total_paid: number; past_due_total: number; outstanding_total: number };
     }> => {
       const response = await apiClient.get("/billing/invoices/stats/");
@@ -818,6 +818,7 @@ export const billingApi = {
       page_size?: number;
       status?: string;
       vendor?: number;
+      bill?: number;
       search?: string;
       ordering?: string;
     }): Promise<VendorCreditListResponse> => {
