@@ -382,7 +382,10 @@ QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL = env.int(
 )
 QUICKBOOKS_RETRY_FAILED_BATCH_SIZE = env.int('QUICKBOOKS_RETRY_FAILED_BATCH_SIZE', default=100)
 QUICKBOOKS_OUTBOUND_QUEUE_DEPTH_LIMIT = env.int('QUICKBOOKS_OUTBOUND_QUEUE_DEPTH_LIMIT', default=40)
-QUICKBOOKS_QBO_HTTP_TIMEOUT = env.int('QUICKBOOKS_QBO_HTTP_TIMEOUT', default=90)
+# Kept short: each blocked worker slot during an Intuit outage stalls the next
+# entity in the queue. A 3-attempt retry at this timeout caps one sync call at
+# roughly 3x this value, instead of multi-minute stalls.
+QUICKBOOKS_QBO_HTTP_TIMEOUT = env.int('QUICKBOOKS_QBO_HTTP_TIMEOUT', default=35)
 
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.

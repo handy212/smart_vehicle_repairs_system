@@ -52,7 +52,7 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-# Celery worker service
+# Celery worker service (general queue: notifications, reports, inventory, etc.)
 echo -e "${YELLOW}Creating Celery worker service...${NC}"
 cat > /etc/systemd/system/svr-celery.service << EOF
 [Unit]
@@ -70,7 +70,44 @@ EnvironmentFile=$APP_DIR/.env
 ExecStart=$APP_DIR/venv/bin/celery -A config worker \
     --loglevel=info \
     --logfile=$APP_DIR/logs/celery.log \
-    -Q qbo,celery
+    -Q celery \
+    --concurrency=3 \
+    -n worker@%%h
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Dedicated Celery worker for QuickBooks outbound sync (isolated so a slow/
+# unresponsive Intuit API never starves notifications, reports, etc.). I/O-bound
+# tasks spend most of their time waiting on QBO's API, so concurrency can safely
+# exceed CPU core count here.
+echo -e "${YELLOW}Creating dedicated QuickBooks Celery worker service...${NC}"
+cat > /etc/systemd/system/svr-celery-qbo.service << EOF
+[Unit]
+Description=Smart Vehicle Repairs Celery Worker (QuickBooks outbound sync)
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=svr
+Group=svr
+WorkingDirectory=$APP_DIR
+Environment="PATH=$APP_DIR/venv/bin"
+EnvironmentFile=$APP_DIR/.env
+ExecStart=$APP_DIR/venv/bin/celery -A config worker \
+    --loglevel=info \
+    --logfile=$APP_DIR/logs/celery-qbo.log \
+    -Q qbo \
+    --concurrency=6 \
+    -n qbo@%%h
 Restart=always
 RestartSec=10
 TimeoutStartSec=60
@@ -147,6 +184,7 @@ echo -e "${YELLOW}Enabling services...${NC}"
 systemctl daemon-reload
 systemctl enable svr
 systemctl enable svr-celery
+systemctl enable svr-celery-qbo
 systemctl enable svr-celerybeat
 
 if [ -f "/etc/systemd/system/svr-nextjs.service" ]; then
@@ -163,6 +201,7 @@ echo ""
 echo "Start services with:"
 echo "  sudo systemctl start svr"
 echo "  sudo systemctl start svr-celery"
+echo "  sudo systemctl start svr-celery-qbo"
 echo "  sudo systemctl start svr-celerybeat"
 if [ -f "/etc/systemd/system/svr-nextjs.service" ]; then
     echo "  sudo systemctl start svr-nextjs"

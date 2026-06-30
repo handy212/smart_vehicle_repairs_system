@@ -367,11 +367,11 @@ fi
 if [ "$RESTART_SERVICES" = true ]; then
     echo -e "${YELLOW}Restarting services...${NC}"
 
-    services=(svr svr-nextjs svr-celery svr-celerybeat nginx)
+    services=(svr svr-nextjs svr-celery svr-celery-qbo svr-celerybeat nginx)
     if [ "$FAST_DEPLOY" = true ]; then
         services=()
         if [ "$REBUILD_BACKEND" = true ] || [ "$BACKEND_CHANGED" = true ]; then
-            services+=(svr svr-celery svr-celerybeat)
+            services+=(svr svr-celery svr-celery-qbo svr-celerybeat)
         fi
         if [ "$REBUILD_FRONTEND" = true ] || [ "$FRONTEND_CHANGED" = true ]; then
             services+=(svr-nextjs)
@@ -400,7 +400,7 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 echo -e "${BLUE}Service Status:${NC}"
-for service in svr svr-nextjs svr-celery svr-celerybeat nginx; do
+for service in svr svr-nextjs svr-celery svr-celery-qbo svr-celerybeat nginx; do
     if systemctl is-active "$service" >/dev/null 2>&1; then
         echo -e "  ${GREEN}✓${NC} $service"
     else

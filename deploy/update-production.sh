@@ -120,7 +120,7 @@ if [ "$READY" = true ]; then
     fi
 else
     echo -e "${RED}✗ API readiness check failed — inspect service logs${NC}"
-    systemctl status svr svr-celery svr-celerybeat svr-nextjs nginx --no-pager -l || true
+    systemctl status svr svr-celery svr-celery-qbo svr-celerybeat svr-nextjs nginx --no-pager -l || true
     exit 1
 fi
 

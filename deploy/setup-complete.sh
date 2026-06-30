@@ -49,6 +49,6 @@ echo "Next steps:"
 echo "1. Create superuser: sudo -u svr /var/www/svr/venv/bin/python manage.py createsuperuser"
 echo "2. Configure Nginx: sudo bash deploy/setup-nginx.sh"
 echo "3. Setup SSL: sudo certbot --nginx -d yourdomain.com"
-echo "4. Start services: sudo systemctl start svr svr-celery svr-celerybeat"
+echo "4. Start services: sudo systemctl start svr svr-celery svr-celery-qbo svr-celerybeat"
 echo ""
 

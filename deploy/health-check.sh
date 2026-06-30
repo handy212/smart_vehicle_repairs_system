@@ -19,7 +19,7 @@ echo ""
 
 # Check if services are enabled
 echo -e "${YELLOW}Checking service status...${NC}"
-SERVICES=("svr" "svr-celery" "svr-celerybeat" "svr-nextjs" "nginx" "postgresql" "redis-server")
+SERVICES=("svr" "svr-celery" "svr-celery-qbo" "svr-celerybeat" "svr-nextjs" "nginx" "postgresql" "redis-server")
 FAILED_SERVICES=()
 
 for service in "${SERVICES[@]}"; do

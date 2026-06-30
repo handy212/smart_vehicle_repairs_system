@@ -17,7 +17,7 @@ echo -e "${GREEN}Ensuring services start on boot...${NC}"
 echo ""
 
 # Required services
-SERVICES=("svr" "svr-celery" "svr-celerybeat" "nginx" "postgresql" "redis-server")
+SERVICES=("svr" "svr-celery" "svr-celery-qbo" "svr-celerybeat" "nginx" "postgresql" "redis-server")
 
 # Check if Next.js service exists
 if [ -f "/etc/systemd/system/svr-nextjs.service" ]; then
@@ -46,7 +46,7 @@ echo -e "${GREEN}All services configured to start on boot!${NC}"
 echo ""
 echo "To verify, run:"
 echo "  systemctl list-unit-files | grep svr"
-echo "  systemctl is-enabled svr svr-celery svr-celerybeat"
+echo "  systemctl is-enabled svr svr-celery svr-celery-qbo svr-celerybeat"
 echo ""
 
 
