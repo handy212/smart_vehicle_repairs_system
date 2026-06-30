@@ -79,6 +79,8 @@ HUBTEL_PAYMENT_ENABLED = False
 QUICKBOOKS_AUTO_SYNC_ENABLED = False
 SKIP_AUDIT_REGISTRY = True
 SKIP_MODULE_PERMISSION_CHECKS = True
+# Admins see all branches in API list views unless a test sends X-Branch-ID explicitly.
+BRANCH_FILTER_USE_ACTIVE_BRANCH_FOR_ADMIN = False
 
 # DRF APIClient reads JSON bodies, not HttpOnly cookies — keep tokens in response data.
 JWT_EMIT_TOKENS_IN_JSON = True

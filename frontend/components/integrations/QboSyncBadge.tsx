@@ -93,6 +93,11 @@ export function QboSyncBadge({
           QuickBooks sync failed: {error}
         </p>
       ) : null}
+      {normalizedStatus === "pending" ? (
+        <p className={cn("text-muted-foreground", compact ? "text-[11px] line-clamp-2" : "text-xs")}>
+          {error ? `Sync stalled: ${error}` : "Sync in progress…"}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -2591,8 +2591,8 @@ class BillViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         with transaction.atomic():
-            bill.calculate_totals()
             bill.refresh_from_db()
+            bill.calculate_totals()
             bill.status = 'open'
             bill.approved_by = request.user
             bill.approved_at = timezone.now()
@@ -2619,8 +2619,8 @@ class BillViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         with transaction.atomic():
-            bill.calculate_totals()
             bill.refresh_from_db()
+            bill.calculate_totals()
             bill.status = 'open'
             bill.save()
         return Response(BillSerializer(bill).data)
@@ -2774,9 +2774,11 @@ class PayBillsBatchView(APIView):
                 'notes': data.get('notes', ''),
             }
             if data['payment_method'] == 'cash':
-                pay_data['cash_account'] = data.get('cash_account')
+                cash_account = data.get('cash_account')
+                pay_data['cash_account'] = cash_account.pk if cash_account is not None else None
             else:
-                pay_data['bank_account'] = data.get('bank_account')
+                bank_account = data.get('bank_account')
+                pay_data['bank_account'] = bank_account.pk if bank_account is not None else None
 
             pay_serializer = BillPaymentCreateSerializer(
                 data=pay_data,

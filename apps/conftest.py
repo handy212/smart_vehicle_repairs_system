@@ -9,6 +9,40 @@ def seed_rbac(django_db_setup, django_db_blocker):
         from apps.accounting.models import Account, AccountingControl
 
         call_command('init_permissions', verbosity=0)
+
+        from django.contrib.auth import get_user_model
+        from apps.branches.models import Branch
+
+        User = get_user_model()
+        seed_admin, _ = User.objects.get_or_create(
+            username='test-seed-admin',
+            defaults={
+                'email': 'test-seed-admin@test.com',
+                'role': 'admin',
+                'is_staff': True,
+                'is_superuser': True,
+                'is_active': True,
+            },
+        )
+        if not seed_admin.has_usable_password():
+            seed_admin.set_password('testpass123')
+            seed_admin.save(update_fields=['password'])
+
+        Branch.objects.get_or_create(
+            code='SEEDHQ',
+            defaults={
+                'name': 'Test Headquarters',
+                'phone': '0000000000',
+                'address': '1 Test St',
+                'city': 'Accra',
+                'state': 'Greater Accra',
+                'zip_code': '00000',
+                'is_active': True,
+                'is_headquarters': True,
+                'created_by': seed_admin,
+            },
+        )
+
         accounts = {}
         for code, name, account_type, balance_type, subtype in [
             ('T1200', 'Test Accounts Receivable', 'asset', 'debit', 'accounts_receivable'),

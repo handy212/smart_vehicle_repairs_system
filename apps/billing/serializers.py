@@ -55,6 +55,22 @@ def bank_account_queryset(*, branch=None):
     return branch_bank_qs(branch=branch)
 
 
+def all_settlement_bank_accounts_queryset():
+    """All active bank/cash-equivalent settlement accounts (branch check runs in validate)."""
+    from apps.accounting.settlement_accounts import settlement_account_base_queryset
+
+    return settlement_account_base_queryset().filter(
+        account_subtype__in={'bank', 'cash_equivalent'},
+    )
+
+
+def all_settlement_till_accounts_queryset():
+    """All till-enabled settlement accounts (branch check runs in validate)."""
+    from apps.accounting.settlement_accounts import settlement_account_base_queryset
+
+    return settlement_account_base_queryset().filter(is_till_enabled=True)
+
+
 def till_account_queryset(*, branch=None):
     from apps.accounting.settlement_accounts import till_enabled_account_queryset
 
@@ -2363,12 +2379,12 @@ class BillPaymentSerializer(serializers.ModelSerializer):
 
 class BillPaymentCreateSerializer(serializers.ModelSerializer):
     cash_account = serializers.PrimaryKeyRelatedField(
-        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        queryset=all_settlement_till_accounts_queryset(),
         required=False,
         write_only=True,
     )
     bank_account = serializers.PrimaryKeyRelatedField(
-        queryset=bank_account_queryset(),
+        queryset=all_settlement_bank_accounts_queryset(),
         required=False,
         allow_null=True,
     )
@@ -2382,6 +2398,7 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
+        bill = self.context.get('bill')
         payment_method = data.get('payment_method')
         amount = data.get('amount') or Decimal('0')
         wht_rate = data.get('wht_rate') or Decimal('0')
@@ -2396,7 +2413,6 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
 
         if data.get('payment_method') == 'cash':
             request = self.context.get('request')
-            bill = self.context.get('bill')
             cash_account = data.pop('cash_account', None)
             if cash_account is None:
                 raise serializers.ValidationError({
@@ -2438,6 +2454,7 @@ class BillPaymentCreateSerializer(serializers.ModelSerializer):
                 user=getattr(request, 'user', None) if request else None,
                 field_name='bank_account',
             )
+            data['bank_account'] = bank_account
             data['till'] = None
         return data
 
@@ -2506,11 +2523,11 @@ class PayBillsBatchSerializer(serializers.Serializer):
     reference_number = serializers.CharField(required=False, allow_blank=True, max_length=100)
     notes = serializers.CharField(required=False, allow_blank=True)
     cash_account = serializers.PrimaryKeyRelatedField(
-        queryset=Account.objects.filter(is_till_enabled=True, is_active=True),
+        queryset=all_settlement_till_accounts_queryset(),
         required=False,
     )
     bank_account = serializers.PrimaryKeyRelatedField(
-        queryset=bank_account_queryset(),
+        queryset=all_settlement_bank_accounts_queryset(),
         required=False,
         allow_null=True,
     )
@@ -2716,6 +2733,10 @@ class VendorExpenseCreateSerializer(serializers.ModelSerializer):
             VendorExpenseLineItem.objects.create(vendor_expense=expense, **item_data)
         expense.calculate_totals()
         expense.refresh_from_db()
+
+        from apps.accounting.services import AccountingService
+
+        AccountingService.post_vendor_expense(expense)
         return expense
 
 

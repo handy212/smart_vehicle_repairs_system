@@ -25,6 +25,7 @@ class BillTests(TestCase):
         self.client.force_authenticate(user=self.user)
         
         self.branch = Branch.objects.create(name="Main Branch", code="MAIN", is_active=True, created_by=self.user)
+        self.client.defaults['HTTP_X_BRANCH_ID'] = str(self.branch.id)
         self.supplier = Supplier.objects.create(name="Test Vendor", supplier_code="TEST001")
 
         from apps.accounting.models import AccountingControl
@@ -355,6 +356,26 @@ class BillTests(TestCase):
     def test_pay_bills_batch_rejects_wrong_branch_bank_account(self):
         from apps.accounting.models import Account
         from apps.branches.models import Branch
+        from apps.accounts.permission_models import Permission, Role
+
+        staff = User.objects.create_user(
+            username='paybills_staff',
+            email='paybills@test.example.com',
+            password='password123',
+            role='accountant',
+            branch=self.branch,
+        )
+        role, _ = Role.objects.update_or_create(
+            code='accountant',
+            defaults={'name': 'Accountant', 'is_active': True},
+        )
+        for code in ('edit_bills', 'view_bills'):
+            permission, _ = Permission.objects.update_or_create(
+                code=code,
+                defaults={'name': code, 'category': 'billing', 'is_active': True},
+            )
+            role.permissions.add(permission)
+        self.client.force_authenticate(user=staff)
 
         other_branch = Branch.objects.create(
             name='Other Branch',
@@ -367,7 +388,7 @@ class BillTests(TestCase):
             name='Other Branch Bank',
             account_type='asset',
             account_subtype='bank',
-            normal_balance='debit',
+            balance_type='debit',
             branch=other_branch,
             is_active=True,
         )

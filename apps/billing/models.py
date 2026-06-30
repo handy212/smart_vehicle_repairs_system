@@ -2340,10 +2340,13 @@ class Bill(models.Model):
         from django.db.models import Sum
 
         payment_total = sum(
-            (p.gross_amount for p in self.payments.all()),
+            (p.gross_amount for p in BillPayment.objects.filter(bill_id=self.pk)),
             Decimal('0'),
         )
-        credit_total = self.vendor_credit_applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        credit_total = (
+            VendorCreditApplication.objects.filter(bill_id=self.pk).aggregate(t=Sum('amount'))['t']
+            or Decimal('0')
+        )
         collected = (payment_total + credit_total).quantize(Decimal('0.01'))
         from apps.billing.balance_utils import operational_collection_balances
 

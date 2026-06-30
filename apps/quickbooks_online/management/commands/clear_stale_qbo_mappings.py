@@ -24,7 +24,39 @@ class Command(BaseCommand):
             help='Delete mapping rows instead of clearing qbo_id.',
         )
 
+        parser.add_argument(
+            '--stale-pending-minutes',
+            type=int,
+            default=None,
+            metavar='MINUTES',
+            help=(
+                'Mark pending mappings older than MINUTES (no qbo_id) as failed so they can be '
+                'retried. Does not clear qbo_id on synced rows.'
+            ),
+        )
+
     def handle(self, *args, **options):
+        stale_minutes = options.get('stale_pending_minutes')
+        if stale_minutes is not None and stale_minutes > 0:
+            from django.utils import timezone
+            from datetime import timedelta
+
+            cutoff = timezone.now() - timedelta(minutes=stale_minutes)
+            stale_qs = QBOMapping.objects.filter(
+                status='pending',
+                qbo_id='',
+                last_synced_at__lt=cutoff,
+            )
+            stale_count = stale_qs.update(
+                status='failed',
+                error_message=(
+                    'Sync did not complete (stale pending). Use Push to retry or clear the mapping.'
+                ),
+            )
+            self.stdout.write(
+                self.style.WARNING(f'Marked {stale_count} stale pending mapping(s) as failed.')
+            )
+
         qs = QBOMapping.objects.all()
         if options['failed_only']:
             qs = qs.filter(status='failed')

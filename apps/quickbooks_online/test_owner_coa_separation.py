@@ -324,6 +324,7 @@ class OwnerCOASetupApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch.object(QuickBooksService, 'get_client', return_value=MagicMock())
     @patch.object(QuickBooksService, 'is_connected', return_value=True)
     @patch.object(QuickBooksService, 'sdk_available', return_value=True)
     @patch('apps.quickbooks_online.owner_coa_services.get_owner_coa_setup_service')

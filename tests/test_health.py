@@ -124,11 +124,17 @@ def test_validate_env_script_passes_for_legacy_database_and_redis_urls(tmp_path)
 def test_validate_env_script_fails_when_required_vars_missing(tmp_path):
     env_file = tmp_path / '.env'
     env_file.write_text('DJANGO_ENVIRONMENT=production\n')
+    clean_env = {
+        key: value
+        for key, value in os.environ.items()
+        if key in {'PATH', 'HOME', 'USER', 'LANG', 'LC_ALL', 'SHELL'}
+    }
     result = subprocess.run(
         ['bash', str(ROOT / 'scripts' / 'validate-env.sh'), str(env_file)],
         capture_output=True,
         text=True,
         check=False,
+        env=clean_env,
     )
     assert result.returncode != 0
 

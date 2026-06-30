@@ -346,20 +346,27 @@ class BranchApiPermissionTest(TestCase):
         from apps.customers.models import Customer
         from apps.vehicles.models import Vehicle
 
-        customer = Customer.objects.create(
-            customer_type='individual',
+        customer_user = User.objects.create_user(
+            email='branch-delete@test.com',
+            username='branch_delete_customer',
+            password='testpass123',
             first_name='Test',
             last_name='Customer',
             phone='555-0001',
-            email='branch-delete@test.com',
+            role='customer',
+        )
+        customer = Customer.objects.create(
+            customer_type='individual',
+            user=customer_user,
         )
         vehicle = Vehicle.objects.create(
-            customer=customer,
+            owner=customer,
             make='Toyota',
             model='Corolla',
             year=2020,
             vin='1HGCM82633A004352',
             license_plate='BR-001',
+            current_mileage=10000,
         )
         WorkOrder.objects.create(
             branch=self.branch,
@@ -367,6 +374,7 @@ class BranchApiPermissionTest(TestCase):
             vehicle=vehicle,
             status='pending',
             customer_concerns='Branch delete blocker test',
+            odometer_in=10000,
             created_by=self.admin,
         )
 

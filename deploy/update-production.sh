@@ -26,6 +26,7 @@ SOURCE_DIR="/opt/smart_vehicle_repairs_system"
 TARGET_DIR="/var/www/svr"
 GIT_REF="main"
 RUN_BOOTSTRAP=false
+FULL_REBUILD=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -37,9 +38,13 @@ while [[ $# -gt 0 ]]; do
             RUN_BOOTSTRAP=true
             shift
             ;;
+        --full)
+            FULL_REBUILD=true
+            shift
+            ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo "Usage: $0 [--ref <branch-or-tag>] [--bootstrap]"
+            echo "Usage: $0 [--ref <branch-or-tag>] [--bootstrap] [--full]"
             exit 1
             ;;
     esac
@@ -84,7 +89,10 @@ else
     echo -e "${YELLOW}[2/4] Skipping env validation (script or .env not found)${NC}"
 fi
 
-DEPLOY_ARGS=(--rebuild-frontend --rebuild-backend --restart)
+DEPLOY_ARGS=(--fast)
+if [ "${FULL_REBUILD:-false}" = true ]; then
+    DEPLOY_ARGS=(--rebuild-frontend --rebuild-backend --restart)
+fi
 if [ "$RUN_BOOTSTRAP" = true ]; then
     DEPLOY_ARGS+=(--bootstrap)
 fi

@@ -23,6 +23,8 @@ except ModuleNotFoundError:
 _US_COUNTRY_CODES = frozenset({'US', 'USA', 'UNITED STATES'})
 US_LINE_TAX_CODE = 'TAX'
 US_LINE_NON_TAX_CODE = 'NON'
+# Ghana/global AP documents use NON on expense lines (see existing QBO Bills).
+AP_LINE_NON_TAX_CODE = 'NON'
 
 try:
     from quickbooks.objects.company_info import CompanyInfo as QBCompanyInfo
@@ -482,3 +484,43 @@ def apply_transaction_tax(service, qb_txn, local_obj, *, mapping_service, sales_
         )
 
     # Let QBO calculate TotalTax from line TaxCodeRef — do not set TotalTax manually.
+
+
+def resolve_ap_tax_code_ids(mapping_service, *, local_obj=None):
+    """
+    Resolve (taxable_tax_code_id, exempt_tax_code_id) for AP expense lines.
+
+    Ghana/global purchase documents in QBO use NON on lines with
+    GlobalTaxCalculation=NotApplicable (matching existing synced Bills).
+    US companies use TAX/NON like sales lines.
+    """
+    if mapping_service is None:
+        return None, None
+
+    return AP_LINE_NON_TAX_CODE, AP_LINE_NON_TAX_CODE
+
+
+def stamp_ap_expense_line_tax_code(
+    expense_detail,
+    local_item,
+    *,
+    tax_code_id,
+    exempt_tax_code_id=None,
+):
+    """Apply TaxCodeRef on AccountBasedExpenseLineDetail or ItemBasedExpenseLineDetail."""
+    if Ref is None or expense_detail is None or not tax_code_id:
+        return
+
+    code_id = tax_code_id
+    expense_detail.TaxCodeRef = Ref()
+    expense_detail.TaxCodeRef.value = code_id
+
+
+def finalize_ap_transaction_for_qbo(service, qb_txn):
+    """Set global tax mode on outbound AP documents."""
+    if uses_us_line_tax_codes(service):
+        if hasattr(qb_txn, 'GlobalTaxCalculation'):
+            qb_txn.GlobalTaxCalculation = None
+        return
+    if hasattr(qb_txn, 'GlobalTaxCalculation'):
+        qb_txn.GlobalTaxCalculation = 'NotApplicable'

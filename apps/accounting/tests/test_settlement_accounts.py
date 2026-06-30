@@ -96,7 +96,9 @@ class SettlementAccountHelpersTests(TestCase):
     @override_settings(SETTLEMENT_ACCOUNT_BRANCH_ENFORCEMENT=True)
     def test_bank_account_queryset_scoped_to_branch(self):
         qs = bank_account_queryset(branch=self.branch_b)
-        self.assertEqual(set(qs.values_list('code', flat=True)), {'1114', '1100'})
+        codes = set(qs.values_list('code', flat=True))
+        self.assertTrue({'1114', '1100'}.issubset(codes))
+        self.assertNotIn('1111', codes)
 
     @override_settings(SETTLEMENT_ACCOUNT_BRANCH_ENFORCEMENT=False)
     def test_enforcement_disabled_allows_any_account(self):

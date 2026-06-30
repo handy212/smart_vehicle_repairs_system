@@ -47,6 +47,13 @@ def branch(db, user):
 
 
 @pytest.fixture
+def branch_api_client(api_client, user, branch):
+    api_client.force_authenticate(user=user)
+    api_client.defaults['HTTP_X_BRANCH_ID'] = str(branch.id)
+    return api_client
+
+
+@pytest.fixture
 def customer(db, branch):
     u = User.objects.create_user(
         username="cn_cust",
@@ -81,9 +88,8 @@ class TestCreditNoteApply:
         cn.save()
         return cn
 
-    def test_apply_reduces_invoice_balance_and_unused(self, api_client, user, branch, customer):
-        api_client.force_authenticate(user=user)
 
+    def test_apply_reduces_invoice_balance_and_unused(self, branch_api_client, user, branch, customer):
         invoice = Invoice.objects.create(
             customer=customer,
             branch=branch,
@@ -98,7 +104,7 @@ class TestCreditNoteApply:
         cn = self._issue_credit_note(user, branch, customer, Decimal("40.00"))
 
         url = reverse("api_billing:credit-note-apply", args=[cn.id])
-        response = api_client.post(url, {"invoice": invoice.id}, format="json")
+        response = branch_api_client.post(url, {"invoice": invoice.id}, format="json")
         assert response.status_code == status.HTTP_200_OK, response.data
         assert Decimal(str(response.data["unused_amount"])) == Decimal("0")
         assert response.data["status"] == "applied"
@@ -109,9 +115,7 @@ class TestCreditNoteApply:
 
         assert CreditNoteApplication.objects.filter(credit_note=cn, invoice=invoice).count() == 1
 
-    def test_apply_partial_then_remainder(self, api_client, user, branch, customer):
-        api_client.force_authenticate(user=user)
-
+    def test_apply_partial_then_remainder(self, branch_api_client, user, branch, customer):
         invoice = Invoice.objects.create(
             customer=customer,
             branch=branch,
@@ -126,7 +130,7 @@ class TestCreditNoteApply:
         cn = self._issue_credit_note(user, branch, customer, Decimal("50.00"))
 
         url = reverse("api_billing:credit-note-apply", args=[cn.id])
-        r1 = api_client.post(url, {"invoice": invoice.id, "amount": "30"}, format="json")
+        r1 = branch_api_client.post(url, {"invoice": invoice.id, "amount": "30"}, format="json")
         assert r1.status_code == status.HTTP_200_OK, r1.data
         assert r1.data["status"] == "issued"
         assert Decimal(str(r1.data["unused_amount"])) == Decimal("20.00")
@@ -134,7 +138,7 @@ class TestCreditNoteApply:
         invoice.refresh_from_db()
         assert invoice.amount_paid == Decimal("30.00")
 
-        r2 = api_client.post(url, {"invoice": invoice.id}, format="json")
+        r2 = branch_api_client.post(url, {"invoice": invoice.id}, format="json")
         assert r2.status_code == status.HTTP_200_OK, r2.data
         assert Decimal(str(r2.data["unused_amount"])) == Decimal("0")
         assert r2.data["status"] == "applied"
@@ -142,9 +146,7 @@ class TestCreditNoteApply:
         invoice.refresh_from_db()
         assert invoice.amount_paid == Decimal("50.00")
 
-    def test_apply_rejects_wrong_customer(self, api_client, user, branch, customer):
-        api_client.force_authenticate(user=user)
-
+    def test_apply_rejects_wrong_customer(self, branch_api_client, user, branch, customer):
         other = User.objects.create_user(
             username="cn_other",
             email="cn_other@example.com",
@@ -169,5 +171,5 @@ class TestCreditNoteApply:
 
         cn = self._issue_credit_note(user, branch, customer, Decimal("10.00"))
         url = reverse("api_billing:credit-note-apply", args=[cn.id])
-        response = api_client.post(url, {"invoice": invoice.id}, format="json")
+        response = branch_api_client.post(url, {"invoice": invoice.id}, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST

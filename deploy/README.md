@@ -7,25 +7,23 @@ The `deploy.sh` script syncs changes from the source directory (`/opt/smart_vehi
 ### Quick Usage
 
 ```bash
+# Sync + rebuild only what changed (recommended)
+sudo bash deploy/deploy.sh --fast
+
 # Sync files only (no rebuild/restart)
 sudo bash deploy/deploy.sh
 
-# Sync + rebuild frontend + restart Next.js
-sudo bash deploy/deploy.sh --rebuild-frontend --restart
-
-# Sync + rebuild backend + restart Django
-sudo bash deploy/deploy.sh --rebuild-backend --restart
-
-# Full deployment (sync + rebuild everything + restart all services)
+# Full rebuild — slowest, use after dependency or infra changes
 sudo bash deploy/deploy.sh --all
 ```
 
 ### Options
 
+- `--fast` - Sync, rebuild only changed frontend/backend, restart affected services (recommended)
 - `--rebuild-frontend` - Rebuild Next.js frontend (runs `npm run build`)
 - `--rebuild-backend` - Rebuild Django backend (runs migrations, collectstatic)
 - `--restart` - Restart all services (Django, Next.js, Celery, Celery Beat)
-- `--all` - Equivalent to `--rebuild-frontend --rebuild-backend --restart`
+- `--all` - Full rebuild of everything (slowest)
 
 ### What It Does
 
@@ -58,7 +56,10 @@ sudo bash deploy/deploy.sh --all
 # Option 1: Quick sync (files only, no restart)
 sudo bash deploy/deploy.sh
 
-# Option 2: Full deployment (recommended after code changes)
+# Option 2: Fast deployment (recommended after code changes)
+sudo bash deploy/deploy.sh --fast
+
+# Option 3: Full deployment (after dependency or infra changes)
 sudo bash deploy/deploy.sh --all
 ```
 

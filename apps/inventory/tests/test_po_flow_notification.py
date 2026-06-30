@@ -41,9 +41,16 @@ class PurchaseOrderFlowTest(TestCase):
             cost_price="10.00",
             selling_price="20.00"
         )
+        StockItem.objects.create(
+            part=self.part,
+            branch=self.branch,
+            quantity_in_stock=0,
+            quantity_reserved=0,
+        )
         
         # Helper to authenticate
         self.client.force_authenticate(user=self.creator)
+        self.client.defaults['HTTP_X_BRANCH_ID'] = str(self.branch.id)
 
     def test_purchase_order_full_flow_with_notification(self):
         """

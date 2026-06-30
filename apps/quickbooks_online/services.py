@@ -83,6 +83,18 @@ def _is_stale_error(exc) -> bool:
     return '5010' in msg or 'stale object' in msg.lower()
 
 
+def _is_transient_connection_error(exc) -> bool:
+    """Return True for network blips that are worth retrying once or twice."""
+    msg = str(exc).lower()
+    return (
+        'connection aborted' in msg
+        or 'remotedisconnected' in msg
+        or 'connection reset' in msg
+        or 'timed out' in msg
+        or 'timeout' in msg
+    )
+
+
 def _normalize_qbo_callback_url(base_url: str) -> str:
     normalized = str(base_url or "").strip().rstrip("/")
     if normalized.endswith("/api/quickbooks/callback"):
@@ -271,11 +283,37 @@ class QuickBooksService:
                 cls._persist_token_from_auth_client(token, auth_client)
 
             client.access_token = auth_client.access_token
+            cls._configure_qbo_request_timeout(client)
 
             return client
         except Exception as e:
             logger.error(f"Error initializing QBO client: {e}")
             return None
+
+    @staticmethod
+    def _configure_qbo_request_timeout(client, timeout=60):
+        """
+        The python-quickbooks SDK calls requests without a timeout, so dropped
+        connections hang for several minutes before RemoteDisconnected.
+        """
+        original = client.process_request
+
+        def process_request(request_type, url, headers='', params='', data=''):
+            if client.session is None:
+                from quickbooks import exceptions as qb_exceptions
+                raise qb_exceptions.QuickbooksException('No session manager')
+
+            headers.update({'Authorization': 'Bearer ' + client.session.access_token})
+            return client.session.request(
+                request_type,
+                url,
+                headers=headers,
+                params=params,
+                data=data,
+                timeout=timeout,
+            )
+
+        client.process_request = process_request
 
     @staticmethod
     def _auth_client_tokens_changed(token, auth_client) -> bool:
@@ -342,25 +380,47 @@ class QuickBooksService:
             config.save()
 
     @classmethod
-    def _save_qb(cls, qb_obj, client):
+    def _save_qb(cls, qb_obj, client, *, max_retries=3):
         """
         Save a QBO object. If a Stale Object Error (5010) is raised, re-fetch
         the entity to get the current SyncToken and retry once.
+        Transient connection errors are retried with backoff.
         Local data always wins — we intentionally overwrite any concurrent QBO changes.
         """
-        try:
-            qb_obj.save(qb=client)
-        except Exception as e:
-            if _is_stale_error(e) and getattr(qb_obj, 'Id', None):
-                logger.warning(
-                    "Stale Object Error (5010) on %s id=%s — refreshing SyncToken and retrying.",
-                    type(qb_obj).__name__, qb_obj.Id,
-                )
-                fresh = type(qb_obj).get(int(qb_obj.Id), qb=client)
-                qb_obj.SyncToken = fresh.SyncToken
-                qb_obj.save(qb=client)   # propagate if it fails a second time
-            else:
+        import time
+
+        last_exc = None
+        for attempt in range(max_retries):
+            try:
+                qb_obj.save(qb=client)
+                return qb_obj
+            except Exception as e:
+                if _is_stale_error(e) and getattr(qb_obj, 'Id', None):
+                    logger.warning(
+                        "Stale Object Error (5010) on %s id=%s — refreshing SyncToken and retrying.",
+                        type(qb_obj).__name__, qb_obj.Id,
+                    )
+                    fresh = type(qb_obj).get(int(qb_obj.Id), qb=client)
+                    qb_obj.SyncToken = fresh.SyncToken
+                    qb_obj.save(qb=client)
+                    return qb_obj
+                if _is_transient_connection_error(e) and attempt < max_retries - 1:
+                    last_exc = e
+                    delay = 2 ** attempt
+                    logger.warning(
+                        'Transient QBO connection error on %s save (attempt %s/%s); retrying in %ss: %s',
+                        type(qb_obj).__name__,
+                        attempt + 1,
+                        max_retries,
+                        delay,
+                        e,
+                    )
+                    time.sleep(delay)
+                    client = cls.get_client() or client
+                    continue
                 raise
+        if last_exc:
+            raise last_exc
         return qb_obj
 
     def _fail_qbo_mapping(self, local_obj, error_message: str):
@@ -902,7 +962,47 @@ class QuickBooksService:
         line.ItemBasedExpenseLineDetail = exp_item
         return True
 
-    def _build_ap_expense_lines(self, line_items, *, description_attr='description', inventory_relation=None):
+    def _stamp_ap_line_tax(self, line, local_item, mapping_service, *, local_parent=None):
+        """Ghana/global QBO requires TaxCodeRef on every AP expense line."""
+        detail = getattr(line, 'AccountBasedExpenseLineDetail', None) or getattr(
+            line, 'ItemBasedExpenseLineDetail', None
+        )
+        if detail is None or mapping_service is None:
+            return
+
+        from .tax_sync_helpers import (
+            resolve_ap_tax_code_ids,
+            stamp_ap_expense_line_tax_code,
+            uses_us_line_tax_codes,
+            US_LINE_NON_TAX_CODE,
+            US_LINE_TAX_CODE,
+        )
+
+        if uses_us_line_tax_codes(self):
+            taxable_id, exempt_id = US_LINE_TAX_CODE, US_LINE_NON_TAX_CODE
+        else:
+            taxable_id, exempt_id = resolve_ap_tax_code_ids(
+                mapping_service,
+                local_obj=local_parent,
+            )
+        if not taxable_id:
+            return
+
+        stamp_ap_expense_line_tax_code(
+            detail,
+            local_item,
+            tax_code_id=taxable_id,
+            exempt_tax_code_id=exempt_id,
+        )
+
+    def _build_ap_expense_lines(
+        self,
+        line_items,
+        *,
+        description_attr='description',
+        inventory_relation=None,
+        local_parent=None,
+    ):
         """Build QBO Bill/VendorCredit/PO expense lines from SVR AP line items."""
         lines = []
         mapping_service = self._get_mapping_service()
@@ -951,6 +1051,9 @@ class QuickBooksService:
                     class_id = resolve_ap_line_class_id(mapping_service, is_inventory_line=is_inventory_line)
                     apply_class_ref_to_detail(expense_detail, class_id)
                 line.AccountBasedExpenseLineDetail = expense_detail
+                self._stamp_ap_line_tax(
+                    line, item, mapping_service, local_parent=local_parent,
+                )
                 lines.append(line)
             elif self._try_item_based_ap_line(
                 line,
@@ -959,6 +1062,9 @@ class QuickBooksService:
                 is_inventory_line=is_inventory_line,
                 client=client,
             ):
+                self._stamp_ap_line_tax(
+                    line, item, mapping_service, local_parent=local_parent,
+                )
                 lines.append(line)
             else:
                 logger.warning(
@@ -1060,7 +1166,17 @@ class QuickBooksService:
         qb_bill.Line = self._build_ap_expense_lines(
             line_items,
             inventory_relation=inventory_relation,
+            local_parent=local_obj,
         )
+        if line_items and not qb_bill.Line:
+            skipped = len(line_items)
+            hint = (
+                f'No QBO account mapped for {skipped} bill line(s). '
+                'Map default expense account under Accounting → Controls → QuickBooks mapping, '
+                'or set an expense account on each line.'
+            )
+            self._fail_qbo_mapping(local_obj, hint)
+            raise ValueError(hint)
 
         purchase_order = getattr(local_obj, 'purchase_order', None)
         if purchase_order is not None:
@@ -1073,6 +1189,9 @@ class QuickBooksService:
                 LinkedTxn=LinkedTxn,
             )
 
+        from .tax_sync_helpers import finalize_ap_transaction_for_qbo
+
+        finalize_ap_transaction_for_qbo(self, qb_bill)
         self._save_qb(qb_bill, client)
         self._update_qbo_mapping(local_obj, qb_bill)
         return qb_bill
@@ -1710,6 +1829,7 @@ class QuickBooksService:
         po_lines = self._build_ap_expense_lines(
             local_po.items.select_related('part').all(),
             inventory_relation='part',
+            local_parent=local_po,
         )
 
         if not po_lines:
@@ -1722,6 +1842,9 @@ class QuickBooksService:
 
         qb_po.Line = po_lines
 
+        from .tax_sync_helpers import finalize_ap_transaction_for_qbo
+
+        finalize_ap_transaction_for_qbo(self, qb_po)
         try:
             self._save_qb(qb_po, client)
             from .ap_sync_helpers import persist_po_line_qbo_ids
@@ -1747,7 +1870,9 @@ class QuickBooksService:
 
         qb_vendor = self.sync_supplier(local_bill.vendor)
         if not qb_vendor:
-            logger.error('Cannot sync vendor bill %s: Supplier sync failed.', local_bill.bill_number)
+            msg = f'Cannot sync vendor bill {local_bill.bill_number}: Supplier sync failed.'
+            logger.error(msg)
+            self._fail_qbo_mapping(local_bill, 'Supplier sync failed.')
             return None
 
         notes = (local_bill.notes or '').strip()
@@ -1805,10 +1930,9 @@ class QuickBooksService:
 
         qb_vendor = self.sync_supplier(local_vendor_credit.vendor)
         if not qb_vendor:
-            logger.error(
-                'Cannot sync vendor credit %s: Supplier sync failed.',
-                local_vendor_credit.credit_number,
-            )
+            msg = f'Cannot sync vendor credit {local_vendor_credit.credit_number}: Supplier sync failed.'
+            logger.error(msg)
+            self._fail_qbo_mapping(local_vendor_credit, 'Supplier sync failed.')
             return None
 
         qb_vendor_credit, _is_new, load_error = self._load_qbo_entity(
@@ -1827,10 +1951,21 @@ class QuickBooksService:
         if local_vendor_credit.notes:
             qb_vendor_credit.PrivateNote = local_vendor_credit.notes
         self._apply_department_ref(qb_vendor_credit, local_vendor_credit.branch)
+        line_items = list(local_vendor_credit.line_items.all())
         qb_vendor_credit.Line = self._build_ap_expense_lines(
-            local_vendor_credit.line_items.all(),
+            line_items,
             inventory_relation='inventory_item',
+            local_parent=local_vendor_credit,
         )
+        if line_items and not qb_vendor_credit.Line:
+            skipped = len(line_items)
+            hint = (
+                f'No QBO account mapped for {skipped} vendor credit line(s). '
+                'Map default expense account under Accounting → Controls → QuickBooks mapping, '
+                'or set an expense account on each line.'
+            )
+            self._update_qbo_mapping(local_vendor_credit, None, error=hint)
+            return None
 
         if local_vendor_credit.bill_id and LinkedTxn is not None:
             bill_mapping = QBOMapping.objects.filter(
@@ -1847,6 +1982,9 @@ class QuickBooksService:
                 linked.TxnType = 'Bill'
                 qb_vendor_credit.LinkedTxn = [linked]
 
+        from .tax_sync_helpers import finalize_ap_transaction_for_qbo
+
+        finalize_ap_transaction_for_qbo(self, qb_vendor_credit)
         try:
             self._save_qb(qb_vendor_credit, client)
             self._update_qbo_mapping(local_vendor_credit, qb_vendor_credit)
@@ -1867,7 +2005,8 @@ class QuickBooksService:
                 .first()
             )
             if leader and leader.id != local_bill_payment.id:
-                return None
+                # Batch payments sync together via the leader row.
+                return self.sync_bill_payment(leader)
             return self.sync_bill_payment_batch(local_bill_payment.payment_batch)
 
         return self._sync_bill_payments_to_qbo([local_bill_payment])
@@ -2049,6 +2188,7 @@ class QuickBooksService:
         lines = self._build_ap_expense_lines(
             local_expense.line_items.select_related('expense_account', 'inventory_item').all(),
             inventory_relation='inventory_item',
+            local_parent=local_expense,
         )
         skipped = max(
             0,
@@ -2068,6 +2208,9 @@ class QuickBooksService:
         qb_purchase.Line = lines
         self._apply_department_ref(qb_purchase, local_expense.branch)
 
+        from .tax_sync_helpers import finalize_ap_transaction_for_qbo
+
+        finalize_ap_transaction_for_qbo(self, qb_purchase)
         try:
             self._save_qb(qb_purchase, client)
             self._update_qbo_mapping(local_expense, qb_purchase)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from django.conf import settings
 from django.http import HttpRequest
 from django.db.models import QuerySet, Q
 
@@ -115,7 +116,11 @@ def filter_queryset_for_user_branches(
         return queryset.filter(base_filter)
     
     if getattr(user, "role", None) == "admin":
-        if use_active_branch and request:
+        if (
+            use_active_branch
+            and request
+            and getattr(settings, 'BRANCH_FILTER_USE_ACTIVE_BRANCH_FOR_ADMIN', True)
+        ):
             active_branch = resolve_branch(request)
             if active_branch:
                 return apply_filter(active_branch)

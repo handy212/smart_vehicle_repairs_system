@@ -15,6 +15,30 @@ from .sync_policy import outbound_eligibility_reason
 
 logger = logging.getLogger(__name__)
 
+# Lower numbers sync first (vendors before bills before payments).
+OUTBOUND_SYNC_PRIORITY = {
+    'branch': 10,
+    'customer': 20,
+    'supplier': 20,
+    'part': 30,
+    'estimate': 40,
+    'invoice': 50,
+    'purchase_order': 50,
+    'vendor_bill': 60,
+    'vendor_expense': 65,
+    'vendor_credit': 65,
+    'credit_note': 65,
+    'payment': 70,
+    'bill_payment': 80,
+}
+
+
+def _sort_candidates_by_dependency(candidates):
+    return sorted(
+        candidates,
+        key=lambda item: (OUTBOUND_SYNC_PRIORITY.get(item[0], 50), item[1]),
+    )
+
 _CONTENT_TYPE_ENTITY_MAP: dict[int, tuple[str, dict]] | None = None
 
 
@@ -92,7 +116,7 @@ def collect_outbound_sync_candidates(
                 'reason': reason,
             })
 
-    return candidates, skipped
+    return _sort_candidates_by_dependency(candidates), skipped
 
 
 def count_pending_outbound_syncs() -> dict[str, int]:

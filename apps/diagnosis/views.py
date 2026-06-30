@@ -703,7 +703,15 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
             work_order = getattr(unscoped_obj, 'work_order', None)
             record_branch = getattr(work_order, 'branch', None)
 
-            if record_branch and active_branch and record_branch.id != active_branch.id:
+            if record_branch is None:
+                return unscoped_obj
+
+            if not active_branch:
+                raise DRFValidationError({
+                    'error': 'Active branch context is required to access this diagnosis. Select the correct branch or send X-Branch-ID.'
+                })
+
+            if record_branch.id != active_branch.id:
                 raise DRFValidationError({
                     'error': (
                         f"Active branch context does not match this diagnosis. "
@@ -711,9 +719,7 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
                     )
                 })
 
-            raise DRFValidationError({
-                'error': 'Active branch context is required to access this diagnosis. Select the correct branch or send X-Branch-ID.'
-            })
+            return unscoped_obj
 
         raise Http404
     

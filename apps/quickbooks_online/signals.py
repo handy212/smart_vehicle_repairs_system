@@ -240,6 +240,14 @@ def sync_bill_payment_on_save(sender, instance, created, **kwargs):
         return
     if not is_outbound_eligible('bill_payment', instance):
         return
+    if instance.payment_batch:
+        leader = (
+            BillPayment.objects.filter(payment_batch=instance.payment_batch)
+            .order_by('id')
+            .first()
+        )
+        if leader and leader.id != instance.id:
+            return
     logger.info('Scheduling QBO sync for BillPayment %s', instance.id)
     schedule_entity_sync('bill_payment', instance.id, task=task_sync_bill_payment_to_qbo)
 

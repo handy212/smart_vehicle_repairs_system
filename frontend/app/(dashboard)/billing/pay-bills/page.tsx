@@ -254,6 +254,9 @@ export default function PayBillsPage() {
     if (!billParam || openBills.length === 0) return;
     const bill = openBills.find((row) => String(row.id) === billParam);
     if (bill) {
+      if (bill.branch) {
+        setBranchId(String(bill.branch));
+      }
       setChecked((prev) => ({ ...prev, [bill.id]: true }));
       setSelected((prev) => ({ ...prev, [bill.id]: String(bill.amount_due ?? 0) }));
     }

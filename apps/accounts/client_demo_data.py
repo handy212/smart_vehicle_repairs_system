@@ -787,16 +787,22 @@ class ClientDemoDataService:
         admin = User.objects.filter(Q(role="admin") | Q(is_superuser=True)).first()
         if admin:
             return admin
-        admin = User.objects.create_user(
-            username="clara.bennett",
-            email=seed_email("admin"),
-            password=SEED_PASSWORD,
-            first_name="Clara",
-            last_name="Bennett",
-            role="admin",
-            is_staff=True,
-            is_superuser=True,
+        first_name, last_name = STAFF_NAMES["admin"]
+        email = seed_staff_email("admin", STAFF_NAMES)
+        admin, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "username": username_from_name(first_name, last_name),
+                "first_name": first_name,
+                "last_name": last_name,
+                "role": "admin",
+                "is_staff": True,
+                "is_superuser": True,
+            },
         )
+        if created:
+            admin.set_password(SEED_PASSWORD)
+            admin.save(update_fields=["password"])
         return admin
 
     def _branch(self):

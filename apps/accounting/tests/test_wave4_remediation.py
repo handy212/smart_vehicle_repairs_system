@@ -284,7 +284,7 @@ class Wave4RemediationTests(TestCase):
             vendor=self.vendor,
             branch=self.branch,
             due_date=timezone.now().date(),
-            status='open',
+            status='draft',
             created_by=self.user,
         )
         BillLineItem.objects.create(
@@ -312,7 +312,13 @@ class Wave4RemediationTests(TestCase):
         self.assertGreater(bill.tax_amount, Decimal('0'))
         self.assertGreater(bill.total, bill.subtotal)
 
-        entry = AccountingService.post_bill(bill)
+        bill.status = 'open'
+        bill.save(update_fields=['status'])
+
+        bill_type = ContentType.objects.get_for_model(bill)
+        entry = JournalEntry.objects.filter(content_type=bill_type, object_id=bill.id).first()
+        if entry is None:
+            entry = AccountingService.post_bill(bill)
         self.assertIsNotNone(entry)
         self.assertTrue(entry.validate_balanced())
         debits = sum(

@@ -34,6 +34,13 @@ def branch(db, user):
     user.managed_branches.add(branch)
     return branch
 
+
+@pytest.fixture
+def branch_api_client(api_client, user, branch):
+    api_client.force_authenticate(user=user)
+    api_client.defaults['HTTP_X_BRANCH_ID'] = str(branch.id)
+    return api_client
+
 @pytest.mark.django_db
 class TestInventoryAPI:
     @pytest.fixture
@@ -57,34 +64,30 @@ class TestInventoryAPI:
         )
         return category, part, stock_item
 
-    def test_part_list_and_detail(self, api_client, user, setup_data):
-        api_client.force_authenticate(user=user)
+    def test_part_list_and_detail(self, branch_api_client, setup_data):
         category, part, stock_item = setup_data
         
         url = reverse('api_inventory:part-list')
-        response = api_client.get(url)
+        response = branch_api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         
         url = reverse('api_inventory:part-detail', args=[part.id])
-        response = api_client.get(url)
+        response = branch_api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         # Check annotated stock fields (mapped to model field names in serializer)
         assert 'quantity_in_stock' in response.data
         assert response.data['quantity_in_stock'] == 10
 
-    def test_inventory_stats(self, api_client, user, setup_data):
-        api_client.force_authenticate(user=user)
-        
+    def test_inventory_stats(self, branch_api_client, setup_data):
         url = reverse('api_inventory:part-dashboard-stats')
-        response = api_client.get(url)
+        response = branch_api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert 'total_parts' in response.data
         assert 'total_value' in response.data
         # total_value = 10 * 50 = 500
         assert float(response.data['total_value']) == 500.0
 
-    def test_stock_adjust(self, api_client, user, setup_data):
-        api_client.force_authenticate(user=user)
+    def test_stock_adjust(self, branch_api_client, setup_data):
         category, part, stock_item = setup_data
         
         url = reverse('api_inventory:part-adjust', args=[part.id])
@@ -93,7 +96,7 @@ class TestInventoryAPI:
             "reason": "Restock",
             "notes": "Added some more items"
         }
-        response = api_client.post(url, data)
+        response = branch_api_client.post(url, data)
         assert response.status_code == status.HTTP_200_OK
         
         stock_item.refresh_from_db()
@@ -113,13 +116,12 @@ class TestInventoryAPI:
         stock_item.refresh_from_db()
         assert stock_item.quantity_in_stock == 10
 
-    def test_stock_reserve_and_release(self, api_client, user, setup_data):
-        api_client.force_authenticate(user=user)
+    def test_stock_reserve_and_release(self, branch_api_client, setup_data):
         category, part, stock_item = setup_data
         
         # Reserve
         url = reverse('api_inventory:part-reserve', args=[part.id])
-        response = api_client.post(url, {"quantity": 3, "reason": "Work order reservation"})
+        response = branch_api_client.post(url, {"quantity": 3, "reason": "Work order reservation"})
         assert response.status_code == status.HTTP_200_OK
         
         stock_item.refresh_from_db()
@@ -128,7 +130,7 @@ class TestInventoryAPI:
         
         # Release
         url = reverse('api_inventory:part-release-reservation', args=[part.id])
-        response = api_client.post(url, {"quantity": 1, "reason": "Partial release"})
+        response = branch_api_client.post(url, {"quantity": 1, "reason": "Partial release"})
         assert response.status_code == status.HTTP_200_OK
         
         stock_item.refresh_from_db()
@@ -184,8 +186,7 @@ class TestInventoryAPI:
         assert stock_item.quantity_in_stock == 8
         assert transaction.quantity == -2
 
-    def test_low_stock_filtering(self, api_client, user, setup_data, branch):
-        api_client.force_authenticate(user=user)
+    def test_low_stock_filtering(self, branch_api_client, user, setup_data, branch):
         category, part, stock_item = setup_data
         
         # Add another part with low stock
@@ -201,7 +202,7 @@ class TestInventoryAPI:
         StockItem.objects.create(part=low_part, branch=branch, quantity_in_stock=5)
         
         url = reverse('api_inventory:part-low-stock')
-        response = api_client.get(url)
+        response = branch_api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         
         # Check that we have results
@@ -228,11 +229,9 @@ class TestInventoryAPI:
         assert alert.alert_type == 'out_of_stock'
         assert alert.severity == 'critical'
 
-    def test_inventory_accounting_report_uses_branch_stock(self, api_client, user, setup_data):
-        api_client.force_authenticate(user=user)
-
+    def test_inventory_accounting_report_uses_branch_stock(self, branch_api_client, setup_data):
         url = reverse('api_inventory:part-inventory-accounting-report')
-        response = api_client.get(url)
+        response = branch_api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['inventory_summary']['total_quantity'] == 10

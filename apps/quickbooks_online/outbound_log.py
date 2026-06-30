@@ -39,6 +39,23 @@ def get_mapping_error(instance):
     return (mapping.error_message or '').strip() if mapping else ''
 
 
+def finalize_mapping_after_failed_sync(instance, error_message: str) -> None:
+    """
+    Ensure a mapping does not stay stuck on pending after a failed outbound sync.
+
+    Sync methods normally set failed/synced via QuickBooksService._fail_qbo_mapping /
+    _update_qbo_mapping, but some paths return None without updating the row (e.g. batch
+    bill-payment followers) and uncaught exceptions leave pending from mark_mapping_pending.
+    """
+    from .services import QuickBooksService
+
+    error_message = (error_message or '').strip() or 'Sync returned no result from QuickBooks.'
+    ct = ContentType.objects.get_for_model(instance)
+    mapping = QBOMapping.objects.filter(content_type=ct, object_id=instance.id).first()
+    if mapping and mapping.status == 'pending' and not mapping.qbo_id:
+        QuickBooksService()._fail_qbo_mapping(instance, error_message)
+
+
 def record_outbound_sync(entity_type, *, success, error_message=''):
     """Persist a single-entity outbound sync result when the entity type is logged."""
     log_entity = ENTITY_LOG_TYPES.get(entity_type)
@@ -143,6 +160,7 @@ def run_outbound_entity_sync(entity_type, object_id, app_label, model_name, serv
             result = sync_method(instance)
         except Exception as exc:
             logger.error('Error syncing %s %s to QBO: %s', model_name, object_id, exc, exc_info=True)
+            finalize_mapping_after_failed_sync(instance, str(exc))
             record_outbound_sync(entity_type, success=False, error_message=str(exc))
             return None
 
@@ -155,10 +173,8 @@ def run_outbound_entity_sync(entity_type, object_id, app_label, model_name, serv
                 getattr(result, 'Id', ''),
             )
         else:
-            record_outbound_sync(
-                entity_type,
-                success=False,
-                error_message=get_mapping_error(instance) or 'Sync returned no result from QuickBooks.',
-            )
+            error_message = get_mapping_error(instance) or 'Sync returned no result from QuickBooks.'
+            finalize_mapping_after_failed_sync(instance, error_message)
+            record_outbound_sync(entity_type, success=False, error_message=error_message)
             logger.warning('Failed to sync %s %s to QBO (no result returned)', model_name, object_id)
         return result

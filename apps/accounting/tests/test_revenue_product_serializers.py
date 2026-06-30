@@ -50,6 +50,8 @@ class RevenueProductSerializerTests(TestCase):
             category=category,
             item_type='service',
             unit='ea',
+            cost_price='10.00',
+            selling_price='15.00',
             quantity_in_stock=0,
             reorder_point=0,
             minimum_stock=0,

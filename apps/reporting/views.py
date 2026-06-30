@@ -73,8 +73,12 @@ def _parse_date_range(request, default_days=30, default_current_month=False):
 
 
 def _filter_branch_queryset(queryset, request, use_active_branch=True):
+    if use_active_branch:
+        active_branch = resolve_branch(request)
+        if active_branch:
+            return queryset.filter(branch=active_branch)
     return filter_queryset_for_user_branches(
-        queryset, request.user, request, use_active_branch
+        queryset, request.user, request, use_active_branch=False
     )
 
 

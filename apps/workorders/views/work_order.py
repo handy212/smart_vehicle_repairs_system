@@ -260,7 +260,15 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             active_branch = resolve_branch(self.request)
             record_branch = getattr(unscoped_obj, 'branch', None)
 
-            if record_branch and active_branch and record_branch.id != active_branch.id:
+            if record_branch is None:
+                return unscoped_obj
+
+            if not active_branch:
+                raise DRFValidationError({
+                    'error': 'Active branch context is required to access this work order. Select the correct branch or send X-Branch-ID.'
+                })
+
+            if record_branch.id != active_branch.id:
                 raise DRFValidationError({
                     'error': (
                         f"Active branch context does not match this record. "
@@ -268,9 +276,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
                     )
                 })
 
-            raise DRFValidationError({
-                'error': 'Active branch context is required to access this work order. Select the correct branch or send X-Branch-ID.'
-            })
+            return unscoped_obj
 
         raise Http404
 
