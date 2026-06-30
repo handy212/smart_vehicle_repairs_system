@@ -1,5 +1,20 @@
 import apiClient from "./client";
 
+export type QboOutboundEntityType =
+  | "customer"
+  | "invoice"
+  | "payment"
+  | "supplier"
+  | "purchase_order"
+  | "branch"
+  | "estimate"
+  | "credit_note"
+  | "vendor_bill"
+  | "vendor_credit"
+  | "bill_payment"
+  | "vendor_expense"
+  | "part";
+
 export interface QBOOutboundPendingCounts {
   failed_mappings: number;
   pending_mappings: number;
@@ -64,20 +79,7 @@ export const quickbooksApi = {
    * Pushes a single SVR entity to QuickBooks Online.
    */
   syncOutbound: async (params: {
-    entity_type:
-      | "customer"
-      | "invoice"
-      | "payment"
-      | "supplier"
-      | "purchase_order"
-      | "branch"
-      | "estimate"
-      | "credit_note"
-      | "vendor_bill"
-      | "vendor_credit"
-      | "bill_payment"
-      | "vendor_expense"
-      | "part";
+    entity_type: QboOutboundEntityType;
     object_id: number;
     inline?: boolean;
   }) => {
@@ -89,20 +91,7 @@ export const quickbooksApi = {
    * Clear a stale SVR ↔ QBO entity link before retrying outbound sync.
    */
   clearMapping: async (params: {
-    entity_type:
-      | "customer"
-      | "invoice"
-      | "payment"
-      | "supplier"
-      | "purchase_order"
-      | "branch"
-      | "estimate"
-      | "credit_note"
-      | "vendor_bill"
-      | "vendor_credit"
-      | "bill_payment"
-      | "vendor_expense"
-      | "part";
+    entity_type: QboOutboundEntityType;
     object_id: number;
     delete?: boolean;
   }) => {
@@ -143,6 +132,30 @@ export const quickbooksApi = {
         status_display: string;
         error_message: string;
         triggered_by_name: string | null;
+      }>;
+    };
+  },
+
+  listMappings: async (params?: {
+    status?: string;
+    entity_type?: string;
+    limit?: number;
+  }) => {
+    const response = await apiClient.get("/quickbooks/mappings/", { params });
+    return response.data as {
+      count: number;
+      results: Array<{
+        id: number;
+        entity_type: string | null;
+        entity_type_display: string;
+        object_id: number;
+        object_label: string;
+        object_exists: boolean;
+        qbo_id: string;
+        status: string;
+        status_display: string;
+        error_message: string;
+        last_synced_at: string;
       }>;
     };
   },

@@ -44,3 +44,17 @@ class QBOSyncLogSerializer(serializers.ModelSerializer):
             return None
         delta = obj.finished_at - obj.started_at
         return round(delta.total_seconds(), 1)
+
+
+class QBOMappingListSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    entity_type = serializers.CharField(allow_null=True)
+    entity_type_display = serializers.CharField()
+    object_id = serializers.IntegerField()
+    object_label = serializers.CharField()
+    object_exists = serializers.BooleanField()
+    qbo_id = serializers.CharField()
+    status = serializers.CharField()
+    status_display = serializers.CharField()
+    error_message = serializers.CharField()
+    last_synced_at = serializers.DateTimeField()

@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
 from apps.quickbooks_online.mapping_services import get_account_mapping_service
 from apps.quickbooks_online.models import QBOMapping, QBOSyncLog
-from apps.quickbooks_online.serializers import QBOSyncLogSerializer
+from apps.quickbooks_online.serializers import QBOMappingListSerializer, QBOSyncLogSerializer
 from apps.quickbooks_online.services import QuickBooksService
 from apps.quickbooks_online import tasks as qbo_tasks
 from apps.quickbooks_online.outbound_log import run_outbound_entity_sync
@@ -148,6 +148,70 @@ class QBOSyncLogsListView(APIView):
         serializer = QBOSyncLogSerializer(logs, many=True)
         return Response({
             'count': queryset.count(),
+            'results': serializer.data,
+        })
+
+
+class QBOMappingsListView(APIView):
+    """List per-record QBO sync mappings (failed/pending/synced) for the integrations UI."""
+
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('view_accounting'),
+    ]
+
+    def get(self, request):
+        from .mapping_list_helpers import (
+            entity_type_display,
+            load_mapping_instance,
+            resolve_mapping_object_label,
+        )
+
+        queryset = (
+            QBOMapping.objects.select_related('content_type')
+            .order_by('-last_synced_at')
+        )
+
+        mapping_status = request.query_params.get('status')
+        if mapping_status:
+            queryset = queryset.filter(status=mapping_status)
+
+        entity_type_filter = request.query_params.get('entity_type')
+        if entity_type_filter:
+            cfg = OUTBOUND_SYNC_ENTITIES.get(entity_type_filter)
+            if cfg:
+                model = apps.get_model(cfg['app_label'], cfg['model_name'])
+                ct = ContentType.objects.get_for_model(model)
+                queryset = queryset.filter(content_type_id=ct.id)
+            else:
+                queryset = queryset.none()
+
+        try:
+            limit = min(int(request.query_params.get('limit', 100)), 500)
+        except (TypeError, ValueError):
+            limit = 100
+
+        rows = []
+        for mapping in queryset[:limit]:
+            instance, entity_type = load_mapping_instance(mapping)
+            rows.append({
+                'id': mapping.id,
+                'entity_type': entity_type,
+                'entity_type_display': entity_type_display(entity_type),
+                'object_id': mapping.object_id,
+                'object_label': resolve_mapping_object_label(instance) if instance else f'#{mapping.object_id}',
+                'object_exists': instance is not None,
+                'qbo_id': mapping.qbo_id or '',
+                'status': mapping.status,
+                'status_display': mapping.get_status_display(),
+                'error_message': mapping.error_message or '',
+                'last_synced_at': mapping.last_synced_at,
+            })
+
+        serializer = QBOMappingListSerializer(rows, many=True)
+        return Response({
+            'count': len(rows),
             'results': serializer.data,
         })
 
