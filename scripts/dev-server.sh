@@ -355,7 +355,7 @@ NEXTJS_PID=$!
 echo -e "${GREEN}Starting Celery Worker...${NC}"
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
-celery -A config worker -l info > /tmp/celery-worker.log 2>&1 &
+celery -A config worker -l info -Q qbo,celery > /tmp/celery-worker.log 2>&1 &
 CELERY_WORKER_PID=$!
 
 # Start Celery Beat

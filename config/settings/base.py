@@ -381,6 +381,8 @@ QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL = env.int(
     'QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL', default=900,
 )
 QUICKBOOKS_RETRY_FAILED_BATCH_SIZE = env.int('QUICKBOOKS_RETRY_FAILED_BATCH_SIZE', default=100)
+QUICKBOOKS_OUTBOUND_QUEUE_DEPTH_LIMIT = env.int('QUICKBOOKS_OUTBOUND_QUEUE_DEPTH_LIMIT', default=40)
+QUICKBOOKS_QBO_HTTP_TIMEOUT = env.int('QUICKBOOKS_QBO_HTTP_TIMEOUT', default=90)
 
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.

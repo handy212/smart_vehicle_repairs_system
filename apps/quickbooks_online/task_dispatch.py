@@ -9,7 +9,8 @@ import threading
 from django.conf import settings
 from django.db import close_old_connections, transaction
 
-from .sync_guard import should_debounce_part_sync
+from .celery_queue import QBO_OUTBOUND_QUEUE
+from .sync_guard import mark_mapping_pending_for_entity, should_debounce_part_sync
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ def _sync_inline() -> bool:
 
 def _run_sync_task(entity_type: str, object_id: int, task) -> None:
     """Execute a sync task without blocking the HTTP response in dev."""
+    mark_mapping_pending_for_entity(entity_type, object_id)
+
     if _sync_inline() and not _in_test_context():
         def worker():
             close_old_connections()
@@ -64,7 +67,7 @@ def _run_sync_task(entity_type: str, object_id: int, task) -> None:
         return
 
     try:
-        task.delay(object_id)
+        task.apply_async(args=[object_id], queue=QBO_OUTBOUND_QUEUE)
     except Exception as exc:
         logger.warning(
             'Celery unavailable for QBO %s %s; running inline: %s',

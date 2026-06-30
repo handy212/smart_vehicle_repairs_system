@@ -291,11 +291,13 @@ class QuickBooksService:
             return None
 
     @staticmethod
-    def _configure_qbo_request_timeout(client, timeout=60):
+    def _configure_qbo_request_timeout(client, timeout=None):
         """
         The python-quickbooks SDK calls requests without a timeout, so dropped
         connections hang for several minutes before RemoteDisconnected.
         """
+        if timeout is None:
+            timeout = int(getattr(settings, 'QUICKBOOKS_QBO_HTTP_TIMEOUT', 90))
         original = client.process_request
 
         def process_request(request_type, url, headers='', params='', data=''):

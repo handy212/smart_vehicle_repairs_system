@@ -1,10 +1,17 @@
 from celery import shared_task
 import logging
+from .celery_queue import QBO_OUTBOUND_QUEUE
 from .outbound_log import run_outbound_entity_sync
 
 logger = logging.getLogger(__name__)
 
-@shared_task
+
+def qbo_outbound_task(**task_kwargs):
+    """Route outbound QuickBooks sync tasks to the dedicated Celery queue."""
+    return shared_task(queue=QBO_OUTBOUND_QUEUE, **task_kwargs)
+
+
+@qbo_outbound_task()
 def task_sync_customer_to_qbo(customer_id):
     """Background task to sync a Customer to QBO."""
     run_outbound_entity_sync(
@@ -12,7 +19,7 @@ def task_sync_customer_to_qbo(customer_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_invoice_to_qbo(invoice_id):
     """Background task to sync an Invoice to QBO."""
     run_outbound_entity_sync(
@@ -20,7 +27,7 @@ def task_sync_invoice_to_qbo(invoice_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_payment_to_qbo(payment_id):
     """Background task to sync a Payment to QBO."""
     run_outbound_entity_sync(
@@ -28,7 +35,7 @@ def task_sync_payment_to_qbo(payment_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_supplier_to_qbo(supplier_id):
     """Background task to sync a Supplier to QBO."""
     run_outbound_entity_sync(
@@ -36,7 +43,7 @@ def task_sync_supplier_to_qbo(supplier_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_purchase_order_to_qbo(po_id):
     """Background task to sync a PurchaseOrder to QBO."""
     run_outbound_entity_sync(
@@ -44,7 +51,7 @@ def task_sync_purchase_order_to_qbo(po_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_bill_payment_to_qbo(bill_payment_id):
     """Background task to sync a BillPayment to QBO."""
     run_outbound_entity_sync(
@@ -52,7 +59,7 @@ def task_sync_bill_payment_to_qbo(bill_payment_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_vendor_expense_to_qbo(vendor_expense_id):
     """Background task to sync a VendorExpense to QBO Purchase."""
     run_outbound_entity_sync(
@@ -60,7 +67,7 @@ def task_sync_vendor_expense_to_qbo(vendor_expense_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_estimate_to_qbo(estimate_id):
     """Background task to sync an Estimate to QBO."""
     run_outbound_entity_sync(
@@ -68,7 +75,7 @@ def task_sync_estimate_to_qbo(estimate_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_credit_note_to_qbo(credit_note_id):
     """Background task to sync a CreditNote to QBO as a Credit Memo."""
     run_outbound_entity_sync(
@@ -76,7 +83,7 @@ def task_sync_credit_note_to_qbo(credit_note_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_vendor_bill_to_qbo(bill_id):
     """Background task to sync a vendor Bill to QBO."""
     run_outbound_entity_sync(
@@ -84,7 +91,7 @@ def task_sync_vendor_bill_to_qbo(bill_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_vendor_credit_to_qbo(vendor_credit_id):
     """Background task to sync a VendorCredit to QBO."""
     run_outbound_entity_sync(
@@ -92,7 +99,7 @@ def task_sync_vendor_credit_to_qbo(vendor_credit_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_branch_to_qbo(branch_id):
     """Background task to sync a Branch to QBO as a Department (Location)."""
     run_outbound_entity_sync(
@@ -100,7 +107,7 @@ def task_sync_branch_to_qbo(branch_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_part_to_qbo(part_id):
     """Background task to sync a Part catalog row to QBO Item."""
     run_outbound_entity_sync(
@@ -108,7 +115,7 @@ def task_sync_part_to_qbo(part_id):
     )
 
 
-@shared_task
+@qbo_outbound_task()
 def task_resync_payments_for_invoice(invoice_id):
     """Re-push completed payments after a proforma invoice is finalized."""
     from apps.billing.models import Invoice
@@ -123,7 +130,7 @@ def task_resync_payments_for_invoice(invoice_id):
         schedule_entity_sync('payment', payment_id, task=task_sync_payment_to_qbo)
 
 
-@shared_task
+@qbo_outbound_task()
 def task_sync_invoice_then_resync_payments(invoice_id):
     """
     Sync issued invoice to QBO, then re-push completed payments in order.
@@ -322,6 +329,7 @@ def task_retry_failed_outbound_syncs():
     """
     from django.conf import settings
 
+    from .celery_queue import outbound_queue_overloaded
     from .bulk_outbound_sync import retry_failed_outbound_syncs
     from .services import QuickBooksService
 
@@ -332,6 +340,9 @@ def task_retry_failed_outbound_syncs():
     if not QuickBooksService.is_connected():
         logger.info('[QBO Outbound] Skipping failed-sync retry — QuickBooks not connected.')
         return {'queued': 0, 'skipped': 'not_connected'}
+
+    if outbound_queue_overloaded():
+        return {'queued': 0, 'skipped': 'queue_backlog'}
 
     queued, skipped = retry_failed_outbound_syncs()
     return {'queued': queued, 'skipped_ineligible': len(skipped)}

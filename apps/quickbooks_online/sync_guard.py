@@ -51,6 +51,37 @@ def mark_mapping_pending(local_obj) -> None:
     )
 
 
+def mark_mapping_pending_for_entity(entity_type: str, object_id: int) -> None:
+    """
+    Mark a mapping pending as soon as outbound sync is scheduled.
+
+    Shows QBO: pending in the UI immediately instead of un-synced while Celery
+  waits in the queue.
+    """
+    if not object_id:
+        return
+
+    from django.apps import apps
+
+    from .outbound_entities import OUTBOUND_SYNC_ENTITIES
+
+    # Chained invoice finalization syncs the invoice row.
+    if entity_type == 'invoice_finalize':
+        entity_type = 'invoice'
+
+    cfg = OUTBOUND_SYNC_ENTITIES.get(entity_type)
+    if not cfg:
+        return
+
+    model = apps.get_model(cfg['app_label'], cfg['model_name'])
+    try:
+        instance = model.objects.get(pk=object_id)
+    except model.DoesNotExist:
+        return
+
+    mark_mapping_pending(instance)
+
+
 def should_debounce_part_sync(part_id: int) -> bool:
     """Coalesce rapid part saves + stock updates into one outbound sync."""
     key = f'qbo:part-debounce:{part_id}'

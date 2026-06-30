@@ -69,7 +69,8 @@ Environment="PATH=$APP_DIR/venv/bin"
 EnvironmentFile=$APP_DIR/.env
 ExecStart=$APP_DIR/venv/bin/celery -A config worker \
     --loglevel=info \
-    --logfile=$APP_DIR/logs/celery.log
+    --logfile=$APP_DIR/logs/celery.log \
+    -Q qbo,celery
 Restart=always
 RestartSec=10
 TimeoutStartSec=60
