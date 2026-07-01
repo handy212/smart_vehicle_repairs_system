@@ -66,7 +66,7 @@ export default function PayBillsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const activeBranchId = useBranchStore((state) => state.activeBranchId);
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
   const [paymentDate, setPaymentDate] = useState(today);
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");

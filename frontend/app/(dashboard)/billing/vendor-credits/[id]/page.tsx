@@ -48,7 +48,7 @@ function VendorCreditDetailContent() {
   const id = parseInt(params.id as string, 10);
   const isValidId = !Number.isNaN(id) && id > 0;
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
   const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
     entityType: "vendor_credit",
@@ -135,8 +135,9 @@ function VendorCreditDetailContent() {
                   status={credit.qbo_sync_status}
                   error={credit.qbo_sync_error}
                   connected={isQboConnected}
-                  onRetry={handleSync}
-                  onClearMapping={handleClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                  onRetry={isQboCanSync ? handleSync : undefined}
+                  onClearMapping={isQboCanSync ? handleClearMapping : undefined}
                   isRetrying={isSyncing}
                   isClearing={isClearing}
                 />

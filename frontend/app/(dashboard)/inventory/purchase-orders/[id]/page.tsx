@@ -80,7 +80,7 @@ export default function PurchaseOrderDetailPage() {
     (approval) => approval.approver === currentUser?.id && approval.status === "pending"
   );
   const { hasPermission } = usePermissions();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const {
     isSyncing,
     isClearing,
@@ -588,8 +588,9 @@ export default function PurchaseOrderDetailPage() {
                   <QboSyncBadge
                     status={purchaseOrder.qbo_sync_status}
                     error={purchaseOrder.qbo_sync_error}
-                    onRetry={handleQBOSync}
-                    onClearMapping={handleQboClearMapping}
+                    connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                    onRetry={isQboCanSync ? handleQBOSync : undefined}
+                    onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
                     isRetrying={isSyncing}
                     isClearing={isClearing}
                     compact

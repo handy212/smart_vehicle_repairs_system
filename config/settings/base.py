@@ -387,6 +387,7 @@ QUICKBOOKS_OUTBOUND_QUEUE_DEPTH_LIMIT = env.int('QUICKBOOKS_OUTBOUND_QUEUE_DEPTH
 # roughly 3x this value, instead of multi-minute stalls.
 QUICKBOOKS_QBO_HTTP_TIMEOUT = env.int('QUICKBOOKS_QBO_HTTP_TIMEOUT', default=35)
 QUICKBOOKS_WEBHOOK_DEBOUNCE_SECONDS = env.int('QUICKBOOKS_WEBHOOK_DEBOUNCE_SECONDS', default=30)
+QUICKBOOKS_CDC_ENABLED = env.bool('QUICKBOOKS_CDC_ENABLED', default=True)
 
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.
@@ -430,6 +431,12 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': QUICKBOOKS_RETRY_FAILED_OUTBOUND_INTERVAL,
     },
 }
+
+if QUICKBOOKS_CDC_ENABLED:
+    CELERY_BEAT_SCHEDULE['qbo-cdc-inbound'] = {
+        'task': 'apps.quickbooks_online.tasks.task_run_cdc_inbound_sync',
+        'schedule': crontab(minute=0, hour='*/6'),  # every 6 hours
+    }
 
 
 # Redis Cache

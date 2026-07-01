@@ -7,9 +7,9 @@ interface QuickBooksConnectedGateProps {
 }
 
 export function QuickBooksConnectedGate({ children }: QuickBooksConnectedGateProps) {
-  const { isConnected, isLoading } = useQuickBooksConnection();
+  const { isOperational, isLoading } = useQuickBooksConnection();
 
-  if (isLoading || !isConnected) {
+  if (isLoading || !isOperational) {
     return null;
   }
 

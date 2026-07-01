@@ -34,7 +34,7 @@ export default function SupplierDetailPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
   const id = parseInt(params.id as string);
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const {
     isSyncing,
     isClearing,
@@ -126,13 +126,14 @@ export default function SupplierDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {isQboConnected && supplier.qbo_sync_status ? (
+          {isQboConnected ? (
             <QboSyncBadge
               status={supplier.qbo_sync_status}
               error={supplier.qbo_sync_error}
               connected={isQboConnected}
-              onRetry={handleQBOSync}
-              onClearMapping={handleQboClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+              onRetry={isQboCanSync ? handleQBOSync : undefined}
+              onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
               isRetrying={isSyncing}
               isClearing={isClearing}
               retryLabel={isSyncing ? "Syncing..." : "Sync QBO"}

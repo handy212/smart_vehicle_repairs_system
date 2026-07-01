@@ -32,6 +32,8 @@ export interface QBOStatus {
   is_sandbox: boolean;
   last_sync: string | null;
   company_name: string | null;
+  token_expires_at?: string | null;
+  refresh_token_expires_at?: string | null;
   oauth_redirect_uri?: string | null;
   oauth_keys_environment?: "sandbox" | "production" | null;
   outbound_pending?: QBOOutboundPendingCounts;
@@ -176,5 +178,10 @@ export const quickbooksApi = {
   disconnect: async () => {
     const response = await apiClient.post("/quickbooks/disconnect/");
     return response.data;
-  }
+  },
+
+  refreshCompany: async () => {
+    const response = await apiClient.post("/quickbooks/refresh-company/");
+    return response.data as { company_name: string };
+  },
 };

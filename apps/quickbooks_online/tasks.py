@@ -381,3 +381,24 @@ def task_full_inbound_sync(triggered_by_id=None):
             task(triggered_by_id=triggered_by_id)
             queued += 1
     logger.info("[QBO Inbound] Full inbound sync queued (%s tasks).", queued)
+
+
+@shared_task
+def task_run_cdc_inbound_sync():
+    """
+    CDC safety net — queue inbound pulls for entity types changed since last sync.
+
+    Complements webhooks and periodic pulls per Intuit best practices.
+    """
+    from .cdc_sync import run_cdc_and_queue_inbound_pulls
+    from .services import QuickBooksService
+
+    if not QuickBooksService.is_connected():
+        logger.info('[QBO CDC] Skipping — QuickBooks not connected.')
+        return {'queued': [], 'skipped': 'not_connected'}
+
+    try:
+        return run_cdc_and_queue_inbound_pulls(QuickBooksService())
+    except Exception as exc:
+        logger.error('Error in task_run_cdc_inbound_sync: %s', exc, exc_info=True)
+        return {'queued': [], 'error': str(exc)}

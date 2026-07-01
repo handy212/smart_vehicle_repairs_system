@@ -43,7 +43,7 @@ function getStatusVariant(status: string) {
 
 function VendorCreditsContent() {
   const { formatCurrency } = useCurrency();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -227,6 +227,7 @@ function VendorCreditsContent() {
                         <TableCell>
                           <QboListCell
                             connected={isQboConnected}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
                             status={credit.qbo_sync_status}
                             error={credit.qbo_sync_error}
                           />

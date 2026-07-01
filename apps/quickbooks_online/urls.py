@@ -11,6 +11,7 @@ urlpatterns = [
     path('disconnect/', views.QBODisconnectView.as_view(), name='disconnect'),
     path('sync-inbound/', views.QBOInboundSyncView.as_view(), name='sync_inbound'),
     path('status/', views.QBOStatusView.as_view(), name='status'),
+    path('refresh-company/', api_views.QBORefreshCompanyView.as_view(), name='refresh_company'),
     path('webhook/', views.QBOWebhookView.as_view(), name='webhook'),
     path('accounts/', api_views.QBOAccountsListView.as_view(), name='accounts'),
     path('items/', api_views.QBOItemsListView.as_view(), name='items'),

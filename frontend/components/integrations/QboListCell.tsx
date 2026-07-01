@@ -7,6 +7,7 @@ export interface QboListCellProps {
   status?: string | null;
   error?: string | null;
   connected?: boolean;
+  connectionIssue?: string | null;
   onRetry?: () => void;
   isRetrying?: boolean;
   className?: string;
@@ -17,6 +18,7 @@ export function QboListCell({
   status,
   error,
   connected = false,
+  connectionIssue = null,
   onRetry,
   isRetrying = false,
   className,
@@ -31,6 +33,7 @@ export function QboListCell({
         status={status ?? "un-synced"}
         error={error}
         connected={connected}
+        connectionIssue={connectionIssue}
         compact
         showLabel={false}
         onRetry={onRetry}

@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 from .models import QBOConfig, QBOToken, QBOSyncLog
 from .services import QuickBooksService, get_qbo_redirect_uri, _infer_redirect_base
 from .tasks import task_full_inbound_sync
+from .oauth_state import persist_oauth_state, resolve_oauth_state, consume_oauth_state
 import logging
 
 logger = logging.getLogger(__name__)
@@ -124,9 +125,14 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
         # Get authorization URL
         auth_url = auth_client.get_authorization_url(scopes)
         
-        # Store state in session
+        # Store state in session (fallback) and database (primary)
         request.session['qbo_state'] = auth_client.state_token
         request.session['qbo_redirect_uri'] = redirect_uri
+        persist_oauth_state(
+            state_token=auth_client.state_token,
+            redirect_uri=redirect_uri,
+            user=request.user,
+        )
         
         return redirect(auth_url)
 
@@ -147,7 +153,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
             
         saved_state = request.session.get('qbo_state')
-        if not saved_state or state != saved_state:
+        redirect_uri, oauth_state = resolve_oauth_state(state, request.user, saved_state)
+        if redirect_uri is None and oauth_state != 'session':
             logger.warning(
                 "QBO OAuth callback rejected due to state mismatch (received=%s, expected=%s)",
                 state,
@@ -161,7 +168,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             messages.error(request, QuickBooksService.sdk_unavailable_message())
             return redirect(build_qbo_integrations_url(qbo_status="sdk_missing"))
 
-        redirect_uri = request.session.get("qbo_redirect_uri") or get_qbo_redirect_uri()
+        if redirect_uri is None:
+            redirect_uri = request.session.get("qbo_redirect_uri") or get_qbo_redirect_uri()
         auth_client = QuickBooksService.get_auth_client(config, redirect_uri=redirect_uri)
         
         try:
@@ -199,6 +207,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
                 del request.session['qbo_state']
             if 'qbo_redirect_uri' in request.session:
                 del request.session['qbo_redirect_uri']
+
+            consume_oauth_state(oauth_state)
 
             QuickBooksService.fetch_and_store_company_name(config)
 
@@ -350,6 +360,12 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             if cache.add(fetch_key, '1', 86400):
                 company_name = QuickBooksService.fetch_and_store_company_name(config)
 
+        token_expires_at = None
+        refresh_token_expires_at = None
+        if config and hasattr(config, 'token') and config.token:
+            token_expires_at = config.token.expires_at
+            refresh_token_expires_at = config.token.refresh_token_expires_at
+
         payload = {
             'is_connected': QuickBooksService.is_connected(),
             'has_keys': bool(has_keys),
@@ -357,6 +373,8 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             'is_sandbox': config.is_sandbox if config else True,
             'last_sync': last_sync.finished_at if last_sync else None,
             'company_name': company_name,
+            'token_expires_at': token_expires_at,
+            'refresh_token_expires_at': refresh_token_expires_at,
             'oauth_redirect_uri': get_qbo_redirect_uri(_infer_redirect_base(request)),
             'oauth_keys_environment': 'sandbox' if (config.is_sandbox if config else True) else 'production',
         }

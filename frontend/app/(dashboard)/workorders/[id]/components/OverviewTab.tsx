@@ -98,7 +98,7 @@ export default function WorkOrderOverviewTab({
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
   const { data: serviceCoordinators } = useQuery({
     queryKey: ["service-coordinators"],
@@ -452,6 +452,7 @@ export default function WorkOrderOverviewTab({
                       status={invoiceSummary.qbo_sync_status}
                       error={invoiceSummary.qbo_sync_error}
                       connected={isQboConnected}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
                       compact
                       showLabel
                     />
