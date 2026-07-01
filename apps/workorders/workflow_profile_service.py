@@ -5,6 +5,34 @@ from __future__ import annotations
 LEGACY_ROUTINE_MAINTENANCE_TYPE = 'routine'
 LEGACY_GENERAL_MAINTENANCE_TYPE = 'general'
 
+# Extra transitions allowed for specific profiles (from_status, to_status)
+PROFILE_EXTRA_TRANSITIONS = {
+    'inspection_only': {
+        ('inspection', 'completed'),
+        ('inspection', 'invoiced'),
+    },
+    'diagnostic_only': {
+        ('diagnosis', 'completed'),
+        ('awaiting_approval', 'completed'),
+        ('approved', 'completed'),
+    },
+}
+
+# Transitions blocked for specific profiles
+PROFILE_BLOCKED_TRANSITIONS = {
+    'inspection_only': {
+        ('inspection', 'intake'),
+        ('inspection', 'assigned'),
+        ('inspection', 'diagnosis'),
+        ('draft', 'intake'),
+    },
+    'diagnostic_only': {
+        ('approved', 'in_progress'),
+        ('awaiting_approval', 'in_progress'),
+    },
+    'routine_fast_track': set(),
+}
+
 
 def get_workflow_profile(work_order):
     """Return the workflow profile for a work order, with legacy fallbacks."""
@@ -23,6 +51,11 @@ def get_workflow_profile(work_order):
     return WorkflowProfile.objects.filter(code='full_repair', is_active=True).first()
 
 
+def get_profile_code(work_order) -> str | None:
+    profile = get_workflow_profile(work_order)
+    return profile.code if profile else None
+
+
 def uses_fast_track_profile(work_order) -> bool:
     profile = get_workflow_profile(work_order)
     return bool(profile and profile.allows_fast_track_to_approved)
@@ -33,6 +66,45 @@ def uses_bundle_on_create(work_order) -> bool:
     if profile and profile.apply_service_bundle_on_create:
         return True
     return getattr(work_order, 'maintenance_type', None) == LEGACY_ROUTINE_MAINTENANCE_TYPE
+
+
+def allows_simplified_completion(work_order) -> bool:
+    """Inspection-only and diagnostic-only jobs can complete without repair tasks."""
+    return get_profile_code(work_order) in {'inspection_only', 'diagnostic_only'}
+
+
+def profile_skips_inspection(work_order) -> bool:
+    profile = get_workflow_profile(work_order)
+    return bool(profile and profile.skip_inspection)
+
+
+def profile_skips_diagnosis(work_order) -> bool:
+    profile = get_workflow_profile(work_order)
+    return bool(profile and profile.skip_diagnosis)
+
+
+def resolve_allowed_targets(work_order, current_status: str, base_targets: list[str]) -> list[str]:
+    """Merge profile-specific extra transitions and remove blocked edges."""
+    profile = get_workflow_profile(work_order)
+    if not profile:
+        return base_targets
+
+    allowed = list(base_targets)
+    extras = PROFILE_EXTRA_TRANSITIONS.get(profile.code, set())
+    blocked = PROFILE_BLOCKED_TRANSITIONS.get(profile.code, set())
+
+    for from_status, to_status in extras:
+        if from_status == current_status and to_status not in allowed:
+            allowed.append(to_status)
+
+    return [target for target in allowed if (current_status, target) not in blocked]
+
+
+def sync_legacy_maintenance_type(work_order) -> str:
+    """Derive legacy maintenance_type from job type / profile for API compatibility."""
+    if uses_fast_track_profile(work_order):
+        return LEGACY_ROUTINE_MAINTENANCE_TYPE
+    return LEGACY_GENERAL_MAINTENANCE_TYPE
 
 
 def resolve_job_type_for_create(*, job_type=None, job_type_code=None, maintenance_type=None):
@@ -75,6 +147,7 @@ def apply_job_type_on_create(work_order, job_type, *, user=None):
         if profile.skip_quality_check:
             work_order.quality_check_required = False
 
+    work_order.maintenance_type = sync_legacy_maintenance_type(work_order)
     work_order.save()
 
     bundle_applied = False
@@ -87,3 +160,34 @@ def apply_job_type_on_create(work_order, job_type, *, user=None):
         work_order.refresh_from_db()
 
     return bundle_applied
+
+
+# Map legacy appointment service_type values to job type codes
+APPOINTMENT_SERVICE_TYPE_TO_JOB_TYPE = {
+    'inspection': 'vehicle_inspection',
+    'repair': 'general_repairs',
+    'maintenance': 'routine_maintenance',
+    'diagnostic': 'diagnostic_inspection',
+    'tire_service': 'tyre_service',
+    'oil_change': 'routine_maintenance',
+    'brake_service': 'brake_service',
+    'other': 'general_repairs',
+}
+
+
+def resolve_job_type_for_appointment(*, job_type=None, job_type_code=None, service_type=None):
+    from .job_types import JobType
+
+    if job_type is not None:
+        if isinstance(job_type, JobType):
+            return job_type
+        return JobType.objects.filter(pk=job_type, is_active=True).first()
+
+    if job_type_code:
+        return JobType.objects.filter(code=job_type_code, is_active=True).first()
+
+    if service_type:
+        mapped = APPOINTMENT_SERVICE_TYPE_TO_JOB_TYPE.get(service_type, 'general_repairs')
+        return JobType.objects.filter(code=mapped, is_active=True).first()
+
+    return JobType.objects.filter(code='general_repairs', is_active=True).first()

@@ -69,8 +69,9 @@ class JobTypeCreateWorkOrderTests(TestCase):
         self.factory = APIRequestFactory()
 
     def _create(self, payload):
-        request = self.factory.post('/api/workorders/work-orders/')
+        request = self.factory.post('/api/workorders/work-orders/', payload, format='json')
         request.user = self.user
+        request.data = payload
         serializer = WorkOrderCreateSerializer(data=payload, context={'request': request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         return serializer.save()
@@ -113,3 +114,169 @@ class JobTypeCreateWorkOrderTests(TestCase):
             'maintenance_type': 'general',
         })
         self.assertEqual(wo.job_type.code, 'general_repairs')
+
+
+class ProfileTransitionTests(TestCase):
+    def setUp(self):
+        seed_workflow_profiles_and_job_types(overwrite=True)
+        self.user = User.objects.create_user(
+            username='tech',
+            email='tech@example.com',
+            password='password',
+            role='service_coordinator',
+        )
+        self.branch = Branch.objects.create(name='Main', code='MAIN2', created_by=self.user)
+        customer_user = User.objects.create_user(
+            username='cust2',
+            email='cust2@example.com',
+            password='password',
+            role='customer',
+        )
+        self.customer = Customer.objects.create(user=customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Honda',
+            model='Civic',
+            year=2019,
+            vin='ABCDEF12345678901',
+            current_mileage=5000,
+        )
+        self.inspection_job_type = JobType.objects.get(code='vehicle_inspection')
+        self.diagnostic_job_type = JobType.objects.get(code='diagnostic_inspection')
+
+    def test_inspection_only_can_complete_from_inspection(self):
+        from apps.inspections.models import InspectionTemplate, VehicleInspection
+
+        technician = User.objects.create_user(
+            username='tech_insp',
+            email='tech_insp@example.com',
+            password='password',
+            role='technician',
+        )
+        template = InspectionTemplate.objects.create(
+            name='Inspection Only Template',
+            created_by=self.user,
+        )
+        wo = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            job_type=self.inspection_job_type,
+            customer_concerns='Annual inspection',
+            odometer_in=5000,
+            status='inspection',
+            created_by=self.user,
+        )
+        VehicleInspection.objects.create(
+            work_order=wo,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            template=template,
+            performed_by=technician,
+            status='completed',
+        )
+        can_transition, error = wo.can_transition_to('completed')
+        self.assertTrue(can_transition, error)
+
+    def test_inspection_only_blocks_intake_from_inspection(self):
+        wo = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            job_type=self.inspection_job_type,
+            customer_concerns='Annual inspection',
+            odometer_in=5000,
+            status='inspection',
+            created_by=self.user,
+        )
+        can_transition, _ = wo.can_transition_to('intake')
+        self.assertFalse(can_transition)
+
+    def test_diagnostic_only_can_complete_from_awaiting_approval(self):
+        wo = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            job_type=self.diagnostic_job_type,
+            customer_concerns='Check engine light',
+            odometer_in=5000,
+            status='awaiting_approval',
+            diagnosis_notes='Faulty sensor detected.',
+            service_coordinator=self.user,
+            created_by=self.user,
+        )
+        can_transition, error = wo.can_transition_to('completed')
+        self.assertTrue(can_transition, error)
+
+    def test_diagnostic_only_blocks_in_progress_from_approved(self):
+        wo = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            job_type=self.diagnostic_job_type,
+            customer_concerns='Check engine light',
+            odometer_in=5000,
+            status='approved',
+            diagnosis_notes='Faulty sensor detected.',
+            service_coordinator=self.user,
+            approved_by_customer=True,
+            created_by=self.user,
+        )
+        can_transition, _ = wo.can_transition_to('in_progress')
+        self.assertFalse(can_transition)
+
+
+class AppointmentJobTypeTests(TestCase):
+    def setUp(self):
+        seed_workflow_profiles_and_job_types(overwrite=True)
+        self.user = User.objects.create_user(
+            username='appt_user',
+            email='appt@example.com',
+            password='password',
+            role='service_coordinator',
+        )
+        self.branch = Branch.objects.create(name='Main', code='MAIN3', created_by=self.user)
+        customer_user = User.objects.create_user(
+            username='cust3',
+            email='cust3@example.com',
+            password='password',
+            role='customer',
+        )
+        self.customer = Customer.objects.create(user=customer_user)
+        self.vehicle = Vehicle.objects.create(
+            owner=self.customer,
+            make='Ford',
+            model='Focus',
+            year=2018,
+            vin='FORD1234567890123',
+            current_mileage=8000,
+        )
+        self.factory = APIRequestFactory()
+
+    def _create_appointment(self, payload):
+        from apps.appointments.serializers import AppointmentCreateSerializer
+        from datetime import date, time, timedelta
+
+        tomorrow = date.today() + timedelta(days=1)
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'branch': self.branch.id,
+            'appointment_date': tomorrow.isoformat(),
+            'appointment_time': '10:00:00',
+            'priority': 'normal',
+            **payload,
+        }
+        request = self.factory.post('/api/appointments/')
+        request.user = self.user
+        serializer = AppointmentCreateSerializer(data=data, context={'request': request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        return serializer.save()
+
+    def test_legacy_service_type_maps_to_job_type(self):
+        appt = self._create_appointment({'service_type': 'maintenance'})
+        self.assertEqual(appt.job_type.code, 'routine_maintenance')
+
+    def test_job_type_code_on_appointment_create(self):
+        appt = self._create_appointment({'job_type_code': 'brake_service'})
+        self.assertEqual(appt.job_type.code, 'brake_service')

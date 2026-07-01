@@ -54,12 +54,27 @@ export const jobTypesApi = {
     const response = await apiClient.get(`/workorders/job-types/${code}/`);
     return response.data;
   },
+
+  create: async (data: Record<string, unknown>): Promise<JobType> => {
+    const response = await apiClient.post("/workorders/job-types/", data);
+    return response.data;
+  },
+
+  update: async (code: string, data: Record<string, unknown>): Promise<JobType> => {
+    const response = await apiClient.patch(`/workorders/job-types/${code}/`, data);
+    return response.data;
+  },
+
+  remove: async (code: string): Promise<void> => {
+    await apiClient.delete(`/workorders/job-types/${code}/`);
+  },
 };
 
 export const workflowProfilesApi = {
-  list: async (): Promise<{ results: WorkflowProfile[] }> => {
+  list: async (): Promise<WorkflowProfile[]> => {
     const response = await apiClient.get("/workorders/workflow-profiles/");
-    return response.data;
+    const data = response.data;
+    return Array.isArray(data) ? data : data.results ?? [];
   },
 };
 

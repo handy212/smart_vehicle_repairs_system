@@ -384,7 +384,7 @@ export function CheckInWizard() {
           vehicle: vehicleId!,
           appointment_date: appointmentDate,
           appointment_time: appointmentTime,
-          service_type: isFastTrack ? "maintenance" : "repair",
+          job_type_code: selectedJobTypeCode,
           priority,
           customer_concerns: concernText || undefined,
         });

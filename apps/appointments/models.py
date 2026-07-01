@@ -169,7 +169,15 @@ class Appointment(models.Model):
         max_length=20,
         choices=SERVICE_TYPE_CHOICES,
         default='maintenance',
-        help_text="Type of service requested"
+        help_text="Legacy service type (deprecated — use job_type)",
+    )
+    job_type = models.ForeignKey(
+        'workorders.JobType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='appointments',
+        help_text='Type of service requested',
     )
     service_bundle = models.ForeignKey(
         'inventory.ServiceBundle',
