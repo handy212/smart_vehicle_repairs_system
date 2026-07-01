@@ -24,7 +24,7 @@ export default function NewProductServiceTypePage({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const [serverError, setServerError] = useState<string | null>(null);
   const formId = "product-service-create-form";
 

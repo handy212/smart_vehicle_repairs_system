@@ -17,6 +17,8 @@ export interface QboSyncBadgeProps {
   status?: QboSyncStatus;
   error?: string | null;
   connected?: boolean;
+  /** When linked but API session is down — show reconnect guidance instead of retry. */
+  connectionIssue?: string | null;
   className?: string;
   showLabel?: boolean;
   onRetry?: () => void;
@@ -32,6 +34,7 @@ export function QboSyncBadge({
   status,
   error,
   connected = true,
+  connectionIssue = null,
   className,
   showLabel = true,
   onRetry,
@@ -43,6 +46,19 @@ export function QboSyncBadge({
   compact = false,
 }: QboSyncBadgeProps) {
   if (!connected) return null;
+
+  if (connectionIssue) {
+    return (
+      <div className={cn("flex flex-col gap-1", className)}>
+        <Badge variant="secondary" className="capitalize">
+          {showLabel ? "QBO: session expired" : "session expired"}
+        </Badge>
+        <p className={cn("text-amber-700 dark:text-amber-400", compact ? "text-[11px] line-clamp-3" : "text-xs")}>
+          {connectionIssue}
+        </p>
+      </div>
+    );
+  }
 
   const normalizedStatus = status ?? "un-synced";
 

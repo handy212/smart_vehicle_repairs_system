@@ -51,7 +51,7 @@ export default function EstimateDetailPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const {
     isSyncing,
     isClearing,
@@ -784,14 +784,15 @@ export default function EstimateDetailPage() {
                           )}
                         </div>
                       </div>
-                      {isQboConnected && estimate.qbo_sync_status && (
+                      {isQboConnected && (
                         <div className="flex flex-col mt-2">
                           <span className="text-sm text-muted-foreground mb-1">QuickBooks Sync</span>
                           <QboSyncBadge
                             status={estimate.qbo_sync_status}
                             error={estimate.qbo_sync_error}
-                            onRetry={handleQBOSync}
-                            onClearMapping={handleQboClearMapping}
+                            connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                            onRetry={isQboCanSync ? handleQBOSync : undefined}
+                            onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
                             isRetrying={isSyncing}
                             isClearing={isClearing}
                             compact

@@ -30,7 +30,7 @@ export default function VendorExpenseDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const params = useParams();
   const id = parseInt(params.id as string, 10);
   const {
@@ -106,8 +106,9 @@ export default function VendorExpenseDetailPage() {
                   status={expense.qbo_sync_status}
                   error={expense.qbo_sync_error}
                   connected={isQboConnected}
-                  onRetry={!isVoid ? handleQBOSync : undefined}
-                  onClearMapping={!isVoid ? handleQboClearMapping : undefined}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                  onRetry={!isVoid && isQboCanSync ? handleQBOSync : undefined}
+                  onClearMapping={!isVoid && isQboCanSync ? handleQboClearMapping : undefined}
                   isRetrying={isSyncing}
                   isClearing={isClearing}
                   compact

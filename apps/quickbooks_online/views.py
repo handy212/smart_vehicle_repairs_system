@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 from .models import QBOConfig, QBOToken, QBOSyncLog
 from .services import QuickBooksService, get_qbo_redirect_uri, _infer_redirect_base
 from .tasks import task_full_inbound_sync
+from .oauth_state import persist_oauth_state, resolve_oauth_state, consume_oauth_state, invalidate_oauth_state
 import logging
 
 logger = logging.getLogger(__name__)
@@ -124,9 +125,14 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
         # Get authorization URL
         auth_url = auth_client.get_authorization_url(scopes)
         
-        # Store state in session
+        # Store state in session (fallback) and database (primary)
         request.session['qbo_state'] = auth_client.state_token
         request.session['qbo_redirect_uri'] = redirect_uri
+        persist_oauth_state(
+            state_token=auth_client.state_token,
+            redirect_uri=redirect_uri,
+            user=request.user,
+        )
         
         return redirect(auth_url)
 
@@ -145,14 +151,21 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
         if not code or not realm_id:
             messages.error(request, "Invalid QuickBooks callback parameters.")
             return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
+
+        if not str(realm_id).isdigit():
+            logger.warning('QBO OAuth callback rejected: invalid realmId format (%s)', realm_id)
+            messages.error(request, "Invalid QuickBooks company ID.")
+            return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
             
         saved_state = request.session.get('qbo_state')
-        if not saved_state or state != saved_state:
+        redirect_uri, oauth_state = resolve_oauth_state(state, request.user, saved_state)
+        if redirect_uri is None and oauth_state != 'session':
             logger.warning(
                 "QBO OAuth callback rejected due to state mismatch (received=%s, expected=%s)",
                 state,
                 saved_state,
             )
+            invalidate_oauth_state(state)
             messages.error(request, "QuickBooks authorization failed due to an invalid session state. Please try connecting again.")
             return redirect(build_qbo_integrations_url(qbo_status="invalid_state"))
 
@@ -161,7 +174,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             messages.error(request, QuickBooksService.sdk_unavailable_message())
             return redirect(build_qbo_integrations_url(qbo_status="sdk_missing"))
 
-        redirect_uri = request.session.get("qbo_redirect_uri") or get_qbo_redirect_uri()
+        if redirect_uri is None:
+            redirect_uri = request.session.get("qbo_redirect_uri") or get_qbo_redirect_uri()
         auth_client = QuickBooksService.get_auth_client(config, redirect_uri=redirect_uri)
         
         try:
@@ -200,11 +214,19 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             if 'qbo_redirect_uri' in request.session:
                 del request.session['qbo_redirect_uri']
 
+            consume_oauth_state(oauth_state)
+
+            from .status_cache import clear_api_ready_cache
+            clear_api_ready_cache(config.pk)
+
+            QuickBooksService.fetch_and_store_company_name(config)
+
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
             return redirect(build_qbo_integrations_url(qbo_status="connected"))
             
         except Exception as e:
             logger.error(f"Error during QBO callback: {e}")
+            invalidate_oauth_state(state)
             messages.error(request, "Error connecting to QuickBooks.")
             return redirect(build_qbo_integrations_url(qbo_status="error"))
 
@@ -316,11 +338,6 @@ class QBOInboundSyncView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperU
 
                 messages.warning(request, message)
 
-            if request_wants_json(request):
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Inbound sync started.',
-                })
         except Exception as e:
             logger.error(f"Failed to trigger inbound sync: {e}", exc_info=True)
             if request_wants_json(request):
@@ -340,13 +357,34 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
         has_keys = config and config.client_id and config.client_secret
         last_sync = QBOSyncLog.objects.order_by('-finished_at').first()
 
+        company_name = config.company_name if config else None
+        if (
+            config
+            and config.is_active
+            and not company_name
+            and QuickBooksService.is_connected()
+        ):
+            from django.core.cache import cache
+
+            fetch_key = f'qbo:fetch-company-name:{config.pk}'
+            if cache.add(fetch_key, '1', 86400):
+                company_name = QuickBooksService.fetch_and_store_company_name(config)
+
+        token_expires_at = None
+        refresh_token_expires_at = None
+        if config and hasattr(config, 'token') and config.token:
+            token_expires_at = config.token.expires_at
+            refresh_token_expires_at = config.token.refresh_token_expires_at
+
         payload = {
             'is_connected': QuickBooksService.is_connected(),
             'has_keys': bool(has_keys),
             'realm_id': config.realm_id if config else None,
             'is_sandbox': config.is_sandbox if config else True,
             'last_sync': last_sync.finished_at if last_sync else None,
-            'company_name': config.company_name if config and hasattr(config, 'company_name') else None,
+            'company_name': company_name,
+            'token_expires_at': token_expires_at,
+            'refresh_token_expires_at': refresh_token_expires_at,
             'oauth_redirect_uri': get_qbo_redirect_uri(_infer_redirect_base(request)),
             'oauth_keys_environment': 'sandbox' if (config.is_sandbox if config else True) else 'production',
         }
@@ -354,14 +392,25 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
         payload['connection_issue'] = None
         if payload['is_connected']:
             from apps.quickbooks_online.bulk_outbound_sync import count_pending_outbound_syncs
+            from django.core.cache import cache
+            from apps.quickbooks_online.status_cache import api_ready_cache_key as build_api_ready_cache_key
+
             payload['outbound_pending'] = count_pending_outbound_syncs()
-            if QuickBooksService.get_client() is not None:
+            ready_cache_key = build_api_ready_cache_key(config.pk) if config else None
+            cached_ready = cache.get(ready_cache_key) if ready_cache_key else None
+            if cached_ready in ('0', '1'):
+                payload['api_ready'] = cached_ready == '1'
+            elif QuickBooksService.get_client() is not None:
                 payload['api_ready'] = True
+                if ready_cache_key:
+                    cache.set(ready_cache_key, '1', 60)
             else:
                 payload['connection_issue'] = (
                     'QuickBooks is linked but the live API session is unavailable. '
                     'Reconnect under Admin → Integrations, or refresh the OAuth token.'
                 )
+                if ready_cache_key:
+                    cache.set(ready_cache_key, '0', 60)
         elif has_keys:
             payload['connection_issue'] = 'QuickBooks credentials are saved but the company is not connected.'
 
@@ -385,11 +434,10 @@ class QBOWebhookView(View):
     """
 
     def post(self, request):
-        import hashlib
-        import hmac
         import json
 
-        # --- Signature verification ---
+        from .webhook_security import webhook_signature_accepted
+
         signature = request.headers.get('intuit-signature', '')
         payload_bytes = request.body
 
@@ -401,23 +449,16 @@ class QBOWebhookView(View):
 
         from django.conf import settings as django_settings
 
-        if webhook_token:
-            expected = hmac.new(
-                webhook_token.encode('utf-8'),
-                payload_bytes,
-                hashlib.sha256
-            ).digest()
-            import base64
-            expected_b64 = base64.b64encode(expected).decode('utf-8')
-            if not hmac.compare_digest(signature, expected_b64):
-                logger.warning("QBO webhook: invalid signature — request rejected.")
-                return JsonResponse({'error': 'Invalid signature'}, status=401)
-        elif getattr(django_settings, 'REQUIRE_WEBHOOK_SIGNATURES', False):
-            logger.warning("QBO webhook rejected: quickbooks_webhook_token not configured")
-            return JsonResponse({'error': 'Webhook verification token required'}, status=401)
-        elif not signature:
-            logger.warning("QBO webhook: no signature and no verifier token — request rejected.")
-            return JsonResponse({'error': 'Invalid signature'}, status=401)
+        accepted, rejection_reason = webhook_signature_accepted(
+            payload_bytes=payload_bytes,
+            signature_header=signature,
+            webhook_token=webhook_token,
+            require_signatures=getattr(django_settings, 'REQUIRE_WEBHOOK_SIGNATURES', False),
+            debug=getattr(django_settings, 'DEBUG', False),
+        )
+        if not accepted:
+            status_code = 401 if rejection_reason in ('Invalid signature', 'Missing signature') else 401
+            return JsonResponse({'error': rejection_reason or 'Invalid signature'}, status=status_code)
 
         # --- Parse payload ---
         try:
@@ -429,6 +470,8 @@ class QBOWebhookView(View):
         # { "eventNotifications": [ { "realmId": "...", "dataChangeEvent": { "entities": [...] } } ] }
         notifications = data.get('eventNotifications', [])
         queued = []
+
+        from .webhook_dispatch import queue_inbound_pull_for_entity
 
         for notification in notifications:
             realm_id = notification.get('realmId')
@@ -446,43 +489,8 @@ class QBOWebhookView(View):
                     # We don't auto-delete local records from QBO deletes
                     continue
 
-                # Queue targeted pull for changed entity types
-                if entity_name == 'invoice':
-                    from .tasks import task_pull_invoices_from_qbo
-                    task_pull_invoices_from_qbo.delay()
-                    queued.append('invoice')
-                elif entity_name in ('vendor', 'supplier'):
-                    from .tasks import task_pull_vendors_from_qbo
-                    task_pull_vendors_from_qbo.delay()
-                    queued.append('vendor')
-                elif entity_name == 'bill':
-                    from .tasks import task_pull_bills_from_qbo
-                    task_pull_bills_from_qbo.delay()
-                    queued.append('bill')
-                elif entity_name in ('billpayment', 'bill_payment'):
-                    from .tasks import task_pull_bill_payments_from_qbo
-                    task_pull_bill_payments_from_qbo.delay()
-                    queued.append('bill_payment')
-                elif entity_name == 'estimate':
-                    from .tasks import task_pull_estimates_from_qbo
-                    task_pull_estimates_from_qbo.delay()
-                    queued.append('estimate')
-                elif entity_name in ('creditmemo', 'credit_memo'):
-                    from .tasks import task_pull_credit_memos_from_qbo
-                    task_pull_credit_memos_from_qbo.delay()
-                    queued.append('credit_memo')
-                elif entity_name in ('vendorcredit', 'vendor_credit'):
-                    from .tasks import task_pull_vendor_credits_from_qbo
-                    task_pull_vendor_credits_from_qbo.delay()
-                    queued.append('vendor_credit')
-                elif entity_name == 'item':
-                    from .tasks import task_pull_items_from_qbo
-                    task_pull_items_from_qbo.delay()
-                    queued.append('item')
-                elif entity_name == 'payment':
-                    from .tasks import task_pull_invoices_from_qbo
-                    task_pull_invoices_from_qbo.delay()
-                    queued.append('payment')
+                if queue_inbound_pull_for_entity(entity_name):
+                    queued.append(entity_name)
 
         logger.info(f"QBO webhook processed. Queued syncs: {list(set(queued))}")
         # QBO expects a 200 response

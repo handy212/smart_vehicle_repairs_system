@@ -87,7 +87,7 @@ function formatIncomeAccount(code?: string | null, label?: string | null) {
 export default function RevenueProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected: qboConnected } = useQuickBooksConnection();
+  const { isLinked: qboConnected, isApiReady: qboApiReady } = useQuickBooksConnection();
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState(ALL_FILTER);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");

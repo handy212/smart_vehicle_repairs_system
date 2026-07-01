@@ -87,7 +87,7 @@ export default function BillDetailPage() {
     const [isVendorCreditDialogOpen, setIsVendorCreditDialogOpen] = useState(false);
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
     const [selectedApproverId, setSelectedApproverId] = useState("");
-    const { isConnected: isQboConnected } = useQuickBooksConnection();
+    const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
     const {
         isSyncing,
         isClearing,
@@ -528,8 +528,9 @@ export default function BillDetailPage() {
                 <QboSyncBadge
                     status={bill.qbo_sync_status}
                     error={bill.qbo_sync_error}
-                    onRetry={handleQBOSync}
-                    onClearMapping={handleQboClearMapping}
+                    connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                    onRetry={isQboCanSync ? handleQBOSync : undefined}
+                    onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
                     isRetrying={isSyncing}
                     isClearing={isClearing}
                 />

@@ -46,7 +46,7 @@ export default function PartDetailPage() {
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [showImageModal, setShowImageModal] = useState(false);
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
   const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
     entityType: "part",
@@ -160,8 +160,9 @@ export default function PartDetailPage() {
               status={part.qbo_sync_status}
               error={part.qbo_sync_error}
               connected={isQboConnected}
-              onRetry={handleSync}
-              onClearMapping={handleClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+              onRetry={isQboCanSync ? handleSync : undefined}
+              onClearMapping={isQboCanSync ? handleClearMapping : undefined}
               isRetrying={isSyncing}
               isClearing={isClearing}
             />

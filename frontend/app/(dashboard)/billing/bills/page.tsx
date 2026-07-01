@@ -40,7 +40,7 @@ export default function BillsPage() {
     const vendorFromUrl = searchParams.get("vendor");
     const { formatCurrency } = useCurrency();
     const { hasPermission } = usePermissions();
-    const { isConnected: isQboConnected } = useQuickBooksConnection();
+    const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
     const getFilterValue = (key: string) => {
         const value = advancedFilters[key];
@@ -352,6 +352,7 @@ export default function BillsPage() {
                                                 <TableCell className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                                                     <QboListCell
                                                         connected={isQboConnected}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
                                                         status={bill.qbo_sync_status}
                                                         error={bill.qbo_sync_error}
                                                     />

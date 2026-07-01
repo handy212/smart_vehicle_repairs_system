@@ -47,7 +47,7 @@ export default function PaymentDetailPage() {
   const id = parseInt(params.id as string);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [allocationOpen, setAllocationOpen] = useState(false);
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const {
     isSyncing,
     isClearing,
@@ -147,13 +147,14 @@ export default function PaymentDetailPage() {
               <Badge variant={getStatusVariant(payment.status)}>
                 {payment.status.replace("_", " ").toUpperCase()}
               </Badge>
-              {isQboConnected && payment.qbo_sync_status && (
+              {isQboConnected && (
                 <QboSyncBadge
                   status={payment.qbo_sync_status}
                   error={payment.qbo_sync_error}
                   connected={isQboConnected}
-                  onRetry={handleQBOSync}
-                  onClearMapping={handleQboClearMapping}
+                  connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                  onRetry={isQboCanSync ? handleQBOSync : undefined}
+                  onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
                   isRetrying={isSyncing}
                   isClearing={isClearing}
                   compact
@@ -190,7 +191,7 @@ export default function PaymentDetailPage() {
                 {isOpeningPrint ? "Opening print..." : "Print receipt"}
               </DropdownMenuItem>
 
-              {isQboConnected && payment.qbo_sync_status && (
+              {isQboConnected && isQboCanSync && (
                 <>
                   <DropdownMenuItem onClick={handleQBOSync} disabled={isSyncing || isClearing}>
                     <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
@@ -224,8 +225,9 @@ export default function PaymentDetailPage() {
           status={payment.qbo_sync_status}
           error={payment.qbo_sync_error}
           connected={isQboConnected}
-          onRetry={handleQBOSync}
-          onClearMapping={handleQboClearMapping}
+          connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+          onRetry={isQboCanSync ? handleQBOSync : undefined}
+          onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
           isRetrying={isSyncing}
           isClearing={isClearing}
         />

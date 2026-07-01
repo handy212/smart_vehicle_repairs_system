@@ -163,10 +163,51 @@ def get_qbo_redirect_uri(redirect_base: str | None = None) -> str:
     return _normalize_qbo_callback_url(get_site_url())
 
 
+try:
+    from quickbooks.objects.company_info import CompanyInfo as QBCompanyInfo
+except ModuleNotFoundError:
+    QBCompanyInfo = None
+
+
 class QuickBooksService:
     """
     Service for interacting with QuickBooks Online API.
     """
+
+    @staticmethod
+    def _deactivate_config(config, reason: str):
+        logger.warning('Deactivating QBO connection: %s', reason)
+        config.is_active = False
+        config.save(update_fields=['is_active', 'updated_at'])
+
+    @classmethod
+    def fetch_and_store_company_name(cls, config=None) -> str | None:
+        """Read CompanyInfo from QBO and persist the display name on QBOConfig."""
+        if QBCompanyInfo is None:
+            return None
+
+        if not config:
+            config = cls.get_config(active_only=False)
+        if not config or not config.realm_id:
+            return None
+
+        client = cls.get_client()
+        if not client:
+            return None
+
+        try:
+            info = QBCompanyInfo.get(1, qb=client)
+            name = (
+                (getattr(info, 'CompanyName', None) or '').strip()
+                or (getattr(info, 'LegalName', None) or '').strip()
+            )
+            if name and config.company_name != name:
+                config.company_name = name
+                config.save(update_fields=['company_name', 'updated_at'])
+            return name or None
+        except Exception as exc:
+            logger.warning('Could not fetch QBO company name: %s', exc)
+            return config.company_name or None
 
     @staticmethod
     def sdk_available():
@@ -257,6 +298,10 @@ class QuickBooksService:
                 return None
                 
             token = config.token
+
+            if token.refresh_token_expires_at <= timezone.now():
+                cls._deactivate_config(config, 'refresh token expired')
+                return None
             
             # Check if token needs refresh (expires in less than 5 minutes)
             if token.expires_at <= timezone.now() + timedelta(minutes=5):
@@ -340,6 +385,9 @@ class QuickBooksService:
         try:
             with transaction.atomic():
                 locked = QBOToken.objects.select_for_update().get(pk=token.pk)
+                if locked.refresh_token_expires_at <= timezone.now():
+                    cls._deactivate_config(config, 'refresh token expired during refresh')
+                    return False
                 if locked.expires_at > timezone.now() + timedelta(minutes=5):
                     token.access_token = locked.access_token
                     token.refresh_token = locked.refresh_token
@@ -357,18 +405,22 @@ class QuickBooksService:
                 token.refresh_token_expires_at = locked.refresh_token_expires_at
 
             logger.info("Successfully refreshed QBO token.")
+            from .status_cache import clear_api_ready_cache
+            clear_api_ready_cache(config.pk)
             return True
         except Exception as e:
             logger.error(f"Failed to refresh QBO token: {e}")
             if "invalid_grant" in str(e).lower():
-                config.is_active = False
-                config.save()
+                cls._deactivate_config(config, 'invalid_grant on token refresh')
+            from .status_cache import clear_api_ready_cache
+            clear_api_ready_cache(config.pk)
             return False
 
     @staticmethod
     def disconnect():
         """Disconnects the app from QBO."""
         config = QuickBooksService.get_config()
+        config_id = config.pk if config else None
         if config and hasattr(config, 'token'):
             auth_client = QuickBooksService.get_auth_client(config)
             try:
@@ -378,8 +430,12 @@ class QuickBooksService:
                 logger.warning(f"Error revoking tokens: {e}")
             
             config.token.delete()
+            config.company_name = ''
             config.is_active = False
-            config.save()
+            config.save(update_fields=['company_name', 'is_active', 'updated_at'])
+
+        from .status_cache import clear_api_ready_cache
+        clear_api_ready_cache(config_id)
 
     @classmethod
     def _save_qb(cls, qb_obj, client, *, max_retries=3):

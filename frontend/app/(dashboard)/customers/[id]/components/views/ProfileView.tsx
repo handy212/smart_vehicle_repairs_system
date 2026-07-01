@@ -24,7 +24,7 @@ interface ProfileViewProps {
 
 export function ProfileView({ customer }: ProfileViewProps) {
     const { currency, formatCurrency } = useCurrency();
-    const { isConnected: isQboConnected } = useQuickBooksConnection();
+    const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
     const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
         entityType: "customer",
@@ -225,8 +225,9 @@ export function ProfileView({ customer }: ProfileViewProps) {
                                 status={customer.qbo_sync_status}
                                 error={customer.qbo_sync_error}
                                 connected={isQboConnected}
-                                onRetry={handleSync}
-                                onClearMapping={handleClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                                onRetry={isQboCanSync ? handleSync : undefined}
+                                onClearMapping={isQboCanSync ? handleClearMapping : undefined}
                                 isRetrying={isSyncing}
                                 isClearing={isClearing}
                             />

@@ -29,7 +29,7 @@ export default function VendorPaymentDetailPage() {
   const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const params = useParams();
   const id = parseInt(params.id as string, 10);
   const {
@@ -96,8 +96,9 @@ export default function VendorPaymentDetailPage() {
                   status={payment.qbo_sync_status ?? "un-synced"}
                   error={payment.qbo_sync_error}
                   connected={isQboConnected}
-                  onRetry={handleQBOSync}
-                  onClearMapping={handleQboClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                  onRetry={isQboCanSync ? handleQBOSync : undefined}
+                  onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
                   isRetrying={isSyncing}
                   isClearing={isClearing}
                   compact
@@ -117,8 +118,9 @@ export default function VendorPaymentDetailPage() {
             status={payment.qbo_sync_status ?? "un-synced"}
             error={payment.qbo_sync_error}
             connected={isQboConnected}
-            onRetry={handleQBOSync}
-            onClearMapping={handleQboClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+            onRetry={isQboCanSync ? handleQBOSync : undefined}
+            onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
             isRetrying={isSyncing}
             isClearing={isClearing}
           />

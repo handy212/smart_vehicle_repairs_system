@@ -351,16 +351,54 @@ def task_retry_failed_outbound_syncs():
 @shared_task
 def task_full_inbound_sync(triggered_by_id=None):
     """
-    Convenience task: runs all inbound pulls sequentially.
-    Triggered by Celery Beat schedule or manual admin action.
+    Queue all inbound pulls as separate Celery tasks.
+
+    Each entity type runs independently so a slow/failed pull does not block
+    the rest, and the webhook endpoint can return within Intuit's 3s limit.
     """
-    logger.info("[QBO Inbound] Starting full inbound sync...")
-    task_pull_vendors_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_invoices_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_bills_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_bill_payments_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_estimates_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_credit_memos_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_vendor_credits_from_qbo(triggered_by_id=triggered_by_id)
-    task_pull_items_from_qbo(triggered_by_id=triggered_by_id)
-    logger.info("[QBO Inbound] Full inbound sync complete.")
+    logger.info("[QBO Inbound] Queueing full inbound sync...")
+    inbound_tasks = (
+        task_pull_vendors_from_qbo,
+        task_pull_invoices_from_qbo,
+        task_pull_bills_from_qbo,
+        task_pull_bill_payments_from_qbo,
+        task_pull_estimates_from_qbo,
+        task_pull_credit_memos_from_qbo,
+        task_pull_vendor_credits_from_qbo,
+        task_pull_items_from_qbo,
+    )
+    queued = 0
+    for task in inbound_tasks:
+        try:
+            task.delay(triggered_by_id=triggered_by_id)
+            queued += 1
+        except Exception as exc:
+            logger.warning(
+                'Celery dispatch failed for %s; running inline: %s',
+                task.__name__,
+                exc,
+            )
+            task(triggered_by_id=triggered_by_id)
+            queued += 1
+    logger.info("[QBO Inbound] Full inbound sync queued (%s tasks).", queued)
+
+
+@shared_task
+def task_run_cdc_inbound_sync():
+    """
+    CDC safety net — queue inbound pulls for entity types changed since last sync.
+
+    Complements webhooks and periodic pulls per Intuit best practices.
+    """
+    from .cdc_sync import run_cdc_and_queue_inbound_pulls
+    from .services import QuickBooksService
+
+    if not QuickBooksService.is_connected():
+        logger.info('[QBO CDC] Skipping — QuickBooks not connected.')
+        return {'queued': [], 'skipped': 'not_connected'}
+
+    try:
+        return run_cdc_and_queue_inbound_pulls(QuickBooksService())
+    except Exception as exc:
+        logger.error('Error in task_run_cdc_inbound_sync: %s', exc, exc_info=True)
+        return {'queued': [], 'error': str(exc)}

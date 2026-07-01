@@ -53,4 +53,15 @@ describe("quickbooksApi.clearMapping", () => {
       object_id: 2,
     });
   });
+
+  it("posts to refresh-company endpoint", async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: { company_name: "Acme Auto Repairs" },
+    });
+
+    const result = await quickbooksApi.refreshCompany();
+
+    expect(apiClient.post).toHaveBeenCalledWith("/quickbooks/refresh-company/");
+    expect(result.company_name).toBe("Acme Auto Repairs");
+  });
 });

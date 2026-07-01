@@ -47,7 +47,7 @@ function formatPaymentMethod(method: string) {
 
 function VendorExpensesContent() {
   const { formatCurrency } = useCurrency();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -230,6 +230,7 @@ function VendorExpensesContent() {
                       <TableCell>
                         <QboListCell
                           connected={isQboConnected}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
                           status={expense.qbo_sync_status}
                           error={expense.qbo_sync_error}
                         />

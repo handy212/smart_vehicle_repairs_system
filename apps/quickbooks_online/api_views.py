@@ -541,6 +541,28 @@ class QBOOwnerCoaSetupView(QBOConnectedMixin, APIView):
         })
 
 
+class QBORefreshCompanyView(QBOConnectedMixin, APIView):
+    """Refresh connected company display name from QBO CompanyInfo."""
+
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('manage_settings'),
+    ]
+
+    def post(self, request):
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
+        company_name = QuickBooksService.fetch_and_store_company_name()
+        if not company_name:
+            return Response(
+                {'detail': 'Could not read company name from QuickBooks.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response({'company_name': company_name})
+
+
 class QBOMappingClearView(QBOConnectedMixin, APIView):
     """Clear a stale SVR ↔ QBO entity link before retrying outbound sync."""
 

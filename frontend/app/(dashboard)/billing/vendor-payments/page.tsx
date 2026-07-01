@@ -29,7 +29,7 @@ export default function VendorPaymentsPage() {
   const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [vendorId, setVendorId] = useState<string>("all");
@@ -163,9 +163,10 @@ export default function VendorPaymentsPage() {
                       <TableCell>
                         <QboListCell
                           connected={isQboConnected}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
                           status={payment.qbo_sync_status}
                           error={payment.qbo_sync_error}
-                          onRetry={() => handlePushPayment(payment.id)}
+                          onRetry={isQboCanSync ? () => handlePushPayment(payment.id) : undefined}
                           isRetrying={syncingPaymentId === payment.id}
                         />
                       </TableCell>

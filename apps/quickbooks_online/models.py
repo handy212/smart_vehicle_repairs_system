@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 class QBOConfig(models.Model):
     """
@@ -11,6 +12,11 @@ class QBOConfig(models.Model):
     client_id = models.CharField(max_length=255, help_text="QBO Client ID from App Settings")
     client_secret = models.CharField(max_length=255, help_text="QBO Client Secret")
     realm_id = models.CharField(max_length=50, blank=True, help_text="Company ID (filled after auth)")
+    company_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Connected QBO company display name (filled after auth)",
+    )
     is_sandbox = models.BooleanField(default=True, help_text="Use Sandbox environment")
     is_active = models.BooleanField(default=True)
     
@@ -19,7 +25,8 @@ class QBOConfig(models.Model):
 
     def __str__(self):
         env = "Sandbox" if self.is_sandbox else "Production"
-        return f"QBO Config ({env})"
+        name = f" — {self.company_name}" if self.company_name else ""
+        return f"QBO Config ({env}){name}"
 
     class Meta:
         verbose_name = "QuickBooks Configuration"
@@ -30,6 +37,40 @@ class QBOConfig(models.Model):
         if self.is_active:
             QBOConfig.objects.filter(is_active=True).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
+
+
+class QBOOAuthState(models.Model):
+    """
+    Persists OAuth CSRF state and redirect URI across the Intuit browser redirect.
+
+    Session cookies can be lost between /connect and /callback (cross-origin proxy,
+    short session TTL). DB-backed state keeps redirect_uri and validation reliable.
+    """
+
+    state_token = models.CharField(max_length=128, unique=True, db_index=True)
+    redirect_uri = models.CharField(max_length=512)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='qbo_oauth_states',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'QBO OAuth State'
+        verbose_name_plural = 'QBO OAuth States'
+        indexes = [
+            models.Index(fields=['expires_at']),
+        ]
+
+    def __str__(self):
+        return f'QBO OAuth state for user {self.user_id}'
+
+    @classmethod
+    def cleanup_expired(cls):
+        cls.objects.filter(expires_at__lt=timezone.now()).delete()
 
 
 class QBOToken(models.Model):

@@ -37,7 +37,7 @@ export default function CreditNoteDetailPage() {
     const id = parseInt(params.id as string);
     const { openPrintWindow, isOpeningPrint } = usePrint();
     const [applyDialogOpen, setApplyDialogOpen] = useState(false);
-    const { isConnected: isQboConnected } = useQuickBooksConnection();
+    const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
     const { isSyncing, isClearing, handleSync, handleClearMapping } = useQboEntitySync({
         entityType: "credit_note",
@@ -333,8 +333,9 @@ export default function CreditNoteDetailPage() {
                                         status={creditNote.qbo_sync_status}
                                         error={creditNote.qbo_sync_error}
                                         connected={isQboConnected}
-                                        onRetry={handleSync}
-                                        onClearMapping={handleClearMapping}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+                                        onRetry={isQboCanSync ? handleSync : undefined}
+                                        onClearMapping={isQboCanSync ? handleClearMapping : undefined}
                                         isRetrying={isSyncing}
                                         isClearing={isClearing}
                                         compact

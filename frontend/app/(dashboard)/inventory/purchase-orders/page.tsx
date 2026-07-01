@@ -100,7 +100,7 @@ export default function PurchaseOrdersPage() {
   const [page, setPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const { toast } = useToast();
-  const { isConnected: isQboConnected } = useQuickBooksConnection();
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
   const handleSort = (field: string) => {
     setSortConfig((current) => toggleSortConfig(current, field));
@@ -387,6 +387,7 @@ export default function PurchaseOrdersPage() {
                         <TableCell className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                           <QboListCell
                             connected={isQboConnected}
+              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
                             status={po.qbo_sync_status}
                             error={po.qbo_sync_error}
                           />

@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link2, RefreshCcw, Unplug, ExternalLink, Copy, Check, Upload } from "lucide-react";
-import { format } from "date-fns";
+import { Link2, RefreshCcw, Unplug, ExternalLink, Copy, Check, Upload, AlertTriangle } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
@@ -15,13 +15,18 @@ export function QuickBooksOnlineCard() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [pushingPending, setPushingPending] = useState(false);
+  const [refreshingCompany, setRefreshingCompany] = useState(false);
   const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
 
   const { data: status, isLoading } = useQuery({
     queryKey: ["qbo", "status"],
     queryFn: () => quickbooksApi.getStatus(),
-    refetchInterval: 30000, // Refresh every 30s
+    refetchInterval: 30000,
   });
+
+  const isLinked = status?.is_connected ?? false;
+  const isApiReady = status?.api_ready ?? false;
+  const syncDisabled = !isLinked || !isApiReady;
 
   const disconnectMutation = useMutation({
     mutationFn: () => quickbooksApi.disconnect(),
@@ -41,7 +46,20 @@ export function QuickBooksOnlineCard() {
     },
   });
 
+  const invalidateQbo = () => {
+    queryClient.invalidateQueries({ queryKey: ["qbo"] });
+  };
+
   const handlePushPending = async () => {
+    if (syncDisabled) {
+      toast({
+        title: "QuickBooks unavailable",
+        description: status?.connection_issue || "Reconnect QuickBooks before pushing records.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const pendingTotal = status?.outbound_pending?.eligible_total ?? 0;
     const message =
       pendingTotal > 0
@@ -58,9 +76,7 @@ export function QuickBooksOnlineCard() {
         title: "Push Started",
         description: result.message,
       });
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["qbo", "status"] });
-      }, 5000);
+      setTimeout(invalidateQbo, 5000);
     } catch (error: unknown) {
       toast({
         title: "Push Failed",
@@ -73,17 +89,25 @@ export function QuickBooksOnlineCard() {
   };
 
   const handleSync = async () => {
+    if (syncDisabled) {
+      toast({
+        title: "QuickBooks unavailable",
+        description: status?.connection_issue || "Reconnect QuickBooks before pulling data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSyncing(true);
     try {
-      await quickbooksApi.syncInbound();
+      const result = await quickbooksApi.syncInbound();
       toast({
         title: "Pull Started",
-        description: "Pulling data from QuickBooks in the background.",
+        description:
+          result?.message ||
+          "Pulling payment status, bills, and vendor updates from QuickBooks in the background.",
       });
-      // Refresh status after a short delay
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["qbo", "status"] });
-      }, 5000);
+      setTimeout(invalidateQbo, 5000);
     } catch (error: unknown) {
       toast({
         title: "Sync Failed",
@@ -95,6 +119,26 @@ export function QuickBooksOnlineCard() {
     }
   };
 
+  const handleRefreshCompany = async () => {
+    setRefreshingCompany(true);
+    try {
+      const result = await quickbooksApi.refreshCompany();
+      toast({
+        title: "Company updated",
+        description: result.company_name || "Company name refreshed from QuickBooks.",
+      });
+      invalidateQbo();
+    } catch (error: unknown) {
+      toast({
+        title: "Refresh failed",
+        description: getUserFacingError(error, "Could not refresh company name."),
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshingCompany(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="border shadow-none animate-pulse">
@@ -103,42 +147,82 @@ export function QuickBooksOnlineCard() {
     );
   }
 
+  const refreshExpiryWarning =
+    status?.refresh_token_expires_at &&
+    new Date(status.refresh_token_expires_at).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
+
   return (
     <Card className="border shadow-none overflow-hidden hover:border-primary/30 transition-colors bg-card">
       <CardHeader className="py-3 px-4 bg-muted/30 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-tight">
-            <div className={`w-2 h-2 rounded-full ${status?.is_connected ? "bg-success/100" : "bg-muted-foreground/30"}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isLinked && isApiReady
+                  ? "bg-success/100"
+                  : isLinked
+                    ? "bg-amber-500"
+                    : "bg-muted-foreground/30"
+              }`}
+            />
             QuickBooks Online
           </CardTitle>
-          {status?.is_connected && (
+          {isLinked && isApiReady && (
             <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded font-bold uppercase">
               Connected
+            </span>
+          )}
+          {isLinked && !isApiReady && (
+            <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded font-bold uppercase">
+              Reconnect needed
             </span>
           )}
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        {status?.is_connected ? (
+        {isLinked ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-[11px]">
+              <div className="col-span-2">
+                <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Company</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-foreground font-semibold">
+                    {status?.company_name || "Name not loaded yet"}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={handleRefreshCompany}
+                    disabled={refreshingCompany || !isApiReady}
+                  >
+                    <RefreshCcw className={`w-3 h-3 mr-1 ${refreshingCompany ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
               <div>
                 <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Company ID</p>
-                <p className="font-mono text-foreground font-semibold bg-muted/50 px-2 py-1 rounded inline-block">{status.realm_id}</p>
+                <p className="font-mono text-foreground font-semibold bg-muted/50 px-2 py-1 rounded inline-block">
+                  {status?.realm_id}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Environment</p>
                 <p className="text-foreground font-semibold bg-muted/50 px-2 py-1 rounded inline-block">
-                    {status.is_sandbox ? "Sandbox" : "Production"}
+                  {status?.is_sandbox ? "Sandbox" : "Production"}
                 </p>
               </div>
               <div className="col-span-2">
                 <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Last Sync</p>
                 <p className="text-foreground font-semibold">
-                  {status.last_sync ? format(new Date(status.last_sync), "MMM d, yyyy h:mm a") : "Never"}
+                  {status?.last_sync
+                    ? `${format(new Date(status.last_sync), "MMM d, yyyy h:mm a")} (${formatDistanceToNow(new Date(status.last_sync), { addSuffix: true })})`
+                    : "Never"}
                 </p>
               </div>
-              {status.outbound_pending && status.outbound_pending.eligible_total > 0 && (
+              {status?.outbound_pending && status.outbound_pending.eligible_total > 0 && (
                 <div className="col-span-2">
                   <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Pending Push</p>
                   <p className="text-foreground font-semibold">
@@ -153,10 +237,37 @@ export function QuickBooksOnlineCard() {
               )}
             </div>
 
-            {status.is_connected && status.api_ready === false && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed border rounded-md px-3 py-2 bg-muted/20">
+              <strong className="text-foreground">Push</strong> sends SVR invoices, payments, and bills to QuickBooks.
+              {" "}
+              <strong className="text-foreground">Pull</strong> updates payment status and vendor data from QuickBooks — it does not create new SVR records (except vendors).
+            </p>
+
+            {!isApiReady && (
+              <div className="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>
+                    {status?.connection_issue ||
+                      "QuickBooks is linked but the live API session is unavailable. Reconnect to restore sync."}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-8 text-xs w-full bg-[#2ca01c] hover:bg-[#2ca01c]/90 text-white"
+                  onClick={() => quickbooksApi.connect()}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                  Reconnect QuickBooks
+                </Button>
+              </div>
+            )}
+
+            {isApiReady && refreshExpiryWarning && status?.refresh_token_expires_at && (
               <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
-                {status.connection_issue ||
-                  "QuickBooks is linked but the live API session is unavailable. Disconnect and reconnect to restore chart mapping and sync."}
+                QuickBooks authorization expires{" "}
+                {formatDistanceToNow(new Date(status.refresh_token_expires_at), { addSuffix: true })}.
+                Reconnect before then to avoid sync interruption.
               </p>
             )}
 
@@ -166,34 +277,36 @@ export function QuickBooksOnlineCard() {
                 size="sm"
                 className="h-8 text-xs w-full font-semibold group"
                 onClick={handlePushPending}
-                disabled={pushingPending || syncing}
+                disabled={pushingPending || syncing || syncDisabled}
               >
                 <Upload className={`w-3.5 h-3.5 mr-2 ${pushingPending ? "animate-pulse" : ""}`} />
                 {pushingPending ? "Queuing…" : "Push All Pending to QBO"}
               </Button>
               <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs flex-1 font-semibold group"
-                onClick={handleSync}
-                disabled={syncing || pushingPending}
-              >
-                <RefreshCcw className={`w-3.5 h-3.5 mr-2 transition-transform duration-500 ${syncing ? "animate-spin" : "group-hover:rotate-180"}`} />
-                Pull from QBO
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
-                onClick={() => {
-                  if (confirm("Are you sure you want to disconnect from QuickBooks Online?")) {
-                    disconnectMutation.mutate();
-                  }
-                }}
-              >
-                <Unplug className="w-4 h-4" />
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs flex-1 font-semibold group"
+                  onClick={handleSync}
+                  disabled={syncing || pushingPending || syncDisabled}
+                >
+                  <RefreshCcw
+                    className={`w-3.5 h-3.5 mr-2 transition-transform duration-500 ${syncing ? "animate-spin" : "group-hover:rotate-180"}`}
+                  />
+                  Pull from QBO
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to disconnect from QuickBooks Online?")) {
+                      disconnectMutation.mutate();
+                    }
+                  }}
+                >
+                  <Unplug className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -206,8 +319,8 @@ export function QuickBooksOnlineCard() {
               <h3 className="text-sm font-bold text-foreground">
                 {!status?.has_keys ? "Keys Required" : "Account Not Linked"}
               </h3>
-              <p className="text-[11px] text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
-                {!status?.has_keys 
+              <p className="text-[11px] text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
+                {!status?.has_keys
                   ? "Configure your API Client ID and Secret in the section below to enable the QuickBooks integration."
                   : "Securely link your QuickBooks account to synchronize invoices, customers, and payments."}
               </p>
@@ -218,8 +331,8 @@ export function QuickBooksOnlineCard() {
                   Intuit redirect URI (register exactly)
                 </p>
                 <p className="text-[10px] text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
-                  In the Intuit Developer Portal, open your app&apos;s <strong>Keys</strong> tab and add this
-                  URL under <strong>Redirect URIs</strong> for{" "}
+                  In the Intuit Developer Portal, open your app&apos;s <strong>Keys</strong> tab and add this URL under{" "}
+                  <strong>Redirect URIs</strong> for{" "}
                   {status.oauth_keys_environment === "production" ? "Production" : "Sandbox"} keys.
                 </p>
                 <div className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuickBooksOnlineCard } from "@/components/integrations/QuickBooksOnlineCard";
 import { QboSyncLogPanel } from "@/components/integrations/QboSyncLogPanel";
 import { QboMappingIssuesPanel } from "@/components/integrations/QboMappingIssuesPanel";
+import { useQboStatusNotifications } from "@/hooks/useQboStatusNotifications";
 
 const QBO_TABS = [
   { id: "connection", label: "Connection", icon: Link2 },
@@ -18,6 +19,7 @@ export type QboIntegrationsTab = (typeof QBO_TABS)[number]["id"];
 export function QboIntegrationsSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  useQboStatusNotifications();
   const activeTab =
     (searchParams.get("qbo_tab") as QboIntegrationsTab | null) || "connection";
 
