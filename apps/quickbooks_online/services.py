@@ -181,7 +181,12 @@ class QuickBooksService:
         config.save(update_fields=['is_active', 'updated_at'])
 
     @classmethod
-    def fetch_and_store_company_name(cls, config=None) -> str | None:
+    def fetch_and_store_company_name(
+        cls,
+        config=None,
+        *,
+        deactivate_on_auth_failure=True,
+    ) -> str | None:
         """Read CompanyInfo from QBO and persist the display name on QBOConfig."""
         if QBCompanyInfo is None:
             return None
@@ -191,7 +196,7 @@ class QuickBooksService:
         if not config or not config.realm_id:
             return None
 
-        client = cls.get_client()
+        client = cls.get_client(deactivate_on_auth_failure=deactivate_on_auth_failure)
         if not client:
             return None
 

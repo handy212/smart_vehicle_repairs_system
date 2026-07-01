@@ -368,7 +368,10 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
 
             fetch_key = f'qbo:fetch-company-name:{config.pk}'
             if cache.add(fetch_key, '1', 86400):
-                company_name = QuickBooksService.fetch_and_store_company_name(config)
+                company_name = QuickBooksService.fetch_and_store_company_name(
+                    config,
+                    deactivate_on_auth_failure=False,
+                )
 
         token_expires_at = None
         refresh_token_expires_at = None
