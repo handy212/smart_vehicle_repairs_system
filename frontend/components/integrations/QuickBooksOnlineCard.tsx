@@ -122,6 +122,12 @@ export function QuickBooksOnlineCard() {
         {status?.is_connected ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-[11px]">
+              {status.company_name && (
+                <div className="col-span-2">
+                  <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Company</p>
+                  <p className="text-foreground font-semibold">{status.company_name}</p>
+                </div>
+              )}
               <div>
                 <p className="text-muted-foreground uppercase font-bold tracking-widest text-[9px] mb-1">Company ID</p>
                 <p className="font-mono text-foreground font-semibold bg-muted/50 px-2 py-1 rounded inline-block">{status.realm_id}</p>

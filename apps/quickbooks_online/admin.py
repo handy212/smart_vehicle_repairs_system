@@ -1,11 +1,11 @@
 from django.contrib import admin
-from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog, QBOAccountMapping, QBOAccountMapping
+from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog, QBOAccountMapping
 
 @admin.register(QBOConfig)
 class QBOConfigAdmin(admin.ModelAdmin):
-    list_display = ('id', 'realm_id', 'is_sandbox', 'is_active', 'created_at', 'updated_at')
+    list_display = ('id', 'realm_id', 'company_name', 'is_sandbox', 'is_active', 'created_at', 'updated_at')
     list_filter = ('is_sandbox', 'is_active')
-    search_fields = ('realm_id', 'client_id')
+    search_fields = ('realm_id', 'client_id', 'company_name')
     readonly_fields = ('realm_id', 'created_at', 'updated_at')
 
 @admin.register(QBOToken)

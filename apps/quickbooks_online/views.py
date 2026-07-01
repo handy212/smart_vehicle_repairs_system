@@ -200,6 +200,8 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             if 'qbo_redirect_uri' in request.session:
                 del request.session['qbo_redirect_uri']
 
+            QuickBooksService.fetch_and_store_company_name(config)
+
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
             return redirect(build_qbo_integrations_url(qbo_status="connected"))
             
@@ -316,11 +318,6 @@ class QBOInboundSyncView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperU
 
                 messages.warning(request, message)
 
-            if request_wants_json(request):
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Inbound sync started.',
-                })
         except Exception as e:
             logger.error(f"Failed to trigger inbound sync: {e}", exc_info=True)
             if request_wants_json(request):
@@ -340,13 +337,26 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
         has_keys = config and config.client_id and config.client_secret
         last_sync = QBOSyncLog.objects.order_by('-finished_at').first()
 
+        company_name = config.company_name if config else None
+        if (
+            config
+            and config.is_active
+            and not company_name
+            and QuickBooksService.is_connected()
+        ):
+            from django.core.cache import cache
+
+            fetch_key = f'qbo:fetch-company-name:{config.pk}'
+            if cache.add(fetch_key, '1', 86400):
+                company_name = QuickBooksService.fetch_and_store_company_name(config)
+
         payload = {
             'is_connected': QuickBooksService.is_connected(),
             'has_keys': bool(has_keys),
             'realm_id': config.realm_id if config else None,
             'is_sandbox': config.is_sandbox if config else True,
             'last_sync': last_sync.finished_at if last_sync else None,
-            'company_name': config.company_name if config and hasattr(config, 'company_name') else None,
+            'company_name': company_name,
             'oauth_redirect_uri': get_qbo_redirect_uri(_infer_redirect_base(request)),
             'oauth_keys_environment': 'sandbox' if (config.is_sandbox if config else True) else 'production',
         }
@@ -416,8 +426,14 @@ class QBOWebhookView(View):
             logger.warning("QBO webhook rejected: quickbooks_webhook_token not configured")
             return JsonResponse({'error': 'Webhook verification token required'}, status=401)
         elif not signature:
-            logger.warning("QBO webhook: no signature and no verifier token — request rejected.")
-            return JsonResponse({'error': 'Invalid signature'}, status=401)
+            if getattr(django_settings, 'DEBUG', False):
+                logger.warning(
+                    "QBO webhook: accepting unsigned payload in DEBUG mode "
+                    "(configure quickbooks_webhook_token for signature verification)."
+                )
+            else:
+                logger.warning("QBO webhook: no signature and no verifier token — request rejected.")
+                return JsonResponse({'error': 'Invalid signature'}, status=401)
 
         # --- Parse payload ---
         try:
@@ -429,6 +445,8 @@ class QBOWebhookView(View):
         # { "eventNotifications": [ { "realmId": "...", "dataChangeEvent": { "entities": [...] } } ] }
         notifications = data.get('eventNotifications', [])
         queued = []
+
+        from .webhook_dispatch import queue_inbound_pull_for_entity
 
         for notification in notifications:
             realm_id = notification.get('realmId')
@@ -446,43 +464,8 @@ class QBOWebhookView(View):
                     # We don't auto-delete local records from QBO deletes
                     continue
 
-                # Queue targeted pull for changed entity types
-                if entity_name == 'invoice':
-                    from .tasks import task_pull_invoices_from_qbo
-                    task_pull_invoices_from_qbo.delay()
-                    queued.append('invoice')
-                elif entity_name in ('vendor', 'supplier'):
-                    from .tasks import task_pull_vendors_from_qbo
-                    task_pull_vendors_from_qbo.delay()
-                    queued.append('vendor')
-                elif entity_name == 'bill':
-                    from .tasks import task_pull_bills_from_qbo
-                    task_pull_bills_from_qbo.delay()
-                    queued.append('bill')
-                elif entity_name in ('billpayment', 'bill_payment'):
-                    from .tasks import task_pull_bill_payments_from_qbo
-                    task_pull_bill_payments_from_qbo.delay()
-                    queued.append('bill_payment')
-                elif entity_name == 'estimate':
-                    from .tasks import task_pull_estimates_from_qbo
-                    task_pull_estimates_from_qbo.delay()
-                    queued.append('estimate')
-                elif entity_name in ('creditmemo', 'credit_memo'):
-                    from .tasks import task_pull_credit_memos_from_qbo
-                    task_pull_credit_memos_from_qbo.delay()
-                    queued.append('credit_memo')
-                elif entity_name in ('vendorcredit', 'vendor_credit'):
-                    from .tasks import task_pull_vendor_credits_from_qbo
-                    task_pull_vendor_credits_from_qbo.delay()
-                    queued.append('vendor_credit')
-                elif entity_name == 'item':
-                    from .tasks import task_pull_items_from_qbo
-                    task_pull_items_from_qbo.delay()
-                    queued.append('item')
-                elif entity_name == 'payment':
-                    from .tasks import task_pull_invoices_from_qbo
-                    task_pull_invoices_from_qbo.delay()
-                    queued.append('payment')
+                if queue_inbound_pull_for_entity(entity_name):
+                    queued.append(entity_name)
 
         logger.info(f"QBO webhook processed. Queued syncs: {list(set(queued))}")
         # QBO expects a 200 response

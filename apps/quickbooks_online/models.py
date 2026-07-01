@@ -11,6 +11,11 @@ class QBOConfig(models.Model):
     client_id = models.CharField(max_length=255, help_text="QBO Client ID from App Settings")
     client_secret = models.CharField(max_length=255, help_text="QBO Client Secret")
     realm_id = models.CharField(max_length=50, blank=True, help_text="Company ID (filled after auth)")
+    company_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Connected QBO company display name (filled after auth)",
+    )
     is_sandbox = models.BooleanField(default=True, help_text="Use Sandbox environment")
     is_active = models.BooleanField(default=True)
     

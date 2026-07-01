@@ -386,6 +386,7 @@ QUICKBOOKS_OUTBOUND_QUEUE_DEPTH_LIMIT = env.int('QUICKBOOKS_OUTBOUND_QUEUE_DEPTH
 # entity in the queue. A 3-attempt retry at this timeout caps one sync call at
 # roughly 3x this value, instead of multi-minute stalls.
 QUICKBOOKS_QBO_HTTP_TIMEOUT = env.int('QUICKBOOKS_QBO_HTTP_TIMEOUT', default=35)
+QUICKBOOKS_WEBHOOK_DEBOUNCE_SECONDS = env.int('QUICKBOOKS_WEBHOOK_DEBOUNCE_SECONDS', default=30)
 
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.
