@@ -400,7 +400,7 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             cached_ready = cache.get(ready_cache_key) if ready_cache_key else None
             if cached_ready in ('0', '1'):
                 payload['api_ready'] = cached_ready == '1'
-            elif QuickBooksService.get_client() is not None:
+            elif QuickBooksService.get_client(deactivate_on_auth_failure=False) is not None:
                 payload['api_ready'] = True
                 if ready_cache_key:
                     cache.set(ready_cache_key, '1', 60)
