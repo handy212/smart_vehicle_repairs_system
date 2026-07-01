@@ -141,8 +141,33 @@ JOB_TYPE_DEFINITIONS = [
 ]
 
 
+# Default income category codes for predefined job types (amounts set on RevenueProduct.default_unit_price).
+JOB_TYPE_DEFAULT_REVENUE_PRODUCT = {
+    'vehicle_inspection': 'service_vehicle_assessment',
+    'diagnostic_inspection': 'service_diagnosis',
+    'electronic_diagnostics': 'service_diagnosis',
+    'paint_work': 'labor_spraying',
+    'body_repair': 'labor_body',
+    'accident_repair': 'labor_body',
+    'wheel_alignment': 'service_wheel_alignment',
+    'air_conditioning_service': 'labor_ac',
+    'electrical_repair': 'labor_electrical',
+}
+
+
 def seed_workflow_profiles_and_job_types(*, overwrite=False):
     from .job_types import JobType, WorkflowProfile
+
+    revenue_by_code = {}
+    try:
+        from apps.accounting.models import RevenueProduct
+
+        revenue_by_code = {
+            row.code: row
+            for row in RevenueProduct.objects.filter(is_active=True).only('id', 'code')
+        }
+    except Exception:
+        revenue_by_code = {}
 
     profiles_by_code = {}
     for profile_data in PROFILE_DEFINITIONS:
@@ -178,15 +203,22 @@ def seed_workflow_profiles_and_job_types(*, overwrite=False):
             'sets_insurance_flag': extras.get('sets_insurance_flag', False),
         }
         if overwrite:
-            _, created = JobType.objects.update_or_create(code=code, defaults=defaults)
+            job_type, created = JobType.objects.update_or_create(code=code, defaults=defaults)
             if created:
                 created_types += 1
             else:
                 updated_types += 1
         else:
-            _, created = JobType.objects.get_or_create(code=code, defaults=defaults)
+            job_type, created = JobType.objects.get_or_create(code=code, defaults=defaults)
             if created:
                 created_types += 1
+
+        revenue_code = JOB_TYPE_DEFAULT_REVENUE_PRODUCT.get(code)
+        if revenue_code and revenue_code in revenue_by_code:
+            product = revenue_by_code[revenue_code]
+            if overwrite or not job_type.default_revenue_product_id:
+                job_type.default_revenue_product = product
+                job_type.save(update_fields=['default_revenue_product', 'updated_at'])
 
     return {
         'profiles': len(profiles_by_code),

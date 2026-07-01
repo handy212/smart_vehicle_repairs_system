@@ -28,6 +28,7 @@ class JobTypeViewSet(viewsets.ModelViewSet):
         'workflow_profile',
         'default_service_type',
         'default_service_bundle',
+        'default_revenue_product',
     ).order_by('sort_order', 'name')
     permission_classes = [IsAuthenticated]
     lookup_field = 'code'

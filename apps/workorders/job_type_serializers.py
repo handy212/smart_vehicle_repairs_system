@@ -28,6 +28,16 @@ class WorkflowProfileSerializer(serializers.ModelSerializer):
 class JobTypeListSerializer(serializers.ModelSerializer):
     workflow_profile = WorkflowProfileSerializer(read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
+    default_revenue_product_name = serializers.CharField(
+        source='default_revenue_product.name',
+        read_only=True,
+        default=None,
+    )
+    default_revenue_product_code = serializers.CharField(
+        source='default_revenue_product.code',
+        read_only=True,
+        default=None,
+    )
 
     class Meta:
         model = JobType
@@ -48,6 +58,10 @@ class JobTypeListSerializer(serializers.ModelSerializer):
             'allows_bundle',
             'sets_warranty_flag',
             'sets_insurance_flag',
+            'default_revenue_product',
+            'default_revenue_product_name',
+            'default_revenue_product_code',
+            'default_service_fee',
         ]
 
 
@@ -60,6 +74,8 @@ class JobTypeSerializer(JobTypeListSerializer):
             'is_predefined',
             'default_service_type',
             'default_service_bundle',
+            'default_revenue_product',
+            'default_service_fee',
             'created_at',
             'updated_at',
         ]
@@ -84,6 +100,8 @@ class JobTypeWriteSerializer(serializers.ModelSerializer):
             'allows_bundle',
             'default_service_type',
             'default_service_bundle',
+            'default_revenue_product',
+            'default_service_fee',
             'sets_warranty_flag',
             'sets_insurance_flag',
         ]

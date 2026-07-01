@@ -21,8 +21,10 @@ export interface RevenueProduct {
   owner_account_label?: string;
   revenue_class: RevenueClass;
   default_billing_line_type: BillingLineType;
+  default_unit_price?: string;
   catalog_part?: number | null;
   catalog_part_number?: string | null;
+  catalog_part_selling_price?: string | null;
   roadside_service_type?: string | null;
   is_active: boolean;
   sort_order: number;
@@ -39,6 +41,7 @@ export type RevenueProductPayload = Partial<
     | "owner_account_label"
     | "revenue_class"
     | "default_billing_line_type"
+    | "default_unit_price"
     | "catalog_part"
     | "roadside_service_type"
     | "is_active"

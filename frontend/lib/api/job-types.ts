@@ -32,6 +32,8 @@ export interface JobTypeWriteInput {
   allows_bundle?: boolean;
   sets_warranty_flag?: boolean;
   sets_insurance_flag?: boolean;
+  default_revenue_product?: number | null;
+  default_service_fee?: string | null;
 }
 
 export interface JobType {
@@ -51,6 +53,10 @@ export interface JobType {
   allows_bundle: boolean;
   sets_warranty_flag: boolean;
   sets_insurance_flag: boolean;
+  default_revenue_product?: number | null;
+  default_revenue_product_name?: string | null;
+  default_revenue_product_code?: string | null;
+  default_service_fee?: string | null;
 }
 
 export interface JobTypeListResponse {

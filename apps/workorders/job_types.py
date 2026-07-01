@@ -5,6 +5,9 @@ Job types describe *what* work is being done (Brake Service, Warranty Repair, et
 Workflow profiles describe *how* the work order flows through the shop.
 """
 
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -94,6 +97,23 @@ class JobType(models.Model):
 
     sets_warranty_flag = models.BooleanField(default=False)
     sets_insurance_flag = models.BooleanField(default=False)
+
+    default_revenue_product = models.ForeignKey(
+        'accounting.RevenueProduct',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='default_job_types',
+        help_text='Default income category when invoicing this job type with no tasks/parts.',
+    )
+    default_service_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text='Optional flat fee override for this job type (otherwise uses income category default price).',
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

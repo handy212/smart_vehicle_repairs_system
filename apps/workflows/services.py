@@ -103,8 +103,7 @@ WORK_ORDER_TRANSITIONS = [
     ('quality_check', 'in_progress', 'Return to Repairs', 'Return to Repairs'),
     ('quality_check', 'discontinued_pending_bill', 'Discontinue Job', 'Discontinue'),
     ('discontinued_pending_bill', 'invoiced', 'Mark Invoiced', 'Mark Invoiced'),
-    ('completed', 'invoiced', 'Mark Invoiced', 'Mark Invoiced'),
-    ('completed', 'closed', 'Close Work Order', 'Close'),
+    ('completed', 'invoiced', 'Confirm Billing Complete', 'Mark Invoiced'),
     ('invoiced', 'closed', 'Close Work Order', 'Close'),
 ]
 

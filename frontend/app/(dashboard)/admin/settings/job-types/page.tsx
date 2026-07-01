@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -58,6 +59,8 @@ type JobTypeForm = {
   quality_check_required: boolean;
   sets_warranty_flag: boolean;
   sets_insurance_flag: boolean;
+  default_revenue_product: number | null;
+  default_service_fee: string;
 };
 
 const emptyForm: JobTypeForm = {
@@ -75,6 +78,8 @@ const emptyForm: JobTypeForm = {
   quality_check_required: true,
   sets_warranty_flag: false,
   sets_insurance_flag: false,
+  default_revenue_product: null,
+  default_service_fee: "",
 };
 
 export default function JobTypesAdminPage() {
@@ -120,6 +125,8 @@ export default function JobTypesAdminPage() {
         quality_check_required: jobType.quality_check_required,
         sets_warranty_flag: jobType.sets_warranty_flag,
         sets_insurance_flag: jobType.sets_insurance_flag,
+        default_revenue_product: jobType.default_revenue_product ?? null,
+        default_service_fee: jobType.default_service_fee ?? "",
       });
     } else {
       setEditing(null);
@@ -134,6 +141,8 @@ export default function JobTypesAdminPage() {
         ...form,
         workflow_profile: Number(form.workflow_profile),
         sort_order: Number(form.sort_order) || 0,
+        default_revenue_product: form.default_revenue_product,
+        default_service_fee: form.default_service_fee.trim() ? form.default_service_fee : null,
       };
       if (editing) {
         return jobTypesApi.update(editing.code, payload);
@@ -196,7 +205,12 @@ export default function JobTypesAdminPage() {
             Job Types
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage work order job types and their workflow profiles.
+            Manage work order job types, workflow profiles, and default billing for flat-fee jobs.
+            Configure income category prices under{" "}
+            <Link href="/accounting/revenue-products" className="text-primary hover:underline">
+              Accounting → Income categories
+            </Link>
+            .
           </p>
         </div>
         <PermissionGuard permission="manage_workorders">
@@ -349,6 +363,33 @@ export default function JobTypesAdminPage() {
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 rows={2}
               />
+            </div>
+            <div className="rounded-md border border-border bg-muted/30 p-3 space-y-3">
+              <p className="text-xs font-medium text-foreground">Default billing (flat-fee jobs)</p>
+              <p className="text-[11px] text-muted-foreground">
+                Used when invoicing before repair tasks exist — e.g. inspection-only, diagnostic, or custom
+                chargeable services. Hourly repair work still bills from service tasks.
+              </p>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Income category</Label>
+                <RevenueProductSelect
+                  value={form.default_revenue_product}
+                  onChange={(value) => setForm((f) => ({ ...f, default_revenue_product: value }))}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <Label htmlFor="jt-service-fee">Flat fee override (optional)</Label>
+                <Input
+                  id="jt-service-fee"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Uses income category default price when blank"
+                  value={form.default_service_fee}
+                  onChange={(e) => setForm((f) => ({ ...f, default_service_fee: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               {[

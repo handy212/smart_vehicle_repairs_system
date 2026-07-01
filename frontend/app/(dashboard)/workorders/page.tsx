@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
 import { serviceTaskTypesApi, type ServiceTaskType } from "@/lib/api/workorder-tasks";
@@ -1001,6 +1002,31 @@ function TaskTypesDialog({
         <DialogHeader>
           <DialogTitle>Manage Service Task Types</DialogTitle>
         </DialogHeader>
+        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">How billing fits together</p>
+          <ul className="mt-1.5 list-disc space-y-1 pl-4">
+            <li>
+              <strong>Income categories</strong> — define chargeable services (spraying, diagnosis, inspection) and
+              default prices in{" "}
+              <Link href="/accounting/revenue-products" className="text-primary hover:underline">
+                Accounting → Income categories
+              </Link>
+              .
+            </li>
+            <li>
+              <strong>Job types</strong> — pick which income category applies to flat-fee jobs (e.g. Vehicle Inspection)
+              in{" "}
+              <Link href="/admin/settings/job-types" className="text-primary hover:underline">
+                Settings → Job types
+              </Link>
+              .
+            </li>
+            <li>
+              <strong>Task types (here)</strong> — map hourly repair work on the Tasks tab: income category + default
+              labour rate per task (brake repair, spray work, alignment, etc.).
+            </li>
+          </ul>
+        </div>
         <div className="grid min-h-0 gap-4 md:grid-cols-[1fr_1.2fr]">
           <div className="space-y-3 rounded-md border border-border p-3 md:max-h-[calc(85vh-8rem)] md:overflow-y-auto">
             <Input
@@ -1026,7 +1052,8 @@ function TaskTypesDialog({
                 className="w-full"
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Default labour rate (per hour)</label>
               <Input
                 type="number"
                 step="0.01"
@@ -1034,13 +1061,13 @@ function TaskTypesDialog({
                 value={form.default_labor_rate}
                 onChange={(event) => setForm((current) => ({ ...current, default_labor_rate: event.target.value }))}
               />
-              <Input
-                type="number"
-                placeholder="Sort order"
-                value={form.sort_order}
-                onChange={(event) => setForm((current) => ({ ...current, sort_order: Number(event.target.value) || 0 }))}
-              />
             </div>
+            <Input
+              type="number"
+              placeholder="Sort order"
+              value={form.sort_order}
+              onChange={(event) => setForm((current) => ({ ...current, sort_order: Number(event.target.value) || 0 }))}
+            />
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

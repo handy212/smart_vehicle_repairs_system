@@ -1191,6 +1191,11 @@ class ServiceTaskCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {'revenue_product': {'required': False, 'allow_null': True}}
 
     def create(self, validated_data):
+        task_type_code = validated_data.get('task_type')
+        if validated_data.get('labor_rate') in (None, '') and task_type_code:
+            task_type = ServiceTaskType.objects.filter(code=task_type_code, is_active=True).first()
+            if task_type and task_type.default_labor_rate and task_type.default_labor_rate > 0:
+                validated_data['labor_rate'] = task_type.default_labor_rate
         if validated_data.get('revenue_product') is None:
             from apps.billing.revenue_resolution import revenue_product_from_task_type_code
 

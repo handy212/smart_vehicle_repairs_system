@@ -21,6 +21,19 @@ from apps.workorders.models import WorkOrder
 class ProfileBillingIntegrationTests(TestCase):
     def setUp(self):
         seed_workflow_profiles_and_job_types(overwrite=True)
+        from apps.accounting.models import RevenueProduct
+
+        RevenueProduct.objects.get_or_create(
+            code='service_vehicle_assessment',
+            defaults={
+                'name': 'Vehicle Assessment',
+                'owner_account_code': '680',
+                'owner_account_label': 'Vehicle Assessment Sales',
+                'revenue_class': 'service',
+                'default_billing_line_type': 'other',
+                'is_active': True,
+            },
+        )
         self.manager = User.objects.create_user(
             username='profile_bill_mgr',
             email='profile_bill_mgr@example.com',
@@ -87,6 +100,35 @@ class ProfileBillingIntegrationTests(TestCase):
         self.assertEqual(len(payloads), 1)
         self.assertEqual(payloads[0]['unit_price'], Decimal('85.00'))
         self.assertIn('Vehicle Inspection', payloads[0]['description'])
+
+    def test_job_type_default_revenue_product_uses_default_unit_price(self):
+        from apps.accounting.models import RevenueProduct
+
+        product, _ = RevenueProduct.objects.get_or_create(
+            code='service_vehicle_assessment',
+            defaults={
+                'name': 'Vehicle Assessment',
+                'owner_account_code': '680',
+                'owner_account_label': 'Vehicle Assessment Sales',
+                'revenue_class': 'service',
+                'default_billing_line_type': 'other',
+                'is_active': True,
+                'default_unit_price': Decimal('95.00'),
+            },
+        )
+        product.default_unit_price = Decimal('95.00')
+        product.save(update_fields=['default_unit_price', 'updated_at'])
+
+        self.inspection_job_type.default_revenue_product = product
+        self.inspection_job_type.default_service_fee = None
+        self.inspection_job_type.save(update_fields=['default_revenue_product', 'default_service_fee', 'updated_at'])
+
+        wo = self._completed_inspection_work_order(estimated_total=Decimal('0'))
+        wo.estimated_labor_cost = Decimal('0')
+        wo.save(update_fields=['estimated_labor_cost', 'updated_at'])
+
+        payloads = build_work_order_invoice_line_payloads(wo)
+        self.assertEqual(payloads[0]['unit_price'], Decimal('95.00'))
 
     def test_inspection_only_invoice_preview_prefers_catalog_part_price(self):
         from apps.accounting.models import RevenueProduct

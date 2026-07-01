@@ -11,9 +11,11 @@ from apps.vehicles.models import Vehicle
 from apps.diagnosis.models import Diagnosis, RepairRecommendation
 from apps.accounts.permission_models import Role, Permission
 from apps.inspections.models import InspectionTemplate
+from apps.workorders.job_type_seed import seed_workflow_profiles_and_job_types
 
 class WorkOrderWorkflowTests(TestCase):
     def setUp(self):
+        seed_workflow_profiles_and_job_types(overwrite=True)
         self.client = APIClient()
         
         # 1. Setup Users

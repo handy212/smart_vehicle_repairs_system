@@ -151,16 +151,11 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
                 order_idx += 1
 
     if order_idx == 0:
-        from apps.billing.profile_invoice_lines import build_profile_default_invoice_line_payloads
-        from apps.workorders.workflow_profile_service import allows_simplified_completion
+        from apps.billing.work_order_billing_defaults import build_job_type_default_invoice_line_payloads
 
-        profile_payloads = (
-            build_profile_default_invoice_line_payloads(wo)
-            if allows_simplified_completion(wo)
-            else []
-        )
-        if profile_payloads:
-            for idx, profile_payload in enumerate(profile_payloads):
+        default_payloads = build_job_type_default_invoice_line_payloads(wo)
+        if default_payloads:
+            for idx, profile_payload in enumerate(default_payloads):
                 profile_payload['order'] = idx
                 payloads.append(profile_payload)
         else:
