@@ -191,7 +191,7 @@ export default function PaymentDetailPage() {
                 {isOpeningPrint ? "Opening print..." : "Print receipt"}
               </DropdownMenuItem>
 
-              {isQboConnected && payment.qbo_sync_status && (
+              {isQboConnected && isQboCanSync && (
                 <>
                   <DropdownMenuItem onClick={handleQBOSync} disabled={isSyncing || isClearing}>
                     <Database className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
@@ -225,7 +225,7 @@ export default function PaymentDetailPage() {
           status={payment.qbo_sync_status}
           error={payment.qbo_sync_error}
           connected={isQboConnected}
-              connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
+          connectionIssue={!isQboCanSync ? qboConnectionIssue : undefined}
           onRetry={isQboCanSync ? handleQBOSync : undefined}
           onClearMapping={isQboCanSync ? handleQboClearMapping : undefined}
           isRetrying={isSyncing}

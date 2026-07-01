@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 from .models import QBOConfig, QBOToken, QBOSyncLog
 from .services import QuickBooksService, get_qbo_redirect_uri, _infer_redirect_base
 from .tasks import task_full_inbound_sync
-from .oauth_state import persist_oauth_state, resolve_oauth_state, consume_oauth_state
+from .oauth_state import persist_oauth_state, resolve_oauth_state, consume_oauth_state, invalidate_oauth_state
 import logging
 
 logger = logging.getLogger(__name__)
@@ -151,6 +151,11 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
         if not code or not realm_id:
             messages.error(request, "Invalid QuickBooks callback parameters.")
             return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
+
+        if not str(realm_id).isdigit():
+            logger.warning('QBO OAuth callback rejected: invalid realmId format (%s)', realm_id)
+            messages.error(request, "Invalid QuickBooks company ID.")
+            return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
             
         saved_state = request.session.get('qbo_state')
         redirect_uri, oauth_state = resolve_oauth_state(state, request.user, saved_state)
@@ -160,6 +165,7 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
                 state,
                 saved_state,
             )
+            invalidate_oauth_state(state)
             messages.error(request, "QuickBooks authorization failed due to an invalid session state. Please try connecting again.")
             return redirect(build_qbo_integrations_url(qbo_status="invalid_state"))
 
@@ -210,6 +216,9 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
 
             consume_oauth_state(oauth_state)
 
+            from .status_cache import clear_api_ready_cache
+            clear_api_ready_cache(config.pk)
+
             QuickBooksService.fetch_and_store_company_name(config)
 
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
@@ -217,6 +226,7 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
             
         except Exception as e:
             logger.error(f"Error during QBO callback: {e}")
+            invalidate_oauth_state(state)
             messages.error(request, "Error connecting to QuickBooks.")
             return redirect(build_qbo_integrations_url(qbo_status="error"))
 
@@ -382,14 +392,25 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
         payload['connection_issue'] = None
         if payload['is_connected']:
             from apps.quickbooks_online.bulk_outbound_sync import count_pending_outbound_syncs
+            from django.core.cache import cache
+            from apps.quickbooks_online.status_cache import api_ready_cache_key as build_api_ready_cache_key
+
             payload['outbound_pending'] = count_pending_outbound_syncs()
-            if QuickBooksService.get_client() is not None:
+            ready_cache_key = build_api_ready_cache_key(config.pk) if config else None
+            cached_ready = cache.get(ready_cache_key) if ready_cache_key else None
+            if cached_ready in ('0', '1'):
+                payload['api_ready'] = cached_ready == '1'
+            elif QuickBooksService.get_client() is not None:
                 payload['api_ready'] = True
+                if ready_cache_key:
+                    cache.set(ready_cache_key, '1', 60)
             else:
                 payload['connection_issue'] = (
                     'QuickBooks is linked but the live API session is unavailable. '
                     'Reconnect under Admin → Integrations, or refresh the OAuth token.'
                 )
+                if ready_cache_key:
+                    cache.set(ready_cache_key, '0', 60)
         elif has_keys:
             payload['connection_issue'] = 'QuickBooks credentials are saved but the company is not connected.'
 
@@ -413,11 +434,10 @@ class QBOWebhookView(View):
     """
 
     def post(self, request):
-        import hashlib
-        import hmac
         import json
 
-        # --- Signature verification ---
+        from .webhook_security import webhook_signature_accepted
+
         signature = request.headers.get('intuit-signature', '')
         payload_bytes = request.body
 
@@ -429,29 +449,16 @@ class QBOWebhookView(View):
 
         from django.conf import settings as django_settings
 
-        if webhook_token:
-            expected = hmac.new(
-                webhook_token.encode('utf-8'),
-                payload_bytes,
-                hashlib.sha256
-            ).digest()
-            import base64
-            expected_b64 = base64.b64encode(expected).decode('utf-8')
-            if not hmac.compare_digest(signature, expected_b64):
-                logger.warning("QBO webhook: invalid signature — request rejected.")
-                return JsonResponse({'error': 'Invalid signature'}, status=401)
-        elif getattr(django_settings, 'REQUIRE_WEBHOOK_SIGNATURES', False):
-            logger.warning("QBO webhook rejected: quickbooks_webhook_token not configured")
-            return JsonResponse({'error': 'Webhook verification token required'}, status=401)
-        elif not signature:
-            if getattr(django_settings, 'DEBUG', False):
-                logger.warning(
-                    "QBO webhook: accepting unsigned payload in DEBUG mode "
-                    "(configure quickbooks_webhook_token for signature verification)."
-                )
-            else:
-                logger.warning("QBO webhook: no signature and no verifier token — request rejected.")
-                return JsonResponse({'error': 'Invalid signature'}, status=401)
+        accepted, rejection_reason = webhook_signature_accepted(
+            payload_bytes=payload_bytes,
+            signature_header=signature,
+            webhook_token=webhook_token,
+            require_signatures=getattr(django_settings, 'REQUIRE_WEBHOOK_SIGNATURES', False),
+            debug=getattr(django_settings, 'DEBUG', False),
+        )
+        if not accepted:
+            status_code = 401 if rejection_reason in ('Invalid signature', 'Missing signature') else 401
+            return JsonResponse({'error': rejection_reason or 'Invalid signature'}, status=status_code)
 
         # --- Parse payload ---
         try:

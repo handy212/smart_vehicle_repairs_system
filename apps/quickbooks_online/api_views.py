@@ -541,7 +541,7 @@ class QBOOwnerCoaSetupView(QBOConnectedMixin, APIView):
         })
 
 
-class QBORefreshCompanyView(APIView):
+class QBORefreshCompanyView(QBOConnectedMixin, APIView):
     """Refresh connected company display name from QBO CompanyInfo."""
 
     permission_classes = [
@@ -551,11 +551,9 @@ class QBORefreshCompanyView(APIView):
     ]
 
     def post(self, request):
-        if not QuickBooksService.is_connected():
-            return Response(
-                {'detail': 'QuickBooks is not connected.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        blocked = self.ensure_connected()
+        if blocked:
+            return blocked
         company_name = QuickBooksService.fetch_and_store_company_name()
         if not company_name:
             return Response(

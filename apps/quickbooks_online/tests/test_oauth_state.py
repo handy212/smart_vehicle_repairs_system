@@ -67,6 +67,20 @@ class OAuthStateTests(TestCase):
         redirect_uri, again = resolve_oauth_state('state-use-once', self.user, None)
         self.assertIsNone(redirect_uri)
 
+    def test_persist_replaces_existing_unconsumed_state(self):
+        persist_oauth_state(
+            state_token='state-old',
+            redirect_uri='https://app.example.com/api/quickbooks/callback/',
+            user=self.user,
+        )
+        persist_oauth_state(
+            state_token='state-new',
+            redirect_uri='https://app.example.com/api/quickbooks/callback/',
+            user=self.user,
+        )
+        self.assertEqual(QBOOAuthState.objects.filter(user=self.user).count(), 1)
+        self.assertTrue(QBOOAuthState.objects.filter(state_token='state-new').exists())
+
     def test_cleanup_expired(self):
         QBOOAuthState.objects.create(
             state_token='old',

@@ -405,17 +405,22 @@ class QuickBooksService:
                 token.refresh_token_expires_at = locked.refresh_token_expires_at
 
             logger.info("Successfully refreshed QBO token.")
+            from .status_cache import clear_api_ready_cache
+            clear_api_ready_cache(config.pk)
             return True
         except Exception as e:
             logger.error(f"Failed to refresh QBO token: {e}")
             if "invalid_grant" in str(e).lower():
                 cls._deactivate_config(config, 'invalid_grant on token refresh')
+            from .status_cache import clear_api_ready_cache
+            clear_api_ready_cache(config.pk)
             return False
 
     @staticmethod
     def disconnect():
         """Disconnects the app from QBO."""
         config = QuickBooksService.get_config()
+        config_id = config.pk if config else None
         if config and hasattr(config, 'token'):
             auth_client = QuickBooksService.get_auth_client(config)
             try:
@@ -428,6 +433,9 @@ class QuickBooksService:
             config.company_name = ''
             config.is_active = False
             config.save(update_fields=['company_name', 'is_active', 'updated_at'])
+
+        from .status_cache import clear_api_ready_cache
+        clear_api_ready_cache(config_id)
 
     @classmethod
     def _save_qb(cls, qb_obj, client, *, max_retries=3):

@@ -25,7 +25,7 @@ export function QuickBooksOnlineCard() {
   });
 
   const isLinked = status?.is_connected ?? false;
-  const isApiReady = status?.api_ready !== false;
+  const isApiReady = status?.api_ready ?? false;
   const syncDisabled = !isLinked || !isApiReady;
 
   const disconnectMutation = useMutation({
