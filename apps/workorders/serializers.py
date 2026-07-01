@@ -11,6 +11,9 @@ from .models import (
     WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart, 
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
 )
+from .job_type_serializers import JobTypeListSerializer
+from .job_types import JobType
+from .workflow_profile_service import resolve_job_type_for_create, apply_job_type_on_create
 from django.contrib.auth import get_user_model
 from apps.customers.serializers import CustomerListSerializer
 from apps.vehicles.serializers import VehicleListSerializer
@@ -279,6 +282,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     current_inspection_completion_percentage = serializers.SerializerMethodField()
     current_quote_stage = serializers.SerializerMethodField()
     current_quote_stage_display = serializers.SerializerMethodField()
+    job_type_detail = JobTypeListSerializer(source='job_type', read_only=True)
+    workflow_profile_code = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -303,10 +308,11 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'actual_parts_cost', 'actual_total', 'odometer_in', 'odometer_out',
             'quality_check_required', 'quality_check_completed', 'quality_check_by',
             'quality_check_at', 'quality_check_notes', 'quality_check_passed',
-            'created_by', 'created_by_name', 'is_warranty', 'is_recall',
+            'created_by', 'created_by_name', 'is_warranty', 'is_recall', 'is_insurance_claim',
             'is_customer_waiting', 'is_warranty_rework', 'related_work_order',
             'related_work_order_detail', 'rework_work_orders', 'warranty_reason',
-            'maintenance_type', 'service_type', 'service_bundle',
+            'maintenance_type', 'service_type', 'service_bundle', 'job_type', 'job_type_detail',
+            'workflow_profile_code',
             'is_overdue', 'days_in_shop', 'is_approved',
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
             'estimate_summary', 'invoice_summary', 'related_invoices', 'gate_pass_status',
@@ -368,6 +374,12 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_current_quote_stage_display(self, obj):
         return obj.get_current_quote_stage_display()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_workflow_profile_code(self, obj):
+        from .workflow_profile_service import get_workflow_profile
+        profile = get_workflow_profile(obj)
+        return profile.code if profile else None
 
     def _get_estimate(self, obj):
         estimate = getattr(obj, 'estimate', None)
@@ -505,6 +517,12 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
 
 class WorkOrderCreateSerializer(serializers.ModelSerializer):
     """Create work order with validation"""
+
+    job_type_code = serializers.SlugField(
+        write_only=True,
+        required=False,
+        help_text='Job type code (e.g. brake_service). Preferred over legacy maintenance_type.',
+    )
     
     class Meta:
         model = WorkOrder
@@ -521,10 +539,11 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'estimated_labor_hours', 'estimated_labor_cost',
             'estimated_parts_cost',
             'odometer_in',
-            'requires_approval', 'is_warranty', 'is_recall',
+            'requires_approval', 'is_warranty', 'is_recall', 'is_insurance_claim',
             'is_customer_waiting', 'quality_check_required',
             'is_warranty_rework', 'related_work_order', 'warranty_reason',
-            'maintenance_type', 'service_type', 'service_bundle'
+            'maintenance_type', 'service_type', 'service_bundle',
+            'job_type', 'job_type_code',
         ]
     
     def validate(self, data):
@@ -684,6 +703,33 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                     or brought_by_contact.job_title
                     or 'Business Contact'
                 )
+
+        job_type = resolve_job_type_for_create(
+            job_type=data.get('job_type'),
+            job_type_code=self.initial_data.get('job_type_code'),
+            maintenance_type=data.get('maintenance_type'),
+        )
+        if job_type is None:
+            raise serializers.ValidationError({
+                'job_type': 'A valid job type is required. Run seed_job_types or choose an active job type.',
+            })
+        data['job_type'] = job_type
+
+        if job_type.allows_bundle:
+            if not data.get('service_bundle') and not data.get('service_type'):
+                if job_type.workflow_profile.apply_service_bundle_on_create:
+                    raise serializers.ValidationError({
+                        'service_bundle': 'A service package is required for this job type.',
+                    })
+        elif data.get('service_bundle') or data.get('service_type'):
+            if job_type.code != 'routine_maintenance':
+                pass  # allow optional service_type link for scheduling on repair jobs
+
+        # Legacy maintenance_type for backwards-compatible clients
+        if job_type.code == 'routine_maintenance' or job_type.workflow_profile.code == 'routine_fast_track':
+            data['maintenance_type'] = 'routine'
+        else:
+            data['maintenance_type'] = data.get('maintenance_type') or 'general'
         
         return data
 
@@ -733,15 +779,10 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             if warranty_reason:
                 validated_data['warranty_reason'] = warranty_reason
         
-        # Create work order
-        if (
-            validated_data.get('maintenance_type') == 'routine'
-            and (validated_data.get('service_bundle') or validated_data.get('service_type'))
-        ):
-            validated_data['requires_approval'] = False
-            validated_data['quality_check_required'] = False
-        else:
-            validated_data.setdefault('requires_approval', True)
+        # Create work order — job type defaults applied after save
+        validated_data.setdefault('requires_approval', True)
+        job_type = validated_data.get('job_type')
+        validated_data.pop('job_type_code', None)
         work_order = WorkOrder.objects.create(**validated_data)
         
         # Add assigned technicians
@@ -797,16 +838,13 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             except WorkOrder.DoesNotExist:
                 pass  # Related work order not found, skip alert creation
         
-        # Apply service bundle if applicable
-        from .services import apply_service_bundle, prepare_routine_service_workflow
-        apply_service_bundle(work_order)
+        # Apply job type profile (bundle + fast-track)
+        apply_job_type_on_create(
+            work_order,
+            job_type,
+            user=request.user if request and request.user.is_authenticated else None,
+        )
         work_order.refresh_from_db()
-        if work_order.maintenance_type == 'routine' and work_order.service_bundle_id:
-            prepare_routine_service_workflow(
-                work_order,
-                user=request.user if request and request.user.is_authenticated else None,
-            )
-            work_order.refresh_from_db()
         
         return work_order
 
@@ -832,7 +870,7 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'quality_check_required', 'quality_check_completed',
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'is_customer_waiting',
-            'maintenance_type', 'service_type', 'service_bundle'
+            'maintenance_type', 'service_type', 'service_bundle', 'job_type'
         ]
 
     def _validate_branch_technician(self, technician, work_order, field_name):

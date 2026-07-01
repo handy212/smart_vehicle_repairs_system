@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     WorkOrderViewSet, ServiceTaskViewSet, ServiceTaskTypeViewSet, WorkOrderPartViewSet,
     TechnicianTimeLogViewSet, WorkOrderNoteViewSet, WorkOrderPhotoViewSet,
-    PublicWorkOrderViewSet
+    PublicWorkOrderViewSet, JobTypeViewSet, WorkflowProfileViewSet,
 )
 
 router = DefaultRouter()
@@ -15,6 +15,8 @@ router.register(r'time-logs', TechnicianTimeLogViewSet, basename='techniciantime
 router.register(r'notes', WorkOrderNoteViewSet, basename='workordernote')
 router.register(r'photos', WorkOrderPhotoViewSet, basename='workorderphoto')
 router.register(r'public', PublicWorkOrderViewSet, basename='public-workorder')
+router.register(r'job-types', JobTypeViewSet, basename='jobtype')
+router.register(r'workflow-profiles', WorkflowProfileViewSet, basename='workflowprofile')
 
 urlpatterns = [
     path('', include(router.urls)),

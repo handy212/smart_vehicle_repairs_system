@@ -269,17 +269,15 @@ export default function WorkOrderOverviewTab({
               {getServiceCoordinatorName()}
             </span>
           </SummaryItem>
+          <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
+            <Badge variant="secondary" className="text-xs font-normal">
+              {getJobTypeLabel(wo.maintenance_type, wo)}
+            </Badge>
+          </SummaryItem>
           {isRoutine && (
-            <>
-              <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
-                <Badge variant="secondary" className="text-xs font-normal">
-                  {getJobTypeLabel(wo.maintenance_type)}
-                </Badge>
-              </SummaryItem>
-              <SummaryItem label={SERVICE_PACKAGE_LABEL}>
-                <span className="font-medium">{servicePackageName ?? "—"}</span>
-              </SummaryItem>
-            </>
+            <SummaryItem label={SERVICE_PACKAGE_LABEL}>
+              <span className="font-medium">{servicePackageName ?? "—"}</span>
+            </SummaryItem>
           )}
         </CardContent>
       </Card>

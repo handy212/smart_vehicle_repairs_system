@@ -15,6 +15,22 @@ from apps.appointments.models import Appointment
 
 logger = logging.getLogger(__name__)
 
+from .job_types import JobType, WorkflowProfile  # noqa: E402
+
+__all__ = [
+    'WorkflowConfiguration',
+    'WorkflowProfile',
+    'JobType',
+    'WorkOrder',
+    'ServiceTask',
+    'ServiceTaskType',
+    'WorkOrderPart',
+    'WorkOrderNote',
+    'WorkOrderPhoto',
+    'TechnicianTimeLog',
+    'RepeatVisitAlert',
+]
+
 
 class WorkflowConfiguration(models.Model):
     """
@@ -313,6 +329,10 @@ class WorkOrder(models.Model):
     # Flags
     is_warranty = models.BooleanField(default=False)
     is_recall = models.BooleanField(default=False)
+    is_insurance_claim = models.BooleanField(
+        default=False,
+        help_text='Insurance or accident-repair claim context for this work order',
+    )
     is_customer_waiting = models.BooleanField(default=False)
     
     # Repeat Visit / Warranty Rework Tracking
@@ -359,6 +379,14 @@ class WorkOrder(models.Model):
         blank=True,
         related_name='work_orders',
         help_text="Service bundle associated with this work order"
+    )
+    job_type = models.ForeignKey(
+        JobType,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='work_orders',
+        help_text="Configurable job type (e.g. Brake Service, Routine Maintenance)",
     )
 
     BROUGHT_BY_TYPE_CHOICES = [
@@ -610,9 +638,11 @@ class WorkOrder(models.Model):
         if blocked_message:
             return False, blocked_message
 
-        # Routine maintenance check-in: skip inspection/intake/diagnosis pipeline
+        # Fast-track check-in: skip inspection/intake/diagnosis pipeline (routine profile)
+        from .workflow_profile_service import uses_fast_track_profile
+
         if (
-            self.maintenance_type == 'routine'
+            uses_fast_track_profile(self)
             and self.service_bundle_id
             and self.status == 'draft'
             and new_status == 'approved'
@@ -1724,8 +1754,9 @@ class WorkOrder(models.Model):
         """
         # Auto-advance to quality_check when all tasks completed
         if self.status == 'in_progress':
-            if self.tasks.exists():
-                all_tasks_completed = self.tasks.exclude(status__in=['completed', 'skipped']).count() == 0
+            mechanical_tasks = self.tasks.filter(is_workflow_task=False)
+            if mechanical_tasks.exists():
+                all_tasks_completed = mechanical_tasks.exclude(status__in=['completed', 'skipped']).count() == 0
                 if all_tasks_completed and not self.quality_check_completed:
                     try:
                         # Only auto-advance if quality check is required

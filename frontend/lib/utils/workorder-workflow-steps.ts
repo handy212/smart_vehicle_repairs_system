@@ -87,13 +87,24 @@ export const ROUTINE_STATUS_ORDER: Record<string, number> = {
 };
 
 export function isRoutineMaintenanceWorkOrder(
-  workOrder?: { maintenance_type?: string } | null
+  workOrder?: {
+    maintenance_type?: string;
+    workflow_profile_code?: string | null;
+    job_type_detail?: { workflow_profile?: { code?: string } } | null;
+  } | null
 ): boolean {
+  if (workOrder?.workflow_profile_code === "routine_fast_track") return true;
+  const profileCode = workOrder?.job_type_detail?.workflow_profile?.code;
+  if (profileCode === "routine_fast_track") return true;
   return workOrder?.maintenance_type === "routine";
 }
 
 export function getWorkflowStepsForWorkOrder(
-  workOrder?: { maintenance_type?: string } | null
+  workOrder?: {
+    maintenance_type?: string;
+    workflow_profile_code?: string | null;
+    job_type_detail?: { workflow_profile?: { code?: string } } | null;
+  } | null
 ): WorkflowStep[] {
   return isRoutineMaintenanceWorkOrder(workOrder) ? ROUTINE_WORKFLOW_STEPS : WORKFLOW_STEPS;
 }
@@ -113,10 +124,15 @@ export function getWorkflowStepIndex(
 
 export function getWorkflowStepIndexForWorkOrder(
   status: string,
-  workOrder?: { maintenance_type?: string; diagnosis_status?: string | null } | null
+  workOrder?: {
+    maintenance_type?: string;
+    diagnosis_status?: string | null;
+    workflow_profile_code?: string | null;
+    job_type_detail?: { workflow_profile?: { code?: string } } | null;
+  } | null
 ): number {
   return getWorkflowStepIndex(status, {
     diagnosisStatus: workOrder?.diagnosis_status,
-    maintenanceType: workOrder?.maintenance_type,
+    maintenanceType: isRoutineMaintenanceWorkOrder(workOrder) ? "routine" : workOrder?.maintenance_type,
   });
 }
