@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
@@ -67,3 +68,22 @@ class CompanyNameTests(TestCase):
         self.assertIsNone(client)
         self.config.refresh_from_db()
         self.assertFalse(self.config.is_active)
+
+    def test_status_probe_does_not_deactivate_when_refresh_token_expired(self):
+        user = get_user_model().objects.create_user(
+            username='qbo-status-user',
+            password='test-pass',
+        )
+        self.client.force_login(user)
+        self.config.token.refresh_token_expires_at = timezone.now() - timedelta(minutes=1)
+        self.config.token.save(update_fields=['refresh_token_expires_at'])
+
+        response = self.client.get('/api/quickbooks/status/', HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['is_connected'])
+        self.assertFalse(payload['api_ready'])
+        self.assertIsNotNone(payload['connection_issue'])
+        self.config.refresh_from_db()
+        self.assertTrue(self.config.is_active)
