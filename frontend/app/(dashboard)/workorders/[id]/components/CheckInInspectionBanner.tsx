@@ -16,6 +16,7 @@ import { inspectionsApi } from "@/lib/api/inspections";
 import { workordersApi, WorkOrder } from "@/lib/api/workorders";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
 import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface CheckInInspectionBannerProps {

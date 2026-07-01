@@ -595,41 +595,48 @@ class WorkOrder(models.Model):
         }
 
         if new_status in {'quality_check', 'completed'}:
-            incomplete_tasks = self.get_incomplete_mechanical_tasks()
-            if new_status == 'quality_check':
-                if not self.tasks.filter(is_workflow_task=False).exists():
-                    blockers['errors'].append('Create at least one mechanical repair task before requesting quality check.')
-                    blockers['next_step'] = 'Add repair tasks from the approved diagnosis recommendations.'
-                elif incomplete_tasks.exists():
-                    blockers['errors'].append('Complete or skip all mechanical tasks before requesting quality check.')
-                    blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
-            elif incomplete_tasks.exists():
-                blockers['errors'].append('Complete or skip all mechanical tasks before completing the work order.')
-                blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+            from .workflow_profile_service import allows_simplified_completion
 
-            blockers['blocking_tasks'] = [
-                {
-                    'id': task.id,
-                    'description': task.description,
-                    'status': task.get_status_display(),
-                    'assigned_to': task.assigned_to.get_full_name() if task.assigned_to else '',
-                }
-                for task in incomplete_tasks.order_by('sequence_order', 'id')[:10]
-            ]
+            skip_mechanical_checks = new_status == 'completed' and allows_simplified_completion(self)
+            if not skip_mechanical_checks:
+                incomplete_tasks = self.get_incomplete_mechanical_tasks()
+                if new_status == 'quality_check':
+                    if not self.tasks.filter(is_workflow_task=False).exists():
+                        blockers['errors'].append('Create at least one mechanical repair task before requesting quality check.')
+                        blockers['next_step'] = 'Add repair tasks from the approved diagnosis recommendations.'
+                    elif incomplete_tasks.exists():
+                        blockers['errors'].append('Complete or skip all mechanical tasks before requesting quality check.')
+                        blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+                elif incomplete_tasks.exists():
+                    blockers['errors'].append('Complete or skip all mechanical tasks before completing the work order.')
+                    blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+
+                blockers['blocking_tasks'] = [
+                    {
+                        'id': task.id,
+                        'description': task.description,
+                        'status': task.get_status_display(),
+                        'assigned_to': task.assigned_to.get_full_name() if task.assigned_to else '',
+                    }
+                    for task in incomplete_tasks.order_by('sequence_order', 'id')[:10]
+                ]
 
         if new_status == 'completed':
-            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
-            blockers['blocking_parts'] = [
-                {
-                    'id': part.id,
-                    'part_name': part.part_name,
-                    'status': part.get_status_display(),
-                }
-                for part in unresolved_parts.order_by('created_at', 'id')[:10]
-            ]
-            if unresolved_parts.exists():
-                blockers['errors'].append('Install required parts or formally return unused parts before completing.')
-                blockers['next_step'] = blockers['next_step'] or 'Open the Parts tab and resolve each required part.'
+            from .workflow_profile_service import allows_simplified_completion
+
+            if not allows_simplified_completion(self):
+                unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+                blockers['blocking_parts'] = [
+                    {
+                        'id': part.id,
+                        'part_name': part.part_name,
+                        'status': part.get_status_display(),
+                    }
+                    for part in unresolved_parts.order_by('created_at', 'id')[:10]
+                ]
+                if unresolved_parts.exists():
+                    blockers['errors'].append('Install required parts or formally return unused parts before completing.')
+                    blockers['next_step'] = blockers['next_step'] or 'Open the Parts tab and resolve each required part.'
 
         return blockers
 
@@ -838,27 +845,32 @@ class WorkOrder(models.Model):
                 errors.append("Work order must be approved")
         
         if new_status == 'completed':
-            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
-            if incomplete_tasks.exists():
-                errors.append("All mechanical tasks must be completed or skipped")
+            from .workflow_profile_service import allows_simplified_completion
 
-            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
-            if unresolved_parts.exists():
-                errors.append(f"{unresolved_parts.count()} part(s) must be installed or formally returned")
+            if allows_simplified_completion(self):
+                pass  # Profile-specific prerequisites checked in can_transition_to
+            else:
+                incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+                if incomplete_tasks.exists():
+                    errors.append("All mechanical tasks must be completed or skipped")
 
-            returned_without_reason = self.parts.filter(status='returned').filter(
-                Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
-            )
-            if returned_without_reason.exists():
-                errors.append("Every returned part must include a return reason")
+                unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+                if unresolved_parts.exists():
+                    errors.append(f"{unresolved_parts.count()} part(s) must be installed or formally returned")
 
-            tasks_missing_labor = [
-                task.description
-                for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                if task.calculated_actual_hours <= 0
-            ]
-            if tasks_missing_labor:
-                errors.append("Actual labor hours are required for every completed mechanical task")
+                returned_without_reason = self.parts.filter(status='returned').filter(
+                    Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
+                )
+                if returned_without_reason.exists():
+                    errors.append("Every returned part must include a return reason")
+
+                tasks_missing_labor = [
+                    task.description
+                    for task in self.tasks.filter(is_workflow_task=False, status='completed')
+                    if task.calculated_actual_hours <= 0
+                ]
+                if tasks_missing_labor:
+                    errors.append("Actual labor hours are required for every completed mechanical task")
         
         if new_status == 'invoiced':
             if not self.odometer_out:

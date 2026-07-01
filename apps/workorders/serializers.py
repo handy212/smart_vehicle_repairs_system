@@ -65,6 +65,8 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     current_inspection_completion_percentage = serializers.SerializerMethodField()
     current_quote_stage = serializers.SerializerMethodField()
     current_quote_stage_display = serializers.SerializerMethodField()
+    job_type_detail = JobTypeListSerializer(source='job_type', read_only=True)
+    workflow_profile_code = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -84,6 +86,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'gate_pass_status', 'current_inspection_status',
             'current_inspection_status_display', 'current_inspection_completion_percentage',
             'current_quote_stage', 'current_quote_stage_display',
+            'maintenance_type', 'job_type', 'job_type_detail', 'workflow_profile_code',
         ]
     
     @extend_schema_field(OpenApiTypes.STR)
@@ -130,6 +133,12 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_current_quote_stage_display(self, obj):
         return obj.get_current_quote_stage_display()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_workflow_profile_code(self, obj):
+        from .workflow_profile_service import get_workflow_profile
+        profile = get_workflow_profile(obj)
+        return profile.code if profile else None
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):
@@ -567,6 +576,14 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Appointment vehicle does not match work order vehicle."
                 )
+            if not data.get('job_type') and not self.initial_data.get('job_type_code'):
+                if appt.job_type_id:
+                    data['job_type'] = appt.job_type
+                elif appt.service_type:
+                    from .workflow_profile_service import resolve_job_type_for_appointment
+                    appt_job_type = resolve_job_type_for_appointment(service_type=appt.service_type)
+                    if appt_job_type:
+                        data['job_type'] = appt_job_type
         
         # Validate estimated completion is in the future
         if data.get('estimated_completion'):
@@ -947,8 +964,11 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             job_type_code = self.initial_data.get('job_type_code')
         if job_type_code:
             job_type = resolve_job_type_for_create(job_type_code=job_type_code)
-            if job_type:
-                data['job_type'] = job_type
+            if job_type is None:
+                raise serializers.ValidationError({
+                    'job_type_code': f'Unknown or inactive job type: {job_type_code}',
+                })
+            data['job_type'] = job_type
 
         # Validate odometer reading
         odometer_out = data.get('odometer_out')
@@ -988,12 +1008,27 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             (old_service_coordinator_id is None or old_service_coordinator_id != new_service_coordinator_id)
         )
         
+        old_job_type_id = instance.job_type_id
+        old_status = instance.status
+
         # Update other fields first
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         if assigned_technicians is not None:
             instance.assigned_technicians.set(assigned_technicians)
+
+        if instance.job_type_id and instance.job_type_id != old_job_type_id:
+            user = self.context.get('request').user if self.context.get('request') else None
+            if old_status in ('draft', 'inspection'):
+                apply_job_type_on_create(instance, instance.job_type, user=user)
+            else:
+                instance.job_type.apply_defaults_to_work_order(instance, overwrite=True)
+                from .workflow_profile_service import sync_legacy_maintenance_type
+                instance.maintenance_type = sync_legacy_maintenance_type(instance)
+                instance.save(update_fields=['maintenance_type', 'is_warranty', 'is_insurance_claim',
+                                             'requires_inspection', 'requires_diagnosis', 'requires_approval',
+                                             'quality_check_required'])
             
         # Check if maintenance type or service type implies applied bundle
         # We only apply if it wasn't applied before or explicit change. 

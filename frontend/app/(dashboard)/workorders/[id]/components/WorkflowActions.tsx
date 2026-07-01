@@ -54,7 +54,8 @@ import { PauseForm } from "./forms/PauseForm";
 import { StartDiagnosisForm } from "./forms/StartDiagnosisForm";
 import { AssignServiceCoordinatorForm } from "./forms/AssignServiceCoordinatorForm";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
-import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
+import { isRoutineMaintenanceWorkOrder, isInspectionOnlyWorkOrder, isDiagnosticOnlyWorkOrder } from "@/lib/utils/workorder-workflow-steps";
+import { getUserFacingError } from "@/lib/api/errors";
 import {
   canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
@@ -119,6 +120,8 @@ export default function WorkflowActions({
 
   const currentWorkOrder = workOrderData ?? workOrder;
   const isRoutine = isRoutineMaintenanceWorkOrder(currentWorkOrder);
+  const isInspectionOnly = isInspectionOnlyWorkOrder(currentWorkOrder);
+  const isDiagnosticOnly = isDiagnosticOnlyWorkOrder(currentWorkOrder);
   const preServiceStatuses = new Set([
     "draft",
     "inspection",
@@ -825,6 +828,17 @@ export default function WorkflowActions({
           });
           break;
         }
+        if (isInspectionOnly) {
+          actions.push({
+            label: "Start Initial Inspection",
+            icon: Eye,
+            onClick: () => setShowInspectionDialog(true),
+            disabled: createInspectionMutation.isPending,
+            variant: "outline",
+            description: "Perform the vehicle inspection for this job",
+          });
+          break;
+        }
         actions.push(
           {
             label: "Start Initial Inspection",
@@ -848,6 +862,18 @@ export default function WorkflowActions({
 
       case "inspection":
         if (isRoutine) break;
+        if (isInspectionOnly) {
+          if (hasApprovedInspection) {
+            actions.push({
+              label: "Mark inspection complete",
+              icon: CheckCircle,
+              onClick: () => setShowCompleteDialog(true),
+              disabled: completeMutation.isPending,
+              description: "Close this inspection-only job after the report is finished",
+            });
+          }
+          break;
+        }
         actions.push({
           label: "Start Intake",
           icon: Play,
@@ -943,6 +969,16 @@ export default function WorkflowActions({
       // Phase 2: Quotation & Customer Approval
       case "awaiting_approval":
         if (isRoutine) break;
+        if (isDiagnosticOnly) {
+          actions.push({
+            label: "Mark diagnostic complete",
+            icon: CheckCircle,
+            onClick: () => setShowCompleteDialog(true),
+            disabled: completeMutation.isPending,
+            description: "Finish after the customer has reviewed the diagnostic estimate",
+          });
+          break;
+        }
         actions.push({
           label: "Approve",
           icon: CheckCircle,
@@ -961,6 +997,16 @@ export default function WorkflowActions({
             variant: "outline",
             description: "Review bundle parts and service tasks",
           });
+        }
+        if (isDiagnosticOnly) {
+          actions.push({
+            label: "Mark diagnostic complete",
+            icon: CheckCircle,
+            onClick: () => setShowCompleteDialog(true),
+            disabled: completeMutation.isPending,
+            description: "Close this diagnostic-only job without starting repairs",
+          });
+          break;
         }
         if (waitingForPartsAllocation) {
           actions.push(

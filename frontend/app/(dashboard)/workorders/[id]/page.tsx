@@ -36,7 +36,7 @@ import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
-import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
+import { isRoutineMaintenanceWorkOrder, isInspectionOnlyWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 
@@ -108,6 +108,7 @@ export default function WorkOrderDetailPage() {
   }, [requestedTab, workOrder]);
 
   const isRoutineWorkOrder = isRoutineMaintenanceWorkOrder(workOrder);
+  const isInspectionOnlyWorkOrderFlag = isInspectionOnlyWorkOrder(workOrder);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
@@ -124,7 +125,7 @@ export default function WorkOrderDetailPage() {
   const { data: diagnosis } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId && !isRoutineWorkOrder,
+    enabled: !!workOrderId && !isRoutineWorkOrder && !isInspectionOnlyWorkOrderFlag,
   });
 
   const { data: inspectionsData } = useQuery({
@@ -276,6 +277,7 @@ export default function WorkOrderDetailPage() {
     unapprovedRecommendations.length > 0;
 
   const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
+  const isInspectionOnly = isInspectionOnlyWorkOrder(workOrder);
 
   const tabsLocked =
     !isRoutine &&
@@ -379,6 +381,7 @@ export default function WorkOrderDetailPage() {
           notesCount={notes.length}
           tabsLocked={tabsLocked}
           isRoutine={isRoutine}
+          hideDiagnosis={isInspectionOnly}
         />
 
         <TabsContent value="overview" className="mt-4">
@@ -417,7 +420,7 @@ export default function WorkOrderDetailPage() {
           <DocumentsTab workOrderId={workOrderId} />
         </TabsContent>
 
-        {!isRoutine && (
+        {!isRoutine && !isInspectionOnly && (
           <TabsContent value="diagnosis" className="mt-4">
             <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
           </TabsContent>

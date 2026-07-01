@@ -1,6 +1,6 @@
 import type { VehicleInspection } from "@/lib/api/inspections";
 import type { WorkOrder } from "@/lib/api/workorders";
-import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
+import { isRoutineMaintenanceWorkOrder, isInspectionOnlyWorkOrder, isDiagnosticOnlyWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 export type WorkOrderLike = Pick<
   Partial<WorkOrder>,
@@ -157,6 +157,35 @@ export function getWorkOrderStagePresentation(
 ): WorkOrderStagePresentation {
   const workflowStatus = workOrder?.status || "draft";
   const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
+  const isInspectionOnly = isInspectionOnlyWorkOrder(workOrder);
+  const isDiagnosticOnly = isDiagnosticOnlyWorkOrder(workOrder);
+
+  if (isInspectionOnly) {
+    if (["draft", "inspection"].includes(workflowStatus)) {
+      return {
+        workflowStatus,
+        label: workflowStatus === "draft" ? "Inspection scheduled" : "Inspection in progress",
+      };
+    }
+    if (workflowStatus === "completed") {
+      return { workflowStatus, label: "Inspection complete" };
+    }
+  }
+
+  if (isDiagnosticOnly) {
+    if (workflowStatus === "awaiting_approval") {
+      return { workflowStatus, label: "Diagnostic estimate ready" };
+    }
+    if (workflowStatus === "completed") {
+      return { workflowStatus, label: "Diagnostic complete" };
+    }
+    if (workflowStatus === "diagnosis") {
+      return {
+        workflowStatus,
+        label: getDiagnosisLifecycleLabel(workOrder),
+      };
+    }
+  }
 
   if (isRoutine) {
     if (["draft", "inspection", "intake", "assigned", "diagnosis", "awaiting_approval"].includes(workflowStatus)) {

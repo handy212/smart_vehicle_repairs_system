@@ -27,6 +27,7 @@ interface WorkOrderTabsNavProps {
   notesCount: number;
   tabsLocked: boolean;
   isRoutine?: boolean;
+  hideDiagnosis?: boolean;
 }
 
 function TabDivider() {
@@ -96,6 +97,7 @@ export function WorkOrderTabsNav({
   notesCount,
   tabsLocked,
   isRoutine = false,
+  hideDiagnosis = false,
 }: WorkOrderTabsNavProps) {
   const lockMessage = LOCK_MSG;
   const effectiveLocked = isRoutine ? false : tabsLocked;
@@ -143,14 +145,16 @@ export function WorkOrderTabsNav({
           locked={effectiveLocked}
           lockMessage={lockMessage}
         />
-        <LockedTabTrigger
-          value="diagnosis"
-          label="Diagnosis"
-          shortLabel="Diag."
-          icon={Search}
-          locked={effectiveLocked}
-          lockMessage={lockMessage}
-        />
+        {!hideDiagnosis ? (
+          <LockedTabTrigger
+            value="diagnosis"
+            label="Diagnosis"
+            shortLabel="Diag."
+            icon={Search}
+            locked={effectiveLocked}
+            lockMessage={lockMessage}
+          />
+        ) : null}
       </>
     );
 

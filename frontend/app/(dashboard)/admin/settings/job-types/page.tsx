@@ -142,6 +142,7 @@ export default function JobTypesAdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workorders", "job-types"] });
+      queryClient.invalidateQueries({ queryKey: ["workorders", "job-types", "admin"] });
       toast({ title: "Saved", description: editing ? "Job type updated" : "Job type created" });
       closeDialog();
     },
@@ -158,6 +159,7 @@ export default function JobTypesAdminPage() {
     mutationFn: (code: string) => jobTypesApi.remove(code),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workorders", "job-types"] });
+      queryClient.invalidateQueries({ queryKey: ["workorders", "job-types", "admin"] });
       toast({ title: "Removed", description: "Job type deactivated or deleted" });
     },
     onError: (error: unknown) => {

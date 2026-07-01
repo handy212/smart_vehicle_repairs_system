@@ -65,6 +65,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by',
         'branch', 'service_coordinator', 'diagnosis_by', 'quality_check_by', 'related_work_order',
         'service_type', 'service_bundle', 'estimate', 'diagnosis',
+        'job_type', 'job_type__workflow_profile',
     ).prefetch_related(
         'assigned_technicians',
         'gate_passes',
@@ -80,6 +81,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     list_queryset = WorkOrder.objects.all().select_related(
         'customer', 'customer__user', 'vehicle', 'primary_technician',
         'service_coordinator', 'branch', 'estimate', 'diagnosis',
+        'job_type', 'job_type__workflow_profile',
     ).prefetch_related(
         'assigned_technicians',
         'gate_passes',

@@ -208,6 +208,58 @@ class ProfileTransitionTests(TestCase):
         can_transition, error = wo.can_transition_to('completed')
         self.assertTrue(can_transition, error)
 
+    def test_inspection_only_transition_to_completed(self):
+        from apps.inspections.models import InspectionTemplate, VehicleInspection
+
+        technician = User.objects.create_user(
+            username='tech_trans',
+            email='tech_trans@example.com',
+            password='password',
+            role='technician',
+        )
+        template = InspectionTemplate.objects.create(
+            name='Transition Template',
+            created_by=self.user,
+        )
+        wo = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            job_type=self.inspection_job_type,
+            customer_concerns='Annual inspection',
+            odometer_in=5000,
+            status='inspection',
+            created_by=self.user,
+        )
+        VehicleInspection.objects.create(
+            work_order=wo,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            template=template,
+            performed_by=technician,
+            status='completed',
+        )
+        wo.transition_to('completed', user=self.user)
+        wo.refresh_from_db()
+        self.assertEqual(wo.status, 'completed')
+
+    def test_diagnostic_only_transition_to_completed_from_awaiting_approval(self):
+        wo = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            job_type=self.diagnostic_job_type,
+            customer_concerns='Check engine light',
+            odometer_in=5000,
+            status='awaiting_approval',
+            diagnosis_notes='Sensor fault identified.',
+            service_coordinator=self.user,
+            created_by=self.user,
+        )
+        wo.transition_to('completed', user=self.user)
+        wo.refresh_from_db()
+        self.assertEqual(wo.status, 'completed')
+
     def test_diagnostic_only_blocks_in_progress_from_approved(self):
         wo = WorkOrder.objects.create(
             customer=self.customer,

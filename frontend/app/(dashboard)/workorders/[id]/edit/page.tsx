@@ -69,9 +69,12 @@ const STATUS_LABELS: Record<string, string> = {
   'closed': 'Closed',
 };
 
-function getValidStatuses(currentStatus: string, workOrder?: Pick<WorkOrderLike, "diagnosis_status" | "paused_from_status">): string[] {
+function getValidStatuses(
+  currentStatus: string,
+  workOrder?: Pick<WorkOrderLike, "diagnosis_status" | "paused_from_status" | "maintenance_type" | "workflow_profile_code" | "job_type_detail">
+): string[] {
   const validStatuses = [currentStatus];
-  let transitions = getValidNextStatuses(currentStatus);
+  let transitions = getValidNextStatuses(currentStatus, workOrder);
 
   if (currentStatus === "paused" && workOrder && isDiagnosisPausedWorkOrder({ status: "paused", ...workOrder })) {
     transitions = transitions.filter((status) => status !== "in_progress");
