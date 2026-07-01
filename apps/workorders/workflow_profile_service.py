@@ -83,6 +83,30 @@ def profile_skips_diagnosis(work_order) -> bool:
     return bool(profile and profile.skip_diagnosis)
 
 
+def work_order_requires_inspection(work_order) -> bool:
+    """True when inspection must be completed before intake (job type + profile)."""
+    if profile_skips_inspection(work_order):
+        return False
+    job_type = getattr(work_order, 'job_type', None)
+    if job_type is not None and not job_type.requires_inspection:
+        return False
+    return True
+
+
+def work_order_requires_diagnosis(work_order) -> bool:
+    """True when this work order follows the diagnosis / approval path."""
+    if profile_skips_diagnosis(work_order):
+        return False
+    job_type = getattr(work_order, 'job_type', None)
+    if job_type is not None and not job_type.requires_diagnosis:
+        return False
+    return True
+
+
+# Statuses where job type may still be changed safely
+JOB_TYPE_CHANGE_ALLOWED_STATUSES = frozenset({'draft', 'inspection'})
+
+
 def resolve_allowed_targets(work_order, current_status: str, base_targets: list[str]) -> list[str]:
     """Merge profile-specific extra transitions and remove blocked edges."""
     profile = get_workflow_profile(work_order)
@@ -146,6 +170,12 @@ def apply_job_type_on_create(work_order, job_type, *, user=None):
             work_order.requires_approval = False
         if profile.skip_quality_check:
             work_order.quality_check_required = False
+        if profile.auto_approve_on_create:
+            from django.utils import timezone
+            work_order.requires_approval = False
+            work_order.approved_by_customer = True
+            if not work_order.approved_at:
+                work_order.approved_at = timezone.now()
 
     work_order.maintenance_type = sync_legacy_maintenance_type(work_order)
     work_order.save()
@@ -162,17 +192,8 @@ def apply_job_type_on_create(work_order, job_type, *, user=None):
     return bundle_applied
 
 
-# Map legacy appointment service_type values to job type codes
-APPOINTMENT_SERVICE_TYPE_TO_JOB_TYPE = {
-    'inspection': 'vehicle_inspection',
-    'repair': 'general_repairs',
-    'maintenance': 'routine_maintenance',
-    'diagnostic': 'diagnostic_inspection',
-    'tire_service': 'tyre_service',
-    'oil_change': 'routine_maintenance',
-    'brake_service': 'brake_service',
-    'other': 'general_repairs',
-}
+# Map legacy appointment service_type values to job type codes (see appointment_job_type_mapping.py)
+from .appointment_job_type_mapping import APPOINTMENT_SERVICE_TYPE_TO_JOB_TYPE  # noqa: F401
 
 
 def resolve_job_type_for_appointment(*, job_type=None, job_type_code=None, service_type=None):

@@ -31,7 +31,7 @@ class JobTypeViewSet(viewsets.ModelViewSet):
     ).order_by('sort_order', 'name')
     permission_classes = [IsAuthenticated]
     lookup_field = 'code'
-    filterset_fields = ['category', 'is_active', 'allows_bundle']
+    filterset_fields = ['category', 'is_active', 'allows_bundle', 'workflow_profile']
     search_fields = ['name', 'code', 'description']
 
     def get_queryset(self):

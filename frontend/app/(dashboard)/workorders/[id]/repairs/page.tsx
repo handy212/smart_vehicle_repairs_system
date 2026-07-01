@@ -51,6 +51,7 @@ import AddTaskDialog from "../components/AddTaskDialog";
 import AddPartDialog from "../components/AddPartDialog";
 import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
 import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
+import { workOrderSkipsRepairs } from "@/lib/workorders/work-order-profile";
 
 type RepairTab = "tasks" | "parts" | "notes" | "photos" | "readiness";
 
@@ -456,6 +457,31 @@ export default function RepairsPage() {
         <Card>
           <CardContent className="py-8">
             <p className="text-sm text-destructive">Unable to load this repair workspace.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (workOrderSkipsRepairs(workOrder)) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => router.push(`/workorders/${workOrderId}`)} className="-ml-2">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Work order
+        </Button>
+        <Card className="border-border">
+          <CardContent className="flex flex-col gap-4 py-8">
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">Repairs workspace not available</p>
+              <p className="text-sm text-muted-foreground">
+                This job uses an inspection-only or diagnostic-only workflow and does not include a
+                repair execution phase. Return to the work order overview to continue.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => router.push(`/workorders/${workOrderId}`)}>
+              Back to Work Order
+            </Button>
           </CardContent>
         </Card>
       </div>

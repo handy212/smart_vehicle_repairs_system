@@ -5,6 +5,9 @@ export interface WorkflowProfile {
   code: string;
   name: string;
   description?: string;
+  is_active?: boolean;
+  is_predefined?: boolean;
+  sort_order?: number;
   skip_inspection: boolean;
   skip_diagnosis: boolean;
   skip_customer_approval: boolean;
@@ -12,6 +15,23 @@ export interface WorkflowProfile {
   auto_approve_on_create: boolean;
   apply_service_bundle_on_create: boolean;
   allows_fast_track_to_approved: boolean;
+}
+
+export interface JobTypeWriteInput {
+  code?: string;
+  name: string;
+  category: string;
+  description?: string;
+  workflow_profile: number;
+  is_active?: boolean;
+  sort_order?: number;
+  requires_inspection?: boolean;
+  requires_diagnosis?: boolean;
+  requires_approval?: boolean;
+  quality_check_required?: boolean;
+  allows_bundle?: boolean;
+  sets_warranty_flag?: boolean;
+  sets_insurance_flag?: boolean;
 }
 
 export interface JobType {
@@ -45,6 +65,7 @@ export const jobTypesApi = {
     category?: string;
     allows_bundle?: boolean;
     active_only?: boolean;
+    workflow_profile?: number;
   }): Promise<JobTypeListResponse> => {
     const response = await apiClient.get("/workorders/job-types/", { params });
     return response.data;
@@ -55,12 +76,12 @@ export const jobTypesApi = {
     return response.data;
   },
 
-  create: async (data: Record<string, unknown>): Promise<JobType> => {
+  create: async (data: JobTypeWriteInput): Promise<JobType> => {
     const response = await apiClient.post("/workorders/job-types/", data);
     return response.data;
   },
 
-  update: async (code: string, data: Record<string, unknown>): Promise<JobType> => {
+  update: async (code: string, data: Partial<JobTypeWriteInput>): Promise<JobType> => {
     const response = await apiClient.patch(`/workorders/job-types/${code}/`, data);
     return response.data;
   },

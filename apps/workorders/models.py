@@ -654,6 +654,9 @@ class WorkOrder(models.Model):
             uses_fast_track_profile,
             resolve_allowed_targets,
             profile_skips_inspection,
+            profile_skips_diagnosis,
+            work_order_requires_inspection,
+            work_order_requires_diagnosis,
             allows_simplified_completion,
             get_profile_code,
             sync_legacy_maintenance_type,
@@ -703,12 +706,17 @@ class WorkOrder(models.Model):
             return (False, 'A Service Coordinator must be assigned when moving to assigned status.')
             
         # Validate Initial Inspection is performed and completed before moving to intake
-        if new_status == 'intake' and not profile_skips_inspection(self):
+        if new_status == 'intake' and work_order_requires_inspection(self):
             if not self.inspections.filter(status__in=['completed', 'approved']).exists():
                 return False, "Initial inspection must be completed and approved before starting intake."
-        
-        # Check prerequisites
-        if new_status == 'awaiting_approval':
+
+        if new_status == 'diagnosis' and profile_skips_diagnosis(self):
+            return False, 'This job profile does not include a diagnosis workflow.'
+
+        if new_status == 'awaiting_approval' and profile_skips_diagnosis(self):
+            return False, 'This job profile does not include customer approval for repairs.'
+
+        if new_status == 'awaiting_approval' and work_order_requires_diagnosis(self):
             if not self.diagnosis_notes:
                 return False, "Diagnosis notes are required before requesting approval"
         

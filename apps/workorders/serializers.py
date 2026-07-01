@@ -968,7 +968,35 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'job_type_code': f'Unknown or inactive job type: {job_type_code}',
                 })
+            if work_order and work_order.job_type_id and job_type.pk != work_order.job_type_id:
+                from .workflow_profile_service import JOB_TYPE_CHANGE_ALLOWED_STATUSES
+                if work_order.status not in JOB_TYPE_CHANGE_ALLOWED_STATUSES:
+                    raise serializers.ValidationError({
+                        'job_type_code': (
+                            'Job type cannot be changed after work has progressed beyond inspection. '
+                            f'Current status: {work_order.get_status_display()}.'
+                        ),
+                    })
             data['job_type'] = job_type
+
+        incoming_job_type = data.get('job_type')
+        if (
+            incoming_job_type
+            and work_order
+            and work_order.job_type_id
+            and incoming_job_type.pk != work_order.job_type_id
+            and not job_type_code
+        ):
+            from .workflow_profile_service import JOB_TYPE_CHANGE_ALLOWED_STATUSES
+            if work_order.status not in JOB_TYPE_CHANGE_ALLOWED_STATUSES:
+                raise serializers.ValidationError({
+                    'job_type': (
+                        'Job type cannot be changed after work has progressed beyond inspection. '
+                        f'Current status: {work_order.get_status_display()}.'
+                    ),
+                })
+            if not incoming_job_type.is_active:
+                raise serializers.ValidationError({'job_type': 'Cannot assign an inactive job type.'})
 
         # Validate odometer reading
         odometer_out = data.get('odometer_out')

@@ -319,6 +319,27 @@ export default function JobTypesAdminPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {(() => {
+                const selectedProfile = profiles.find((p) => p.id === form.workflow_profile);
+                if (!selectedProfile) return null;
+                const hints = [
+                  selectedProfile.skip_inspection && "Skips inspection",
+                  selectedProfile.skip_diagnosis && "Skips diagnosis",
+                  selectedProfile.skip_customer_approval && "Skips customer approval",
+                  selectedProfile.apply_service_bundle_on_create && "Uses service bundle",
+                  selectedProfile.allows_fast_track_to_approved && "Fast-tracks to approved",
+                ].filter(Boolean);
+                return (
+                  <div className="mt-2 space-y-1">
+                    {selectedProfile.description ? (
+                      <p className="text-xs text-muted-foreground">{selectedProfile.description}</p>
+                    ) : null}
+                    {hints.length > 0 ? (
+                      <p className="text-[11px] text-muted-foreground">{hints.join(" · ")}</p>
+                    ) : null}
+                  </div>
+                );
+              })()}
             </div>
             <div>
               <Label htmlFor="jt-desc">Description</Label>

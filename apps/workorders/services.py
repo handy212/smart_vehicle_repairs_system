@@ -138,8 +138,10 @@ def prepare_routine_service_workflow(work_order, user=None):
     if not work_order.approved_by_customer:
         work_order.approved_by_customer = True
         work_order.approved_at = timezone.now()
+        update_fields.extend(['approved_by_customer', 'approved_at'])
+    if work_order.approval_method != 'routine_service':
         work_order.approval_method = 'routine_service'
-        update_fields.extend(['approved_by_customer', 'approved_at', 'approval_method'])
+        update_fields.append('approval_method')
     if not work_order.diagnosis_notes:
         work_order.diagnosis_notes = (
             f"Routine maintenance: {bundle_name}. "

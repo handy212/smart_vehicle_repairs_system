@@ -36,7 +36,9 @@ import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
-import { isRoutineMaintenanceWorkOrder, isInspectionOnlyWorkOrder } from "@/lib/utils/workorder-workflow-steps";
+import { ProfileFlowBanner } from "./components/ProfileFlowBanner";
+import { workOrderShowsDiagnosisTab } from "@/lib/workorders/work-order-profile";
+import { useWorkOrderProfile } from "@/lib/hooks/useWorkOrderProfile";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 
@@ -97,18 +99,18 @@ export default function WorkOrderDetailPage() {
     }
   }, [workOrder, addRecentItem]);
 
+  const profile = useWorkOrderProfile(workOrder);
+  const showDiagnosisTab = workOrderShowsDiagnosisTab(workOrder);
+
   useEffect(() => {
     if (requestedTab && VALID_TABS.has(requestedTab)) {
-      if (isRoutineMaintenanceWorkOrder(workOrder) && requestedTab === "diagnosis") {
-        setActiveTab("parts");
+      if (!showDiagnosisTab && requestedTab === "diagnosis") {
+        setActiveTab(profile.isRoutine ? "parts" : "overview");
         return;
       }
       setActiveTab(requestedTab);
     }
-  }, [requestedTab, workOrder]);
-
-  const isRoutineWorkOrder = isRoutineMaintenanceWorkOrder(workOrder);
-  const isInspectionOnlyWorkOrderFlag = isInspectionOnlyWorkOrder(workOrder);
+  }, [requestedTab, workOrder, showDiagnosisTab, profile.isRoutine]);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
@@ -125,7 +127,7 @@ export default function WorkOrderDetailPage() {
   const { data: diagnosis } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId && !isRoutineWorkOrder && !isInspectionOnlyWorkOrderFlag,
+    enabled: !!workOrderId && showDiagnosisTab,
   });
 
   const { data: inspectionsData } = useQuery({
@@ -162,7 +164,7 @@ export default function WorkOrderDetailPage() {
   });
 
   useEffect(() => {
-    if (!workOrder || !isRoutineMaintenanceWorkOrder(workOrder)) return;
+    if (!workOrder || !profile.isRoutine) return;
     if (workOrder.status !== "draft") return;
     if (routineRecoveryAttempted.current || routineFastTrackMutation.isPending) return;
 
@@ -276,8 +278,8 @@ export default function WorkOrderDetailPage() {
     ["completed", "invoiced", "closed"].includes(workOrder.status) &&
     unapprovedRecommendations.length > 0;
 
-  const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
-  const isInspectionOnly = isInspectionOnlyWorkOrder(workOrder);
+  const isRoutine = profile.isRoutine;
+  const isInspectionOnly = profile.isInspectionOnly;
 
   const tabsLocked =
     !isRoutine &&
@@ -372,6 +374,8 @@ export default function WorkOrderDetailPage() {
         onStatusChange={refreshData}
       />
 
+      <ProfileFlowBanner workOrder={workOrder} workOrderId={workOrderId} />
+
       {workOrder.status === "closed" && <GatePassBanner workOrderId={workOrderId} />}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -420,7 +424,7 @@ export default function WorkOrderDetailPage() {
           <DocumentsTab workOrderId={workOrderId} />
         </TabsContent>
 
-        {!isRoutine && !isInspectionOnly && (
+        {!showDiagnosisTab ? null : (
           <TabsContent value="diagnosis" className="mt-4">
             <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
           </TabsContent>
