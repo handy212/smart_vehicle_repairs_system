@@ -54,7 +54,7 @@ import { PauseForm } from "./forms/PauseForm";
 import { StartDiagnosisForm } from "./forms/StartDiagnosisForm";
 import { AssignServiceCoordinatorForm } from "./forms/AssignServiceCoordinatorForm";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
-import { getUserFacingError } from "@/lib/api/errors";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 import {
   canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
@@ -118,7 +118,7 @@ export default function WorkflowActions({
   });
 
   const currentWorkOrder = workOrderData ?? workOrder;
-  const isRoutine = currentWorkOrder?.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(currentWorkOrder);
   const preServiceStatuses = new Set([
     "draft",
     "inspection",

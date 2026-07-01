@@ -1,5 +1,6 @@
 import type { VehicleInspection } from "@/lib/api/inspections";
 import type { WorkOrder } from "@/lib/api/workorders";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 export type WorkOrderLike = Pick<
   Partial<WorkOrder>,
@@ -155,7 +156,7 @@ export function getWorkOrderStagePresentation(
   inspection?: VehicleInspection | null
 ): WorkOrderStagePresentation {
   const workflowStatus = workOrder?.status || "draft";
-  const isRoutine = (workOrder as { maintenance_type?: string } | null | undefined)?.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
 
   if (isRoutine) {
     if (["draft", "inspection", "intake", "assigned", "diagnosis", "awaiting_approval"].includes(workflowStatus)) {

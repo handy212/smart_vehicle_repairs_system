@@ -10,19 +10,22 @@ import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
 import {
-  JOB_TYPE_FIELD_LABEL,
-  JOB_TYPE_GENERAL_LABEL,
-  JOB_TYPE_ROUTINE_LABEL,
   SERVICE_PACKAGE_LABEL,
   SERVICE_PACKAGE_PLACEHOLDER,
 } from "@/lib/workorders/job-type-labels";
+import {
+  jobTypesApi,
+  jobTypeRequiresBundle,
+  type JobType,
+} from "@/lib/api/job-types";
+import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
@@ -38,16 +41,10 @@ const workOrderSchema = z.object({
     "completed", "invoiced", "closed"
   ]),
   customer_concerns: z.string().optional(),
-  maintenance_type: z.enum(["general", "routine"]).optional(),
+  job_type_code: z.string().min(1, "Job type is required"),
   service_type: z.number().optional(),
   service_bundle: z.number().optional(),
-}).refine(
-  (data) => data.maintenance_type !== "routine" || !!data.service_bundle,
-  {
-    message: "Select a service package for routine service jobs",
-    path: ["service_bundle"],
-  }
-);
+});
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
 
@@ -123,6 +120,18 @@ export default function EditWorkOrderPage() {
     queryKey: ["inventory", "bundles", "active"],
     queryFn: () => inventoryApi.listBundles({ is_active: true }),
   });
+
+  const { data: jobTypesData } = useQuery({
+    queryKey: ["workorders", "job-types"],
+    queryFn: () => jobTypesApi.list({ active_only: true }),
+  });
+
+  const jobTypeCode = watch("job_type_code");
+  const selectedJobType = useMemo<JobType | null>(() => {
+    const jobTypes = jobTypesData?.results ?? [];
+    return jobTypes.find((jt) => jt.code === jobTypeCode) ?? null;
+  }, [jobTypesData, jobTypeCode]);
+  const bundleRequired = jobTypeRequiresBundle(selectedJobType);
 
   const bundles = (() => {
     if (!bundlesData) return [] as ServiceBundle[];
@@ -261,8 +270,9 @@ export default function EditWorkOrderPage() {
 
         status: (workOrder.status || "draft") as WorkOrderFormData["status"],
         customer_concerns: workOrder.customer_concerns || "",
-
-        maintenance_type: (workOrder.maintenance_type || "general") as WorkOrderFormData["maintenance_type"],
+        job_type_code:
+          workOrder.job_type_detail?.code ??
+          (workOrder.maintenance_type === "routine" ? "routine_maintenance" : "general_repairs"),
         service_type: serviceTypeId,
         service_bundle: serviceBundleId,
       });
@@ -360,6 +370,10 @@ export default function EditWorkOrderPage() {
 
   const onSubmit = async (data: WorkOrderFormData) => {
     setErrorMessage(null);
+    if (bundleRequired && !data.service_bundle) {
+      setErrorMessage("Select a service package for this job type.");
+      return;
+    }
     await updateMutation.mutateAsync(data);
   };
 
@@ -638,35 +652,19 @@ export default function EditWorkOrderPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-card-foreground">
-                      {JOB_TYPE_FIELD_LABEL}
-                    </label>
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      General repair follows inspection and diagnosis. Routine service uses a predefined package.
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-4">
-                      <label className="flex cursor-pointer items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="general"
-                          {...register("maintenance_type")}
-                          className="h-4 w-4 border-border text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_GENERAL_LABEL}</span>
-                      </label>
-                      <label className="flex cursor-pointer items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="routine"
-                          {...register("maintenance_type")}
-                          className="h-4 w-4 border-border text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_ROUTINE_LABEL}</span>
-                      </label>
-                    </div>
+                    <JobTypeSelect
+                      value={jobTypeCode || "general_repairs"}
+                      onChange={(code, jobType) => {
+                        setValue("job_type_code", code, { shouldValidate: true });
+                        if (!jobTypeRequiresBundle(jobType)) {
+                          setValue("service_bundle", undefined);
+                          setValue("service_type", undefined);
+                        }
+                      }}
+                    />
                   </div>
 
-                  {watch("maintenance_type") === "routine" && (
+                  {bundleRequired && (
                     <div>
                       <label htmlFor="service_bundle" className="mb-1 block text-sm font-medium text-card-foreground">
                         {SERVICE_PACKAGE_LABEL} *

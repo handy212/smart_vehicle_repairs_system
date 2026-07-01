@@ -36,6 +36,7 @@ import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 
@@ -98,13 +99,15 @@ export default function WorkOrderDetailPage() {
 
   useEffect(() => {
     if (requestedTab && VALID_TABS.has(requestedTab)) {
-      if (workOrder?.maintenance_type === "routine" && requestedTab === "diagnosis") {
+      if (isRoutineMaintenanceWorkOrder(workOrder) && requestedTab === "diagnosis") {
         setActiveTab("parts");
         return;
       }
       setActiveTab(requestedTab);
     }
-  }, [requestedTab, workOrder?.maintenance_type]);
+  }, [requestedTab, workOrder]);
+
+  const isRoutineWorkOrder = isRoutineMaintenanceWorkOrder(workOrder);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
@@ -121,7 +124,7 @@ export default function WorkOrderDetailPage() {
   const { data: diagnosis } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId && workOrder?.maintenance_type !== "routine",
+    enabled: !!workOrderId && !isRoutineWorkOrder,
   });
 
   const { data: inspectionsData } = useQuery({
@@ -158,7 +161,7 @@ export default function WorkOrderDetailPage() {
   });
 
   useEffect(() => {
-    if (!workOrder || workOrder.maintenance_type !== "routine") return;
+    if (!workOrder || !isRoutineMaintenanceWorkOrder(workOrder)) return;
     if (workOrder.status !== "draft") return;
     if (routineRecoveryAttempted.current || routineFastTrackMutation.isPending) return;
 
@@ -272,7 +275,7 @@ export default function WorkOrderDetailPage() {
     ["completed", "invoiced", "closed"].includes(workOrder.status) &&
     unapprovedRecommendations.length > 0;
 
-  const isRoutine = workOrder.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
 
   const tabsLocked =
     !isRoutine &&
@@ -328,8 +331,7 @@ export default function WorkOrderDetailPage() {
       <WorkOrderProgress
         status={stagePresentation.workflowStatus}
         labelOverride={statusLabelOverride}
-        diagnosisStatus={workOrder.diagnosis_status}
-        maintenanceType={workOrder.maintenance_type}
+        workOrder={workOrder}
       />
 
       {(workOrder.customer_rating || workOrder.customer_feedback) && (

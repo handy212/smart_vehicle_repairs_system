@@ -44,6 +44,7 @@ import {
   JOB_TYPE_FIELD_LABEL,
   SERVICE_PACKAGE_LABEL,
 } from "@/lib/workorders/job-type-labels";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -81,7 +82,7 @@ export default function WorkOrderOverviewTab({
     refetchOnWindowFocus: true,
   });
   const wo = workOrderFresh ?? workOrder;
-  const isRoutine = wo.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(wo);
   const estimateSummary = wo.estimate_summary;
   const invoiceSummary = wo.invoice_summary;
   const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
@@ -271,7 +272,7 @@ export default function WorkOrderOverviewTab({
           </SummaryItem>
           <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
             <Badge variant="secondary" className="text-xs font-normal">
-              {getJobTypeLabel(wo.maintenance_type, wo)}
+              {getJobTypeLabel(undefined, wo)}
             </Badge>
           </SummaryItem>
           {isRoutine && (

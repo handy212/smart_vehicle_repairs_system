@@ -67,6 +67,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getWorkOrderAssignees } from "@/lib/workorders/assignees";
 import { getUserFacingError } from "@/lib/api/errors";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 
 type DiagnosisWorkspaceProps = {
@@ -96,7 +97,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
 
   useEffect(() => {
     if (workOrderLoading || !workOrder) return;
-    if (workOrder.maintenance_type === "routine") {
+    if (isRoutineMaintenanceWorkOrder(workOrder)) {
       router.replace(`${workOrderBackHref}?tab=parts`);
     }
   }, [workOrder, workOrderLoading, router, workOrderBackHref]);
@@ -364,7 +365,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     );
   }
 
-  if (workOrder.maintenance_type === "routine") {
+  if (isRoutineMaintenanceWorkOrder(workOrder)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />

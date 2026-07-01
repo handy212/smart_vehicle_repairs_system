@@ -25,7 +25,7 @@ import { getUserFacingError } from "@/lib/api/errors";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 import { INCOME_CATEGORY_SHORT } from "@/lib/accounting/income-category-labels";
-import { Label } from "@/components/ui/label";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface TasksTabProps {
   workOrderId: number;
@@ -60,7 +60,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
   const [editBillingTask, setEditBillingTask] = useState<ServiceTask | null>(null);
   const [billingCategoryId, setBillingCategoryId] = useState<number | null>(null);
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
-  const isRoutine = workOrder?.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
   const routineSkipWorkflowPhases = new Set([
     "inspection",
     "intake",

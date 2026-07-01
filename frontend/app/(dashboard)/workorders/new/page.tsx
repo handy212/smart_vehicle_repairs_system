@@ -66,7 +66,6 @@ const workOrderSchema = z.object({
   customer_concerns: z.string().min(1, "Customer concerns are required"),
   odometer_in: z.number().min(0),
   job_type_code: z.string().min(1, "Job type is required"),
-  maintenance_type: z.enum(["general", "routine"]).optional(),
   service_type: z.number().optional(),
   service_bundle: z.number().optional(),
 });
@@ -292,7 +291,6 @@ export default function NewWorkOrderPage() {
       brought_by_relationship: "",
       customer_concerns: "",
       job_type_code: "general_repairs",
-      maintenance_type: "general",
       service_bundle: undefined,
     },
   });
@@ -758,7 +756,6 @@ export default function NewWorkOrderPage() {
       ...data,
       odometer_in: data.odometer_in ?? 0,
       customer_concerns: data.customer_concerns || "",
-      maintenance_type: isFastTrack ? "routine" : "general",
     };
 
     // Add warranty rework fields if applicable
@@ -1336,7 +1333,6 @@ export default function NewWorkOrderPage() {
                       value={jobTypeCode || "general_repairs"}
                       onChange={(code, jobType) => {
                         setValue("job_type_code", code, { shouldValidate: true });
-                        setValue("maintenance_type", isFastTrackJobType(jobType) ? "routine" : "general");
                         if (!jobTypeRequiresBundle(jobType)) {
                           setValue("service_bundle", undefined);
                           setValue("service_type", undefined);

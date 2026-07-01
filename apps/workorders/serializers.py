@@ -851,6 +851,8 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
 
 class WorkOrderUpdateSerializer(serializers.ModelSerializer):
     """Update work order"""
+
+    job_type_code = serializers.SlugField(write_only=True, required=False)
     
     class Meta:
         model = WorkOrder
@@ -870,7 +872,7 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'quality_check_required', 'quality_check_completed',
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'is_customer_waiting',
-            'maintenance_type', 'service_type', 'service_bundle', 'job_type'
+            'maintenance_type', 'service_type', 'service_bundle', 'job_type', 'job_type_code',
         ]
 
     def _validate_branch_technician(self, technician, work_order, field_name):
@@ -939,6 +941,14 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
 
         if service_coordinator:
             self._validate_branch_service_coordinator(service_coordinator, work_order)
+
+        job_type_code = data.pop('job_type_code', None)
+        if job_type_code is None:
+            job_type_code = self.initial_data.get('job_type_code')
+        if job_type_code:
+            job_type = resolve_job_type_for_create(job_type_code=job_type_code)
+            if job_type:
+                data['job_type'] = job_type
 
         # Validate odometer reading
         odometer_out = data.get('odometer_out')

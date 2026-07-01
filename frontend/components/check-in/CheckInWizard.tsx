@@ -29,16 +29,15 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
-  JOB_TYPE_FIELD_LABEL,
   SERVICE_PACKAGE_LABEL,
   SERVICE_PACKAGE_PLACEHOLDER,
 } from "@/lib/workorders/job-type-labels";
 import {
-  jobTypesApi,
   isFastTrackJobType,
   jobTypeRequiresBundle,
   type JobType,
 } from "@/lib/api/job-types";
+import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -100,6 +99,7 @@ export function CheckInWizard() {
   const [odometer, setOdometer] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [selectedJobTypeCode, setSelectedJobTypeCode] = useState("general_repairs");
+  const [selectedJobType, setSelectedJobType] = useState<JobType | null>(null);
   const [serviceBundleId, setServiceBundleId] = useState<number | null>(null);
   const [serviceTypeId, setServiceTypeId] = useState<number | null>(null);
   const [progressionWarning, setProgressionWarning] = useState<string | null>(null);
@@ -138,31 +138,8 @@ export function CheckInWizard() {
     queryFn: () => inventoryApi.listBundles({ is_active: true }),
   });
 
-  const { data: jobTypesData } = useQuery({
-    queryKey: ["workorders", "job-types"],
-    queryFn: () => jobTypesApi.list({ active_only: true }),
-  });
-
-  const jobTypes = useMemo(() => jobTypesData?.results ?? [], [jobTypesData]);
-
-  const selectedJobType = useMemo(
-    () => jobTypes.find((jt) => jt.code === selectedJobTypeCode) ?? null,
-    [jobTypes, selectedJobTypeCode]
-  );
-
   const isFastTrack = isFastTrackJobType(selectedJobType);
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
-
-  const jobTypesByCategory = useMemo(() => {
-    const groups = new Map<string, JobType[]>();
-    for (const jt of jobTypes) {
-      const key = jt.category_display || jt.category;
-      const list = groups.get(key) ?? [];
-      list.push(jt);
-      groups.set(key, list);
-    }
-    return Array.from(groups.entries());
-  }, [jobTypes]);
 
   const bundles = useMemo(() => {
     if (!bundlesData) return [] as ServiceBundle[];
@@ -222,10 +199,10 @@ export function CheckInWizard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-fetch when vehicle changes
   }, [vehicleId]);
 
-  const handleJobTypeChange = (code: string) => {
+  const handleJobTypeChange = (code: string, jobType: JobType | null) => {
     setSelectedJobTypeCode(code);
+    setSelectedJobType(jobType);
     setProgressionWarning(null);
-    const jobType = jobTypes.find((jt) => jt.code === code);
     if (!jobTypeRequiresBundle(jobType)) {
       setServiceBundleId(null);
       setServiceTypeId(null);
@@ -373,7 +350,6 @@ export function CheckInWizard() {
         priority,
         status: "draft",
         job_type_code: selectedJobTypeCode,
-        maintenance_type: isFastTrack ? "routine" : "general",
         ...(serviceTypeId ? { service_type: serviceTypeId } : {}),
         ...(serviceBundleId ? { service_bundle: serviceBundleId } : {}),
       });
@@ -631,31 +607,11 @@ export function CheckInWizard() {
                 </div>
               )}
 
-              <div>
-                <Label htmlFor="check-in-job-type">{JOB_TYPE_FIELD_LABEL}</Label>
-                <Select value={selectedJobTypeCode} onValueChange={handleJobTypeChange}>
-                  <SelectTrigger id="check-in-job-type" className="mt-2">
-                    <SelectValue placeholder="Select job type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {jobTypesByCategory.map(([category, types]) => (
-                      <div key={category}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                          {category}
-                        </div>
-                        {types.map((jt) => (
-                          <SelectItem key={jt.code} value={jt.code}>
-                            {jt.name}
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedJobType?.description ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{selectedJobType.description}</p>
-                ) : null}
-              </div>
+              <JobTypeSelect
+                id="check-in-job-type"
+                value={selectedJobTypeCode}
+                onChange={handleJobTypeChange}
+              />
 
               {bundleRequired && (
                 <div>

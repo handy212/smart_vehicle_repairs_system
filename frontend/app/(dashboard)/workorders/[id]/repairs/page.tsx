@@ -50,6 +50,7 @@ import { workOrderPhotosApi, WorkOrderPhoto } from "@/lib/api/workorder-photos";
 import AddTaskDialog from "../components/AddTaskDialog";
 import AddPartDialog from "../components/AddPartDialog";
 import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 type RepairTab = "tasks" | "parts" | "notes" | "photos" | "readiness";
 
@@ -461,7 +462,7 @@ export default function RepairsPage() {
     );
   }
 
-  if (workOrder.maintenance_type !== "routine" && isDiagnosisPausedWorkOrder(workOrder)) {
+  if (!isRoutineMaintenanceWorkOrder(workOrder) && isDiagnosisPausedWorkOrder(workOrder)) {
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => router.push(`/workorders/${workOrderId}`)} className="-ml-2">
