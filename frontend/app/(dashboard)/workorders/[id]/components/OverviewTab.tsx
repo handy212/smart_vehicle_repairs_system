@@ -32,6 +32,7 @@ import { EstimatedNextServiceCallout } from "./EstimatedNextServiceCallout";
 import {
   canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
+  mustInvoiceViaLinkedEstimate,
 } from "@/lib/workorders/invoiceSummaryDisplay";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
@@ -88,6 +89,7 @@ export default function WorkOrderOverviewTab({
   const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
   const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, wo.status);
   const canCreateInvoice = canCreateWorkOrderInvoice(wo);
+  const invoiceViaEstimate = mustInvoiceViaLinkedEstimate(wo);
   const displayedEstimatedTotal = parseFloat(wo.estimated_total || "0");
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
@@ -518,7 +520,18 @@ export default function WorkOrderOverviewTab({
               {!invoiceSummary?.id &&
               ["completed", "discontinued_pending_bill"].includes(wo.status) ? (
                 <p className="text-xs text-muted-foreground">
-                  {estimateSummary?.id ? (
+                  {invoiceViaEstimate && estimateSummary?.id ? (
+                    <>
+                      Bill this job by converting{" "}
+                      <Link
+                        href={`/billing/estimates/${estimateSummary.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {estimateSummary.estimate_number}
+                      </Link>
+                      {" "}to an invoice.
+                    </>
+                  ) : estimateSummary?.id ? (
                     <>
                       Create an invoice from{" "}
                       <Link
@@ -528,15 +541,19 @@ export default function WorkOrderOverviewTab({
                         {estimateSummary.estimate_number}
                       </Link>
                       {" "}or{" "}
-                      <Link
-                        href={`/billing/invoices/new?work_order=${wo.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        bill directly from this work order
-                      </Link>
+                      {canCreateInvoice ? (
+                        <Link
+                          href={`/billing/invoices/new?work_order=${wo.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          bill directly from this work order
+                        </Link>
+                      ) : (
+                        "use the billing actions on this work order"
+                      )}
                       .
                     </>
-                  ) : (
+                  ) : canCreateInvoice ? (
                     <>
                       No invoice yet.{" "}
                       <Link
@@ -547,6 +564,8 @@ export default function WorkOrderOverviewTab({
                       </Link>
                       .
                     </>
+                  ) : (
+                    "No invoice yet. Use the billing actions on this work order when ready."
                   )}
                 </p>
               ) : null}

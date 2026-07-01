@@ -20,7 +20,7 @@ export const WORK_ORDER_VALID_TRANSITIONS: Record<string, string[]> = {
   paused: ["diagnosis", "in_progress", "additional_work_found", "discontinued_pending_bill"],
   quality_check: ["completed", "in_progress", "discontinued_pending_bill"],
   discontinued_pending_bill: ["invoiced"],
-  completed: ["invoiced", "closed"],
+  completed: ["invoiced"],
   invoiced: ["closed"],
   closed: [],
 };
@@ -28,7 +28,6 @@ export const WORK_ORDER_VALID_TRANSITIONS: Record<string, string[]> = {
 const PROFILE_EXTRA_TRANSITIONS: Record<string, Array<[string, string]>> = {
   inspection_only: [
     ["inspection", "completed"],
-    ["inspection", "invoiced"],
   ],
   diagnostic_only: [
     ["diagnosis", "completed"],

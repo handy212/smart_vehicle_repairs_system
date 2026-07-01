@@ -1176,17 +1176,6 @@ export default function WorkflowActions({
                 "Record odometer out and move the work order to Ready to Close after the invoice is issued.",
             });
           }
-          if (hasIssuedInvoice) {
-            actions.push({
-              label: "Close Work Order",
-              icon: Lock,
-              onClick: () => setShowCloseDialog(true),
-              disabled: closeMutation.isPending,
-              description: invoicePayment?.paymentLabel.startsWith("Paid")
-                ? "Invoice is settled. Complete the handover and close the work order."
-                : "Invoice is issued. You can close the job now while Accounts follows up on the outstanding balance.",
-            });
-          }
           actions.push({
             label: "View invoice",
             icon: DollarSign,
@@ -1201,7 +1190,11 @@ export default function WorkflowActions({
             onClick: openCreateInvoice,
             description: invoiceSummary?.status === "void"
               ? "Issue a new invoice (previous invoice was voided)"
-              : "Bill labor and installed parts directly from this work order",
+              : isInspectionOnly
+                ? "Bill the inspection fee, issue the invoice, then confirm billing complete"
+                : isDiagnosticOnly
+                  ? "Bill the diagnostic service, issue the invoice, then confirm billing complete"
+                  : "Bill labor and installed parts directly from this work order",
           });
           if (linkedEstimateId) {
             actions.push({

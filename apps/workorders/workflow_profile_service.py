@@ -9,7 +9,6 @@ LEGACY_GENERAL_MAINTENANCE_TYPE = 'general'
 PROFILE_EXTRA_TRANSITIONS = {
     'inspection_only': {
         ('inspection', 'completed'),
-        ('inspection', 'invoiced'),
     },
     'diagnostic_only': {
         ('diagnosis', 'completed'),

@@ -567,7 +567,7 @@ class WorkOrder(models.Model):
         'paused': ['diagnosis', 'in_progress', 'additional_work_found', 'discontinued_pending_bill'],
         'quality_check': ['completed', 'in_progress', 'discontinued_pending_bill'],
         'discontinued_pending_bill': ['invoiced'],
-        'completed': ['invoiced', 'closed'],
+        'completed': ['invoiced'],
         'invoiced': ['closed'],
         'closed': [],
     }
@@ -762,10 +762,14 @@ class WorkOrder(models.Model):
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
             if django_apps.is_installed('apps.billing'):
-                from apps.billing.work_order_invoices import get_primary_invoice
+                from apps.billing.work_order_invoices import get_primary_invoice, is_invoice_issued
                 invoice = get_primary_invoice(self)
                 if not invoice:
                     return False, "Create and link an invoice to this work order before marking as invoiced."
+                if invoice.status in ('draft', 'proforma', 'void'):
+                    return False, "Issue the invoice (move it out of draft or proforma) before marking this work order as invoiced."
+                if not is_invoice_issued(invoice):
+                    return False, "Invoice must be issued before the work order can be marked as invoiced."
                 if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
                     return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
             return True, None
@@ -812,22 +816,31 @@ class WorkOrder(models.Model):
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
             if django_apps.is_installed('apps.billing'):
-                from apps.billing.work_order_invoices import get_primary_invoice
+                from apps.billing.work_order_invoices import get_primary_invoice, is_invoice_issued
                 invoice = get_primary_invoice(self)
                 if not invoice:
-                    return False, "A finalized invoice must be created before the work order can be marked as invoiced."
+                    return False, "Create and link an invoice to this work order before marking as invoiced."
+                if invoice.status in ('draft', 'proforma', 'void'):
+                    return False, "Issue the invoice (move it out of draft or proforma) before marking this work order as invoiced."
+                if not is_invoice_issued(invoice):
+                    return False, "Invoice must be issued before the work order can be marked as invoiced."
                 if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
                     return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
 
-        if new_status == 'closed' and django_apps.is_installed('apps.billing'):
-            from apps.billing.work_order_invoices import get_primary_invoice
-            invoice = get_primary_invoice(self)
-            if not invoice:
-                return False, "A finalized invoice is required before the work order can be closed."
-            if invoice.status == 'draft':
-                return False, "Invoice must be issued before the work order can be closed."
-            if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
-                return False, "Invoice total must be greater than zero before the work order can be closed."
+        if new_status == 'closed':
+            if self.status != 'invoiced':
+                return False, "Mark the work order as invoiced before closing."
+            if django_apps.is_installed('apps.billing'):
+                from apps.billing.work_order_invoices import get_primary_invoice, is_invoice_issued
+                invoice = get_primary_invoice(self)
+                if not invoice:
+                    return False, "A finalized invoice is required before the work order can be closed."
+                if invoice.status in ('draft', 'proforma', 'void'):
+                    return False, "Invoice must be issued before the work order can be closed."
+                if not is_invoice_issued(invoice):
+                    return False, "Invoice must be issued before the work order can be closed."
+                if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
+                    return False, "Invoice total must be greater than zero before the work order can be closed."
         
         return True, None
     

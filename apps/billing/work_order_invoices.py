@@ -11,6 +11,12 @@ if TYPE_CHECKING:
 
 HIDDEN_INVOICE_STATUSES = ('void', 'refunded')
 CUSTOMER_VISIBLE_EXCLUDE = ('draft', 'void', 'proforma', 'refunded')
+ISSUED_INVOICE_STATUSES = frozenset({'sent', 'viewed', 'partial', 'paid', 'overdue'})
+
+
+def is_invoice_issued(invoice) -> bool:
+    """True when the invoice has left draft/proforma and can count toward WO billing."""
+    return invoice is not None and invoice.status in ISSUED_INVOICE_STATUSES
 
 
 def invoices_for_work_order(work_order: WorkOrder) -> Iterable[Invoice]:
