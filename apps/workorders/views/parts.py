@@ -247,6 +247,12 @@ class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissi
             wo_part.status = 'ready'
             wo_part.inventory_part = part
             wo_part.save(update_fields=['status', 'inventory_part', 'updated_at'])
+            try:
+                from apps.notifications_app.triggers import notification_triggers
+                notification_triggers.part_requisition_ready(wo_part, fulfillment='allocated')
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send part ready notification: {e}")
             serializer = self.get_serializer(wo_part)
             return Response(serializer.data)
 
@@ -296,6 +302,13 @@ class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissi
                 wo_part.inventory_part = part
                 wo_part.save()
             
+            try:
+                from apps.notifications_app.triggers import notification_triggers
+                notification_triggers.part_requisition_ready(wo_part, fulfillment='allocated')
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send part ready notification: {e}")
+
             serializer = self.get_serializer(wo_part)
             return Response(serializer.data)
         except Exception as e:
@@ -689,13 +702,14 @@ class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissi
             except ValidationError as exc:
                 raise DRFValidationError({'error': '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)})
         
-        # Trigger notification
-        try:
-            from apps.notifications_app.triggers import notification_triggers
-            notification_triggers.part_requisition_created(part)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to send part requisition notification: {e}")
+        # Notify stores when the request is actionable (pending), not while still draft.
+        if part.status != 'draft':
+            try:
+                from apps.notifications_app.triggers import notification_triggers
+                notification_triggers.part_requisition_created(part)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send part requisition notification: {e}")
     @action(detail=True, methods=['post'])
     def mark_installed(self, request, pk=None):
         """Mark part as installed"""

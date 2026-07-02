@@ -190,9 +190,9 @@ export default function PartsRequestsPage() {
                                 Parts Requests
                             </h1>
                             {workOrderFilterId && (
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Filtered to work order #{workOrderFilterId}
-                                </p>
+                                <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
+                                    Showing requests for work order #{workOrderFilterId}. Approve, allocate, or order parts below.
+                                </div>
                             )}
                         </div>
                     </div>

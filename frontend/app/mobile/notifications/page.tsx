@@ -14,6 +14,12 @@ import { cn } from "@/lib/utils";
 
 function getNotificationHref(notification: Notification): string | null {
   const data = notification.data;
+  if (typeof data?.url === "string" && data.url.startsWith("/mobile/")) {
+    return data.url;
+  }
+  if (notification.notification_type === "inventory" && data?.work_order_id) {
+    return `/mobile/workorders/${data.work_order_id}`;
+  }
   if (notification.related_object_type === "roadside" && notification.related_object_id) {
     return `/mobile/roadside/${notification.related_object_id}`;
   }

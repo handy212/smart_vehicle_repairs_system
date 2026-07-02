@@ -114,6 +114,24 @@ export function NotificationDropdown() {
     };
 
     const getNotificationUrl = (notification: Notification): string | null => {
+        const data = notification.data as Record<string, unknown> | undefined;
+        if (typeof data?.url === 'string' && data.url) {
+            try {
+                const parsed = new URL(data.url, window.location.origin);
+                if (parsed.origin === window.location.origin) {
+                    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+                }
+            } catch {
+                if (data.url.startsWith('/')) {
+                    return data.url;
+                }
+            }
+        }
+
+        if (data?.work_order_id && notification.notification_type === 'inventory') {
+            return `/inventory/parts-requests?work_order=${data.work_order_id}`;
+        }
+
         // Use related_object_type if available, otherwise fallback to notification_type
         const typeRaw = notification.related_object_type || notification.notification_type;
         if (!typeRaw || !notification.related_object_id) return null;
@@ -159,6 +177,11 @@ export function NotificationDropdown() {
                 case "workorder":
                 case "work_order":
                     return `/workorders/${id}`;
+                case "work_order_part":
+                    if (data?.work_order_id) {
+                        return `/inventory/parts-requests?work_order=${data.work_order_id}`;
+                    }
+                    return `/inventory/parts-requests`;
                 case "invoice":
                     return `/billing/invoices/${id}`;
                 case "estimate":
@@ -179,6 +202,9 @@ export function NotificationDropdown() {
                     return `/inventory/purchase-orders/${id}`;
                 case "part":
                 case "inventory":
+                    if (data?.work_order_id) {
+                        return `/inventory/parts-requests?work_order=${data.work_order_id}`;
+                    }
                     return `/inventory/${id}`;
                 case "subscription":
                     return `/billing/subscriptions/${id}`;

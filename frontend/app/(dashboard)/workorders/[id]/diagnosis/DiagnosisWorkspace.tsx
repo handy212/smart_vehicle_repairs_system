@@ -1622,10 +1622,12 @@ function RecommendationsTab({
           ? ` ${response.labor_lines_synced} labor line(s) added to the estimate.`
           : "";
       toast({
-        title: "Sent to stores",
+        title: "Stores notified",
         description: `${response.message}${estimateText}${partsText}${laborText}`,
         variant: "default",
       });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
     onError: (error: any) => {
       toast({
