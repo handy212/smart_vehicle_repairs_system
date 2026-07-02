@@ -67,6 +67,7 @@ const EMPTY_FORM: RevenueProductPayload = {
   owner_account_label: "",
   revenue_class: "service",
   default_billing_line_type: "other",
+  default_unit_price: "0.00",
   catalog_part: null,
   roadside_service_type: "",
   sort_order: 0,
@@ -154,6 +155,7 @@ export default function RevenueProductsPage() {
       owner_account_label: product.owner_account_label ?? "",
       revenue_class: product.revenue_class,
       default_billing_line_type: product.default_billing_line_type,
+      default_unit_price: product.default_unit_price ?? "0.00",
       catalog_part: product.catalog_part ?? null,
       roadside_service_type: product.roadside_service_type ?? "",
       sort_order: product.sort_order,
@@ -169,6 +171,7 @@ export default function RevenueProductsPage() {
         code: (form.code ?? "").trim().toLowerCase().replace(/\s+/g, "_"),
         roadside_service_type: form.roadside_service_type?.trim() || null,
         catalog_part: form.catalog_part ?? null,
+        default_unit_price: form.default_unit_price ?? "0.00",
         sort_order: Number(form.sort_order ?? 0),
       };
       return editing
@@ -315,6 +318,7 @@ export default function RevenueProductsPage() {
                     <TableHead>Category</TableHead>
                     <TableHead>{QBO_INCOME_ACCOUNT_SHORT}</TableHead>
                     <TableHead>QBO item</TableHead>
+                    <TableHead className="text-right">Default price</TableHead>
                     <TableHead>Class</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -354,8 +358,14 @@ export default function RevenueProductsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
+                      <TableCell className="text-right text-xs font-mono">
+                        {product.default_unit_price && parseFloat(product.default_unit_price) > 0
+                          ? product.default_unit_price
+                          : product.catalog_part_selling_price && parseFloat(product.catalog_part_selling_price) > 0
+                            ? product.catalog_part_selling_price
+                            : "—"}
+                      </TableCell>
                       <TableCell className="text-xs">
-                        {REVENUE_CLASS_LABELS[product.revenue_class] ?? product.revenue_class}
                       </TableCell>
                       <TableCell>
                         <Badge variant={product.is_active ? "success" : "secondary"} className="text-[10px]">
@@ -373,7 +383,7 @@ export default function RevenueProductsPage() {
                   ))}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-sm text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
                         No income categories found. Run{" "}
                         <code className="text-xs">seed_owner_revenue_products</code> or add your first category.
                       </TableCell>
@@ -463,6 +473,21 @@ export default function RevenueProductsPage() {
                   value={form.catalog_part ?? null}
                   onChange={(catalogPart) => setForm((f) => ({ ...f, catalog_part: catalogPart }))}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Default unit price</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.default_unit_price ?? "0.00"}
+                  onChange={(e) => setForm((f) => ({ ...f, default_unit_price: e.target.value }))}
+                  placeholder="0.00"
+                  className="h-8 text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Flat fee used for inspection, diagnostic, spraying, and other chargeable services when no tasks exist yet.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">

@@ -716,7 +716,7 @@ class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissi
     @action(detail=True, methods=['post'])
     def mark_returned(self, request, pk=None):
         """Mark part as returned to stores with a reason."""
-        from apps.inventory.models import InventoryTransaction, Part
+        from apps.inventory.services import InventoryService
 
         part = self.get_object()
         if part.status in ['installed', 'returned']:
@@ -738,16 +738,17 @@ class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissi
         part.save()
 
         if previous_status == 'ready' and part.inventory_part_id:
-            inventory_part = Part.objects.filter(id=part.inventory_part_id).first()
+            from apps.inventory.services import InventoryService
+            inventory_part = part.inventory_part
             if inventory_part:
-                InventoryTransaction.objects.create(
+                InventoryService.record_transaction(
                     part=inventory_part,
-                    transaction_type='adjustment',
                     quantity=part.quantity,
-                    balance_after=inventory_part.quantity_in_stock + part.quantity,
+                    transaction_type='adjustment',
+                    user=request.user,
+                    branch=part.work_order.branch,
                     work_order=part.work_order,
                     reason=f"Returned from WO #{part.work_order.id}: {reason}",
-                    created_by=request.user,
                 )
 
         serializer = self.get_serializer(part)

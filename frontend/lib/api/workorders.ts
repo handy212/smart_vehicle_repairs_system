@@ -152,6 +152,21 @@ export interface WorkOrder {
     name: string;
   };
   maintenance_type?: 'general' | 'routine';
+  job_type?: number;
+  job_type_code?: string;
+  job_type_detail?: {
+    id: number;
+    code: string;
+    name: string;
+    category: string;
+    workflow_profile?: {
+      code: string;
+      name: string;
+      allows_fast_track_to_approved?: boolean;
+    };
+  };
+  workflow_profile_code?: string | null;
+  is_insurance_claim?: boolean;
   service_type?: number | { id: number; name: string };
   service_bundle?: number | { id: number; name: string };
   customer_discontinuation_reason?: string;

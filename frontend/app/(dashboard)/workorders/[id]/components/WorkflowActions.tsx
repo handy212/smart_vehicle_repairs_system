@@ -54,6 +54,7 @@ import { PauseForm } from "./forms/PauseForm";
 import { StartDiagnosisForm } from "./forms/StartDiagnosisForm";
 import { AssignServiceCoordinatorForm } from "./forms/AssignServiceCoordinatorForm";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
+import { isRoutineMaintenanceWorkOrder, isInspectionOnlyWorkOrder, isDiagnosticOnlyWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
   canCreateWorkOrderInvoice,
@@ -118,7 +119,9 @@ export default function WorkflowActions({
   });
 
   const currentWorkOrder = workOrderData ?? workOrder;
-  const isRoutine = currentWorkOrder?.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(currentWorkOrder);
+  const isInspectionOnly = isInspectionOnlyWorkOrder(currentWorkOrder);
+  const isDiagnosticOnly = isDiagnosticOnlyWorkOrder(currentWorkOrder);
   const preServiceStatuses = new Set([
     "draft",
     "inspection",
@@ -825,6 +828,17 @@ export default function WorkflowActions({
           });
           break;
         }
+        if (isInspectionOnly) {
+          actions.push({
+            label: "Start Initial Inspection",
+            icon: Eye,
+            onClick: () => setShowInspectionDialog(true),
+            disabled: createInspectionMutation.isPending,
+            variant: "outline",
+            description: "Perform the vehicle inspection for this job",
+          });
+          break;
+        }
         actions.push(
           {
             label: "Start Initial Inspection",
@@ -848,6 +862,18 @@ export default function WorkflowActions({
 
       case "inspection":
         if (isRoutine) break;
+        if (isInspectionOnly) {
+          if (hasApprovedInspection) {
+            actions.push({
+              label: "Mark inspection complete",
+              icon: CheckCircle,
+              onClick: () => setShowCompleteDialog(true),
+              disabled: completeMutation.isPending,
+              description: "Close this inspection-only job after the report is finished",
+            });
+          }
+          break;
+        }
         actions.push({
           label: "Start Intake",
           icon: Play,
@@ -943,6 +969,16 @@ export default function WorkflowActions({
       // Phase 2: Quotation & Customer Approval
       case "awaiting_approval":
         if (isRoutine) break;
+        if (isDiagnosticOnly) {
+          actions.push({
+            label: "Mark diagnostic complete",
+            icon: CheckCircle,
+            onClick: () => setShowCompleteDialog(true),
+            disabled: completeMutation.isPending,
+            description: "Finish after the customer has reviewed the diagnostic estimate",
+          });
+          break;
+        }
         actions.push({
           label: "Approve",
           icon: CheckCircle,
@@ -961,6 +997,16 @@ export default function WorkflowActions({
             variant: "outline",
             description: "Review bundle parts and service tasks",
           });
+        }
+        if (isDiagnosticOnly) {
+          actions.push({
+            label: "Mark diagnostic complete",
+            icon: CheckCircle,
+            onClick: () => setShowCompleteDialog(true),
+            disabled: completeMutation.isPending,
+            description: "Close this diagnostic-only job without starting repairs",
+          });
+          break;
         }
         if (waitingForPartsAllocation) {
           actions.push(
@@ -1130,17 +1176,6 @@ export default function WorkflowActions({
                 "Record odometer out and move the work order to Ready to Close after the invoice is issued.",
             });
           }
-          if (hasIssuedInvoice) {
-            actions.push({
-              label: "Close Work Order",
-              icon: Lock,
-              onClick: () => setShowCloseDialog(true),
-              disabled: closeMutation.isPending,
-              description: invoicePayment?.paymentLabel.startsWith("Paid")
-                ? "Invoice is settled. Complete the handover and close the work order."
-                : "Invoice is issued. You can close the job now while Accounts follows up on the outstanding balance.",
-            });
-          }
           actions.push({
             label: "View invoice",
             icon: DollarSign,
@@ -1155,7 +1190,11 @@ export default function WorkflowActions({
             onClick: openCreateInvoice,
             description: invoiceSummary?.status === "void"
               ? "Issue a new invoice (previous invoice was voided)"
-              : "Bill labor and installed parts directly from this work order",
+              : isInspectionOnly
+                ? "Bill the inspection fee, issue the invoice, then confirm billing complete"
+                : isDiagnosticOnly
+                  ? "Bill the diagnostic service, issue the invoice, then confirm billing complete"
+                  : "Bill labor and installed parts directly from this work order",
           });
           if (linkedEstimateId) {
             actions.push({

@@ -31,12 +31,16 @@ import { useToast } from "@/lib/hooks/useToast";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
-  JOB_TYPE_FIELD_LABEL,
-  JOB_TYPE_GENERAL_LABEL,
-  JOB_TYPE_ROUTINE_LABEL,
   SERVICE_PACKAGE_LABEL,
   SERVICE_PACKAGE_PLACEHOLDER,
 } from "@/lib/workorders/job-type-labels";
+import {
+  jobTypesApi,
+  isFastTrackJobType,
+  jobTypeRequiresBundle,
+  type JobType,
+} from "@/lib/api/job-types";
+import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 import {
   Dialog,
@@ -61,16 +65,10 @@ const workOrderSchema = z.object({
   brought_by_relationship: z.string().optional(),
   customer_concerns: z.string().min(1, "Customer concerns are required"),
   odometer_in: z.number().min(0),
-  maintenance_type: z.enum(["general", "routine"]),
+  job_type_code: z.string().min(1, "Job type is required"),
   service_type: z.number().optional(),
   service_bundle: z.number().optional(),
-}).refine(
-  (data) => data.maintenance_type !== "routine" || !!data.service_bundle,
-  {
-    message: "Select a service package for routine service jobs",
-    path: ["service_bundle"],
-  }
-);
+});
 
 type WorkOrderFormData = z.input<typeof workOrderSchema>;
 
@@ -292,13 +290,27 @@ export default function NewWorkOrderPage() {
       brought_by_email: "",
       brought_by_relationship: "",
       customer_concerns: "",
-      maintenance_type: "general",
+      job_type_code: "general_repairs",
       service_bundle: undefined,
     },
   });
 
   const customer = watch("customer");
   const vehicle = watch("vehicle");
+  const jobTypeCode = watch("job_type_code");
+
+  const { data: jobTypesData } = useQuery({
+    queryKey: ["workorders", "job-types"],
+    queryFn: () => jobTypesApi.list({ active_only: true }),
+  });
+
+  const selectedJobType = useMemo<JobType | null>(() => {
+    const jobTypes = jobTypesData?.results ?? [];
+    return jobTypes.find((jt) => jt.code === jobTypeCode) ?? null;
+  }, [jobTypesData, jobTypeCode]);
+
+  const bundleRequired = jobTypeRequiresBundle(selectedJobType);
+  const isFastTrack = isFastTrackJobType(selectedJobType);
   const odometerIn = watch("odometer_in");
   const customerConcerns = watch("customer_concerns");
   const broughtByContact = watch("brought_by_contact");
@@ -526,8 +538,8 @@ export default function NewWorkOrderPage() {
       vehiclesApi.getSuggestedService(vehicle)
         .then(data => {
           setSuggestedService(data);
-          // If maintenance type is routine and nothing is selected yet, pre-select suggested bundle
-          if (watch("maintenance_type") === "routine" && !watch("service_bundle") && data.suggested_bundle_id) {
+          // Pre-select suggested bundle when job type requires a service package
+          if (bundleRequired && !watch("service_bundle") && data.suggested_bundle_id) {
             setValue("service_bundle", data.suggested_bundle_id);
             setValue("service_type", data.suggested_service_id);
           }
@@ -666,7 +678,9 @@ export default function NewWorkOrderPage() {
     mutationFn: (data: WorkOrderFormData) => workordersApi.create(data),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
-      const isRoutine = variables.maintenance_type === "routine";
+      const isRoutine = isFastTrackJobType(
+        (jobTypesData?.results ?? []).find((jt) => jt.code === variables.job_type_code) ?? null
+      );
       router.push(
         isRoutine
           ? `/workorders/${data.id}?from=check-in&flow=routine&tab=parts`
@@ -722,10 +736,10 @@ export default function NewWorkOrderPage() {
   const onSubmit: SubmitHandler<WorkOrderFormData> = async (data) => {
     setServerError(null);
 
-    if (data.maintenance_type === "routine" && !data.service_bundle) {
+    if (bundleRequired && !data.service_bundle) {
       setError("service_bundle", {
         type: "manual",
-        message: "Select a service package for routine service jobs",
+        message: "Select a service package for this job type",
       });
       return;
     }
@@ -741,7 +755,7 @@ export default function NewWorkOrderPage() {
     const submitData: any = {
       ...data,
       odometer_in: data.odometer_in ?? 0,
-      customer_concerns: data.customer_concerns || "", // Ensure it's not undefined
+      customer_concerns: data.customer_concerns || "",
     };
 
     // Add warranty rework fields if applicable
@@ -1315,35 +1329,20 @@ export default function NewWorkOrderPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-card-foreground">
-                      {JOB_TYPE_FIELD_LABEL}
-                    </label>
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      General repair follows inspection and diagnosis. Routine service uses a predefined package.
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-4">
-                      <label className="flex cursor-pointer items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="general"
-                          {...register("maintenance_type")}
-                          className="h-4 w-4 border-border text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_GENERAL_LABEL}</span>
-                      </label>
-                      <label className="flex cursor-pointer items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="routine"
-                          {...register("maintenance_type")}
-                          className="h-4 w-4 border-border text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm font-medium text-foreground">{JOB_TYPE_ROUTINE_LABEL}</span>
-                      </label>
-                    </div>
+                    <JobTypeSelect
+                      value={jobTypeCode || "general_repairs"}
+                      onChange={(code, jobType) => {
+                        setValue("job_type_code", code, { shouldValidate: true });
+                        if (!jobTypeRequiresBundle(jobType)) {
+                          setValue("service_bundle", undefined);
+                          setValue("service_type", undefined);
+                          setProgressionWarning(null);
+                        }
+                      }}
+                    />
                   </div>
 
-                  {watch("maintenance_type") === "routine" && (
+                  {bundleRequired && (
                     <div>
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <label htmlFor="service_bundle" className="block text-sm font-medium text-card-foreground">
@@ -1427,7 +1426,7 @@ export default function NewWorkOrderPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {watch("maintenance_type") !== "routine" && (
+                  {!bundleRequired && (
                     <div className="flex items-end">
                       <Popover>
                         <PopoverTrigger asChild>

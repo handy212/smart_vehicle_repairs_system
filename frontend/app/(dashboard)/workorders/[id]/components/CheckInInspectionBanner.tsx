@@ -17,6 +17,7 @@ import { workordersApi, WorkOrder } from "@/lib/api/workorders";
 import { CreateInspectionForm } from "./forms/CreateInspectionForm";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface CheckInInspectionBannerProps {
   workOrder: WorkOrder;
@@ -61,7 +62,7 @@ export function CheckInInspectionBanner({
   const visible =
     !dismissed &&
     !routineFlow &&
-    workOrder.maintenance_type !== "routine" &&
+    !isRoutineMaintenanceWorkOrder(workOrder) &&
     needsInspection &&
     (fromCheckIn || (!hasInspection && workOrder.status === "draft"));
 

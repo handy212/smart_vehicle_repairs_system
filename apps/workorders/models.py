@@ -15,6 +15,22 @@ from apps.appointments.models import Appointment
 
 logger = logging.getLogger(__name__)
 
+from .job_types import JobType, WorkflowProfile  # noqa: E402
+
+__all__ = [
+    'WorkflowConfiguration',
+    'WorkflowProfile',
+    'JobType',
+    'WorkOrder',
+    'ServiceTask',
+    'ServiceTaskType',
+    'WorkOrderPart',
+    'WorkOrderNote',
+    'WorkOrderPhoto',
+    'TechnicianTimeLog',
+    'RepeatVisitAlert',
+]
+
 
 class WorkflowConfiguration(models.Model):
     """
@@ -313,6 +329,10 @@ class WorkOrder(models.Model):
     # Flags
     is_warranty = models.BooleanField(default=False)
     is_recall = models.BooleanField(default=False)
+    is_insurance_claim = models.BooleanField(
+        default=False,
+        help_text='Insurance or accident-repair claim context for this work order',
+    )
     is_customer_waiting = models.BooleanField(default=False)
     
     # Repeat Visit / Warranty Rework Tracking
@@ -359,6 +379,14 @@ class WorkOrder(models.Model):
         blank=True,
         related_name='work_orders',
         help_text="Service bundle associated with this work order"
+    )
+    job_type = models.ForeignKey(
+        JobType,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='work_orders',
+        help_text="Configurable job type (e.g. Brake Service, Routine Maintenance)",
     )
 
     BROUGHT_BY_TYPE_CHOICES = [
@@ -440,6 +468,10 @@ class WorkOrder(models.Model):
         
         # Calculate actual total
         self.actual_total = self.actual_labor_cost + self.actual_parts_cost
+
+        if self.job_type_id:
+            from .workflow_profile_service import sync_legacy_maintenance_type
+            self.maintenance_type = sync_legacy_maintenance_type(self)
         
         super().save(*args, **kwargs)
         
@@ -535,7 +567,7 @@ class WorkOrder(models.Model):
         'paused': ['diagnosis', 'in_progress', 'additional_work_found', 'discontinued_pending_bill'],
         'quality_check': ['completed', 'in_progress', 'discontinued_pending_bill'],
         'discontinued_pending_bill': ['invoiced'],
-        'completed': ['invoiced', 'closed'],
+        'completed': ['invoiced'],
         'invoiced': ['closed'],
         'closed': [],
     }
@@ -563,41 +595,48 @@ class WorkOrder(models.Model):
         }
 
         if new_status in {'quality_check', 'completed'}:
-            incomplete_tasks = self.get_incomplete_mechanical_tasks()
-            if new_status == 'quality_check':
-                if not self.tasks.filter(is_workflow_task=False).exists():
-                    blockers['errors'].append('Create at least one mechanical repair task before requesting quality check.')
-                    blockers['next_step'] = 'Add repair tasks from the approved diagnosis recommendations.'
-                elif incomplete_tasks.exists():
-                    blockers['errors'].append('Complete or skip all mechanical tasks before requesting quality check.')
-                    blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
-            elif incomplete_tasks.exists():
-                blockers['errors'].append('Complete or skip all mechanical tasks before completing the work order.')
-                blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+            from .workflow_profile_service import allows_simplified_completion
 
-            blockers['blocking_tasks'] = [
-                {
-                    'id': task.id,
-                    'description': task.description,
-                    'status': task.get_status_display(),
-                    'assigned_to': task.assigned_to.get_full_name() if task.assigned_to else '',
-                }
-                for task in incomplete_tasks.order_by('sequence_order', 'id')[:10]
-            ]
+            skip_mechanical_checks = new_status == 'completed' and allows_simplified_completion(self)
+            if not skip_mechanical_checks:
+                incomplete_tasks = self.get_incomplete_mechanical_tasks()
+                if new_status == 'quality_check':
+                    if not self.tasks.filter(is_workflow_task=False).exists():
+                        blockers['errors'].append('Create at least one mechanical repair task before requesting quality check.')
+                        blockers['next_step'] = 'Add repair tasks from the approved diagnosis recommendations.'
+                    elif incomplete_tasks.exists():
+                        blockers['errors'].append('Complete or skip all mechanical tasks before requesting quality check.')
+                        blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+                elif incomplete_tasks.exists():
+                    blockers['errors'].append('Complete or skip all mechanical tasks before completing the work order.')
+                    blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+
+                blockers['blocking_tasks'] = [
+                    {
+                        'id': task.id,
+                        'description': task.description,
+                        'status': task.get_status_display(),
+                        'assigned_to': task.assigned_to.get_full_name() if task.assigned_to else '',
+                    }
+                    for task in incomplete_tasks.order_by('sequence_order', 'id')[:10]
+                ]
 
         if new_status == 'completed':
-            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
-            blockers['blocking_parts'] = [
-                {
-                    'id': part.id,
-                    'part_name': part.part_name,
-                    'status': part.get_status_display(),
-                }
-                for part in unresolved_parts.order_by('created_at', 'id')[:10]
-            ]
-            if unresolved_parts.exists():
-                blockers['errors'].append('Install required parts or formally return unused parts before completing.')
-                blockers['next_step'] = blockers['next_step'] or 'Open the Parts tab and resolve each required part.'
+            from .workflow_profile_service import allows_simplified_completion
+
+            if not allows_simplified_completion(self):
+                unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+                blockers['blocking_parts'] = [
+                    {
+                        'id': part.id,
+                        'part_name': part.part_name,
+                        'status': part.get_status_display(),
+                    }
+                    for part in unresolved_parts.order_by('created_at', 'id')[:10]
+                ]
+                if unresolved_parts.exists():
+                    blockers['errors'].append('Install required parts or formally return unused parts before completing.')
+                    blockers['next_step'] = blockers['next_step'] or 'Open the Parts tab and resolve each required part.'
 
         return blockers
 
@@ -610,9 +649,21 @@ class WorkOrder(models.Model):
         if blocked_message:
             return False, blocked_message
 
-        # Routine maintenance check-in: skip inspection/intake/diagnosis pipeline
+        # Fast-track check-in: skip inspection/intake/diagnosis pipeline (routine profile)
+        from .workflow_profile_service import (
+            uses_fast_track_profile,
+            resolve_allowed_targets,
+            profile_skips_inspection,
+            profile_skips_diagnosis,
+            work_order_requires_inspection,
+            work_order_requires_diagnosis,
+            allows_simplified_completion,
+            get_profile_code,
+            sync_legacy_maintenance_type,
+        )
+
         if (
-            self.maintenance_type == 'routine'
+            uses_fast_track_profile(self)
             and self.service_bundle_id
             and self.status == 'draft'
             and new_status == 'approved'
@@ -630,11 +681,13 @@ class WorkOrder(models.Model):
 
         workflow_allowed = get_workflow_allowed_targets(self)
         if workflow_allowed is not None:
-            if new_status not in workflow_allowed:
+            allowed_targets = resolve_allowed_targets(self, self.status, workflow_allowed)
+            if new_status not in allowed_targets:
                 return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
         else:
             valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
-            if new_status not in valid_next_statuses:
+            allowed_targets = resolve_allowed_targets(self, self.status, valid_next_statuses)
+            if new_status not in allowed_targets:
                 return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
 
         # Discontinued — pending invoice (customer stops job; bill then close via invoiced → closed)
@@ -653,12 +706,17 @@ class WorkOrder(models.Model):
             return (False, 'A Service Coordinator must be assigned when moving to assigned status.')
             
         # Validate Initial Inspection is performed and completed before moving to intake
-        if new_status == 'intake':
+        if new_status == 'intake' and work_order_requires_inspection(self):
             if not self.inspections.filter(status__in=['completed', 'approved']).exists():
                 return False, "Initial inspection must be completed and approved before starting intake."
-        
-        # Check prerequisites
-        if new_status == 'awaiting_approval':
+
+        if new_status == 'diagnosis' and profile_skips_diagnosis(self):
+            return False, 'This job profile does not include a diagnosis workflow.'
+
+        if new_status == 'awaiting_approval' and profile_skips_diagnosis(self):
+            return False, 'This job profile does not include customer approval for repairs.'
+
+        if new_status == 'awaiting_approval' and work_order_requires_diagnosis(self):
             if not self.diagnosis_notes:
                 return False, "Diagnosis notes are required before requesting approval"
         
@@ -704,63 +762,85 @@ class WorkOrder(models.Model):
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
             if django_apps.is_installed('apps.billing'):
-                from apps.billing.work_order_invoices import get_primary_invoice
+                from apps.billing.work_order_invoices import get_primary_invoice, is_invoice_issued
                 invoice = get_primary_invoice(self)
                 if not invoice:
                     return False, "Create and link an invoice to this work order before marking as invoiced."
+                if invoice.status in ('draft', 'proforma', 'void'):
+                    return False, "Issue the invoice (move it out of draft or proforma) before marking this work order as invoiced."
+                if not is_invoice_issued(invoice):
+                    return False, "Invoice must be issued before the work order can be marked as invoiced."
                 if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
                     return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
             return True, None
 
         if new_status == 'completed':
-            if not self.tasks.filter(is_workflow_task=False).exists():
-                return False, "At least one mechanical task must exist before completing"
-            if self.quality_check_required and not self.quality_check_completed:
-                return False, "Quality check must be completed first"
-            incomplete_tasks = self.get_incomplete_mechanical_tasks()
-            if incomplete_tasks.exists():
-                task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
-                suffix = f": {task_names}" if task_names else ""
-                return False, f"Complete or skip all mechanical tasks before completing{suffix}"
+            if allows_simplified_completion(self):
+                profile_code = get_profile_code(self)
+                if profile_code == 'inspection_only':
+                    if not self.inspections.filter(status__in=['completed', 'approved']).exists():
+                        return False, "Vehicle inspection must be completed before closing this job."
+                elif profile_code == 'diagnostic_only':
+                    if not self.diagnosis_notes or not self.diagnosis_notes.strip():
+                        return False, "Diagnosis notes are required before completing this diagnostic job."
+            else:
+                if not self.tasks.filter(is_workflow_task=False).exists():
+                    return False, "At least one mechanical task must exist before completing"
+                if self.quality_check_required and not self.quality_check_completed:
+                    return False, "Quality check must be completed first"
+                incomplete_tasks = self.get_incomplete_mechanical_tasks()
+                if incomplete_tasks.exists():
+                    task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
+                    suffix = f": {task_names}" if task_names else ""
+                    return False, f"Complete or skip all mechanical tasks before completing{suffix}"
 
-            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
-            if unresolved_parts.exists():
-                return False, f"{unresolved_parts.count()} part(s) must be installed or formally returned before completing"
+                unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+                if unresolved_parts.exists():
+                    return False, f"{unresolved_parts.count()} part(s) must be installed or formally returned before completing"
 
-            returned_without_reason = self.parts.filter(status='returned').filter(
-                Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
-            )
-            if returned_without_reason.exists():
-                return False, "Every returned part must include a return reason before completing"
+                returned_without_reason = self.parts.filter(status='returned').filter(
+                    Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
+                )
+                if returned_without_reason.exists():
+                    return False, "Every returned part must include a return reason before completing"
 
-            tasks_missing_labor = [
-                task.description
-                for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                if task.calculated_actual_hours <= 0
-            ]
-            if tasks_missing_labor:
-                return False, "Actual labor hours are required for every completed mechanical task before completing the work order"
+                tasks_missing_labor = [
+                    task.description
+                    for task in self.tasks.filter(is_workflow_task=False, status='completed')
+                    if task.calculated_actual_hours <= 0
+                ]
+                if tasks_missing_labor:
+                    return False, "Actual labor hours are required for every completed mechanical task before completing the work order"
         
         if new_status == 'invoiced':
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
             if django_apps.is_installed('apps.billing'):
-                from apps.billing.work_order_invoices import get_primary_invoice
+                from apps.billing.work_order_invoices import get_primary_invoice, is_invoice_issued
                 invoice = get_primary_invoice(self)
                 if not invoice:
-                    return False, "A finalized invoice must be created before the work order can be marked as invoiced."
+                    return False, "Create and link an invoice to this work order before marking as invoiced."
+                if invoice.status in ('draft', 'proforma', 'void'):
+                    return False, "Issue the invoice (move it out of draft or proforma) before marking this work order as invoiced."
+                if not is_invoice_issued(invoice):
+                    return False, "Invoice must be issued before the work order can be marked as invoiced."
                 if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
                     return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
 
-        if new_status == 'closed' and django_apps.is_installed('apps.billing'):
-            from apps.billing.work_order_invoices import get_primary_invoice
-            invoice = get_primary_invoice(self)
-            if not invoice:
-                return False, "A finalized invoice is required before the work order can be closed."
-            if invoice.status == 'draft':
-                return False, "Invoice must be issued before the work order can be closed."
-            if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
-                return False, "Invoice total must be greater than zero before the work order can be closed."
+        if new_status == 'closed':
+            if self.status != 'invoiced':
+                return False, "Mark the work order as invoiced before closing."
+            if django_apps.is_installed('apps.billing'):
+                from apps.billing.work_order_invoices import get_primary_invoice, is_invoice_issued
+                invoice = get_primary_invoice(self)
+                if not invoice:
+                    return False, "A finalized invoice is required before the work order can be closed."
+                if invoice.status in ('draft', 'proforma', 'void'):
+                    return False, "Invoice must be issued before the work order can be closed."
+                if not is_invoice_issued(invoice):
+                    return False, "Invoice must be issued before the work order can be closed."
+                if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
+                    return False, "Invoice total must be greater than zero before the work order can be closed."
         
         return True, None
     
@@ -786,27 +866,32 @@ class WorkOrder(models.Model):
                 errors.append("Work order must be approved")
         
         if new_status == 'completed':
-            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
-            if incomplete_tasks.exists():
-                errors.append("All mechanical tasks must be completed or skipped")
+            from .workflow_profile_service import allows_simplified_completion
 
-            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
-            if unresolved_parts.exists():
-                errors.append(f"{unresolved_parts.count()} part(s) must be installed or formally returned")
+            if allows_simplified_completion(self):
+                pass  # Profile-specific prerequisites checked in can_transition_to
+            else:
+                incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+                if incomplete_tasks.exists():
+                    errors.append("All mechanical tasks must be completed or skipped")
 
-            returned_without_reason = self.parts.filter(status='returned').filter(
-                Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
-            )
-            if returned_without_reason.exists():
-                errors.append("Every returned part must include a return reason")
+                unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+                if unresolved_parts.exists():
+                    errors.append(f"{unresolved_parts.count()} part(s) must be installed or formally returned")
 
-            tasks_missing_labor = [
-                task.description
-                for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                if task.calculated_actual_hours <= 0
-            ]
-            if tasks_missing_labor:
-                errors.append("Actual labor hours are required for every completed mechanical task")
+                returned_without_reason = self.parts.filter(status='returned').filter(
+                    Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
+                )
+                if returned_without_reason.exists():
+                    errors.append("Every returned part must include a return reason")
+
+                tasks_missing_labor = [
+                    task.description
+                    for task in self.tasks.filter(is_workflow_task=False, status='completed')
+                    if task.calculated_actual_hours <= 0
+                ]
+                if tasks_missing_labor:
+                    errors.append("Actual labor hours are required for every completed mechanical task")
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -1724,8 +1809,9 @@ class WorkOrder(models.Model):
         """
         # Auto-advance to quality_check when all tasks completed
         if self.status == 'in_progress':
-            if self.tasks.exists():
-                all_tasks_completed = self.tasks.exclude(status__in=['completed', 'skipped']).count() == 0
+            mechanical_tasks = self.tasks.filter(is_workflow_task=False)
+            if mechanical_tasks.exists():
+                all_tasks_completed = mechanical_tasks.exclude(status__in=['completed', 'skipped']).count() == 0
                 if all_tasks_completed and not self.quality_check_completed:
                     try:
                         # Only auto-advance if quality check is required

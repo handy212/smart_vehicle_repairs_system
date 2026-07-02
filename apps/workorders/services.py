@@ -2,116 +2,127 @@ from .models import WorkOrder, WorkOrderPart, WorkOrderNote, ServiceTask
 from django.db.models import Max
 from django.utils import timezone
 from apps.inventory.models import ServiceBundle
+from .workflow_profile_service import uses_bundle_on_create, uses_fast_track_profile
 
 def apply_service_bundle(work_order):
     """
-    Apply service bundle parts to a work order if it's a routine maintenance type.
+    Apply service bundle parts to a work order when the workflow profile uses bundles.
     """
-    if work_order.maintenance_type == 'routine':
-        try:
-            bundle = None
-            
-            # 1. Prefer explicit service_bundle if provided
-            if work_order.service_bundle:
-                bundle = work_order.service_bundle
-                # Ensure service_type is also set for other logic/reporting
-                if not work_order.service_type and bundle.service_type:
-                    work_order.service_type = bundle.service_type
-                    work_order.save(update_fields=['service_type'])
-            
-            # 2. Fallback to finding bundle via service_type
-            elif work_order.service_type:
-                bundle = ServiceBundle.objects.filter(service_type=work_order.service_type, is_active=True).first()
-                if bundle:
-                    work_order.service_bundle = bundle
-                    work_order.save(update_fields=['service_bundle'])
-            
+    if not uses_bundle_on_create(work_order):
+        return False
+    try:
+        bundle = None
+
+        # 1. Prefer explicit service_bundle if provided
+        if work_order.service_bundle:
+            bundle = work_order.service_bundle
+            if not work_order.service_type and bundle.service_type:
+                work_order.service_type = bundle.service_type
+                work_order.save(update_fields=['service_type'])
+
+        # 2. Fallback to finding bundle via service_type
+        elif work_order.service_type:
+            bundle = ServiceBundle.objects.filter(service_type=work_order.service_type, is_active=True).first()
             if bundle:
-                update_fields = []
-                if not work_order.diagnosis_notes:
-                    work_order.diagnosis_notes = (
-                        f"Routine maintenance: {bundle.name}. "
-                        "Pre-defined service bundle applied at check-in."
-                    )
-                    update_fields.append('diagnosis_notes')
-                if work_order.requires_approval:
-                    work_order.requires_approval = False
-                    update_fields.append('requires_approval')
-                if work_order.quality_check_required:
-                    work_order.quality_check_required = False
-                    update_fields.append('quality_check_required')
-                if update_fields:
-                    work_order.save(update_fields=update_fields)
+                work_order.service_bundle = bundle
+                work_order.save(update_fields=['service_bundle'])
 
-                # Create note
-                WorkOrderNote.objects.create(
-                    work_order=work_order,
-                    note_type='internal',
-                    note=f"Applied service bundle: {bundle.name}",
-                    is_important=False
-                )
-                
-                # Add parts
-                for item in bundle.items.all():
-                    WorkOrderPart.objects.create(
-                        work_order=work_order,
-                        part_number=item.part.part_number,
-                        part_name=item.part.name,
-                        description=f"Included in {bundle.name}",
-                        quantity=item.quantity,
-                        unit_cost=item.part.cost_price,
-                        markup_percentage=item.part.markup_percentage,
-                        inventory_part=item.part,
-                        status='pending'  # dependent on workflow
-                    )
-                
-                # Automatically reserve parts if we have a branch
-                if work_order.branch:
-                    from apps.inventory.services import InventoryService
-                    InventoryService.reserve_parts_for_work_order(work_order)
-
-                # Mechanical tasks for routine bundle (skip full diagnosis path)
-                if not work_order.tasks.filter(is_workflow_task=False).exists():
-                    max_seq = work_order.tasks.filter(is_workflow_task=False).aggregate(
-                        max_seq=Max('sequence_order')
-                    )['max_seq'] or 0
-                    ServiceTask.objects.create(
-                        work_order=work_order,
-                        task_type='maintenance',
-                        description=f"Perform {bundle.name}",
-                        detailed_notes="Routine maintenance service bundle applied at check-in.",
-                        sequence_order=max_seq + 1,
-                        is_workflow_task=False,
-                    )
-                    for index, item in enumerate(bundle.items.select_related('part').all(), start=1):
-                        ServiceTask.objects.create(
-                            work_order=work_order,
-                            task_type='maintenance',
-                            description=f"Install {item.part.name}",
-                            detailed_notes=f"Included in {bundle.name}",
-                            sequence_order=max_seq + 1 + index,
-                            is_workflow_task=False,
-                        )
-                
-                return True
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to apply service bundle for WO {work_order.work_order_number}: {e}")
+        if not bundle:
             return False
-    return False
+
+        update_fields = []
+        if not work_order.diagnosis_notes:
+            work_order.diagnosis_notes = (
+                f"Routine maintenance: {bundle.name}. "
+                "Pre-defined service bundle applied at check-in."
+            )
+            update_fields.append('diagnosis_notes')
+        if work_order.requires_approval:
+            work_order.requires_approval = False
+            update_fields.append('requires_approval')
+        if work_order.quality_check_required:
+            work_order.quality_check_required = False
+            update_fields.append('quality_check_required')
+        if update_fields:
+            work_order.save(update_fields=update_fields)
+
+        WorkOrderNote.objects.create(
+            work_order=work_order,
+            note_type='internal',
+            note=f"Applied service bundle: {bundle.name}",
+            is_important=False,
+        )
+
+        for item in bundle.items.all():
+            WorkOrderPart.objects.create(
+                work_order=work_order,
+                part_number=item.part.part_number,
+                part_name=item.part.name,
+                description=f"Included in {bundle.name}",
+                quantity=item.quantity,
+                unit_cost=item.part.cost_price,
+                markup_percentage=item.part.markup_percentage,
+                inventory_part=item.part,
+                status='pending',
+            )
+
+        if work_order.branch:
+            from apps.inventory.services import InventoryService
+            InventoryService.reserve_parts_for_work_order(work_order)
+
+        if not work_order.tasks.filter(is_workflow_task=False).exists():
+            max_seq = work_order.tasks.filter(is_workflow_task=False).aggregate(
+                max_seq=Max('sequence_order')
+            )['max_seq'] or 0
+            ServiceTask.objects.create(
+                work_order=work_order,
+                task_type='maintenance',
+                description=f"Perform {bundle.name}",
+                detailed_notes="Routine maintenance service bundle applied at check-in.",
+                sequence_order=max_seq + 1,
+                is_workflow_task=False,
+            )
+            for index, item in enumerate(bundle.items.select_related('part').all(), start=1):
+                ServiceTask.objects.create(
+                    work_order=work_order,
+                    task_type='maintenance',
+                    description=f"Install {item.part.name}",
+                    detailed_notes=f"Included in {bundle.name}",
+                    sequence_order=max_seq + 1 + index,
+                    is_workflow_task=False,
+                )
+
+        return True
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to apply service bundle for WO {work_order.work_order_number}: {e}")
+        return False
 
 
 def prepare_routine_service_workflow(work_order, user=None):
     """
-    Fast-track routine maintenance from check-in to approved.
-    Skips inspection, intake, and diagnosis — the service bundle defines the work.
+    Fast-track pre-packaged service from check-in to approved.
+    Skips inspection, intake, and diagnosis when the workflow profile allows it.
     """
-    if work_order.maintenance_type != 'routine' or not work_order.service_bundle_id:
+    if not uses_fast_track_profile(work_order):
         return False
     if work_order.status != 'draft':
         return False
     if not work_order.tasks.filter(is_workflow_task=False).exists():
+        return False
+
+    # Resolve bundle from service_type when service_bundle not set directly
+    if not work_order.service_bundle_id and work_order.service_type_id:
+        bundle = ServiceBundle.objects.filter(
+            service_type=work_order.service_type,
+            is_active=True,
+        ).first()
+        if bundle:
+            work_order.service_bundle = bundle
+            work_order.save(update_fields=['service_bundle', 'updated_at'])
+
+    if not work_order.service_bundle_id:
         return False
 
     bundle = work_order.service_bundle
@@ -127,8 +138,10 @@ def prepare_routine_service_workflow(work_order, user=None):
     if not work_order.approved_by_customer:
         work_order.approved_by_customer = True
         work_order.approved_at = timezone.now()
+        update_fields.extend(['approved_by_customer', 'approved_at'])
+    if work_order.approval_method != 'routine_service':
         work_order.approval_method = 'routine_service'
-        update_fields.extend(['approved_by_customer', 'approved_at', 'approval_method'])
+        update_fields.append('approval_method')
     if not work_order.diagnosis_notes:
         work_order.diagnosis_notes = (
             f"Routine maintenance: {bundle_name}. "

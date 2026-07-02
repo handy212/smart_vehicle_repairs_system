@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
+from apps.workorders.job_type_seed import seed_workflow_profiles_and_job_types
 from apps.workorders.models import WorkOrder
 from apps.workorders.utils import find_repeat_workorders
 
@@ -89,6 +90,7 @@ class RepeatIssueDetectionTests(TestCase):
 
 class RepeatIssueAPITests(TestCase):
     def setUp(self):
+        seed_workflow_profiles_and_job_types(overwrite=True)
         self.admin = User.objects.create_user(
             username='admin2',
             email='admin2@example.com',

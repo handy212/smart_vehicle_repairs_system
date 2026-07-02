@@ -6,6 +6,7 @@ from apps.inventory.models import Part, PartCategory, Supplier, ServiceBundle, S
 from apps.vehicles.models import ServiceType, Vehicle
 from apps.customers.models import Customer
 from apps.branches.models import Branch
+from apps.workorders.job_type_seed import seed_workflow_profiles_and_job_types
 from apps.workorders.models import WorkOrder, WorkOrderPart, WorkOrderNote
 from apps.workorders.serializers import WorkOrderCreateSerializer, WorkOrderUpdateSerializer
 from rest_framework.test import APIRequestFactory
@@ -15,6 +16,7 @@ User = get_user_model()
 
 class ServiceBundleTests(TestCase):
     def setUp(self):
+        seed_workflow_profiles_and_job_types(overwrite=True)
         # Create Basic Data
         self.user = User.objects.create_user(username='tech', email='tech@example.com', password='password', role='technician')
         self.branch = Branch.objects.create(name="Test Branch", code="TB", created_by=self.user)

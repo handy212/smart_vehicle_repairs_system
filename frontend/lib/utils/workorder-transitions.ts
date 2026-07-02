@@ -1,6 +1,10 @@
 import type { WorkOrder } from "@/lib/api/workorders";
 import { getStatusesForGroup, type WorkOrderStatusGroupId } from "./workorder-status-groups";
 import { isDiagnosisPausedWorkOrder } from "./workorder-inspection-stage";
+import {
+  getWorkflowProfileCode,
+  type WorkflowWorkOrderContext,
+} from "./workorder-workflow-steps";
 
 /** Mirrors backend WorkOrder.VALID_TRANSITIONS for client-side guards. */
 export const WORK_ORDER_VALID_TRANSITIONS: Record<string, string[]> = {
@@ -16,9 +20,30 @@ export const WORK_ORDER_VALID_TRANSITIONS: Record<string, string[]> = {
   paused: ["diagnosis", "in_progress", "additional_work_found", "discontinued_pending_bill"],
   quality_check: ["completed", "in_progress", "discontinued_pending_bill"],
   discontinued_pending_bill: ["invoiced"],
-  completed: ["invoiced", "closed"],
+  completed: ["invoiced"],
   invoiced: ["closed"],
   closed: [],
+};
+
+const PROFILE_EXTRA_TRANSITIONS: Record<string, Array<[string, string]>> = {
+  inspection_only: [
+    ["inspection", "completed"],
+  ],
+  diagnostic_only: [
+    ["diagnosis", "completed"],
+    ["awaiting_approval", "completed"],
+    ["approved", "completed"],
+  ],
+};
+
+const PROFILE_BLOCKED_TRANSITIONS: Record<string, Set<string>> = {
+  inspection_only: new Set([
+    "inspection:intake",
+    "inspection:assigned",
+    "inspection:diagnosis",
+    "draft:intake",
+  ]),
+  diagnostic_only: new Set(["approved:in_progress", "awaiting_approval:in_progress"]),
 };
 
 const TRANSITION_PRIORITY: Partial<Record<string, string[]>> = {
@@ -29,12 +54,41 @@ const TRANSITION_PRIORITY: Partial<Record<string, string[]>> = {
   cancelled: ["cancelled"],
 };
 
-export function getValidNextStatuses(status: string): string[] {
-  return WORK_ORDER_VALID_TRANSITIONS[status] ?? [];
+function resolveAllowedTargets(
+  workOrder: WorkflowWorkOrderContext | null | undefined,
+  currentStatus: string,
+  baseTargets: string[]
+): string[] {
+  const profile = getWorkflowProfileCode(workOrder);
+  if (!profile) return baseTargets;
+
+  const allowed = [...baseTargets];
+  const extras = PROFILE_EXTRA_TRANSITIONS[profile] ?? [];
+  const blocked = PROFILE_BLOCKED_TRANSITIONS[profile] ?? new Set();
+
+  for (const [fromStatus, toStatus] of extras) {
+    if (fromStatus === currentStatus && !allowed.includes(toStatus)) {
+      allowed.push(toStatus);
+    }
+  }
+
+  return allowed.filter((target) => !blocked.has(`${currentStatus}:${target}`));
 }
 
-export function canTransitionWorkOrderStatus(fromStatus: string, toStatus: string): boolean {
-  return getValidNextStatuses(fromStatus).includes(toStatus);
+export function getValidNextStatuses(
+  status: string,
+  workOrder?: WorkflowWorkOrderContext | null
+): string[] {
+  const base = WORK_ORDER_VALID_TRANSITIONS[status] ?? [];
+  return resolveAllowedTargets(workOrder, status, base);
+}
+
+export function canTransitionWorkOrderStatus(
+  fromStatus: string,
+  toStatus: string,
+  workOrder?: WorkflowWorkOrderContext | null
+): boolean {
+  return getValidNextStatuses(fromStatus, workOrder).includes(toStatus);
 }
 
 /**
@@ -42,11 +96,12 @@ export function canTransitionWorkOrderStatus(fromStatus: string, toStatus: strin
  * Returns null when the drop would skip required workflow steps.
  */
 export function resolveKanbanDropStatus(
-  workOrder: Pick<WorkOrder, "status" | "diagnosis_status" | "paused_from_status">,
+  workOrder: Pick<WorkOrder, "status" | "diagnosis_status" | "paused_from_status"> &
+    WorkflowWorkOrderContext,
   targetGroupId: WorkOrderStatusGroupId
 ): string | null {
   const currentStatus = workOrder.status;
-  const allowedNext = getValidNextStatuses(currentStatus);
+  const allowedNext = getValidNextStatuses(currentStatus, workOrder);
   const groupStatuses = getStatusesForGroup(targetGroupId);
   const candidates = allowedNext.filter((status) => groupStatuses.includes(status));
 

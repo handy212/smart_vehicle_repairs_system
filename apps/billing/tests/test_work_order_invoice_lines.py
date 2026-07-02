@@ -171,14 +171,19 @@ class WorkOrderInvoiceLineItemsTests(TestCase):
             vehicle=self.vehicle,
             work_order=self.work_order,
             branch=self.branch,
-            status="sent",
+            status="draft",
             subtotal=Decimal("35.00"),
             total=Decimal("35.00"),
             created_by=self.manager,
             invoice_date=timezone.now().date(),
         )
+        Invoice.objects.filter(pk=active_invoice.pk).update(status="sent")
+        active_invoice.refresh_from_db()
 
         self.assertEqual(get_primary_invoice(self.work_order).id, active_invoice.id)
+
+        self.work_order.status = 'invoiced'
+        self.work_order.save(update_fields=['status', 'updated_at'])
 
         can_close, error = self.work_order.can_transition_to("closed")
         self.assertTrue(can_close, error)

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 import { Package, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorkOrder } from "@/lib/api/workorders";
@@ -25,7 +26,7 @@ export function RoutineCheckInBanner({
 
   const fromCheckIn = searchParams.get("from") === "check-in";
   const routineFlow = searchParams.get("flow") === "routine";
-  const isRoutine = workOrder.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
 
   useEffect(() => {
     if (fromCheckIn && routineFlow) {

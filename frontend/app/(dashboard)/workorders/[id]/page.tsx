@@ -36,6 +36,9 @@ import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
+import { ProfileFlowBanner } from "./components/ProfileFlowBanner";
+import { workOrderShowsDiagnosisTab } from "@/lib/workorders/work-order-profile";
+import { useWorkOrderProfile } from "@/lib/hooks/useWorkOrderProfile";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 
@@ -96,15 +99,18 @@ export default function WorkOrderDetailPage() {
     }
   }, [workOrder, addRecentItem]);
 
+  const profile = useWorkOrderProfile(workOrder);
+  const showDiagnosisTab = workOrderShowsDiagnosisTab(workOrder);
+
   useEffect(() => {
     if (requestedTab && VALID_TABS.has(requestedTab)) {
-      if (workOrder?.maintenance_type === "routine" && requestedTab === "diagnosis") {
-        setActiveTab("parts");
+      if (!showDiagnosisTab && requestedTab === "diagnosis") {
+        setActiveTab(profile.isRoutine ? "parts" : "overview");
         return;
       }
       setActiveTab(requestedTab);
     }
-  }, [requestedTab, workOrder?.maintenance_type]);
+  }, [requestedTab, workOrder, showDiagnosisTab, profile.isRoutine]);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
@@ -121,7 +127,7 @@ export default function WorkOrderDetailPage() {
   const { data: diagnosis } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId && workOrder?.maintenance_type !== "routine",
+    enabled: !!workOrderId && showDiagnosisTab,
   });
 
   const { data: inspectionsData } = useQuery({
@@ -158,7 +164,7 @@ export default function WorkOrderDetailPage() {
   });
 
   useEffect(() => {
-    if (!workOrder || workOrder.maintenance_type !== "routine") return;
+    if (!workOrder || !profile.isRoutine) return;
     if (workOrder.status !== "draft") return;
     if (routineRecoveryAttempted.current || routineFastTrackMutation.isPending) return;
 
@@ -272,7 +278,8 @@ export default function WorkOrderDetailPage() {
     ["completed", "invoiced", "closed"].includes(workOrder.status) &&
     unapprovedRecommendations.length > 0;
 
-  const isRoutine = workOrder.maintenance_type === "routine";
+  const isRoutine = profile.isRoutine;
+  const isInspectionOnly = profile.isInspectionOnly;
 
   const tabsLocked =
     !isRoutine &&
@@ -328,8 +335,7 @@ export default function WorkOrderDetailPage() {
       <WorkOrderProgress
         status={stagePresentation.workflowStatus}
         labelOverride={statusLabelOverride}
-        diagnosisStatus={workOrder.diagnosis_status}
-        maintenanceType={workOrder.maintenance_type}
+        workOrder={workOrder}
       />
 
       {(workOrder.customer_rating || workOrder.customer_feedback) && (
@@ -368,6 +374,8 @@ export default function WorkOrderDetailPage() {
         onStatusChange={refreshData}
       />
 
+      <ProfileFlowBanner workOrder={workOrder} workOrderId={workOrderId} />
+
       {workOrder.status === "closed" && <GatePassBanner workOrderId={workOrderId} />}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -377,6 +385,7 @@ export default function WorkOrderDetailPage() {
           notesCount={notes.length}
           tabsLocked={tabsLocked}
           isRoutine={isRoutine}
+          hideDiagnosis={isInspectionOnly}
         />
 
         <TabsContent value="overview" className="mt-4">
@@ -415,7 +424,7 @@ export default function WorkOrderDetailPage() {
           <DocumentsTab workOrderId={workOrderId} />
         </TabsContent>
 
-        {!isRoutine && (
+        {!showDiagnosisTab ? null : (
           <TabsContent value="diagnosis" className="mt-4">
             <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
           </TabsContent>

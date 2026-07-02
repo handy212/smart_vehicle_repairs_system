@@ -2,8 +2,24 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart,
-    TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto, RepeatVisitAlert
+    TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto, RepeatVisitAlert,
+    JobType, WorkflowProfile,
 )
+
+
+@admin.register(WorkflowProfile)
+class WorkflowProfileAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'is_active', 'sort_order', 'allows_fast_track_to_approved']
+    list_filter = ['is_active', 'skip_inspection', 'skip_diagnosis', 'apply_service_bundle_on_create']
+    search_fields = ['name', 'code']
+
+
+@admin.register(JobType)
+class JobTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'category', 'workflow_profile', 'is_active', 'allows_bundle', 'sort_order']
+    list_filter = ['category', 'is_active', 'allows_bundle', 'workflow_profile']
+    search_fields = ['name', 'code']
+    raw_id_fields = ['workflow_profile', 'default_service_type', 'default_service_bundle']
 
 
 @admin.register(ServiceTaskType)
