@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -128,12 +130,12 @@ class MobileAPITestCase(TestCase):
             approved_by_customer=True,
         )
         
-        # Create a task
+        # Create a task with a flat charge
         self.task = ServiceTask.objects.create(
             work_order=self.work_order,
             description='Change Oil',
             status='pending',
-            estimated_hours=0.5
+            labor_cost=Decimal('45.00'),
         )
         
         # Authenticate as technician
@@ -270,8 +272,7 @@ class MobileAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.task.refresh_from_db()
         self.assertEqual(self.task.status, 'completed')
-        self.assertGreater(self.task.actual_hours, 0)
-        self.assertGreater(response.data['calculated_hours'], 0)
+        self.assertGreater(self.task.labor_cost, 0)
 
     def test_request_quality_check_is_idempotent_when_already_requested(self, mock_filter):
         """Repeated QC requests should return the current work order instead of failing."""

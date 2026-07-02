@@ -6,6 +6,13 @@ from django.utils import timezone
 from .models import Appointment, ServiceBay, AppointmentReminder
 
 
+class AppointmentJobTypeSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    name = serializers.CharField()
+    category = serializers.CharField()
+
+
 class ServiceBaySerializer(serializers.ModelSerializer):
     """Serializer for service bays"""
     is_available = serializers.BooleanField(read_only=True)
@@ -28,6 +35,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
     is_today = serializers.BooleanField(read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
     end_time = serializers.TimeField(read_only=True)
+    job_type_detail = AppointmentJobTypeSummarySerializer(source='job_type', read_only=True)
     
     class Meta:
         model = Appointment
@@ -35,6 +43,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
             'id', 'appointment_number', 'customer', 'customer_name', 'customer_number',
             'vehicle', 'vehicle_display', 'vehicle_plate', 'appointment_date',
             'appointment_time', 'end_time', 'estimated_duration', 'service_type',
+            'job_type', 'job_type_detail',
             'priority', 'status', 'service_bay', 'service_bay_name', 'branch', 'branch_name',
             'technician_names', 'estimated_cost', 'is_today', 'is_overdue',
             'checked_in', 'created_at', 'customer_rating', 'customer_feedback'
@@ -77,12 +86,14 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     # customer_concerns / special_instructions, so accept missing/blank values.
     customer_concerns = serializers.CharField(required=False, allow_blank=True, default="")
     special_instructions = serializers.CharField(required=False, allow_blank=True, default="")
+    job_type_code = serializers.SlugField(write_only=True, required=False)
     
     class Meta:
         model = Appointment
         fields = [
             'customer', 'vehicle', 'branch', 'appointment_date', 'appointment_time',
-            'estimated_duration', 'service_type', 'priority', 'customer_concerns',
+            'estimated_duration', 'service_type', 'job_type', 'job_type_code', 'priority',
+            'customer_concerns',
             'special_instructions', 'estimated_cost', 'service_bay',
             'assigned_technicians'
         ]
@@ -170,21 +181,54 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'service_bay': 'Service bay is already booked for this time slot'
                 })
+
+        from apps.workorders.workflow_profile_service import resolve_job_type_for_appointment
+
+        job_type_code = attrs.pop('job_type_code', None)
+        if job_type_code is None:
+            job_type_code = self.initial_data.get('job_type_code')
+
+        job_type = resolve_job_type_for_appointment(
+            job_type=attrs.get('job_type'),
+            job_type_code=job_type_code,
+            service_type=attrs.get('service_type'),
+        )
+        if job_type:
+            attrs['job_type'] = job_type
         
         return attrs
 
 
 class AppointmentUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating appointments"""
+
+    job_type_code = serializers.SlugField(write_only=True, required=False)
     
     class Meta:
         model = Appointment
         fields = [
             'branch', 'appointment_date', 'appointment_time', 'estimated_duration',
-            'service_type', 'priority', 'customer_concerns', 'special_instructions',
+            'service_type', 'job_type', 'job_type_code', 'priority', 'customer_concerns',
+            'special_instructions',
             'estimated_cost', 'status', 'service_bay', 'assigned_technicians',
             'confirmation_method', 'cancellation_reason'
         ]
+
+    def validate(self, attrs):
+        from apps.workorders.workflow_profile_service import resolve_job_type_for_appointment
+
+        job_type_code = attrs.pop('job_type_code', None)
+        if job_type_code is None:
+            job_type_code = self.initial_data.get('job_type_code')
+
+        job_type = resolve_job_type_for_appointment(
+            job_type=attrs.get('job_type') or getattr(self.instance, 'job_type', None),
+            job_type_code=job_type_code,
+            service_type=attrs.get('service_type', getattr(self.instance, 'service_type', None)),
+        )
+        if job_type:
+            attrs['job_type'] = job_type
+        return attrs
 
 
 class AppointmentReminderSerializer(serializers.ModelSerializer):

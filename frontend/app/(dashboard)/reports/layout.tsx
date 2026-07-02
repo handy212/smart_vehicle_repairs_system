@@ -11,7 +11,7 @@ import { ShieldAlert } from "lucide-react";
 export default function ReportsLayout({ children }: { children: ReactNode }) {
     return (
         <PermissionGuard
-            permission="view_reports"
+            permissions={["view_reports", "view_all_reports"]}
             fallback={
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
                     <ShieldAlert className="w-16 h-16 text-destructive/60" />

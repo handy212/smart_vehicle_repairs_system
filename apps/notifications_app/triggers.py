@@ -89,6 +89,76 @@ class NotificationTriggers:
         base.update(context)
         return enrich_money_context(base)
 
+    def _work_order_staff_recipients(self, work_order):
+        """Managers, coordinators, and technicians for a work order."""
+        from apps.accounts.models import User
+
+        recipients = []
+        for user in User.objects.filter(role__in=['admin', 'manager', 'receptionist']):
+            if self._user_has_branch_access(user, work_order.branch):
+                recipients.append(user)
+        if work_order.service_coordinator:
+            recipients.append(work_order.service_coordinator)
+        if work_order.primary_technician:
+            recipients.append(work_order.primary_technician)
+        recipients.extend(work_order.assigned_technicians.all())
+        return list({user.id: user for user in recipients if user}.values())
+
+    def _work_order_technician_recipients(self, work_order):
+        technicians = []
+        if work_order.primary_technician:
+            technicians.append(work_order.primary_technician)
+        technicians.extend(work_order.assigned_technicians.all())
+        return list({user.id: user for user in technicians if user}.values())
+
+    def _work_order_notification_data(self, work_order, recipient=None):
+        data = self._get_default_context()
+        data.update({
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'status': work_order.status,
+            'vehicle': self._build_vehicle_display(work_order.vehicle),
+            'vehicle_display': self._build_vehicle_display(work_order.vehicle),
+            'customer_name': self._build_customer_name(work_order.customer),
+        })
+        base = self._get_base_url().rstrip('/')
+        role = getattr(recipient, 'role', None) if recipient else None
+        if role == 'technician':
+            data['url'] = f'{base}/mobile/workorders/{work_order.id}'
+        else:
+            data['url'] = f'{base}/workorders/{work_order.id}'
+        return data
+
+    def _notify_staff_work_order(self, work_order, *, title, message, priority='normal', template_type=None):
+        for recipient in self._work_order_staff_recipients(work_order):
+            self._create_notification_for_channels(
+                recipient=recipient,
+                notification_type='work_order',
+                channels=['in_app', 'email'],
+                priority=priority,
+                title=title,
+                message=message,
+                data=self._work_order_notification_data(work_order, recipient),
+                related_object_type='work_order',
+                related_object_id=work_order.id,
+                template_type=template_type,
+            )
+
+    def _notify_technicians_work_order(self, work_order, *, title, message, priority='normal', template_type=None):
+        for recipient in self._work_order_technician_recipients(work_order):
+            self._create_notification_for_channels(
+                recipient=recipient,
+                notification_type='work_order',
+                channels=['in_app', 'email'],
+                priority=priority,
+                title=title,
+                message=message,
+                data=self._work_order_notification_data(work_order, recipient),
+                related_object_type='work_order',
+                related_object_id=work_order.id,
+                template_type=template_type,
+            )
+
     def _create_notification_for_channels(
         self,
         *,
@@ -107,6 +177,17 @@ class NotificationTriggers:
         if not recipient:
             return []
 
+        payload_data = dict(data or {})
+        if related_object_type == 'work_order' and related_object_id:
+            payload_data.setdefault('work_order_id', related_object_id)
+            if 'url' not in payload_data:
+                base = self._get_base_url().rstrip('/')
+                role = getattr(recipient, 'role', None)
+                if role == 'technician':
+                    payload_data['url'] = f'{base}/mobile/workorders/{related_object_id}'
+                else:
+                    payload_data['url'] = f'{base}/workorders/{related_object_id}'
+
         notifications = []
         for channel in channels:
             template = self._get_template(template_type, channel) if template_type else None
@@ -118,7 +199,7 @@ class NotificationTriggers:
                 template=template,
                 title=title,
                 message=message,
-                data=data,
+                data=payload_data,
                 related_object_type=related_object_type,
                 related_object_id=related_object_id,
             )
@@ -458,9 +539,24 @@ We'll keep you updated on the progress.'''
             priority='normal',
             title=title,
             message=message,
-            data=context,
+            data={
+                **context,
+                'url': f"{self._get_base_url().rstrip('/')}/portal/work-orders/{work_order.id}",
+            },
             related_object_type='work_order',
             related_object_id=work_order.id,
+            template_type='work_order_created',
+        )
+
+        self._notify_staff_work_order(
+            work_order,
+            title=f'New Work Order - {work_order.work_order_number}',
+            message=f'''A new work order was created.
+
+Customer: {customer_name}
+Vehicle: {vehicle_display}
+Status: {work_order.get_status_display()}''',
+            priority='normal',
             template_type='work_order_created',
         )
     
@@ -602,36 +698,165 @@ Please review and approve to proceed with repairs.'''
     
     def work_order_started(self, work_order):
         """Notify technicians when work order starts"""
-        # Notify all assigned technicians
-        technicians = []
-        if work_order.primary_technician:
-            technicians.append(work_order.primary_technician)
-        technicians.extend(work_order.assigned_technicians.all())
-        
-        for tech in set(technicians):  # Remove duplicates
-            self._create_notification_for_channels(
-                recipient=tech,
-                notification_type='work_order',
-                channels=['email', 'in_app'],
-                priority='normal',
-                title=f'Work Started - {work_order.work_order_number}',
-                message=f'''Work order {work_order.work_order_number} has started.
+        self._notify_technicians_work_order(
+            work_order,
+            title=f'Work Started - {work_order.work_order_number}',
+            message=f'''Work order {work_order.work_order_number} has started.
 
-Vehicle: {work_order.vehicle}
-Customer: {work_order.customer}
+Vehicle: {self._build_vehicle_display(work_order.vehicle)}
+Customer: {self._build_customer_name(work_order.customer)}
 
 You can now begin work on this order.''',
+            priority='normal',
+        )
+
+    def work_order_resumed(self, work_order):
+        """Notify technicians when paused work resumes."""
+        self._notify_technicians_work_order(
+            work_order,
+            title=f'Work Resumed - {work_order.work_order_number}',
+            message=f'''Work has resumed on {work_order.work_order_number}.
+
+Vehicle: {self._build_vehicle_display(work_order.vehicle)}
+Customer: {self._build_customer_name(work_order.customer)}''',
+            priority='normal',
+        )
+
+    def work_order_inspection_started(self, work_order):
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Inspection Started - {work_order.work_order_number}',
+            message=f'Initial inspection has started for work order {work_order.work_order_number}.',
+            priority='normal',
+        )
+
+    def work_order_intake(self, work_order):
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Intake Started - {work_order.work_order_number}',
+            message=f'Customer intake is in progress for work order {work_order.work_order_number}.',
+            priority='normal',
+        )
+
+    def work_order_assigned(self, work_order):
+        self._notify_technicians_work_order(
+            work_order,
+            title=f'Work Order Assigned - {work_order.work_order_number}',
+            message=f'''You have been assigned to work order {work_order.work_order_number}.
+
+Vehicle: {self._build_vehicle_display(work_order.vehicle)}
+Customer: {self._build_customer_name(work_order.customer)}''',
+            priority='high',
+        )
+        if work_order.service_coordinator:
+            self._create_notification_for_channels(
+                recipient=work_order.service_coordinator,
+                notification_type='work_order',
+                channels=['in_app', 'email'],
+                priority='normal',
+                title=f'Work Order Assigned - {work_order.work_order_number}',
+                message=f'Work order {work_order.work_order_number} is now assigned and ready for diagnosis.',
+                data=self._work_order_notification_data(work_order, work_order.service_coordinator),
+                related_object_type='work_order',
+                related_object_id=work_order.id,
+            )
+
+    def work_order_diagnosis_started(self, work_order):
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Diagnosis Started - {work_order.work_order_number}',
+            message=f'Technician diagnosis is underway for work order {work_order.work_order_number}.',
+            priority='normal',
+        )
+
+    def work_order_additional_work_found(self, work_order):
+        if work_order.customer.user:
+            self._create_notification_for_channels(
+                recipient=work_order.customer.user,
+                notification_type='work_order',
+                channels=['email', 'in_app'],
+                priority='high',
+                title=f'Additional Work Found - {work_order.work_order_number}',
+                message=f'''Additional work was found on your vehicle.
+
+Work Order: {work_order.work_order_number}
+Vehicle: {self._build_vehicle_display(work_order.vehicle)}
+
+Please review and approve the updated estimate.''',
                 data={
-                    'work_order_id': work_order.id,
-                    'work_order_number': work_order.work_order_number,
+                    **self._work_order_notification_data(work_order),
+                    'url': f"{self._get_base_url().rstrip('/')}/portal/work-orders/{work_order.id}",
                 },
                 related_object_type='work_order',
                 related_object_id=work_order.id,
             )
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Additional Work Found - {work_order.work_order_number}',
+            message='Customer approval may be required before repair can continue.',
+            priority='high',
+        )
+
+    def work_order_quality_check_requested(self, work_order):
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Quality Check Requested - {work_order.work_order_number}',
+            message=f'Work order {work_order.work_order_number} is ready for quality check.',
+            priority='high',
+        )
+
+    def work_order_discontinued_pending_bill(self, work_order):
+        if work_order.customer.user:
+            self._create_notification_for_channels(
+                recipient=work_order.customer.user,
+                notification_type='work_order',
+                channels=['email', 'in_app'],
+                priority='normal',
+                title=f'Work Discontinued - {work_order.work_order_number}',
+                message=f'''Repair work was discontinued on work order {work_order.work_order_number}.
+
+Any completed billable work will be invoiced separately.''',
+                data={
+                    **self._work_order_notification_data(work_order),
+                    'url': f"{self._get_base_url().rstrip('/')}/portal/work-orders/{work_order.id}",
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id,
+            )
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Discontinued — Pending Bill - {work_order.work_order_number}',
+            message='Prepare final billing for discontinued work.',
+            priority='high',
+        )
+
+    def work_order_closed(self, work_order):
+        if work_order.customer.user:
+            self._create_notification_for_channels(
+                recipient=work_order.customer.user,
+                notification_type='work_order',
+                channels=['email', 'in_app'],
+                priority='normal',
+                title=f'Work Order Closed - {work_order.work_order_number}',
+                message=f'''Work order {work_order.work_order_number} is closed.
+
+Your vehicle is ready for pickup when payment and gate pass requirements are complete.''',
+                data={
+                    **self._work_order_notification_data(work_order),
+                    'url': f"{self._get_base_url().rstrip('/')}/portal/work-orders/{work_order.id}",
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id,
+            )
+        self._notify_staff_work_order(
+            work_order,
+            title=f'Work Order Closed - {work_order.work_order_number}',
+            message='This work order has been closed.',
+            priority='normal',
+        )
     
     def work_order_paused(self, work_order, reason=''):
         """Notify when work order is paused"""
-        # Notify customer if they're waiting
         if work_order.is_customer_waiting and work_order.customer.user:
             self._create_notification_for_channels(
                 recipient=work_order.customer.user,
@@ -642,46 +867,37 @@ You can now begin work on this order.''',
                 message=f'''Work on your vehicle has been temporarily paused.
 
 Work Order: {work_order.work_order_number}
-Vehicle: {work_order.vehicle}
+Vehicle: {self._build_vehicle_display(work_order.vehicle)}
 {f"Reason: {reason}" if reason else ""}
 
 We'll resume work shortly.''',
                 data={
-                    'work_order_id': work_order.id,
-                    'work_order_number': work_order.work_order_number,
+                    **self._work_order_notification_data(work_order),
+                    'url': f"{self._get_base_url().rstrip('/')}/portal/work-orders/{work_order.id}",
                 },
                 related_object_type='work_order',
                 related_object_id=work_order.id,
             )
+        self._notify_technicians_work_order(
+            work_order,
+            title=f'Work Order Paused - {work_order.work_order_number}',
+            message=f'Work was paused on {work_order.work_order_number}.{f" Reason: {reason}" if reason else ""}',
+            priority='normal',
+        )
     
     def work_order_quality_check_failed(self, work_order):
         """Notify when quality check fails"""
-        # Notify assigned technicians
-        technicians = []
-        if work_order.primary_technician:
-            technicians.append(work_order.primary_technician)
-        technicians.extend(work_order.assigned_technicians.all())
-        
-        for tech in set(technicians):
-            self._create_notification_for_channels(
-                recipient=tech,
-                notification_type='work_order',
-                channels=['email', 'in_app'],
-                priority='high',
-                title=f'Quality Check Failed - {work_order.work_order_number}',
-                message=f'''Quality check failed for work order {work_order.work_order_number}.
+        self._notify_technicians_work_order(
+            work_order,
+            title=f'Quality Check Failed - {work_order.work_order_number}',
+            message=f'''Quality check failed for work order {work_order.work_order_number}.
 
-Vehicle: {work_order.vehicle}
+Vehicle: {self._build_vehicle_display(work_order.vehicle)}
 Notes: {work_order.quality_check_notes or "See work order for details"}
 
 Please review and make necessary corrections.''',
-                data={
-                    'work_order_id': work_order.id,
-                    'work_order_number': work_order.work_order_number,
-                },
-                related_object_type='work_order',
-                related_object_id=work_order.id,
-            )
+            priority='high',
+        )
     
     def work_order_invoiced(self, work_order):
         """Notify customer when work order is invoiced"""
@@ -991,156 +1207,217 @@ Please contact us to schedule an appointment or book online.'''
         self.service.send_notification(notification)
 
     def parts_estimate_requested(self, work_order, diagnosis, requested_by):
-        """Notify Parts Managers that a parts estimate is requested"""
-        from apps.accounts.models import User
-        
-        # Find parts managers in the same branch
-        # If branch filtering is strict, only show same branch
-        parts_managers = User.objects.filter(
-            branch=work_order.branch, 
-            role='parts_manager', 
-            is_active=True
+        """Notify stores staff that a parts estimate is requested from diagnosis."""
+        parts_count = work_order.parts.exclude(status='draft').count()
+        return self.parts_requests_submitted_to_stores(
+            work_order,
+            requested_by=requested_by,
+            parts_count=parts_count,
+            diagnosis_id=diagnosis.id,
+            source='diagnosis_estimate',
         )
-        
-        # Fallback to managers if no parts manager found
-        if not parts_managers.exists():
-            parts_managers = User.objects.filter(
-                managed_branches=work_order.branch,
-                role='manager',
-                is_active=True
-            )
-            
-        count = 0
-        for pm in parts_managers:
-            # Note: Explicitly using 'in_app' to avoid SMS as requested, but also 'email' for visibility
-            # The previous implementation only created 'in_app'. We'll stick to 'in_app' and 'email'.
-            
-            # 1. In-App Notification
-            notification_in_app = Notification.objects.create(
-                recipient=pm,
-                notification_type='work_order',
-                channel='in_app',
-                priority='high',
-                title=f"Parts Estimate Requested: WO #{work_order.work_order_number}",
-                message=f"Technician {requested_by.get_full_name()} has requested an estimate for parts on Work Order #{work_order.work_order_number}.",
-                data={
-                    'work_order_id': work_order.id,
-                    'diagnosis_id': diagnosis.id,
-                    'action': 'estimate_required'
-                },
-                related_object_type='work_order',
-                related_object_id=work_order.id
-            )
-            self.service.send_notification(notification_in_app)
-            
-            # 2. Email Notification (if they have email enabled)
-            # We don't have a specific template yet, so we'll construct a generic message
-            notification_email = Notification.objects.create(
-                recipient=pm,
-                notification_type='work_order',
-                channel='email',
-                priority='high',
-                title=f"Parts Estimate Requested: WO #{work_order.work_order_number}",
-                message=f'''Parts Estimate Requested
-                
-Work Order: {work_order.work_order_number}
-Technician: {requested_by.get_full_name()}
 
-Please review the parts required and provide an estimate.
-''',
-                data={
-                    'work_order_id': work_order.id,
-                    'diagnosis_id': diagnosis.id,
-                    'action': 'estimate_required'
-                },
+    def _stores_recipients_for_work_order(self, work_order, exclude_user=None):
+        """Users who fulfill parts requests for a branch (stores / inventory desk)."""
+        from apps.accounts.models import User
+        from apps.accounts.permissions import user_has_permission
+        from django.db.models import Q
+
+        branch = work_order.branch
+        query = User.objects.filter(is_active=True)
+        if branch_id := getattr(branch, 'id', None):
+            query = query.filter(Q(branch=branch) | Q(managed_branches=branch)).distinct()
+        else:
+            query = query.filter(role__in=['parts_manager', 'manager', 'admin'])
+
+        recipients = {}
+        for user in query:
+            if exclude_user and user.pk == exclude_user.pk:
+                continue
+            if branch and hasattr(user, 'has_branch_access') and not user.has_branch_access(branch):
+                continue
+            if user.role in ('parts_manager', 'manager', 'admin'):
+                recipients[user.pk] = user
+                continue
+            if user_has_permission(user, 'manage_inventory') or user_has_permission(user, 'approve_part_requests'):
+                recipients[user.pk] = user
+        return list(recipients.values())
+
+    def _parts_requests_url(self, work_order, recipient=None):
+        base = self._get_base_url().rstrip('/')
+        role = getattr(recipient, 'role', None) if recipient else None
+        if role == 'technician':
+            return f'{base}/workorders/{work_order.id}?tab=parts'
+        return f'{base}/inventory/parts-requests?work_order={work_order.id}'
+
+    def _technician_parts_url(self, work_order, recipient=None):
+        base = self._get_base_url().rstrip('/')
+        role = getattr(recipient, 'role', None) if recipient else None
+        if role == 'technician':
+            return f'{base}/mobile/workorders/{work_order.id}'
+        return f'{base}/workorders/{work_order.id}?tab=parts'
+
+    def _notify_stores_users(
+        self,
+        work_order,
+        *,
+        title,
+        message,
+        priority='high',
+        data=None,
+        exclude_user=None,
+    ):
+        count = 0
+        for recipient in self._stores_recipients_for_work_order(work_order, exclude_user=exclude_user):
+            payload = {
+                **(data or {}),
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'url': self._parts_requests_url(work_order, recipient),
+                'action': 'parts_request',
+            }
+            self._create_notification_for_channels(
+                recipient=recipient,
+                notification_type='inventory',
+                channels=['in_app', 'email'],
+                priority=priority,
+                title=title,
+                message=message,
+                data=payload,
                 related_object_type='work_order',
-                related_object_id=work_order.id
+                related_object_id=work_order.id,
             )
-            self.service.send_notification(notification_email)
-            
             count += 1
-            
         return count
+
+    def parts_requests_submitted_to_stores(
+        self,
+        work_order,
+        *,
+        requested_by,
+        parts_count,
+        diagnosis_id=None,
+        source='diagnosis',
+    ):
+        """Batch notification when parts land in the stores queue."""
+        if parts_count <= 0:
+            return 0
+
+        requester = requested_by.get_full_name() if requested_by else 'A technician'
+        vehicle_display = self._build_vehicle_display(work_order.vehicle)
+        title = f'Parts requested — WO {work_order.work_order_number}'
+        message = (
+            f'{requester} submitted {parts_count} part request(s) for WO {work_order.work_order_number}.\n\n'
+            f'Vehicle: {vehicle_display}\n'
+            f'Open Parts Requests to review, approve, and fulfill.'
+        )
+        data = {'parts_count': parts_count, 'source': source}
+        if diagnosis_id:
+            data['diagnosis_id'] = diagnosis_id
+        return self._notify_stores_users(
+            work_order,
+            title=title,
+            message=message,
+            priority='high',
+            data=data,
+            exclude_user=requested_by,
+        )
     
     def part_requisition_created(self, part):
-        """Notify Parts Managers when a part is requested via requisition"""
-        from apps.accounts.models import User
-        
-        work_order = part.work_order
-        
-        # Find parts managers in the same branch
-        recipients = User.objects.filter(
-            branch=work_order.branch, 
-            role__in=['parts_manager', 'manager', 'service_coordinator'], 
-            is_active=True
-        )
-        
-        if not recipients.exists():
+        """Notify stores staff when a part is requested via requisition."""
+        if part.status == 'draft':
             return
 
+        work_order = part.work_order
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
-        requested_by_name = part.requested_by.get_full_name() if part.requested_by else "Technician"
+        requested_by_name = part.requested_by.get_full_name() if part.requested_by else 'Technician'
+        req_label = part.requisition_number or part.part_name
 
-        for recipient in recipients:
-            if recipient == part.requested_by:
-                continue # Don't notify self
-                
-            notification = Notification.objects.create(
-                recipient=recipient,
-                notification_type='work_order',
-                channel='in_app',
-                priority='high',
-                title=f'Part Requisition - {part.requisition_number}',
-                message=f'''New part requisition from {requested_by_name}.
-    
-    Part: {part.part_name} ({part.quantity})
-    WO: {work_order.work_order_number}
-    Vehicle: {vehicle_display}
-    
-    Please review and approve.''',
-                data={
-                    'work_order_id': work_order.id,
-                    'work_order_number': work_order.work_order_number,
-                    'part_id': part.id,
-                    'requisition_number': part.requisition_number
-                },
-                related_object_type='work_order_part',
-                related_object_id=part.id
-            )
-            self.service.send_notification(notification)
+        title = f'Part request — {req_label}'
+        message = (
+            f'New part request from {requested_by_name}.\n\n'
+            f'Part: {part.part_name} (x{part.quantity})\n'
+            f'WO: {work_order.work_order_number}\n'
+            f'Customer: {customer_name}\n'
+            f'Vehicle: {vehicle_display}\n\n'
+            f'Review and approve in Parts Requests.'
+        )
+        self._notify_stores_users(
+            work_order,
+            title=title,
+            message=message,
+            priority='high',
+            data={
+                'part_id': part.id,
+                'requisition_number': part.requisition_number,
+                'customer_name': customer_name,
+                'vehicle_display': vehicle_display,
+            },
+            exclude_user=part.requested_by,
+        )
 
     def part_requisition_approved(self, part):
-        """Notify requester when part requisition is approved"""
+        """Notify requester when stores approves a part requisition."""
         if not part.requested_by:
             return
-            
+
         work_order = part.work_order
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
-        approved_by_name = part.approved_by.get_full_name() if part.approved_by else "Manager"
-        
-        notification = Notification.objects.create(
+        approved_by_name = part.approved_by.get_full_name() if part.approved_by else 'Stores'
+
+        self._create_notification_for_channels(
             recipient=part.requested_by,
             notification_type='work_order',
-            channel='in_app',
+            channels=['in_app', 'email'],
             priority='normal',
-            title=f'Requisition Approved - {part.requisition_number}',
-            message=f'''Your requisition for {part.part_name} has been approved by {approved_by_name}.
-    
-    WO: {work_order.work_order_number}
-    Quantity: {part.quantity}
-    
-    You may now proceed.''',
+            title=f'Part request approved — {part.requisition_number or part.part_name}',
+            message=(
+                f'Stores approved your request for {part.part_name} (x{part.quantity}) '
+                f'on WO {work_order.work_order_number}.\n\n'
+                f'Approved by: {approved_by_name}\n'
+                f'Stores will allocate stock or place a supplier order next.'
+            ),
             data={
                 'work_order_id': work_order.id,
                 'work_order_number': work_order.work_order_number,
                 'part_id': part.id,
-                'requisition_number': part.requisition_number
+                'requisition_number': part.requisition_number,
+                'url': self._technician_parts_url(work_order, part.requested_by),
+                'vehicle_display': vehicle_display,
             },
-            related_object_type='work_order_part',
-            related_object_id=part.id
+            related_object_type='work_order',
+            related_object_id=work_order.id,
         )
-        self.service.send_notification(notification)
+
+    def part_requisition_ready(self, part, *, fulfillment='allocated'):
+        """Notify the technician when a requested part is ready to install."""
+        if not part.requested_by:
+            return
+
+        work_order = part.work_order
+        fulfillment_label = 'allocated from stock' if fulfillment == 'allocated' else 'received from supplier'
+        self._create_notification_for_channels(
+            recipient=part.requested_by,
+            notification_type='work_order',
+            channels=['in_app', 'email'],
+            priority='high',
+            title=f'Part ready — {part.part_name}',
+            message=(
+                f'{part.part_name} (x{part.quantity}) is ready on WO {work_order.work_order_number} '
+                f'({fulfillment_label}).\n\n'
+                f'You can install it when repair work resumes.'
+            ),
+            data={
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'part_id': part.id,
+                'requisition_number': part.requisition_number,
+                'url': self._technician_parts_url(work_order, part.requested_by),
+            },
+            related_object_type='work_order',
+            related_object_id=work_order.id,
+        )
 
     # ==================== INVOICE NOTIFICATIONS ====================
     

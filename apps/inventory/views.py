@@ -1579,6 +1579,11 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 if wo_part.status != 'received':
                     wo_part.status = 'received'
                     wo_part.save(update_fields=['status', 'updated_at'])
+                    try:
+                        from apps.notifications_app.triggers import notification_triggers
+                        notification_triggers.part_requisition_ready(wo_part, fulfillment='received')
+                    except Exception:
+                        pass
                 received_available -= required
             elif wo_part.status == 'po_created':
                 wo_part.status = 'awaiting_stock'

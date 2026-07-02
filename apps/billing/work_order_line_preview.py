@@ -54,6 +54,9 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
             description=desc,
             item_type='labor',
         )
+        from apps.workorders.task_billing import task_uses_hourly_pricing
+
+        use_hourly = task_uses_hourly_pricing(task)
         payload = {
             'order': order_idx,
             'is_taxable': True,
@@ -62,8 +65,8 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
             **_product_meta(revenue_product),
             **merge_labor_pricing_fields(
                 cost=cost,
-                hours=task.actual_hours or task.estimated_hours,
-                rate=task.labor_rate,
+                hours=(task.actual_hours or task.estimated_hours) if use_hourly else None,
+                rate=task.labor_rate if use_hourly else None,
             ),
         }
         if payload.get('part') is not None:
@@ -151,23 +154,31 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
                 order_idx += 1
 
     if order_idx == 0:
-        revenue_product = _active_product(code='labor_mechanical')
-        line_fields = build_invoice_line_fields(
-            revenue_product=revenue_product,
-            description=f"Labor / services — WO {wo.work_order_number}"[:500],
-            item_type='labor',
-        )
-        payload = {
-            'order': 0,
-            'quantity': Decimal('1'),
-            'unit_price': Decimal('0'),
-            'is_taxable': True,
-            'discount_percentage': Decimal('0'),
-            **line_fields,
-            **_product_meta(revenue_product),
-        }
-        if payload.get('part') is not None:
-            payload['part'] = payload['part'].pk
-        payloads.append(payload)
+        from apps.billing.work_order_billing_defaults import build_job_type_default_invoice_line_payloads
+
+        default_payloads = build_job_type_default_invoice_line_payloads(wo)
+        if default_payloads:
+            for idx, profile_payload in enumerate(default_payloads):
+                profile_payload['order'] = idx
+                payloads.append(profile_payload)
+        else:
+            revenue_product = _active_product(code='labor_mechanical')
+            line_fields = build_invoice_line_fields(
+                revenue_product=revenue_product,
+                description=f"Labor / services — WO {wo.work_order_number}"[:500],
+                item_type='labor',
+            )
+            payload = {
+                'order': 0,
+                'quantity': Decimal('1'),
+                'unit_price': Decimal('0'),
+                'is_taxable': True,
+                'discount_percentage': Decimal('0'),
+                **line_fields,
+                **_product_meta(revenue_product),
+            }
+            if payload.get('part') is not None:
+                payload['part'] = payload['part'].pk
+            payloads.append(payload)
 
     return payloads

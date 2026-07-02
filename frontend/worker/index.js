@@ -25,7 +25,11 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || "/notifications";
+  const data = event.notification.data || {};
+  let targetUrl = data.url || "/notifications";
+  if ((!data.url || data.url === "/notifications") && data.work_order_id) {
+    targetUrl = `/mobile/workorders/${data.work_order_id}`;
+  }
   const url = new URL(targetUrl, self.location.origin).href;
 
   event.waitUntil(

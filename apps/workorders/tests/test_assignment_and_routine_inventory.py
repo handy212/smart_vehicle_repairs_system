@@ -155,6 +155,12 @@ class WorkOrderAssignmentTests(TestCase):
 
 class RoutineInventoryValidationTests(TestCase):
     def setUp(self):
+        from django.core.management import call_command
+        from apps.workorders.job_types import JobType
+
+        call_command('seed_job_types', verbosity=0)
+        self.routine_job_type = JobType.objects.get(code='routine_maintenance')
+
         self.user = User.objects.create_user(
             username='tech',
             email='tech@example.com',
@@ -210,6 +216,7 @@ class RoutineInventoryValidationTests(TestCase):
             'status': 'draft',
             'priority': 'normal',
             'maintenance_type': 'routine',
+            'job_type': self.routine_job_type.id,
             'service_type': self.service_type.id,
             'service_bundle': self.bundle.id,
             'estimated_completion': timezone.now() + timezone.timedelta(days=1),

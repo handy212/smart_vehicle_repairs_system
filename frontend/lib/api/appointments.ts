@@ -13,6 +13,8 @@ export interface Appointment {
   appointment_date: string;
   appointment_time: string;
   service_type: string;
+  job_type?: number | null;
+  job_type_code?: string;
   status: string;
   priority: string;
   estimated_duration?: number;

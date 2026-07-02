@@ -46,7 +46,7 @@ class User(AbstractUser):
     
     email = models.EmailField(_('email address'), unique=True)
     phone = models.CharField(_('phone number'), max_length=20, blank=True)
-    role = models.CharField(_('role'), max_length=20, choices=ROLE_CHOICES, default='customer')
+    role = models.CharField(_('role'), max_length=50, default='customer')
     profile_picture = models.ImageField(_('profile picture'), upload_to='profiles/', blank=True, null=True)
     gender = models.CharField(_('gender'), max_length=20, choices=[
         ('male', 'Male'),
@@ -124,7 +124,8 @@ class User(AbstractUser):
     @property
     def is_staff_member(self):
         """Check if user is a staff member (not a customer)"""
-        return self.role in ['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant', 'hr_manager']
+        from .role_utils import is_staff_role_code
+        return is_staff_role_code(self.role)
     
     @property
     def is_technician(self):
@@ -139,42 +140,57 @@ class User(AbstractUser):
     def get_accessible_branches(self):
         """
         Get all branches this user has access to
-        - Admins: all branches
-        - Managers: their managed branches
+        - Admins / manage_branches: all branches
+        - Managers / manage_branch_staff: their managed branches
         - Other staff: their assigned branch
         - Customers: None
         """
         from apps.branches.models import Branch
-        
-        if self.role in ['admin', 'super-admin']:
+        from .role_utils import (
+            role_has_all_branches_access,
+            role_requires_single_branch,
+            role_uses_managed_branches,
+        )
+
+        if self.role == 'super-admin' or role_has_all_branches_access(self.role):
             return Branch.objects.filter(is_active=True)
-        elif self.role == 'manager':
+        if role_uses_managed_branches(self.role):
             return self.managed_branches.filter(is_active=True)
-        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
-            if self.branch:
-                return Branch.objects.filter(id=self.branch.id, is_active=True)
-            return Branch.objects.none()
+        if role_requires_single_branch(self.role) and self.branch:
+            return Branch.objects.filter(id=self.branch.id, is_active=True)
         return Branch.objects.none()
     
     def has_branch_access(self, branch):
         """Check if user has access to a specific branch"""
-        if self.role in ['admin', 'super-admin']:
+        from .role_utils import (
+            role_has_all_branches_access,
+            role_requires_single_branch,
+            role_uses_managed_branches,
+        )
+
+        if self.role == 'super-admin' or role_has_all_branches_access(self.role):
             return True
-        elif self.role == 'manager':
+        if role_uses_managed_branches(self.role):
             return self.managed_branches.filter(id=branch.id).exists()
-        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
+        if role_requires_single_branch(self.role):
             return self.branch and self.branch.id == branch.id
         return False
     
     @property
     def primary_branch(self):
         """Get the primary branch for this user"""
-        if self.role in ['admin', 'super-admin']:
-            from apps.branches.models import Branch
+        from apps.branches.models import Branch
+        from .role_utils import (
+            role_has_all_branches_access,
+            role_requires_single_branch,
+            role_uses_managed_branches,
+        )
+
+        if self.role == 'super-admin' or role_has_all_branches_access(self.role):
             return Branch.objects.filter(is_headquarters=True).first() or Branch.objects.filter(is_active=True).first()
-        elif self.role == 'manager':
+        if role_uses_managed_branches(self.role):
             return self.managed_branches.filter(is_active=True).first()
-        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
+        if role_requires_single_branch(self.role):
             return self.branch
         return None
 

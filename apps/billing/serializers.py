@@ -985,14 +985,26 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                         "'Discontinued — Pending Invoice' before creating an invoice."
                     )
                 })
-            
-            from apps.billing.work_order_invoices import active_invoice_exists_for_work_order
+
+            from apps.billing.work_order_invoices import (
+                active_invoice_exists_for_work_order,
+                get_billable_estimate_for_work_order,
+            )
 
             if active_invoice_exists_for_work_order(work_order):
                 raise serializers.ValidationError({
                     "work_order": (
                         "An active invoice already exists for this work order. "
                         "Void the current invoice before creating a revision."
+                    ),
+                })
+
+            billable_estimate = get_billable_estimate_for_work_order(work_order)
+            if billable_estimate and line_items:
+                raise serializers.ValidationError({
+                    "line_items": (
+                        "This work order has an approved estimate. Create the invoice from "
+                        "the estimate instead of posting custom line items."
                     ),
                 })
         else:

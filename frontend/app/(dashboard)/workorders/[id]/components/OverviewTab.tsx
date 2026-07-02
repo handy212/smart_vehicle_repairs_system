@@ -32,6 +32,7 @@ import { EstimatedNextServiceCallout } from "./EstimatedNextServiceCallout";
 import {
   canCreateWorkOrderInvoice,
   getInvoicePaymentDisplay,
+  mustInvoiceViaLinkedEstimate,
 } from "@/lib/workorders/invoiceSummaryDisplay";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
@@ -44,6 +45,7 @@ import {
   JOB_TYPE_FIELD_LABEL,
   SERVICE_PACKAGE_LABEL,
 } from "@/lib/workorders/job-type-labels";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -81,12 +83,13 @@ export default function WorkOrderOverviewTab({
     refetchOnWindowFocus: true,
   });
   const wo = workOrderFresh ?? workOrder;
-  const isRoutine = wo.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(wo);
   const estimateSummary = wo.estimate_summary;
   const invoiceSummary = wo.invoice_summary;
   const relatedInvoices: NonNullable<WorkOrder["related_invoices"]> = wo.related_invoices ?? [];
   const invoicePayment = getInvoicePaymentDisplay(invoiceSummary, wo.status);
   const canCreateInvoice = canCreateWorkOrderInvoice(wo);
+  const invoiceViaEstimate = mustInvoiceViaLinkedEstimate(wo);
   const displayedEstimatedTotal = parseFloat(wo.estimated_total || "0");
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
@@ -269,17 +272,15 @@ export default function WorkOrderOverviewTab({
               {getServiceCoordinatorName()}
             </span>
           </SummaryItem>
+          <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
+            <Badge variant="secondary" className="text-xs font-normal">
+              {getJobTypeLabel(undefined, wo)}
+            </Badge>
+          </SummaryItem>
           {isRoutine && (
-            <>
-              <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
-                <Badge variant="secondary" className="text-xs font-normal">
-                  {getJobTypeLabel(wo.maintenance_type)}
-                </Badge>
-              </SummaryItem>
-              <SummaryItem label={SERVICE_PACKAGE_LABEL}>
-                <span className="font-medium">{servicePackageName ?? "—"}</span>
-              </SummaryItem>
-            </>
+            <SummaryItem label={SERVICE_PACKAGE_LABEL}>
+              <span className="font-medium">{servicePackageName ?? "—"}</span>
+            </SummaryItem>
           )}
         </CardContent>
       </Card>
@@ -519,7 +520,18 @@ export default function WorkOrderOverviewTab({
               {!invoiceSummary?.id &&
               ["completed", "discontinued_pending_bill"].includes(wo.status) ? (
                 <p className="text-xs text-muted-foreground">
-                  {estimateSummary?.id ? (
+                  {invoiceViaEstimate && estimateSummary?.id ? (
+                    <>
+                      Bill this job by converting{" "}
+                      <Link
+                        href={`/billing/estimates/${estimateSummary.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {estimateSummary.estimate_number}
+                      </Link>
+                      {" "}to an invoice.
+                    </>
+                  ) : estimateSummary?.id ? (
                     <>
                       Create an invoice from{" "}
                       <Link
@@ -529,15 +541,19 @@ export default function WorkOrderOverviewTab({
                         {estimateSummary.estimate_number}
                       </Link>
                       {" "}or{" "}
-                      <Link
-                        href={`/billing/invoices/new?work_order=${wo.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        bill directly from this work order
-                      </Link>
+                      {canCreateInvoice ? (
+                        <Link
+                          href={`/billing/invoices/new?work_order=${wo.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          bill directly from this work order
+                        </Link>
+                      ) : (
+                        "use the billing actions on this work order"
+                      )}
                       .
                     </>
-                  ) : (
+                  ) : canCreateInvoice ? (
                     <>
                       No invoice yet.{" "}
                       <Link
@@ -548,6 +564,8 @@ export default function WorkOrderOverviewTab({
                       </Link>
                       .
                     </>
+                  ) : (
+                    "No invoice yet. Use the billing actions on this work order when ready."
                   )}
                 </p>
               ) : null}

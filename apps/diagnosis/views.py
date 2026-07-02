@@ -1221,6 +1221,21 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
         )
         self._sync_work_order_financials_from_diagnosis_parts(diagnosis.work_order, estimate)
 
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.parts_requests_submitted_to_stores(
+                diagnosis.work_order,
+                requested_by=request.user,
+                parts_count=parts_synced,
+                diagnosis_id=diagnosis.id,
+                source='recommendations_quote',
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to notify stores after syncing recommendation parts: %s", e, exc_info=True
+            )
+
         for recommendation in recommendations:
             recommendation.request_quotation(requested_by=request.user)
             if estimate is not None:

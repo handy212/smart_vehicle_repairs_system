@@ -21,17 +21,24 @@ class CustomerStatsTest(TestCase):
         
         # Create some customers for this month
         today = timezone.now()
+        month_start = today.date().replace(day=1)
         for i in range(5):
             u = User.objects.create(username=f'cust{i}', email=f'c{i}@ex.com', role='customer')
             Customer.objects.create(user=u, customer_number=f'CUST-{i:05d}', status='active')
             
         # Create some customers for last month
-        last_month = today - timedelta(days=32)
+        last_month_end = month_start - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        last_month_mid = timezone.make_aware(
+            timezone.datetime.combine(
+                last_month_start + timedelta(days=10),
+                timezone.datetime.min.time(),
+            )
+        )
         for i in range(3):
             u = User.objects.create(username=f'oldcust{i}', email=f'oc{i}@ex.com', role='customer')
             c = Customer.objects.create(user=u, customer_number=f'CUST-OLD-{i:05d}', status='active')
-            # Manually update created_at since auto_now_add=True
-            Customer.objects.filter(id=c.id).update(created_at=last_month)
+            Customer.objects.filter(id=c.id).update(created_at=last_month_mid)
 
     def test_dashboard_stats(self):
         response = self.client.get('/api/customers/customers/dashboard_stats/')

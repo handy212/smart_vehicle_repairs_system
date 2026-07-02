@@ -67,6 +67,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getWorkOrderAssignees } from "@/lib/workorders/assignees";
 import { getUserFacingError } from "@/lib/api/errors";
+import { isRoutineMaintenanceWorkOrder, isInspectionOnlyWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 
 type DiagnosisWorkspaceProps = {
@@ -96,7 +97,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
 
   useEffect(() => {
     if (workOrderLoading || !workOrder) return;
-    if (workOrder.maintenance_type === "routine") {
+    if (isRoutineMaintenanceWorkOrder(workOrder) || isInspectionOnlyWorkOrder(workOrder)) {
       router.replace(`${workOrderBackHref}?tab=parts`);
     }
   }, [workOrder, workOrderLoading, router, workOrderBackHref]);
@@ -364,7 +365,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     );
   }
 
-  if (workOrder.maintenance_type === "routine") {
+  if (isRoutineMaintenanceWorkOrder(workOrder) || isInspectionOnlyWorkOrder(workOrder)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -1621,10 +1622,12 @@ function RecommendationsTab({
           ? ` ${response.labor_lines_synced} labor line(s) added to the estimate.`
           : "";
       toast({
-        title: "Sent to stores",
+        title: "Stores notified",
         description: `${response.message}${estimateText}${partsText}${laborText}`,
         variant: "default",
       });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
     onError: (error: any) => {
       toast({

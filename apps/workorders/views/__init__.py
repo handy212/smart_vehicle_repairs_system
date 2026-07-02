@@ -5,6 +5,7 @@ from .parts import WorkOrderPartViewSet
 from .time_logs import TechnicianTimeLogViewSet
 from .notes_photos import WorkOrderNoteViewSet, WorkOrderPhotoViewSet
 from .public import PublicWorkOrderViewSet
+from .job_types import JobTypeViewSet, WorkflowProfileViewSet
 
 __all__ = [
     'WorkOrderViewSet',
@@ -15,4 +16,6 @@ __all__ = [
     'WorkOrderNoteViewSet',
     'WorkOrderPhotoViewSet',
     'PublicWorkOrderViewSet',
+    'JobTypeViewSet',
+    'WorkflowProfileViewSet',
 ]

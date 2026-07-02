@@ -19,6 +19,8 @@ from .hubtel_payment import (
     is_hubtel_payment_available
 )
 
+from apps.accounts.permissions import user_has_permission
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,7 +74,9 @@ def initiate_payment(request):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     
     # Check if user has permission to pay this invoice
-    if invoice.customer.user != request.user and not request.user.is_staff:
+    is_owner = invoice.customer.user == request.user
+    can_process = user_has_permission(request.user, 'process_payments')
+    if not is_owner and not can_process:
         return Response({
             'success': False,
             'error': 'You do not have permission to pay this invoice'
@@ -299,7 +303,9 @@ def verify_payment_status(request, transaction_id):
         payment = get_object_or_404(Payment, transaction_id=transaction_id)
         
         # Check permission
-        if payment.customer.user != request.user and not request.user.is_staff:
+        is_owner = payment.customer.user == request.user
+        can_view = user_has_permission(request.user, 'view_billing')
+        if not is_owner and not can_view:
             return Response({
                 'success': False,
                 'error': 'You do not have permission to view this payment'
@@ -380,7 +386,9 @@ def check_payment_status(request, payment_id):
         payment = get_object_or_404(Payment, id=payment_id)
         
         # Check permission
-        if payment.customer.user != request.user and not request.user.is_staff:
+        is_owner = payment.customer.user == request.user
+        can_view = user_has_permission(request.user, 'view_billing')
+        if not is_owner and not can_view:
             return Response({
                 'success': False,
                 'error': 'You do not have permission to view this payment'

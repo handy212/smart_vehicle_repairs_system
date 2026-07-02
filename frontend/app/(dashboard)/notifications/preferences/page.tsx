@@ -439,52 +439,6 @@ export default function NotificationPreferencesPage() {
           </CardContent>
         </Card>
 
-        {/* Quiet Hours */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Quiet Hours</CardTitle>
-            <CardDescription>
-              Set times when you don&apos;t want to receive notifications
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
-              <Label htmlFor="quiet_hours_enabled" className="text-sm font-medium text-foreground cursor-pointer">
-                Enable Quiet Hours
-              </Label>
-              <Checkbox
-                id="quiet_hours_enabled"
-                checked={mergedData.quiet_hours_enabled ?? false}
-                onCheckedChange={(checked) => handleChange("quiet_hours_enabled", checked === true)}
-              />
-            </div>
-            {mergedData.quiet_hours_enabled && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Start Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={mergedData.quiet_hours_start || "22:00"}
-                    onChange={(e) => handleChange("quiet_hours_start", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    End Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={mergedData.quiet_hours_end || "08:00"}
-                    onChange={(e) => handleChange("quiet_hours_end", e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         <div className="flex justify-end">
           <Button type="submit" size="sm" className="h-9" disabled={updateMutation.isPending}>
             <Save className="w-4 h-4 mr-2" />

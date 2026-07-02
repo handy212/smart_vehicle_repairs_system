@@ -6,6 +6,7 @@ import { getStatusLabel } from "@/lib/utils/workorder-status";
 import {
   getWorkflowStepIndexForWorkOrder,
   getWorkflowStepsForWorkOrder,
+  type WorkflowWorkOrderContext,
 } from "@/lib/utils/workorder-workflow-steps";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +20,9 @@ interface WorkOrderProgressProps {
   status: string;
   labelOverride?: string;
   diagnosisStatus?: string | null;
+  /** @deprecated Prefer `workOrder` — derived from workflow profile when available */
   maintenanceType?: string | null;
+  workOrder?: WorkflowWorkOrderContext | null;
   className?: string;
 }
 
@@ -28,14 +31,16 @@ export function WorkOrderProgress({
   labelOverride,
   diagnosisStatus,
   maintenanceType,
+  workOrder,
   className,
 }: WorkOrderProgressProps) {
   const [stepsOpen, setStepsOpen] = useState(false);
-  const workflowSteps = getWorkflowStepsForWorkOrder({ maintenance_type: maintenanceType ?? undefined });
-  const currentIndex = getWorkflowStepIndexForWorkOrder(status, {
+  const workflowContext: WorkflowWorkOrderContext = workOrder ?? {
     maintenance_type: maintenanceType ?? undefined,
     diagnosis_status: diagnosisStatus,
-  });
+  };
+  const workflowSteps = getWorkflowStepsForWorkOrder(workflowContext);
+  const currentIndex = getWorkflowStepIndexForWorkOrder(status, workflowContext);
   const currentStep = workflowSteps[currentIndex] ?? workflowSteps[0];
   const progressPct = Math.round(((currentIndex + 1) / workflowSteps.length) * 100);
   const CurrentIcon = currentStep.icon;

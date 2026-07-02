@@ -1013,10 +1013,14 @@ class RoleViewSet(viewsets.ModelViewSet):
         return RoleSerializer
     
     def perform_create(self, serializer):
-        instance = serializer.save()
+        from apps.accounts.role_utils import clear_role_permission_cache
+        serializer.save()
+        clear_role_permission_cache()
     
     def perform_update(self, serializer):
-        updated_instance = serializer.save()
+        from apps.accounts.role_utils import clear_role_permission_cache
+        serializer.save()
+        clear_role_permission_cache()
 
     def perform_destroy(self, instance):
         if instance.is_system:
@@ -1064,6 +1068,8 @@ class RoleViewSet(viewsets.ModelViewSet):
             )
 
         role.permissions.set(permission_ids)
+        from apps.accounts.role_utils import clear_role_permission_cache
+        clear_role_permission_cache()
 
         return Response({'detail': 'Permissions updated successfully'})
 

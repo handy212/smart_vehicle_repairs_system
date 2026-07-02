@@ -136,6 +136,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: Settings,
       items: [
         { name: "Settings", href: "/admin/settings", permission: "manage_settings", icon: Settings },
+        { name: "Job Types", href: "/admin/settings/job-types", permission: "manage_workorders", icon: Tags },
         { name: "Modules", href: "/admin/modules", superAdminOnly: true, icon: Puzzle },
         { name: "Integrations", href: "/admin/integrations", permission: "manage_settings", icon: Puzzle },
         { name: "Email Templates", href: "/admin/settings/email-templates", permission: "manage_notification_templates", icon: Mail },

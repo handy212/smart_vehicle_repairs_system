@@ -30,11 +30,15 @@ import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
   JOB_TYPE_FIELD_LABEL,
-  JOB_TYPE_GENERAL_LABEL,
-  JOB_TYPE_ROUTINE_LABEL,
   SERVICE_PACKAGE_LABEL,
   SERVICE_PACKAGE_PLACEHOLDER,
 } from "@/lib/workorders/job-type-labels";
+import {
+  isFastTrackJobType,
+  jobTypeRequiresBundle,
+  type JobType,
+} from "@/lib/api/job-types";
+import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -95,7 +99,8 @@ export function CheckInWizard() {
   const [customConcerns, setCustomConcerns] = useState("");
   const [odometer, setOdometer] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
-  const [maintenanceType, setMaintenanceType] = useState<"general" | "routine">("general");
+  const [selectedJobTypeCode, setSelectedJobTypeCode] = useState("general_repairs");
+  const [selectedJobType, setSelectedJobType] = useState<JobType | null>(null);
   const [serviceBundleId, setServiceBundleId] = useState<number | null>(null);
   const [serviceTypeId, setServiceTypeId] = useState<number | null>(null);
   const [progressionWarning, setProgressionWarning] = useState<string | null>(null);
@@ -134,6 +139,9 @@ export function CheckInWizard() {
     queryFn: () => inventoryApi.listBundles({ is_active: true }),
   });
 
+  const isFastTrack = isFastTrackJobType(selectedJobType);
+  const bundleRequired = jobTypeRequiresBundle(selectedJobType);
+
   const bundles = useMemo(() => {
     if (!bundlesData) return [] as ServiceBundle[];
     return Array.isArray(bundlesData) ? bundlesData : (bundlesData as { results?: ServiceBundle[] }).results ?? [];
@@ -147,7 +155,7 @@ export function CheckInWizard() {
   const { data: bundleDetail } = useQuery({
     queryKey: ["inventory", "bundle", serviceBundleId],
     queryFn: () => inventoryApi.getBundle(serviceBundleId!),
-    enabled: maintenanceType === "routine" && !!serviceBundleId,
+    enabled: bundleRequired && !!serviceBundleId,
   });
 
   const bundleItems = bundleDetail?.items ?? selectedBundle?.items ?? [];
@@ -179,7 +187,7 @@ export function CheckInWizard() {
       .getSuggestedService(vehicleId)
       .then((data) => {
         setSuggestedService(data as SuggestedService);
-        if (maintenanceType === "routine" && !serviceBundleId && data.suggested_bundle_id) {
+        if (isFastTrackJobType(selectedJobType) && !serviceBundleId && data.suggested_bundle_id) {
           setServiceBundleId(data.suggested_bundle_id);
           setServiceTypeId(data.suggested_service_id);
           const bundle = bundles.find((b) => b.id === data.suggested_bundle_id);
@@ -192,10 +200,11 @@ export function CheckInWizard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-fetch when vehicle changes
   }, [vehicleId]);
 
-  const handleMaintenanceTypeChange = (type: "general" | "routine") => {
-    setMaintenanceType(type);
+  const handleJobTypeChange = (code: string, jobType: JobType | null) => {
+    setSelectedJobTypeCode(code);
+    setSelectedJobType(jobType);
     setProgressionWarning(null);
-    if (type === "general") {
+    if (!jobTypeRequiresBundle(jobType)) {
       setServiceBundleId(null);
       setServiceTypeId(null);
       return;
@@ -332,7 +341,7 @@ export function CheckInWizard() {
       const bundle = bundles.find((b) => b.id === serviceBundleId);
       const concernText =
         concerns.trim() ||
-        (maintenanceType === "routine" && bundle ? `Perform ${bundle.name}` : "");
+        (isFastTrack && bundle ? `Perform ${bundle.name}` : "");
 
       const wo = await workordersApi.create({
         customer: customerId!,
@@ -341,9 +350,9 @@ export function CheckInWizard() {
         odometer_in: parseInt(odometer, 10) || 0,
         priority,
         status: "draft",
-        maintenance_type: maintenanceType,
-        ...(maintenanceType === "routine" && serviceTypeId ? { service_type: serviceTypeId } : {}),
-        ...(maintenanceType === "routine" && serviceBundleId ? { service_bundle: serviceBundleId } : {}),
+        job_type_code: selectedJobTypeCode,
+        ...(serviceTypeId ? { service_type: serviceTypeId } : {}),
+        ...(serviceBundleId ? { service_bundle: serviceBundleId } : {}),
       });
 
       if (scheduleAppointment) {
@@ -352,7 +361,7 @@ export function CheckInWizard() {
           vehicle: vehicleId!,
           appointment_date: appointmentDate,
           appointment_time: appointmentTime,
-          service_type: maintenanceType === "routine" ? "maintenance" : "repair",
+          job_type_code: selectedJobTypeCode,
           priority,
           customer_concerns: concernText || undefined,
         });
@@ -363,18 +372,18 @@ export function CheckInWizard() {
     onSuccess: (wo) => {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      const isRoutine = maintenanceType === "routine";
+      const isRoutineFlow = isFastTrack;
       toast({
         title: "Check-in complete",
-        description: isRoutine
-          ? "Routine service work order created with bundle parts and tasks."
+        description: isRoutineFlow
+          ? "Service work order created with bundle parts and tasks."
           : scheduleAppointment
             ? "Work order and appointment created."
             : "Work order created. Complete the intake inspection when ready.",
         variant: "success",
       });
       router.push(
-        isRoutine
+        isRoutineFlow
           ? `/workorders/${wo.id}?from=check-in&flow=routine&tab=parts`
           : `/workorders/${wo.id}?from=check-in`
       );
@@ -395,7 +404,7 @@ export function CheckInWizard() {
     if (step === 2) return !!vehicleId;
     if (step === 3) {
       const hasOdometer = odometer.trim().length > 0;
-      if (maintenanceType === "routine") {
+      if (bundleRequired) {
         return hasOdometer && !!serviceBundleId;
       }
       const hasConcerns = selectedConcerns.length > 0 || customConcerns.trim().length > 0;
@@ -599,33 +608,13 @@ export function CheckInWizard() {
                 </div>
               )}
 
-              <div>
-                <Label>{JOB_TYPE_FIELD_LABEL}</Label>
-                <div className="mt-2 flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="maintenance_type"
-                      checked={maintenanceType === "general"}
-                      onChange={() => handleMaintenanceTypeChange("general")}
-                      className="h-4 w-4 text-primary border-border focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium">{JOB_TYPE_GENERAL_LABEL}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="maintenance_type"
-                      checked={maintenanceType === "routine"}
-                      onChange={() => handleMaintenanceTypeChange("routine")}
-                      className="h-4 w-4 text-primary border-border focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium">{JOB_TYPE_ROUTINE_LABEL}</span>
-                  </label>
-                </div>
-              </div>
+              <JobTypeSelect
+                id="check-in-job-type"
+                value={selectedJobTypeCode}
+                onChange={handleJobTypeChange}
+              />
 
-              {maintenanceType === "routine" && (
+              {bundleRequired && (
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <Label htmlFor="check-in-service-type">{SERVICE_PACKAGE_LABEL} *</Label>
@@ -687,7 +676,7 @@ export function CheckInWizard() {
                 </div>
               )}
 
-              {maintenanceType === "general" && (
+              {!isFastTrack && (
                 <div className="space-y-3">
                   <div>
                     <Label>Common concerns</Label>
@@ -734,16 +723,16 @@ export function CheckInWizard() {
 
               <div>
                 <Label htmlFor="check-in-concerns">
-                  {maintenanceType === "routine" ? "Service notes" : "Additional details"}
-                  {maintenanceType === "general" ? " *" : ""}
+                  {isFastTrack ? "Service notes" : "Additional details"}
+                  {!isFastTrack ? " *" : ""}
                 </Label>
                 <Textarea
                   id="check-in-concerns"
                   value={customConcerns}
                   onChange={(e) => setCustomConcerns(e.target.value)}
                   placeholder={
-                    maintenanceType === "routine"
-                      ? "Optional notes for this routine service..."
+                    isFastTrack
+                      ? "Optional notes for this service..."
                       : selectedConcerns.length > 0
                         ? "Add any extra details not covered above..."
                         : "Describe the issue or service requested..."
@@ -751,7 +740,7 @@ export function CheckInWizard() {
                   rows={3}
                   className="mt-1"
                 />
-                {maintenanceType === "general" && concerns.trim().length > 0 && (
+                {!isFastTrack && concerns.trim().length > 0 && (
                   <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                       Request summary
@@ -817,11 +806,11 @@ export function CheckInWizard() {
                 </p>
                 <p>
                   <span className="text-muted-foreground">{JOB_TYPE_FIELD_LABEL}: </span>
-                  <span className="font-medium capitalize">
-                    {maintenanceType === "routine" ? JOB_TYPE_ROUTINE_LABEL : JOB_TYPE_GENERAL_LABEL}
+                  <span className="font-medium">
+                    {selectedJobType?.name ?? "General repair"}
                   </span>
                 </p>
-                {maintenanceType === "routine" && selectedBundle && (
+                {bundleRequired && selectedBundle && (
                   <p>
                     <span className="text-muted-foreground">{SERVICE_PACKAGE_LABEL}: </span>
                     <span className="font-medium">
@@ -830,7 +819,7 @@ export function CheckInWizard() {
                     </span>
                   </p>
                 )}
-                {maintenanceType === "routine" && bundleItems.length > 0 && (
+                {bundleRequired && bundleItems.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">Bundle items: </span>
                     <ul className="mt-1 space-y-0.5 font-medium">
@@ -844,7 +833,7 @@ export function CheckInWizard() {
                 )}
                 <div>
                   <span className="text-muted-foreground">
-                    {maintenanceType === "routine" ? "Service notes: " : "Concerns: "}
+                    {isFastTrack ? "Service notes: " : "Concerns: "}
                   </span>
                   {concerns.trim() ? (
                     <ul className="mt-1 space-y-0.5 font-medium">

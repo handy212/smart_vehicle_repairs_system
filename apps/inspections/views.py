@@ -315,6 +315,10 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             return base_permissions + [HasPermission('delete_inspections')]
         elif self.action in ['approve', 'reject']:
             return base_permissions + [HasPermission('edit_inspections')]
+        elif self.action in ['complete', 'add_result']:
+            return base_permissions + [HasPermission('perform_inspections')]
+        elif self.action in ['send_to_customer', 'pdf', 'print', 'by_vehicle', 'recent', 'statistics']:
+            return base_permissions + [HasPermission('view_inspections')]
         return base_permissions
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -958,6 +962,18 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
     filterset_fields = ['inspection', 'result', 'condition', 'needs_immediate_attention']
     ordering_fields = ['created_at']
     ordering = ['inspection_item__category__order', 'inspection_item__order']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('inspections')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_inspections')]
+        if self.action == 'create':
+            return base + [HasPermission('perform_inspections')]
+        if self.action in ('update', 'partial_update', 'add_photo'):
+            return base + [HasPermission('edit_inspections')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_inspections')]
+        return base
 
     def get_queryset(self):
         """Filter results by customer ownership or active/accessible branch."""

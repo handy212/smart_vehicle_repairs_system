@@ -14,6 +14,9 @@ class WorkOrderFilter(django_filters.FilterSet):
     customer = django_filters.NumberFilter(field_name='customer__id')
     vehicle = django_filters.NumberFilter(field_name='vehicle__id')
     status = CharInFilter(field_name='status', lookup_expr='in')
+    job_type = django_filters.CharFilter(field_name='job_type__code')
+    workflow_profile = django_filters.CharFilter(field_name='job_type__workflow_profile__code')
+    maintenance_type = django_filters.CharFilter(field_name='maintenance_type')
     
     class Meta:
         model = WorkOrder

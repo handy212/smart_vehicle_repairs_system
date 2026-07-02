@@ -152,6 +152,21 @@ export interface WorkOrder {
     name: string;
   };
   maintenance_type?: 'general' | 'routine';
+  job_type?: number;
+  job_type_code?: string;
+  job_type_detail?: {
+    id: number;
+    code: string;
+    name: string;
+    category: string;
+    workflow_profile?: {
+      code: string;
+      name: string;
+      allows_fast_track_to_approved?: boolean;
+    };
+  };
+  workflow_profile_code?: string | null;
+  is_insurance_claim?: boolean;
   maintenance_type_display?: string;
   assigned_personnel_display?: string;
   technician_assignment_status?: '' | 'pending' | 'accepted' | 'rejected' | 'released';

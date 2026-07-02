@@ -138,12 +138,13 @@ export function PartsRequiredTab({
             setIsSubmitting(true);
             const response = await diagnosisApi.requestPartsEstimate(diagnosis.id);
             toast({
-                title: "Request Sent",
-                description: response.message,
+                title: "Stores notified",
+                description: response.message || "Parts request sent to stores for review.",
                 variant: "success",
             });
 
-            // Force refresh of notifications to ensure sound plays immediately
+            queryClient.invalidateQueries({ queryKey: ["parts-requests"] });
+            queryClient.invalidateQueries({ queryKey: ["parts-requests-stats"] });
             queryClient.invalidateQueries({ queryKey: ["notifications"] });
             queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
 
@@ -167,7 +168,7 @@ export function PartsRequiredTab({
                     <div className="space-y-1">
                         <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Parts Required</CardTitle>
                         <CardDescription className="text-xs">
-                            List all parts required for this repair.
+                            Add parts here, then click Submit to notify stores (SVRS Parts Requests).
                         </CardDescription>
                     </div>
                     <div className="flex items-center space-x-2">

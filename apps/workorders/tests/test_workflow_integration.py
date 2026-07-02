@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -11,9 +13,11 @@ from apps.vehicles.models import Vehicle
 from apps.diagnosis.models import Diagnosis, RepairRecommendation
 from apps.accounts.permission_models import Role, Permission
 from apps.inspections.models import InspectionTemplate
+from apps.workorders.job_type_seed import seed_workflow_profiles_and_job_types
 
 class WorkOrderWorkflowTests(TestCase):
     def setUp(self):
+        seed_workflow_profiles_and_job_types(overwrite=True)
         self.client = APIClient()
         
         # 1. Setup Users
@@ -504,7 +508,12 @@ class WorkOrderWorkflowTests(TestCase):
         tasks = ServiceTask.objects.filter(work_order_id=wo_id)
         for task in tasks:
             url_task = reverse('api_workorders:servicetask-detail', args=[task.id])
-            self.client.patch(url_task, {'status': 'completed', 'actual_hours': '0.50'})
+            payload = {'status': 'completed'}
+            if (task.labor_cost or Decimal('0')) <= 0 and task.estimated_hours and task.labor_rate:
+                payload['labor_cost'] = str((task.estimated_hours * task.labor_rate).quantize(Decimal('0.01')))
+            elif (task.labor_cost or Decimal('0')) <= 0:
+                payload['labor_cost'] = '20.00'
+            self.client.patch(url_task, payload)
 
         # 9. REQUEST QC (In Progress -> Quality Check)
         url_qc = reverse('api_workorders:workorder-request-quality-check', args=[wo_id])

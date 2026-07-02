@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, inline_serializer
-from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.permissions import HasPermission, HasAnyPermission, user_has_permission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Sum, Avg
 from django.utils import timezone
@@ -39,15 +39,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('view_customers')]
-        elif self.action == 'create':
-            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('create_customers')]
-        elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('edit_customers')]
-        elif self.action == 'destroy':
-            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('delete_customers')]
-        return [IsAuthenticated(), IsModuleEnabled('customers')]
+        base = [IsAuthenticated(), IsModuleEnabled('customers')]
+        if self.action in ('list', 'retrieve', 'vehicles', 'workorders', 'stats', 'fleet',
+                           'inactive', 'top_spenders', 'loyalty_tiers', 'export'):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'create':
+            return base + [HasPermission('create_customers')]
+        if self.action in ('update', 'partial_update', 'suspend', 'activate',
+                           'reset_password', 'send_password_reset_link'):
+            return base + [HasPermission('edit_customers')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_customers')]
+        if self.action in ('import_excel', 'import_csv'):
+            return base + [HasPermission('manage_customers')]
+        if self.action == 'grant_portal_access':
+            return base + [HasPermission('grant_customer_portal_access')]
+        if self.action == 'revoke_portal_access':
+            return base + [HasPermission('revoke_customer_portal_access')]
+        return base
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'customer_type', 'payment_terms', 'loyalty_tier']
     search_fields = [
@@ -864,11 +873,22 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class CustomerNoteViewSet(viewsets.ModelViewSet):
     """ViewSet for customer notes"""
     serializer_class = CustomerNoteSerializer
-    from apps.accounts.permissions import IsStaff
-    permission_classes = [IsAuthenticated, IsStaff]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('customers')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'note_type', 'is_important']
     ordering = ['-created_at']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('customers')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'create':
+            return base + [HasPermission('edit_customers')]
+        if self.action in ('update', 'partial_update'):
+            return base + [HasPermission('edit_customers')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_customers')]
+        return base
     
     def get_queryset(self):
         return CustomerNote.objects.select_related('customer', 'created_by').all()
@@ -879,8 +899,7 @@ class CustomerNoteViewSet(viewsets.ModelViewSet):
 class CustomerContactViewSet(viewsets.ModelViewSet):
     """ViewSet for customer contacts"""
     serializer_class = CustomerContactSerializer
-    from apps.accounts.permissions import IsStaff
-    permission_classes = [IsAuthenticated, IsStaff]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('customers')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'is_primary', 'is_billing']
     ordering_fields = [
@@ -889,6 +908,18 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
     ]
     ordering = ['-is_primary', 'first_name']
 
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('customers')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'create':
+            return base + [HasPermission('edit_customers')]
+        if self.action in ('update', 'partial_update'):
+            return base + [HasPermission('edit_customers')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_customers')]
+        return base
+
     def get_queryset(self):
         return CustomerContact.objects.filter(customer__user__is_active=True).select_related('customer')
 
@@ -896,11 +927,22 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
 class CustomerReminderViewSet(viewsets.ModelViewSet):
     """ViewSet for customer reminders"""
     serializer_class = CustomerReminderSerializer
-    from apps.accounts.permissions import IsStaff
-    permission_classes = [IsAuthenticated, IsStaff]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('customers')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'status', 'is_system_generated']
     ordering = ['due_date']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('customers')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'create':
+            return base + [HasPermission('edit_customers')]
+        if self.action in ('update', 'partial_update'):
+            return base + [HasPermission('edit_customers')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_customers')]
+        return base
 
     def get_queryset(self):
         return CustomerReminder.objects.select_related('customer', 'created_by').all()
@@ -915,11 +957,22 @@ from .serializers import CustomerDocumentSerializer, CustomerContractSerializer
 class CustomerDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for customer documents"""
     serializer_class = CustomerDocumentSerializer
-    from apps.accounts.permissions import IsStaff
-    permission_classes = [IsAuthenticated, IsStaff]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('customers')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'is_public']
     ordering = ['-created_at']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('customers')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'create':
+            return base + [HasPermission('edit_customers')]
+        if self.action in ('update', 'partial_update'):
+            return base + [HasPermission('edit_customers')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_customers')]
+        return base
     
     def get_queryset(self):
         return CustomerDocument.objects.select_related('customer', 'uploaded_by').all()
@@ -931,11 +984,22 @@ class CustomerDocumentViewSet(viewsets.ModelViewSet):
 class CustomerContractViewSet(viewsets.ModelViewSet):
     """ViewSet for customer contracts"""
     serializer_class = CustomerContractSerializer
-    from apps.accounts.permissions import IsStaff
-    permission_classes = [IsAuthenticated, IsStaff]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('customers')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'status']
     ordering = ['-created_at']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('customers')]
+        if self.action in ('list', 'retrieve'):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'create':
+            return base + [HasPermission('edit_customers')]
+        if self.action in ('update', 'partial_update'):
+            return base + [HasPermission('edit_customers')]
+        if self.action == 'destroy':
+            return base + [HasPermission('delete_customers')]
+        return base
     
     def get_queryset(self):
         return CustomerContract.objects.select_related('customer', 'created_by').all()

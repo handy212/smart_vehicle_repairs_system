@@ -174,6 +174,7 @@ class Command(BaseCommand):
                 'manage_billing': ('billing', 'Manage Billing', 'Full billing management'),
                 'view_own_invoices': ('billing', 'View Own Invoices', 'View own invoices only'),
                 'process_payments': ('billing', 'Process Payments', 'Process customer payments'),
+                'edit_payments': ('billing', 'Edit Payments', 'Edit existing payment records'),
                 'refund_payments': ('billing', 'Refund Payments', 'Process payment refunds'),
                 'create_estimates': ('billing', 'Create Estimates', 'Create repair estimates'),
                 'edit_estimates': ('billing', 'Edit Estimates', 'Edit estimate details'),

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ import { getUserFacingError } from "@/lib/api/errors";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 import { INCOME_CATEGORY_SHORT } from "@/lib/accounting/income-category-labels";
-import { Label } from "@/components/ui/label";
+import { isRoutineMaintenanceWorkOrder } from "@/lib/utils/workorder-workflow-steps";
 
 interface TasksTabProps {
   workOrderId: number;
@@ -55,12 +56,11 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [completeTask, setCompleteTask] = useState<ServiceTask | null>(null);
-  const [completeHours, setCompleteHours] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
   const [editBillingTask, setEditBillingTask] = useState<ServiceTask | null>(null);
   const [billingCategoryId, setBillingCategoryId] = useState<number | null>(null);
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
-  const isRoutine = workOrder?.maintenance_type === "routine";
+  const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
   const routineSkipWorkflowPhases = new Set([
     "inspection",
     "intake",
@@ -117,7 +117,6 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
       workOrderTasksApi.complete(taskId, data),
     onSuccess: () => {
       setCompleteTask(null);
-      setCompleteHours("");
       setCompleteNotes("");
       onRefresh();
     },
@@ -156,27 +155,16 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
     const task = tasks.find((item) => item.id === taskId);
     if (task) {
       setCompleteTask(task);
-      setCompleteHours(task.actual_hours && task.actual_hours > 0 ? String(task.actual_hours) : "");
       setCompleteNotes(task.detailed_notes || "");
     }
   };
 
   const submitCompleteTask = () => {
     if (!completeTask) return;
-    const hours = Number(completeHours);
-    if (!Number.isFinite(hours) || hours <= 0) {
-      toast({
-        title: "Actual hours required",
-        description: "Enter the labor hours spent before completing the task.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     completeTaskMutation.mutate({
       taskId: completeTask.id,
       data: {
-        actual_hours: hours,
         notes: completeNotes.trim() || undefined,
       },
     });
@@ -321,16 +309,10 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
         </TableCell>
         <TableCell className="py-3">
           <div className="text-sm">
-            {(task.calculated_hours !== undefined && task.calculated_hours !== null && task.calculated_hours > 0) ? (
-              <span>{Number(task.calculated_hours).toFixed(2)}h</span>
-            ) : (task.actual_hours !== undefined && task.actual_hours !== null && task.actual_hours > 0) ? (
-              <span>{Number(task.actual_hours).toFixed(2)}h</span>
-            ) : (task.estimated_hours !== undefined && task.estimated_hours !== null && task.estimated_hours > 0) ? (
-              <span className="text-muted-foreground">Est: {Number(task.estimated_hours).toFixed(2)}h</span>
-            ) : task.status === 'completed' ? (
-              <span className="text-muted-foreground">0.00h</span>
+            {task.labor_cost !== undefined && task.labor_cost !== null && Number(task.labor_cost) > 0 ? (
+              <span>${Number(task.labor_cost).toFixed(2)}</span>
             ) : (
-              "-"
+              <span className="text-muted-foreground">—</span>
             )}
           </div>
         </TableCell>
@@ -444,7 +426,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
                     <TableHead>Type</TableHead>
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Hours</TableHead>
+                    <TableHead>Charge</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -519,7 +501,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
                     <TableHead>Type</TableHead>
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Hours</TableHead>
+                    <TableHead>Charge</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -566,19 +548,12 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
           <div className="space-y-4 p-6 pt-0">
             <div>
               <p className="text-sm font-medium text-foreground">{completeTask?.description}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Actual labor hours are required before this task can move to completed.</p>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="actual_hours" className="text-sm font-medium">Actual hours</label>
-              <Input
-                id="actual_hours"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={completeHours}
-                onChange={(event) => setCompleteHours(event.target.value)}
-                placeholder="e.g. 1.50"
-              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Completing applies the flat charge from the task type or income category.
+                {completeTask?.labor_cost && Number(completeTask.labor_cost) > 0
+                  ? ` Charge: $${Number(completeTask.labor_cost).toFixed(2)}`
+                  : ""}
+              </p>
             </div>
             <div className="space-y-1.5">
               <label htmlFor="completion_notes" className="text-sm font-medium">Completion notes</label>
