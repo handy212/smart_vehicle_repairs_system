@@ -489,8 +489,8 @@ def get_notification_settings():
         'notify_invoice_created': 'true',
         'notify_payment_received': 'true',
         'appointment_reminder_hours': '24',
-        'notification_quiet_hours_start': '22:00',
-        'notification_quiet_hours_end': '08:00',
+        'notification_quiet_hours_start': '',
+        'notification_quiet_hours_end': '',
     }
     
     return get_settings(keys, defaults)

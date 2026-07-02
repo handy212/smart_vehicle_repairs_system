@@ -339,13 +339,6 @@ class NotificationPreference(models.Model):
         if not type_enabled:
             return False
         
-        # Check quiet hours
-        if self.quiet_hours_enabled and self.quiet_hours_start and self.quiet_hours_end:
-            current_time = timezone.now().time()
-            if self.quiet_hours_start <= self.quiet_hours_end:
-                return not (self.quiet_hours_start <= current_time <= self.quiet_hours_end)
-            return not (current_time >= self.quiet_hours_start or current_time <= self.quiet_hours_end)
-        
         return True
 
 

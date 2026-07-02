@@ -10,6 +10,7 @@ import { ensureApiSession } from "@/lib/auth/session";
 import { useModules } from "@/lib/hooks/useModules";
 import { shouldUseMobileApp } from "@/lib/utils/device-context";
 import { isMobileShellRole } from "@/lib/utils/post-login-redirect";
+import { useWebPushRegistration } from "@/lib/hooks/useWebPushRegistration";
 
 export default function DashboardLayoutWrapper({
   children,
@@ -91,6 +92,10 @@ export default function DashboardLayoutWrapper({
 
   const waitingForModules = canViewModuleManagement && modulesLoading;
   const waitingForAuth = !hasHydrated || (!isAuthenticated && !sessionChecked);
+
+  useWebPushRegistration(
+    Boolean(isAuthenticated && mounted && sessionChecked && user?.role !== "customer")
+  );
 
   if (!mounted || waitingForAuth || waitingForModules) {
     return <AppShellSkeleton />;

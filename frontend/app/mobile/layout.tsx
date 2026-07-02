@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { authApi } from "@/lib/api/auth";
 import { SyncStatusBanner } from "@/components/mobile/SyncStatusBanner";
 import { OfflineIndicator } from "@/components/mobile/OfflineIndicator";
 import { MobileNotificationBell } from "@/components/mobile/MobileNotificationBell";
+import { useWebPushRegistration } from "@/lib/hooks/useWebPushRegistration";
 import { Home, Wrench, Truck, MoreHorizontal, Calendar } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -76,9 +77,7 @@ export default function MobileLayout({
     };
   }, [user, setUser, router, mounted]);
 
-  // Guard to prevent repeated attempts per page load
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const hasAttemptedPushRef = useRef(false);
+  useWebPushRegistration(Boolean(isAuthenticated && mounted));
 
   if (!mounted || !isAuthenticated) {
     return <AppShellSkeleton />;

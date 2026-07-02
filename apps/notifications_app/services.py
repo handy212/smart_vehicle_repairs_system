@@ -11,7 +11,7 @@ from .models import Notification, NotificationLog, WebPushSubscription
 from .firebase import send_push_notification, is_firebase_available
 from .hubtel_sms import is_hubtel_available
 from .whatsapp_service import get_whatsapp_service
-from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings, get_whatsapp_settings
+from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings, get_whatsapp_settings, get_site_url
 from .currency import enrich_money_context, format_money
 
 try:
@@ -66,33 +66,6 @@ class NotificationService:
                 notification.mark_as_failed(f"Channel {notification.channel} is disabled in system settings")
                 self._log_action(notification, 'failed', f'Channel {notification.channel} disabled globally')
                 return False
-            
-            # Check system quiet hours (skip for custom/urgent notifications)
-            # Custom notifications from SMS Console should bypass quiet hours
-            if notification.notification_type not in ['custom', 'system']:
-                quiet_hours_start = notification_settings.get('notification_quiet_hours_start', '22:00')
-                quiet_hours_end = notification_settings.get('notification_quiet_hours_end', '08:00')
-                
-                if quiet_hours_start and quiet_hours_end:
-                    from datetime import datetime, time
-                    try:
-                        start_time = datetime.strptime(quiet_hours_start, '%H:%M').time()
-                        end_time = datetime.strptime(quiet_hours_end, '%H:%M').time()
-                        current_time = timezone.now().time()
-                        
-                        # Handle overnight quiet hours (e.g., 22:00 to 08:00)
-                        if start_time > end_time:  # Overnight
-                            if current_time >= start_time or current_time <= end_time:
-                                notification.mark_as_failed("Notification blocked by system quiet hours")
-                                self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
-                                return False
-                        else:  # Same day
-                            if start_time <= current_time <= end_time:
-                                notification.mark_as_failed("Notification blocked by system quiet hours")
-                                self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
-                                return False
-                    except (ValueError, AttributeError):
-                        pass  # Skip quiet hours check if parsing fails
             
             # Check user preferences
             if hasattr(notification.recipient, 'notification_preferences'):
@@ -623,7 +596,7 @@ class NotificationService:
                 "data": {
                     "notification_id": str(notification.id),
                     "type": notification.notification_type,
-                    "url": notification.data.get("url") if notification.data else None,
+                    "url": self._resolve_push_url(notification),
                 }
             }
 
@@ -683,6 +656,12 @@ class NotificationService:
             self._log_action(notification, 'delivered', 'In-app notification ready')
             
             logger.info(f"In-app notification created for user {notification.recipient.email}")
+
+            # Mirror to Web Push for PWA / tech app subscribers.
+            prefs = getattr(notification.recipient, 'notification_preferences', None)
+            if prefs and prefs.push_enabled:
+                self._send_web_push(notification)
+
             return True
             
         except Exception as e:
@@ -747,6 +726,34 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Template rendering error: {str(e)}")
             return template_string
+    
+    def _resolve_push_url(self, notification):
+        """Build a deep link for push notification clicks."""
+        data = notification.data or {}
+        for key in ('url', 'mobile_url', 'dashboard_url'):
+            value = data.get(key)
+            if value:
+                return value
+
+        base = (get_site_url() or '').rstrip('/')
+        recipient = notification.recipient
+        is_technician = getattr(recipient, 'role', None) == 'technician'
+
+        work_order_id = data.get('work_order_id')
+        if not work_order_id and notification.related_object_type == 'work_order':
+            work_order_id = notification.related_object_id
+        if work_order_id:
+            path = f'/mobile/workorders/{work_order_id}' if is_technician else f'/workorders/{work_order_id}'
+            return f'{base}{path}' if base else path
+
+        appointment_id = data.get('appointment_id')
+        if not appointment_id and notification.related_object_type == 'appointment':
+            appointment_id = notification.related_object_id
+        if appointment_id:
+            path = '/mobile/schedule' if is_technician else f'/appointments/{appointment_id}'
+            return f'{base}{path}' if base else path
+
+        return f'{base}/notifications' if base else '/notifications'
     
     def _log_action(self, notification, action, details):
         """

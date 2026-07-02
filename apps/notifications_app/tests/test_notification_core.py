@@ -106,7 +106,7 @@ class NotificationCoreTests(TestCase):
         self.assertIn('whatsapp_enabled', data)
         self.assertIn('roadside_requested_sms', data)
 
-    def test_user_quiet_hours_handles_overnight_ranges(self):
+    def test_user_quiet_hours_no_longer_block_notifications(self):
         preferences = NotificationPreference.objects.create(
             user=self.user,
             quiet_hours_enabled=True,
@@ -116,10 +116,10 @@ class NotificationCoreTests(TestCase):
 
         with patch('apps.notifications_app.models.timezone') as mock_timezone:
             mock_timezone.now.return_value.time.return_value = time(23, 0)
-            self.assertFalse(preferences.should_send_notification('invoice', 'email'))
+            self.assertTrue(preferences.should_send_notification('work_order', 'in_app'))
 
             mock_timezone.now.return_value.time.return_value = time(12, 0)
-            self.assertTrue(preferences.should_send_notification('invoice', 'email'))
+            self.assertTrue(preferences.should_send_notification('work_order', 'in_app'))
 
     @patch('apps.notifications_app.services.send_mail')
     def test_digest_delivery_is_idempotent_per_period(self, mock_send_mail):
