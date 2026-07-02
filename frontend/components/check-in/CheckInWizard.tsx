@@ -29,6 +29,7 @@ import {
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
+  JOB_TYPE_FIELD_LABEL,
   SERVICE_PACKAGE_LABEL,
   SERVICE_PACKAGE_PLACEHOLDER,
 } from "@/lib/workorders/job-type-labels";

@@ -49,7 +49,7 @@ const workOrderSchema = z.object({
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
 
 import { getValidNextStatuses } from "@/lib/utils/workorder-transitions";
-import { isDiagnosisPausedWorkOrder, type WorkOrderLike } from "@/lib/utils/workorder-inspection-stage";
+import type { WorkflowWorkOrderContext } from "@/lib/utils/workorder-workflow-steps";
 
 // Status display labels
 const STATUS_LABELS: Record<string, string> = {
@@ -71,12 +71,16 @@ const STATUS_LABELS: Record<string, string> = {
 
 function getValidStatuses(
   currentStatus: string,
-  workOrder?: Pick<WorkOrderLike, "diagnosis_status" | "paused_from_status" | "maintenance_type" | "workflow_profile_code" | "job_type_detail">
+  workOrder?: (WorkflowWorkOrderContext & { paused_from_status?: string | null }) | null
 ): string[] {
   const validStatuses = [currentStatus];
   let transitions = getValidNextStatuses(currentStatus, workOrder);
 
-  if (currentStatus === "paused" && workOrder && isDiagnosisPausedWorkOrder({ status: "paused", ...workOrder })) {
+  if (
+    currentStatus === "paused" &&
+    workOrder &&
+    (workOrder.paused_from_status === "diagnosis" || workOrder.diagnosis_status === "paused")
+  ) {
     transitions = transitions.filter((status) => status !== "in_progress");
   }
 

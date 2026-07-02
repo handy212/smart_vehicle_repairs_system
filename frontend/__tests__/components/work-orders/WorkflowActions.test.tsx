@@ -269,7 +269,7 @@ describe('WorkflowActions Component', () => {
             expect(screen.queryByText(/Create invoice/i)).not.toBeInTheDocument();
         });
 
-        it('allows closing a completed work order once the invoice is issued even if payment is still due', async () => {
+        it('shows confirm billing complete on completed work orders with an issued invoice', async () => {
             vi.mocked(workordersApi.get).mockResolvedValue({
                 id: 1,
                 status: 'completed',
@@ -291,6 +291,45 @@ describe('WorkflowActions Component', () => {
                 workOrder: {
                     id: 1,
                     status: 'completed',
+                    work_order_number: 'WO-001',
+                    invoice_summary: {
+                        id: 99,
+                        invoice_number: 'INV-00099',
+                        status: 'sent',
+                        total: '350.00',
+                        amount_due: '350.00',
+                        amount_paid: '0.00',
+                        is_paid: false,
+                    },
+                },
+            });
+
+            expect(await screen.findByText(/Confirm billing complete/i)).toBeInTheDocument();
+            expect(screen.queryByText(/Close Work Order/i)).not.toBeInTheDocument();
+        });
+
+        it('allows closing an invoiced work order when the invoice is issued', async () => {
+            vi.mocked(workordersApi.get).mockResolvedValue({
+                id: 1,
+                status: 'invoiced',
+                work_order_number: 'WO-001',
+                invoice_summary: {
+                    id: 99,
+                    invoice_number: 'INV-00099',
+                    status: 'sent',
+                    total: '350.00',
+                    amount_due: '350.00',
+                    amount_paid: '0.00',
+                    is_paid: false,
+                },
+            } as any);
+
+            renderComponent({
+                workOrderId: 1,
+                status: 'invoiced',
+                workOrder: {
+                    id: 1,
+                    status: 'invoiced',
                     work_order_number: 'WO-001',
                     invoice_summary: {
                         id: 99,
