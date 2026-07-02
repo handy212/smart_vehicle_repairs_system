@@ -67,6 +67,9 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     current_quote_stage_display = serializers.SerializerMethodField()
     job_type_detail = JobTypeListSerializer(source='job_type', read_only=True)
     workflow_profile_code = serializers.SerializerMethodField()
+    maintenance_type = serializers.CharField(read_only=True)
+    maintenance_type_display = serializers.SerializerMethodField()
+    assigned_personnel_display = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -78,6 +81,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'primary_technician', 'primary_technician_name',
             'service_coordinator', 'service_coordinator_name',
             'diagnosis_status', 'has_technician_assignment',
+            'maintenance_type', 'maintenance_type_display', 'assigned_personnel_display',
             'created_at', 'started_at', 'completed_at', 'estimated_completion',
             'estimated_total', 'actual_total', 'total_cost', 'is_overdue', 'days_in_shop',
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
@@ -183,6 +187,23 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         if annotated is not None:
             return annotated > 0
         return obj.assigned_technicians.exists()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_maintenance_type_display(self, obj):
+        return obj.get_maintenance_type_display()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_assigned_personnel_display(self, obj):
+        names = []
+        if obj.primary_technician:
+            names.append(
+                f"{obj.primary_technician.first_name} {obj.primary_technician.last_name}".strip()
+            )
+        for tech in obj.assigned_technicians.all():
+            full_name = f"{tech.first_name} {tech.last_name}".strip()
+            if full_name and full_name not in names:
+                names.append(full_name)
+        return ', '.join(names) if names else ''
     
     @extend_schema_field(OpenApiTypes.INT)
     def get_task_count(self, obj):
@@ -293,6 +314,9 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     current_quote_stage_display = serializers.SerializerMethodField()
     job_type_detail = JobTypeListSerializer(source='job_type', read_only=True)
     workflow_profile_code = serializers.SerializerMethodField()
+    technician_assignment_status_display = serializers.SerializerMethodField()
+    requires_assignment_acceptance = serializers.SerializerMethodField()
+    inventory_availability_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -304,6 +328,10 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'service_coordinator', 'primary_technician', 'assigned_technicians',
             'primary_technician_name', 'service_coordinator_name',
             'diagnosis_status', 'has_technician_assignment',
+            'technician_assignment_status', 'technician_assignment_status_display',
+            'technician_assignment_note', 'technician_assignment_responded_at',
+            'technician_assignment_responded_by',
+            'requires_assignment_acceptance', 'inventory_availability_summary',
             'vehicle_display', 'technician_names',
             'assigned_technicians_detail', 'created_at', 'updated_at',
             'started_at', 'completed_at', 'estimated_completion',
@@ -479,6 +507,21 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_technician_assignment(self, obj):
         return bool(obj.primary_technician_id or obj.assigned_technicians.exists())
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_technician_assignment_status_display(self, obj):
+        status = obj.get_technician_assignment_gate_status()
+        if not status:
+            return ''
+        return dict(WorkOrder.TECHNICIAN_ASSIGNMENT_STATUS_CHOICES).get(status, status)
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_requires_assignment_acceptance(self, obj):
+        return obj.requires_technician_assignment_acceptance()
+
+    @extend_schema_field(serializers.DictField())
+    def get_inventory_availability_summary(self, obj):
+        return obj.get_inventory_availability_summary()
     
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_assigned_technicians_detail(self, obj):
@@ -1018,6 +1061,8 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         # Extract status if it's being updated
         new_status = validated_data.pop('status', None)
         assigned_technicians = validated_data.pop('assigned_technicians', None)
+        old_primary_technician_id = instance.primary_technician_id
+        old_assigned_ids = set(instance.assigned_technicians.values_list('id', flat=True))
         if assigned_technicians is not None:
             for technician in assigned_technicians:
                 self._validate_branch_technician(technician, instance, 'assigned_technicians')
@@ -1057,6 +1102,25 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
                 instance.save(update_fields=['maintenance_type', 'is_warranty', 'is_insurance_claim',
                                              'requires_inspection', 'requires_diagnosis', 'requires_approval',
                                              'quality_check_required'])
+
+        new_primary_id = instance.primary_technician_id
+        new_assigned_ids = (
+            set(instance.assigned_technicians.values_list('id', flat=True))
+            if assigned_technicians is not None
+            else old_assigned_ids
+        )
+        technician_assignment_changed = (
+            ('primary_technician' in validated_data and new_primary_id != old_primary_technician_id)
+            or (assigned_technicians is not None and new_assigned_ids != old_assigned_ids)
+        )
+        if technician_assignment_changed:
+            if new_primary_id or new_assigned_ids:
+                instance.mark_technician_assignment_pending()
+            else:
+                instance.technician_assignment_status = ''
+                instance.technician_assignment_note = ''
+                instance.technician_assignment_responded_at = None
+                instance.technician_assignment_responded_by = None
             
         # Check if maintenance type or service type implies applied bundle
         # We only apply if it wasn't applied before or explicit change. 
@@ -1110,6 +1174,20 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
                 work_order=instance,
                 service_coordinator=instance.service_coordinator
             )
+
+        if technician_assignment_changed and instance.has_technician_assigned():
+            from apps.notifications_app.triggers import notification_triggers
+            if instance.primary_technician_id:
+                notification_triggers.work_order_technician_assigned(
+                    work_order=instance,
+                    technician=instance.primary_technician,
+                )
+            for technician in instance.assigned_technicians.all():
+                if technician.id != instance.primary_technician_id:
+                    notification_triggers.work_order_technician_assigned(
+                        work_order=instance,
+                        technician=technician,
+                    )
         
         return instance
 

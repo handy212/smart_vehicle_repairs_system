@@ -32,6 +32,7 @@ import { WorkOrderProgress } from "./components/WorkOrderProgress";
 import { GatePassBanner } from "./components/GatePassBanner";
 import { CheckInInspectionBanner } from "./components/CheckInInspectionBanner";
 import { RoutineCheckInBanner } from "./components/RoutineCheckInBanner";
+import { AssignmentActions } from "./components/AssignmentActions";
 import { WorkOrderTabsNav } from "./components/WorkOrderTabsNav";
 import { UnapprovedRecommendationsDialog } from "./components/UnapprovedRecommendationsDialog";
 import { inspectionsApi } from "@/lib/api/inspections";
@@ -366,6 +367,12 @@ export default function WorkOrderDetailPage() {
         workOrderId={workOrderId}
         partsCount={parts.length}
         tasksCount={tasks.length}
+      />
+
+      <AssignmentActions
+        workOrder={workOrder}
+        workOrderId={workOrderId}
+        onStatusChange={refreshData}
       />
 
       <CheckInInspectionBanner

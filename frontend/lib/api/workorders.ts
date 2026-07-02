@@ -167,6 +167,25 @@ export interface WorkOrder {
   };
   workflow_profile_code?: string | null;
   is_insurance_claim?: boolean;
+  maintenance_type_display?: string;
+  assigned_personnel_display?: string;
+  technician_assignment_status?: '' | 'pending' | 'accepted' | 'rejected' | 'released';
+  technician_assignment_status_display?: string;
+  technician_assignment_note?: string;
+  technician_assignment_responded_at?: string | null;
+  requires_assignment_acceptance?: boolean;
+  inventory_availability_summary?: {
+    stock_unavailable_count: number;
+    parts_pending_allocation_count: number;
+    stock_unavailable: Array<{
+      id: number;
+      part_name: string;
+      quantity_needed: string;
+      quantity_available: number;
+      message: string;
+    }>;
+    is_ready_for_service: boolean;
+  };
   service_type?: number | { id: number; name: string };
   service_bundle?: number | { id: number; name: string };
   customer_discontinuation_reason?: string;
@@ -489,8 +508,32 @@ export const workordersApi = {
     can_start: boolean;
     errors: string[];
     unavailable_parts: Array<{ part_name: string; reason: string }>;
+    inventory_availability?: WorkOrder['inventory_availability_summary'];
+    stock_unavailable?: Array<{
+      part_name: string;
+      quantity_needed: string;
+      quantity_available: number;
+      message: string;
+    }>;
+    requires_assignment_acceptance?: boolean;
+    technician_assignment_status?: string;
   }> => {
     const response = await apiClient.get(`/workorders/work-orders/${id}/check_readiness/`);
+    return response.data;
+  },
+
+  acceptAssignment: async (id: number, data?: { note?: string }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/accept-assignment/`, data || {});
+    return response.data;
+  },
+
+  rejectAssignment: async (id: number, data: { reason: string }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/reject-assignment/`, data);
+    return response.data;
+  },
+
+  releaseAssignment: async (id: number, data?: { note?: string }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/release-assignment/`, data || {});
     return response.data;
   },
 

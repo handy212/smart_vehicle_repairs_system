@@ -499,6 +499,7 @@ class WorkOrderStateTransitionMixin:
         
         can_start, errors = work_order.can_start_work()
         unavailable_parts = work_order.check_parts_availability()
+        stock_issues = work_order.check_inventory_stock_availability()
         
         return Response({
             'can_start': can_start,
@@ -509,7 +510,19 @@ class WorkOrderStateTransitionMixin:
                     'reason': p['reason']
                 }
                 for p in unavailable_parts
-            ]
+            ],
+            'inventory_availability': work_order.get_inventory_availability_summary(),
+            'stock_unavailable': [
+                {
+                    'part_name': item['part_name'],
+                    'quantity_needed': item['quantity_needed'],
+                    'quantity_available': item['quantity_available'],
+                    'message': item['message'],
+                }
+                for item in stock_issues
+            ],
+            'requires_assignment_acceptance': work_order.requires_technician_assignment_acceptance(),
+            'technician_assignment_status': work_order.get_effective_technician_assignment_status(),
         })
 
     @action(detail=True, methods=['post'])
@@ -526,7 +539,15 @@ class WorkOrderStateTransitionMixin:
         if not work_order.primary_technician and not work_order.assigned_technicians.exists():
             if request.user.role in ['technician', 'manager', 'admin']:
                 work_order.primary_technician = request.user
-                work_order.save(update_fields=['primary_technician'])
+                work_order.technician_assignment_status = 'accepted'
+                work_order.technician_assignment_responded_at = timezone.now()
+                work_order.technician_assignment_responded_by = request.user
+                work_order.save(update_fields=[
+                    'primary_technician',
+                    'technician_assignment_status',
+                    'technician_assignment_responded_at',
+                    'technician_assignment_responded_by',
+                ])
                 logger.info(f"Auto-assigned {request.user.username} as primary technician for WO {work_order.work_order_number}")
                 
                 # Assign to existing tasks if they are unassigned
@@ -948,3 +969,94 @@ class WorkOrderStateTransitionMixin:
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    def _assignment_permission_denied(self):
+        return Response(
+            {'error': 'You are not authorized to respond to this assignment.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    @action(detail=True, methods=['post'], url_path='accept-assignment')
+    def accept_assignment(self, request, pk=None):
+        """Accept a technician assignment (optional note)."""
+        work_order = self.get_object()
+        if not work_order.user_can_respond_to_technician_assignment(request.user):
+            return self._assignment_permission_denied()
+        note = (request.data.get('note') or '').strip()
+        try:
+            work_order.accept_technician_assignment(request.user, note=note)
+            if note:
+                WorkOrderNote.objects.create(
+                    work_order=work_order,
+                    created_by=request.user,
+                    note_type='internal',
+                    note=f"Assignment accepted: {note}",
+                )
+            serializer = self.get_serializer(work_order)
+            return Response(serializer.data)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='reject-assignment')
+    def reject_assignment(self, request, pk=None):
+        """Reject a technician assignment (mandatory reason)."""
+        work_order = self.get_object()
+        if not work_order.user_can_respond_to_technician_assignment(request.user):
+            return self._assignment_permission_denied()
+        reason = (request.data.get('reason') or request.data.get('note') or '').strip()
+        if not reason:
+            return Response(
+                {'error': 'A rejection reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            work_order.reject_technician_assignment(request.user, reason)
+            WorkOrderNote.objects.create(
+                work_order=work_order,
+                created_by=request.user,
+                note_type='internal',
+                note=f"Assignment rejected by {request.user.get_full_name()}: {reason}",
+                is_important=True,
+            )
+            if work_order.service_coordinator_id:
+                try:
+                    notification_triggers.work_order_assignment_rejected(
+                        work_order, request.user, reason
+                    )
+                except Exception:
+                    pass
+            serializer = self.get_serializer(work_order)
+            return Response(serializer.data)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='release-assignment')
+    def release_assignment(self, request, pk=None):
+        """Release assignment back to the Service Coordinator for reassignment."""
+        work_order = self.get_object()
+        if not work_order.user_can_respond_to_technician_assignment(request.user):
+            return self._assignment_permission_denied()
+        note = (request.data.get('note') or '').strip()
+        try:
+            work_order.release_technician_assignment(request.user, note=note)
+            release_note = f"Assignment released by {request.user.get_full_name()}"
+            if note:
+                release_note += f": {note}"
+            WorkOrderNote.objects.create(
+                work_order=work_order,
+                created_by=request.user,
+                note_type='internal',
+                note=release_note,
+                is_important=True,
+            )
+            if work_order.service_coordinator_id:
+                try:
+                    notification_triggers.work_order_assignment_released(
+                        work_order, request.user, note
+                    )
+                except Exception:
+                    pass
+            serializer = self.get_serializer(work_order)
+            return Response(serializer.data)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
