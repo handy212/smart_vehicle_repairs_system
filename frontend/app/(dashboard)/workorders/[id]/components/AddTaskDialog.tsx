@@ -20,8 +20,6 @@ const taskSchema = z.object({
   task_type: z.string().min(1, "Task type is required"),
   description: z.string().min(1, "Description is required"),
   detailed_notes: z.string().optional(),
-  estimated_hours: z.number().min(0).optional(),
-  labor_rate: z.number().min(0).optional(),
   sequence_order: z.number().min(0).optional(),
   assigned_to: z.number().optional(),
 });
@@ -137,10 +135,6 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
                 value={watch("task_type")}
                 onValueChange={(val) => {
                   setValue("task_type", val, { shouldValidate: true });
-                  const selectedType = taskTypes.find((type) => type.value === val || type.code === val);
-                  if (selectedType?.default_labor_rate) {
-                    setValue("labor_rate", Number(selectedType.default_labor_rate), { shouldValidate: true });
-                  }
                 }}
               >
                 <SelectTrigger id="task_type" className="w-full">
@@ -170,7 +164,9 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
                 </div>
               ) : selectedTaskType ? (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  No income category mapped for this task type — billing will use description keywords or the mechanical labour default.
+                  {selectedTaskType.default_labor_rate && parseFloat(selectedTaskType.default_labor_rate) > 0
+                    ? `Flat charge: $${parseFloat(selectedTaskType.default_labor_rate).toFixed(2)}`
+                    : "No flat charge on this task type — set a price in Manage Task Types or Income categories."}
                 </p>
               ) : null}
             </div>
@@ -232,33 +228,6 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
                 rows={4}
                 className="w-full"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="estimated_hours" className="block text-sm font-medium text-foreground mb-2">
-                  Estimated Hours
-                </label>
-                <Input
-                  id="estimated_hours"
-                  type="number"
-                  step="0.5"
-                  {...register("estimated_hours", { setValueAs: (value) => value === "" ? undefined : Number(value) })}
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label htmlFor="labor_rate" className="block text-sm font-medium text-foreground mb-2">
-                  Labor Rate
-                </label>
-                <Input
-                  id="labor_rate"
-                  type="number"
-                  step="0.01"
-                  {...register("labor_rate", { setValueAs: (value) => value === "" ? undefined : Number(value) })}
-                  className="w-full"
-                />
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

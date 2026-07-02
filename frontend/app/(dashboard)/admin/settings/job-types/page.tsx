@@ -368,7 +368,7 @@ export default function JobTypesAdminPage() {
               <p className="text-xs font-medium text-foreground">Default billing (flat-fee jobs)</p>
               <p className="text-[11px] text-muted-foreground">
                 Used when invoicing before repair tasks exist — e.g. inspection-only, diagnostic, or custom
-                chargeable services. Hourly repair work still bills from service tasks.
+                chargeable services. Flat-fee repair tasks bill from the Tasks tab.
               </p>
               <div className="space-y-1.5">
                 <Label className="text-xs">Income category</Label>

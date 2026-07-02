@@ -421,7 +421,7 @@ class WorkOrderModelTest(TestCase):
         self.assertFalse(can_transition)
         self.assertIn('return reason', error)
 
-    def test_workorder_cannot_complete_when_completed_task_has_no_labor_hours(self):
+    def test_workorder_cannot_complete_when_completed_task_has_no_charge(self):
         workorder = baker.make(
             WorkOrder,
             customer=self.customer,
@@ -436,16 +436,13 @@ class WorkOrderModelTest(TestCase):
             work_order=workorder,
             status='completed',
             is_workflow_task=False,
-            actual_hours=Decimal('0.00'),
-            labor_rate=Decimal('80.00'),
-            started_at=None,
-            completed_at=None,
+            labor_cost=Decimal('0.00'),
         )
 
         can_transition, error = workorder.can_transition_to('completed')
 
         self.assertFalse(can_transition)
-        self.assertIn('Actual labor hours are required', error)
+        self.assertIn('flat charge', error.lower())
 
     def test_repair_pause_records_paused_from_status(self):
         workorder = WorkOrder.objects.create(

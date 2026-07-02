@@ -1185,17 +1185,26 @@ class ServiceTaskCreateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'work_order', 'task_type', 'description', 'detailed_notes',
             'sequence_order', 'assigned_to',
-            'estimated_hours', 'labor_rate', 'revenue_product',
+            'estimated_hours', 'labor_rate', 'labor_cost', 'revenue_product',
         ]
         read_only_fields = ['id']
         extra_kwargs = {'revenue_product': {'required': False, 'allow_null': True}}
 
     def create(self, validated_data):
         task_type_code = validated_data.get('task_type')
-        if validated_data.get('labor_rate') in (None, '') and task_type_code:
-            task_type = ServiceTaskType.objects.filter(code=task_type_code, is_active=True).first()
-            if task_type and task_type.default_labor_rate and task_type.default_labor_rate > 0:
-                validated_data['labor_rate'] = task_type.default_labor_rate
+        task_type = None
+        if task_type_code:
+            task_type = ServiceTaskType.objects.filter(code=task_type_code, is_active=True).select_related(
+                'revenue_product', 'revenue_product__catalog_part'
+            ).first()
+        if validated_data.get('labor_cost') in (None, '', Decimal('0')) and task_type:
+            from apps.workorders.task_billing import resolve_flat_unit_price_for_task_type
+
+            flat = resolve_flat_unit_price_for_task_type(task_type)
+            if flat > 0:
+                validated_data['labor_cost'] = flat
+        if validated_data.get('revenue_product') is None and task_type and task_type.revenue_product_id:
+            validated_data['revenue_product'] = task_type.revenue_product
         if validated_data.get('revenue_product') is None:
             from apps.billing.revenue_resolution import revenue_product_from_task_type_code
 

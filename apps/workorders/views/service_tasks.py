@@ -204,12 +204,19 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
                     Decimal('0.01')
                 )
 
-        if task.calculated_actual_hours <= 0:
+        from apps.workorders.task_billing import resolve_flat_unit_price_for_task
+
+        if (task.labor_cost or Decimal('0')) <= 0:
+            flat = resolve_flat_unit_price_for_task(task)
+            if flat > 0:
+                task.labor_cost = flat
+
+        if (task.labor_cost or Decimal('0')) <= 0:
             return Response(
                 {
-                    'error': 'Task must be started before completion so labor time can be calculated.',
-                    'field': 'started_at',
-                    'next_step': 'Start the task, then complete it again.',
+                    'error': 'This task has no flat charge configured. Set a price on the task type or income category.',
+                    'field': 'labor_cost',
+                    'next_step': 'Open Manage Task Types or Income categories and set a default price.',
                     'task': {
                         'id': task.id,
                         'description': task.description,

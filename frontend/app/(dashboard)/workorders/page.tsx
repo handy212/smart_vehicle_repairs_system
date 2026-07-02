@@ -1021,8 +1021,8 @@ function TaskTypesDialog({
               .
             </li>
             <li>
-              <strong>Task types (here)</strong> — map hourly repair work on the Tasks tab: income category + default
-              labour rate per task (brake repair, spray work, alignment, etc.).
+              <strong>Task types (here)</strong> — map flat-fee repair work on the Tasks tab: income category + default
+              charge per task (brake repair, spray work, alignment, etc.).
             </li>
           </ul>
         </div>
@@ -1052,11 +1052,11 @@ function TaskTypesDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Default labour rate (per hour)</label>
+              <label className="text-xs text-muted-foreground">Default flat charge (optional override)</label>
               <Input
                 type="number"
                 step="0.01"
-                placeholder="Default labor rate"
+                placeholder="Uses income category price when blank"
                 value={form.default_labor_rate}
                 onChange={(event) => setForm((current) => ({ ...current, default_labor_rate: event.target.value }))}
               />
@@ -1104,7 +1104,7 @@ function TaskTypesDialog({
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Revenue</TableHead>
-                    <TableHead>Rate</TableHead>
+                    <TableHead>Charge</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>

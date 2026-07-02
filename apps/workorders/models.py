@@ -804,13 +804,13 @@ class WorkOrder(models.Model):
                 if returned_without_reason.exists():
                     return False, "Every returned part must include a return reason before completing"
 
-                tasks_missing_labor = [
+                tasks_missing_charge = [
                     task.description
                     for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                    if task.calculated_actual_hours <= 0
+                    if (task.labor_cost or Decimal('0')) <= 0
                 ]
-                if tasks_missing_labor:
-                    return False, "Actual labor hours are required for every completed mechanical task before completing the work order"
+                if tasks_missing_charge:
+                    return False, "A flat charge is required for every completed mechanical task before completing the work order"
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -885,13 +885,13 @@ class WorkOrder(models.Model):
                 if returned_without_reason.exists():
                     errors.append("Every returned part must include a return reason")
 
-                tasks_missing_labor = [
+                tasks_missing_charge = [
                     task.description
                     for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                    if task.calculated_actual_hours <= 0
+                    if (task.labor_cost or Decimal('0')) <= 0
                 ]
-                if tasks_missing_labor:
-                    errors.append("Actual labor hours are required for every completed mechanical task")
+                if tasks_missing_charge:
+                    errors.append("A flat charge is required for every completed mechanical task")
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -1681,9 +1681,15 @@ class WorkOrder(models.Model):
                         is_workflow_task=False,
                     )
 
-                    if task.estimated_hours and task.labor_rate:
+                    if rec.estimated_labor_cost and rec.estimated_labor_cost > 0:
+                        labor_cost = Decimal(str(rec.estimated_labor_cost))
+                        if split_count > 1:
+                            labor_cost = (labor_cost / Decimal(str(split_count))).quantize(Decimal('0.01'))
+                        task.labor_cost = labor_cost
+                        task.save(update_fields=['labor_cost', 'updated_at'])
+                    elif task.estimated_hours and task.labor_rate:
                         task.labor_cost = task.estimated_hours * task.labor_rate
-                        task.save()
+                        task.save(update_fields=['labor_cost', 'updated_at'])
 
                     if primary_task is None:
                         primary_task = task
@@ -2032,9 +2038,16 @@ class ServiceTask(models.Model):
             self._original_actual_hours = None
 
     def save(self, *args, **kwargs):
-        # Calculate labor cost from hours and rate
-        if self.actual_hours and self.labor_rate:
-            self.labor_cost = self.actual_hours * self.labor_rate
+        from apps.workorders.task_billing import resolve_flat_unit_price_for_task, task_uses_hourly_pricing
+
+        if (self.labor_cost or Decimal('0')) <= 0:
+            if task_uses_hourly_pricing(self):
+                hours = self.actual_hours if self.actual_hours and self.actual_hours > 0 else self.estimated_hours
+                self.labor_cost = hours * self.labor_rate
+            else:
+                flat = resolve_flat_unit_price_for_task(self)
+                if flat > 0:
+                    self.labor_cost = flat
         
         # Track if status changed to completed (using tracked original, no extra query)
         status_changed = False
@@ -2081,6 +2094,7 @@ class ServiceTaskType(models.Model):
         decimal_places=2,
         default=Decimal('0.00'),
         validators=[MinValueValidator(Decimal('0'))],
+        help_text='Default flat fee for this task type (falls back to income category price when zero).',
     )
     is_billable = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)

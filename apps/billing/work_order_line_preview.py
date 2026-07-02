@@ -54,6 +54,9 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
             description=desc,
             item_type='labor',
         )
+        from apps.workorders.task_billing import task_uses_hourly_pricing
+
+        use_hourly = task_uses_hourly_pricing(task)
         payload = {
             'order': order_idx,
             'is_taxable': True,
@@ -62,8 +65,8 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
             **_product_meta(revenue_product),
             **merge_labor_pricing_fields(
                 cost=cost,
-                hours=task.actual_hours or task.estimated_hours,
-                rate=task.labor_rate,
+                hours=(task.actual_hours or task.estimated_hours) if use_hourly else None,
+                rate=task.labor_rate if use_hourly else None,
             ),
         }
         if payload.get('part') is not None:
