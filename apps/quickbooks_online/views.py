@@ -368,7 +368,10 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
 
             fetch_key = f'qbo:fetch-company-name:{config.pk}'
             if cache.add(fetch_key, '1', 86400):
-                company_name = QuickBooksService.fetch_and_store_company_name(config)
+                company_name = QuickBooksService.fetch_and_store_company_name(
+                    config,
+                    deactivate_on_auth_failure=False,
+                )
 
         token_expires_at = None
         refresh_token_expires_at = None
@@ -400,7 +403,7 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
             cached_ready = cache.get(ready_cache_key) if ready_cache_key else None
             if cached_ready in ('0', '1'):
                 payload['api_ready'] = cached_ready == '1'
-            elif QuickBooksService.get_client() is not None:
+            elif QuickBooksService.get_client(deactivate_on_auth_failure=False) is not None:
                 payload['api_ready'] = True
                 if ready_cache_key:
                     cache.set(ready_cache_key, '1', 60)

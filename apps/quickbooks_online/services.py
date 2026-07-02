@@ -181,7 +181,12 @@ class QuickBooksService:
         config.save(update_fields=['is_active', 'updated_at'])
 
     @classmethod
-    def fetch_and_store_company_name(cls, config=None) -> str | None:
+    def fetch_and_store_company_name(
+        cls,
+        config=None,
+        *,
+        deactivate_on_auth_failure=True,
+    ) -> str | None:
         """Read CompanyInfo from QBO and persist the display name on QBOConfig."""
         if QBCompanyInfo is None:
             return None
@@ -191,7 +196,7 @@ class QuickBooksService:
         if not config or not config.realm_id:
             return None
 
-        client = cls.get_client()
+        client = cls.get_client(deactivate_on_auth_failure=deactivate_on_auth_failure)
         if not client:
             return None
 
@@ -282,7 +287,7 @@ class QuickBooksService:
         )
 
     @classmethod
-    def get_client(cls):
+    def get_client(cls, *, deactivate_on_auth_failure=True):
         """
         Get an authenticated QuickBooks client.
         Automatically refreshes token if expired.
@@ -300,12 +305,21 @@ class QuickBooksService:
             token = config.token
 
             if token.refresh_token_expires_at <= timezone.now():
-                cls._deactivate_config(config, 'refresh token expired')
+                if deactivate_on_auth_failure:
+                    cls._deactivate_config(config, 'refresh token expired')
+                else:
+                    logger.warning('QBO refresh token expired; live API session unavailable.')
                 return None
             
             # Check if token needs refresh (expires in less than 5 minutes)
             if token.expires_at <= timezone.now() + timedelta(minutes=5):
-                cls.refresh_token(config, token)
+                refreshed = cls.refresh_token(
+                    config,
+                    token,
+                    deactivate_on_auth_failure=deactivate_on_auth_failure,
+                )
+                if not refreshed:
+                    return None
                 token.refresh_from_db()
                 
             auth_client = cls.get_auth_client(config)
@@ -380,13 +394,16 @@ class QuickBooksService:
         token.save()
 
     @classmethod
-    def refresh_token(cls, config, token):
+    def refresh_token(cls, config, token, *, deactivate_on_auth_failure=True):
         """Refresh the OAuth2 token (serialized per token row to avoid invalid_grant races)."""
         try:
             with transaction.atomic():
                 locked = QBOToken.objects.select_for_update().get(pk=token.pk)
                 if locked.refresh_token_expires_at <= timezone.now():
-                    cls._deactivate_config(config, 'refresh token expired during refresh')
+                    if deactivate_on_auth_failure:
+                        cls._deactivate_config(config, 'refresh token expired during refresh')
+                    else:
+                        logger.warning('QBO refresh token expired during refresh; live API session unavailable.')
                     return False
                 if locked.expires_at > timezone.now() + timedelta(minutes=5):
                     token.access_token = locked.access_token
@@ -410,7 +427,7 @@ class QuickBooksService:
             return True
         except Exception as e:
             logger.error(f"Failed to refresh QBO token: {e}")
-            if "invalid_grant" in str(e).lower():
+            if deactivate_on_auth_failure and "invalid_grant" in str(e).lower():
                 cls._deactivate_config(config, 'invalid_grant on token refresh')
             from .status_cache import clear_api_ready_cache
             clear_api_ready_cache(config.pk)
