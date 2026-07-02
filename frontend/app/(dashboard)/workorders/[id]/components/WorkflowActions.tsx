@@ -210,6 +210,7 @@ export default function WorkflowActions({
     currentQuoteStage === "quotation_ready" ||
     !currentQuoteStage;
   const routineReadyForService = isRoutine && effectiveStatus === "approved";
+  const assignmentBlocksStart = currentWorkOrder?.requires_assignment_acceptance === true;
 
   // Fetch inspections for this work order
   const { data: inspectionsData } = useQuery({
@@ -968,9 +969,11 @@ export default function WorkflowActions({
               label: "Start Repairs",
               icon: Play,
               onClick: () => startWorkMutation.mutate(),
-              disabled: startWorkMutation.isPending,
+              disabled: startWorkMutation.isPending || assignmentBlocksStart,
               variant: "default",
-              description: "Start the repair work that is ready now while remaining parts are still being allocated",
+              description: assignmentBlocksStart
+                ? "Technician must accept the assignment before starting work"
+                : "Start the repair work that is ready now while remaining parts are still being allocated",
             },
             {
               label: "Open Parts",
@@ -986,8 +989,12 @@ export default function WorkflowActions({
               label: isRoutine ? "Start service" : "Start Repairs",
               icon: Play,
               onClick: () => startWorkMutation.mutate(),
-              disabled: startWorkMutation.isPending,
-              description: isRoutine ? "Begin routine maintenance work" : "Begin repair work",
+              disabled: startWorkMutation.isPending || assignmentBlocksStart,
+              description: assignmentBlocksStart
+                ? "Technician must accept the assignment before starting work"
+                : isRoutine
+                  ? "Begin routine maintenance work"
+                  : "Begin repair work",
             },
             {
               label: isRoutine ? "View parts & tasks" : "Open Repairs",

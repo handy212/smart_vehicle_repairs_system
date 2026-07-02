@@ -57,6 +57,7 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import { getUserFacingError } from "@/lib/api/errors";
+import { getJobTypeLabel } from "@/lib/workorders/job-type-labels";
 
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
@@ -608,7 +609,7 @@ export default function WorkOrdersPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4">
-              <TableSkeleton rows={8} columns={9} />
+              <TableSkeleton rows={8} columns={11} />
             </div>
           ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
@@ -643,6 +644,12 @@ export default function WorkOrdersPage() {
                       Customer
                     </SortableHeader>
                     <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Job Type
+                    </TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Assigned Personnel
+                    </TableHead>
                     <SortableHeader
                       field="status"
                       sortConfig={sortConfig}
@@ -703,6 +710,15 @@ export default function WorkOrdersPage() {
                         {getWorkOrderCustomerDisplayName(workorder)}
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs text-muted-foreground">
+                        {getJobTypeLabel(workorder.maintenance_type)}
+                      </TableCell>
+                      <TableCell
+                        className="px-3 py-1.5 text-xs text-muted-foreground max-w-[140px] truncate"
+                        title={workorder.assigned_personnel_display || workorder.primary_technician_name || ""}
+                      >
+                        {workorder.assigned_personnel_display || workorder.primary_technician_name || "—"}
+                      </TableCell>
                       <TableCell className="px-3 py-1.5">
                         <div className="flex flex-wrap items-center gap-1">
                           <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">

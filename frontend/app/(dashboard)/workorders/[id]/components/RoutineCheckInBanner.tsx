@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Package, Wrench, X } from "lucide-react";
+import { Package, Wrench, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorkOrder } from "@/lib/api/workorders";
 
@@ -33,13 +33,21 @@ export function RoutineCheckInBanner({
     }
   }, [fromCheckIn, routineFlow, workOrderId]);
 
-  const visible =
+  const inventorySummary = workOrder.inventory_availability_summary;
+  const hasInventoryIssues =
+    isRoutine &&
+    inventorySummary &&
+    (inventorySummary.stock_unavailable_count > 0 ||
+      inventorySummary.parts_pending_allocation_count > 0) &&
+    ["approved", "draft"].includes(workOrder.status);
+
+  const checkInBannerVisible =
     !dismissed &&
     isRoutine &&
     (fromCheckIn || routineFlow) &&
     ["approved", "in_progress", "draft"].includes(workOrder.status);
 
-  if (!visible) return null;
+  if (!checkInBannerVisible && !hasInventoryIssues) return null;
 
   const bundleName =
     typeof workOrder.service_bundle === "object" && workOrder.service_bundle
@@ -65,7 +73,11 @@ export function RoutineCheckInBanner({
 
   const statusHint =
     workOrder.status === "approved"
-      ? "Assign a technician and tap Start service when ready."
+      ? workOrder.inventory_availability_summary?.is_ready_for_service === false
+        ? "Allocate required parts before starting service."
+        : workOrder.requires_assignment_acceptance
+          ? "Accept the technician assignment, then tap Start service when ready."
+          : "Assign a technician and tap Start service when ready."
       : workOrder.status === "in_progress"
         ? "Service is underway — install parts and complete tasks."
         : workOrder.status === "draft"
@@ -73,6 +85,38 @@ export function RoutineCheckInBanner({
           : "Ready for service.";
 
   return (
+    <div className="space-y-2">
+      {hasInventoryIssues && inventorySummary && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Parts not ready for service</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {inventorySummary.stock_unavailable_count > 0 && (
+                  <>
+                    {inventorySummary.stock_unavailable_count} part(s) have insufficient branch stock
+                    {inventorySummary.stock_unavailable
+                      .slice(0, 3)
+                      .map((p) => p.part_name)
+                      .join(", ")}
+                    {inventorySummary.stock_unavailable_count > 3 ? "…" : ""}.{" "}
+                  </>
+                )}
+                {inventorySummary.parts_pending_allocation_count > 0 && (
+                  <>
+                    {inventorySummary.parts_pending_allocation_count} part(s) still need allocation before work begins.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={goToParts}>
+            Review parts
+          </Button>
+        </div>
+      )}
+    {checkInBannerVisible && (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
       <div className="flex min-w-0 items-start gap-3">
         <Package className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" aria-hidden="true" />
@@ -101,6 +145,8 @@ export function RoutineCheckInBanner({
           <X className="h-4 w-4" />
         </Button>
       </div>
+    </div>
+    )}
     </div>
   );
 }

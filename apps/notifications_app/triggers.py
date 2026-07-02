@@ -845,6 +845,85 @@ Please review the work order and coordinate the diagnosis process.''',
             related_object_id=work_order.id,
         )
 
+    def work_order_technician_assigned(self, work_order, technician):
+        """Notify technician they have been assigned to a work order."""
+        if not technician:
+            return
+        customer_name = self._build_customer_name(work_order.customer)
+        vehicle_display = self._build_vehicle_display(work_order.vehicle)
+        self._create_notification_for_channels(
+            recipient=technician,
+            notification_type='work_order',
+            channels=['in_app'],
+            priority='normal',
+            title=f'Work Order Assignment - {work_order.work_order_number}',
+            message=(
+                f"You have been assigned to work order {work_order.work_order_number}.\n"
+                f"Customer: {customer_name}\n"
+                f"Vehicle: {vehicle_display}\n"
+                f"Please accept or reject the assignment."
+            ),
+            data={
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'vehicle': vehicle_display,
+                'customer_name': customer_name,
+            },
+            related_object_type='work_order',
+            related_object_id=work_order.id,
+        )
+
+    def work_order_assignment_rejected(self, work_order, technician, reason=''):
+        """Notify service coordinator that a technician rejected the assignment."""
+        coordinator = work_order.service_coordinator
+        if not coordinator:
+            return
+        self._create_notification_for_channels(
+            recipient=coordinator,
+            notification_type='work_order',
+            channels=['in_app'],
+            priority='normal',
+            title=f'Assignment Rejected - {work_order.work_order_number}',
+            message=(
+                f"{technician.get_full_name()} rejected work order {work_order.work_order_number}.\n"
+                f"Reason: {reason or 'No reason provided'}\n"
+                f"Reassign a technician to continue."
+            ),
+            data={
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'reason': reason,
+            },
+            related_object_type='work_order',
+            related_object_id=work_order.id,
+        )
+
+    def work_order_assignment_released(self, work_order, released_by, note=''):
+        """Notify service coordinator that assignment was released for reassignment."""
+        coordinator = work_order.service_coordinator
+        if not coordinator:
+            return
+        self._create_notification_for_channels(
+            recipient=coordinator,
+            notification_type='work_order',
+            channels=['in_app'],
+            priority='normal',
+            title=f'Assignment Released - {work_order.work_order_number}',
+            message=(
+                f"{released_by.get_full_name()} released the technician assignment on "
+                f"work order {work_order.work_order_number}."
+                + (f"\nNote: {note}" if note else "")
+                + "\nPlease reassign a technician."
+            ),
+            data={
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'note': note,
+            },
+            related_object_type='work_order',
+            related_object_id=work_order.id,
+        )
+
     # ==================== VEHICLE/SERVICE NOTIFICATIONS ====================
 
     def service_due(self, schedule):

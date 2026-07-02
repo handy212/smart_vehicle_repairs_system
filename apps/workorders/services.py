@@ -102,6 +102,38 @@ def apply_service_bundle(work_order):
     return False
 
 
+def flag_routine_inventory_issues(work_order, user=None):
+    """
+    Record inventory availability issues for routine service bundles.
+    Returns the list of parts with insufficient branch stock.
+    """
+    if work_order.maintenance_type != 'routine':
+        return []
+
+    stock_issues = work_order.check_inventory_stock_availability()
+    if not stock_issues:
+        return []
+
+    parts_list = ', '.join(
+        f"{item['part_name']} ({item['message']})" for item in stock_issues[:8]
+    )
+    if len(stock_issues) > 8:
+        parts_list += f", +{len(stock_issues) - 8} more"
+
+    WorkOrderNote.objects.create(
+        work_order=work_order,
+        note_type='internal',
+        note=(
+            f"Routine service inventory alert: {len(stock_issues)} required part(s) "
+            f"have insufficient branch stock — {parts_list}. "
+            "Allocate or order parts before starting service."
+        ),
+        created_by=user,
+        is_important=True,
+    )
+    return stock_issues
+
+
 def prepare_routine_service_workflow(work_order, user=None):
     """
     Fast-track routine maintenance from check-in to approved.
@@ -161,6 +193,7 @@ def prepare_routine_service_workflow(work_order, user=None):
         created_by=user,
         is_important=False,
     )
+    flag_routine_inventory_issues(work_order, user=user)
     return True
 
 

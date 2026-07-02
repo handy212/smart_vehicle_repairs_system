@@ -164,6 +164,32 @@ class WorkOrder(models.Model):
         limit_choices_to={'role__in': ['technician', 'manager']},
         blank=True
     )
+
+    TECHNICIAN_ASSIGNMENT_STATUS_CHOICES = [
+        ('pending', 'Pending Acceptance'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('released', 'Released to Coordinator'),
+    ]
+    technician_assignment_status = models.CharField(
+        max_length=20,
+        choices=TECHNICIAN_ASSIGNMENT_STATUS_CHOICES,
+        blank=True,
+        default='',
+        help_text='Technician response to work order assignment',
+    )
+    technician_assignment_note = models.TextField(
+        blank=True,
+        help_text='Optional acceptance note or mandatory rejection/release reason',
+    )
+    technician_assignment_responded_at = models.DateTimeField(null=True, blank=True)
+    technician_assignment_responded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='work_order_assignment_responses',
+    )
     
     # Dates and Times
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -1053,6 +1079,198 @@ class WorkOrder(models.Model):
         
         return unavailable
 
+    def check_inventory_stock_availability(self):
+        """
+        Check branch stock levels for parts not yet allocated on this work order.
+        Returns list of dicts with part details and stock messages.
+        """
+        unavailable = []
+        for part in self.parts.filter(
+            status__in=['draft', 'pending', 'po_created', 'awaiting_stock', 'received']
+        ):
+            payload = part.get_inventory_status_payload()
+            if payload is None:
+                unavailable.append({
+                    'part': part,
+                    'part_name': part.part_name,
+                    'quantity_needed': str(part.quantity),
+                    'quantity_available': 0,
+                    'message': 'Part not found in inventory',
+                })
+                continue
+            if payload.get('tracks_stock') is False:
+                continue
+            if not payload.get('available', False):
+                unavailable.append({
+                    'part': part,
+                    'part_name': part.part_name,
+                    'quantity_needed': str(part.quantity),
+                    'quantity_available': payload.get('quantity', 0),
+                    'message': payload.get('message', 'Insufficient stock'),
+                })
+        return unavailable
+
+    def get_inventory_availability_summary(self):
+        """Serializable inventory readiness for routine and general work orders."""
+        stock_issues = self.check_inventory_stock_availability()
+        pending_parts = self.check_parts_availability()
+        return {
+            'stock_unavailable_count': len(stock_issues),
+            'parts_pending_allocation_count': len(pending_parts),
+            'stock_unavailable': [
+                {
+                    'id': item['part'].id,
+                    'part_name': item['part_name'],
+                    'quantity_needed': item['quantity_needed'],
+                    'quantity_available': item['quantity_available'],
+                    'message': item['message'],
+                }
+                for item in stock_issues
+            ],
+            'is_ready_for_service': not stock_issues and not pending_parts,
+        }
+
+    def has_technician_assigned(self):
+        if self.primary_technician_id:
+            return True
+        return self.assigned_technicians.exists()
+
+    def get_technician_assignment_gate_status(self):
+        """Raw assignment status for workflow gating (legacy blank = accepted)."""
+        if not self.has_technician_assigned():
+            return ''
+        if not self.technician_assignment_status:
+            return 'accepted'
+        return self.technician_assignment_status
+
+    def get_effective_technician_assignment_status(self):
+        """Display-oriented assignment status."""
+        return self.get_technician_assignment_gate_status()
+
+    def requires_technician_assignment_acceptance(self):
+        return self.get_technician_assignment_gate_status() == 'pending'
+
+    def user_can_respond_to_technician_assignment(self, user):
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if getattr(user, 'role', None) in ['manager', 'admin']:
+            return True
+        if self.service_coordinator_id == user.id:
+            return True
+        if self.primary_technician_id == user.id:
+            return True
+        return self.assigned_technicians.filter(id=user.id).exists()
+
+    def mark_technician_assignment_pending(self):
+        if self.has_technician_assigned():
+            self.technician_assignment_status = 'pending'
+            self.technician_assignment_note = ''
+            self.technician_assignment_responded_at = None
+            self.technician_assignment_responded_by = None
+        else:
+            self.technician_assignment_status = ''
+            self.technician_assignment_note = ''
+            self.technician_assignment_responded_at = None
+            self.technician_assignment_responded_by = None
+
+    def accept_technician_assignment(self, user, note=''):
+        if not self.has_technician_assigned():
+            raise ValidationError('No technician is assigned to this work order.')
+        gate_status = self.get_technician_assignment_gate_status()
+        if gate_status == 'accepted':
+            return
+        if gate_status == 'rejected':
+            raise ValidationError('This assignment was rejected and must be reassigned before acceptance.')
+        if gate_status == 'released':
+            raise ValidationError('This assignment was released. Assign a technician before accepting.')
+        if gate_status != 'pending':
+            raise ValidationError('Assignment is not awaiting acceptance.')
+        self.technician_assignment_status = 'accepted'
+        self.technician_assignment_note = (note or '').strip()
+        self.technician_assignment_responded_at = timezone.now()
+        self.technician_assignment_responded_by = user
+        self.save(update_fields=[
+            'technician_assignment_status',
+            'technician_assignment_note',
+            'technician_assignment_responded_at',
+            'technician_assignment_responded_by',
+            'updated_at',
+        ])
+
+    def reject_technician_assignment(self, user, reason):
+        reason = (reason or '').strip()
+        if not reason:
+            raise ValidationError('A rejection reason is required.')
+        if not self.has_technician_assigned():
+            raise ValidationError('No technician is assigned to this work order.')
+        gate_status = self.get_technician_assignment_gate_status()
+        if gate_status == 'accepted':
+            raise ValidationError('Cannot reject after the assignment has been accepted.')
+
+        is_assigned_technician = (
+            self.primary_technician_id == user.id
+            or self.assigned_technicians.filter(id=user.id).exists()
+        )
+
+        if is_assigned_technician:
+            if self.primary_technician_id == user.id:
+                self.primary_technician = None
+            if self.assigned_technicians.filter(id=user.id).exists():
+                self.assigned_technicians.remove(user)
+        else:
+            # Coordinator/manager/admin declining the assignment for reassignment.
+            self.primary_technician = None
+            self.assigned_technicians.clear()
+
+        if self.has_technician_assigned():
+            self.technician_assignment_status = 'pending'
+            self.technician_assignment_note = ''
+            self.technician_assignment_responded_at = None
+            self.technician_assignment_responded_by = None
+            self.save(update_fields=[
+                'primary_technician',
+                'technician_assignment_status',
+                'technician_assignment_note',
+                'technician_assignment_responded_at',
+                'technician_assignment_responded_by',
+                'updated_at',
+            ])
+            return
+
+        self.technician_assignment_status = 'rejected'
+        self.technician_assignment_note = reason
+        self.technician_assignment_responded_at = timezone.now()
+        self.technician_assignment_responded_by = user
+        self.save(update_fields=[
+            'primary_technician',
+            'technician_assignment_status',
+            'technician_assignment_note',
+            'technician_assignment_responded_at',
+            'technician_assignment_responded_by',
+            'updated_at',
+        ])
+
+    def release_technician_assignment(self, user, note=''):
+        if not self.has_technician_assigned():
+            raise ValidationError('No technician is assigned to release.')
+        if self.status == 'in_progress':
+            raise ValidationError('Pause or complete work before releasing the assignment.')
+
+        self.primary_technician = None
+        self.assigned_technicians.clear()
+        self.technician_assignment_status = 'released'
+        self.technician_assignment_note = (note or '').strip()
+        self.technician_assignment_responded_at = timezone.now()
+        self.technician_assignment_responded_by = user
+        self.save(update_fields=[
+            'primary_technician',
+            'technician_assignment_status',
+            'technician_assignment_note',
+            'technician_assignment_responded_at',
+            'technician_assignment_responded_by',
+            'updated_at',
+        ])
+
     def _single_recommendation_part_is_startable(self, part_data):
         if not isinstance(part_data, dict):
             return True
@@ -1326,6 +1544,19 @@ class WorkOrder(models.Model):
         
         if not self.primary_technician and not self.assigned_technicians.exists():
             errors.append("No technician assigned")
+
+        if self.requires_technician_assignment_acceptance():
+            errors.append("Technician must accept the assignment before starting work")
+        else:
+            gate_status = self.get_technician_assignment_gate_status()
+            if gate_status == 'rejected':
+                errors.append(
+                    "Technician assignment was rejected. Reassign a technician before starting work."
+                )
+            elif gate_status == 'released':
+                errors.append(
+                    "Technician assignment was released. Assign a technician before starting work."
+                )
         
         # Check if there are any executable tasks or recommendations ready to convert.
         has_tasks = self.tasks.filter(is_workflow_task=False).exists()
@@ -1381,7 +1612,27 @@ class WorkOrder(models.Model):
                 )
         
         unavailable_parts = self.check_parts_availability()
-        if unavailable_parts and not self.has_startable_repair_work():
+        if self.maintenance_type == 'routine':
+            if unavailable_parts:
+                unresolved_names = [item['part'].part_name for item in unavailable_parts[:5]]
+                unresolved_summary = ', '.join(unresolved_names)
+                if len(unavailable_parts) > 5:
+                    unresolved_summary += f", +{len(unavailable_parts) - 5} more"
+                errors.append(
+                    f"{len(unavailable_parts)} routine service part(s) must be allocated before starting. "
+                    f"Pending parts: {unresolved_summary}."
+                )
+            stock_issues = self.check_inventory_stock_availability()
+            if stock_issues:
+                stock_names = [item['part_name'] for item in stock_issues[:5]]
+                stock_summary = ', '.join(stock_names)
+                if len(stock_issues) > 5:
+                    stock_summary += f", +{len(stock_issues) - 5} more"
+                errors.append(
+                    f"{len(stock_issues)} required part(s) have insufficient branch stock. "
+                    f"Unavailable: {stock_summary}."
+                )
+        elif unavailable_parts and not self.has_startable_repair_work():
             unresolved_names = [item['part'].part_name for item in unavailable_parts[:5]]
             unresolved_summary = ', '.join(unresolved_names)
             if len(unavailable_parts) > 5:
