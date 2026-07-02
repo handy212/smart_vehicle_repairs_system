@@ -7,6 +7,12 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi, UserCreate } from "@/lib/api/admin";
 import { branchesApi } from "@/lib/api/admin";
+import { rolesApi } from "@/lib/api/admin";
+import {
+  isAdminRoleCode,
+  roleRequiresSingleBranch,
+  roleUsesManagedBranches,
+} from "@/lib/utils/role-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,16 +33,7 @@ const userSchema = z
     first_name: z.string().min(1, "First name is required"),
     last_name: z.string().min(1, "Last name is required"),
     phone: z.string().optional(),
-    role: z.enum([
-      "admin",
-      "manager",
-      "service_coordinator",
-      "technician",
-      "receptionist",
-      "parts_manager",
-      "accountant",
-      "hr_manager",
-    ]),
+    role: z.string().min(1, "Role is required"),
     branch: z.number().nullable().optional(),
     managed_branches: z.array(z.number()).optional(),
     employee_id: z.string().optional(),
@@ -52,7 +49,7 @@ const userSchema = z
   .refine(
     (data) => {
       // Managers should have managed_branches, not branch
-      if (data.role === "manager") {
+      if (data.role && roleUsesManagedBranches(data.role)) {
         return !data.branch;
       }
       return true;
@@ -83,7 +80,7 @@ const userSchema = z
   .refine(
     (data) => {
       // Managers must have at least one managed branch
-      if (data.role === "manager") {
+      if (data.role && roleUsesManagedBranches(data.role)) {
         return data.managed_branches && data.managed_branches.length > 0;
       }
       return true;
@@ -96,12 +93,7 @@ const userSchema = z
   .refine(
     (data) => {
       // Staff must have a branch assigned
-      if (
-        data.role &&
-        ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant", "hr_manager"].includes(
-          data.role
-        )
-      ) {
+      if (data.role && roleRequiresSingleBranch(data.role)) {
         return data.branch !== null && data.branch !== undefined;
       }
       return true;
@@ -113,18 +105,6 @@ const userSchema = z
   );
 
 type UserFormData = z.infer<typeof userSchema>;
-type UserRole = UserFormData["role"];
-
-const ROLE_OPTIONS = [
-  { value: "receptionist", label: "Receptionist" },
-  { value: "technician", label: "Technician" },
-  { value: "parts_manager", label: "Parts Manager" },
-  { value: "service_coordinator", label: "Service Coordinator" },
-  { value: "accountant", label: "Accountant" },
-  { value: "hr_manager", label: "HR Manager" },
-  { value: "manager", label: "Manager" },
-  { value: "admin", label: "Admin" },
-];
 
 export default function NewUserPage() {
   const router = useRouter();
@@ -139,6 +119,15 @@ export default function NewUserPage() {
   });
 
   const branches = branchesData ?? [];
+
+  const { data: roleOptions = [] } = useQuery({
+    queryKey: ["admin", "roles", "assignable"],
+    queryFn: () => rolesApi.list({ is_active: true }),
+    select: (roles) =>
+      roles
+        .filter((role) => role.code !== "customer" && role.code !== "super-admin")
+        .map((role) => ({ value: role.code, label: role.name })),
+  });
 
   // Fetch existing users to generate next employee ID
   const { data: existingUsersData } = useQuery({
@@ -184,10 +173,9 @@ export default function NewUserPage() {
   const [passwordCopied, setPasswordCopied] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
-  const isManager = selectedRole === "manager";
-  const isStaff = ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant", "hr_manager"].includes(
-    selectedRole || ""
-  );
+  const isManager = roleUsesManagedBranches(selectedRole);
+  const isStaff = roleRequiresSingleBranch(selectedRole);
+  const isAdmin = isAdminRoleCode(selectedRole);
 
   // Generate secure password
   const generatePassword = () => {
@@ -456,7 +444,7 @@ export default function NewUserPage() {
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLE_OPTIONS.map((option) => (
+                      {roleOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>

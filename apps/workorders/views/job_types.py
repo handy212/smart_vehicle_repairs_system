@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from apps.accounts.permissions import HasAnyPermission
+from apps.accounts.permissions import HasAnyPermission, HasPermission
 
 from ..job_type_serializers import (
     JobTypeListSerializer,
@@ -17,7 +17,7 @@ class WorkflowProfileViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = WorkflowProfile.objects.filter(is_active=True).order_by('sort_order', 'name')
     serializer_class = WorkflowProfileSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasAnyPermission(['view_workorders', 'view_own_workorders', 'manage_settings'])]
     lookup_field = 'code'
 
 

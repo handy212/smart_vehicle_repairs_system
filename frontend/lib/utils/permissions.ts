@@ -77,6 +77,7 @@ export const PERMISSIONS = {
 
   // Vehicles
   VIEW_VEHICLES: "view_vehicles",
+  VIEW_OWN_VEHICLES: "view_own_vehicles",
   CREATE_VEHICLES: "create_vehicles",
   EDIT_VEHICLES: "edit_vehicles",
   DELETE_VEHICLES: "delete_vehicles",
@@ -85,10 +86,23 @@ export const PERMISSIONS = {
 
   // Appointments
   VIEW_APPOINTMENTS: "view_appointments",
+  VIEW_OWN_APPOINTMENTS: "view_own_appointments",
   CREATE_APPOINTMENTS: "create_appointments",
   EDIT_APPOINTMENTS: "edit_appointments",
   DELETE_APPOINTMENTS: "delete_appointments",
   MANAGE_APPOINTMENTS: "manage_appointments",
+
+  // Inspections
+  VIEW_INSPECTIONS: "view_inspections",
+  CREATE_INSPECTIONS: "create_inspections",
+  EDIT_INSPECTIONS: "edit_inspections",
+  PERFORM_INSPECTIONS: "perform_inspections",
+
+  // Roadside
+  VIEW_ROADSIDE: "view_roadside",
+  CREATE_ROADSIDE: "create_roadside",
+  EDIT_ROADSIDE: "edit_roadside",
+  MANAGE_ROADSIDE: "manage_roadside",
 
   // Work Orders
   VIEW_WORKORDERS: "view_workorders",
@@ -152,7 +166,9 @@ export const PERMISSIONS = {
   // Notifications
   VIEW_NOTIFICATIONS: "view_notifications",
   MANAGE_NOTIFICATIONS: "manage_notifications",
-  SEND_SMS: "send_sms",
+  SEND_NOTIFICATIONS: "send_notifications",
+  /** @deprecated Use SEND_NOTIFICATIONS */
+  SEND_SMS: "send_notifications",
 
   // Subscriptions
   VIEW_SUBSCRIPTIONS: "view_subscriptions",
@@ -188,7 +204,32 @@ export const PERMISSIONS = {
   MANAGE_DIAGNOSIS: "manage_diagnosis",
   REFUND_PAYMENTS: "refund_payments",
   MANAGE_BILLING: "manage_billing",
+  EDIT_PAYMENTS: "edit_payments",
 } as const;
+
+/** Any permission that grants access to admin section pages. */
+export const ADMIN_SECTION_PERMISSIONS = [
+  PERMISSIONS.MANAGE_SETTINGS,
+  PERMISSIONS.MANAGE_USERS,
+  PERMISSIONS.VIEW_USERS,
+  PERMISSIONS.MANAGE_ROLES,
+  PERMISSIONS.MANAGE_PERMISSIONS,
+  PERMISSIONS.VIEW_AUDIT_LOGS,
+  PERMISSIONS.MANAGE_BACKUPS,
+  PERMISSIONS.MANAGE_SYSTEM_UPDATES,
+] as const;
+
+/** Permissions that grant access to the mobile technician shell. */
+export const MOBILE_APP_PERMISSIONS = [
+  PERMISSIONS.VIEW_WORKORDERS,
+  PERMISSIONS.VIEW_OWN_WORKORDERS,
+  PERMISSIONS.VIEW_APPOINTMENTS,
+  PERMISSIONS.VIEW_OWN_APPOINTMENTS,
+  PERMISSIONS.VIEW_ROADSIDE,
+  PERMISSIONS.VIEW_INSPECTIONS,
+  PERMISSIONS.PERFORM_INSPECTIONS,
+  PERMISSIONS.VIEW_DIAGNOSIS,
+] as const;
 
 /** Staff landing dashboard overview API and nav link. */
 export const DASHBOARD_VIEW_PERMISSIONS = [

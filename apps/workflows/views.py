@@ -3,9 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasAnyPermission, HasPermission
 
 from .models import (
     WorkflowAction,
@@ -205,7 +203,10 @@ class WorkflowTransitionLogViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class WorkflowRuntimeViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        IsAuthenticated,
+        HasAnyPermission(['view_workorders', 'view_own_workorders', 'update_workorder_status']),
+    ]
 
     def _get_object(self, model_path, object_id):
         from .services import _get_model_and_config

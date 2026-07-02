@@ -11,6 +11,18 @@ from django.contrib.auth.password_validation import validate_password
 User = get_user_model()
 
 
+class RoleCodeField(serializers.CharField):
+    """Accept any active role code from the dynamic Role model (except super-admin)."""
+
+    def to_internal_value(self, data):
+        value = super().to_internal_value(data)
+        from apps.accounts.role_utils import is_valid_assignable_role_code
+
+        if not is_valid_assignable_role_code(value):
+            raise serializers.ValidationError('Invalid role selection.')
+        return value
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     
@@ -87,6 +99,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True, label='Confirm Password')
+    role = RoleCodeField()
     
     class Meta:
         model = User
@@ -134,18 +147,26 @@ class UserCreateSerializer(serializers.ModelSerializer):
         branch = attrs.get('branch')
         managed_branches = attrs.get('managed_branches', [])
 
-        if role == 'super-admin':
+        from apps.accounts.role_utils import (
+            is_valid_assignable_role_code,
+            role_requires_single_branch,
+            role_uses_managed_branches,
+        )
+
+        if role and not is_valid_assignable_role_code(role):
             raise serializers.ValidationError({"role": "Invalid role selection."})
         
         # Validate branch assignment based on role
-        if role == 'manager':
-            # Managers should use managed_branches, not branch
+        if role_uses_managed_branches(role):
             if branch:
                 raise serializers.ValidationError({
                     "branch": "Managers should be assigned via managed_branches, not branch field."
                 })
-        elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
-            # Staff should use branch, not managed_branches
+            if not managed_branches:
+                raise serializers.ValidationError({
+                    "managed_branches": "Managers must be assigned to at least one branch."
+                })
+        elif role_requires_single_branch(role):
             if managed_branches:
                 raise serializers.ValidationError({
                     "managed_branches": f"{role} role should be assigned to a single branch, not multiple branches."
@@ -154,10 +175,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "branch": f"{role} role must be assigned to a branch."
                 })
-        if role == 'manager' and not managed_branches:
-            raise serializers.ValidationError({
-                "managed_branches": "Managers must be assigned to at least one branch."
-            })
         
         return attrs
     
@@ -177,9 +194,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(password=password, **validated_data)
         
         # Assign branch based on role
-        if role == 'manager' and managed_branches:
+        from apps.accounts.role_utils import role_requires_single_branch, role_uses_managed_branches
+
+        if role_uses_managed_branches(role) and managed_branches:
             user.managed_branches.set(managed_branches)
-        elif branch and role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
+        elif branch and role_requires_single_branch(role):
             user.branch = branch
             user.save()
         
@@ -336,7 +355,7 @@ Best regards,
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile"""
     
-    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, required=False)
+    role = RoleCodeField(required=False)
     is_active = serializers.BooleanField(required=False)
     
     class Meta:
@@ -395,6 +414,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         branch = attrs.get('branch')
         managed_branches = attrs.get('managed_branches')
 
+        from apps.accounts.role_utils import (
+            role_requires_single_branch,
+            role_uses_managed_branches,
+        )
+
         # Keep the owner/system account out of operational user-management flows.
         request = self.context.get('request')
         if self.instance and self.instance.role == 'super-admin':
@@ -406,8 +430,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         
         # If role is being changed, validate branch assignment
         if role:
-            if role == 'manager':
-                # Managers should use managed_branches, not branch
+            if role_uses_managed_branches(role):
                 if branch is not None:
                     raise serializers.ValidationError({
                         "branch": "Managers should be assigned via managed_branches, not branch field."
@@ -421,11 +444,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({
                         "managed_branches": "Managers must be assigned to at least one branch."
                     })
-                # Clear branch if switching to manager
                 if self.instance and self.instance.branch:
                     attrs['branch'] = None
-            elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
-                # Staff should use branch, not managed_branches
+            elif role_requires_single_branch(role):
                 if managed_branches is not None and len(managed_branches) > 0:
                     raise serializers.ValidationError({
                         "managed_branches": f"{role} role should be assigned to a single branch, not multiple branches."
@@ -435,7 +456,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({
                         "branch": f"{role} role must be assigned to a branch."
                     })
-                # Clear managed_branches if switching to staff role
                 if self.instance:
                     self.instance.managed_branches.clear()
         
@@ -452,8 +472,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         instance.save()
         
         # Update branch assignments
+        from apps.accounts.role_utils import role_uses_managed_branches
+
         if managed_branches is not None:
-            if role == 'manager':
+            if role_uses_managed_branches(role):
                 instance.managed_branches.set(managed_branches)
             else:
                 instance.managed_branches.clear()

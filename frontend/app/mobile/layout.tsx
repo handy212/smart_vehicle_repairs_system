@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { shouldUseMobileApp } from "@/lib/utils/device-context";
 import { isMobileShellRole } from "@/lib/utils/post-login-redirect";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { MOBILE_APP_PERMISSIONS, PERMISSIONS } from "@/lib/utils/permissions";
 
 export default function MobileLayout({
   children,
@@ -23,7 +25,15 @@ export default function MobileLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { user, setUser, isAuthenticated } = useAuthStore();
+  const { hasAnyPermission, hasPermission } = usePermissions();
   const [mounted, setMounted] = useState(false);
+
+  const hasMobileAccess = (currentUser: typeof user) =>
+    Boolean(
+      currentUser &&
+        (isMobileShellRole(currentUser.role) ||
+          hasAnyPermission([...MOBILE_APP_PERMISSIONS]))
+    );
 
   useEffect(() => {
     setMounted(true);
@@ -43,7 +53,7 @@ export default function MobileLayout({
             }
 
             const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
-            if (!allowedRoles.has(currentUser.role)) {
+            if (!hasMobileAccess(currentUser) && !allowedRoles.has(currentUser.role)) {
               router.push("/dashboard");
               return;
             }
@@ -62,7 +72,7 @@ export default function MobileLayout({
         }
 
         const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
-        if (!allowedRoles.has(user.role)) {
+        if (!hasMobileAccess(user) && !allowedRoles.has(user.role)) {
           if (isMounted) router.push("/dashboard");
         }
       }
@@ -88,28 +98,33 @@ export default function MobileLayout({
       href: "/mobile/dashboard",
       label: "Dashboard",
       icon: Home,
+      show: true,
     },
     {
       href: "/mobile/workorders",
       label: "Work Orders",
       icon: Wrench,
+      show: hasAnyPermission([PERMISSIONS.VIEW_WORKORDERS, PERMISSIONS.VIEW_OWN_WORKORDERS]),
     },
     {
       href: "/mobile/schedule",
       label: "Schedule",
       icon: Calendar,
+      show: hasAnyPermission([PERMISSIONS.VIEW_APPOINTMENTS, PERMISSIONS.VIEW_OWN_APPOINTMENTS]),
     },
     {
       href: "/mobile/roadside",
       label: "Roadside",
       icon: Truck,
+      show: hasPermission(PERMISSIONS.VIEW_ROADSIDE),
     },
     {
       href: "/mobile/more",
       label: "More",
       icon: MoreHorizontal,
+      show: true,
     },
-  ];
+  ].filter((item) => item.show);
 
   return (
     <div className="min-h-screen bg-muted bg-background flex flex-col">
@@ -140,7 +155,10 @@ export default function MobileLayout({
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card safe-area-inset-bottom"
         aria-label="Mobile navigation"
       >
-        <div className="grid h-16 grid-cols-5">
+        <div
+          className="grid h-16"
+          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
