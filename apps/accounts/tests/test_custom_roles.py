@@ -88,3 +88,102 @@ class CustomRoleTests(TestCase):
 
     def test_edit_payments_permission_exists(self):
         self.assertTrue(Permission.objects.filter(code='edit_payments', is_active=True).exists())
+
+    def test_manage_roles_cannot_set_role_permissions_without_manage_permissions(self):
+        manage_roles = Permission.objects.get(code='manage_roles')
+        view_customers = Permission.objects.get(code='view_customers')
+        edit_users = Permission.objects.get(code='edit_users')
+        role_manager_role = Role.objects.create(
+            code='role_manager_only',
+            name='Role Manager Only',
+            is_active=True,
+            priority=40,
+        )
+        role_manager_role.permissions.set([manage_roles])
+        role_manager = create_role_user(
+            'role_manager_only',
+            email='role_manager_only@test.com',
+            username='role_manager_only',
+            branch=self.branch,
+        )
+        target_role = Role.objects.create(
+            code='limited_customer_viewer',
+            name='Limited Customer Viewer',
+            is_active=True,
+            priority=10,
+        )
+        target_role.permissions.set([view_customers])
+
+        client = APIClient()
+        client.force_authenticate(user=role_manager)
+        response = client.patch(
+            f'/api/auth/admin/roles/{target_role.id}/',
+            {'permission_ids': [edit_users.id]},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+        self.assertEqual(
+            set(target_role.permissions.values_list('code', flat=True)),
+            {'view_customers'},
+        )
+
+    def test_edit_users_cannot_promote_user_to_role_with_extra_permissions(self):
+        edit_users = Permission.objects.get(code='edit_users')
+        editor_role = Role.objects.create(
+            code='user_editor_only',
+            name='User Editor Only',
+            is_active=True,
+            priority=40,
+        )
+        editor_role.permissions.set([edit_users])
+        editor = create_role_user(
+            'user_editor_only',
+            email='user_editor_only@test.com',
+            username='user_editor_only',
+            branch=self.branch,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=editor)
+        response = client.patch(
+            f'/api/auth/users/{editor.id}/',
+            {'role': 'admin'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        editor.refresh_from_db()
+        self.assertEqual(editor.role, 'user_editor_only')
+
+    def test_create_users_cannot_create_user_with_role_extra_permissions(self):
+        create_users = Permission.objects.get(code='create_users')
+        creator_role = Role.objects.create(
+            code='user_creator_only',
+            name='User Creator Only',
+            is_active=True,
+            priority=40,
+        )
+        creator_role.permissions.set([create_users])
+        creator = create_role_user(
+            'user_creator_only',
+            email='user_creator_only@test.com',
+            username='user_creator_only',
+            branch=self.branch,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=creator)
+        response = client.post('/api/auth/users/', {
+            'email': 'created_admin@test.com',
+            'username': 'created_admin',
+            'password': 'SecurePass123!',
+            'password2': 'SecurePass123!',
+            'first_name': 'Created',
+            'last_name': 'Admin',
+            'role': 'admin',
+            'is_active': True,
+            'send_welcome_email': False,
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)

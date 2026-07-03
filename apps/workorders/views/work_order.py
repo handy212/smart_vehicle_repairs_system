@@ -259,6 +259,13 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
 
         unscoped_obj = super().get_queryset().filter(**filter_kwargs).first()
         if unscoped_obj is not None:
+            has_workorder_access = filter_workorders_for_user(
+                super().get_queryset().filter(pk=unscoped_obj.pk),
+                user,
+            ).exists()
+            if not has_workorder_access:
+                raise Http404
+
             active_branch = resolve_branch(self.request)
             record_branch = getattr(unscoped_obj, 'branch', None)
 
