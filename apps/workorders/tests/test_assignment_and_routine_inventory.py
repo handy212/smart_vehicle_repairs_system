@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.accounts.permission_models import Permission, Role
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.inventory.models import Part, PartCategory, ServiceBundle, ServiceBundleItem, StockItem
@@ -169,11 +170,18 @@ class WorkOrderObjectScopeTests(TestCase):
             is_staff=True,
             is_active=True,
         )
+        own_workorder_role = Role.objects.create(
+            code='own_workorder_viewer',
+            name='Own Workorder Viewer',
+            is_active=True,
+            priority=20,
+        )
+        own_workorder_role.permissions.set([Permission.objects.get(code='view_own_workorders')])
         cls.technician = User.objects.create_user(
             username='scope_tech',
             email='scope_tech@example.com',
             password='password',
-            role='technician',
+            role='own_workorder_viewer',
             is_staff=True,
             is_active=True,
         )
