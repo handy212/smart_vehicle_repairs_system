@@ -194,3 +194,45 @@ class ReportExportLog(models.Model):
 
     def __str__(self):
         return f"{self.report_type} {self.export_format} export by {self.created_by_id}"
+
+
+class AIAuditLog(models.Model):
+    """Audit trail for AI-powered features."""
+
+    FEATURE_CHOICES = [
+        ('comms_suggestion', 'Communication Suggestion'),
+        ('diagnosis_recommendations', 'Diagnosis Recommendations'),
+        ('diagnosis_report', 'Diagnosis Report'),
+        ('inspection_summary', 'Inspection Summary'),
+        ('photo_analysis', 'Photo Analysis'),
+        ('voice_transcription', 'Voice Transcription'),
+        ('sms_assist', 'SMS Assistant'),
+        ('ops_briefing', 'Operations Briefing'),
+        ('ops_exception_triage', 'Exception Triage'),
+        ('ops_return_jobs', 'Return Job Analysis'),
+        ('ops_capacity', 'Capacity Narrative'),
+        ('ops_ap_cycle', 'AP Cycle Narrative'),
+        ('ops_traceability', 'Traceability Q&A'),
+        ('ops_bottleneck', 'Workflow Bottleneck'),
+        ('ops_exception_draft', 'Exception Comms Draft'),
+        ('other', 'Other'),
+    ]
+
+    feature = models.CharField(max_length=50, choices=FEATURE_CHOICES, default='other')
+    prompt_summary = models.TextField(blank=True)
+    output_summary = models.TextField(blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_audit_logs')
+    branch_id = models.IntegerField(null=True, blank=True)
+    success = models.BooleanField(default=True)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['feature', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.feature} @ {self.created_at:%Y-%m-%d %H:%M}"

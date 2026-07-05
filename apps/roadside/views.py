@@ -1193,5 +1193,5 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         """Get a suggested message using the centralized AI service"""
         roadside_request = self.get_object()
         channel = request.query_params.get('channel', 'email')
-        suggestion = AIService.get_suggested_message(roadside_request, channel=channel, context_type='roadside')
+        suggestion = AIService.get_suggested_message(roadside_request, channel=channel, context_type='roadside', user=request.user)
         return Response(suggestion)

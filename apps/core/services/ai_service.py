@@ -5,6 +5,13 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 
+from apps.core.services.ai_audit import (
+    get_gemini_model,
+    is_ai_enabled,
+    log_ai_call,
+    summarize_for_audit,
+)
+
 logger = logging.getLogger(__name__)
 
 class AIService:
@@ -14,26 +21,85 @@ class AIService:
     """
 
     @staticmethod
-    def get_suggested_message(obj, channel='email', context_type='roadside'):
+    def get_suggested_message(obj, channel='email', context_type='roadside', user=None):
         """
         Generates a suggested message based on the object's state and context.
-        
-        Args:
-            obj: The Django model instance (RoadsideRequest, Appointment, or Invoice)
-            channel: 'sms' or 'email'
-            context_type: 'roadside', 'appointment', or 'invoice'
+        Uses Gemini when available; falls back to status-based templates.
         """
+        if is_ai_enabled('comms'):
+            try:
+                result = AIService._generate_message_with_gemini(obj, channel, context_type, user=user)
+                if result:
+                    return result
+            except Exception as e:
+                logger.warning(f"Gemini comms suggestion failed, using template: {e}")
+
         if context_type == 'roadside':
             return AIService._generate_roadside_message(obj, channel)
         elif context_type == 'appointment':
             return AIService._generate_appointment_message(obj, channel)
         elif context_type == 'invoice':
             return AIService._generate_invoice_message(obj, channel)
-        
+
         return {
             'subject': "Notification from Smart Vehicle Repairs",
             'message': "Hello, we have an update regarding your service."
         }
+
+    @staticmethod
+    def _build_comms_context(obj, context_type):
+        customer = getattr(obj, 'customer', None)
+        customer_name = AIService._get_customer_name(customer)
+        ctx = {'context_type': context_type, 'customer_name': customer_name, 'status': getattr(obj, 'status', '')}
+
+        if context_type == 'roadside':
+            ctx.update({
+                'reference': getattr(obj, 'request_number', str(obj)),
+                'service': obj.get_service_type_display() if hasattr(obj, 'get_service_type_display') else '',
+                'technician': obj.assigned_technician.get_full_name() if getattr(obj, 'assigned_technician', None) else '',
+            })
+        elif context_type == 'appointment':
+            ctx.update({
+                'reference': getattr(obj, 'appointment_number', str(obj)),
+                'service': obj.get_service_type_display() if hasattr(obj, 'get_service_type_display') else '',
+                'date': obj.appointment_date.strftime('%B %d, %Y') if getattr(obj, 'appointment_date', None) else '',
+                'time': obj.appointment_time.strftime('%I:%M %p') if getattr(obj, 'appointment_time', None) else '',
+                'branch': obj.branch.name if getattr(obj, 'branch', None) else '',
+            })
+        elif context_type == 'invoice':
+            ctx.update({
+                'reference': getattr(obj, 'invoice_number', str(obj)),
+                'total': str(getattr(obj, 'total', '')),
+                'amount_due': str(getattr(obj, 'amount_due', '')),
+                'due_date': obj.due_date.strftime('%B %d, %Y') if getattr(obj, 'due_date', None) else '',
+            })
+        return ctx
+
+    @staticmethod
+    def _generate_message_with_gemini(obj, channel, context_type, user=None):
+        ctx = AIService._build_comms_context(obj, context_type)
+        channel_rules = (
+            'Keep SMS under 160 characters when possible. No HTML.'
+            if channel == 'sms'
+            else 'Use a professional email format with greeting and sign-off.'
+        )
+        prompt = f"""You are an expert copywriter for an automotive repair shop.
+Write a {channel} message for a customer based on this context:
+{json.dumps(ctx, default=str)}
+
+{channel_rules}
+Return JSON with:
+- subject: email subject line (for SMS use a short title)
+- message: the full message body
+"""
+        class CommsResult(typing.TypedDict):
+            subject: str
+            message: str
+
+        result = AIService._gemini_json(prompt, CommsResult, feature='comms_suggestion', user=user)
+        if result.get('message'):
+            return result
+        return None
 
     @staticmethod
     def _get_customer_name(customer):
@@ -238,7 +304,7 @@ Only include recommendations genuinely supported by the data above."""
 
             client = genai.Client(api_key=api_key)
             response = client.models.generate_content(
-                model='gemini-flash-lite-latest',
+                model=get_gemini_model(),
                 contents=prompt,
                 config={
                     'response_mime_type': 'application/json',
@@ -256,7 +322,7 @@ Only include recommendations genuinely supported by the data above."""
             return []
 
     @staticmethod
-    def _gemini_text(prompt):
+    def _gemini_text(prompt, feature='other', user=None):
         """Sends a plain text prompt to Gemini and returns the response string."""
         from google import genai
         api_key = getattr(settings, 'GEMINI_API_KEY', '')
@@ -264,13 +330,15 @@ Only include recommendations genuinely supported by the data above."""
             raise ValueError("GEMINI_API_KEY is not configured.")
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
+            model=get_gemini_model(),
             contents=prompt,
         )
-        return response.text or ''
+        text = response.text or ''
+        log_ai_call(feature, summarize_for_audit(prompt), summarize_for_audit(text), user=user)
+        return text
 
     @staticmethod
-    def _gemini_json(prompt, schema):
+    def _gemini_json(prompt, schema, feature='other', user=None):
         """Sends a prompt to Gemini and returns a parsed JSON response."""
         from google import genai
         api_key = getattr(settings, 'GEMINI_API_KEY', '')
@@ -278,14 +346,16 @@ Only include recommendations genuinely supported by the data above."""
             raise ValueError("GEMINI_API_KEY is not configured.")
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
+            model=get_gemini_model(),
             contents=prompt,
             config={
                 'response_mime_type': 'application/json',
                 'response_schema': schema,
             },
         )
-        return json.loads(response.text or '{}')
+        parsed = json.loads(response.text or '{}')
+        log_ai_call(feature, summarize_for_audit(prompt), summarize_for_audit(parsed), user=user)
+        return parsed
 
     @staticmethod
     def transcribe_audio(audio_file):
@@ -309,7 +379,7 @@ Only include recommendations genuinely supported by the data above."""
 
             client = genai.Client(api_key=api_key)
             response = client.models.generate_content(
-                model='gemini-flash-lite-latest',
+                model=get_gemini_model(),
                 contents=[
                     types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
                     "Transcribe this vehicle technician audio note verbatim. Return only the transcription text.",
@@ -371,7 +441,7 @@ Return:
 
             client = genai.Client(api_key=api_key)
             response = client.models.generate_content(
-                model='gemini-flash-lite-latest',
+                model=get_gemini_model(),
                 contents=[
                     types.Part.from_bytes(data=img_response.content, mime_type=mime_type),
                     "Analyze this vehicle photo for damage or wear. Return detected issues, a confidence score (0.0–1.0), a brief summary, and severity: minor, moderate, severe, or critical.",
@@ -573,7 +643,7 @@ Return:
             logger.warning(f"Failed to cache OBD code {code_number} to library: {e}")
 
     @staticmethod
-    def analyze_inspection_results(inspection):
+    def analyze_inspection_results(inspection, user=None):
         """Generates AI notes and recommendations from multi-point inspection results."""
         vehicle = inspection.vehicle
         pass_count = inspection.results.filter(result='pass').count()
@@ -586,6 +656,33 @@ Return:
         advisory_items = AIService._inspection_item_names(
             inspection.results.filter(result='advisory')
         )
+
+        if is_ai_enabled('inspection'):
+            try:
+                class InspectionSummary(typing.TypedDict):
+                    notes: str
+                    recommendations: str
+
+                ai_data = AIService._gemini_json(
+                    f"""You are an automotive service advisor. Summarize this multi-point inspection for the customer record.
+
+Vehicle: {vehicle.year} {vehicle.make} {vehicle.model}
+Passed: {pass_count}, Failed: {fail_count}, Advisory: {advisory_count}
+Failed items: {', '.join(failed_items) or 'None'}
+Advisory items: {', '.join(advisory_items) or 'None'}
+
+Return:
+- notes: 2-3 sentence professional summary of inspection results
+- recommendations: bullet-style recommendations (plain text, one per line) for failed/advisory items, or a note that no repairs are needed
+""",
+                    InspectionSummary,
+                    feature='inspection_summary',
+                    user=user,
+                )
+                if ai_data.get('notes'):
+                    return ai_data
+            except Exception as e:
+                logger.warning(f"Gemini inspection summary failed, using rules: {e}")
 
         notes = (
             f"Inspection completed for the {vehicle.year} {vehicle.make} {vehicle.model}: "
@@ -662,3 +759,143 @@ Write 3–4 sentences confirming the work was completed and the vehicle is ready
         except Exception as e:
             logger.warning(f"Gemini QC notes failed: {e}")
             return ""
+
+    # ------------------------------------------------------------------
+    # Operations intelligence
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def generate_ops_briefing(context, user=None):
+        """Natural-language shift handoff for operations managers."""
+        prompt = f"""You are an automotive workshop operations manager assistant.
+Write a concise daily operations briefing (3-5 short paragraphs) for branch managers based on this data.
+Highlight urgent items first, then patterns, then capacity/cash-flow notes. Be actionable.
+
+Data:
+{json.dumps(context, default=str)[:12000]}
+"""
+        try:
+            return AIService._gemini_text(prompt, feature='ops_briefing', user=user).strip()
+        except Exception as e:
+            logger.warning(f"Ops briefing failed: {e}")
+            return "AI briefing unavailable. Review the exception log and return jobs tabs manually."
+
+    @staticmethod
+    def triage_exceptions(exceptions, user=None):
+        """Rank exceptions and suggest owner, action, and draft SMS."""
+        class TriageItem(typing.TypedDict):
+            reference: str
+            priority_rank: int
+            suggested_owner: str
+            suggested_action: str
+            draft_sms: str
+
+        prompt = f"""You are an automotive service operations coordinator.
+Triage these operational exceptions. For each item return priority_rank (1=highest),
+suggested_owner (service coordinator, parts desk, technician lead, or accounts),
+suggested_action (one sentence), and draft_sms (under 160 chars, warm and professional).
+
+Exceptions:
+{json.dumps(exceptions[:50], default=str)}
+"""
+        try:
+            return AIService._gemini_json(prompt, list[TriageItem], feature='ops_exception_triage', user=user)
+        except Exception as e:
+            logger.warning(f"Exception triage failed: {e}")
+            return []
+
+    @staticmethod
+    def analyze_return_jobs(return_jobs, user=None):
+        """Root-cause patterns from warranty/rework jobs."""
+        if not return_jobs:
+            return "No return or rework jobs in this period."
+        prompt = f"""Analyze these warranty/rework jobs for an automotive repair shop.
+Identify recurring patterns (vehicle make, job type, cost variance), likely root causes,
+and 3-5 preventive recommendations for the service team.
+
+Return jobs:
+{json.dumps(return_jobs[:100], default=str)[:10000]}
+"""
+        try:
+            return AIService._gemini_text(prompt, feature='ops_return_jobs', user=user).strip()
+        except Exception as e:
+            logger.warning(f"Return job analysis failed: {e}")
+            return "Analysis unavailable."
+
+    @staticmethod
+    def generate_capacity_narrative(capacity_data, user=None):
+        prompt = f"""You are a workshop capacity planner. Interpret this capacity data and write
+2-3 paragraphs with utilization assessment and specific scheduling/staffing suggestions.
+
+Data:
+{json.dumps(capacity_data, default=str)}
+"""
+        try:
+            return AIService._gemini_text(prompt, feature='ops_capacity', user=user).strip()
+        except Exception as e:
+            logger.warning(f"Capacity narrative failed: {e}")
+            return ""
+
+    @staticmethod
+    def generate_ap_cycle_narrative(ap_data, user=None):
+        prompt = f"""You are a finance operations analyst for an automotive repair business.
+Summarize AP payment cycle patterns, cash-flow implications, and vendor follow-up recommendations.
+
+Data:
+{json.dumps(ap_data, default=str)[:8000]}
+"""
+        try:
+            return AIService._gemini_text(prompt, feature='ops_ap_cycle', user=user).strip()
+        except Exception as e:
+            logger.warning(f"AP cycle narrative failed: {e}")
+            return ""
+
+    @staticmethod
+    def answer_traceability_query(chain, question, user=None):
+        prompt = f"""Answer this question about parts traceability for an automotive repair shop.
+Use ONLY the transaction chain data below. If the answer is not in the data, say so clearly.
+
+Question: {question}
+
+Transaction chain:
+{json.dumps(chain[:50], default=str)}
+"""
+        try:
+            return AIService._gemini_text(prompt, feature='ops_traceability', user=user).strip()
+        except Exception as e:
+            logger.warning(f"Traceability Q&A failed: {e}")
+            return "Unable to answer — check the traceability data manually."
+
+    @staticmethod
+    def analyze_workflow_bottlenecks(metrics, user=None):
+        prompt = f"""You are a shop floor efficiency coach. Analyze these work-order workflow metrics,
+explain bottlenecks in plain language, and suggest 3-5 specific next steps for the service manager.
+
+Metrics:
+{json.dumps(metrics, default=str)[:8000]}
+"""
+        try:
+            return AIService._gemini_text(prompt, feature='ops_bottleneck', user=user).strip()
+        except Exception as e:
+            logger.warning(f"Bottleneck analysis failed: {e}")
+            return ""
+
+    @staticmethod
+    def draft_exception_comms(exceptions, user=None):
+        """Draft customer SMS messages for critical exceptions (for manager review)."""
+        class DraftItem(typing.TypedDict):
+            reference: str
+            draft_sms: str
+            reason: str
+
+        prompt = f"""Draft professional SMS messages (under 160 chars) for customers affected by these
+service delays. Include reference number context. Do NOT send — these are drafts for staff review.
+
+Exceptions:
+{json.dumps(exceptions[:20], default=str)}
+"""
+        try:
+            return AIService._gemini_json(prompt, list[DraftItem], feature='ops_exception_draft', user=user)
+        except Exception as e:
+            logger.warning(f"Exception comms draft failed: {e}")
+            return []

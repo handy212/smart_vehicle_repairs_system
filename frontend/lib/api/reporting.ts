@@ -301,6 +301,41 @@ export const reportingApi = {
     return response.data;
   },
 
+  generateDailyBriefing: async (params?: DateRangeParams): Promise<{ briefing: string; context_summary?: Record<string, number> }> => {
+    const response = await apiClient.post('/reporting/operations/daily-briefing/', params ?? {});
+    return response.data;
+  },
+
+  triageExceptions: async (): Promise<{ triage: Array<{ reference: string; priority_rank: number; suggested_owner: string; suggested_action: string; draft_sms: string }>; as_of?: string }> => {
+    const response = await apiClient.post('/reporting/operations/triage-exceptions/');
+    return response.data;
+  },
+
+  analyzeReturnJobs: async (params?: DateRangeParams): Promise<{ analysis: string; return_job_count?: number }> => {
+    const response = await apiClient.post('/reporting/operations/analyze-return-jobs/', params ?? {});
+    return response.data;
+  },
+
+  capacityNarrative: async (params?: DateRangeParams): Promise<{ narrative: string }> => {
+    const response = await apiClient.post('/reporting/operations/capacity-narrative/', params ?? {});
+    return response.data;
+  },
+
+  apCycleNarrative: async (params?: DateRangeParams): Promise<{ narrative: string }> => {
+    const response = await apiClient.post('/reporting/operations/ap-cycle-narrative/', params ?? {});
+    return response.data;
+  },
+
+  traceabilityQA: async (data: { question: string; work_order_id?: number; part_id?: number }): Promise<{ answer: string }> => {
+    const response = await apiClient.post('/reporting/operations/traceability-qa/', data);
+    return response.data;
+  },
+
+  workflowBottleneckAnalysis: async (metrics: Record<string, unknown>): Promise<{ analysis: string }> => {
+    const response = await apiClient.post('/reporting/operations/workflow-bottleneck/', { metrics });
+    return response.data;
+  },
+
   exportLogs: {
     list: async (params?: { report_type?: string; status?: string }): Promise<Paginated<ReportExportLog>> => {
       const response = await apiClient.get('/reporting/export-logs/', { params });

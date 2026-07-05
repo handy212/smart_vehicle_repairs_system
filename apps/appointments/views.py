@@ -526,7 +526,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """Get a suggested message using the centralized AI service"""
         appointment = self.get_object()
         channel = request.query_params.get('channel', 'email')
-        suggestion = AIService.get_suggested_message(appointment, channel=channel, context_type='appointment')
+        suggestion = AIService.get_suggested_message(appointment, channel=channel, context_type='appointment', user=request.user)
         return Response(suggestion)
 
     @action(detail=True, methods=['post'])

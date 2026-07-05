@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import operations_views
+from . import operations_ai_views
 
 # app_name = 'reporting'  # Commented out to avoid conflict with frontend namespace
 
@@ -52,4 +53,13 @@ urlpatterns = [
     path('traceability/', operations_views.traceability_dashboard, name='traceability'),
     path('capacity-planning/', operations_views.capacity_planning_report, name='capacity_planning'),
     path('system-usage/', operations_views.system_usage_report, name='system_usage'),
+
+    # Operations AI
+    path('operations/daily-briefing/', operations_ai_views.daily_briefing, name='ops_daily_briefing'),
+    path('operations/triage-exceptions/', operations_ai_views.triage_exceptions, name='ops_triage_exceptions'),
+    path('operations/analyze-return-jobs/', operations_ai_views.analyze_return_jobs, name='ops_analyze_return_jobs'),
+    path('operations/capacity-narrative/', operations_ai_views.capacity_narrative, name='ops_capacity_narrative'),
+    path('operations/ap-cycle-narrative/', operations_ai_views.ap_cycle_narrative, name='ops_ap_cycle_narrative'),
+    path('operations/traceability-qa/', operations_ai_views.traceability_qa, name='ops_traceability_qa'),
+    path('operations/workflow-bottleneck/', operations_ai_views.workflow_bottleneck_analysis, name='ops_workflow_bottleneck'),
 ]

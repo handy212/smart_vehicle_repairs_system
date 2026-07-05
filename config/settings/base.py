@@ -438,6 +438,15 @@ if QUICKBOOKS_CDC_ENABLED:
         'schedule': crontab(minute=0, hour='*/6'),  # every 6 hours
     }
 
+CELERY_BEAT_SCHEDULE['ai-daily-ops-briefing'] = {
+    'task': 'ai_daily_ops_briefing',
+    'schedule': crontab(minute=0, hour=6),  # 6 AM daily
+}
+CELERY_BEAT_SCHEDULE['ai-proactive-exception-comms'] = {
+    'task': 'ai_proactive_exception_comms',
+    'schedule': crontab(minute=0, hour='*/4'),  # every 4 hours
+}
+
 
 # Redis Cache
 CACHES = {
@@ -528,6 +537,7 @@ WHATSAPP_BUSINESS_ACCOUNT_ID = env('WHATSAPP_BUSINESS_ACCOUNT_ID', default='')
 
 # Gemini AI Configuration
 GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
+GEMINI_MODEL = env('GEMINI_MODEL', default='gemini-flash-lite-latest')
 
 # Firebase Configuration
 FIREBASE_CREDENTIALS_PATH = env('FIREBASE_CREDENTIALS_PATH', default='')

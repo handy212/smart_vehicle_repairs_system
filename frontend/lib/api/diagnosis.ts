@@ -322,6 +322,14 @@ export const diagnosisApi = {
     return response.data;
   },
 
+  generateReport: async (id: number, format: 'html' | 'pdf' | 'text' = 'html'): Promise<Blob | string> => {
+    const response = await apiClient.get(`/diagnosis/diagnoses/${id}/generate_report/`, {
+      params: { format },
+      responseType: format === 'html' ? 'text' : 'blob',
+    });
+    return response.data;
+  },
+
   approveRecommendations: async (
     id: number,
     data: {

@@ -70,6 +70,21 @@ class SystemSettings(models.Model):
         ('quickbooks_sandbox_enabled', 'true', 'Use QuickBooks Online Sandbox environment if true'),
         ('quickbooks_webhook_token', '', 'QuickBooks webhook verifier token from Intuit Developer Portal'),
     ]
+
+    AI_SETTING_DEFAULTS = [
+        ('ai_enabled', 'true', 'Master switch for Gemini AI features'),
+        ('ai_gemini_model', 'gemini-flash-lite-latest', 'Google Gemini model name for AI features'),
+        ('ai_comms_enabled', 'true', 'AI-generated customer communication suggestions'),
+        ('ai_inspection_enabled', 'true', 'AI inspection summary generation'),
+        ('ai_ops_briefing_enabled', 'true', 'Daily operations briefing'),
+        ('ai_ops_exception_triage_enabled', 'true', 'Exception triage copilot'),
+        ('ai_ops_return_jobs_enabled', 'true', 'Return job root-cause analysis'),
+        ('ai_ops_capacity_enabled', 'true', 'Capacity planning narratives'),
+        ('ai_ops_ap_cycle_enabled', 'true', 'AP cycle narratives'),
+        ('ai_ops_traceability_enabled', 'true', 'Traceability Q&A'),
+        ('ai_ops_bottleneck_enabled', 'true', 'Workflow bottleneck analysis'),
+        ('ai_ops_exception_draft_enabled', 'true', 'Proactive exception SMS drafts'),
+    ]
     
     @classmethod
     def get_setting(cls, key, default=None):
@@ -169,11 +184,22 @@ class SystemSettings(models.Model):
                 }
             )
 
+    @classmethod
+    def ensure_ai_settings(cls):
+        """Ensure default AI feature settings exist."""
+        for key, value, description in cls.AI_SETTING_DEFAULTS:
+            cls.objects.get_or_create(
+                key=key,
+                defaults={
+                    'category': 'integration',
+                    'value': value,
+                    'description': description,
+                    'is_secret': False,
+                    'is_active': True,
+                }
+            )
 
 
-
-
-class SystemBackup(models.Model):
     """
     System backup records
     """

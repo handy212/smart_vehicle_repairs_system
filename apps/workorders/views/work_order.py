@@ -134,7 +134,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         'list', 'retrieve', 'dashboard_stats', 'check_unapproved_recommendations',
         'get_recent_work_orders', 'active', 'overdue', 'awaiting_approval',
         'customer_waiting', 'by_technician', 'status_summary', 'technician_workload',
-        'workflow_metrics', 'predict_service', 'suggest_observations', 'suggest_qc_notes',
+        'workflow_metrics', 'workflow_ai_analysis', 'predict_service', 'suggest_observations', 'suggest_qc_notes',
         'rate_service',
     })
 
@@ -1009,6 +1009,24 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
                 'avg_variance_percent': float(cost_variance_data['avg_variance_percent'] or 0)
             }
         })
+
+    @action(detail=False, methods=['get'], url_path='workflow_ai_analysis')
+    def workflow_ai_analysis(self, request):
+        """AI narrative analysis of workflow bottlenecks."""
+        from apps.core.services.ai_audit import is_ai_enabled
+        from apps.core.services.ai_service import AIService
+
+        if not is_ai_enabled('ops_bottleneck'):
+            return Response(
+                {'error': 'AI bottleneck analysis is not configured or disabled.'},
+                status=503,
+            )
+
+        metrics_response = self.workflow_metrics(request)
+        if metrics_response.status_code != 200:
+            return metrics_response
+        analysis = AIService.analyze_workflow_bottlenecks(metrics_response.data, user=request.user)
+        return Response({'analysis': analysis, 'metrics': metrics_response.data})
 
     @action(detail=True, methods=['get'])
     def predict_service(self, request, pk=None):

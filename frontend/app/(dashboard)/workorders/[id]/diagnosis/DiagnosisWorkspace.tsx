@@ -50,7 +50,8 @@ import {
   RotateCcw,
   Send,
   User,
-  Search,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -141,6 +142,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
   const testsCount = Array.isArray(diagnosis?.diagnostic_tests) ? diagnosis.diagnostic_tests.length : 0;
   const findingsCount = Array.isArray(diagnosis?.findings) ? diagnosis.findings.length : 0;
   const recommendationsCount = Array.isArray(diagnosis?.repair_recommendations) ? diagnosis.repair_recommendations.length : 0;
+  const photosCount = Array.isArray(diagnosis?.photos) ? diagnosis.photos.length : 0;
 
   const updateDiagnosisMutation = useMutation({
     mutationFn: (data: Partial<Diagnosis>) => {
@@ -832,6 +834,18 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
               )}
             </TabsTrigger>
             <TabsTrigger
+              value="photos"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Photos
+              {photosCount > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                  {photosCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
               value="recommendations"
               className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
@@ -890,6 +904,16 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
           <FindingsTab
             diagnosis={diagnosis}
             workOrderId={workOrderId}
+            onRefresh={() => {
+              queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+            }}
+            isDisabled={!diagnosisActive}
+          />
+        </TabsContent>
+
+        <TabsContent value="photos" className="mt-6">
+          <PhotosTab
+            diagnosisId={diagnosis.id}
             onRefresh={() => {
               queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
             }}
@@ -1503,6 +1527,52 @@ function RecommendationsTab({
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<any>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+
+  const aiSuggestMutation = useMutation({
+    mutationFn: () => diagnosisApi.getAiSuggestions(diagnosis.id),
+    onSuccess: (suggestions) => {
+      if (!suggestions?.length) {
+        toast({ title: "No AI suggestions", description: "Add codes or findings first, or check GEMINI_API_KEY.", variant: "default" });
+        return;
+      }
+      setAiSuggestions(suggestions);
+      setShowAiDialog(true);
+    },
+    onError: (error: any) => {
+      toast({ title: "AI suggestions failed", description: getUserFacingError(error), variant: "destructive" });
+    },
+  });
+
+  const applyAiSuggestionsMutation = useMutation({
+    mutationFn: async (items: any[]) => {
+      for (const item of items) {
+        const partsList = (item.parts_needed || "")
+          .split(",")
+          .map((p: string) => p.trim())
+          .filter(Boolean)
+          .map((part_name: string) => ({ part_name, quantity: 1 }));
+        await diagnosisApi.addRecommendation(diagnosis.id, {
+          recommendation_type: item.recommendation_type === "service" ? "service" : "repair",
+          description: item.description,
+          priority: item.priority || "recommended",
+          parts_needed: partsList,
+          findings: [],
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      onRefresh();
+      setShowAiDialog(false);
+      setAiSuggestions([]);
+      toast({ title: "AI recommendations added", variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to add recommendations", description: getUserFacingError(error), variant: "destructive" });
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: (data: any) =>
@@ -1893,6 +1963,20 @@ function RecommendationsTab({
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={() => aiSuggestMutation.mutate()}
+              size="sm"
+              variant="outline"
+              className="h-8"
+              disabled={isDisabled || aiSuggestMutation.isPending}
+            >
+              {aiSuggestMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              AI Suggest
+            </Button>
             <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add
@@ -1945,13 +2029,43 @@ function RecommendationsTab({
         }}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" /> AI Repair Suggestions
+            </DialogTitle>
+            <DialogDescription>Review and add Gemini-generated recommendations to this diagnosis.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {aiSuggestions.map((s, i) => (
+              <div key={i} className="rounded-md border p-3 text-sm">
+                <div className="flex gap-2 mb-1">
+                  <Badge variant="outline" className="capitalize">{s.priority}</Badge>
+                  <Badge variant="secondary" className="capitalize">{s.recommendation_type}</Badge>
+                </div>
+                <p>{s.description}</p>
+                {s.parts_needed && <p className="text-xs text-muted-foreground mt-1">Parts: {s.parts_needed}</p>}
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAiDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => applyAiSuggestionsMutation.mutate(aiSuggestions)}
+              disabled={applyAiSuggestionsMutation.isPending}
+            >
+              {applyAiSuggestionsMutation.isPending ? "Adding…" : `Add ${aiSuggestions.length} recommendation(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog />
     </>
   );
 }
 
 // Photos Tab Component
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PhotosTab({
   diagnosisId,
   onRefresh,
@@ -1965,6 +2079,21 @@ function PhotosTab({
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+  const [analysisByPhoto, setAnalysisByPhoto] = useState<Record<number, { summary: string; suggested_severity: string }>>({});
+
+  const analyzeMutation = useMutation({
+    mutationFn: (id: number) => diagnosisApi.photos.analyzeDamage(id),
+    onSuccess: (data, id) => {
+      setAnalysisByPhoto((prev) => ({ ...prev, [id]: { summary: data.summary, suggested_severity: data.suggested_severity } }));
+      toast({ title: "Smart Scan complete", description: data.summary?.slice(0, 80) });
+      setAnalyzingId(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Smart Scan failed", description: getUserFacingError(error), variant: "destructive" });
+      setAnalyzingId(null);
+    },
+  });
 
   const { data: photos = [], isLoading, error } = useQuery({
     queryKey: ["diagnosis-photos", diagnosisId],
@@ -2060,6 +2189,29 @@ function PhotosTab({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
+                              variant="secondary"
+                              size="icon"
+                              className="h-8 w-8 rounded-full shadow-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAnalyzingId(photo.id);
+                                analyzeMutation.mutate(photo.id);
+                              }}
+                              disabled={isDisabled || analyzingId === photo.id}
+                              aria-label="Smart Scan"
+                            >
+                              {analyzingId === photo.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom"><p>Smart Scan (AI)</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
                               variant="destructive"
                               size="icon"
                               className="h-8 w-8 rounded-full shadow-lg bg-red-600 hover:bg-red-700 border-none transition-all duration-200"
@@ -2101,6 +2253,11 @@ function PhotosTab({
                     <p className="text-xs font-medium text-foreground truncate" title={photo.caption || "Untitled"}>
                       {photo.caption || <span className="text-muted-foreground italic">No caption</span>}
                     </p>
+                    {analysisByPhoto[photo.id] && (
+                      <p className="text-[10px] text-primary mt-1 line-clamp-2" title={analysisByPhoto[photo.id].summary}>
+                        AI: {analysisByPhoto[photo.id].summary}
+                      </p>
+                    )}
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {new Date(photo.created_at).toLocaleDateString()}
                     </p>
@@ -2376,7 +2533,32 @@ function SummaryTab({
   isDisabled?: boolean;
 }) {
   const { formatCurrency } = useCurrency(); // Added hook
+  const { toast } = useToast();
   const [notes, setNotes] = useState(diagnosis.diagnostic_notes || "");
+  const [generatingReport, setGeneratingReport] = useState(false);
+
+  const handleGenerateReport = async (format: 'html' | 'pdf') => {
+    setGeneratingReport(true);
+    try {
+      const data = await diagnosisApi.generateReport(diagnosis.id, format);
+      if (format === 'html' && typeof data === 'string') {
+        const w = window.open('', '_blank');
+        if (w) { w.document.write(data); w.document.close(); }
+      } else if (data instanceof Blob) {
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `diagnosis_report_${diagnosis.id}.${format === 'pdf' ? 'pdf' : 'txt'}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      toast({ title: 'Customer report generated', variant: 'default' });
+    } catch (error: any) {
+      toast({ title: 'Report failed', description: getUserFacingError(error), variant: 'destructive' });
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   // Update notes when diagnosis changes
   React.useEffect(() => {
@@ -2480,9 +2662,20 @@ function SummaryTab({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="border-none shadow-sm bg-muted/50">
-        <CardHeader className="pb-3 border-b bg-muted/50">
-          <CardTitle className="text-base font-semibold">Overview</CardTitle>
-          <CardDescription>Key metrics for this diagnosis</CardDescription>
+        <CardHeader className="pb-3 border-b bg-muted/50 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold">Overview</CardTitle>
+            <CardDescription>Key metrics for this diagnosis</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" disabled={generatingReport} onClick={() => handleGenerateReport('html')}>
+              {generatingReport ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              AI Report
+            </Button>
+            <Button size="sm" variant="outline" disabled={generatingReport} onClick={() => handleGenerateReport('pdf')}>
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-3 gap-6">

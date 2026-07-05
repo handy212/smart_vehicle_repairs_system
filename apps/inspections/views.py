@@ -802,7 +802,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             )
             
         from apps.core.services.ai_service import AIService
-        ai_data = AIService.analyze_inspection_results(inspection)
+        ai_data = AIService.analyze_inspection_results(inspection, user=request.user)
         
         inspection.notes = ai_data["notes"]
         inspection.recommendations = ai_data["recommendations"]

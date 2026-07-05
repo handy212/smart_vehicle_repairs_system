@@ -233,7 +233,7 @@ class BillingCommunicationMixin:
         obj = self.get_object()
         channel = request.query_params.get('channel', 'email')
         context_type = 'invoice' if obj.__class__.__name__ == 'Invoice' else 'estimate'
-        suggestion = AIService.get_suggested_message(obj, channel=channel, context_type=context_type)
+        suggestion = AIService.get_suggested_message(obj, channel=channel, context_type=context_type, user=request.user)
         return Response(suggestion)
 
 class BillingReportMixin:

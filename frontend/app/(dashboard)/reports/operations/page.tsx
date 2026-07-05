@@ -16,6 +16,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
+import { OpsDailyBriefing, OpsExceptionTriage, OpsAINarrativeButton, OpsTraceabilityQA } from "@/components/reports/OpsAIPanel";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 
 type OpsTab = "exceptions" | "roadside" | "return" | "trace" | "usage" | "ap" | "capacity";
@@ -182,6 +183,9 @@ export default function OperationsReportsPage() {
         <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
+
+      <OpsDailyBriefing startDate={startDate} endDate={endDate} />
+
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OpsTab)}>
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="exceptions">Exception Log</TabsTrigger>
@@ -197,6 +201,7 @@ export default function OperationsReportsPage() {
           <Card>
             <CardHeader><CardTitle>Service delays & exceptions</CardTitle></CardHeader>
             <CardContent className="max-h-[480px] overflow-auto">
+              <OpsExceptionTriage exceptionList={exceptionList} />
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -258,6 +263,11 @@ export default function OperationsReportsPage() {
           <Card>
             <CardHeader><CardTitle>Return & rework cost control</CardTitle></CardHeader>
             <CardContent className="max-h-[480px] overflow-auto">
+              <OpsAINarrativeButton
+                label="AI analyze return jobs"
+                resultKey="analysis"
+                onGenerate={() => reportingApi.analyzeReturnJobs(params)}
+              />
               {lRet ? <Loader2 className="animate-spin h-6 w-6" /> : (
                 <Table>
                   <TableHeader>
@@ -360,6 +370,7 @@ export default function OperationsReportsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">Select a work order and/or part, then search.</p>
               )}
+              <OpsTraceabilityQA traceQuery={traceQuery} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -400,6 +411,10 @@ export default function OperationsReportsPage() {
           <Card>
             <CardHeader><CardTitle>AP cycle time (days to pay)</CardTitle></CardHeader>
             <CardContent>
+              <OpsAINarrativeButton
+                label="AI AP cycle insights"
+                onGenerate={() => reportingApi.apCycleNarrative(params)}
+              />
               <p className="text-lg font-semibold mb-4">
                 Average: {(apCycle as { average_days_to_pay?: number })?.average_days_to_pay ?? "—"} days
               </p>
@@ -419,6 +434,10 @@ export default function OperationsReportsPage() {
           <Card>
             <CardHeader><CardTitle>Capacity planning</CardTitle></CardHeader>
             <CardContent>
+              <OpsAINarrativeButton
+                label="AI capacity insights"
+                onGenerate={() => reportingApi.capacityNarrative(params)}
+              />
               <ul className="text-sm space-y-2">
                 <li>Service bays: {(capacity as { service_bays?: number })?.service_bays ?? 0}</li>
                 <li>Appointments in period: {(capacity as { appointments_in_period?: number })?.appointments_in_period ?? 0}</li>
