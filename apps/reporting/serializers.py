@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import ReportExportLog, ReportSchedule, SavedReport
+from .models import AIAuditLog, ReportExportLog, ReportSchedule, SavedReport
 
 
 class SavedReportSerializer(serializers.ModelSerializer):
@@ -72,3 +72,28 @@ class ReportExportLogSerializer(serializers.ModelSerializer):
             'user_agent', 'created_by', 'created_by_name', 'created_at'
         ]
         read_only_fields = ['id', 'ip_address', 'user_agent', 'created_by', 'created_by_name', 'created_at']
+
+
+class AIAuditLogSerializer(serializers.ModelSerializer):
+    user_email = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AIAuditLog
+        fields = [
+            'id',
+            'feature',
+            'prompt_summary',
+            'output_summary',
+            'user',
+            'user_email',
+            'branch_id',
+            'success',
+            'error_message',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+    def get_user_email(self, obj):
+        if obj.user_id and obj.user:
+            return obj.user.email or str(obj.user)
+        return None

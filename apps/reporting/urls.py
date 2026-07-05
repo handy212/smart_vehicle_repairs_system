@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import operations_views
 from . import operations_ai_views
+from . import ai_audit_views
 
 # app_name = 'reporting'  # Commented out to avoid conflict with frontend namespace
 
@@ -10,6 +11,7 @@ router = DefaultRouter()
 router.register(r'saved-reports', views.SavedReportViewSet, basename='saved-report')
 router.register(r'schedules', views.ReportScheduleViewSet, basename='report-schedule')
 router.register(r'export-logs', views.ReportExportLogViewSet, basename='report-export-log')
+router.register(r'ai-audit-logs', ai_audit_views.AIAuditLogViewSet, basename='ai-audit-log')
 
 urlpatterns = [
     path('', include(router.urls)),

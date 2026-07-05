@@ -9,8 +9,10 @@ import {
   ShieldCheck, 
   MessageSquare, 
   Calculator,
-  Save
+  Save,
+  Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useMemo } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -20,6 +22,8 @@ import { IntegrationField } from "@/components/integrations/IntegrationField";
 import {
   fieldPrefixForKey,
   isHubtelSmsSetting,
+  isAiSetting,
+  sortAiSettings,
   sortHubtelSmsSettings,
 } from "@/lib/integrations/fieldLabels";
 import { cn } from "@/lib/utils/cn";
@@ -28,6 +32,7 @@ import { getUserFacingError } from "@/lib/api/errors";
 const CATEGORIES = [
   { id: "accounting", label: "Accounting", icon: Calculator },
   { id: "communication", label: "Communication", icon: MessageSquare },
+  { id: "ai", label: "AI (Gemini)", icon: Sparkles },
   { id: "security", label: "Security", icon: ShieldCheck },
 ];
 
@@ -104,6 +109,9 @@ export default function IntegrationsPage() {
       if (activeCategory === "communication") {
         return s.category === "sms" || s.key.startsWith("firebase_") || s.key.startsWith("hubtel_");
       }
+      if (activeCategory === "ai") {
+        return isAiSetting(s.key);
+      }
       if (activeCategory === "security") {
         return s.key.startsWith("recaptcha_");
       }
@@ -134,6 +142,9 @@ export default function IntegrationsPage() {
       } else if (s.key.startsWith("quickbooks_")) {
         provider = "QuickBooks Online";
         prefix = "quickbooks_";
+      } else if (isAiSetting(s.key)) {
+        provider = "Google Gemini AI";
+        prefix = "ai_";
       } else if (/(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key)) {
         provider = "Analytics & Tracking";
         prefix = "";
@@ -147,6 +158,9 @@ export default function IntegrationsPage() {
 
     if (groups["Hubtel SMS"]) {
       groups["Hubtel SMS"].settings = sortHubtelSmsSettings(groups["Hubtel SMS"].settings);
+    }
+    if (groups["Google Gemini AI"]) {
+      groups["Google Gemini AI"].settings = sortAiSettings(groups["Google Gemini AI"].settings);
     }
 
     return groups;
@@ -225,6 +239,24 @@ export default function IntegrationsPage() {
           {/* Featured/Special Cards */}
           {activeCategory === "accounting" && (
               <QboIntegrationsSection />
+          )}
+
+          {activeCategory === "ai" && (
+            <Card className="border border-primary/20 bg-primary/5 mb-4">
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">API key configuration</p>
+                <p>
+                  Set <code className="text-xs bg-muted px-1 rounded">GEMINI_API_KEY</code> in your server environment
+                  (see <code className="text-xs bg-muted px-1 rounded">.env</code>). Feature toggles below control which
+                  AI capabilities are active once the key is configured.
+                </p>
+                <p className="mt-2">
+                  <Link href="/admin/ai-audit" className="text-primary hover:underline">
+                    View AI audit log →
+                  </Link>
+                </p>
+              </CardContent>
+            </Card>
           )}
 
           {/* Grouped Settings Sections */}

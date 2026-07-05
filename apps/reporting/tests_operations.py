@@ -97,3 +97,22 @@ class OperationsAIEndpointTests(TestCase):
                 format='json',
             )
         self.assertEqual(response.status_code, 400)
+
+
+class AIAuditLogAPITests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='ai-audit-admin',
+            email='ai-audit@example.com',
+            password='password',
+            role='admin',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_ai_audit_list_returns_200(self):
+        response = self.client.get('/api/reporting/ai-audit-logs/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('results', response.data)

@@ -22,6 +22,18 @@ const FIELD_LABELS: Record<string, string> = {
   quickbooks_client_secret: "Client secret",
   quickbooks_sandbox_enabled: "Sandbox mode",
   quickbooks_webhook_token: "Webhook verifier token",
+  ai_enabled: "AI master switch",
+  ai_gemini_model: "Gemini model",
+  ai_comms_enabled: "Customer comms suggestions",
+  ai_inspection_enabled: "Inspection summaries",
+  ai_ops_briefing_enabled: "Daily ops briefing",
+  ai_ops_exception_triage_enabled: "Exception triage",
+  ai_ops_return_jobs_enabled: "Return job analysis",
+  ai_ops_capacity_enabled: "Capacity narratives",
+  ai_ops_ap_cycle_enabled: "AP cycle narratives",
+  ai_ops_traceability_enabled: "Traceability Q&A",
+  ai_ops_bottleneck_enabled: "Workflow bottleneck analysis",
+  ai_ops_exception_draft_enabled: "Proactive exception drafts",
 };
 
 function humanizeKey(key: string): string {
@@ -29,7 +41,7 @@ function humanizeKey(key: string): string {
 }
 
 export function fieldPrefixForKey(key: string): string {
-  const prefixes = ["hubtel_", "sms_", "firebase_", "recaptcha_", "quickbooks_"];
+  const prefixes = ["hubtel_", "sms_", "firebase_", "recaptcha_", "quickbooks_", "ai_"];
   return prefixes.find((p) => key.startsWith(p)) ?? "";
 }
 
@@ -49,6 +61,36 @@ export function isHubtelSmsSetting(setting: { key: string; category?: string }):
     setting.key.startsWith("hubtel_") ||
     setting.key.startsWith("sms_")
   );
+}
+
+const AI_SETTING_ORDER = [
+  "ai_enabled",
+  "ai_gemini_model",
+  "ai_comms_enabled",
+  "ai_inspection_enabled",
+  "ai_ops_briefing_enabled",
+  "ai_ops_exception_triage_enabled",
+  "ai_ops_return_jobs_enabled",
+  "ai_ops_capacity_enabled",
+  "ai_ops_ap_cycle_enabled",
+  "ai_ops_traceability_enabled",
+  "ai_ops_bottleneck_enabled",
+  "ai_ops_exception_draft_enabled",
+];
+
+export function isAiSetting(key: string): boolean {
+  return key.startsWith("ai_");
+}
+
+export function sortAiSettings<T extends { key: string }>(settings: T[]): T[] {
+  return [...settings].sort((a, b) => {
+    const ai = AI_SETTING_ORDER.indexOf(a.key);
+    const bi = AI_SETTING_ORDER.indexOf(b.key);
+    const aRank = ai === -1 ? 999 : ai;
+    const bRank = bi === -1 ? 999 : bi;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.key.localeCompare(b.key);
+  });
 }
 
 const HUBTEL_SMS_ORDER = [

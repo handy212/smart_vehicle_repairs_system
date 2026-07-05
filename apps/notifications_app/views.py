@@ -1076,6 +1076,10 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         if not messages:
             return Response({'error': 'messages list is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        from apps.core.services.ai_audit import is_ai_enabled, get_gemini_model, log_ai_call, summarize_for_audit
+        if not is_ai_enabled('comms'):
+            return Response({'error': 'AI assistant is not configured or disabled'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         api_key = getattr(settings, 'GEMINI_API_KEY', '')
         if not api_key:
             return Response({'error': 'AI assistant is not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
@@ -1115,7 +1119,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                 ))
 
             response = client.models.generate_content(
-                model='gemini-flash-lite-latest',
+                model=get_gemini_model(),
                 contents=contents,
                 config=genai_types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -1130,6 +1134,13 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             import re
             match = re.search(r'\[SMS\](.*?)\[/SMS\]', reply, re.DOTALL)
             suggestion = match.group(1).strip() if match else None
+
+            log_ai_call(
+                'sms_assist',
+                summarize_for_audit(messages[-1].get('content', '') if messages else ''),
+                summarize_for_audit(reply),
+                user=request.user,
+            )
 
             return Response({'reply': reply, 'suggestion': suggestion})
 
