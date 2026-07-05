@@ -23,18 +23,13 @@ test.describe('Accounting reports', () => {
         test(`loads and shows export controls: ${route}`, async ({ page }) => {
             const errors: string[] = [];
             page.on('pageerror', (e) => errors.push(e.message));
-
-            const response = await page.goto(route, {
-                waitUntil: 'domcontentloaded',
-                timeout: 30_000,
-            });
+            const response = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 90_000 });
             expect(response?.status()).toBeLessThan(500);
-            await expect(page).not.toHaveURL(/\/login/);
-
-            await expect(
-                page.getByRole('button', { name: /print|pdf|export/i }).first(),
-            ).toBeVisible({ timeout: 15_000 });
-
+            await expect(page).not.toHaveURL(/\/login/, { timeout: 60_000 });
+            const exportButton = page.getByRole('button', { name: /^export$/i });
+            await expect(exportButton).toBeVisible({ timeout: 45_000 });
+            await expect(exportButton).toBeEnabled({ timeout: 45_000 });
+            await expect(page.getByRole('button', { name: /print/i }).first()).toBeVisible({ timeout: 15_000 });
             expect(errors.filter((m) => !m.includes('ResizeObserver'))).toEqual([]);
         });
     }

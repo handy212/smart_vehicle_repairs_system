@@ -1360,7 +1360,7 @@ from .serializers import AccrualSerializer, AccrualCandidateSerializer
 from .accruals import AccrualService
 
 class AccrualViewSet(viewsets.ModelViewSet):
-    queryset = Accrual.objects.all().select_related('account', 'created_by')
+    queryset = Accrual.objects.all().select_related('account', 'created_by').order_by('-created_at', '-id')
     serializer_class = AccrualSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]

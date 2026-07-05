@@ -818,7 +818,7 @@ class SalaryComponentViewSet(viewsets.ModelViewSet):
 
 
 class EmployeeSalaryComponentViewSet(viewsets.ModelViewSet):
-    queryset = EmployeeSalaryComponent.objects.all().select_related('employee', 'component')
+    queryset = EmployeeSalaryComponent.objects.all().select_related('employee', 'component').order_by('employee_id', 'component_id')
     serializer_class = EmployeeSalaryComponentSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]

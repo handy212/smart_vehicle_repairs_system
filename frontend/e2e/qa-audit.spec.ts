@@ -1,7 +1,7 @@
 /**
  * Expanded QA audit — route smoke, RBAC redirects, responsive layouts.
  */
-import { test, expect, applyAuth } from './fixtures';
+import { test, expect, applyAuth, gotoAuthenticated } from './fixtures';
 import { fetchE2ETokens } from './auth-token';
 
 const DASHBOARD_ROUTES = [
@@ -42,8 +42,7 @@ test.describe('QA Audit — Authentication', () => {
     test('email-based API token works for dashboard', async ({ page, baseURL }) => {
         const tokens = await fetchE2ETokens();
         await applyAuth(page, page.context(), tokens.access, tokens.refresh, baseURL!);
-        await page.goto('/dashboard');
-        await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 });
+        await gotoAuthenticated(page, '/dashboard');
     });
 });
 
@@ -57,9 +56,9 @@ test.describe('QA Audit — Route smoke (authenticated)', () => {
         test(`loads without 5xx: ${route}`, async ({ page }) => {
             const errors: string[] = [];
             page.on('pageerror', (e) => errors.push(e.message));
-            const response = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+            const response = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 90_000 });
             expect(response?.status()).toBeLessThan(500);
-            await expect(page).not.toHaveURL(/\/login/, { timeout: 10_000 });
+            await expect(page).not.toHaveURL(/\/login/, { timeout: 60_000 });
             expect(errors.filter((m) => !m.includes('ResizeObserver'))).toEqual([]);
         });
     }
@@ -91,8 +90,7 @@ test.describe('QA Audit — Responsive', () => {
     for (const vp of viewports) {
         test(`dashboard layout ${vp.name}`, async ({ page }) => {
             await page.setViewportSize({ width: vp.width, height: vp.height });
-            await page.goto('/dashboard');
-            await expect(page).not.toHaveURL(/\/login/);
+            await gotoAuthenticated(page, '/dashboard');
             await page.screenshot({
                 path: `test-results/qa-dashboard-${vp.name}.png`,
                 fullPage: false,

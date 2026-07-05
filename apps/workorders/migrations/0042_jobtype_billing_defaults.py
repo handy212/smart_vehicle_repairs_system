@@ -5,6 +5,20 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def seed_job_type_revenue_products(apps, schema_editor):
+    from apps.workorders.job_type_seed import seed_workflow_profiles_and_job_types
+
+    JobType = apps.get_model('workorders', 'JobType')
+    WorkflowProfile = apps.get_model('workorders', 'WorkflowProfile')
+
+    seed_workflow_profiles_and_job_types(
+        overwrite=True,
+        JobType=JobType,
+        WorkflowProfile=WorkflowProfile,
+        revenue_products_only=True,
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -37,4 +51,5 @@ class Migration(migrations.Migration):
                 validators=[django.core.validators.MinValueValidator(Decimal('0'))],
             ),
         ),
+        migrations.RunPython(seed_job_type_revenue_products, migrations.RunPython.noop),
     ]

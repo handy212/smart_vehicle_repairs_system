@@ -26,12 +26,20 @@ DJANGO_BIND_ADDRESS="${DJANGO_BIND_ADDRESS:-127.0.0.1}"
 # Listen on all interfaces so Windows/host can reach WSL via 172.x (API still reached via Next proxy).
 NEXTJS_BIND_ADDRESS="${NEXTJS_BIND_ADDRESS:-0.0.0.0}"
 PUBLIC_HOST="${PUBLIC_HOST:-${DJANGO_HOST:-localhost}}"
-FRONTEND_PREWARM_ROUTES="${FRONTEND_PREWARM_ROUTES:-/ /login}"
 
 # Virtualenv settings
 # Use a dedicated dev venv so we don't conflict with the production venv under /var/www/svr
 VENV_DIR="${VENV_DIR:-$BACKEND_DIR/venv-dev}"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+if [ -z "${PYTHON_BIN:-}" ]; then
+    if command -v python3.11 >/dev/null 2>&1; then
+        PYTHON_BIN="python3.11"
+    elif command -v python3.12 >/dev/null 2>&1; then
+        PYTHON_BIN="python3.12"
+    else
+        PYTHON_BIN="python3"
+    fi
+fi
+FRONTEND_PREWARM_ROUTES="${FRONTEND_PREWARM_ROUTES:-/ /login /dashboard}"
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Development Server${NC}"
@@ -109,6 +117,16 @@ create_dev_venv() {
 }
 
 # Create / ensure dev virtual environment exists (matching repo requirements)
+if [ -d "$VENV_DIR" ]; then
+    VENV_PY_VERSION="$("$VENV_DIR/bin/python" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")"
+    VENV_PY_MAJOR="${VENV_PY_VERSION%%.*}"
+    VENV_PY_MINOR="${VENV_PY_VERSION#*.}"
+    if [ "$VENV_PY_MAJOR" -lt 3 ] || { [ "$VENV_PY_MAJOR" -eq 3 ] && [ "$VENV_PY_MINOR" -lt 11 ]; }; then
+        echo -e "${YELLOW}Dev venv uses Python $VENV_PY_VERSION; recreating with $PYTHON_BIN (requires 3.11+)...${NC}"
+        rm -rf "$VENV_DIR"
+    fi
+fi
+
 if [ ! -d "$VENV_DIR" ]; then
     create_dev_venv
 fi
@@ -261,6 +279,14 @@ else
     echo -e "${YELLOW}    ⚠ Roles/permissions already exist or failed${NC}"
 fi
 
+echo -e "${YELLOW}  - Ensuring E2E test users...${NC}"
+python scripts/create_e2e_user.py > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}    ✓ E2E users ready${NC}"
+else
+    echo -e "${YELLOW}    ⚠ E2E user seed skipped or failed${NC}"
+fi
+
 # Initialize system settings
 # echo -e "${YELLOW}  - Setting up system settings...${NC}"
 # python manage.py init_settings > /dev/null 2>&1
@@ -343,7 +369,7 @@ sleep 3
 echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
 cd "$FRONTEND_DIR"
 NEXT_DEV_ARGS=(dev --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
-if [ "${USE_TURBOPACK:-0}" = "1" ]; then
+if [ "${USE_TURBOPACK:-1}" = "1" ]; then
     NEXT_DEV_ARGS=(dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")
 else
     NEXT_DEV_ARGS=(dev --webpack --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT")

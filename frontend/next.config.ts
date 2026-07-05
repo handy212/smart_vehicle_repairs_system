@@ -136,7 +136,10 @@ const nextConfig: NextConfig = {
         "**/.pytest_cache/**",
         "**/coverage.xml",
         "**/coverage/**",
-      ];
+      ].filter(
+        (pattern): pattern is string =>
+          typeof pattern === 'string' && pattern.trim().length > 0,
+      );
       config.watchOptions = {
         ...config.watchOptions,
         ignored: ignoredList,

@@ -486,7 +486,7 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing notification preferences
     """
-    queryset = NotificationPreference.objects.all()
+    queryset = NotificationPreference.objects.all().order_by('user_id')
     serializer_class = NotificationPreferenceSerializer
     permission_classes = [IsAuthenticated]
 

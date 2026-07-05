@@ -1,4 +1,4 @@
-import { test, expect, applyAuth } from './fixtures';
+import { test, expect, applyAuth, gotoAuthenticated } from './fixtures';
 
 test.describe('Work orders', () => {
     test.beforeEach(async ({ page, apiToken, apiRefreshToken, baseURL }) => {
@@ -6,8 +6,7 @@ test.describe('Work orders', () => {
     });
 
     test('work orders list loads', async ({ page }) => {
-        await page.goto('/workorders');
-        await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
-        await expect(page.locator('body')).toContainText(/work order/i, { timeout: 20_000 });
+        await gotoAuthenticated(page, '/workorders');
+        await expect(page.locator('body')).toContainText(/work order/i, { timeout: 30_000 });
     });
 });

@@ -8,8 +8,16 @@ def seed_profiles_and_job_types(apps, schema_editor):
         seed_workflow_profiles_and_job_types,
     )
 
-    seed_workflow_profiles_and_job_types(overwrite=True)
-    backfill_work_order_job_types()
+    JobType = apps.get_model('workorders', 'JobType')
+    WorkflowProfile = apps.get_model('workorders', 'WorkflowProfile')
+    WorkOrder = apps.get_model('workorders', 'WorkOrder')
+
+    seed_workflow_profiles_and_job_types(
+        overwrite=True,
+        JobType=JobType,
+        WorkflowProfile=WorkflowProfile,
+    )
+    backfill_work_order_job_types(JobType=JobType, WorkOrder=WorkOrder)
 
 
 class Migration(migrations.Migration):

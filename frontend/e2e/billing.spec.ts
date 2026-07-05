@@ -1,4 +1,4 @@
-import { test, expect, applyAuth } from './fixtures';
+import { test, expect, applyAuth, gotoAuthenticated } from './fixtures';
 
 test.describe('Billing', () => {
     test.beforeEach(async ({ page, apiToken, apiRefreshToken, baseURL }) => {
@@ -6,10 +6,7 @@ test.describe('Billing', () => {
     });
 
     test('billing area loads', async ({ page }) => {
-        await page.goto('/billing');
-        await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
-        await expect(page.locator('body')).toContainText(/invoice|billing|estimate/i, {
-            timeout: 20_000,
-        });
+        await gotoAuthenticated(page, '/billing');
+        await expect(page.locator('body')).toContainText(/invoice|billing|estimate/i, { timeout: 30_000 });
     });
 });

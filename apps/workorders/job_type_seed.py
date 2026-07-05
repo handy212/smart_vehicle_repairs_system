@@ -155,8 +155,25 @@ JOB_TYPE_DEFAULT_REVENUE_PRODUCT = {
 }
 
 
-def seed_workflow_profiles_and_job_types(*, overwrite=False):
-    from .job_types import JobType, WorkflowProfile
+def _job_type_model_field_names(JobType):
+    return {field.name for field in JobType._meta.get_fields()}
+
+
+def seed_workflow_profiles_and_job_types(
+    *,
+    overwrite=False,
+    JobType=None,
+    WorkflowProfile=None,
+    revenue_products_only=False,
+):
+    if JobType is None or WorkflowProfile is None:
+        from .job_types import JobType as LiveJobType, WorkflowProfile as LiveWorkflowProfile
+
+        JobType = JobType or LiveJobType
+        WorkflowProfile = WorkflowProfile or LiveWorkflowProfile
+
+    job_type_fields = _job_type_model_field_names(JobType)
+    can_set_revenue_product = 'default_revenue_product' in job_type_fields
 
     revenue_by_code = {}
     try:
@@ -169,8 +186,24 @@ def seed_workflow_profiles_and_job_types(*, overwrite=False):
     except Exception:
         revenue_by_code = {}
 
+    if revenue_products_only and not can_set_revenue_product:
+        return {
+            'profiles': 0,
+            'job_types_created': 0,
+            'job_types_updated': 0,
+        }
+
     profiles_by_code = {}
+    if revenue_products_only:
+        profiles_by_code = {
+            row.code: row
+            for row in WorkflowProfile.objects.filter(
+                code__in=[profile_data['code'] for profile_data in PROFILE_DEFINITIONS]
+            )
+        }
     for profile_data in PROFILE_DEFINITIONS:
+        if revenue_products_only:
+            continue
         code = profile_data['code']
         defaults = {**profile_data, 'is_predefined': True, 'is_active': True}
         if overwrite:
@@ -186,32 +219,40 @@ def seed_workflow_profiles_and_job_types(*, overwrite=False):
     created_types = 0
     updated_types = 0
     for code, name, category, profile_code, sort_order, extras in JOB_TYPE_DEFINITIONS:
-        profile = profiles_by_code[profile_code]
-        defaults = {
-            'name': name,
-            'category': category,
-            'workflow_profile': profile,
-            'sort_order': sort_order,
-            'is_predefined': True,
-            'is_active': True,
-            'requires_inspection': extras.get('requires_inspection', True),
-            'requires_diagnosis': extras.get('requires_diagnosis', True),
-            'requires_approval': extras.get('requires_approval', True),
-            'quality_check_required': extras.get('quality_check_required', True),
-            'allows_bundle': extras.get('allows_bundle', False),
-            'sets_warranty_flag': extras.get('sets_warranty_flag', False),
-            'sets_insurance_flag': extras.get('sets_insurance_flag', False),
-        }
-        if overwrite:
-            job_type, created = JobType.objects.update_or_create(code=code, defaults=defaults)
-            if created:
-                created_types += 1
-            else:
-                updated_types += 1
+        if revenue_products_only:
+            job_type = JobType.objects.filter(code=code).first()
+            if not job_type:
+                continue
         else:
-            job_type, created = JobType.objects.get_or_create(code=code, defaults=defaults)
-            if created:
-                created_types += 1
+            profile = profiles_by_code[profile_code]
+            defaults = {
+                'name': name,
+                'category': category,
+                'workflow_profile': profile,
+                'sort_order': sort_order,
+                'is_predefined': True,
+                'is_active': True,
+                'requires_inspection': extras.get('requires_inspection', True),
+                'requires_diagnosis': extras.get('requires_diagnosis', True),
+                'requires_approval': extras.get('requires_approval', True),
+                'quality_check_required': extras.get('quality_check_required', True),
+                'allows_bundle': extras.get('allows_bundle', False),
+                'sets_warranty_flag': extras.get('sets_warranty_flag', False),
+                'sets_insurance_flag': extras.get('sets_insurance_flag', False),
+            }
+            if overwrite:
+                job_type, created = JobType.objects.update_or_create(code=code, defaults=defaults)
+                if created:
+                    created_types += 1
+                else:
+                    updated_types += 1
+            else:
+                job_type, created = JobType.objects.get_or_create(code=code, defaults=defaults)
+                if created:
+                    created_types += 1
+
+        if not can_set_revenue_product:
+            continue
 
         revenue_code = JOB_TYPE_DEFAULT_REVENUE_PRODUCT.get(code)
         if revenue_code and revenue_code in revenue_by_code:
@@ -227,9 +268,13 @@ def seed_workflow_profiles_and_job_types(*, overwrite=False):
     }
 
 
-def backfill_work_order_job_types():
-    from .job_types import JobType
-    from .models import WorkOrder
+def backfill_work_order_job_types(*, JobType=None, WorkOrder=None):
+    if JobType is None or WorkOrder is None:
+        from .job_types import JobType as LiveJobType
+        from .models import WorkOrder as LiveWorkOrder
+
+        JobType = JobType or LiveJobType
+        WorkOrder = WorkOrder or LiveWorkOrder
 
     general = JobType.objects.filter(code='general_repairs').first()
     routine = JobType.objects.filter(code='routine_maintenance').first()

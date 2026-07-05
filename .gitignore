@@ -69,6 +69,9 @@ dist/
 !.env.production.example
 !.env.development.example
 
+# Cursor MCP secrets (never commit tokens)
+.cursor/secrets.env
+
 # Logs
 logs/
 *.log

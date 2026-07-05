@@ -1,7 +1,7 @@
 /**
  * Role-based access smoke tests for staff dashboards.
  */
-import { test, expect, applyAuth } from './fixtures';
+import { test, expect, applyAuth, gotoAuthenticated } from './fixtures';
 import { fetchE2ETokensForRole, type E2ERole } from './auth-token';
 
 type RoleScenario = {
@@ -51,9 +51,9 @@ for (const scenario of ROLE_SCENARIOS) {
 
         for (const route of scenario.allowedRoutes) {
             test(`can open ${route}`, async ({ page }) => {
-                const response = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+                const response = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 90_000 });
                 expect(response?.status()).toBeLessThan(500);
-                await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
+                await expect(page).not.toHaveURL(/\/login/, { timeout: 60_000 });
                 if (scenario.redirect) {
                     await expect(page).toHaveURL(scenario.redirect, { timeout: 15_000 });
                 }

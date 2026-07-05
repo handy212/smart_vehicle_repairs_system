@@ -19,7 +19,15 @@ export const test = base.extend<AuthFixtures>({
 
 export { expect };
 
-/** Set cookie + localStorage so middleware and client layout both authenticate. */
+type MeUser = {
+    id: number;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+    branch?: number | null;
+};
+
 export async function applyAuth(
     page: Page,
     context: BrowserContext,
@@ -53,10 +61,38 @@ export async function applyAuth(
     }
     await context.addCookies(cookies);
 
+    let me: MeUser | null = null;
+    try {
+        const meRes = await fetch(`${api.origin}${api.pathname.replace(/\/$/, '')}/auth/users/me/`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (meRes.ok) me = (await meRes.json()) as MeUser;
+    } catch {
+        me = null;
+    }
+
     await page.addInitScript(
-        ([access]) => {
+        ([access, user]) => {
             sessionStorage.setItem('e2e_access', access);
+            if (user) {
+                localStorage.setItem(
+                    'auth-storage',
+                    JSON.stringify({ state: { user, isAuthenticated: true }, version: 0 }),
+                );
+                if (user.branch && !localStorage.getItem('branch-storage')) {
+                    localStorage.setItem(
+                        'branch-storage',
+                        JSON.stringify({ state: { activeBranchId: user.branch, activeBranch: null }, version: 0 }),
+                    );
+                }
+            }
         },
-        [accessToken],
+        [accessToken, me],
     );
+}
+
+export async function gotoAuthenticated(page: Page, path: string) {
+    await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 60_000 });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
 }

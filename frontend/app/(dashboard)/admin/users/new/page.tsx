@@ -438,7 +438,7 @@ export default function NewUserPage() {
                   <Select
                     value={watch("role")}
 
-                    onValueChange={(val) => setValue("role", val as UserRole, { shouldValidate: true })}
+                    onValueChange={(val) => setValue("role", val, { shouldValidate: true })}
                   >
                     <SelectTrigger className={errors.role ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}>
                       <SelectValue placeholder="Select a role" />
