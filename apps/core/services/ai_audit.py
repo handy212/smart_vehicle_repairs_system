@@ -24,11 +24,12 @@ def is_ai_enabled(feature=None):
 
 
 def get_gemini_model():
+    model = getattr(settings, 'GEMINI_MODEL', 'gemini-flash-lite-latest')
     try:
         from apps.accounts.admin_models import SystemSettings
-        return SystemSettings.get_setting('ai_gemini_model', 'gemini-flash-lite-latest')
+        return SystemSettings.get_setting('ai_gemini_model', model) or model
     except Exception:
-        return 'gemini-flash-lite-latest'
+        return model
 
 
 def log_ai_call(feature, prompt_summary, output_summary='', user=None, branch_id=None, success=True, error=''):

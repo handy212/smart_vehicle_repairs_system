@@ -663,6 +663,16 @@ export const workordersApi = {
     },
   },
 
+  getWorkflowMetrics: async (): Promise<Record<string, unknown>> => {
+    const response = await apiClient.get('/workorders/work-orders/workflow_metrics/');
+    return response.data;
+  },
+
+  getWorkflowAiAnalysis: async (): Promise<{ analysis: string; metrics: Record<string, unknown> }> => {
+    const response = await apiClient.get('/workorders/work-orders/workflow_ai_analysis/');
+    return response.data;
+  },
+
   // Public/Customer Portal APIs (unauthenticated)
   public: {
 

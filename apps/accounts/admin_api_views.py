@@ -130,6 +130,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                 SystemSettings.ensure_tax_settings()
             if category == 'integration':
                 SystemSettings.ensure_integration_settings()
+                SystemSettings.ensure_ai_settings()
         return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
@@ -194,6 +195,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                 SystemSettings.ensure_tax_settings()
             if category == 'integration':
                 SystemSettings.ensure_integration_settings()
+                SystemSettings.ensure_ai_settings()
 
         queryset = self.get_queryset()
         

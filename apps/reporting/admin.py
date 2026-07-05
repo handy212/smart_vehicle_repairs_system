@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import DashboardWidget, ReportExportLog, ReportSchedule, SavedReport
+from .models import DashboardWidget, ReportExportLog, ReportSchedule, SavedReport, AIAuditLog
 
 
 @admin.register(ReportSchedule)
@@ -240,3 +240,20 @@ class ReportExportLogAdmin(admin.ModelAdmin):
         'parameters', 'file_name', 'error_message', 'ip_address',
         'user_agent', 'created_by', 'created_at',
     ]
+
+
+@admin.register(AIAuditLog)
+class AIAuditLogAdmin(admin.ModelAdmin):
+    list_display = ['feature', 'user', 'success', 'branch_id', 'created_at']
+    list_filter = ['feature', 'success', 'created_at']
+    search_fields = ['prompt_summary', 'output_summary', 'error_message', 'user__email']
+    readonly_fields = [
+        'feature', 'prompt_summary', 'output_summary', 'user', 'branch_id',
+        'success', 'error_message', 'created_at',
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

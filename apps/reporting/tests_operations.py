@@ -58,3 +58,42 @@ class OperationsReportingTests(TestCase):
         keys = {item['key'] for item in response.data['reports']}
         self.assertIn('dashboard_overview', keys)
         self.assertIn('ap_cycle_time', keys)
+
+
+class OperationsAIEndpointTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='ops-ai',
+            email='ops-ai@example.com',
+            password='password',
+            role='admin',
+            is_staff=True,
+            is_superuser=True,
+        )
+        SystemModule.objects.get_or_create(
+            slug='reports',
+            defaults={'name': 'Reports', 'is_enabled': True},
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_daily_briefing_returns_503_without_gemini(self):
+        response = self.client.post(
+            '/api/reporting/operations/daily-briefing/',
+            {'start_date': '2026-05-01', 'end_date': '2026-05-22'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 503)
+
+    def test_triage_exceptions_returns_503_without_gemini(self):
+        response = self.client.post('/api/reporting/operations/triage-exceptions/')
+        self.assertEqual(response.status_code, 503)
+
+    def test_traceability_qa_requires_question(self):
+        with self.settings(GEMINI_API_KEY='test-key'):
+            response = self.client.post(
+                '/api/reporting/operations/traceability-qa/',
+                {'work_order_id': 1},
+                format='json',
+            )
+        self.assertEqual(response.status_code, 400)

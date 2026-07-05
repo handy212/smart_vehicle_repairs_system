@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { reportingApi } from '@/lib/api/reporting';
+import { workordersApi } from '@/lib/api/workorders';
 import { getUserFacingError } from '@/lib/api/errors';
 import { useToast } from '@/lib/hooks/useToast';
 
@@ -179,6 +180,29 @@ export function OpsTraceabilityQA({
         Ask AI
       </Button>
       {answer && <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-md">{answer}</p>}
+    </div>
+  );
+}
+
+export function OpsWorkflowBottleneck() {
+  const { toast } = useToast();
+  const [analysis, setAnalysis] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: () => workordersApi.getWorkflowAiAnalysis(),
+    onSuccess: (data) => setAnalysis(data.analysis || ''),
+    onError: (err) => toast({ title: 'Bottleneck analysis failed', description: getUserFacingError(err), variant: 'destructive' }),
+  });
+
+  return (
+    <div className="space-y-3 mb-4">
+      <Button size="sm" variant="outline" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+        {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+        AI workflow bottleneck analysis
+      </Button>
+      {analysis && (
+        <p className="text-sm text-muted-foreground whitespace-pre-wrap border rounded-md p-3 bg-muted/30">{analysis}</p>
+      )}
     </div>
   );
 }

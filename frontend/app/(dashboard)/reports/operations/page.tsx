@@ -16,7 +16,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
-import { OpsDailyBriefing, OpsExceptionTriage, OpsAINarrativeButton, OpsTraceabilityQA } from "@/components/reports/OpsAIPanel";
+import { OpsDailyBriefing, OpsExceptionTriage, OpsAINarrativeButton, OpsTraceabilityQA, OpsWorkflowBottleneck } from "@/components/reports/OpsAIPanel";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 
 type OpsTab = "exceptions" | "roadside" | "return" | "trace" | "usage" | "ap" | "capacity";
@@ -379,6 +379,7 @@ export default function OperationsReportsPage() {
           <Card>
             <CardHeader><CardTitle>System usage & job logging</CardTitle></CardHeader>
             <CardContent>
+              <OpsWorkflowBottleneck />
               {l2 ? <Loader2 className="animate-spin h-6 w-6" /> : (
                 <div className="space-y-4">
                   <p className="text-sm">

@@ -14,9 +14,9 @@ class AIEnabledTests(TestCase):
         self.assertFalse(is_ai_enabled('ops_briefing'))
 
     @override_settings(GEMINI_API_KEY='test-key')
-    @patch('apps.core.services.ai_audit.SystemSettings')
-    def test_ai_enabled_with_key_and_setting(self, mock_settings):
-        mock_settings.get_setting.return_value = 'true'
+    @patch('apps.accounts.admin_models.SystemSettings.get_setting')
+    def test_ai_enabled_with_key_and_setting(self, mock_get_setting):
+        mock_get_setting.return_value = 'true'
         self.assertTrue(is_ai_enabled())
         self.assertTrue(is_ai_enabled('comms'))
 
