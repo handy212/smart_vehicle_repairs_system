@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Lock, ShieldAlert, Archive, RotateCcw, ExternalLink, Link2, BookOpen } from "lucide-react";
 import { endOfYear, format, startOfYear } from "date-fns";
 import {
@@ -65,6 +66,9 @@ function formatResourceLabel(resourceType: string, resourceId: string): string {
 }
 
 export default function ControlPanelPage() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("qbo_tab") === "mapping" ? "quickbooks" : "gl-accounts";
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
@@ -242,7 +246,7 @@ export default function ControlPanelPage() {
         </div>
       )}
 
-      <Tabs defaultValue="gl-accounts" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="w-full flex flex-wrap justify-start h-auto gap-1 p-1">
           <TabsTrigger value="gl-accounts" className="gap-1.5">
             <Link2 className="w-3.5 h-3.5" />
