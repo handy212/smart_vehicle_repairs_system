@@ -233,6 +233,16 @@ BRANCH_OVERRIDE_CONTROL_GROUPS = {
     'sales_revenue_account': 'Revenue (item fallback)',
 }
 
+BRANCH_OVERRIDE_SLOTS = frozenset(
+    {(MAPPING_KIND_CONTROL, field_name) for field_name in BRANCH_OVERRIDE_CONTROL_FIELDS}
+    | {(MAPPING_KIND_INVOICE_LINE, key) for key in INVOICE_LINE_TYPE_LABELS}
+)
+
+
+def is_branch_override_slot(mapping_kind, mapping_key):
+    """Return True when mapping_kind/key may be stored as a branch override row."""
+    return (mapping_kind, mapping_key) in BRANCH_OVERRIDE_SLOTS
+
 
 def branch_mapping_rows(branch):
     """Configurable QBO mapping slots for a single branch override."""

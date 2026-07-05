@@ -12,6 +12,7 @@ from .mapping_specs import (
     TAX_CODE_MAPPING_KINDS,
     all_mapping_rows,
     branch_mapping_rows,
+    is_branch_override_slot,
 )
 from .account_requirements import (
     CONTROL_ACCOUNT_QBO_HINTS,
@@ -86,6 +87,16 @@ class QBOAccountMappingService:
             branch__isnull=True,
         ).first()
 
+    def has_branch_override(self, mapping_kind, mapping_key, branch):
+        branch_id = self._branch_id(branch)
+        if branch_id is None:
+            return False
+        return QBOAccountMapping.objects.filter(
+            mapping_kind=mapping_kind,
+            mapping_key=mapping_key,
+            branch_id=branch_id,
+        ).exists()
+
     def list_accounts(self):
         client = self.qb.get_client()
         if not client:
@@ -97,7 +108,9 @@ class QBOAccountMappingService:
             accounts = QBAccount.all(qb=client)
             account_mappings = {
                 row.qbo_account_id: row
-                for row in QBOAccountMapping.objects.exclude(qbo_account_id='')
+                for row in QBOAccountMapping.objects.filter(
+                    branch__isnull=True,
+                ).exclude(qbo_account_id='')
             }
             results = []
             for account in accounts:
@@ -138,7 +151,9 @@ class QBOAccountMappingService:
             items = QBItem.all(qb=client)
             item_mappings = {
                 row.qbo_item_id: row
-                for row in QBOAccountMapping.objects.exclude(qbo_item_id='')
+                for row in QBOAccountMapping.objects.filter(
+                    branch__isnull=True,
+                ).exclude(qbo_item_id='')
             }
             results = []
             for item in items:
@@ -391,6 +406,10 @@ class QBOAccountMappingService:
             return False, 'QuickBooks not connected or unauthorized.'
 
         branch_id = self._branch_id(branch)
+        if branch_id is not None and not is_branch_override_slot(mapping_kind, mapping_key):
+            return False, (
+                f'{mapping_kind}:{mapping_key} is not configurable as a branch QBO override.'
+            )
 
         if mapping_kind in ITEM_MAPPING_KINDS:
             if not qbo_item_id:

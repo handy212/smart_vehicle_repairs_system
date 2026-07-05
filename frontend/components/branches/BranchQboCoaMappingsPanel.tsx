@@ -239,7 +239,9 @@ export function BranchQboCoaMappingsPanel({ branches }: { branches: Branch[] }) 
       <CardContent className="p-0">
         <p className="px-4 py-3 text-xs text-muted-foreground border-b">
           Optional per-branch overrides for AR, COGS, revenue, and invoice income items. Unset rows inherit
-          company defaults from Accounting → Controls. Branch P&amp;L still uses QBO Departments above.
+          company defaults from Accounting → Controls. Map a branch-specific <strong>Part</strong> QBO item when
+          part lines must post to a different income account than the shared catalog item. Branch P&amp;L still
+          uses QBO Departments above.
         </p>
 
         {isCatalogLoading ? (

@@ -186,3 +186,34 @@ class BranchCoaMappingTests(TestCase):
         )
         self.assertEqual(mapping.qbo_account_id, '321')
         self.assertIsNone(mapping.svr_account_id)
+
+    def test_map_row_rejects_non_branch_override_slot(self):
+        service = self._service()
+        ok, error = service.map_row(
+            'payment_method',
+            'cash',
+            qbo_account_id='99',
+            branch=self.branch_a,
+        )
+        self.assertFalse(ok)
+        self.assertIn('not configurable', error)
+
+    def test_has_branch_override_detects_branch_only_rows(self):
+        QBOAccountMapping.objects.create(
+            mapping_kind='invoice_line_type',
+            mapping_key='labor',
+            qbo_item_id='10',
+            qbo_item_name='Labor (company)',
+            status='synced',
+        )
+        service = self._service()
+        self.assertFalse(service.has_branch_override('invoice_line_type', 'labor', self.branch_a))
+        QBOAccountMapping.objects.create(
+            mapping_kind='invoice_line_type',
+            mapping_key='labor',
+            branch=self.branch_a,
+            qbo_item_id='20',
+            qbo_item_name='Labor (Takoradi)',
+            status='synced',
+        )
+        self.assertTrue(service.has_branch_override('invoice_line_type', 'labor', self.branch_a))

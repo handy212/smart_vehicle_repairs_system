@@ -878,15 +878,25 @@ class QuickBooksService:
             sales_item.UnitPrice = float(item.unit_price)
             qbo_item_id = None
             part = getattr(item, part_attr, None) if part_attr else None
-            if part is not None and getattr(part, 'pk', None):
-                qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date, branch=branch)
+
+            # Branch-specific QBO Items (income GL per branch) take precedence over the
+            # global catalog Part item, which always uses company-default accounts.
+            if (
+                mapping_service
+                and branch is not None
+                and mapping_service.has_branch_override('invoice_line_type', item_type, branch)
+            ):
+                qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type, branch=branch)
+
+            if not qbo_item_id and part is not None and getattr(part, 'pk', None):
+                qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
             if not qbo_item_id:
                 revenue_product = getattr(item, 'revenue_product', None)
                 template_part = (
                     getattr(revenue_product, 'catalog_part', None) if revenue_product else None
                 )
                 if template_part is not None and getattr(template_part, 'pk', None):
-                    qbo_item_id = resolve_part_qbo_item_id(self, template_part, txn_date=txn_date, branch=branch)
+                    qbo_item_id = resolve_part_qbo_item_id(self, template_part, txn_date=txn_date)
             if not qbo_item_id and mapping_service and Ref is not None:
                 qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type, branch=branch)
             if qbo_item_id and Ref is not None:
@@ -946,7 +956,7 @@ class QuickBooksService:
             qb_txn.DepartmentRef = Ref()
             qb_txn.DepartmentRef.value = qb_dept.Id
 
-    def _apply_ar_account_ref(self, qb_invoice, branch):
+    def _apply_ar_account_ref(self, qb_txn, branch):
         """Apply branch-specific AR account when configured in QBO mappings."""
         if not branch or Ref is None:
             return
@@ -958,8 +968,8 @@ class QuickBooksService:
             branch=branch,
         )
         if ar_id:
-            qb_invoice.ARAccountRef = Ref()
-            qb_invoice.ARAccountRef.value = ar_id
+            qb_txn.ARAccountRef = Ref()
+            qb_txn.ARAccountRef.value = ar_id
 
     def _update_qbo_mapping(self, local_obj, qb_obj, *, error=None):
         defaults = {
@@ -1018,7 +1028,7 @@ class QuickBooksService:
 
         from .item_sync import resolve_part_qbo_item_id
 
-        qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date, branch=branch)
+        qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
         if not qbo_item_id:
             return False
 
@@ -1648,6 +1658,7 @@ class QuickBooksService:
             set_qbo_customer_memo(qb_credit_memo, local_credit_note.notes)
 
         self._apply_department_ref(qb_credit_memo, local_credit_note.branch)
+        self._apply_ar_account_ref(qb_credit_memo, local_credit_note.branch)
 
         qb_credit_memo.Line = self._build_sales_item_lines(
             credit_lines,
