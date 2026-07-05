@@ -340,6 +340,73 @@ class BranchApiPermissionTest(TestCase):
         self.assertEqual(response.data['updated'], 0)
         self.assertIn('not configurable', response.data['errors'][0]['detail'])
 
+    @patch('apps.quickbooks_online.branch_qbo_resync_services.queue_branch_sales_document_resync')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_resync_documents(self, _mock_connected, mock_resync):
+        mock_resync.return_value = {
+            'branch_id': self.branch.id,
+            'branch_name': self.branch.name,
+            'queued_count': 3,
+            'skipped_count': 0,
+            'queued': [],
+            'skipped': [],
+        }
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.post(f'/api/branches/{self.branch.id}/qbo-resync-documents/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['queued_count'], 3)
+        mock_resync.assert_called_once()
+
+    @patch('apps.quickbooks_online.owner_coa_services.get_owner_coa_setup_service')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_link_all_locations(self, _mock_connected, mock_service_factory):
+        mock_service = MagicMock()
+        mock_service.sync_branch_departments.return_value = {
+            'linked': [{'branch': self.branch.name}],
+            'skipped': [],
+            'error': None,
+        }
+        mock_service_factory.return_value = mock_service
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.post('/api/branches/qbo-link-all-locations/', {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['linked']), 1)
+
+    @patch('apps.quickbooks_online.mapping_services.get_account_mapping_service')
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_suggest_mappings(self, _mock_connected, mock_get_client, mock_mapping_service):
+        mock_get_client.return_value = MagicMock()
+        service = MagicMock()
+        service.suggest_branch_qbo_mappings.return_value = {
+            'branch_id': self.branch.id,
+            'branch_name': self.branch.name,
+            'dry_run': True,
+            'suggestions': [{'mapping_key': 'accounts_receivable_account'}],
+            'applied': 0,
+            'errors': [],
+        }
+        service.get_branch_mapping_overview.return_value = {
+            'branch_id': self.branch.id,
+            'branch_name': self.branch.name,
+            'groups': [],
+            'rows': [],
+        }
+        mock_mapping_service.return_value = service
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.post(
+            f'/api/branches/{self.branch.id}/qbo-suggest-mappings/',
+            {'dry_run': True},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['suggestions']), 1)
+
     def test_branch_delete_archives_without_removing_staff_assignment(self):
         second_branch = Branch.objects.create(
             name='Archive Target',

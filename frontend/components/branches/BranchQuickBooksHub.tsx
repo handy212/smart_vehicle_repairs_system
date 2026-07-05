@@ -86,7 +86,7 @@ export function BranchQuickBooksHub({ branches, onOpenWizard }: BranchQuickBooks
   });
 
   const branchActionMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       branchId,
       action,
       sourceBranchId,
@@ -96,7 +96,7 @@ export function BranchQuickBooksHub({ branches, onOpenWizard }: BranchQuickBooks
       action: "suggest" | "copy" | "resync";
       sourceBranchId?: number;
       dryRun?: boolean;
-    }) => {
+    }): Promise<unknown> => {
       if (action === "suggest") {
         return branchesApi.suggestQboMappings(branchId, { dry_run: dryRun ?? false });
       }
