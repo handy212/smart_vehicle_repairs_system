@@ -218,3 +218,61 @@ def all_mapping_rows():
         })
 
     return rows
+
+
+# Control accounts that may differ per branch in the owner's QBO sub-COA.
+BRANCH_OVERRIDE_CONTROL_FIELDS = (
+    'accounts_receivable_account',
+    'cost_of_goods_sold_account',
+    'sales_revenue_account',
+)
+
+BRANCH_OVERRIDE_CONTROL_GROUPS = {
+    'accounts_receivable_account': 'Receivables',
+    'cost_of_goods_sold_account': 'Cost of Sales',
+    'sales_revenue_account': 'Revenue (item fallback)',
+}
+
+BRANCH_OVERRIDE_SLOTS = frozenset(
+    {(MAPPING_KIND_CONTROL, field_name) for field_name in BRANCH_OVERRIDE_CONTROL_FIELDS}
+    | {(MAPPING_KIND_INVOICE_LINE, key) for key in INVOICE_LINE_TYPE_LABELS}
+)
+
+
+def is_branch_override_slot(mapping_kind, mapping_key):
+    """Return True when mapping_kind/key may be stored as a branch override row."""
+    return (mapping_kind, mapping_key) in BRANCH_OVERRIDE_SLOTS
+
+
+def branch_mapping_rows(branch):
+    """Configurable QBO mapping slots for a single branch override."""
+    rows = []
+    for field_name in BRANCH_OVERRIDE_CONTROL_FIELDS:
+        rows.append({
+            'mapping_kind': MAPPING_KIND_CONTROL,
+            'mapping_key': field_name,
+            'label': CONTROL_ACCOUNT_LABELS.get(field_name, field_name),
+            'group': BRANCH_OVERRIDE_CONTROL_GROUPS.get(field_name, 'Branch accounts'),
+            'uses_item': False,
+            'uses_tax_code': False,
+            'uses_class': False,
+            'control_field': field_name,
+            'branch_id': branch.id,
+            'branch_name': branch.name,
+        })
+
+    for key, label in INVOICE_LINE_TYPE_LABELS.items():
+        rows.append({
+            'mapping_kind': MAPPING_KIND_INVOICE_LINE,
+            'mapping_key': key,
+            'label': f'{label} (QBO item → income account)',
+            'group': 'Invoice income items',
+            'uses_item': True,
+            'uses_tax_code': False,
+            'uses_class': False,
+            'control_field': None,
+            'branch_id': branch.id,
+            'branch_name': branch.name,
+        })
+
+    return rows

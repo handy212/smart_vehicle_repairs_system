@@ -2,7 +2,7 @@
 Tests for branches app
 """
 from django.test import TestCase
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.template.loader import render_to_string
@@ -294,6 +294,51 @@ class BranchApiPermissionTest(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_account_mappings_get_overview(self, _mock_connected, mock_get_client):
+        mock_get_client.return_value = MagicMock()
+        from apps.quickbooks_online.models import QBOAccountMapping
+
+        QBOAccountMapping.objects.create(
+            mapping_kind='control_account',
+            mapping_key='accounts_receivable_account',
+            qbo_account_id='100',
+            qbo_account_name='Company AR',
+            status='synced',
+        )
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.get(f'/api/branches/{self.branch.id}/qbo-account-mappings/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['branch_id'], self.branch.id)
+        self.assertTrue(
+            any(row['mapping_key'] == 'accounts_receivable_account' for row in response.data['rows'])
+        )
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client')
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    def test_qbo_account_mappings_rejects_invalid_slot(self, _mock_connected, mock_get_client):
+        mock_get_client.return_value = MagicMock()
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.patch(
+            f'/api/branches/{self.branch.id}/qbo-account-mappings/',
+            {
+                'mappings': [{
+                    'mapping_kind': 'payment_method',
+                    'mapping_key': 'cash',
+                    'qbo_account_id': '55',
+                }],
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
+        self.assertEqual(response.data['updated'], 0)
+        self.assertIn('not configurable', response.data['errors'][0]['detail'])
 
     def test_branch_delete_archives_without_removing_staff_assignment(self):
         second_branch = Branch.objects.create(

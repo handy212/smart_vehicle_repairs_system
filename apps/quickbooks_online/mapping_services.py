@@ -5,11 +5,14 @@ import logging
 from apps.accounting.models import AccountingControl
 
 from .mapping_specs import (
+    BRANCH_OVERRIDE_CONTROL_FIELDS,
     CLASS_MAPPING_KINDS,
     ITEM_MAPPING_KINDS,
     MAPPING_KIND_CONTROL,
     TAX_CODE_MAPPING_KINDS,
     all_mapping_rows,
+    branch_mapping_rows,
+    is_branch_override_slot,
 )
 from .account_requirements import (
     CONTROL_ACCOUNT_QBO_HINTS,
@@ -19,7 +22,7 @@ from .account_requirements import (
 from .models import QBOAccountMapping
 from .qbo_account_utils import account_number_from_name, extract_qbo_account_number
 
-from .owner_coa_specs import CONTROL_ACCOUNT_QBO_PATTERNS
+from .owner_coa_specs import CONTROL_ACCOUNT_QBO_PATTERNS, branch_control_account_patterns
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +63,40 @@ class QBOAccountMappingService:
     def __init__(self, quickbooks_service):
         self.qb = quickbooks_service
 
+    @staticmethod
+    def _branch_id(branch):
+        if branch is None:
+            return None
+        if hasattr(branch, 'id'):
+            return branch.id
+        return branch
+
+    def get_mapping(self, mapping_kind, mapping_key, branch=None):
+        branch_id = self._branch_id(branch)
+        if branch_id is not None:
+            mapping = QBOAccountMapping.objects.filter(
+                mapping_kind=mapping_kind,
+                mapping_key=mapping_key,
+                branch_id=branch_id,
+            ).first()
+            if mapping:
+                return mapping
+        return QBOAccountMapping.objects.filter(
+            mapping_kind=mapping_kind,
+            mapping_key=mapping_key,
+            branch__isnull=True,
+        ).first()
+
+    def has_branch_override(self, mapping_kind, mapping_key, branch):
+        branch_id = self._branch_id(branch)
+        if branch_id is None:
+            return False
+        return QBOAccountMapping.objects.filter(
+            mapping_kind=mapping_kind,
+            mapping_key=mapping_key,
+            branch_id=branch_id,
+        ).exists()
+
     def list_accounts(self):
         client = self.qb.get_client()
         if not client:
@@ -71,7 +108,9 @@ class QBOAccountMappingService:
             accounts = QBAccount.all(qb=client)
             account_mappings = {
                 row.qbo_account_id: row
-                for row in QBOAccountMapping.objects.exclude(qbo_account_id='')
+                for row in QBOAccountMapping.objects.filter(
+                    branch__isnull=True,
+                ).exclude(qbo_account_id='')
             }
             results = []
             for account in accounts:
@@ -112,7 +151,9 @@ class QBOAccountMappingService:
             items = QBItem.all(qb=client)
             item_mappings = {
                 row.qbo_item_id: row
-                for row in QBOAccountMapping.objects.exclude(qbo_item_id='')
+                for row in QBOAccountMapping.objects.filter(
+                    branch__isnull=True,
+                ).exclude(qbo_item_id='')
             }
             results = []
             for item in items:
@@ -220,7 +261,9 @@ class QBOAccountMappingService:
         controls = AccountingControl.get_settings()
         stored = {
             (row.mapping_kind, row.mapping_key): row
-            for row in QBOAccountMapping.objects.select_related('svr_account', 'updated_by').all()
+            for row in QBOAccountMapping.objects.filter(
+                branch__isnull=True,
+            ).select_related('svr_account', 'updated_by')
         }
 
         groups = {}
@@ -265,6 +308,76 @@ class QBOAccountMappingService:
         grouped = [{'group': name, 'rows': group_rows} for name, group_rows in groups.items()]
         return {'groups': grouped, 'rows': rows}
 
+    def get_branch_mapping_overview(self, branch):
+        """Return branch-specific override rows with company defaults for context."""
+        from apps.branches.models import Branch
+
+        if isinstance(branch, int):
+            branch = Branch.objects.get(pk=branch)
+        company_defaults = {
+            (row.mapping_kind, row.mapping_key): row
+            for row in QBOAccountMapping.objects.filter(branch__isnull=True).select_related('updated_by')
+        }
+        branch_rows = {
+            (row.mapping_kind, row.mapping_key): row
+            for row in QBOAccountMapping.objects.filter(branch=branch).select_related('updated_by')
+        }
+
+        groups = {}
+        rows = []
+        for spec in branch_mapping_rows(branch):
+            branch_mapping = branch_rows.get((spec['mapping_kind'], spec['mapping_key']))
+            company_mapping = company_defaults.get((spec['mapping_kind'], spec['mapping_key']))
+            effective = branch_mapping or company_mapping
+            company_default = None
+            if company_mapping:
+                company_default = {
+                    'qbo_account_id': company_mapping.qbo_account_id,
+                    'qbo_account_name': company_mapping.qbo_account_name,
+                    'qbo_account_number': company_mapping.qbo_account_number,
+                    'qbo_item_id': company_mapping.qbo_item_id,
+                    'qbo_item_name': company_mapping.qbo_item_name,
+                }
+            row = {
+                **spec,
+                'svr_account': None,
+                'qbo_account_id': branch_mapping.qbo_account_id if branch_mapping else '',
+                'qbo_account_name': branch_mapping.qbo_account_name if branch_mapping else '',
+                'qbo_account_number': (
+                    branch_mapping.qbo_account_number
+                    if branch_mapping and branch_mapping.qbo_account_number
+                    else account_number_from_name(branch_mapping.qbo_account_name)
+                    if branch_mapping and branch_mapping.qbo_account_name
+                    else ''
+                ),
+                'qbo_item_id': branch_mapping.qbo_item_id if branch_mapping else '',
+                'qbo_item_name': branch_mapping.qbo_item_name if branch_mapping else '',
+                'qbo_class_id': '',
+                'qbo_class_name': '',
+                'status': branch_mapping.status if branch_mapping else 'inherit',
+                'error_message': branch_mapping.error_message if branch_mapping else '',
+                'inherits_company_default': branch_mapping is None and company_mapping is not None,
+                'company_default': company_default,
+                'effective_mapping': {
+                    'qbo_account_id': effective.qbo_account_id if effective else '',
+                    'qbo_account_name': effective.qbo_account_name if effective else '',
+                    'qbo_item_id': effective.qbo_item_id if effective else '',
+                    'qbo_item_name': effective.qbo_item_name if effective else '',
+                    'source': 'branch' if branch_mapping else ('company' if company_mapping else 'unmapped'),
+                },
+                'qbo_account_hint': CONTROL_ACCOUNT_QBO_HINTS.get(spec.get('control_field') or '', ''),
+            }
+            rows.append(row)
+            groups.setdefault(spec['group'], []).append(row)
+
+        grouped = [{'group': name, 'rows': group_rows} for name, group_rows in groups.items()]
+        return {
+            'branch_id': branch.id,
+            'branch_name': branch.name,
+            'groups': grouped,
+            'rows': rows,
+        }
+
     def _fetch_qbo_account(self, client, account_id):
         return QBAccount.get(int(account_id), qb=client)
 
@@ -277,10 +390,26 @@ class QBOAccountMappingService:
     def _fetch_qbo_class(self, client, class_id):
         return QBClass.get(int(class_id), qb=client)
 
-    def map_row(self, mapping_kind, mapping_key, *, qbo_account_id=None, qbo_item_id=None, qbo_class_id=None, user=None):
+    def map_row(
+        self,
+        mapping_kind,
+        mapping_key,
+        *,
+        qbo_account_id=None,
+        qbo_item_id=None,
+        qbo_class_id=None,
+        branch=None,
+        user=None,
+    ):
         client = self.qb.get_client()
         if not client:
             return False, 'QuickBooks not connected or unauthorized.'
+
+        branch_id = self._branch_id(branch)
+        if branch_id is not None and not is_branch_override_slot(mapping_kind, mapping_key):
+            return False, (
+                f'{mapping_kind}:{mapping_key} is not configurable as a branch QBO override.'
+            )
 
         if mapping_kind in ITEM_MAPPING_KINDS:
             if not qbo_item_id:
@@ -339,9 +468,14 @@ class QBOAccountMappingService:
         else:
             if not qbo_account_id:
                 return False, 'qbo_account_id is required.'
-            conflict = QBOAccountMapping.objects.filter(
+            conflict_qs = QBOAccountMapping.objects.filter(
                 qbo_account_id=str(qbo_account_id),
-            ).exclude(mapping_kind=mapping_kind, mapping_key=mapping_key).first()
+            ).exclude(mapping_kind=mapping_kind, mapping_key=mapping_key)
+            if branch_id is not None:
+                conflict_qs = conflict_qs.filter(branch_id=branch_id)
+            else:
+                conflict_qs = conflict_qs.filter(branch__isnull=True)
+            conflict = conflict_qs.first()
             if conflict:
                 return False, (
                     f'QBO account is already mapped to {conflict.mapping_kind}:{conflict.mapping_key}.'
@@ -369,54 +503,61 @@ class QBOAccountMappingService:
                 'updated_by': user,
             }
 
-        if mapping_kind == MAPPING_KIND_CONTROL:
+        if mapping_kind == MAPPING_KIND_CONTROL and branch_id is None:
             controls = AccountingControl.get_settings()
             svr_account = getattr(controls, mapping_key, None)
             defaults['svr_account'] = svr_account
+        elif mapping_kind == MAPPING_KIND_CONTROL:
+            defaults['svr_account'] = None
 
+        lookup = {
+            'mapping_kind': mapping_kind,
+            'mapping_key': mapping_key,
+            'branch_id': branch_id,
+        }
+        defaults['branch_id'] = branch_id
         QBOAccountMapping.objects.update_or_create(
-            mapping_kind=mapping_kind,
-            mapping_key=mapping_key,
+            **lookup,
             defaults=defaults,
         )
         return True, None
 
-    def clear_row(self, mapping_kind, mapping_key):
+    def clear_row(self, mapping_kind, mapping_key, branch=None):
+        branch_id = self._branch_id(branch)
         deleted, _ = QBOAccountMapping.objects.filter(
             mapping_kind=mapping_kind,
             mapping_key=mapping_key,
+            branch_id=branch_id,
         ).delete()
         return deleted > 0
 
-    def get_mapping(self, mapping_kind, mapping_key):
-        return QBOAccountMapping.objects.filter(
-            mapping_kind=mapping_kind,
-            mapping_key=mapping_key,
-        ).first()
-
-    def resolve_qbo_account_id(self, mapping_kind, mapping_key):
-        mapping = self.get_mapping(mapping_kind, mapping_key)
+    def resolve_qbo_account_id(self, mapping_kind, mapping_key, branch=None):
+        mapping = self.get_mapping(mapping_kind, mapping_key, branch=branch)
         if mapping and mapping.qbo_account_id:
             return mapping.qbo_account_id
         return None
 
-    def resolve_qbo_item_id(self, mapping_kind, mapping_key):
-        mapping = self.get_mapping(mapping_kind, mapping_key)
+    def resolve_qbo_item_id(self, mapping_kind, mapping_key, branch=None):
+        mapping = self.get_mapping(mapping_kind, mapping_key, branch=branch)
         if mapping and mapping.qbo_item_id:
             return mapping.qbo_item_id
         return None
 
-    def resolve_qbo_class_id(self, mapping_kind, mapping_key):
-        mapping = self.get_mapping(mapping_kind, mapping_key)
+    def resolve_qbo_class_id(self, mapping_kind, mapping_key, branch=None):
+        mapping = self.get_mapping(mapping_kind, mapping_key, branch=branch)
         if mapping and mapping.qbo_class_id:
             return mapping.qbo_class_id
         return None
 
-    def resolve_control_account_qbo_id(self, control_field):
-        mapped = self.resolve_qbo_account_id(MAPPING_KIND_CONTROL, control_field)
+    def resolve_control_account_qbo_id(self, control_field, branch=None):
+        mapped = self.resolve_qbo_account_id(MAPPING_KIND_CONTROL, control_field, branch=branch)
         if mapped:
             return mapped
-        persist = control_field in INVENTORY_PART_CONTROL_REQUIREMENTS
+        if branch is not None and control_field in BRANCH_OVERRIDE_CONTROL_FIELDS:
+            branch_match = self._pattern_resolve_branch_control_account_qbo_id(branch, control_field)
+            if branch_match:
+                return branch_match
+        persist = control_field in INVENTORY_PART_CONTROL_REQUIREMENTS and branch is None
         return self._pattern_resolve_control_account_qbo_id(control_field, persist=persist)
 
     def _account_rows_for_pattern_match(self, account_rows):
@@ -481,6 +622,24 @@ class QBOAccountMappingService:
 
         return account_id
 
+    def _pattern_resolve_branch_control_account_qbo_id(self, branch, control_field):
+        """Best-effort branch sub-COA match when no saved branch or company mapping exists."""
+        from .owner_coa_services import find_best_qbo_account
+
+        patterns = branch_control_account_patterns(branch, control_field)
+        if not patterns:
+            return None
+
+        account_rows, error = self.list_accounts()
+        if error or not account_rows:
+            return None
+
+        accounts = self._account_rows_for_pattern_match(account_rows)
+        best, score = find_best_qbo_account(accounts, patterns)
+        if not best or score <= 0:
+            return None
+        return str(best.Id)
+
     def resolve_payment_deposit_account_id(self, payment):
         """Resolve QBO deposit account for a customer payment."""
         if payment.bank_account_id:
@@ -499,19 +658,19 @@ class QBOAccountMappingService:
 
         return self.resolve_control_account_qbo_id('default_bank_account')
 
-    def resolve_invoice_line_item_id(self, item_type):
-        return self.resolve_qbo_item_id('invoice_line_type', item_type)
+    def resolve_invoice_line_item_id(self, item_type, branch=None):
+        return self.resolve_qbo_item_id('invoice_line_type', item_type, branch=branch)
 
     def resolve_tax_code_id(self, tax_key='composite'):
         return self.resolve_qbo_account_id('tax_code', tax_key)
 
-    def resolve_bill_line_account_id(self, *, is_inventory_line):
+    def resolve_bill_line_account_id(self, *, is_inventory_line, branch=None):
         key = 'inventory' if is_inventory_line else 'expense'
         account_id = self.resolve_qbo_account_id('bill_line_kind', key)
         if account_id:
             return account_id
         control_field = 'inventory_asset_account' if is_inventory_line else 'default_expense_account'
-        return self.resolve_control_account_qbo_id(control_field)
+        return self.resolve_control_account_qbo_id(control_field, branch=branch)
 
 
 def get_account_mapping_service():
