@@ -230,6 +230,14 @@ class QBOAccountMapping(models.Model):
         related_name='qbo_account_mappings',
         help_text='Optional SVR GL account this row mirrors (bank/cash accounts).',
     )
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='qbo_account_mappings',
+        help_text='When set, this mapping overrides the company default for the branch.',
+    )
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='synced')
     error_message = models.TextField(blank=True)
@@ -243,9 +251,21 @@ class QBOAccountMapping(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('mapping_kind', 'mapping_key')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['mapping_kind', 'mapping_key'],
+                condition=models.Q(branch__isnull=True),
+                name='qbo_mapping_unique_company_default',
+            ),
+            models.UniqueConstraint(
+                fields=['mapping_kind', 'mapping_key', 'branch'],
+                condition=models.Q(branch__isnull=False),
+                name='qbo_mapping_unique_per_branch',
+            ),
+        ]
         indexes = [
             models.Index(fields=['mapping_kind', 'mapping_key']),
+            models.Index(fields=['mapping_kind', 'mapping_key', 'branch']),
             models.Index(fields=['qbo_account_id']),
             models.Index(fields=['qbo_item_id']),
             models.Index(fields=['qbo_class_id']),
@@ -255,4 +275,5 @@ class QBOAccountMapping(models.Model):
 
     def __str__(self):
         target = self.qbo_class_id or self.qbo_item_id or self.qbo_account_id or 'unmapped'
-        return f'{self.mapping_kind}:{self.mapping_key} -> {target}'
+        branch_suffix = f' @ {self.branch.code}' if self.branch_id else ''
+        return f'{self.mapping_kind}:{self.mapping_key}{branch_suffix} -> {target}'

@@ -45,12 +45,12 @@ QBO_TYPE_TO_ITEM_TYPE = {
 }
 
 
-def _accounts_from_mapped_part_line_item(mapping_service, client):
+def _accounts_from_mapped_part_line_item(mapping_service, client, branch=None):
     """Copy account refs from the mapped invoice line type Part QBO Item."""
     if not mapping_service or client is None or QBItem is None:
         return None, None, None
 
-    item_id = mapping_service.resolve_invoice_line_item_id('part')
+    item_id = mapping_service.resolve_invoice_line_item_id('part', branch=branch)
     if not item_id:
         return None, None, None
 
@@ -99,25 +99,25 @@ def _income_from_revenue_product_template(local_part, mapping_service, client):
         return None
 
 
-def _resolve_item_account_ids(mapping_service, local_part, client=None):
+def _resolve_item_account_ids(mapping_service, local_part, client=None, branch=None):
     income_id = None
     expense_id = None
     asset_id = None
 
     if mapping_service:
-        income_id = mapping_service.resolve_control_account_qbo_id('sales_revenue_account')
+        income_id = mapping_service.resolve_control_account_qbo_id('sales_revenue_account', branch=branch)
         if local_part.item_type == 'inventory':
-            expense_id = mapping_service.resolve_control_account_qbo_id('cost_of_goods_sold_account')
-            asset_id = mapping_service.resolve_control_account_qbo_id('inventory_asset_account')
+            expense_id = mapping_service.resolve_control_account_qbo_id('cost_of_goods_sold_account', branch=branch)
+            asset_id = mapping_service.resolve_control_account_qbo_id('inventory_asset_account', branch=branch)
         elif local_part.item_type == 'non_inventory':
-            expense_id = mapping_service.resolve_control_account_qbo_id('default_expense_account')
+            expense_id = mapping_service.resolve_control_account_qbo_id('default_expense_account', branch=branch)
             if not expense_id:
-                expense_id = mapping_service.resolve_control_account_qbo_id('cost_of_goods_sold_account')
+                expense_id = mapping_service.resolve_control_account_qbo_id('cost_of_goods_sold_account', branch=branch)
         # Service items typically only need income in QBO.
 
     if client is not None and mapping_service:
         fallback_income, fallback_expense, fallback_asset = _accounts_from_mapped_part_line_item(
-            mapping_service, client
+            mapping_service, client, branch=branch
         )
         income_id = income_id or fallback_income
         expense_id = expense_id or fallback_expense
@@ -236,7 +236,7 @@ def _validate_accounts_for_part(local_part, income_id, expense_id, asset_id):
     return None
 
 
-def sync_part(service, local_part):
+def sync_part(service, local_part, branch=None):
     """
     Push SVR Part catalog row to QBO Item.
 
@@ -286,7 +286,7 @@ def sync_part(service, local_part):
 
     mapping_service = _mapping_service(service)
     income_id, expense_id, asset_id = _resolve_item_account_ids(
-        mapping_service, local_part, client=client
+        mapping_service, local_part, client=client, branch=branch
     )
     account_error = _validate_accounts_for_part(local_part, income_id, expense_id, asset_id)
     if account_error:
@@ -511,7 +511,7 @@ def effective_sales_txn_date(service, line_items, txn_date, *, part_attr='part')
     return effective
 
 
-def resolve_part_qbo_item_id(service, local_part, *, txn_date: date | None = None) -> str | None:
+def resolve_part_qbo_item_id(service, local_part, *, txn_date: date | None = None, branch=None) -> str | None:
     """QBO Item id for a part, syncing the catalog row when needed."""
     if not local_part:
         return None
@@ -527,7 +527,7 @@ def resolve_part_qbo_item_id(service, local_part, *, txn_date: date | None = Non
     if mapping and mapping.qbo_id:
         return str(mapping.qbo_id)
 
-    qb_item = sync_part(service, local_part)
+    qb_item = sync_part(service, local_part, branch=branch)
     if qb_item and getattr(qb_item, 'Id', None):
         return str(qb_item.Id)
     return None

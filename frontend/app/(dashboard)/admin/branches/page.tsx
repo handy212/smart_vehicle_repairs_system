@@ -49,6 +49,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { getUserFacingError } from "@/lib/api/errors";
 import { BranchQboMappingPanel } from "@/components/branches/BranchQboMappingPanel";
+import { BranchQboCoaMappingsPanel } from "@/components/branches/BranchQboCoaMappingsPanel";
 import { BranchSettlementAccountsPanel } from "@/components/branches/BranchSettlementAccountsPanel";
 import { BranchOnboardingWizard } from "@/components/branches/BranchOnboardingWizard";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
@@ -267,6 +268,10 @@ export default function BranchesPage() {
 
       <PermissionGuard permission="manage_branches">
         <BranchQboMappingPanel branches={filteredBranches} />
+      </PermissionGuard>
+
+      <PermissionGuard permission="manage_branches">
+        <BranchQboCoaMappingsPanel branches={filteredBranches} />
       </PermissionGuard>
 
       <PermissionGuard permission="manage_branches">

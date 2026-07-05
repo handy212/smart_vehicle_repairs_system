@@ -456,3 +456,48 @@ QBO_ACCOUNT_EXCLUDE_PATTERNS = [
 ]
 
 OWNER_CONTROL_FIELD_NAMES = list(AccountingControl.ACCOUNT_FIELD_NAMES)
+
+
+def branch_name_tokens(branch):
+    tokens = []
+    for value in (getattr(branch, 'city', None), getattr(branch, 'name', None), getattr(branch, 'code', None)):
+        if value:
+            token = str(value).strip().lower()
+            if token and token not in tokens:
+                tokens.append(token)
+    return tokens
+
+
+def branch_control_account_patterns(branch, control_field):
+    """
+    Best-effort patterns for branch-specific sub-COA rows in the owner's QBO chart.
+    Used only when resolving branch-scoped control account overrides.
+    """
+    tokens = branch_name_tokens(branch)
+    if not tokens:
+        return None
+
+    if control_field == 'accounts_receivable_account':
+        return {
+            'name_substrings': [f'{token} receivable' for token in tokens] + [f'{token} ar' for token in tokens],
+            'account_numbers': ['120'],
+            'account_types': ['Accounts Receivable'],
+            'exclude_substrings': [],
+        }
+    if control_field == 'cost_of_goods_sold_account':
+        return {
+            'name_substrings': [
+                f'{token} cogs' for token in tokens
+            ] + [f'{token} cost of goods' for token in tokens],
+            'account_numbers': ['700'],
+            'account_types': ['Cost of Goods Sold'],
+            'exclude_substrings': [],
+        }
+    if control_field == 'sales_revenue_account':
+        return {
+            'name_substrings': [f'{token} sales' for token in tokens] + [f'{token} revenue' for token in tokens],
+            'account_numbers': ['698', '651', '650', '655', '658', '661'],
+            'account_types': ['Income'],
+            'exclude_substrings': ['sub-contractor', 'subcontractor', 'cost', 'cogs'],
+        }
+    return None

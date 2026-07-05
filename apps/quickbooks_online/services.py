@@ -848,6 +848,7 @@ class QuickBooksService:
         default_item_type='other',
         part_attr='part',
         txn_date=None,
+        branch=None,
     ):
         lines = []
         mapping_service = self._get_mapping_service()
@@ -878,16 +879,16 @@ class QuickBooksService:
             qbo_item_id = None
             part = getattr(item, part_attr, None) if part_attr else None
             if part is not None and getattr(part, 'pk', None):
-                qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
+                qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date, branch=branch)
             if not qbo_item_id:
                 revenue_product = getattr(item, 'revenue_product', None)
                 template_part = (
                     getattr(revenue_product, 'catalog_part', None) if revenue_product else None
                 )
                 if template_part is not None and getattr(template_part, 'pk', None):
-                    qbo_item_id = resolve_part_qbo_item_id(self, template_part, txn_date=txn_date)
+                    qbo_item_id = resolve_part_qbo_item_id(self, template_part, txn_date=txn_date, branch=branch)
             if not qbo_item_id and mapping_service and Ref is not None:
-                qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type)
+                qbo_item_id = mapping_service.resolve_invoice_line_item_id(item_type, branch=branch)
             if qbo_item_id and Ref is not None:
                 sales_item.ItemRef = Ref()
                 sales_item.ItemRef.value = qbo_item_id
@@ -945,6 +946,21 @@ class QuickBooksService:
             qb_txn.DepartmentRef = Ref()
             qb_txn.DepartmentRef.value = qb_dept.Id
 
+    def _apply_ar_account_ref(self, qb_invoice, branch):
+        """Apply branch-specific AR account when configured in QBO mappings."""
+        if not branch or Ref is None:
+            return
+        mapping_service = self._get_mapping_service()
+        if not mapping_service:
+            return
+        ar_id = mapping_service.resolve_control_account_qbo_id(
+            'accounts_receivable_account',
+            branch=branch,
+        )
+        if ar_id:
+            qb_invoice.ARAccountRef = Ref()
+            qb_invoice.ARAccountRef.value = ar_id
+
     def _update_qbo_mapping(self, local_obj, qb_obj, *, error=None):
         defaults = {
             'status': 'failed' if error else 'synced',
@@ -965,6 +981,7 @@ class QuickBooksService:
         *,
         expense_account_id=None,
         is_inventory_line=False,
+        branch=None,
     ):
         """Resolve QBO expense account for AP lines (never use item-based without ItemRef)."""
         account_id = None
@@ -975,12 +992,13 @@ class QuickBooksService:
         if not account_id and mapping_service:
             account_id = mapping_service.resolve_bill_line_account_id(
                 is_inventory_line=is_inventory_line,
+                branch=branch,
             )
         if not account_id and mapping_service:
             control_field = (
                 'inventory_asset_account' if is_inventory_line else 'default_expense_account'
             )
-            account_id = mapping_service.resolve_control_account_qbo_id(control_field)
+            account_id = mapping_service.resolve_control_account_qbo_id(control_field, branch=branch)
         return account_id
 
     def _try_item_based_ap_line(
@@ -992,6 +1010,7 @@ class QuickBooksService:
         is_inventory_line=False,
         txn_date=None,
         client=None,
+        branch=None,
     ) -> bool:
         """Fall back to ItemBasedExpenseLineDetail when account mapping is unavailable."""
         if ItemBasedExpenseLineDetail is None or Ref is None or part is None:
@@ -999,7 +1018,7 @@ class QuickBooksService:
 
         from .item_sync import resolve_part_qbo_item_id
 
-        qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date)
+        qbo_item_id = resolve_part_qbo_item_id(self, part, txn_date=txn_date, branch=branch)
         if not qbo_item_id:
             return False
 
@@ -1077,11 +1096,14 @@ class QuickBooksService:
         description_attr='description',
         inventory_relation=None,
         local_parent=None,
+        branch=None,
     ):
         """Build QBO Bill/VendorCredit/PO expense lines from SVR AP line items."""
         lines = []
         mapping_service = self._get_mapping_service()
         client = self.get_client()
+        if branch is None and local_parent is not None:
+            branch = getattr(local_parent, 'branch', None)
         for item in line_items:
             line = DetailLine()
             line.Amount = float(item.total)
@@ -1113,6 +1135,7 @@ class QuickBooksService:
                 mapping_service,
                 expense_account_id=expense_account_id,
                 is_inventory_line=is_inventory_line,
+                branch=branch,
             )
 
             if account_id and AccountBasedExpenseLineDetail is not None and Ref is not None:
@@ -1136,6 +1159,7 @@ class QuickBooksService:
                 part=related_part,
                 is_inventory_line=is_inventory_line,
                 client=client,
+                branch=branch,
             ):
                 self._stamp_ap_line_tax(
                     line, item, mapping_service, local_parent=local_parent,
@@ -1334,10 +1358,12 @@ class QuickBooksService:
             qb_invoice.PrivateNote = local_invoice.notes
             
         self._apply_department_ref(qb_invoice, local_invoice.branch)
+        self._apply_ar_account_ref(qb_invoice, local_invoice.branch)
 
         qb_invoice.Line = self._build_sales_item_lines(
             invoice_lines,
             txn_date=qbo_txn_date,
+            branch=local_invoice.branch,
         )
         self._apply_mapped_tax(
             qb_invoice,
@@ -1404,6 +1430,7 @@ class QuickBooksService:
                 qb_invoice.Line = self._build_sales_item_lines(
                     invoice_lines,
                     txn_date=qbo_txn_date,
+                    branch=local_invoice.branch,
                 )
                 try:
                     self._save_qb(qb_invoice, client)
@@ -1507,6 +1534,7 @@ class QuickBooksService:
         qb_estimate.Line = self._build_sales_item_lines(
             estimate_lines,
             txn_date=qbo_txn_date,
+            branch=local_estimate.branch,
         )
         self._apply_mapped_tax(
             qb_estimate,
@@ -1543,6 +1571,7 @@ class QuickBooksService:
                 qb_estimate.Line = self._build_sales_item_lines(
                     estimate_lines,
                     txn_date=qbo_txn_date,
+                    branch=local_estimate.branch,
                 )
                 try:
                     self._save_qb(qb_estimate, client)
@@ -1624,6 +1653,7 @@ class QuickBooksService:
             credit_lines,
             default_item_type='other',
             txn_date=qbo_txn_date,
+            branch=local_credit_note.branch,
         )
 
         self._apply_mapped_tax(
@@ -1671,6 +1701,7 @@ class QuickBooksService:
                     credit_lines,
                     default_item_type='other',
                     txn_date=qbo_txn_date,
+                    branch=local_credit_note.branch,
                 )
                 try:
                     self._save_qb(qb_credit_memo, client)

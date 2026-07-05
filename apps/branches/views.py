@@ -48,7 +48,7 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
-        elif self.action in ['qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement', 'settlement_accounts']:
+        elif self.action in ['qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement', 'settlement_accounts', 'qbo_account_mappings']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action == 'accessible':
             return [IsAuthenticated()]
@@ -449,6 +449,96 @@ class BranchViewSet(viewsets.ModelViewSet):
 
         overview = branch_settlement_overview(branch)
         return Response({**overview, **result})
+
+    @action(detail=True, methods=['get', 'patch'], url_path='qbo-account-mappings')
+    def qbo_account_mappings(self, request, pk=None):
+        """
+        List or update branch-specific QBO chart-of-accounts overrides.
+
+        Overrides cascade: branch row → company default (Accounting → Controls).
+        PATCH body: { "mappings": [{ "mapping_kind", "mapping_key", "qbo_account_id"?, "qbo_item_id"?, "action": "clear"? }] }
+        """
+        from apps.quickbooks_online.mapping_services import get_account_mapping_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to manage branch QBO mappings.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        branch = self.get_object()
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected. Connect under Admin → Integrations first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if QuickBooksService.get_client() is None:
+            return Response(
+                {
+                    'detail': (
+                        'QuickBooks is linked but the live API session is unavailable. '
+                        'Reconnect under Admin → Integrations.'
+                    ),
+                    'code': 'qbo_api_unavailable',
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        service = get_account_mapping_service()
+
+        if request.method == 'GET':
+            overview = service.get_branch_mapping_overview(branch)
+            return Response({'is_connected': True, **overview})
+
+        mappings = request.data.get('mappings')
+        if not isinstance(mappings, list):
+            return Response(
+                {'detail': 'Expected a list of mappings under the "mappings" key.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        errors = []
+        updated = 0
+        for entry in mappings:
+            mapping_kind = entry.get('mapping_kind')
+            mapping_key = entry.get('mapping_key')
+            if not mapping_kind or not mapping_key:
+                errors.append({'entry': entry, 'detail': 'mapping_kind and mapping_key are required.'})
+                continue
+            if entry.get('action') == 'clear':
+                service.clear_row(mapping_kind, mapping_key, branch=branch)
+                updated += 1
+                continue
+            success, error = service.map_row(
+                mapping_kind,
+                mapping_key,
+                qbo_account_id=entry.get('qbo_account_id'),
+                qbo_item_id=entry.get('qbo_item_id'),
+                branch=branch,
+                user=request.user,
+            )
+            if success:
+                updated += 1
+            else:
+                errors.append({
+                    'mapping_kind': mapping_kind,
+                    'mapping_key': mapping_key,
+                    'detail': error,
+                })
+
+        overview = service.get_branch_mapping_overview(branch)
+        status_code = status.HTTP_200_OK if not errors else status.HTTP_207_MULTI_STATUS
+        return Response(
+            {
+                'updated': updated,
+                'errors': errors,
+                'is_connected': True,
+                **overview,
+            },
+            status=status_code,
+        )
 
     @action(detail=False, methods=['get'], url_path='qbo-departments')
     def qbo_departments(self, request):

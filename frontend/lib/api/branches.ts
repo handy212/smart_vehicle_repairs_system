@@ -65,6 +65,48 @@ export interface BranchSettlementAccount {
   qbo_mapped: boolean;
 }
 
+export interface BranchQboCoaMappingRow {
+  mapping_kind: string;
+  mapping_key: string;
+  label: string;
+  group: string;
+  uses_item: boolean;
+  control_field?: string | null;
+  qbo_account_id: string;
+  qbo_account_name: string;
+  qbo_account_number: string;
+  qbo_item_id: string;
+  qbo_item_name: string;
+  status: string;
+  error_message: string;
+  inherits_company_default?: boolean;
+  company_default?: {
+    qbo_account_id: string;
+    qbo_account_name: string;
+    qbo_account_number: string;
+    qbo_item_id: string;
+    qbo_item_name: string;
+  } | null;
+  effective_mapping?: {
+    qbo_account_id: string;
+    qbo_account_name: string;
+    qbo_item_id: string;
+    qbo_item_name: string;
+    source: string;
+  };
+  qbo_account_hint?: string;
+}
+
+export interface BranchQboCoaMappingsOverview {
+  is_connected: boolean;
+  branch_id: number;
+  branch_name: string;
+  groups: Array<{ group: string; rows: BranchQboCoaMappingRow[] }>;
+  rows: BranchQboCoaMappingRow[];
+  updated?: number;
+  errors?: Array<{ mapping_kind?: string; mapping_key?: string; detail: string }>;
+}
+
 export interface BranchSettlementAccountsOverview {
   branch_id: number;
   branch_name: string;
@@ -284,6 +326,25 @@ export const branchesApi = {
     },
   ): Promise<BranchQboOnboardResult> => {
     const response = await apiClient.post(`/branches/${id}/qbo-onboard/`, payload ?? {});
+    return response.data;
+  },
+
+  getQboAccountMappings: async (id: number): Promise<BranchQboCoaMappingsOverview> => {
+    const response = await apiClient.get(`/branches/${id}/qbo-account-mappings/`);
+    return response.data;
+  },
+
+  updateQboAccountMappings: async (
+    id: number,
+    mappings: Array<{
+      mapping_kind: string;
+      mapping_key: string;
+      qbo_account_id?: string;
+      qbo_item_id?: string;
+      action?: "clear";
+    }>,
+  ): Promise<BranchQboCoaMappingsOverview> => {
+    const response = await apiClient.patch(`/branches/${id}/qbo-account-mappings/`, { mappings });
     return response.data;
   },
 
