@@ -51,7 +51,7 @@ function effectiveLabel(row: BranchQboCoaMappingRow): string | null {
   return null;
 }
 
-export function BranchQboCoaMappingsPanel({ branches }: { branches: Branch[] }) {
+export function BranchQboCoaMappingsPanel({ branches, embedded = false }: { branches: Branch[]; embedded?: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isConnected, isApiReady, connectionIssue, isLoading: qboStatusLoading } = useQuickBooksConnection();
@@ -217,7 +217,7 @@ export function BranchQboCoaMappingsPanel({ branches }: { branches: Branch[] }) 
   const isCatalogLoading = accountsLoading || itemsLoading || overviewQuery.isLoading;
 
   return (
-    <Card className="mx-4 border shadow-sm">
+    <Card className={embedded ? "border shadow-sm" : "mx-4 border shadow-sm"}>
       <CardHeader className="py-3 px-4 border-b bg-muted/30">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">

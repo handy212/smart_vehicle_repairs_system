@@ -37,4 +37,5 @@ urlpatterns = [
         name='sync_outbound_bulk',
     ),
     path('mappings/clear/', api_views.QBOMappingClearView.as_view(), name='mapping_clear'),
+    path('setup-status/', api_views.QBOSetupStatusView.as_view(), name='setup_status'),
 ]

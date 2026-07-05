@@ -620,3 +620,18 @@ class QBOMappingClearView(QBOConnectedMixin, APIView):
     @staticmethod
     def _has_entity_permission_for_config(request, entity_config):
         return user_has_permission(request.user, entity_config['permission'])
+
+
+class QBOSetupStatusView(APIView):
+    """Aggregate QuickBooks setup progress for the admin checklist."""
+
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('view_accounting'),
+    ]
+
+    def get(self, request):
+        from .qbo_setup_status import get_qbo_setup_status
+
+        return Response(get_qbo_setup_status())

@@ -348,6 +348,54 @@ export const branchesApi = {
     return response.data;
   },
 
+  suggestQboMappings: async (
+    id: number,
+    payload?: { dry_run?: boolean },
+  ): Promise<BranchQboCoaMappingsOverview & {
+    suggestions?: Array<Record<string, unknown>>;
+    applied?: number;
+    dry_run?: boolean;
+  }> => {
+    const response = await apiClient.post(`/branches/${id}/qbo-suggest-mappings/`, payload ?? {});
+    return response.data;
+  },
+
+  copyQboMappingsFrom: async (
+    id: number,
+    sourceBranchId: number,
+  ): Promise<BranchQboCoaMappingsOverview & { copied?: number; source_branch_id?: number }> => {
+    const response = await apiClient.post(`/branches/${id}/qbo-copy-mappings/`, {
+      source_branch_id: sourceBranchId,
+    });
+    return response.data;
+  },
+
+  resyncQboDocuments: async (
+    id: number,
+  ): Promise<{
+    branch_id: number;
+    branch_name: string;
+    queued_count: number;
+    skipped_count: number;
+  }> => {
+    const response = await apiClient.post(`/branches/${id}/qbo-resync-documents/`);
+    return response.data;
+  },
+
+  linkAllQboLocations: async (
+    payload?: { dry_run?: boolean },
+  ): Promise<{ dry_run: boolean; linked: unknown[]; skipped: unknown[] }> => {
+    const response = await apiClient.post("/branches/qbo-link-all-locations/", payload ?? {});
+    return response.data;
+  },
+
+  provisionAllSettlement: async (
+    payload?: { dry_run?: boolean },
+  ): Promise<{ dry_run: boolean; branches: unknown[] }> => {
+    const response = await apiClient.post("/branches/qbo-provision-all-settlement/", payload ?? {});
+    return response.data;
+  },
+
   getDefault: async (): Promise<Branch | null> => {
     try {
       // Try to get headquarters branch first

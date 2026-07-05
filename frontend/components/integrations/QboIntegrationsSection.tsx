@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Link2, AlertTriangle, History } from "lucide-react";
+import { Link2, AlertTriangle, History, ListChecks } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuickBooksOnlineCard } from "@/components/integrations/QuickBooksOnlineCard";
 import { QboSyncLogPanel } from "@/components/integrations/QboSyncLogPanel";
 import { QboMappingIssuesPanel } from "@/components/integrations/QboMappingIssuesPanel";
+import { QboSetupChecklist } from "@/components/integrations/QboSetupChecklist";
 import { useQboStatusNotifications } from "@/hooks/useQboStatusNotifications";
 
 const QBO_TABS = [
+  { id: "setup", label: "Setup", icon: ListChecks },
   { id: "connection", label: "Connection", icon: Link2 },
   { id: "issues", label: "Sync issues", icon: AlertTriangle },
   { id: "logs", label: "Sync logs", icon: History },
@@ -21,7 +23,7 @@ export function QboIntegrationsSection() {
   const searchParams = useSearchParams();
   useQboStatusNotifications();
   const activeTab =
-    (searchParams.get("qbo_tab") as QboIntegrationsTab | null) || "connection";
+    (searchParams.get("qbo_tab") as QboIntegrationsTab | null) || "setup";
 
   const setTab = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -40,6 +42,10 @@ export function QboIntegrationsSection() {
           </TabsTrigger>
         ))}
       </TabsList>
+
+      <TabsContent value="setup">
+        <QboSetupChecklist />
+      </TabsContent>
 
       <TabsContent value="connection">
         <QuickBooksOnlineCard />
