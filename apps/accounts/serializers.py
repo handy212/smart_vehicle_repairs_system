@@ -23,6 +23,39 @@ class RoleCodeField(serializers.CharField):
         return value
 
 
+def _role_permission_codes_for_assignment(role_code):
+    from apps.accounts.permission_models import Permission, Role
+
+    try:
+        role = Role.objects.get(code=role_code, is_active=True)
+    except Role.DoesNotExist:
+        return set()
+
+    permission_codes = set(role.permissions.filter(is_active=True).values_list('code', flat=True))
+    if role_code == 'admin' and not permission_codes:
+        return set(Permission.objects.filter(is_active=True).values_list('code', flat=True))
+    return permission_codes
+
+
+def validate_requester_can_assign_role(request, role_code):
+    """Prevent users from assigning roles that would grant permissions they lack."""
+    user = getattr(request, 'user', None) if request else None
+    if not user or not getattr(user, 'is_authenticated', False):
+        raise serializers.ValidationError({'role': "You do not have permission to assign this role."})
+    if getattr(user, 'role', None) == 'super-admin' or getattr(user, 'is_superuser', False):
+        return
+
+    target_permissions = _role_permission_codes_for_assignment(role_code)
+    if not target_permissions:
+        return
+
+    from apps.accounts.permissions import get_user_permissions
+
+    requester_permissions = set(get_user_permissions(user))
+    if not target_permissions.issubset(requester_permissions):
+        raise serializers.ValidationError({'role': "You do not have permission to assign this role."})
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     
@@ -155,6 +188,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
         if role and not is_valid_assignable_role_code(role):
             raise serializers.ValidationError({"role": "Invalid role selection."})
+        validate_requester_can_assign_role(self.context.get('request'), role)
         
         # Validate branch assignment based on role
         if role_uses_managed_branches(role):
@@ -427,6 +461,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         
         if role == 'super-admin' and (not self.instance or self.instance.role != 'super-admin'):
             raise serializers.ValidationError({"role": "Invalid role selection."})
+
+        if self.instance and 'role' in attrs and role != self.instance.role:
+            validate_requester_can_assign_role(request, role)
         
         # If role is being changed, validate branch assignment
         if role:

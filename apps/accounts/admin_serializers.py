@@ -351,6 +351,12 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate_permission_ids(self, value):
         request = self.context.get('request')
+        from apps.accounts.permissions import user_has_permission
+        from rest_framework.exceptions import PermissionDenied
+
+        if not request or not user_has_permission(request.user, 'manage_permissions'):
+            raise PermissionDenied("You do not have permission to assign role permissions.")
+
         if not request or getattr(request.user, 'role', None) != 'super-admin':
             restricted = set(
                 Permission.objects.filter(

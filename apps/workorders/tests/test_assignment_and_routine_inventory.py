@@ -1,16 +1,20 @@
 from decimal import Decimal
 
+from django.core.management import call_command
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.accounts.permission_models import Permission, Role
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.inventory.models import Part, PartCategory, ServiceBundle, ServiceBundleItem, StockItem
 from apps.vehicles.models import ServiceType, Vehicle
 from apps.workorders.models import WorkOrder, WorkOrderPart
 from apps.workorders.serializers import WorkOrderCreateSerializer
+from tests.rbac_test_utils import enable_system_modules
 from unittest import mock
 
 User = get_user_model()
@@ -153,9 +157,94 @@ class WorkOrderAssignmentTests(TestCase):
         self.work_order.accept_technician_assignment(self.technician)
 
 
+class WorkOrderObjectScopeTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command('init_permissions', verbosity=0)
+        enable_system_modules()
+        cls.coordinator = User.objects.create_user(
+            username='scope_coordinator',
+            email='scope_coordinator@example.com',
+            password='password',
+            role='service_coordinator',
+            is_staff=True,
+            is_active=True,
+        )
+        own_workorder_role = Role.objects.create(
+            code='own_workorder_viewer',
+            name='Own Workorder Viewer',
+            is_active=True,
+            priority=20,
+        )
+        own_workorder_role.permissions.set([Permission.objects.get(code='view_own_workorders')])
+        cls.technician = User.objects.create_user(
+            username='scope_tech',
+            email='scope_tech@example.com',
+            password='password',
+            role='own_workorder_viewer',
+            is_staff=True,
+            is_active=True,
+        )
+        cls.branch = Branch.objects.create(name='Scope Branch', code='SCOPE', created_by=cls.coordinator)
+        cls.coordinator.branch = cls.branch
+        cls.coordinator.save(update_fields=['branch'])
+        cls.technician.branch = cls.branch
+        cls.technician.save(update_fields=['branch'])
+
+        customer_user = User.objects.create_user(
+            username='scope_customer',
+            email='scope_customer@example.com',
+            password='password',
+            role='customer',
+        )
+        cls.customer = Customer.objects.create(user=customer_user)
+        cls.vehicle = Vehicle.objects.create(
+            owner=cls.customer,
+            make='Toyota',
+            model='Camry',
+            year=2021,
+            vin='SCOPE123456789012',
+            current_mileage=12000,
+        )
+        cls.unassigned_work_order = WorkOrder.objects.create(
+            customer=cls.customer,
+            vehicle=cls.vehicle,
+            branch=cls.branch,
+            status='draft',
+            service_coordinator=cls.coordinator,
+            customer_concerns='Unassigned job',
+            odometer_in=12000,
+        )
+        cls.assigned_work_order = WorkOrder.objects.create(
+            customer=cls.customer,
+            vehicle=cls.vehicle,
+            branch=cls.branch,
+            status='assigned',
+            service_coordinator=cls.coordinator,
+            primary_technician=cls.technician,
+            customer_concerns='Assigned job',
+            odometer_in=12000,
+        )
+
+    def test_view_own_workorders_cannot_retrieve_unassigned_same_branch_workorder(self):
+        client = APIClient()
+        client.force_authenticate(user=self.technician)
+
+        response = client.get(f'/api/workorders/work-orders/{self.unassigned_work_order.id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_view_own_workorders_can_retrieve_assigned_workorder(self):
+        client = APIClient()
+        client.force_authenticate(user=self.technician)
+
+        response = client.get(f'/api/workorders/work-orders/{self.assigned_work_order.id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+
 class RoutineInventoryValidationTests(TestCase):
     def setUp(self):
-        from django.core.management import call_command
         from apps.workorders.job_types import JobType
 
         call_command('seed_job_types', verbosity=0)
