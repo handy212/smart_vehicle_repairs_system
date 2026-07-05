@@ -73,6 +73,16 @@ const MAPPING_SECTIONS = [
 
 type MappingSectionId = (typeof MAPPING_SECTIONS)[number]["id"];
 
+const ESSENTIALS_SECTION_IDS = new Set<MappingSectionId>(["accounts", "invoices", "payments"]);
+const ADVANCED_SECTION_IDS = new Set<MappingSectionId>(["purchasing", "tax", "classes"]);
+
+const ESSENTIALS_SECTIONS = MAPPING_SECTIONS.filter((section) =>
+  ESSENTIALS_SECTION_IDS.has(section.id),
+);
+const ADVANCED_SECTIONS = MAPPING_SECTIONS.filter((section) =>
+  ADVANCED_SECTION_IDS.has(section.id),
+);
+
 function groupInSection(groupName: string, sectionGroups: ReadonlySet<string> | Set<string>): boolean {
   return sectionGroups.has(groupName);
 }
@@ -209,7 +219,16 @@ export function QboAccountMappingPanel() {
   const { isConnected, isApiReady, connectionIssue, isLoading: qboStatusLoading } = useQuickBooksConnection();
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const [rowSearch, setRowSearch] = useState("");
+  const [mappingTier, setMappingTier] = useState<"essentials" | "advanced">("essentials");
   const [activeSection, setActiveSection] = useState<MappingSectionId>("accounts");
+
+  const tierSections = mappingTier === "essentials" ? ESSENTIALS_SECTIONS : ADVANCED_SECTIONS;
+
+  const handleMappingTierChange = (tier: "essentials" | "advanced") => {
+    setMappingTier(tier);
+    const sections = tier === "essentials" ? ESSENTIALS_SECTIONS : ADVANCED_SECTIONS;
+    setActiveSection(sections[0]?.id ?? "accounts");
+  };
 
   const draftKey = (row: QboMappingRow) => `${row.mapping_kind}:${row.mapping_key}`;
   const catalogEnabled = isConnected && isApiReady;
@@ -658,9 +677,27 @@ export function QboAccountMappingPanel() {
       <CardContent className="p-0">
         {!isLoading && (
           <div className="px-4 py-3 border-b bg-muted/10 space-y-3">
+            <Tabs
+              value={mappingTier}
+              onValueChange={(value) => handleMappingTierChange(value as "essentials" | "advanced")}
+            >
+              <TabsList className="h-8">
+                <TabsTrigger value="essentials" className="text-xs">
+                  Essentials
+                </TabsTrigger>
+                <TabsTrigger value="advanced" className="text-xs">
+                  Advanced
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <p className="text-xs text-muted-foreground">
+              {mappingTier === "essentials"
+                ? "Core mappings most shops need: control accounts, invoice line items, and payment methods."
+                : "Optional or specialist mappings: bills & POs, sales tax codes, and QBO class tracking."}
+            </p>
             <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as MappingSectionId)}>
               <TabsList className="h-auto flex flex-wrap justify-start gap-1">
-                {MAPPING_SECTIONS.map((section) => (
+                {tierSections.map((section) => (
                   <TabsTrigger key={section.id} value={section.id} className="text-xs h-8">
                     {section.label}
                   </TabsTrigger>

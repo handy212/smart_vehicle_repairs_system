@@ -9,6 +9,7 @@ from .mapping_specs import (
     CLASS_MAPPING_KINDS,
     ITEM_MAPPING_KINDS,
     MAPPING_KIND_CONTROL,
+    MAPPING_KIND_INVOICE_LINE,
     TAX_CODE_MAPPING_KINDS,
     all_mapping_rows,
     branch_mapping_rows,
@@ -671,6 +672,181 @@ class QBOAccountMappingService:
             return account_id
         control_field = 'inventory_asset_account' if is_inventory_line else 'default_expense_account'
         return self.resolve_control_account_qbo_id(control_field, branch=branch)
+
+    def suggest_branch_qbo_mappings(self, branch, *, dry_run=True, user=None):
+        """
+        Best-effort match branch override slots from the live QBO chart.
+
+        Control accounts use branch name/city patterns. Invoice line items match QBO
+        item names containing branch tokens when possible.
+        """
+        from apps.branches.models import Branch
+
+        if isinstance(branch, int):
+            branch = Branch.objects.get(pk=branch)
+
+        suggestions = []
+        errors = []
+        applied = 0
+        item_rows_cache = None
+
+        for spec in branch_mapping_rows(branch):
+            mapping_kind = spec['mapping_kind']
+            mapping_key = spec['mapping_key']
+            if self.has_branch_override(mapping_kind, mapping_key, branch):
+                continue
+
+            if mapping_kind == MAPPING_KIND_CONTROL:
+                account_id = self._pattern_resolve_branch_control_account_qbo_id(
+                    branch, mapping_key,
+                )
+                if not account_id:
+                    continue
+                account_name = ''
+                client = self.qb.get_client()
+                if client and QBAccount is not None:
+                    try:
+                        account = self._fetch_qbo_account(client, account_id)
+                        account_name = account.Name or ''
+                    except Exception:
+                        pass
+                entry = {
+                    'mapping_kind': mapping_kind,
+                    'mapping_key': mapping_key,
+                    'label': spec['label'],
+                    'qbo_account_id': account_id,
+                    'qbo_account_name': account_name,
+                    'action': 'dry_run' if dry_run else 'applied',
+                }
+                if not dry_run:
+                    ok, error = self.map_row(
+                        mapping_kind,
+                        mapping_key,
+                        qbo_account_id=account_id,
+                        branch=branch,
+                        user=user,
+                    )
+                    if ok:
+                        applied += 1
+                        entry['action'] = 'applied'
+                    else:
+                        entry['action'] = 'failed'
+                        entry['error'] = error
+                        errors.append({'mapping_key': mapping_key, 'detail': error})
+                suggestions.append(entry)
+                continue
+
+            if mapping_kind == MAPPING_KIND_INVOICE_LINE and spec.get('uses_item'):
+                if item_rows_cache is None:
+                    item_rows_cache, list_error = self.list_items()
+                    if list_error:
+                        errors.append({'detail': list_error})
+                        item_rows_cache = []
+                from .owner_coa_specs import branch_name_tokens
+
+                tokens = branch_name_tokens(branch)
+                if not tokens or not item_rows_cache:
+                    continue
+                line_label = spec['label'].split('(')[0].strip().lower()
+                best_item = None
+                best_score = 0
+                for item_row in item_rows_cache:
+                    name = (item_row.get('name') or '').lower()
+                    score = 0
+                    for token in tokens:
+                        if token in name:
+                            score += 2
+                    if line_label and line_label.split()[0] in name:
+                        score += 1
+                    if score > best_score:
+                        best_score = score
+                        best_item = item_row
+                if not best_item or best_score <= 0:
+                    continue
+                entry = {
+                    'mapping_kind': mapping_kind,
+                    'mapping_key': mapping_key,
+                    'label': spec['label'],
+                    'qbo_item_id': best_item['id'],
+                    'qbo_item_name': best_item.get('name', ''),
+                    'action': 'dry_run' if dry_run else 'applied',
+                }
+                if not dry_run:
+                    ok, error = self.map_row(
+                        mapping_kind,
+                        mapping_key,
+                        qbo_item_id=best_item['id'],
+                        branch=branch,
+                        user=user,
+                    )
+                    if ok:
+                        applied += 1
+                        entry['action'] = 'applied'
+                    else:
+                        entry['action'] = 'failed'
+                        entry['error'] = error
+                        errors.append({'mapping_key': mapping_key, 'detail': error})
+                suggestions.append(entry)
+
+        return {
+            'branch_id': branch.id,
+            'branch_name': branch.name,
+            'dry_run': dry_run,
+            'suggestions': suggestions,
+            'applied': applied,
+            'errors': errors,
+        }
+
+    def copy_branch_qbo_mappings(self, target_branch, source_branch, *, user=None):
+        """Copy branch-scoped QBO override rows from source_branch to target_branch."""
+        from apps.branches.models import Branch
+
+        if isinstance(target_branch, int):
+            target_branch = Branch.objects.get(pk=target_branch)
+        if isinstance(source_branch, int):
+            source_branch = Branch.objects.get(pk=source_branch)
+        if target_branch.pk == source_branch.pk:
+            return {'copied': 0, 'errors': [{'detail': 'Source and target branch must differ.'}]}
+
+        source_rows = QBOAccountMapping.objects.filter(branch=source_branch)
+        copied = 0
+        errors = []
+        for row in source_rows:
+            if not is_branch_override_slot(row.mapping_kind, row.mapping_key):
+                continue
+            if row.qbo_item_id:
+                ok, error = self.map_row(
+                    row.mapping_kind,
+                    row.mapping_key,
+                    qbo_item_id=row.qbo_item_id,
+                    branch=target_branch,
+                    user=user,
+                )
+            elif row.qbo_account_id:
+                ok, error = self.map_row(
+                    row.mapping_kind,
+                    row.mapping_key,
+                    qbo_account_id=row.qbo_account_id,
+                    branch=target_branch,
+                    user=user,
+                )
+            else:
+                continue
+            if ok:
+                copied += 1
+            else:
+                errors.append({
+                    'mapping_kind': row.mapping_kind,
+                    'mapping_key': row.mapping_key,
+                    'detail': error,
+                })
+
+        return {
+            'target_branch_id': target_branch.id,
+            'source_branch_id': source_branch.id,
+            'copied': copied,
+            'errors': errors,
+        }
 
 
 def get_account_mapping_service():

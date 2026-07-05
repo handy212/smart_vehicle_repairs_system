@@ -141,4 +141,35 @@ export const qboMappingsApi = {
     const response = await apiClient.post("/quickbooks/account-mappings/apply-owner-template/", payload ?? {});
     return response.data;
   },
+
+  getSetupStatus: async (): Promise<QboSetupStatus> => {
+    const response = await apiClient.get("/quickbooks/setup-status/");
+    return response.data;
+  },
 };
+
+export interface QboSetupStep {
+  id: string;
+  label: string;
+  href?: string;
+  done: boolean;
+}
+
+export interface QboSetupStatus {
+  is_connected: boolean;
+  is_api_ready: boolean;
+  company_mappings: { mapped: number; total: number };
+  branches: {
+    active_count: number;
+    unmapped_locations: number;
+    override_slots_per_branch: number;
+    items: Array<{
+      id: number;
+      name: string;
+      code: string;
+      location_mapped: boolean;
+      override_count: number;
+    }>;
+  };
+  next_steps: QboSetupStep[];
+}

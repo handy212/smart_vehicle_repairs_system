@@ -119,6 +119,7 @@ class RunOutboundEntitySyncFinalizationTests(TestCase):
 class BillPaymentBatchSyncTests(TestCase):
     def setUp(self):
         from apps.accounting.models import AccountingControl
+        from apps.accounting.services import AccountingService
 
         self.user = User.objects.create_superuser(
             username='qbo_bp',
@@ -133,7 +134,48 @@ class BillPaymentBatchSyncTests(TestCase):
             created_by=self.user,
         )
         self.vendor = Supplier.objects.create(name='Batch Vendor', supplier_code='BV001')
+        self._wire_accounting_controls()
         self.bank_account = AccountingControl.get_settings().default_bank_account
+
+    def _wire_accounting_controls(self):
+        from apps.accounting.models import AccountingControl
+        from apps.accounting.services import AccountingService
+
+        controls = AccountingControl.get_settings()
+        controls.accounts_receivable_account = AccountingService.get_or_create_account(
+            '1200', 'Accounts Receivable', 'asset', 'debit'
+        )
+        controls.accounts_payable_account = AccountingService.get_or_create_account(
+            '2000', 'Accounts Payable', 'liability', 'credit'
+        )
+        controls.sales_revenue_account = AccountingService.get_or_create_account(
+            '4000', 'Sales Revenue', 'income', 'credit'
+        )
+        controls.sales_discount_account = AccountingService.get_or_create_account(
+            '4100', 'Sales Returns', 'income', 'debit'
+        )
+        controls.sales_tax_payable_account = AccountingService.get_or_create_account(
+            '2100', 'Sales Tax Payable', 'liability', 'credit'
+        )
+        controls.default_expense_account = AccountingService.get_or_create_account(
+            '5000', 'Operating Expense', 'expense', 'debit'
+        )
+        controls.input_tax_account = AccountingService.get_or_create_account(
+            '2200', 'Input Tax', 'asset', 'debit'
+        )
+        controls.inventory_asset_account = AccountingService.get_or_create_account(
+            '1500', 'Inventory Asset', 'asset', 'debit'
+        )
+        bank = AccountingService.get_or_create_account('1100', 'Operating Bank', 'asset', 'debit')
+        bank.account_subtype = 'bank'
+        bank.save(update_fields=['account_subtype'])
+        controls.default_bank_account = bank
+        controls.shop_supplies_revenue_account = controls.sales_revenue_account
+        controls.environmental_fee_revenue_account = controls.sales_revenue_account
+        controls.cost_of_goods_sold_account = controls.default_expense_account
+        controls.cash_over_short_account = controls.default_expense_account
+        controls.till_counterparty_cash_account = bank
+        controls.save()
 
     def _open_bill(self, number_suffix: str, total: str):
         bill = Bill.objects.create(

@@ -48,9 +48,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getUserFacingError } from "@/lib/api/errors";
-import { BranchQboMappingPanel } from "@/components/branches/BranchQboMappingPanel";
-import { BranchQboCoaMappingsPanel } from "@/components/branches/BranchQboCoaMappingsPanel";
-import { BranchSettlementAccountsPanel } from "@/components/branches/BranchSettlementAccountsPanel";
+import { BranchQuickBooksHub } from "@/components/branches/BranchQuickBooksHub";
 import { BranchOnboardingWizard } from "@/components/branches/BranchOnboardingWizard";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
@@ -267,15 +265,10 @@ export default function BranchesPage() {
       </Card>
 
       <PermissionGuard permission="manage_branches">
-        <BranchQboMappingPanel branches={filteredBranches} />
-      </PermissionGuard>
-
-      <PermissionGuard permission="manage_branches">
-        <BranchQboCoaMappingsPanel branches={filteredBranches} />
-      </PermissionGuard>
-
-      <PermissionGuard permission="manage_branches">
-        <BranchSettlementAccountsPanel branches={filteredBranches} />
+        <BranchQuickBooksHub
+          branches={filteredBranches}
+          onOpenWizard={(branch) => setOnboardBranch(branch)}
+        />
       </PermissionGuard>
 
       {/* Branches Table */}

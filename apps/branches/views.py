@@ -48,7 +48,12 @@ class BranchViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
             return [IsAuthenticated(), HasPermission('manage_branches')]
-        elif self.action in ['qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement', 'settlement_accounts', 'qbo_account_mappings']:
+        elif self.action in [
+            'qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement',
+            'settlement_accounts', 'qbo_account_mappings', 'qbo_suggest_mappings',
+            'qbo_copy_mappings', 'qbo_resync_documents', 'qbo_link_all_locations',
+            'qbo_provision_all_settlement',
+        ]:
             return [IsAuthenticated(), HasPermission('manage_branches')]
         elif self.action == 'accessible':
             return [IsAuthenticated()]
@@ -539,6 +544,122 @@ class BranchViewSet(viewsets.ModelViewSet):
             },
             status=status_code,
         )
+
+    @action(detail=True, methods=['post'], url_path='qbo-suggest-mappings')
+    def qbo_suggest_mappings(self, request, pk=None):
+        """Pattern-match branch QBO chart overrides from the live QBO chart."""
+        from apps.quickbooks_online.mapping_services import get_account_mapping_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        branch = self.get_object()
+        if not QuickBooksService.is_connected() or QuickBooksService.get_client() is None:
+            return Response(
+                {'detail': 'QuickBooks is not connected or the API session is unavailable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = bool(request.data.get('dry_run', False))
+        result = get_account_mapping_service().suggest_branch_qbo_mappings(
+            branch,
+            dry_run=dry_run,
+            user=request.user,
+        )
+        overview = get_account_mapping_service().get_branch_mapping_overview(branch)
+        status_code = status.HTTP_200_OK if not result.get('errors') else status.HTTP_207_MULTI_STATUS
+        return Response({**result, **overview, 'is_connected': True}, status=status_code)
+
+    @action(detail=True, methods=['post'], url_path='qbo-copy-mappings')
+    def qbo_copy_mappings(self, request, pk=None):
+        """Copy QBO chart overrides from another branch."""
+        from apps.quickbooks_online.mapping_services import get_account_mapping_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        branch = self.get_object()
+        source_branch_id = request.data.get('source_branch_id')
+        if not source_branch_id:
+            return Response(
+                {'detail': 'source_branch_id is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            source_branch = Branch.objects.get(pk=int(source_branch_id))
+        except (TypeError, ValueError, Branch.DoesNotExist):
+            return Response(
+                {'detail': 'source_branch_id is invalid.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not QuickBooksService.is_connected() or QuickBooksService.get_client() is None:
+            return Response(
+                {'detail': 'QuickBooks is not connected or the API session is unavailable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = get_account_mapping_service().copy_branch_qbo_mappings(
+            branch,
+            source_branch,
+            user=request.user,
+        )
+        overview = get_account_mapping_service().get_branch_mapping_overview(branch)
+        status_code = status.HTTP_200_OK if not result.get('errors') else status.HTTP_207_MULTI_STATUS
+        return Response({**result, **overview, 'is_connected': True}, status=status_code)
+
+    @action(detail=True, methods=['post'], url_path='qbo-resync-documents')
+    def qbo_resync_documents(self, request, pk=None):
+        """Queue outbound QBO re-sync for eligible branch invoices, estimates, and credit notes."""
+        from apps.quickbooks_online.branch_qbo_resync_services import queue_branch_sales_document_resync
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        branch = self.get_object()
+        result = queue_branch_sales_document_resync(branch)
+        return Response(result)
+
+    @action(detail=False, methods=['post'], url_path='qbo-link-all-locations')
+    def qbo_link_all_locations(self, request):
+        """Link all active branches to QBO Departments by city/name."""
+        from apps.quickbooks_online.owner_coa_services import get_owner_coa_setup_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = bool(request.data.get('dry_run', False))
+        result = get_owner_coa_setup_service().sync_branch_departments(dry_run=dry_run)
+        if result.get('error'):
+            return Response({'detail': result['error']}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'dry_run': dry_run, **result})
+
+    @action(detail=False, methods=['post'], url_path='qbo-provision-all-settlement')
+    def qbo_provision_all_settlement(self, request):
+        """Provision settlement GL accounts from QBO for every active branch."""
+        from apps.quickbooks_online.branch_settlement_services import provision_branch_settlement_accounts
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = bool(request.data.get('dry_run', False))
+        results = []
+        for branch in Branch.objects.filter(is_active=True).order_by('name'):
+            provision = provision_branch_settlement_accounts(branch, dry_run=dry_run, map_qbo=True)
+            results.append({
+                'branch_id': branch.id,
+                'branch_name': branch.name,
+                **provision,
+            })
+        return Response({'dry_run': dry_run, 'branches': results})
 
     @action(detail=False, methods=['get'], url_path='qbo-departments')
     def qbo_departments(self, request):
