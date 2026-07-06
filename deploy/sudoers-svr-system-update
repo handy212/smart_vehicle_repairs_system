@@ -1,0 +1,6 @@
+# Allow the svr app user to run production updates from the admin UI.
+# Install: sudo cp deploy/sudoers-svr-system-update /etc/sudoers.d/svr-system-update
+#          sudo chmod 440 /etc/sudoers.d/svr-system-update
+#          sudo visudo -cf /etc/sudoers.d/svr-system-update
+
+svr ALL=(root) NOPASSWD: /opt/smart_vehicle_repairs_system/deploy/run-system-update.sh

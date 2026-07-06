@@ -1,0 +1,370 @@
+{% extends 'printing/base/document_base.html' %}
+{% block title %}Inspection Report {{ document.inspection_number }}{% endblock %}
+
+{% block document_type %}Inspection Report{% endblock %}
+
+{% block document_number %}{{ document.inspection_number }}{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .damage-marker-dot {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 2px solid white;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .damage-marker-dot span {
+        font-size: 8px;
+        line-height: 1;
+    }
+
+    /* Severity Badges (List) */
+    .severity-badge {
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-weight: bold;
+        display: inline-block;
+        font-size: 8px;
+        letter-spacing: 0.04em;
+    }
+
+    .badge-major {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-moderate {
+        background-color: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-minor {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .damage-shell {
+        position: relative;
+        width: 100%;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        padding: 8px;
+    }
+
+    .damage-legend {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        justify-content: center;
+        font-size: 8px;
+        text-transform: uppercase;
+        font-weight: bold;
+        color: #6b7280;
+    }
+
+    .damage-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .damage-legend-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .signature-panel {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px 14px 10px;
+        background: #fff;
+        min-height: 120px;
+    }
+
+    .signature-panel-title {
+        font-size: 11px;
+        font-weight: bold;
+        color: #111827;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .signature-panel-meta {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #9ca3af;
+        font-size: 10px;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block document_meta %}
+<div>Date: {{ document.inspection_date|date:"F d, Y" }}</div>
+<div>Result: <span
+        class="font-bold uppercase {% if document.overall_result == 'fail' %}text-danger{% elif document.overall_result == 'pass_with_advisory' or document.overall_result == 'needs_attention' %}text-warning{% elif document.overall_result == 'pass' %}text-success{% endif %}">
+        {{ document.get_overall_result_display|default:"IN PROGRESS" }}
+    </span></div>
+{% if document.performed_by %}
+<div>Service Advisor: {{ document.performed_by.get_full_name }}</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Top Section: Vehicle Info & Summary -->
+<div class="grid-2-col mb-8">
+    <!-- Vehicle Info -->
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Vehicle Details</div>
+        <div class="info-card">
+            <div class="info-item border-b mb-2 pb-2">
+                <div class="info-label">Vehicle</div>
+                <div class="info-value font-bold">
+                    {{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}
+                </div>
+            </div>
+            {% if document.vehicle.vin %}
+            <div class="info-item">
+                <div class="info-label">VIN</div>
+                <div class="info-value">{{ document.vehicle.vin }}</div>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <div class="info-label">License</div>
+                <div class="info-value">{{ document.vehicle.license_plate|default:"-" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Odometer</div>
+                <div class="info-value">{{ document.odometer_reading|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Summary</div>
+        <div class="info-card" style="padding: 10px;">
+            <div class="flex items-center justify-around text-center">
+                <div>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Passed</span>
+                    <div class="text-xl font-bold text-success">{{ document.pass_count }}</div>
+                </div>
+                <div style="border-left: 1px solid #e5e7eb; height: 30px;"></div>
+                <div>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Advisory</span>
+                    <div class="text-xl font-bold text-warning">{{ document.advisory_count }}</div>
+                </div>
+                <div style="border-left: 1px solid #e5e7eb; height: 30px;"></div>
+                <div>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Failed</span>
+                    <div class="text-xl font-bold text-danger">{{ document.fail_count }}</div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t text-center">
+                <div class="text-sm text-gray-600">
+                    Completion: <span class="font-bold">{{ document.completion_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations -->
+{% if document.recommendations %}
+<div class="mb-8">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Technician Recommendations</div>
+    <div class="text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 rounded border-l-4 border-blue-500">
+        {{ document.recommendations|linebreaks }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Inspection Results Grouped by Category -->
+{% for category_data in grouped_results %}
+<div class="mb-6 avoid-break">
+    <div class="flex items-center justify-between bg-gray-100 p-2 rounded mb-2">
+        <h3 class="font-bold text-gray-900">{{ category_data.category.name }}</h3>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 45%;">Item</th>
+                <th style="width: 15%; text-align: center;">Status</th>
+                <th style="width: 40%;">Details & Measurements</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in category_data.results %}
+            <tr>
+                <td>
+                    <div class="font-medium text-gray-900">{{ result.inspection_item.name }}</div>
+                </td>
+                <td class="text-center">
+                    {% if result.result == 'pass' %}
+                    <span
+                        class="inline-block px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-800">PASS</span>
+                    {% elif result.result == 'fail' %}
+                    <span class="inline-block px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-800">FAIL</span>
+                    {% elif result.result == 'advisory' %}
+                    <span
+                        class="inline-block px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-800">ADVISORY</span>
+                    {% elif result.result == 'not_applicable' %}
+                    <span class="text-xs text-gray-400">N/A</span>
+                    {% else %}
+                    <span class="text-xs text-gray-400">-</span>
+                    {% endif %}
+                </td>
+                <td class="text-sm">
+                    {% if result.measurement_value %}
+                    <div class="mb-1">
+                        <span class="font-semibold">Measured:</span> {{ result.measurement_value }} {{ result.inspection_item.measurement_unit }}
+                    </div>
+                    {% endif %}
+
+                    {% if result.condition %}
+                    <div class="mb-1">
+                        <span class="font-semibold">Condition:</span> {{ result.get_condition_display }}
+                    </div>
+                    {% endif %}
+
+                    {% if result.text_note %}
+                    <div class="text-gray-600 italic">{{ result.text_note }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+
+<!-- Vehicle Damage Assessment -->
+{% if normalized_damage_marks %}
+<div class="mb-8 avoid-break">
+    <div class="flex items-center justify-between bg-gray-100 p-2 rounded mb-4">
+        <h3 class="font-bold text-gray-900">Vehicle Damage Assessment</h3>
+    </div>
+
+    <div class="grid-2-col gap-6">
+        <!-- Damage Diagram -->
+        <div class="col-2-3">
+            <div class="damage-shell">
+                <img src="{{ inspection_damage_diagram_url }}"
+                    style="width: 100%; display: block;" />
+
+                {% for mark in normalized_damage_marks %}
+                <div
+                    class="damage-marker-dot"
+                    style="left: {{ mark.x_pct }}%; top: {{ mark.y_pct }}%; width: {{ mark.marker_size }}px; height: {{ mark.marker_size }}px; background-color: {{ mark.marker_color }};">
+                    <span style="color: white; font-weight: bold;">
+                        {{ mark.index }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="damage-legend">
+                <div class="damage-legend-item"><span class="damage-legend-dot" style="background: #6366f1;"></span> Scratch</div>
+                <div class="damage-legend-item"><span class="damage-legend-dot" style="background: #dc2626;"></span> Dent</div>
+                <div class="damage-legend-item"><span class="damage-legend-dot" style="background: #eab308;"></span> Chip</div>
+                <div class="damage-legend-item"><span class="damage-legend-dot" style="background: #ea580c;"></span> Crack</div>
+                <div class="damage-legend-item"><span class="damage-legend-dot" style="background: #92400e;"></span> Rust</div>
+                <div class="damage-legend-item"><span class="damage-legend-dot" style="background: #4b5563;"></span> Other</div>
+            </div>
+        </div>
+
+        <!-- Damage List -->
+        <div class="col-1-3">
+            <table class="data-table" style="font-size: 10px;">
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">#</th>
+                        <th style="width: 30%;">Type</th>
+                        <th style="width: 20%;">Severity</th>
+                        <th style="width: 40%;">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mark in normalized_damage_marks %}
+                    <tr>
+                        <td class="font-bold border-b py-1">{{ mark.index }}</td>
+                        <td class="capitalize border-b py-1">{{ mark.type }}</td>
+                        <td class="border-b py-1">
+                            <span class="severity-badge {{ mark.badge_class }}">
+                                {{ mark.severity|upper }}
+                            </span>
+                        </td>
+                        <td class="text-gray-600 italic border-b py-1">{{ mark.description|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Signatures -->
+<div class="grid-2-col mt-12 pt-8" style="page-break-inside: avoid;">
+    <div class="col-1-2 pr-4">
+        <div class="signature-panel">
+            <div class="signature-panel-title">Service Advisor Sign-off</div>
+            {% if document.technician_signature %}
+            <div class="mb-2 h-16">
+                <img src="{{ document.technician_signature }}" alt="Technician Signature"
+                    style="max-height: 60px; max-width: 100%;">
+            </div>
+            {% else %}
+            <div class="h-16"></div>
+            {% endif %}
+            <div class="signature-panel-meta">
+                Date:
+                {% if document.completed_at %}
+                    {{ document.completed_at|date:"F d, Y" }}
+                {% else %}
+                    {{ document.inspection_date|date:"F d, Y" }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-1-2 pl-4">
+        <div class="signature-panel">
+            <div class="signature-panel-title">Customer Acknowledgement</div>
+            {% if document.customer_signature %}
+            <div class="mb-2 h-16">
+                <img src="{{ document.customer_signature }}" alt="Customer Signature"
+                    style="max-height: 60px; max-width: 100%;">
+            </div>
+            {% else %}
+            <div class="h-16"></div>
+            {% endif %}
+            <div class="signature-panel-meta">
+                Date:
+                {% if document.approved_at %}
+                    {{ document.approved_at|date:"F d, Y" }}
+                {% else %}
+                    _________________
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disclaimer -->
+<div class="clear-both mt-8 text-xs text-gray-500 text-justify">
+    <p>This inspection report is based on a visual inspection of the vehicle components listed above. It does not
+        guarantee the internal condition of any component or system that cannot be seen without disassembly. This report
+        is for informational purposes only.</p>
+</div>
+{% endblock %}

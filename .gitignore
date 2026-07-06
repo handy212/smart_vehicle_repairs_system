@@ -1,0 +1,110 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+!frontend/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv-dev/
+ENV/
+env/
+*.sqlite3
+*.db
+db.sqlite3
+
+# Django
+*.log
+local_settings.py
+!/static/
+/staticfiles/
+/media/
+*.pot
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.DS_Store
+
+# Node
+node_modules/
+.npm
+.next
+.turbo
+out/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment — exclude ALL .env files, only allow templates
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.development.example
+
+# Cursor MCP secrets (never commit tokens)
+.cursor/secrets.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+frontend/test-results/
+frontend/playwright-report/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Project specific
+Attached_image.png
+.cursor/
+
+# Firebase credentials (sensitive)
+firebase/*.json
+!firebase/.gitkeep
+frontend/public/sw.js

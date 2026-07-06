@@ -1,0 +1,185 @@
+{% extends 'printing/base/document_base.html' %}
+
+{% block title %}Gate Pass {{ document.gate_pass_number }}{% endblock %}
+
+{% block document_type %}Gate Pass{% endblock %}
+
+{% block document_number %}{{ document.gate_pass_number }}{% endblock %}
+
+{% block document_meta %}
+<div>Date Issued: {{ document.issued_at|date:"F d, Y" }}</div>
+<div>Status: <span
+        class="font-bold uppercase {% if document.status == 'completed' %}text-success{% elif document.status == 'cancelled' %}text-danger{% endif %}">
+        {{ document.get_status_display }}</span></div>
+{% endblock %}
+
+{% block content %}
+<!-- Authorization Statement -->
+<div class="bg-gray-100 p-4 mb-6 rounded border-l-4 border-primary">
+    <p class="text-sm leading-relaxed">
+        This document authorizes the release of the vehicle described below to the authorized person listed.
+        Please ensure all items are checked and the work order is verified before departure.
+    </p>
+</div>
+
+<!-- Reference Info -->
+<div class="grid-2-col mb-6">
+    <div class="col-1-2">
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Reference Work Order</div>
+        <div class="info-card">
+            <div class="info-item">
+                <div class="info-label">WO Number</div>
+                <div class="info-value font-bold">{{ document.work_order.work_order_number }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Completed At</div>
+                <div class="info-value">{{ document.work_order.completed_at|date:"M d, Y H:i" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-1-2">
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Pickup Information</div>
+        <div class="info-card">
+            <div class="info-item">
+                <div class="info-label">Issuer</div>
+                <div class="info-value">{{ document.issued_by.get_full_name }}</div>
+            </div>
+            {% if document.authorized_by %}
+            <div class="info-item">
+                <div class="info-label">Authorized By</div>
+                <div class="info-value">{{ document.authorized_by.get_full_name }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Customer & Vehicle Info -->
+<div class="grid-2-col mb-6">
+    <!-- Customer -->
+    <div class="col-1-2">
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Registered Owner</div>
+        {% with customer=document.customer %}
+        {% include 'printing/base/components/customer_info.html' %}
+        {% endwith %}
+    </div>
+
+    <!-- Vehicle -->
+    <div class="col-1-2">
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Vehicle Release Details</div>
+        <div class="info-card">
+            <div class="info-item border-b mb-2 pb-2">
+                <div class="info-label">Vehicle</div>
+                <div class="info-value font-bold">
+                    {{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">License Plate</div>
+                <div class="info-value font-semibold">{{ document.vehicle.license_plate|default:"—" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">VIN</div>
+                <div class="info-value text-xs">{{ document.vehicle.vin|default:"—" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Color</div>
+                <div class="info-value">{{ document.vehicle.color|default:"—" }}</div>
+            </div>
+            {% if document.work_order.odometer_out %}
+            <div class="info-item">
+                <div class="info-label">Odometer Out</div>
+                <div class="info-value">{{ document.work_order.odometer_out }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Authority Details -->
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-3 pb-1">Authorized Pickup Person</div>
+    <div class="bg-gray-50 p-4 rounded">
+        <div class="grid-2-col">
+            <div class="col-1-2">
+                <div class="info-item mb-2">
+                    <div class="info-label">Name</div>
+                    <div class="info-value font-bold">{{ document.pickup_person_display }}</div>
+                </div>
+                <div class="info-item mb-2">
+                    <div class="info-label">Relationship</div>
+                    <div class="info-value">{{ document.pickup_person_relationship|default:"Owner/Self" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Phone</div>
+                    <div class="info-value">{{ document.pickup_person_phone|default:document.customer.phone }}</div>
+                </div>
+            </div>
+            <div class="col-1-2">
+                {% if not document.picked_up_by_customer %}
+                <div class="info-item mb-2">
+                    <div class="info-label">ID Type</div>
+                    <div class="info-value">{{ document.get_pickup_person_id_type_display|default:"—" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">ID Number</div>
+                    <div class="info-value">{{ document.pickup_person_id_number|default:"—" }}</div>
+                </div>
+                {% else %}
+                <div class="text-xs text-gray-500 italic mt-4">
+                    Vehicle being picked up directly by the registered owner.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notes -->
+{% if document.pickup_notes %}
+<div class="mb-8">
+    <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Pickup Notes</div>
+    <div class="p-3 bg-gray-50 text-sm rounded min-h-[60px]">
+        {{ document.pickup_notes|linebreaks }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Signatures -->
+<div class="grid-2-col mt-12 pt-8" style="page-break-inside: avoid;">
+    <div class="col-1-2 pr-4">
+        <div class="border-t-2 border-gray-400 pt-2">
+            <div class="font-bold text-sm">Customer / Representative</div>
+            <div class="text-xs text-gray-500 mt-1">Signature confirms receipt of vehicle and satisfaction with repairs.
+            </div>
+            <div class="mt-8 text-xs text-gray-500">
+                Signature: _____________________________
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                Date: _________________
+            </div>
+        </div>
+    </div>
+    <div class="col-1-2 pl-4">
+        <div class="border-t-2 border-gray-400 pt-2">
+            <div class="font-bold text-sm">Security / Gate Release</div>
+            <div class="text-xs text-gray-500 mt-1">Authorized by: {{ document.authorized_by.get_full_name|default:document.issued_by.get_full_name }}</div>
+            <div class="mt-8 text-xs text-gray-500">
+                Signature: _____________________________
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                Date: _________________
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legal Disclaimer -->
+<div class="mt-12 text-10 text-gray-400 leading-tight border-t pt-4">
+    <p>
+        The vehicle and its contents are released at the risk of the person taking delivery. The company shall not be
+        liable for any loss or damage occurring after the vehicle has passed the exit gate. This gate pass must be
+        surrendered at the security point for final exit clearance.
+    </p>
+</div>
+{% endblock %}

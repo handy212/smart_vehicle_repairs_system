@@ -1,0 +1,873 @@
+import logging
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, status, permissions, filters
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Sum, F
+from django.utils import timezone
+
+from .models import Branch
+from .serializers import (
+    BranchSerializer, 
+    BranchListSerializer, 
+    BranchCreateUpdateSerializer,
+    PublicBranchSerializer
+)
+from apps.accounts.models import User
+from apps.accounts.permissions import HasPermission, user_has_permission
+
+
+
+logger = logging.getLogger(__name__)
+
+
+class BranchViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing branches
+    """
+    queryset = Branch.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['is_active', 'is_headquarters']
+    search_fields = ['name', 'code', 'city', 'state']
+    ordering_fields = ['name', 'code', 'city', 'state', 'is_active', 'created_at']
+    ordering = ['name']
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list':
+            return [permissions.AllowAny()]
+        if self.action in ['retrieve', 'staff', 'managers', 'stats']:
+            return [IsAuthenticated(), HasPermission('view_branches')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action in ['update', 'partial_update', 'destroy', 'permanent_delete']:
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action in [
+            'qbo_departments', 'qbo_mapping', 'qbo_onboard', 'provision_settlement',
+            'settlement_accounts', 'qbo_account_mappings', 'qbo_suggest_mappings',
+            'qbo_copy_mappings', 'qbo_resync_documents', 'qbo_link_all_locations',
+            'qbo_provision_all_settlement',
+        ]:
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action == 'accessible':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), HasPermission('view_branches')()]
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            user = self.request.user
+            if user.is_anonymous or getattr(user, 'role', None) == 'customer':
+                return PublicBranchSerializer
+            return BranchListSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return BranchCreateUpdateSerializer
+        return BranchSerializer
+    
+    def get_queryset(self):
+        """
+        Filter branches based on user role:
+        - Admin: all branches
+        - Manager: only their managed branches
+        - Other staff: only their assigned branch
+        """
+        user = self.request.user
+        if user.is_anonymous or getattr(user, 'role', None) == 'customer':
+            return Branch.objects.filter(is_active=True)
+
+        if user.role in ('admin', 'super-admin') or user_has_permission(user, 'manage_branches'):
+            return Branch.objects.all()
+        elif user.role == 'manager':
+            return user.managed_branches.all()
+        elif user.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
+            if user.branch:
+                return Branch.objects.filter(id=user.branch.id)
+        
+        return Branch.objects.none()
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action in ('list', 'accessible'):
+            try:
+                from apps.quickbooks_online.services import QuickBooksService
+                from apps.quickbooks_online.models import QBOMapping
+
+                if QuickBooksService.is_connected():
+                    branch_ct = ContentType.objects.get_for_model(Branch)
+                    mappings = list(
+                        QBOMapping.objects.filter(content_type=branch_ct)
+                    )
+                    context['qbo_branch_mappings'] = {mapping.object_id: mapping for mapping in mappings}
+            except Exception:
+                logger.exception('Unable to preload QuickBooks branch mappings')
+        return context
+    
+    def perform_create(self, serializer):
+        """Set created_by when creating a branch"""
+        if not user_has_permission(self.request.user, 'manage_branches'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('You do not have permission to create branches.')
+        serializer.save(created_by=self.request.user)
+    
+    def perform_update(self, serializer):
+        """Check permissions before updating"""
+        if not user_has_permission(self.request.user, 'manage_branches'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('You do not have permission to update branches.')
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        """Check permissions and prevent deletion of branches with data"""
+        if not user_has_permission(self.request.user, 'manage_branches'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('You do not have permission to delete branches.')
+        
+        # Prevent deletion if it's the only active branch
+        active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
+        if instance.is_active and not active_branches.exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                'Cannot deactivate the last active branch. Please activate another branch first or create a new one.'
+            )
+        
+        instance.is_active = False
+        instance.save()
+
+        from apps.accounting.settlement_accounts import deactivate_branch_settlement_accounts
+
+        deactivated = deactivate_branch_settlement_accounts(instance)
+        if deactivated:
+            logger.info(
+                'Deactivated %s settlement account(s) for archived branch %s',
+                deactivated,
+                instance.name,
+            )
+    
+    @action(detail=True, methods=['delete'])
+    def force_delete(self, request, pk=None):
+        """
+        Deprecated destructive endpoint.
+
+        Branches are archived by deactivation so operational history remains
+        intact. This keeps old work orders, invoices, inspections, and stock
+        movements auditable.
+        """
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to archive branches.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        instance = self.get_object()
+        active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
+        if not active_branches.exists() and instance.is_active:
+            return Response(
+                {'detail': 'Cannot deactivate the last active branch. Please activate another branch first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        instance.is_active = False
+        instance.save(update_fields=['is_active', 'updated_at'])
+        from apps.accounting.settlement_accounts import deactivate_branch_settlement_accounts
+
+        deactivate_branch_settlement_accounts(instance)
+        return Response(
+            {'detail': f'Branch "{instance.name}" has been archived. Historical records were preserved.'},
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='permanent-delete')
+    def permanent_delete(self, request, pk=None):
+        """Permanently delete a branch that has no operational records."""
+        from rest_framework.exceptions import ValidationError
+
+        from .deletion import get_branch_delete_blockers, permanently_delete_branch
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to delete branches.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        instance = self.get_object()
+        confirmation = str(request.data.get('confirmation', '')).strip()
+        if confirmation != instance.name:
+            return Response(
+                {
+                    'detail': (
+                        f'Permanent deletion requires confirmation. '
+                        f'Type the exact branch name: {instance.name}'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        blockers = get_branch_delete_blockers(instance)
+        if blockers:
+            return Response(
+                {
+                    'detail': (
+                        'Cannot permanently delete this branch because it still has: '
+                        + ', '.join(blockers)
+                        + '. Archive it instead, or remove the related records first.'
+                    ),
+                    'blockers': blockers,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            fallback = permanently_delete_branch(instance)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+        payload = {'detail': f'Branch "{confirmation}" was permanently deleted.'}
+        if fallback:
+            payload['fallback_branch'] = {
+                'id': fallback.id,
+                'name': fallback.name,
+                'code': fallback.code,
+            }
+        return Response(payload, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'])
+    def staff(self, request, pk=None):
+        """Get all staff members assigned to this branch"""
+        branch = self.get_object()
+        
+        # Check if user has access to this branch
+        if not request.user.has_branch_access(branch) and not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to view staff for this branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        from apps.accounts.serializers import StaffUserSerializer
+        
+        staff = User.objects.filter(
+            branch=branch,
+            role__in=['receptionist', 'technician', 'parts_manager']
+        )
+        serializer = StaffUserSerializer(staff, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def managers(self, request, pk=None):
+        """Get all managers assigned to this branch"""
+        branch = self.get_object()
+        
+        # Check if user has access to this branch
+        if not request.user.has_branch_access(branch) and not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to view managers for this branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        from apps.accounts.serializers import StaffUserSerializer
+        
+        managers = branch.managers.filter(role='manager')
+        serializer = StaffUserSerializer(managers, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def assign_staff(self, request, pk=None):
+        """Assign a staff member to this branch"""
+        branch = self.get_object()
+        
+        if not user_has_permission(request.user, 'manage_branches') and not request.user.has_branch_access(branch):
+            return Response(
+                {'detail': 'You do not have permission to assign staff to this branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response(
+                {'detail': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+            
+            # Only assign non-manager staff
+            if user.role not in ['receptionist', 'technician', 'parts_manager']:
+                return Response(
+                    {'detail': 'Only receptionist, technician, and parts_manager can be assigned to a single branch.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            user.branch = branch
+            user.save()
+            
+            return Response(
+                {'detail': f'{user.get_full_name()} has been assigned to {branch.name}'},
+                status=status.HTTP_200_OK
+            )
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['post'])
+    def assign_manager(self, request, pk=None):
+        """Assign a manager to this branch"""
+        branch = self.get_object()
+        
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to assign managers to branches.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response(
+                {'detail': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id, role='manager')
+            user.managed_branches.add(branch)
+            
+            return Response(
+                {'detail': f'{user.get_full_name()} has been assigned as manager to {branch.name}'},
+                status=status.HTTP_200_OK
+            )
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Manager not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['post'])
+    def remove_manager(self, request, pk=None):
+        """Remove a manager from this branch"""
+        branch = self.get_object()
+        
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to remove managers from branches.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response(
+                {'detail': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id, role='manager')
+            user.managed_branches.remove(branch)
+            
+            return Response(
+                {'detail': f'{user.get_full_name()} has been removed from {branch.name}'},
+                status=status.HTTP_200_OK
+            )
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Manager not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=False, methods=['get'])
+    def accessible(self, request):
+        """Get all branches accessible to the current user"""
+        branches = request.user.get_accessible_branches()
+        serializer = BranchListSerializer(
+            branches,
+            many=True,
+            context=self.get_serializer_context(),
+        )
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='provision-settlement')
+    def provision_settlement(self, request, pk=None):
+        """Create branch settlement GL accounts from QBO and map svr_account rows."""
+        from apps.quickbooks_online.branch_settlement_services import provision_branch_settlement_accounts
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to provision branch settlement accounts.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        branch = self.get_object()
+        dry_run = bool(request.data.get('dry_run', False))
+        map_qbo = not bool(request.data.get('no_map_qbo', False))
+        result = provision_branch_settlement_accounts(branch, dry_run=dry_run, map_qbo=map_qbo)
+        return Response({
+            'branch_id': branch.id,
+            'dry_run': dry_run,
+            **result,
+        })
+
+    @action(detail=True, methods=['get', 'patch'], url_path='settlement-accounts')
+    def settlement_accounts(self, request, pk=None):
+        """
+        List or update branch-scoped settlement (bank/cash) GL accounts.
+
+        PATCH body: { "assign": [account_id, ...], "unassign": [...], "provision_from_qbo": true }
+        """
+        from apps.accounting.settlement_accounts import (
+            branch_settlement_overview,
+            update_branch_settlement_accounts,
+        )
+        from apps.quickbooks_online.branch_settlement_services import provision_branch_settlement_accounts
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to manage branch settlement accounts.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        branch = self.get_object()
+
+        if request.method == 'GET':
+            return Response(branch_settlement_overview(branch))
+
+        assign_ids = request.data.get('assign') or []
+        unassign_ids = request.data.get('unassign') or []
+        if not isinstance(assign_ids, list) or not isinstance(unassign_ids, list):
+            return Response(
+                {'detail': 'assign and unassign must be lists of account ids.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = update_branch_settlement_accounts(
+            branch,
+            assign_ids=assign_ids,
+            unassign_ids=unassign_ids,
+        )
+
+        if request.data.get('provision_from_qbo'):
+            provision = provision_branch_settlement_accounts(branch, map_qbo=True)
+            result['provision'] = provision
+
+        overview = branch_settlement_overview(branch)
+        return Response({**overview, **result})
+
+    @action(detail=True, methods=['get', 'patch'], url_path='qbo-account-mappings')
+    def qbo_account_mappings(self, request, pk=None):
+        """
+        List or update branch-specific QBO chart-of-accounts overrides.
+
+        Overrides cascade: branch row → company default (Accounting → Controls).
+        PATCH body: { "mappings": [{ "mapping_kind", "mapping_key", "qbo_account_id"?, "qbo_item_id"?, "action": "clear"? }] }
+        """
+        from apps.quickbooks_online.mapping_services import get_account_mapping_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not user_has_permission(request.user, 'manage_branches'):
+            return Response(
+                {'detail': 'You do not have permission to manage branch QBO mappings.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        branch = self.get_object()
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected. Connect under Admin → Integrations first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if QuickBooksService.get_client() is None:
+            return Response(
+                {
+                    'detail': (
+                        'QuickBooks is linked but the live API session is unavailable. '
+                        'Reconnect under Admin → Integrations.'
+                    ),
+                    'code': 'qbo_api_unavailable',
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        service = get_account_mapping_service()
+
+        if request.method == 'GET':
+            overview = service.get_branch_mapping_overview(branch)
+            return Response({'is_connected': True, **overview})
+
+        mappings = request.data.get('mappings')
+        if not isinstance(mappings, list):
+            return Response(
+                {'detail': 'Expected a list of mappings under the "mappings" key.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        errors = []
+        updated = 0
+        for entry in mappings:
+            mapping_kind = entry.get('mapping_kind')
+            mapping_key = entry.get('mapping_key')
+            if not mapping_kind or not mapping_key:
+                errors.append({'entry': entry, 'detail': 'mapping_kind and mapping_key are required.'})
+                continue
+            if entry.get('action') == 'clear':
+                service.clear_row(mapping_kind, mapping_key, branch=branch)
+                updated += 1
+                continue
+            success, error = service.map_row(
+                mapping_kind,
+                mapping_key,
+                qbo_account_id=entry.get('qbo_account_id'),
+                qbo_item_id=entry.get('qbo_item_id'),
+                branch=branch,
+                user=request.user,
+            )
+            if success:
+                updated += 1
+            else:
+                errors.append({
+                    'mapping_kind': mapping_kind,
+                    'mapping_key': mapping_key,
+                    'detail': error,
+                })
+
+        overview = service.get_branch_mapping_overview(branch)
+        status_code = status.HTTP_200_OK if not errors else status.HTTP_207_MULTI_STATUS
+        return Response(
+            {
+                'updated': updated,
+                'errors': errors,
+                'is_connected': True,
+                **overview,
+            },
+            status=status_code,
+        )
+
+    @action(detail=True, methods=['post'], url_path='qbo-suggest-mappings')
+    def qbo_suggest_mappings(self, request, pk=None):
+        """Pattern-match branch QBO chart overrides from the live QBO chart."""
+        from apps.quickbooks_online.mapping_services import get_account_mapping_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        branch = self.get_object()
+        if not QuickBooksService.is_connected() or QuickBooksService.get_client() is None:
+            return Response(
+                {'detail': 'QuickBooks is not connected or the API session is unavailable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = bool(request.data.get('dry_run', False))
+        result = get_account_mapping_service().suggest_branch_qbo_mappings(
+            branch,
+            dry_run=dry_run,
+            user=request.user,
+        )
+        overview = get_account_mapping_service().get_branch_mapping_overview(branch)
+        status_code = status.HTTP_200_OK if not result.get('errors') else status.HTTP_207_MULTI_STATUS
+        return Response({**result, **overview, 'is_connected': True}, status=status_code)
+
+    @action(detail=True, methods=['post'], url_path='qbo-copy-mappings')
+    def qbo_copy_mappings(self, request, pk=None):
+        """Copy QBO chart overrides from another branch."""
+        from apps.quickbooks_online.mapping_services import get_account_mapping_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        branch = self.get_object()
+        source_branch_id = request.data.get('source_branch_id')
+        if not source_branch_id:
+            return Response(
+                {'detail': 'source_branch_id is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            source_branch = Branch.objects.get(pk=int(source_branch_id))
+        except (TypeError, ValueError, Branch.DoesNotExist):
+            return Response(
+                {'detail': 'source_branch_id is invalid.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not QuickBooksService.is_connected() or QuickBooksService.get_client() is None:
+            return Response(
+                {'detail': 'QuickBooks is not connected or the API session is unavailable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = get_account_mapping_service().copy_branch_qbo_mappings(
+            branch,
+            source_branch,
+            user=request.user,
+        )
+        overview = get_account_mapping_service().get_branch_mapping_overview(branch)
+        status_code = status.HTTP_200_OK if not result.get('errors') else status.HTTP_207_MULTI_STATUS
+        return Response({**result, **overview, 'is_connected': True}, status=status_code)
+
+    @action(detail=True, methods=['post'], url_path='qbo-resync-documents')
+    def qbo_resync_documents(self, request, pk=None):
+        """Queue outbound QBO re-sync for eligible branch invoices, estimates, and credit notes."""
+        from apps.quickbooks_online.branch_qbo_resync_services import queue_branch_sales_document_resync
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        branch = self.get_object()
+        result = queue_branch_sales_document_resync(branch)
+        return Response(result)
+
+    @action(detail=False, methods=['post'], url_path='qbo-link-all-locations')
+    def qbo_link_all_locations(self, request):
+        """Link all active branches to QBO Departments by city/name."""
+        from apps.quickbooks_online.owner_coa_services import get_owner_coa_setup_service
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = bool(request.data.get('dry_run', False))
+        result = get_owner_coa_setup_service().sync_branch_departments(dry_run=dry_run)
+        if result.get('error'):
+            return Response({'detail': result['error']}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'dry_run': dry_run, **result})
+
+    @action(detail=False, methods=['post'], url_path='qbo-provision-all-settlement')
+    def qbo_provision_all_settlement(self, request):
+        """Provision settlement GL accounts from QBO for every active branch."""
+        from apps.quickbooks_online.branch_settlement_services import provision_branch_settlement_accounts
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = bool(request.data.get('dry_run', False))
+        results = []
+        for branch in Branch.objects.filter(is_active=True).order_by('name'):
+            provision = provision_branch_settlement_accounts(branch, dry_run=dry_run, map_qbo=True)
+            results.append({
+                'branch_id': branch.id,
+                'branch_name': branch.name,
+                **provision,
+            })
+        return Response({'dry_run': dry_run, 'branches': results})
+
+    @action(detail=False, methods=['get'], url_path='qbo-departments')
+    def qbo_departments(self, request):
+        """List QBO locations and show which SVR branch each one is mapped to."""
+        from apps.quickbooks_online.services import QuickBooksService
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected. Connect under Admin → Integrations first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        departments, error = QuickBooksService().list_departments()
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'departments': departments,
+            'is_connected': True,
+        })
+
+    @action(detail=True, methods=['post'], url_path='qbo-mapping')
+    def qbo_mapping(self, request, pk=None):
+        """
+        Manage the QBO location mapping for a branch.
+
+        Body:
+          { "department_id": "12" }  — map to an existing QBO location
+          { "action": "auto_sync" }  — create/update QBO location from branch data
+          { "action": "clear" }      — remove mapping
+        """
+        from apps.quickbooks_online.services import QuickBooksService
+
+        branch = self.get_object()
+
+        if not QuickBooksService.is_connected():
+            return Response(
+                {'detail': 'QuickBooks is not connected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        service = QuickBooksService()
+        action_name = request.data.get('action')
+        department_id = request.data.get('department_id')
+
+        if action_name == 'clear':
+            service.clear_branch_qbo_mapping(branch)
+            return Response({'detail': 'QuickBooks mapping cleared.', 'branch_id': branch.id})
+
+        if action_name == 'auto_sync':
+            qb_department = service.sync_branch(branch)
+            if not qb_department:
+                from apps.quickbooks_online.models import QBOMapping
+                branch_ct = ContentType.objects.get_for_model(Branch)
+                mapping = QBOMapping.objects.filter(content_type=branch_ct, object_id=branch.id).first()
+                error_message = mapping.error_message if mapping else 'Failed to sync branch to QuickBooks.'
+                return Response({'detail': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'detail': 'Branch synced to QuickBooks.',
+                'branch_id': branch.id,
+                'qbo_department_id': str(qb_department.Id),
+                'qbo_department_name': qb_department.Name,
+            })
+
+        if department_id:
+            success, error = service.map_branch_to_department(branch, department_id)
+            if not success:
+                return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+            departments, _list_error = service.list_departments()
+            department_name = None
+            if departments:
+                department_name = next(
+                    (item['name'] for item in departments if item['id'] == str(department_id)),
+                    None,
+                )
+            return Response({
+                'detail': 'Branch mapped to QuickBooks location.',
+                'branch_id': branch.id,
+                'qbo_department_id': str(department_id),
+                'qbo_department_name': department_name,
+            })
+
+        return Response(
+            {'detail': 'Provide department_id or action (auto_sync, clear).'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    @action(detail=True, methods=['post'], url_path='qbo-onboard')
+    def qbo_onboard(self, request, pk=None):
+        """
+        One-step QuickBooks onboarding for a branch.
+
+        Body:
+          {
+            "location_action": "auto_sync" | "map" | "skip",
+            "department_id": "12",
+            "provision_settlement": true,
+            "provision_main_cash": true,
+            "dry_run": false
+          }
+        """
+        from apps.quickbooks_online.branch_onboard_services import onboard_branch_quickbooks
+
+        branch = self.get_object()
+        dry_run = bool(request.data.get('dry_run', False))
+        result = onboard_branch_quickbooks(
+            branch,
+            location_action=request.data.get('location_action', 'auto_sync'),
+            department_id=request.data.get('department_id'),
+            provision_settlement=bool(request.data.get('provision_settlement', True)),
+            provision_main_cash=bool(request.data.get('provision_main_cash', True)),
+            dry_run=dry_run,
+        )
+
+        if result.get('errors') and not dry_run:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
+    
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """Get statistics for a specific branch"""
+        branch = self.get_object()
+        
+        # Check if user has access to this branch
+        # Admin users have access to all branches
+        user_has_access = False
+        if user_has_permission(request.user, 'manage_branches') or request.user.is_superuser:
+            user_has_access = True
+        elif request.user.role == 'manager':
+            # Managers can access branches they manage
+            user_has_access = branch in request.user.managed_branches.all()
+        elif request.user.branch == branch:
+            # Staff can access their assigned branch
+            user_has_access = True
+        
+        if not user_has_access:
+            return Response(
+                {'detail': 'You do not have permission to view stats for this branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            from apps.workorders.models import WorkOrder
+            from apps.appointments.models import Appointment
+            from apps.inventory.models import Part
+            
+            # Work order stats
+            work_orders = WorkOrder.objects.filter(branch=branch)
+            total_work_orders = work_orders.count()
+            active_work_orders = work_orders.filter(status__in=['pending', 'in_progress', 'on_hold']).count()
+            completed_work_orders = work_orders.filter(status='completed').count()
+            total_revenue = work_orders.filter(status='completed').aggregate(
+                total=Sum('actual_total')
+            )['total'] or 0
+            
+            # Appointment stats
+            appointments = Appointment.objects.filter(branch=branch)
+            total_appointments = appointments.count()
+            upcoming_appointments = appointments.filter(
+                appointment_date__gte=timezone.now().date()
+            ).count()
+            
+            # Inventory stats - Use StockItem model
+            try:
+                from apps.inventory.models import StockItem
+                stock_items = StockItem.objects.filter(branch=branch).select_related('part')
+                total_parts = stock_items.values('part').distinct().count()
+                # Count parts where quantity_in_stock <= minimum_stock
+                low_stock_parts = stock_items.filter(
+                    quantity_in_stock__lte=F('minimum_stock')
+                ).values('part').distinct().count()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error calculating inventory stats for branch {branch.id}: {e}", exc_info=True)
+                total_parts = 0
+                low_stock_parts = 0
+            
+            stats = {
+                'branch_id': branch.id,
+                'branch_name': branch.name,
+                'work_orders': {
+                    'total': total_work_orders,
+                    'active': active_work_orders,
+                    'completed': completed_work_orders,
+                    'total_revenue': float(total_revenue),
+                },
+                'appointments': {
+                    'total': total_appointments,
+                    'upcoming': upcoming_appointments,
+                },
+                'inventory': {
+                    'total_parts': total_parts,
+                    'low_stock_parts': low_stock_parts,
+                },
+                'staff': {
+                    'total_staff': branch.staff_count,
+                    'total_managers': branch.manager_count,
+                }
+            }
+            
+            return Response(stats)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in stats endpoint for branch {branch.id}: {e}", exc_info=True)
+            return Response(
+                {'detail': f'Error calculating statistics: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

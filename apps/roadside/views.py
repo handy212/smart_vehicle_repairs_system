@@ -1,0 +1,1197 @@
+"""
+Views for roadside assistance
+"""
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db import IntegrityError, transaction
+from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+from .models import RoadsideRequest, RoadsideDispatch
+from .serializers import (
+    RoadsideRequestSerializer,
+    RoadsideRequestDetailSerializer,
+    RoadsideRequestCreateSerializer,
+    RoadsideRequestUpdateSerializer,
+    RoadsideNoteSerializer,
+    RoadsideNoteCreateSerializer,
+    RoadsidePhotoSerializer,
+    RoadsidePhotoCreateSerializer,
+)
+from apps.accounts.permissions import HasPermission, HasAnyPermission, IsModuleEnabled
+from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
+from .branch_utils import resolve_roadside_branch
+from apps.core.services.ai_service import AIService
+
+
+import logging
+from apps.notifications_app.triggers import notification_triggers
+from apps.subscriptions.services import SubscriptionUsageService
+from apps.subscriptions.models import SubscriptionUsage
+
+logger = logging.getLogger(__name__)
+
+ACTIVE_ROADSIDE_STATUSES = ('requested', 'dispatched', 'en_route', 'on_site', 'in_progress')
+TERMINAL_ROADSIDE_STATUSES = ('completed', 'cancelled', 'failed')
+TECH_APP_HISTORY_DAYS = 14
+
+
+def _is_tech_app_client(request):
+    """Next.js technician PWA sends this header — enforce field-tech scoping."""
+    return request.headers.get('X-Tech-App', '').lower() in ('1', 'true', 'yes')
+
+
+def _technician_roadside_queryset(queryset, user, include_history=False):
+    """Only jobs assigned to this technician; hide old completed by default."""
+    assigned = queryset.filter(
+        Q(assigned_technician=user) | Q(dispatches__technician=user)
+    ).distinct()
+
+    if include_history:
+        return assigned
+
+    cutoff = timezone.now() - timedelta(days=TECH_APP_HISTORY_DAYS)
+    return assigned.filter(
+        Q(status__in=ACTIVE_ROADSIDE_STATUSES)
+        | Q(status__in=TERMINAL_ROADSIDE_STATUSES, completed_at__gte=cutoff)
+        | Q(
+            status__in=TERMINAL_ROADSIDE_STATUSES,
+            completed_at__isnull=True,
+            updated_at__gte=cutoff,
+        )
+    )
+
+
+class RoadsideRequestViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing roadside assistance requests
+    """
+    queryset = RoadsideRequest.objects.all()
+
+    def get_queryset(self):
+        """Filter requests based on user role and branch"""
+        user = self.request.user
+        action = getattr(self, 'action', None)
+        
+        queryset = RoadsideRequest.objects.select_related(
+            'customer', 'customer__user', 'vehicle', 'branch', 'assigned_technician',
+            'subscription_used', 'subscription_used__package', 'created_by', 'invoice',
+        ).prefetch_related(
+            'dispatches__technician',
+            'site_notes__created_by',
+            'photos__uploaded_by',
+        )
+        
+        # For my_requests action, let the action handle filtering
+        if action == 'my_requests':
+            return queryset.none()  # Will be filtered in the action itself
+        
+        if not user or user.is_anonymous:
+            return queryset.none()
+        
+        if user.role == 'customer':
+            try:
+                customer = user.customer_profile
+                return queryset.filter(customer=customer)
+            except AttributeError:
+                from apps.customers.models import Customer
+                try:
+                    customer = Customer.objects.get(user=user)
+                    return queryset.filter(customer=customer)
+                except Customer.DoesNotExist:
+                    return queryset.none()
+        
+        elif getattr(user, 'is_technician', False) or _is_tech_app_client(self.request):
+            include_history = self.request.query_params.get('include_history', '').lower() in (
+                '1', 'true', 'yes',
+            )
+            return _technician_roadside_queryset(queryset, user, include_history=include_history)
+
+        # Admin, Manager, and other staff -> Apply branch filtering
+        return filter_queryset_for_user_branches(queryset, user, self.request)
+
+    permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
+
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status', 'service_type', 'customer', 'vehicle', 'branch', 'is_covered_by_subscription', 'assigned_technician']
+    search_fields = ['request_number', 'customer__user__first_name', 'customer__user__last_name', 'vehicle__license_plate', 'breakdown_location']
+    ordering_fields = [
+        'request_number', 'requested_at', 'dispatched_at', 'completed_at', 'status',
+        'service_type', 'breakdown_location',
+        'customer__user__last_name', 'customer__company_name',
+        'branch__name',
+    ]
+    ordering = ['-requested_at']
+
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for roadside dashboard.
+        """
+        # Filter by user role/branch logic
+        queryset = self.get_queryset()
+        
+        # Calculate stats
+        total_requests = queryset.count()
+        active_requests = queryset.filter(status__in=['requested', 'dispatched', 'en_route', 'on_site', 'in_progress']).count()
+        completed_requests = queryset.filter(status='completed').count()
+        covered_by_subscription = queryset.filter(is_covered_by_subscription=True).count()
+        
+        return Response({
+            'total_requests': total_requests,
+            'active_requests': active_requests,
+            'completed_requests': completed_requests,
+            'covered_by_subscription': covered_by_subscription
+        })
+    
+    def _customer_portal_permissions(self):
+        """Authenticated customer portal access (queryset limits to own records)."""
+        return [p() for p in [IsAuthenticated, IsModuleEnabled('roadside')]]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        action = getattr(self, 'action', None)
+        permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
+        is_customer = getattr(self.request.user, 'role', None) == 'customer'
+        is_technician = getattr(self.request.user, 'is_technician', False)
+        if action in ['list', 'retrieve']:
+            if is_customer:
+                return self._customer_portal_permissions()
+            if is_technician:
+                return [p() for p in permission_classes]
+            permission_classes.append(HasPermission('view_roadside'))
+            return [p() for p in permission_classes]
+        if action == 'dashboard_stats':
+            permission_classes.append(HasPermission('view_roadside'))
+            return [p() for p in permission_classes]
+        elif action in ('create', 'cancel', 'my_requests', 'rate_service'):
+            # Customer portal actions on own requests
+            if is_customer:
+                return self._customer_portal_permissions()
+            if action == 'create':
+                permission_classes.append(HasAnyPermission(['manage_roadside', 'create_roadside']))
+            elif action == 'cancel':
+                permission_classes.append(HasAnyPermission(['edit_roadside', 'manage_roadside']))
+            elif action == 'my_requests':
+                permission_classes.append(HasPermission('view_roadside'))
+            return [p() for p in permission_classes]
+        elif action == 'assign_dispatch':
+            permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+            return [p() for p in permission_classes]
+        elif action in ['add_technician', 'remove_technician']:
+            permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+            return [p() for p in permission_classes]
+        elif action == 'my_assignments':
+            return [p() for p in permission_classes]
+        elif action in ['accept_assignment', 'reject_assignment']:
+            return [p() for p in permission_classes]
+        elif action in ['en_route', 'in_progress', 'arrive', 'complete', 'fail']:
+             # Allow dispatchers OR the assigned technician (via object permission or get_queryset security)
+             # But we must Block customers
+             if getattr(self.request.user, "role", None) == "customer":
+                 permission_classes.append(HasAnyPermission(['manage_roadside'])) # Effectively blocks customers
+                 return [p() for p in permission_classes]
+             return [p() for p in permission_classes]
+        elif action in ['site_notes', 'site_photos']:
+             return [p() for p in permission_classes]
+        elif action in ['update', 'partial_update']:
+             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+             return [p() for p in permission_classes]
+        elif action == 'destroy':
+             permission_classes.append(HasAnyPermission(['manage_roadside']))
+             return [p() for p in permission_classes]
+        elif action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
+             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+             return [p() for p in permission_classes]
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            permission_classes.append(HasPermission('view_roadside'))
+        else:
+            permission_classes.append(HasAnyPermission(['edit_roadside', 'manage_roadside']))
+        return [p() for p in permission_classes]
+
+    def _can_add_site_update(self, roadside_request):
+        return roadside_request.status in ['on_site', 'in_progress']
+
+    def _get_technician_dispatch(self, roadside_request, user):
+        return roadside_request.dispatches.filter(technician=user).first()
+
+    def _ensure_technician_accepted(self, roadside_request, user):
+        """Field technicians must accept before status transitions."""
+        if not getattr(user, 'is_technician', False) and not _is_tech_app_client(self.request):
+            return
+        dispatch = self._get_technician_dispatch(roadside_request, user)
+        if not dispatch:
+            raise ValueError('You are not assigned to this request.')
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_PENDING:
+            raise ValueError('Accept the assignment before continuing.')
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_REJECTED:
+            raise ValueError('You rejected this assignment.')
+
+    def _apply_dispatch_rejection(self, roadside_request, technician, reason=''):
+        """Update dispatch + primary assignment after technician rejects."""
+        dispatch = roadside_request.dispatches.filter(technician=technician).first()
+        if not dispatch:
+            return
+        dispatch.response_status = RoadsideDispatch.RESPONSE_REJECTED
+        dispatch.rejection_reason = (reason or '').strip()
+        dispatch.responded_at = timezone.now()
+        dispatch.save(update_fields=['response_status', 'rejection_reason', 'responded_at'])
+
+        was_primary = roadside_request.assigned_technician_id == technician.id
+        if not was_primary:
+            return
+
+        next_dispatch = (
+            roadside_request.dispatches.filter(
+                response_status=RoadsideDispatch.RESPONSE_ACCEPTED
+            )
+            .select_related('technician')
+            .first()
+        )
+        if next_dispatch:
+            roadside_request.assigned_technician = next_dispatch.technician
+            roadside_request.save(update_fields=['assigned_technician', 'updated_at'])
+            return
+
+        roadside_request.assigned_technician = None
+        has_pending = roadside_request.dispatches.filter(
+            response_status=RoadsideDispatch.RESPONSE_PENDING
+        ).exists()
+        if roadside_request.status == 'dispatched' and not has_pending:
+            roadside_request.status = 'requested'
+            roadside_request.dispatched_at = None
+        roadside_request.save(
+            update_fields=['assigned_technician', 'status', 'dispatched_at', 'updated_at']
+        )
+
+    def _site_update_unavailable_response(self):
+        return Response(
+            {'error': 'Site notes and photos can be added once the technician is on site or working.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    def get_serializer_class(self):
+        action = getattr(self, 'action', None)
+        if action == 'create':
+            return RoadsideRequestCreateSerializer
+        elif action in ['update', 'partial_update']:
+            return RoadsideRequestUpdateSerializer
+        elif action == 'retrieve':
+            return RoadsideRequestDetailSerializer
+        return RoadsideRequestSerializer
+
+    def perform_destroy(self, instance):
+        from rest_framework.exceptions import ValidationError
+
+        if instance.status != 'requested' or instance.dispatches.exists():
+            raise ValidationError({
+                'detail': 'Only roadside requests that have not been dispatched can be deleted.'
+            })
+
+        if instance.subscription_allowance_deducted and instance.subscription_usage_record:
+            self._refund_subscription_allowance(
+                self.request,
+                instance,
+                'Deleted before dispatch'
+            )
+            instance.refresh_from_db()
+
+        instance.delete()
+    
+
+    
+    
+    def perform_create(self, serializer):
+        from django.db import transaction
+        from rest_framework.exceptions import ValidationError
+        
+        request = self.request
+        branch = serializer.validated_data.get('branch')
+        if branch is None:
+            branch_id = request.data.get('branch') or request.data.get('branch_id')
+            branch = resolve_roadside_branch(request, branch_id=branch_id)
+
+        try:
+            # 1. Start atomic transaction for the entire request creation
+            with transaction.atomic():
+                roadside_request = serializer.save(
+                    branch=branch,
+                    created_by=request.user,
+                )
+                
+                # 2. Check and consume subscription allowance
+                # We wrap this logic here. If subscription consumption fails BUT we catch it,
+                # we must ensure that any created Usage record is rolled back OR never linked.
+                self._handle_subscription_usage(request, roadside_request)
+                self._ensure_valid_subscription_usage_link(roadside_request)
+        except IntegrityError as exc:
+            if 'subscription_usage_record_id' in str(exc):
+                logger.warning(
+                    "Roadside request subscription usage link failed during create: %s",
+                    exc,
+                    exc_info=True,
+                )
+                raise ValidationError({
+                    'subscription': 'We could not apply the subscription allowance to this request. Please try again or create the request as pay-per-use.'
+                })
+            raise
+
+        # 3. Send notification ONLY after successful commit
+        def send_notification():
+            try:
+                notification_triggers.roadside_requested(roadside_request)
+            except Exception as e:
+                logger.warning(f"Failed to send roadside request notification: {e}")
+
+        transaction.on_commit(send_notification)
+
+    def _clear_subscription_usage_link(self, roadside_request):
+        RoadsideRequest.objects.filter(pk=roadside_request.pk).update(
+            subscription_used=None,
+            subscription_allowance_deducted=False,
+            subscription_usage_record=None,
+            is_covered_by_subscription=False,
+        )
+        roadside_request.subscription_used = None
+        roadside_request.subscription_allowance_deducted = False
+        roadside_request.subscription_usage_record = None
+        roadside_request.subscription_usage_record_id = None
+        roadside_request.is_covered_by_subscription = False
+
+    def _ensure_valid_subscription_usage_link(self, roadside_request):
+        roadside_request.refresh_from_db(fields=[
+            'subscription_usage_record',
+            'subscription_used',
+            'subscription_allowance_deducted',
+            'is_covered_by_subscription',
+        ])
+        usage_id = roadside_request.subscription_usage_record_id
+        if usage_id and not SubscriptionUsage.objects.filter(pk=usage_id).exists():
+            logger.warning(
+                "Clearing missing subscription usage %s from roadside request %s before commit",
+                usage_id,
+                roadside_request.pk,
+            )
+            self._clear_subscription_usage_link(roadside_request)
+
+    def _handle_subscription_usage(self, request, roadside_request):
+        """Helper to handle strict subscription logic inside a transaction"""
+        if request.data.get('pay_as_you_go') in [True, 'true', 'True', '1', 1]:
+            return
+
+        # Map service types to subscription feature keys
+        service_to_feature = {
+            'towing': 'towing_services_km',
+            'battery_boost': 'battery_boosts',
+            'flat_tyre': 'flat_tyre_service',
+            'key_lockout': 'key_lock_out',
+            'emergency_fuel': 'emergency_fuel',
+            'extrication': 'extrication',
+            'mechanical_first_aid': 'roadside_first_aid',
+            'accident_estimate': 'accident_estimate',
+            'pre_purchase_inspection': 'pre_purchase_inspection',
+        }
+        
+        feature_key = service_to_feature.get(roadside_request.service_type)
+        if not feature_key:
+            return
+
+        try:
+            customer = roadside_request.customer
+            vehicle = roadside_request.vehicle
+            
+            if not customer or not vehicle:
+                return
+
+            # Check if customer has active subscription for this vehicle
+            has_allowance, subscription, remaining = SubscriptionUsageService.check_allowance(
+                customer, feature_key, 
+                quantity_needed=roadside_request.tow_distance_km if roadside_request.service_type == 'towing' else 1,
+                vehicle=vehicle
+            )
+            
+            if has_allowance and subscription:
+                try:
+                    # Determine quantity to deduct
+                    if roadside_request.service_type == 'towing' and roadside_request.tow_distance_km:
+                        quantity_used = roadside_request.tow_distance_km
+                    else:
+                        quantity_used = 1
+                    
+                    usage_type = service_to_feature.get(roadside_request.service_type, feature_key)
+                    
+                    # Consume allowance in the same outer transaction as the request update.
+                    usage_record = SubscriptionUsageService.consume_allowance(
+                        subscription=subscription,
+                        usage_type=usage_type,
+                        quantity_used=quantity_used,
+                        reference_type='roadside',
+                        reference_id=roadside_request.id,
+                        description=f'{roadside_request.get_service_type_display()} - {roadside_request.request_number}',
+                        created_by=request.user
+                    )
+                    
+                    # Also consume the package-wide service call count if applicable.
+                    # `call_out_charges` is legacy and should not be deducted for
+                    # every roadside service because it can exhaust all services.
+                    for global_feat in ['total_service_calls']:
+                        if subscription.package.features.get(global_feat) is not None:
+                            SubscriptionUsageService.consume_allowance(
+                                subscription=subscription,
+                                usage_type=global_feat,
+                                quantity_used=1,
+                                reference_type='roadside',
+                                reference_id=roadside_request.id,
+                                description=f'Global deduction for {roadside_request.get_service_type_display()} - {roadside_request.request_number}',
+                                created_by=request.user
+                            )
+                    
+                    # Update request with subscription info only after the usage row exists.
+                    roadside_request.subscription_used = subscription
+                    roadside_request.subscription_allowance_deducted = True
+                    roadside_request.subscription_usage_record = usage_record
+                    roadside_request.is_covered_by_subscription = True
+                    roadside_request.save(update_fields=[
+                        'subscription_used',
+                        'subscription_allowance_deducted',
+                        'subscription_usage_record',
+                        'is_covered_by_subscription',
+                        'updated_at',
+                    ])
+                        
+                except Exception as sub_e:
+                    # Log the internal subscription failure
+                    logger.warning(f"Subscription consumption failed: {sub_e}", exc_info=True)
+                    
+                    self._clear_subscription_usage_link(roadside_request)
+
+        except Exception as e:
+            # Catch top-level logic errors in this helper
+            logger.error(f"Error in _handle_subscription_usage: {e}", exc_info=True)
+            # Ensure safe fallback - clear ALL subscription fields
+            self._clear_subscription_usage_link(roadside_request)
+
+    def _refund_subscription_allowance(self, request, roadside_request, reason):
+        if not roadside_request.subscription_allowance_deducted or not roadside_request.subscription_usage_record:
+            return
+
+        usage_record = roadside_request.subscription_usage_record
+        SubscriptionUsageService.refund_allowance(
+            subscription=usage_record.subscription,
+            usage_type=usage_record.usage_type,
+            quantity_to_refund=usage_record.quantity_used,
+            reference_type='roadside',
+            reference_id=roadside_request.id,
+            description=f"Refund: {reason} {roadside_request.request_number}",
+            created_by=request.user
+        )
+        roadside_request.subscription_allowance_deducted = False
+        roadside_request.save(update_fields=['subscription_allowance_deducted', 'updated_at'])
+    
+    @action(detail=True, methods=['post'])
+    def assign_dispatch(self, request, pk=None):
+        """Dispatch a roadside request to a technician (sets primary technician, changes status)"""
+        roadside_request = self.get_object()
+        
+        try:
+            technician_id = request.data.get('technician_id')
+            if technician_id:
+                from apps.accounts.models import User
+                try:
+                    technician = User.objects.get(id=technician_id)
+                    if not technician.is_technician:
+                        return Response(
+                            {'error': 'Assigned user must be a technician'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    if roadside_request.branch and not technician.has_branch_access(roadside_request.branch):
+                        return Response(
+                            {'error': 'Technician does not have access to this request branch'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    roadside_request.mark_dispatched(technician=technician)
+                    dispatch, _created = RoadsideDispatch.objects.get_or_create(
+                        request=roadside_request,
+                        technician=technician,
+                        defaults={
+                            'dispatched_by': request.user,
+                            'response_status': RoadsideDispatch.RESPONSE_PENDING,
+                        },
+                    )
+                    if not _created:
+                        dispatch.response_status = RoadsideDispatch.RESPONSE_PENDING
+                        dispatch.rejection_reason = ''
+                        dispatch.responded_at = None
+                        dispatch.dispatched_by = request.user
+                        dispatch.dispatched_at = timezone.now()
+                        dispatch.save()
+                except User.DoesNotExist:
+                    return Response(
+                        {'error': 'Technician not found'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            else:
+                roadside_request.mark_dispatched()
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Send notification
+        try:
+            notification_triggers.roadside_dispatched(roadside_request)
+        except Exception as e:
+            logger.warning(f"Failed to send dispatch notification: {e}")
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def add_technician(self, request, pk=None):
+        """Add an additional technician to an active roadside request without changing its status"""
+        roadside_request = self.get_object()
+
+        if not roadside_request.is_active():
+            return Response(
+                {'error': 'Cannot add technician to a completed, cancelled, or failed request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        technician_id = request.data.get('technician_id')
+        if not technician_id:
+            return Response({'error': 'technician_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.accounts.models import User
+        try:
+            technician = User.objects.get(id=technician_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Technician not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not technician.is_technician:
+            return Response({'error': 'Assigned user must be a technician'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if roadside_request.branch and not technician.has_branch_access(roadside_request.branch):
+            return Response(
+                {'error': 'Technician does not have access to this request branch'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        notes = request.data.get('notes', '')
+        dispatch, created = RoadsideDispatch.objects.get_or_create(
+            request=roadside_request,
+            technician=technician,
+            defaults={
+                'dispatched_by': request.user,
+                'notes': notes,
+                'response_status': RoadsideDispatch.RESPONSE_PENDING,
+            },
+        )
+        if not created:
+            if dispatch.response_status != RoadsideDispatch.RESPONSE_REJECTED:
+                return Response(
+                    {'error': 'This technician is already assigned to this request'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            dispatch.response_status = RoadsideDispatch.RESPONSE_PENDING
+            dispatch.rejection_reason = ''
+            dispatch.responded_at = None
+            dispatch.dispatched_at = timezone.now()
+            dispatch.dispatched_by = request.user
+            dispatch.notes = notes or dispatch.notes
+            dispatch.save()
+
+        # If this is the first dispatch record, set as primary technician & transition status
+        if not roadside_request.assigned_technician:
+            roadside_request.assigned_technician = technician
+            if roadside_request.status == 'requested':
+                roadside_request.status = 'dispatched'
+                roadside_request.dispatched_at = timezone.now()
+            roadside_request.save(update_fields=['assigned_technician', 'status', 'dispatched_at', 'updated_at'])
+
+        try:
+            notification_triggers.roadside_dispatched(roadside_request)
+        except Exception as e:
+            logger.warning(f"Failed to send dispatch notification for additional technician: {e}")
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def remove_technician(self, request, pk=None):
+        """Remove a technician from an active roadside request"""
+        roadside_request = self.get_object()
+
+        if not roadside_request.is_active():
+            return Response(
+                {'error': 'Cannot modify technicians on a completed, cancelled, or failed request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        technician_id = request.data.get('technician_id')
+        if not technician_id:
+            return Response({'error': 'technician_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = RoadsideDispatch.objects.filter(
+            request=roadside_request, technician_id=technician_id
+        ).delete()
+        if not deleted:
+            return Response({'error': 'Technician not found on this request'}, status=status.HTTP_404_NOT_FOUND)
+
+        # If we just removed the primary technician, promote the next one
+        if str(roadside_request.assigned_technician_id) == str(technician_id):
+            next_dispatch = roadside_request.dispatches.select_related('technician').first()
+            roadside_request.assigned_technician = next_dispatch.technician if next_dispatch else None
+            roadside_request.save(update_fields=['assigned_technician', 'updated_at'])
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='accept-assignment')
+    def accept_assignment(self, request, pk=None):
+        """Technician accepts a dispatched assignment."""
+        roadside_request = self.get_object()
+        dispatch = self._get_technician_dispatch(roadside_request, request.user)
+        if not dispatch:
+            return Response(
+                {'error': 'You are not assigned to this request'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_REJECTED:
+            return Response(
+                {'error': 'This assignment was already rejected'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if dispatch.response_status != RoadsideDispatch.RESPONSE_ACCEPTED:
+            dispatch.response_status = RoadsideDispatch.RESPONSE_ACCEPTED
+            dispatch.responded_at = timezone.now()
+            dispatch.save(update_fields=['response_status', 'responded_at'])
+            if not roadside_request.assigned_technician_id:
+                roadside_request.assigned_technician = request.user
+                roadside_request.save(update_fields=['assigned_technician', 'updated_at'])
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='reject-assignment')
+    def reject_assignment(self, request, pk=None):
+        """Technician declines a dispatched assignment."""
+        roadside_request = self.get_object()
+        dispatch = self._get_technician_dispatch(roadside_request, request.user)
+        if not dispatch:
+            return Response(
+                {'error': 'You are not assigned to this request'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if dispatch.response_status == RoadsideDispatch.RESPONSE_ACCEPTED:
+            return Response(
+                {'error': 'Cannot reject after accepting. Contact dispatch.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if dispatch.response_status != RoadsideDispatch.RESPONSE_REJECTED:
+            reason = (request.data.get('reason') or '').strip()
+            self._apply_dispatch_rejection(roadside_request, request.user, reason)
+            try:
+                notification_triggers.roadside_assignment_rejected(
+                    roadside_request, request.user, reason
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send rejection notification: {e}")
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def en_route(self, request, pk=None):
+        """Mark that service provider is en route"""
+        roadside_request = self.get_object()
+
+        try:
+            self._ensure_technician_accepted(roadside_request, request.user)
+            roadside_request.mark_en_route()
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def in_progress(self, request, pk=None):
+        """Mark that service is in progress"""
+        roadside_request = self.get_object()
+
+        try:
+            self._ensure_technician_accepted(roadside_request, request.user)
+            roadside_request.mark_in_progress()
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def arrive(self, request, pk=None):
+        """Mark that service provider has arrived on site"""
+        roadside_request = self.get_object()
+
+        try:
+            self._ensure_technician_accepted(roadside_request, request.user)
+            roadside_request.mark_arrived()
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Send notification
+        try:
+            notification_triggers.roadside_arrived(roadside_request)
+        except Exception as e:
+            logger.warning(f"Failed to send arrival notification: {e}")
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'post'], url_path='site-notes')
+    def site_notes(self, request, pk=None):
+        """List or add technician notes captured on site."""
+        roadside_request = self.get_object()
+
+        if request.method == 'GET':
+            notes = roadside_request.site_notes.select_related('created_by').all()
+            serializer = RoadsideNoteSerializer(notes, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        if getattr(request.user, 'role', None) == 'customer':
+            return Response(
+                {'error': 'Customers cannot add technician site notes.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not self._can_add_site_update(roadside_request):
+            return self._site_update_unavailable_response()
+
+        serializer = RoadsideNoteCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        note = serializer.save(request=roadside_request, created_by=request.user)
+        return Response(
+            RoadsideNoteSerializer(note, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=['get', 'post'],
+        url_path='site-photos',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def site_photos(self, request, pk=None):
+        """List or upload technician photos captured on site."""
+        roadside_request = self.get_object()
+
+        if request.method == 'GET':
+            photos = roadside_request.photos.select_related('uploaded_by').all()
+            serializer = RoadsidePhotoSerializer(photos, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        if getattr(request.user, 'role', None) == 'customer':
+            return Response(
+                {'error': 'Customers cannot upload technician site photos.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not self._can_add_site_update(roadside_request):
+            return self._site_update_unavailable_response()
+
+        serializer = RoadsidePhotoCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        photo = serializer.save(request=roadside_request, uploaded_by=request.user)
+        return Response(
+            RoadsidePhotoSerializer(photo, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+    
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Mark roadside request as completed"""
+        roadside_request = self.get_object()
+
+        try:
+            self._ensure_technician_accepted(roadside_request, request.user)
+            with transaction.atomic():
+                if not roadside_request.is_covered_by_subscription and (
+                    not roadside_request.charge_amount or roadside_request.charge_amount <= 0
+                ):
+                    raise DjangoValidationError(
+                        'Enter a charge amount before completing this pay-as-you-go roadside service.'
+                    )
+                roadside_request.mark_completed()
+                invoice_id = self._create_completion_invoice(request, roadside_request)
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except DjangoValidationError as e:
+            return Response(
+                {'error': e.messages[0] if hasattr(e, 'messages') else str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Send notification
+        try:
+            notification_triggers.roadside_completed(roadside_request)
+        except Exception as e:
+            logger.warning(f"Failed to send completion notification: {e}")
+        
+        serializer = self.get_serializer(roadside_request)
+        response_data = serializer.data
+        if invoice_id:
+            response_data['invoice_id'] = invoice_id
+        return Response(response_data)
+
+    def _create_completion_invoice(self, request, roadside_request):
+        if roadside_request.invoice_id:
+            return roadside_request.invoice_id
+        if roadside_request.is_covered_by_subscription:
+            return None
+        if not roadside_request.charge_amount or roadside_request.charge_amount <= 0:
+            return None
+
+        from apps.billing.models import Invoice, InvoiceLineItem
+        from apps.billing.revenue_resolution import (
+            build_invoice_line_fields,
+            resolve_revenue_product_for_roadside,
+        )
+
+        branch = roadside_request.branch or resolve_branch(request)
+        if not branch:
+            if hasattr(roadside_request.customer, 'branch') and roadside_request.customer.branch:
+                branch = roadside_request.customer.branch
+            else:
+                from apps.branches.models import Branch
+                branch = Branch.objects.filter(is_active=True).first()
+        if not branch:
+            raise DjangoValidationError('A branch is required to invoice roadside service.')
+
+        invoice = Invoice.objects.create(
+            customer=roadside_request.customer,
+            vehicle=roadside_request.vehicle,
+            branch=branch,
+            invoice_date=timezone.now().date(),
+            due_date=timezone.now().date(),
+            description=f"Roadside Assistance: {roadside_request.get_service_type_display()} - {roadside_request.request_number}",
+            subtotal=roadside_request.charge_amount,
+            total=roadside_request.charge_amount,
+            amount_due=roadside_request.charge_amount,
+            status='pending',
+            created_by=request.user
+        )
+
+        revenue_product = resolve_revenue_product_for_roadside(roadside_request.service_type)
+        line_fields = build_invoice_line_fields(
+            revenue_product=revenue_product,
+            description=f"{roadside_request.get_service_type_display()} - {roadside_request.request_number}",
+        )
+        InvoiceLineItem.objects.create(
+            invoice=invoice,
+            quantity=1,
+            unit_price=roadside_request.charge_amount,
+            total=roadside_request.charge_amount,
+            **line_fields,
+        )
+
+        roadside_request.invoice = invoice
+        roadside_request.notes = f"{roadside_request.notes}\nInvoice: {invoice.invoice_number}" if roadside_request.notes else f"Invoice: {invoice.invoice_number}"
+        roadside_request.save(update_fields=['invoice', 'notes', 'updated_at'])
+        return invoice.id
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel a roadside request"""
+        roadside_request = self.get_object()
+        
+        try:
+            with transaction.atomic():
+                self._refund_subscription_allowance(request, roadside_request, 'Cancelled Request')
+                roadside_request.mark_cancelled()
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Failed to cancel roadside request {roadside_request.id}: {e}", exc_info=True)
+            return Response(
+                {'error': 'Failed to cancel request safely.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Send notification
+        try:
+            notification_triggers.roadside_cancelled(roadside_request)
+        except Exception as e:
+            logger.warning(f"Failed to send cancellation notification: {e}")
+            
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def fail(self, request, pk=None):
+        """Mark roadside request as failed"""
+        roadside_request = self.get_object()
+        
+        reason = request.data.get('reason', '')
+        try:
+            with transaction.atomic():
+                self._refund_subscription_allowance(request, roadside_request, 'Failed Request')
+                roadside_request.mark_failed(reason=reason)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='my-assignments')
+    def my_assignments(self, request):
+        """Field technician: only this user's assignments (active + recent history)."""
+        user = request.user
+        if not user or user.is_anonymous:
+            return Response([], status=status.HTTP_200_OK)
+
+        include_history = request.query_params.get('include_history', '').lower() in (
+            '1', 'true', 'yes',
+        )
+        qs = _technician_roadside_queryset(
+            RoadsideRequest.objects.select_related(
+                'customer', 'customer__user', 'vehicle', 'branch', 'assigned_technician',
+            ).prefetch_related('dispatches__technician'),
+            user,
+            include_history=include_history,
+        ).order_by('-requested_at')
+
+        serializer = RoadsideRequestSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def my_requests(self, request):
+        """Get current user's roadside requests (for customer portal)"""
+        try:
+            if request.user.role != 'customer':
+                return Response(
+                    {'detail': 'Only customers can view their requests'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Try to get customer profile
+            try:
+                customer = request.user.customer_profile
+            except AttributeError:
+                # Try alternative method to get customer
+                from apps.customers.models import Customer
+                try:
+                    customer = Customer.objects.get(user=request.user)
+                except Customer.DoesNotExist:
+                    return Response(
+                        {'detail': 'Customer profile not found'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            requests = RoadsideRequest.objects.filter(customer=customer).select_related(
+                'customer', 'vehicle', 'branch', 'assigned_technician', 'subscription_used'
+            )
+            serializer = self.get_serializer(requests, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error in my_requests: {e}", exc_info=True)
+            return Response(
+                {'detail': f'An error occurred: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def rate_service(self, request, pk=None):
+        """Rate completed service (Customer only)"""
+        roadside_request = self.get_object()
+        
+        # Verify user is the customer
+        is_customer = False
+        if getattr(request.user, 'role', '') == 'customer':
+            customer_profile = getattr(request.user, 'customer_profile', None)
+            if customer_profile and roadside_request.customer == customer_profile:
+                is_customer = True
+        
+        if not is_customer and request.user.role not in ['admin', 'manager']: # Allow admins to test
+             return Response(
+                {'error': 'You do not have permission to rate this request'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        rating = request.data.get('rating')
+        feedback = request.data.get('customer_feedback') or request.data.get('feedback')
+        if roadside_request.status != 'completed':
+            return Response(
+                {'error': 'Only completed roadside requests can be rated'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not rating:
+            return Response(
+                {'error': 'Rating is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            rating = int(rating)
+            if not (1 <= rating <= 5):
+                raise ValueError
+        except (ValueError, TypeError):
+             return Response(
+                {'error': 'Rating must be an integer between 1 and 5'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        roadside_request.rating = rating
+        if feedback:
+            roadside_request.customer_feedback = feedback
+        
+        roadside_request.save()
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def send_customer_sms(self, request, pk=None):
+        """Send SMS to customer for this roadside request"""
+        roadside_request = self.get_object()
+        
+        # Get message from request body
+        message = request.data.get('message', '').strip()
+        if not message:
+            return Response(
+                {'error': 'Message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if customer phone exists
+        if not roadside_request.customer_phone:
+            return Response(
+                {'error': 'Customer phone number not available'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Import SMS utilities
+        try:
+            from apps.notifications_app.hubtel_sms import send_sms, is_hubtel_available
+        except ImportError:
+            return Response(
+                {'error': 'SMS service is not configured'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        # Check if Hubtel SMS is available
+        if not is_hubtel_available():
+            return Response(
+                {'error': 'SMS service is not available. Please check configuration.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        # Send SMS
+        success, response = send_sms(roadside_request.customer_phone, message)
+        
+        if success:
+            return Response({
+                'success': True,
+                'message': 'SMS sent successfully',
+                'details': response
+            })
+        else:
+            return Response(
+                {'error': f'Failed to send SMS: {response}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def send_customer_email(self, request, pk=None):
+        """Send Email to customer for this roadside request"""
+        roadside_request = self.get_object()
+        
+        # Get message and subject from request body
+        message = request.data.get('message', '').strip()
+        subject = request.data.get('subject', f'Update on your Roadside Request {roadside_request.request_number}').strip()
+        
+        if not message:
+            return Response(
+                {'error': 'Message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if customer has an email
+        customer_user = roadside_request.customer.user if roadside_request.customer else None
+        if not customer_user or not customer_user.email:
+            return Response(
+                {'error': 'Customer email address not available'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            
+            # Create a notification object
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='custom',
+                channel='email',
+                priority='high',
+                title=subject,
+                message=message,
+                data={
+                    'request_id': roadside_request.id,
+                    'request_number': roadside_request.request_number,
+                },
+                related_object_type='roadside',
+                related_object_id=roadside_request.id
+            )
+            
+            # Send the notification
+            success = NotificationService().send_notification(notification)
+            
+            if success:
+                return Response({
+                    'success': True,
+                    'message': 'Email sent successfully'
+                })
+            else:
+                return Response(
+                    {'error': 'Failed to send email. Please check notification logs.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        except Exception as e:
+            logger.error(f"Error sending custom email: {e}", exc_info=True)
+            return Response(
+                {'error': f'An error occurred while sending email: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def suggested_message(self, request, pk=None):
+        """Get a suggested message using the centralized AI service"""
+        roadside_request = self.get_object()
+        channel = request.query_params.get('channel', 'email')
+        suggestion = AIService.get_suggested_message(roadside_request, channel=channel, context_type='roadside', user=request.user)
+        return Response(suggestion)

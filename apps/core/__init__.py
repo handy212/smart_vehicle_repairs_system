@@ -1,0 +1,3 @@
+"""
+Apps core package
+"""

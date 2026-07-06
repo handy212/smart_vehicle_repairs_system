@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estimate {{ estimate.estimate_number }}</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 12px;
+            position: relative;
+            min-height: 100vh;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .print-footer {
+            width: 100%;
+            border-top: 1px solid #d1d5db;
+            border-collapse: collapse;
+            margin-top: 16px;
+            color: #4b5563;
+            font-size: 11px;
+            line-height: 1.35;
+            position: relative;
+            z-index: 2;
+            background: #fff;
+        }
+        .print-footer td {
+            border: 0;
+            padding: 8px 0 0;
+            vertical-align: top;
+            background: #fff;
+        }
+        .print-footer-branches {
+            width: auto;
+            text-align: left;
+        }
+        .print-footer-heading {
+            color: #111827;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .print-footer-branch-list {
+            color: #111827;
+        }
+        .print-footer-separator {
+            color: #9ca3af;
+        }
+        .print-footer-branch-name {
+            color: #111827;
+        }
+        .print-footer-muted,
+        .print-footer-generated {
+            color: #6b7280;
+        }
+        .print-footer-generated {
+            margin-top: 5px;
+        }
+        .print-footer-logos {
+            width: 270px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .print-footer-logo {
+            max-height: 32px;
+            max-width: 88px;
+            margin-left: 8px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+        .watermark {
+            position: absolute;
+            top: 34%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 66pt;
+            font-weight: 900;
+            opacity: 0.085;
+            z-index: 0;
+            color: #9ca3af;
+            text-transform: uppercase;
+            pointer-events: none;
+            white-space: nowrap;
+            line-height: 1;
+            text-align: center;
+        }
+        h1, h2, h3, p, table:not(.print-footer) {
+            position: relative;
+            z-index: 1;
+        }
+        @media screen and (max-width: 700px) {
+            body {
+                margin: 12px;
+            }
+            .print-footer-logos {
+                text-align: left;
+                width: auto;
+                padding-top: 8px;
+            }
+            .print-footer,
+            .print-footer tbody,
+            .print-footer tr,
+            .print-footer td {
+                display: block;
+                width: 100%;
+            }
+        }
+        @media print {
+            .watermark {
+                position: fixed;
+                top: 34%;
+                left: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">Print</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+
+    {% if watermark %}
+    <div class="watermark" style="color: {{ watermark.color }};">{{ watermark.text }}</div>
+    {% endif %}
+
+    <h1>Smart Vehicle Repairs</h1>
+    {% if print_branch %}
+    <p><strong>{{ print_branch.name }}</strong></p>
+    {% if print_branch.address %}<p>{{ print_branch.address }}</p>{% endif %}
+    {% if print_branch.phone %}<p>Phone: {{ print_branch.phone }}</p>{% endif %}
+    {% if print_branch.email %}<p>Email: {{ print_branch.email }}</p>{% endif %}
+    {% endif %}
+
+    <h2>ESTIMATE</h2>
+    
+    <table>
+        <tr>
+            <td><strong>Estimate #:</strong> {{ estimate.estimate_number }}</td>
+            <td><strong>Date:</strong> {{ estimate.estimate_date|date:"F d, Y" }}</td>
+        </tr>
+        <tr>
+            <td><strong>Valid Until:</strong> {{ estimate.valid_until|date:"F d, Y" }}</td>
+            <td><strong>Status:</strong> {{ estimate.get_status_display }}</td>
+        </tr>
+        {% if estimate.work_order %}
+        <tr>
+            <td colspan="2"><strong>Work Order:</strong> {{ estimate.work_order.work_order_number }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <h3>Bill To</h3>
+    <table>
+        <tr>
+            <td>
+                <strong>
+                    {% if estimate.customer.company_name %}{{ estimate.customer.company_name }}{% else %}{{ estimate.customer.full_name }}{% endif %}
+                </strong><br>
+                {% if estimate.customer.service_address %}{{ estimate.customer.service_address }}<br>{% endif %}
+                {% if estimate.customer.service_city or estimate.customer.service_state %}
+                {{ estimate.customer.service_city }}{% if estimate.customer.service_city and estimate.customer.service_state %}, {% endif %}{{ estimate.customer.service_state }} {{ estimate.customer.service_zip_code|default:"" }}<br>
+                {% endif %}
+                {% if estimate.customer.phone %}Phone: {{ estimate.customer.phone }}<br>{% endif %}
+                {% if estimate.customer.email %}Email: {{ estimate.customer.email }}{% endif %}
+            </td>
+            <td>
+                <strong>Vehicle Information</strong><br>
+                {% if estimate.vehicle %}
+                {{ estimate.vehicle.year }} {{ estimate.vehicle.make }} {{ estimate.vehicle.model }}<br>
+                VIN: {{ estimate.vehicle.vin }}<br>
+                {% if estimate.vehicle.license_plate %}License Plate: {{ estimate.vehicle.license_plate }}{% endif %}
+                {% else %}
+                No vehicle information
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    {% if estimate.title %}
+    <h3>{{ estimate.title }}</h3>
+    {% endif %}
+
+    {% if estimate.description %}
+    <p><strong>Description:</strong> {{ estimate.description }}</p>
+    {% endif %}
+
+    <h3>Line Items</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th class="text-right">Quantity</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if estimate.line_items.all %}
+                {% for item in estimate.line_items.all %}
+                <tr>
+                    <td>{{ item.get_item_type_display }}</td>
+                    <td>{{ item.description }}</td>
+                    <td class="text-right">
+                        {% if item.item_type == 'labor' %}
+                            {{ item.labor_hours|floatformat:2 }}h
+                        {% else %}
+                            {{ item.quantity|floatformat:2 }}
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        {% if item.item_type == 'labor' %}
+                            {{ currency_symbol }}{{ item.labor_rate|floatformat:2 }}/hr
+                        {% else %}
+                            {{ currency_symbol }}{{ item.unit_price|floatformat:2 }}
+                        {% endif %}
+                    </td>
+                    <td class="text-right">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">No line items</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <h3>Summary</h3>
+    <table>
+        <tr>
+            <td class="text-right"><strong>Subtotal:</strong></td>
+            <td class="text-right">{{ currency_symbol }}{{ estimate.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% if estimate.discount_percentage > 0 and estimate.discount_amount > 0 %}
+        <tr>
+            <td class="text-sm text-gray-700 text-right py-1">
+                Discount ({{ estimate.discount_percentage }}%):
+                {% if estimate.discount_reason %}
+                <br><small class="text-xs text-gray-500">{{ estimate.discount_reason }}</small>
+                {% endif %}
+            </td>
+            <td class="text-sm text-green-600 text-right py-1">-{{ currency_symbol }}{{ estimate.discount_amount|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td class="text-sm text-gray-700 text-right py-1">Subtotal after Discount:</td>
+            <td class="text-sm text-gray-700 text-right py-1">{{ currency_symbol }}{{ estimate.subtotal_after_discount|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        {% if estimate.tax_regime == 'ghana' %}
+            {% if estimate.tax_nhil_amount > 0 %}
+            <tr>
+                <td class="text-right">NHIL (2.5%):</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_nhil_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+            {% if estimate.tax_getfund_amount > 0 %}
+            <tr>
+                <td class="text-right">GETFund (2.5%):</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_getfund_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+
+            {% if estimate.tax_vat_amount > 0 %}
+            <tr>
+                <td class="text-right">VAT (15%):</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_vat_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+        {% else %}
+            {% if estimate.tax_amount > 0 %}
+            <tr>
+                <td class="text-right"><strong>Tax:</strong></td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+        {% endif %}
+        <tr class="bold">
+            <td class="text-right"><strong>TOTAL:</strong></td>
+            <td class="text-right"><strong>{{ currency_symbol }}{{ estimate.total|floatformat:2 }}</strong></td>
+        </tr>
+    </table>
+
+    {% if estimate.customer_notes %}
+    <h3>Customer Notes</h3>
+    <p>{{ estimate.customer_notes }}</p>
+    {% endif %}
+
+    {% if estimate.notes %}
+    <h3>Internal Notes</h3>
+    <p>{{ estimate.notes }}</p>
+    {% endif %}
+
+    <p><em>This estimate is valid until {{ estimate.valid_until|date:"F d, Y" }}.</em></p>
+    {% include 'printing/base/components/footer.html' %}
+
+    <script>
+        // Auto-print when page loads (optional)
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>

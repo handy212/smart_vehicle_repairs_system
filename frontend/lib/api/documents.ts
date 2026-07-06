@@ -1,0 +1,73 @@
+import apiClient from "./client";
+
+export interface Document {
+    id: number;
+    title: string;
+    description?: string;
+    file: string; // URL
+    file_type: string;
+    file_size: number;
+    original_filename: string;
+    uploaded_at: string;
+    uploaded_by: number;
+    uploaded_by_name?: string;
+    uploaded_by_email?: string;
+    customer?: number;
+    vehicle?: number;
+    work_order?: number;
+    asset_acquisition_request?: number | null;
+    fixed_asset?: number | null;
+    acquisition_document_kind?: "invoice" | "receipt" | "";
+    access_count: number;
+    tags?: string;
+}
+
+export const documentsApi = {
+    list: async (params?: {
+        customer?: number;
+        vehicle?: number;
+        work_order?: number;
+        asset_acquisition_request?: number;
+        fixed_asset?: number;
+        acquisition_document_kind?: string;
+        search?: string;
+        page?: number;
+    }): Promise<{ count: number; results: Document[] }> => {
+        const response = await apiClient.get("/documents/documents/", { params });
+        return response.data;
+    },
+
+    create: async (data: FormData): Promise<Document> => {
+        const response = await apiClient.post("/documents/documents/", data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+        return response.data;
+    },
+
+    delete: async (id: number): Promise<void> => {
+        await apiClient.delete(`/documents/documents/${id}/`);
+    },
+
+    download: async (id: number): Promise<Blob> => {
+        const response = await apiClient.get(`/documents/documents/${id}/download/`, {
+            responseType: "blob",
+        });
+        return response.data;
+    },
+
+    processVoiceNote: async (id: number): Promise<{
+        id: number;
+        transcription: string;
+        analysis: {
+            summary: string;
+            suggested_category: string;
+            suggested_severity: string;
+        };
+        message: string;
+    }> => {
+        const response = await apiClient.post(`/documents/documents/${id}/process_voice_notes/`);
+        return response.data;
+    },
+};

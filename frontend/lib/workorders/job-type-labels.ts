@@ -1,0 +1,34 @@
+/** UI labels for work order job type and routine service packages. */
+
+import { getJobTypeDisplayName } from "@/lib/api/job-types";
+
+export const JOB_TYPE_FIELD_LABEL = "Job type";
+export const JOB_TYPE_GENERAL_LABEL = "General repair";
+export const JOB_TYPE_ROUTINE_LABEL = "Routine service";
+export const SERVICE_PACKAGE_LABEL = "Service package";
+export const SERVICE_PACKAGE_PLACEHOLDER = "Select service package";
+
+export function getJobTypeLabel(
+  maintenanceType?: string | null,
+  workOrder?: Parameters<typeof getJobTypeDisplayName>[0]
+): string {
+  if (workOrder) {
+    return getJobTypeDisplayName(workOrder);
+  }
+  if (maintenanceType === "routine") return JOB_TYPE_ROUTINE_LABEL;
+  return JOB_TYPE_GENERAL_LABEL;
+}
+
+export function getServicePackageName(workOrder: {
+  service_bundle?: { name?: string } | number | null;
+  service_type?: { name?: string } | number | null;
+} | null | undefined): string | null {
+  if (!workOrder) return null;
+  if (typeof workOrder.service_bundle === "object" && workOrder.service_bundle?.name) {
+    return workOrder.service_bundle.name;
+  }
+  if (typeof workOrder.service_type === "object" && workOrder.service_type?.name) {
+    return workOrder.service_type.name;
+  }
+  return null;
+}

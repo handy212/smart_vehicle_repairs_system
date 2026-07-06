@@ -1,0 +1,21 @@
+DIAGNOSTIC REPORT — {{ work_order.work_order_number }}
+Generated: {{ generated_at|date:"F d, Y g:i A" }}
+
+CUSTOMER: {{ customer }}
+VEHICLE: {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}
+
+{% if ai_summary %}SUMMARY:
+{{ ai_summary }}
+
+{% endif %}{% if diagnosis.customer_complaint %}CUSTOMER CONCERN:
+{{ diagnosis.customer_complaint }}
+
+{% endif %}{% if codes %}DIAGNOSTIC CODES:
+{% for code in codes %}- {{ code.code_number }}: {{ code.description|default:"" }}
+{% endfor %}
+
+{% endif %}{% if recommendations %}RECOMMENDED REPAIRS:
+{% for rec in recommendations %}- [{{ rec.priority|upper }}] {{ rec.description }}{% if rec.estimated_total_cost %} — Est. ${{ rec.estimated_total_cost }}{% endif %}
+{% endfor %}
+{% if total_cost %}Estimated total: ${{ total_cost }}
+{% endif %}{% endif %}

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendations - {{ work_order.work_order_number }}</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            @page {
+                size: A4;
+                margin: 6mm;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 12px auto;
+            max-width: 210mm;
+            padding: 8mm;
+            font-size: 8pt;
+            line-height: 1.25;
+            color: #111827;
+            position: relative;
+            min-height: 100vh;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #111827;
+            padding-bottom: 8px;
+        }
+        .header h1 {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        .header h2 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 5px 0 3px 0;
+            color: #991b1b;
+        }
+        .info-section {
+            margin-bottom: 8px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 3px;
+            font-size: 8pt;
+        }
+        .info-label {
+            font-weight: bold;
+            min-width: 90px;
+        }
+        .recommendations-section {
+            margin-top: 10px;
+        }
+        .recommendation {
+            margin-bottom: 8px;
+            padding: 6px;
+            border: 0.5px solid #9ca3af;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .recommendation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            padding-bottom: 4px;
+            border-bottom: 0.5px solid #d1d5db;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-weight: bold;
+            font-size: 7.5pt;
+            text-transform: uppercase;
+        }
+        .priority-critical {
+            background-color: #d32f2f;
+            color: white;
+        }
+        .priority-necessary {
+            background-color: #f57c00;
+            color: white;
+        }
+        .priority-recommended {
+            background-color: #1976d2;
+            color: white;
+        }
+        .priority-advisory {
+            background-color: #388e3c;
+            color: white;
+        }
+        .recommendation-type {
+            font-size: 7.5pt;
+            color: #666;
+            font-style: italic;
+        }
+        .recommendation-description {
+            font-size: 9pt;
+            font-weight: bold;
+            line-height: 1.25;
+            margin: 5px 0;
+            color: #000;
+        }
+        .recommendation-cost {
+            font-size: 8pt;
+            margin-top: 4px;
+            color: #333;
+            white-space: nowrap;
+        }
+        .recommendation-cost strong {
+            font-size: 9pt;
+        }
+        .footer {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #111827;
+            text-align: center;
+            font-size: 7.5pt;
+            color: #666;
+        }
+        .footer-note {
+            margin-bottom: 8px;
+        }
+        .print-footer {
+            width: 100%;
+            border-top: 1px solid #d1d5db;
+            border-collapse: collapse;
+            color: #4b5563;
+            font-size: 7.5pt;
+            line-height: 1.25;
+            text-align: left;
+        }
+        .print-footer td {
+            border: 0;
+            padding: 8px 0 0;
+            vertical-align: top;
+        }
+        .print-footer-branches {
+            width: auto;
+        }
+        .print-footer-heading {
+            color: #111827;
+            font-weight: 700;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .print-footer-branch-list {
+            color: #111827;
+        }
+        .print-footer-separator {
+            color: #9ca3af;
+        }
+        .print-footer-branch-name {
+            color: #111827;
+        }
+        .print-footer-muted,
+        .print-footer-generated {
+            color: #6b7280;
+        }
+        .print-footer-generated {
+            margin-top: 4px;
+        }
+        .print-footer-logos {
+            width: 245px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .print-footer-logo {
+            max-height: 28px;
+            max-width: 78px;
+            margin-left: 8px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+        .no-print {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+        .no-print button {
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .no-print button:hover {
+            background-color: #1565c0;
+        }
+        .vehicle-info {
+            background-color: #f5f5f5;
+            padding: 6px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        .customer-info {
+            background-color: #f5f5f5;
+            padding: 6px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        .watermark {
+            position: absolute;
+            top: 34%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 62pt;
+            font-weight: 900;
+            opacity: 0.085;
+            z-index: 0;
+            color: #9ca3af;
+            text-transform: uppercase;
+            pointer-events: none;
+            white-space: nowrap;
+            line-height: 1;
+            text-align: center;
+        }
+        .header,
+        .info-section,
+        .vehicle-info,
+        .customer-info,
+        .recommendations-section {
+            position: relative;
+            z-index: 1;
+        }
+        .footer,
+        .print-footer,
+        .print-footer td {
+            position: relative;
+            z-index: 2;
+            background: #fff;
+        }
+        @media screen and (max-width: 700px) {
+            body {
+                max-width: none;
+                padding: 12px;
+            }
+            .print-footer-logos {
+                text-align: left;
+                width: auto;
+                padding-top: 8px;
+            }
+            .print-footer,
+            .print-footer tbody,
+            .print-footer tr,
+            .print-footer td {
+                display: block;
+                width: 100%;
+            }
+        }
+        @media print {
+            .watermark {
+                position: fixed;
+                top: 34%;
+                left: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">Print Recommendations</button>
+        <button onclick="window.location.href='?format=pdf'">Download PDF</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+
+    {% if watermark %}
+    <div class="watermark" style="color: {{ watermark.color }};">{{ watermark.text }}</div>
+    {% endif %}
+
+    <div class="header">
+        <h1>Smart Vehicle Repairs</h1>
+        {% if print_branch %}
+        <p><strong>{{ print_branch.name }}</strong></p>
+        {% if print_branch.address %}<p>{{ print_branch.address }}</p>{% endif %}
+        {% if print_branch.phone %}<p>Phone: {{ print_branch.phone }}</p>{% endif %}
+        {% if print_branch.email %}<p>Email: {{ print_branch.email }}</p>{% endif %}
+        {% endif %}
+        <h2>REPAIR RECOMMENDATIONS</h2>
+        <p style="font-size: 9pt; font-weight: bold;">Place this document in the vehicle dashboard</p>
+    </div>
+
+    <div class="info-section">
+        <div class="info-row">
+            <span class="info-label">Work Order #:</span>
+            <span><strong>{{ work_order.work_order_number }}</strong></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Date:</span>
+            <span>{{ work_order.completed_at|date:"F d, Y"|default:work_order.created_at|date:"F d, Y" }}</span>
+        </div>
+    </div>
+
+    <div class="vehicle-info">
+        <div class="info-row">
+            <span class="info-label">Vehicle:</span>
+            <span><strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">VIN:</span>
+            <span>{{ vehicle.vin }}</span>
+        </div>
+        {% if vehicle.license_plate %}
+        <div class="info-row">
+            <span class="info-label">License Plate:</span>
+            <span>{{ vehicle.license_plate }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="customer-info">
+        <div class="info-row">
+            <span class="info-label">Customer:</span>
+            <span><strong>{% if customer.company_name %}{{ customer.company_name }}{% else %}{{ customer.user.get_full_name|default:"N/A" }}{% endif %}</strong></span>
+        </div>
+        {% if customer.customer_number %}
+        <div class="info-row">
+            <span class="info-label">Customer #:</span>
+            <span>{{ customer.customer_number }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="recommendations-section">
+        <h2 style="font-size: 11pt; font-weight: bold; margin-bottom: 8px; text-align: center; text-decoration: underline;">
+            RECOMMENDED REPAIRS & SERVICES
+        </h2>
+        
+        {% for recommendation in recommendations %}
+        <div class="recommendation">
+            <div class="recommendation-header">
+                <div>
+                    <span class="priority-badge priority-{{ recommendation.priority }}">
+                        {{ recommendation.get_priority_display }}
+                    </span>
+                    <span class="recommendation-type">
+                        ({{ recommendation.get_recommendation_type_display }})
+                    </span>
+                </div>
+                {% if recommendation.estimated_total_cost and recommendation.estimated_total_cost > 0 %}
+                <div class="recommendation-cost">
+                    <strong>Est. Cost: {{ currency_symbol }}{{ recommendation.estimated_total_cost|floatformat:2 }}</strong>
+                </div>
+                {% endif %}
+            </div>
+            <div class="recommendation-description">
+                {{ recommendation.description|linebreaks }}
+            </div>
+            {% if recommendation.parts_needed %}
+            <div style="margin-top: 5px; font-size: 8pt;">
+                <strong>Parts Needed:</strong>
+                <ul style="margin: 3px 0; padding-left: 16px;">
+                    {% for part in recommendation.parts_needed %}
+                    <li>{{ part.part_name }} (Qty: {{ part.quantity }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="footer">
+        <div class="footer-note">
+        <p><strong>IMPORTANT:</strong> These recommendations require attention. Please review with your Technical Officer (TO) for follow-up and necessary action.</p>
+        {% if print_branch and print_branch.phone %}
+        <p>For questions, contact: {{ print_branch.phone }}</p>
+        {% endif %}
+        </div>
+        {% include 'printing/base/components/footer.html' %}
+    </div>
+</body>
+</html>

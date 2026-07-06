@@ -1,0 +1,37 @@
+{% load static settings_tags %}
+{% get_print_footer_branches as print_footer_branches %}
+
+<table class="print-footer" role="presentation">
+    <tr>
+        <td class="print-footer-branches">
+            <div class="print-footer-branch-list">
+                {% for footer_branch in print_footer_branches %}
+                <span class="print-footer-branch-name">{{ footer_branch.name }}</span>{% if not forloop.last %}<span class="print-footer-separator"> | </span>{% endif %}
+                {% empty %}
+                {% if print_branch %}
+                <span class="print-footer-branch-name">{{ print_branch.name }}</span>
+                {% elif branch %}
+                <span class="print-footer-branch-name">{{ branch.name }}</span>
+                {% else %}
+                <span class="print-footer-branch-name">{% if company_name %}{{ company_name }}{% else %}Smart Vehicle Repairs{% endif %}</span>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <div class="print-footer-generated">
+                {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% elif print_branch %}{{ print_branch.name }}{% else %}Smart Vehicle Repairs{% endif %}
+                | Generated on {% now "F d, Y" %}
+            </div>
+        </td>
+        <td class="print-footer-logos" aria-label="Company logos">
+            {% if print_footer_logos %}
+            {% for footer_logo in print_footer_logos %}
+            <img src="{{ footer_logo }}" class="print-footer-logo" alt="Company logo">
+            {% endfor %}
+            {% else %}
+            <img src="{% static 'images/logos/logo-1.jpeg' %}" class="print-footer-logo" alt="Company logo">
+            <img src="{% static 'images/logos/logo-2.jpeg' %}" class="print-footer-logo" alt="Company logo">
+            <img src="{% static 'images/logos/logo-3.jpeg' %}" class="print-footer-logo" alt="Company logo">
+            {% endif %}
+        </td>
+    </tr>
+</table>

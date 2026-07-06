@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mobile Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #111827;
+        }
+        .mobile-page {
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .mobile-header {
+            margin-bottom: 16px;
+        }
+        .mobile-title {
+            margin: 0 0 6px;
+            font-size: 1.35rem;
+            line-height: 1.2;
+        }
+        #branch-name {
+            color: #4b5563;
+            font-size: 0.95rem;
+        }
+        #activity {
+            display: grid;
+            gap: 10px;
+        }
+        .activity-item,
+        .empty-state {
+            border: 1px solid #dbe3ef;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 12px;
+            line-height: 1.4;
+        }
+        .empty-state {
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="mobile-page">
+        <header class="mobile-header">
+            <h1 class="mobile-title">Mobile Dashboard</h1>
+            <div id="branch-name">{{ branch_active_branch.name|default:"No branch selected" }}</div>
+        </header>
+        <section id="activity" aria-label="Recent activity">
+            {% for activity in recent_activity %}
+            <div class="activity-item">{{ activity.title }}</div>
+            {% empty %}
+            <div class="empty-state">No recent activity.</div>
+            {% endfor %}
+        </section>
+    </main>
+</body>
+
+</html>

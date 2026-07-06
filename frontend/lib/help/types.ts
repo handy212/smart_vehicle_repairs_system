@@ -1,0 +1,66 @@
+import type { NavIcon } from "@/components/layout/nav-group-types";
+
+export type HelpBlock =
+    | { type: "paragraph"; text: string }
+    | { type: "steps"; items: string[] }
+    | { type: "checklist"; title?: string; items: string[] }
+    | { type: "tips"; title?: string; items: string[] }
+    | { type: "mistakes"; title?: string; items: string[] }
+    | { type: "troubleshooting"; items: { problem: string; solution: string }[] }
+    | { type: "note"; text: string }
+    | { type: "screenshot"; label: string; caption?: string };
+
+export type HelpTopic = {
+    title: string;
+    summary?: string;
+    blocks: HelpBlock[];
+    actionLink?: string;
+    actionLabel?: string;
+    keywords?: string[];
+};
+
+export type HelpGuide = {
+    id: string;
+    title: string;
+    description: string;
+    icon: NavIcon;
+    section: HelpSectionId;
+    responsibilities?: string[];
+    topics: HelpTopic[];
+    keywords?: string[];
+};
+
+export type HelpSectionId =
+    | "overview"
+    | "roles"
+    | "quick-start"
+    | "workflows"
+    | "troubleshooting"
+    | "best-practices"
+    | "glossary"
+    | "modules";
+
+export type HelpSection = {
+    id: HelpSectionId;
+    title: string;
+    description: string;
+    icon: NavIcon;
+};
+
+/** Legacy module shape kept for module reference section */
+export type HelpModule = {
+    id: string;
+    title: string;
+    description: string;
+    icon: NavIcon;
+    topics: LegacyHelpTopic[];
+    keywords?: string[];
+};
+
+export type LegacyHelpTopic = {
+    title: string;
+    steps: string[];
+    actionLink?: string;
+    actionLabel?: string;
+    keywords?: string[];
+};

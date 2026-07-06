@@ -1,0 +1,348 @@
+/* Centralized brand color utility classes
+ * These utilities rely on CSS variables defined in base templates.
+ * NOTE: Color variables are now primarily defined in base.html and tailwind.config.js
+ * This file provides additional utility classes for legacy templates.
+ */
+
+:root {
+    /* Keep fallback values for legacy support */
+    --primary: var(--primary, #4f46e5);
+    --primary-dark: var(--primary-dark, #4338ca);
+    --primary-light: var(--primary-light, #6366f1);
+    --primary-rgb: var(--primary-rgb, 79, 70, 229);
+    --secondary: var(--secondary, #6b7280);
+    --secondary-dark: color-mix(in srgb, var(--secondary) 80%, black);
+    --success: var(--success, #10b981);
+    --success-dark: color-mix(in srgb, var(--success) 80%, black);
+    --danger: var(--danger, #ef4444);
+    --danger-dark: color-mix(in srgb, var(--danger) 80%, black);
+    --warning: var(--warning, #f59e0b);
+    --warning-dark: color-mix(in srgb, var(--warning) 80%, black);
+    --info: var(--info, #3b82f6);
+    --info-dark: color-mix(in srgb, var(--info) 80%, black);
+    --brand-white: #ffffff;
+}
+
+/* ------------------------------- */
+/* Page header gradients           */
+/* ------------------------------- */
+
+.page-header-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
+    color: var(--brand-white);
+}
+
+.page-header-success {
+    background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 80%, black) 100%);
+    color: var(--brand-white);
+}
+
+.page-header-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 80%, black) 100%);
+    color: var(--brand-white);
+}
+
+.page-header-warning {
+    background: linear-gradient(135deg, var(--warning) 0%, color-mix(in srgb, var(--warning) 85%, #b45309) 100%);
+    color: var(--brand-white);
+}
+
+.page-header-info {
+    background: linear-gradient(135deg, var(--info) 0%, color-mix(in srgb, var(--info) 80%, black) 100%);
+    color: var(--brand-white);
+}
+
+/* Allow cards to opt into header gradients */
+.page-header-card.is-success {
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+    color: var(--brand-white);
+}
+
+.page-header-card.is-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+    color: var(--brand-white);
+}
+
+/* ------------------------------- */
+/* Stat cards & badges             */
+/* ------------------------------- */
+/* NOTE: Stat cards now use Tailwind CSS in stat_card.html partial */
+/* Keeping these for legacy template support */
+.stats-card {
+    border: none;
+    border-radius: 18px;
+    padding: 1.5rem;
+    background: var(--brand-white);
+    box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.08);
+}
+
+/* Legacy gradient stat cards - Consider migrating to Tailwind */
+.stats-card-success,
+.stats-card.stats-card-success {
+    background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 80%, black) 100%);
+    color: var(--brand-white);
+}
+
+.stats-card-warning {
+    background: linear-gradient(135deg, var(--warning) 0%, color-mix(in srgb, var(--warning) 80%, #a16207) 100%);
+    color: var(--brand-white);
+}
+
+.stats-card-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--secondary)) 100%);
+    color: var(--brand-white);
+}
+
+.stats-card-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 70%, #b91c1c) 100%);
+    color: var(--brand-white);
+}
+
+.badge-soft {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    background: color-mix(in srgb, var(--secondary) 12%, transparent);
+    color: color-mix(in srgb, var(--secondary) 80%, black);
+}
+
+.badge-soft-success {
+    background: color-mix(in srgb, var(--success) 18%, transparent);
+    color: var(--success-dark);
+}
+
+.badge-soft-primary {
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    color: var(--primary-dark);
+}
+
+.badge-soft-warning {
+    background: color-mix(in srgb, var(--warning) 22%, transparent);
+    color: var(--warning-dark);
+}
+
+.badge-soft-info {
+    background: color-mix(in srgb, var(--info) 18%, transparent);
+    color: var(--info-dark);
+}
+
+.badge-soft-danger {
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
+    color: var(--danger-dark);
+}
+
+.badge-soft-muted {
+    background: color-mix(in srgb, var(--secondary) 10%, transparent);
+    color: color-mix(in srgb, var(--secondary) 60%, black);
+}
+
+/* ------------------------------- */
+/* Border accents                  */
+/* ------------------------------- */
+
+.border-brand-left {
+    border-left: 4px solid var(--primary);
+}
+
+.border-success-left {
+    border-left: 4px solid var(--success);
+}
+
+.border-danger-left {
+    border-left: 4px solid var(--danger);
+}
+
+.border-warning-left {
+    border-left: 4px solid var(--warning);
+}
+
+.border-info-left {
+    border-left: 4px solid var(--info);
+}
+
+/* ------------------------------- */
+/* Gradient helpers                */
+/* ------------------------------- */
+
+.gradient-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: var(--brand-white);
+}
+
+.gradient-success {
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+    color: var(--brand-white);
+}
+
+.gradient-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+    color: var(--brand-white);
+}
+
+.gradient-warning {
+    background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
+    color: var(--brand-white);
+}
+
+.gradient-info {
+    background: linear-gradient(135deg, var(--info) 0%, var(--info-dark) 100%);
+    color: var(--brand-white);
+}
+
+/* ------------------------------- */
+/* Buttons                         */
+/* ------------------------------- */
+
+.btn-brand {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--brand-white) !important;
+    box-shadow: 0 0.5rem 1.25rem rgba(var(--primary-rgb), 0.15);
+}
+
+.btn-brand:hover,
+.btn-brand:focus {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: var(--brand-white) !important;
+}
+
+.btn-outline-brand {
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 70%, var(--brand-white));
+}
+
+.btn-outline-brand:hover,
+.btn-outline-brand:focus {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+}
+
+/* ------------------------------- */
+/* Background helpers              */
+/* ------------------------------- */
+
+.bg-brand {
+    background: var(--primary) !important;
+    color: var(--brand-white) !important;
+}
+
+.bg-brand-light {
+    background: color-mix(in srgb, var(--primary) 15%, var(--brand-white));
+}
+
+.bg-brand-lighter {
+    background: color-mix(in srgb, var(--primary) 8%, var(--brand-white));
+}
+
+.text-brand {
+    color: var(--primary) !important;
+}
+
+.text-brand-dark {
+    color: var(--primary-dark) !important;
+}
+
+.text-brand-light {
+    color: color-mix(in srgb, var(--primary) 35%, var(--brand-white)) !important;
+}
+
+/* ------------------------------- */
+/* Card accents                    */
+/* ------------------------------- */
+
+.card-accent-primary {
+    border-left: 4px solid var(--primary);
+    box-shadow: 0 0.25rem 1rem rgba(var(--primary-rgb), 0.08);
+}
+
+.card-accent-success {
+    border-left: 4px solid var(--success);
+    box-shadow: 0 0.25rem 1rem rgba(16, 185, 129, 0.08);
+}
+
+.card-accent-danger {
+    border-left: 4px solid var(--danger);
+    box-shadow: 0 0.25rem 1rem rgba(239, 68, 68, 0.1);
+}
+
+/* ------------------------------- */
+/* Quick action shortcuts          */
+/* ------------------------------- */
+
+.quick-action-card {
+    border: none;
+    border-radius: 16px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.05);
+}
+
+.quick-action-card i {
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+.quick-action-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, 0.12);
+}
+
+/* ------------------------------- */
+/* Hover helpers                   */
+/* ------------------------------- */
+
+.hover-brand:hover {
+    background: color-mix(in srgb, var(--primary) 12%, white) !important;
+    color: var(--primary) !important;
+}
+
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+.hover-lift {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.12);
+}
+
+/* ------------------------------- */
+/* Links & pills                   */
+/* ------------------------------- */
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background: var(--primary);
+}
+
+.nav-link.text-brand:hover {
+    color: var(--primary-dark) !important;
+}
+
+/* ------------------------------- */
+/* Utility fallbacks               */
+/* ------------------------------- */
+
+.shadow-brand {
+    box-shadow: 0 0.75rem 2.25rem rgba(var(--primary-rgb), 0.18) !important;
+}
+
+.shadow-brand-soft {
+    box-shadow: 0 0.5rem 1.5rem rgba(var(--primary-rgb), 0.12) !important;
+}

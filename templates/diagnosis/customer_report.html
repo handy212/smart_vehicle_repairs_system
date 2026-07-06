@@ -1,0 +1,74 @@
+{% extends 'printing/base/document_base.html' %}
+
+{% block title %}Diagnostic Report — {{ work_order.work_order_number }}{% endblock %}
+
+{% block document_type %}Diagnostic Report{% endblock %}
+{% block document_number %}{{ work_order.work_order_number }}{% endblock %}
+
+{% block content %}
+<div class="grid-2-col mb-8">
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Customer</div>
+        {% with customer=customer %}
+        {% include 'printing/base/components/customer_info.html' %}
+        {% endwith %}
+    </div>
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Vehicle</div>
+        <div class="info-card">
+            <div class="info-value font-bold">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</div>
+            {% if vehicle.vin %}<div class="info-item"><span class="info-label">VIN</span> {{ vehicle.vin }}</div>{% endif %}
+            {% if vehicle.license_plate %}<div class="info-item"><span class="info-label">Plate</span> {{ vehicle.license_plate }}</div>{% endif %}
+        </div>
+    </div>
+</div>
+
+{% if ai_summary %}
+<div class="mb-6 p-4 rounded border bg-gray-50">
+    <div class="text-sm font-semibold text-gray-900 mb-2">Summary</div>
+    <p class="text-sm text-gray-700 leading-relaxed">{{ ai_summary|linebreaks }}</p>
+</div>
+{% endif %}
+
+{% if diagnosis.customer_complaint %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Customer Concern</div>
+    <p class="text-sm text-gray-700">{{ diagnosis.customer_complaint|linebreaks }}</p>
+</div>
+{% endif %}
+
+{% if codes %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Diagnostic Codes</div>
+    <table class="data-table">
+        <thead><tr><th>Code</th><th>Description</th></tr></thead>
+        <tbody>
+            {% for code in codes %}
+            <tr><td>{{ code.code_number }}</td><td>{{ code.description|default:code.code_number }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if recommendations %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Recommended Repairs</div>
+    <table class="data-table">
+        <thead><tr><th>Priority</th><th>Description</th><th>Est. Cost</th></tr></thead>
+        <tbody>
+            {% for rec in recommendations %}
+            <tr>
+                <td class="capitalize">{{ rec.get_priority_display|default:rec.priority }}</td>
+                <td>{{ rec.description }}</td>
+                <td class="text-right">{% if rec.estimated_total_cost %}${{ rec.estimated_total_cost }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if total_cost %}<p class="text-sm font-semibold mt-2 text-right">Estimated total: ${{ total_cost }}</p>{% endif %}
+</div>
+{% endif %}
+
+<p class="text-xs text-gray-500 mt-8">Report generated {{ generated_at|date:"F d, Y g:i A" }}</p>
+{% endblock %}

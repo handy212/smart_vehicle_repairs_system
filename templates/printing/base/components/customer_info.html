@@ -1,0 +1,39 @@
+<div class="info-card">
+    <div class="info-item border-b mb-2 pb-2">
+        <div class="info-label">Customer</div>
+        <div class="info-value font-bold">
+            {% if customer.company_name %}
+            {{ customer.company_name }}
+            {% else %}
+            {{ customer.full_name }}
+            {% endif %}
+        </div>
+    </div>
+
+    {% if customer.email %}
+    <div class="info-item">
+        <div class="info-label">Email</div>
+        <div class="info-value">{{ customer.email }}</div>
+    </div>
+    {% endif %}
+
+    {% if customer.phone %}
+    <div class="info-item">
+        <div class="info-label">Phone</div>
+        <div class="info-value">{{ customer.phone }}</div>
+    </div>
+    {% endif %}
+
+    {% if customer.service_address or customer.service_city %}
+    <div class="info-item">
+        <div class="info-label">Address</div>
+        <div class="info-value">
+            {% if customer.service_address %}{{ customer.service_address }}<br>{% endif %}
+            {% if customer.service_city %}
+            {{ customer.service_city }}{% if customer.service_state %}, {{ customer.service_state }}{% endif %}
+            {{ customer.service_zip_code|default:"" }}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>

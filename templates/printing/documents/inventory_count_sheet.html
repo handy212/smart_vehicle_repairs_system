@@ -1,0 +1,115 @@
+{% extends 'printing/base/document_base.html' %}
+
+{% block title %}Count Sheet {{ document.session_number }}{% endblock %}
+
+{% block document_type %}Inventory Count Sheet{% endblock %}
+
+{% block document_number %}{{ document.session_number }}{% endblock %}
+
+{% block document_meta %}
+<div>Date: {{ document.count_date|date:"F d, Y" }}</div>
+<div>Branch: <span class="font-bold">{{ document.branch.name }}</span></div>
+{% endblock %}
+
+{% block content %}
+<!-- Instructions -->
+<div class="bg-gray-100 p-3 mb-6 rounded border-l-4 border-primary text-sm">
+    <strong>Instructions:</strong> Verify the physical quantity of each item listed below.
+    Write the actual count in the "Counted Qty" column.
+    Note any damages or discrepancies in the "Notes" column.
+</div>
+
+<!-- Items Table -->
+<div class="mb-8">
+    <table class="table w-full">
+        <thead>
+            <tr>
+                <th class="text-left w-[15%]">Location</th>
+                <th class="text-left w-[15%]">Part Number</th>
+                <th class="text-left w-[30%]">Description</th>
+                <th class="text-center w-[10%]">UoM</th>
+                <th class="text-right w-[15%]">Counted Qty</th>
+                <th class="text-left w-[15%]">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in document.count_items.all|dictsort:"stock_item.bin_location" %}
+            <tr class="{% cycle 'bg-white' 'bg-gray-50' %} border-b border-gray-200">
+                <td class="font-mono text-xs font-bold text-primary">
+                    {% if item.stock_item.bin_location %}
+                    {{ item.stock_item.bin_location }}
+                    {% if item.stock_item.shelf %} / {{ item.stock_item.shelf }}{% endif %}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="font-mono text-xs">{{ item.part.part_number }}</td>
+                <td>
+                    <div class="font-semibold text-sm">{{ item.part.name }}</div>
+                </td>
+                <td class="text-center text-xs text-gray-500">Unit</td>
+                <td class="text-right align-bottom pb-1">
+                    <div class="border-b border-gray-400 h-6 w-full"></div>
+                </td>
+                <td class="align-bottom pb-1">
+                    <div class="border-b border-gray-300 h-6 w-full"></div>
+                </td>
+            </tr>
+            {% endfor %}
+            <!-- Blank rows for extra items found -->
+            {% for i in "12345" %}
+            <tr class="border-b border-gray-200">
+                <td class="align-bottom pb-1">
+                    <div class="border-b border-gray-300 h-6 w-full"></div>
+                </td>
+                <td class="align-bottom pb-1">
+                    <div class="border-b border-gray-300 h-6 w-full"></div>
+                </td>
+                <td class="align-bottom pb-1">
+                    <div class="border-b border-gray-300 h-6 w-full"></div>
+                </td>
+                <td class="text-center text-xs text-gray-500">Unit</td>
+                <td class="align-bottom pb-1">
+                    <div class="border-b border-gray-400 h-6 w-full"></div>
+                </td>
+                <td class="align-bottom pb-1">
+                    <div class="border-b border-gray-300 h-6 w-full"></div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Signatures -->
+<div class="grid-2-col mt-12 pt-8" style="page-break-inside: avoid;">
+    <div class="col-1-2 pr-4">
+        <div class="border-t-2 border-gray-400 pt-2">
+            <div class="font-bold text-sm">Counted By</div>
+            <div class="mt-8 text-xs text-gray-500">
+                Name: _____________________________
+            </div>
+            <div class="mt-4 text-xs text-gray-500">
+                Signature: _____________________________
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                Date: _________________
+            </div>
+        </div>
+    </div>
+    <div class="col-1-2 pl-4">
+        <div class="border-t-2 border-gray-400 pt-2">
+            <div class="font-bold text-sm">Verified By (Supervisor)</div>
+            <div class="mt-8 text-xs text-gray-500">
+                Name: _____________________________
+            </div>
+            <div class="mt-4 text-xs text-gray-500">
+                Signature: _____________________________
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                Date: _________________
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

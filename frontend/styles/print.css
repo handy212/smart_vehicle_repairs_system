@@ -1,0 +1,306 @@
+/* ============================================
+   UNIFIED PRINT STYLESHEET
+   Used across all printable documents
+   ============================================ */
+
+@media print {
+
+  /* ==================== RESET & BASE ==================== */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    margin: 6mm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: 'Arial', 'Helvetica', sans-serif !important;
+    font-size: 8pt !important;
+    line-height: 1.25 !important;
+    color: #000 !important;
+  }
+
+  /* ==================== HIDE ELEMENTS ==================== */
+  .no-print,
+  .print-hide,
+  nav,
+  aside,
+  header,
+  footer,
+  [class*="Navbar"],
+  [class*="Sidebar"],
+  [class*="SubNav"],
+  [class*="sidebar"],
+  [class*="navbar"],
+  nav[class*="fixed"],
+  aside[class*="fixed"],
+  button:not(.print-show),
+  .print-controls {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* ==================== LAYOUT ==================== */
+  main,
+  .print-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  /* ==================== HEADERS & FOOTERS ==================== */
+  .print-header {
+    display: block !important;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000;
+  }
+
+  .print-container > .print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .print-footer {
+    display: block !important;
+    margin-top: 10px;
+    padding-top: 6px;
+    border-top: 1px solid #666;
+    font-size: 8pt;
+    color: #666;
+    text-align: center;
+  }
+
+  .print-header-logo {
+    max-height: 40px;
+    max-width: 120px;
+  }
+
+  .print-header-title {
+    font-size: 16pt !important;
+    font-weight: bold !important;
+    margin: 0 !important;
+    color: #000 !important;
+  }
+
+  .print-header-subtitle {
+    font-size: 10pt !important;
+    margin: 3px 0 !important;
+    color: #333 !important;
+  }
+
+  /* ==================== TABLES ==================== */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 8px 0 !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  th,
+  td {
+    border: 0.5px solid #9ca3af !important;
+    padding: 2px 4px !important;
+    text-align: left !important;
+    font-size: 8pt !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  th {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    color: #000 !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Zebra striping for better readability */
+  tbody tr:nth-child(even) {
+    background-color: #f9f9f9 !important;
+  }
+
+  /* ==================== TEXT UTILITIES ==================== */
+  .text-right {
+    text-align: right !important;
+  }
+
+  .text-center {
+    text-align: center !important;
+  }
+
+  .text-left {
+    text-align: left !important;
+  }
+
+  .font-bold {
+    font-weight: bold !important;
+  }
+
+  .font-semibold {
+    font-weight: 600 !important;
+  }
+
+  /* ==================== PAGE BREAKS ==================== */
+  .page-break-before {
+    page-break-before: always !important;
+  }
+
+  .page-break-after {
+    page-break-after: always !important;
+  }
+
+  .page-break-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .print-page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .print-keep-together {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* ==================== SECTIONS ==================== */
+  .print-section {
+    margin-bottom: 10px;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-section-title {
+    font-size: 10pt !important;
+    font-weight: bold !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 3px !important;
+    border-bottom: 1px solid #ccc !important;
+    color: #000 !important;
+  }
+
+  /* ==================== WATERMARKS ==================== */
+  .watermark {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) rotate(-45deg) !important;
+    font-size: 90pt !important;
+    font-weight: bold !important;
+    opacity: 0.1 !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+    color: #000 !important;
+  }
+
+  .watermark-draft {
+    color: #ff9800 !important;
+  }
+
+  .watermark-paid {
+    color: #4caf50 !important;
+  }
+
+  .watermark-void {
+    color: #f44336 !important;
+  }
+
+  .watermark-copy {
+    color: #2196f3 !important;
+  }
+
+  /* ==================== QR CODE ==================== */
+  .print-qr {
+    display: block !important;
+    max-width: 100px !important;
+    max-height: 100px !important;
+  }
+
+  /* ==================== FINANCIAL TABLES ==================== */
+  .financial-total-row {
+    background-color: #e8f4f8 !important;
+    font-weight: bold !important;
+  }
+
+  .financial-summary {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    font-size: 9pt !important;
+  }
+
+  /* ==================== LINKS & COLORS ==================== */
+  a {
+    text-decoration: none !important;
+    color: #000 !important;
+  }
+
+  a[href]:after {
+    content: "" !important;
+  }
+
+  /* ==================== RESPONSIVE PRINT ==================== */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* ==================== STATUS BADGES ==================== */
+  .status-badge {
+    display: inline-block !important;
+    padding: 2px 8px !important;
+    border: 0.5px solid #9ca3af !important;
+    border-radius: 3px !important;
+    font-size: 8pt !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+  }
+
+  /* ==================== PRINT OPTIMIZATION ==================== */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .bg-gradient,
+  .gradient {
+    background: white !important;
+  }
+}
+
+/* ==================== SCREEN-ONLY STYLES ==================== */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+
+  .watermark {
+    display: none !important;
+  }
+}

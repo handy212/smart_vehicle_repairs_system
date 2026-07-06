@@ -1,0 +1,259 @@
+/* ------------------------------------------------------------------
+   Custom component styling for Smart Vehicle Repairs System
+   This file intentionally focuses on layout, spacing and component
+   presentation while color decisions live in brand-colors.css.
+------------------------------------------------------------------- */
+
+html,
+body {
+    height: 100%;
+}
+
+.brand-logo {
+    max-height: 48px;
+    width: auto;
+    height: auto !important;
+    display: inline-block;
+    object-fit: contain;
+}
+
+body {
+    background-color: var(--bg-body, #f4f6f8);
+    color: var(--gray-900, #111827);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+main.main-content {
+    padding-bottom: 4rem;
+}
+
+/* ------------------------- */
+/* Page header cards         */
+/* ------------------------- */
+
+.page-header-card {
+    background: var(--bg-card, #ffffff);
+    border-radius: 20px;
+    padding: 2rem 2.25rem;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--gray-200, #e5e7eb) 60%, #fff);
+}
+
+.page-header-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at top right, color-mix(in srgb, var(--primary, #4f46e5) 12%, transparent) 0%, transparent 55%);
+    opacity: 0.9;
+}
+
+.page-header-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.page-header-card .page-title {
+    font-size: clamp(1.5rem, 2vw, 2.1rem);
+    font-weight: 600;
+}
+
+.page-header-card .page-subtitle {
+    font-size: 0.95rem;
+    color: color-mix(in srgb, var(--gray-600, #4b5563) 60%, #ffffff);
+}
+
+.profile-header-card {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary, #4f46e5) 9%, #0f172a) 0%, color-mix(in srgb, var(--primary, #4f46e5) 60%, #1e1b4b) 100%);
+    color: #ffffff;
+    border: none;
+}
+
+.profile-header-card::after {
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.12) 0%, transparent 60%);
+}
+
+/* Danger variation for destructive flows */
+.page-header-card.is-danger {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--danger, #ef4444) 92%, #7f1d1d) 0%, color-mix(in srgb, var(--danger, #ef4444) 65%, #450a0a) 100%);
+    color: #ffffff;
+}
+
+/* REMOVED: Page actions buttons now use Tailwind CSS utilities */
+
+/* ------------------------- */
+/* Buttons                   */
+/* ------------------------- */
+/* REMOVED: Button styles now use Tailwind CSS utilities */
+/* Use: bg-white border border-primary text-primary hover:bg-primary hover:text-white */
+
+/* ------------------------- */
+/* Statistic cards           */
+/* ------------------------- */
+/* REMOVED: Stat cards now use Tailwind CSS in stat_card.html partial */
+
+/* ------------------------- */
+/* Filter section             */
+/* ------------------------- */
+/* REMOVED: Filter sections now use Tailwind CSS utilities */
+/* Use: bg-white rounded-xl border border-slate-200 p-6 shadow-sm */
+
+/* REMOVED: Filter actions buttons now use Tailwind CSS utilities */
+
+/* ------------------------- */
+/* Bulk selection toolbar    */
+/* ------------------------- */
+
+.bulk-toolbar {
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--primary, #4f46e5) 35%, #dbeafe);
+    background: color-mix(in srgb, var(--primary, #4f46e5) 8%, #ffffff);
+    box-shadow: 0 0.75rem 2rem rgba(79, 70, 229, 0.08);
+}
+
+/* REMOVED: Bulk toolbar buttons now use Tailwind CSS utilities */
+
+/* ------------------------- */
+/* Table styling             */
+/* ------------------------- */
+
+/* REMOVED: Table styles now use Tailwind CSS utilities */
+/* Use: min-w-full divide-y divide-slate-200 bg-slate-50 for thead */
+/* Table metadata - Keep for legacy support */
+.table-meta {
+    font-size: 0.85rem;
+    color: var(--gray-500, #6b7280);
+}
+
+/* REMOVED: View toggle buttons now use Tailwind CSS utilities */
+
+/* ------------------------- */
+/* Vehicles list grid view   */
+/* ------------------------- */
+/* REMOVED: Vehicle card styles now use Tailwind CSS utilities */
+/* Use Tailwind grid, card, and image utilities */
+
+/* ------------------------- */
+/* Delete confirmation page  */
+/* ------------------------- */
+
+.delete-warning-card {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--danger, #ef4444) 90%, #7f1d1d) 0%, color-mix(in srgb, var(--danger, #ef4444) 72%, #450a0a) 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.delete-warning-card .hero-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 22px;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 2rem;
+}
+
+.vehicle-summary-panel,
+.impact-list,
+.confirmation-panel {
+    background: var(--bg-card, #ffffff);
+    border-radius: 18px;
+    padding: 1.75rem;
+    border: 1px solid color-mix(in srgb, var(--gray-200, #e5e7eb) 70%, #ffffff);
+}
+
+.vehicle-summary-panel .vehicle-avatar,
+.profile-header-card .vehicle-avatar,
+.page-header-card .vehicle-avatar {
+    width: 86px;
+    height: 86px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.15);
+    display: grid;
+    place-items: center;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    overflow: hidden;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.vehicle-summary-panel .vehicle-avatar img,
+.profile-header-card .vehicle-avatar img,
+.page-header-card .vehicle-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Ensure all vehicle images are properly constrained */
+img[src*="vehicle"], 
+img[alt*="vehicle"],
+img[alt*="Vehicle"] {
+    max-width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+/* Constrain preview images in forms */
+.vehicle-image-preview img {
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 300px !important;
+}
+
+.impact-list li {
+    background: color-mix(in srgb, var(--warning, #f59e0b) 10%, #fff);
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+}
+
+/* ------------------------- */
+/* Widgets & utilities       */
+/* ------------------------- */
+
+.card-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+}
+
+.per-page-control .form-select {
+    min-width: 140px;
+}
+
+.vehicle-checkbox {
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 0.45rem;
+}
+
+.vehicle-checkbox:checked {
+    background-color: var(--primary, #4f46e5);
+    border-color: var(--primary, #4f46e5);
+}
+
+/* Empty state */
+/* REMOVED: Empty state now uses Tailwind CSS in empty_state.html partial */
+
+/* Responsive tweaks */
+
+/* Responsive tweaks - Keep minimal for legacy support */
+@media (max-width: 991.98px) {
+    .page-header-card {
+        padding: 1.75rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-header-card {
+        border-radius: 16px;
+    }
+}

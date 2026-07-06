@@ -1,0 +1,389 @@
+:root {
+  --print-font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --print-text-color: #1f2937;
+  --print-heading-color: #0f172a;
+  --print-accent-color: var(--primary, #1d4ed8);
+}
+
+body {
+  font-family: var(--print-font-family);
+  color: var(--print-text-color);
+  background-color: #f8fafc;
+  line-height: 1.5;
+}
+
+.print-page {
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+.print-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+  background-color: #ffffff;
+}
+
+.print-surface {
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.print-header {
+  margin-bottom: 28px;
+}
+
+.print-header-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr minmax(170px, 220px);
+  gap: 24px;
+  align-items: start;
+}
+
+.print-header-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.print-header-column:first-child {
+  justify-content: center;
+  text-align: left;
+}
+
+.print-header-column:nth-child(2) {
+  align-items: center;
+  text-align: center;
+}
+
+.print-header-column:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.print-header-logo img {
+  max-height: 70px;
+  width: auto;
+  display: block;
+}
+
+.print-header-placeholder {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.print-company-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.print-company-tagline {
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.print-company-info div {
+  font-size: 0.8rem;
+  color: rgba(30, 41, 59, 0.85);
+}
+
+.print-meta-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.print-meta-label {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.6);
+  position: relative;
+}
+
+.print-meta-label::after {
+  content: ':';
+  margin-left: 4px;
+}
+
+.print-meta-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 2px;
+}
+
+.print-meta-sub {
+  font-size: 0.72rem;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.print-meta-divider {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.12);
+  margin: 12px 0;
+}
+
+.print-header-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0), rgba(15, 23, 42, 0.16), rgba(15, 23, 42, 0));
+  margin-top: 24px;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-table th {
+  background: var(--print-accent-color);
+  color: #ffffff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.8rem;
+  padding: 0.75rem 1rem;
+}
+
+.print-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.print-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.print-meta {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.65);
+  letter-spacing: 0.08em;
+}
+
+.print-footer {
+  margin-top: 48px;
+  font-size: 0.75rem;
+  color: rgba(15, 23, 42, 0.55);
+  text-align: center;
+}
+
+.print-footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.print-footer-value {
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.75);
+}
+
+.print-footer-note {
+  margin-top: 12px;
+  font-size: 0.7rem;
+  color: rgba(15, 23, 42, 0.5);
+}
+
+.print-body {
+  position: relative;
+  margin-top: 28px;
+  padding-left: 32px;
+}
+
+.print-body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.45), rgba(148, 163, 184, 0.2));
+}
+
+.print-body > *:first-child {
+  margin-top: 0;
+}
+
+.print-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 10rem;
+  color: rgba(30, 64, 175, 0.08);
+  font-weight: 900;
+  z-index: -1;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.print-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--print-heading-color);
+  margin-bottom: 0.75rem;
+}
+
+.print-card {
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 1.5rem;
+}
+
+.print-card + .print-card {
+  margin-top: 1.25rem;
+}
+
+.print-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.print-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.print-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.no-print {
+  transition: opacity 0.2s ease;
+}
+
+.print-only {
+  display: none !important;
+}
+
+.print-break {
+  page-break-after: always;
+}
+
+.page-break {
+  page-break-before: always;
+}
+
+@page {
+  size: A4;
+  margin: 12mm 10mm 18mm 10mm;
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+
+  .print-header-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .print-header-column,
+  .print-header-column:first-child,
+  .print-header-column:nth-child(2),
+  .print-header-column:last-child {
+    align-items: center;
+    text-align: center;
+  }
+
+  .print-meta-item {
+    justify-content: center;
+  }
+
+  .print-meta-value {
+    align-items: center;
+    text-align: center;
+  }
+
+  .print-body {
+    padding-left: 0;
+    padding-top: 16px;
+  }
+
+  .print-body::before {
+    display: none;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: var(--print-heading-color);
+    font-size: 11pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-page {
+    background: transparent !important;
+  }
+
+  .print-container {
+    max-width: none;
+    width: 100%;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  .print-surface {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-break {
+    page-break-after: always;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  a[href]:after {
+    content: "";
+  }
+
+  .print-card {
+    background: transparent;
+    border-color: rgba(15, 23, 42, 0.1);
+  }
+
+  .print-badge,
+  .appointment-status-badge,
+  .status-badge,
+  .priority-badge {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+

@@ -1,0 +1,79 @@
+<div class="financial-summary">
+    <!-- Subtotal -->
+    <div class="summary-item subtotal">
+        <div class="summary-label">Subtotal</div>
+        <div class="summary-value">{{ currency_symbol }}{{ document.subtotal|floatformat:2|default:"0.00" }}</div>
+    </div>
+
+    <!-- Discount -->
+    {% if document.discount_amount and document.discount_amount > 0 %}
+    <div class="summary-item text-danger">
+        <div class="summary-label">
+            Discount {% if document.discount_percentage %}<span class="text-xs">({{ document.discount_percentage }}%)</span>{% endif %}
+        </div>
+        <div class="summary-value">-{{ currency_symbol }}{{ document.discount_amount|floatformat:2 }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Tax Breakdown -->
+    {% if document.tax_nhil_amount or document.tax_getfund_amount or document.tax_hrl_amount or document.tax_vat_amount %}
+        {% if document.tax_nhil_amount and document.tax_nhil_amount > 0 %}
+        <div class="summary-item text-gray-500">
+            <div class="summary-label">NHIL (2.5%)</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.tax_nhil_amount|floatformat:2 }}</div>
+        </div>
+        {% endif %}
+
+        {% if document.tax_getfund_amount and document.tax_getfund_amount > 0 %}
+        <div class="summary-item text-gray-500">
+            <div class="summary-label">GETFund (2.5%)</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.tax_getfund_amount|floatformat:2 }}</div>
+        </div>
+        {% endif %}
+
+        {% if document.tax_hrl_amount and document.tax_hrl_amount > 0 %}
+        <div class="summary-item text-gray-500">
+            <div class="summary-label">COVID-19 HRL (1%)</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.tax_hrl_amount|floatformat:2 }}</div>
+        </div>
+        {% endif %}
+
+        {% if document.tax_vat_amount and document.tax_vat_amount > 0 %}
+        <div class="summary-item text-gray-500">
+            <div class="summary-label">VAT (15%)</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.tax_vat_amount|floatformat:2 }}</div>
+        </div>
+        {% endif %}
+
+        <div class="summary-item font-semibold text-gray-700 mt-2">
+            <div class="summary-label">Total Tax</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.tax_amount|floatformat:2|default:"0.00" }}</div>
+        </div>
+    {% elif document.tax_amount and document.tax_amount > 0 %}
+        <div class="summary-item">
+            <div class="summary-label">Tax</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.tax_amount|floatformat:2 }}</div>
+        </div>
+    {% endif %}
+
+    <!-- Total -->
+    <div class="summary-item total">
+        <div class="summary-label">TOTAL</div>
+        <div class="summary-value">{{ currency_symbol }}{{ document.total|floatformat:2|default:"0.00" }}</div>
+    </div>
+
+    <!-- Amount Paid & Balance -->
+    {% if document.amount_paid and document.amount_paid > 0 %}
+    <div class="summary-item mt-4 pt-2 border-t">
+        <div class="summary-label">Amount Paid</div>
+        <div class="summary-value text-success font-bold">{{ currency_symbol }}{{ document.amount_paid|floatformat:2 }}</div>
+    </div>
+
+    <div class="summary-item">
+        <div class="summary-label font-bold text-gray-900">Balance Due</div>
+        <div class="summary-value font-bold text-danger">{{ currency_symbol }}{{ document.amount_due|floatformat:2|default:"0.00" }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="clearfix"></div>

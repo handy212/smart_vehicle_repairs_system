@@ -1,0 +1,11 @@
+"""
+URL configuration for branches app API
+"""
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import BranchViewSet
+
+router = DefaultRouter()
+router.register(r'', BranchViewSet, basename='branch')
+
+urlpatterns = router.urls

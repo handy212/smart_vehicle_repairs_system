@@ -1,0 +1,705 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { appointmentsApi } from "@/lib/api/appointments";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from "react";
+import { useToast } from "@/lib/hooks/useToast";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { Input } from "@/components/ui/input";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck, MoreVertical, Trash2, Star } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { getUserFacingError } from "@/lib/api/errors";
+
+export default function AppointmentDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const appointmentId = parseInt(params.id as string);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { hasPermission, hasAnyPermission } = usePermissions();
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [communicationMethod, setCommunicationMethod] = useState<"sms" | "email">("sms");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageBody, setMessageBody] = useState("");
+  const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
+
+  const { data: appointment, isLoading, error } = useQuery({
+    queryKey: ["appointment", appointmentId],
+    queryFn: () => appointmentsApi.get(appointmentId),
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () => appointmentsApi.confirm(appointmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointment", appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Success", description: "Appointment confirmed successfully" });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: getUserFacingError(error, "Failed to confirm appointment"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: () => appointmentsApi.checkIn(appointmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointment", appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Success", description: "Customer checked in successfully" });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: getUserFacingError(error, "Failed to check in customer"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () => appointmentsApi.complete(appointmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointment", appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Success", description: "Appointment marked as completed" });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: getUserFacingError(error, "Failed to complete appointment"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => appointmentsApi.delete(appointmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Appointment Deleted", description: "The appointment was deleted successfully." });
+      router.push("/appointments");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: getUserFacingError(error, "Failed to delete appointment"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (reason: string) => appointmentsApi.cancel(appointmentId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointment", appointmentId] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Success", description: "Appointment cancelled successfully" });
+      setShowCancelDialog(false);
+      setCancelReason("");
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: getUserFacingError(error, "Failed to cancel appointment"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
+      if (data.method === "email") {
+        return appointmentsApi.sendEmail(appointmentId, data.subject || "", data.message);
+      }
+      return appointmentsApi.sendSms(appointmentId, data.message);
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Success",
+        description: variables.method === "email" ? "Email sent to customer successfully" : "SMS sent to customer successfully"
+      });
+      setIsMessageDialogOpen(false);
+      setMessageBody("");
+      setMessageSubject("");
+    },
+
+    onError: (error: any, variables) => {
+      toast({
+        title: variables.method === "email" ? "Email Failed" : "SMS Failed",
+        description: getUserFacingError(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
+        variant: "destructive"
+      });
+    }
+  });
+
+  const fetchSuggestion = async (method: "sms" | "email") => {
+    setIsFetchingSuggestion(true);
+    try {
+      const suggestion = await appointmentsApi.getSuggestedMessage(appointmentId, method);
+      if (method === "email") {
+        setMessageSubject(suggestion.subject);
+      }
+      setMessageBody(suggestion.message);
+    } catch (error) {
+      console.error("Failed to fetch suggestion", error);
+      toast({
+        title: "Suggestion Failed",
+        description: "Could not fetch AI suggestion. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetchingSuggestion(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isMessageDialogOpen && !messageBody.trim() && !isFetchingSuggestion) {
+      fetchSuggestion(communicationMethod);
+    }
+  }, [isMessageDialogOpen, communicationMethod]);
+
+  const handleCancel = () => {
+    if (cancelReason.trim()) {
+      cancelMutation.mutate(cancelReason);
+    } else {
+      cancelMutation.mutate("");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error || !appointment) {
+    return (
+      <div className="space-y-4">
+        <Button variant="secondary" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-destructive">Error loading appointment. Please try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "success";
+      case "pending":
+        return "warning";
+      case "completed":
+        return "info";
+      case "cancelled":
+        return "danger";
+      default:
+        return "default";
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const getPriorityVariant = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "danger";
+      case "high":
+        return "warning";
+      case "normal":
+        return "default";
+      case "low":
+        return "secondary";
+      default:
+        return "default";
+    }
+  };
+  const canEditAppointment = hasPermission("edit_appointments");
+  const canDeleteAppointment = hasAnyPermission(["delete_appointments", "manage_appointments"]);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
+            <span>/</span>
+            <span className="text-foreground font-medium">#{appointment.appointment_number}</span>
+          </div>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Appointment Details</h1>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 bg-muted text-foreground border-border">
+            <ArrowLeft className="w-3.5 h-3.5 mr-2" />
+            Back
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 bg-card">
+                <MoreVertical className="w-3.5 h-3.5 mr-2" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {canEditAppointment && (
+                <DropdownMenuItem onClick={() => router.push(`/appointments/${appointmentId}/edit`)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {canDeleteAppointment && (
+                <>
+                  {canEditAppointment && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      if (confirm(`Delete appointment "${appointment.appointment_number}"?`)) {
+                        deleteMutation.mutate();
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Status and Priority Badges */}
+      <div className="flex items-center space-x-2">
+
+        <Badge variant={getStatusVariant(appointment.status) as any} className="text-xs px-2.5 py-0.5 font-medium border shadow-none">
+          {appointment.status?.replace(/_/g, " ") || appointment.status}
+        </Badge>
+        <Badge variant="outline" className="text-xs px-2.5 py-0.5 font-medium border shadow-none bg-transparent">
+          {appointment.priority} Priority
+        </Badge>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Appointment Info */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Appointment Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Appointment Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Date</p>
+                  <p className="text-foreground">
+                    {appointment.appointment_date
+                      ? format(new Date(appointment.appointment_date), "EEEE, MMMM dd, yyyy")
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <Clock className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Time</p>
+                  <p className="text-foreground">{appointment.appointment_time || "-"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Service Type</p>
+                <p className="text-foreground capitalize">
+                  {appointment.service_type?.replace(/_/g, " ") || appointment.service_type || "-"}
+                </p>
+              </div>
+              {appointment.estimated_duration && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Estimated Duration</p>
+                  <p className="text-foreground">{appointment.estimated_duration} minutes</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer & Vehicle */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer & Vehicle</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <User className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Customer</p>
+                  {appointment.customer ? (
+                    <Link
+                      href={`/customers/${typeof appointment.customer === 'object' && appointment.customer !== null ? appointment.customer.id : appointment.customer}`}
+                      className="text-primary hover:text-orange-800 font-medium"
+                    >
+                      {appointment.customer_name || "View Customer"}
+                    </Link>
+                  ) : (
+                    <p className="text-foreground">{appointment.customer_name || "-"}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <Car className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Vehicle</p>
+                  {appointment.vehicle ? (
+                    <Link
+                      href={`/vehicles/${typeof appointment.vehicle === 'object' && appointment.vehicle !== null ? appointment.vehicle.id : appointment.vehicle}`}
+                      className="text-primary hover:text-orange-800 font-medium"
+                    >
+                      {appointment.vehicle_info || "View Vehicle"}
+                    </Link>
+                  ) : (
+                    <p className="text-foreground">{appointment.vehicle_info || "-"}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notes */}
+          {appointment.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground whitespace-pre-wrap">{appointment.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Right Column - Actions */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {appointment.status === "pending" && (
+                <Button
+                  className="w-full"
+                  variant="default"
+                  onClick={() => confirmMutation.mutate()}
+                  disabled={confirmMutation.isPending}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {confirmMutation.isPending ? "Confirming..." : "Confirm Appointment"}
+                </Button>
+              )}
+              {(appointment.status === "confirmed" || appointment.status === "pending") && (
+                <Button
+                  className="w-full"
+                  variant="default"
+                  onClick={() => checkInMutation.mutate()}
+                  disabled={checkInMutation.isPending}
+                >
+                  <CheckCheck className="w-4 h-4 mr-2" />
+                  {checkInMutation.isPending ? "Checking in..." : "Check In Customer"}
+                </Button>
+              )}
+              {appointment.status === "in_progress" && (
+                <Button
+                  className="w-full"
+                  variant="default"
+                  onClick={() => completeMutation.mutate()}
+                  disabled={completeMutation.isPending}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {completeMutation.isPending ? "Completing..." : "Complete Appointment"}
+                </Button>
+              )}
+              {appointment.status !== "completed" && appointment.status !== "cancelled" && (
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={() => setShowCancelDialog(true)}
+                  disabled={cancelMutation.isPending}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancel Appointment
+                </Button>
+              )}
+              <PermissionGuard permission="edit_appointments">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => setIsMessageDialogOpen(true)}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Message Customer
+                </Button>
+              </PermissionGuard>
+              <Link href={`/workorders/new?appointment=${appointmentId}`} className="block">
+                <Button variant="secondary" className="w-full">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Create Work Order
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Appointment Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Appointment Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Appointment Number</p>
+                <p className="text-sm font-mono">{appointment.appointment_number}</p>
+              </div>
+              {appointment.created_at && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="text-sm">
+                    {format(new Date(appointment.created_at), "MMM dd, yyyy 'at' h:mm a")}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {(appointment.customer_rating || appointment.customer_feedback) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Rating</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {appointment.customer_rating && (
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`}
+                      />
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-1">({appointment.customer_rating}/5)</span>
+                  </div>
+                )}
+                {appointment.customer_feedback && (
+                  <p className="text-sm italic text-foreground">"{appointment.customer_feedback}"</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Cancel Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this appointment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Cancellation Reason (Optional)
+              </label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Enter reason for cancellation..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowCancelDialog(false);
+                setCancelReason("");
+              }}
+              disabled={cancelMutation.isPending}
+            >
+              Keep Appointment
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel Appointment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Sub-component for the Messaging Dialog
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function MessageCustomerDialog({
+  open,
+  onOpenChange,
+  onSend,
+  method,
+  onMethodChange,
+  subject,
+  onSubjectChange,
+  message,
+  onMessageChange,
+  isSending,
+  isFetching,
+  onRefresh
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSend: () => void;
+  method: "sms" | "email";
+  onMethodChange: (method: "sms" | "email") => void;
+  subject: string;
+  onSubjectChange: (val: string) => void;
+  message: string;
+  onMessageChange: (val: string) => void;
+  isSending: boolean;
+  isFetching: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Message Customer
+          </DialogTitle>
+          <DialogDescription>
+            Send a professional update to the customer about their appointment.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs value={method} onValueChange={(val) => onMethodChange(val as "sms" | "email")} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="sms" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              SMS
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Email
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="space-y-4 py-2">
+            {method === "email" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Subject</label>
+                <Input
+                  value={subject}
+                  onChange={(e) => onSubjectChange(e.target.value)}
+                  placeholder="Email subject..."
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Message Body</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10 transition-all font-medium"
+                  onClick={onRefresh}
+                  disabled={isFetching}
+                >
+                  {isFetching ? (
+                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 mr-2" />
+                  )}
+                  {isFetching ? "Thinking..." : "Auto-generate Content"}
+                </Button>
+              </div>
+              <Textarea
+                value={message}
+                onChange={(e) => onMessageChange(e.target.value)}
+                placeholder={`Type your ${method} message here...`}
+                rows={method === "email" ? 10 : 5}
+                className="resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                ✨ AI suggestions are based on the current appointment status.
+              </p>
+            </div>
+          </div>
+        </Tabs>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
+            Cancel
+          </Button>
+          <Button onClick={onSend} disabled={isSending || !message.trim() || (method === "email" && !subject.trim())}>
+            {isSending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                {method === "email" ? <Mail className="mr-2 h-4 w-4" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+                Send {method === "email" ? "Email" : "SMS"}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

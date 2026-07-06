@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cost Estimate — Smart Vehicle Repairs System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a1f36;
+            --primary-light: #2d3352;
+            --accent: #3b82f6;
+            --accent-dark: #2563eb;
+            --success: #10b981;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--gray-800);
+            background: #e5e7eb;
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 30mm 20mm 20mm 20mm;
+            position: relative;
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Watermark */
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 120px;
+            font-weight: 800;
+            color: rgba(203, 213, 225, 0.15);
+            letter-spacing: 20px;
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 0;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        /* Project Timeline */
+        .timeline-section {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-top: 30px;
+        }
+
+        .timeline-section h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 14px;
+        }
+
+        .timeline-bar {
+            display: flex;
+            gap: 0;
+            margin-bottom: 14px;
+            border-radius: 6px;
+            overflow: hidden;
+            height: 32px;
+        }
+
+        .timeline-phase {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            padding: 0 8px;
+        }
+
+        .timeline-phase.phase-1 {
+            background: #3b82f6;
+            flex: 2;
+        }
+
+        .timeline-phase.phase-2 {
+            background: #6366f1;
+            flex: 3;
+        }
+
+        .timeline-phase.phase-3 {
+            background: #8b5cf6;
+            flex: 2;
+        }
+
+        .timeline-phase.phase-4 {
+            background: #a855f7;
+            flex: 2;
+        }
+
+        .timeline-phase.phase-5 {
+            background: #10b981;
+            flex: 1;
+        }
+
+        .timeline-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .timeline-details .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .timeline-details .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header-left .tagline {
+            font-size: 12px;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+
+        .header-right {
+            text-align: right;
+            font-size: 13px;
+            color: var(--gray-600);
+            line-height: 1.8;
+        }
+
+        /* Estimate badge */
+        .estimate-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 6px 20px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        /* Info grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 36px;
+        }
+
+        .info-box h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--gray-400);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .info-box p {
+            font-size: 14px;
+            color: var(--gray-700);
+            font-weight: 500;
+        }
+
+        .info-box p.name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Section headers */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 30px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table thead th {
+            background: var(--gray-50);
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-500);
+            font-weight: 600;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        table thead th:last-child {
+            text-align: right;
+        }
+
+        table tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 13px;
+        }
+
+        table tbody td:last-child {
+            text-align: right;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        table tbody td .module-desc {
+            font-size: 11px;
+            color: var(--gray-400);
+            margin-top: 2px;
+        }
+
+        table tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* Totals */
+        .totals-section {
+            margin-top: 10px;
+            border-top: 2px solid var(--gray-200);
+            padding-top: 16px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 14px;
+            font-size: 14px;
+        }
+
+        .total-row.subtotal {
+            color: var(--gray-600);
+        }
+
+        .total-row.paid {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .total-row.grand-total {
+            background: var(--primary);
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-top: 8px;
+        }
+
+        /* Recurring */
+        .recurring-note {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-top: 30px;
+        }
+
+        .recurring-note h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .recurring-note table thead th {
+            background: white;
+        }
+
+        /* Notes */
+        .notes {
+            margin-top: 30px;
+            padding: 20px 24px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+        }
+
+        .notes h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 10px;
+        }
+
+        .notes ul {
+            padding-left: 18px;
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .notes ul li {
+            margin-bottom: 6px;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 2px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .signature-block {
+            flex: 1;
+        }
+
+        .signature-block h4 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--gray-400);
+            margin-bottom: 50px;
+            font-weight: 600;
+        }
+
+        .signature-line {
+            border-top: 1px solid var(--gray-300);
+            padding-top: 8px;
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .thank-you {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 13px;
+            color: var(--gray-400);
+            font-style: italic;
+        }
+
+        /* Print styles */
+        @media print {
+            @page {
+                size: 210mm 297mm;
+                margin: 10mm 12mm;
+            }
+
+            body {
+                background: #fff;
+                font-size: 11px;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .page {
+                width: 100%;
+                min-height: auto;
+                padding: 0;
+                box-shadow: none;
+                margin: 0;
+            }
+
+            .header {
+                margin-bottom: 20px;
+                padding-bottom: 16px;
+            }
+
+            .header-left h1 {
+                font-size: 22px;
+            }
+
+            .section-title {
+                margin: 16px 0 10px 0;
+                font-size: 13px;
+            }
+
+            .info-grid {
+                margin-bottom: 20px;
+            }
+
+            table thead th {
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+
+            table tbody td {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+
+            table tbody td .module-desc {
+                font-size: 9.5px;
+            }
+
+            table tbody tr:hover {
+                background: transparent;
+            }
+
+            .totals-section {
+                break-inside: avoid;
+            }
+
+            .total-row {
+                font-size: 12px;
+            }
+
+            .total-row.grand-total {
+                font-size: 15px;
+                padding: 10px 14px;
+            }
+
+            .timeline-section {
+                break-inside: avoid;
+                margin-top: 16px;
+                padding: 14px 18px;
+            }
+
+            .recurring-note {
+                break-inside: avoid;
+                margin-top: 16px;
+                padding: 14px 18px;
+            }
+
+            .notes {
+                break-inside: avoid;
+                margin-top: 16px;
+                padding: 14px 18px;
+            }
+
+            .footer {
+                break-inside: avoid;
+                margin-top: 20px;
+                padding-top: 16px;
+            }
+
+            .watermark {
+                position: fixed;
+                font-size: 100px;
+            }
+
+            .thank-you {
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="watermark">ESTIMATE</div>
+    <div class="page">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>Esackseasy Solutions</h1>
+                <div class="tagline">Software Development & IT Solutions</div>
+            </div>
+            <div class="header-right">
+                Oseble Street<br>
+                Greater-Accra, Ghana<br>
+                0246999414 / 0548996607<br>
+                info@esackezysolutions.com
+            </div>
+        </div>
+
+        <!-- Estimate Badge -->
+        <div class="estimate-badge">Cost Estimate</div>
+
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <div class="info-box">
+                <h3>Prepared For</h3>
+                <p class="name">American AutoParts Limited</p>
+                <p>Awudome Estates, Odaw Avenue, close to TV Africa, Accra, Ghana</p>
+                <p>md@aapgh.com</p>
+            </div>
+            <div class="info-box" style="text-align: right;">
+                <h3>Estimate Details</h3>
+                <p><strong>Estimate #:</strong> EST-2026-001</p>
+                <p><strong>Date:</strong> 23rd February, 2026</p>
+                <p><strong>Valid Until:</strong> 23rd March, 2026</p>
+            </div>
+        </div>
+
+        <!-- Project Overview -->
+        <h2 class="section-title">Project: Smart Vehicle Repairs Management System</h2>
+        <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 20px;">
+            A comprehensive, enterprise-grade vehicle repair and workshop management system featuring real-time
+            operations tracking,
+            automated billing, inventory management, staff management, customer portal, AI-powered diagnostics,
+            and seamless third-party integrations — fully designed, developed, tested, and ready for deployment.
+        </p>
+
+        <!-- Deliverables Table -->
+        <h2 class="section-title">Deliverables & Scope of Work</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 70%;">Module / Deliverable</th>
+                    <th>Amount (GH₵)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>
+                        <strong>User Authentication & Access Control</strong>
+                        <div class="module-desc">Login, registration, Google sign-in, role-based permissions (6 user
+                            roles), JWT security</div>
+                    </td>
+                    <td>5,000.00</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>
+                        <strong>Customer Management</strong>
+                        <div class="module-desc">Customer profiles, service history, search & filtering
+                        </div>
+                    </td>
+                    <td>3,000.00</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>
+                        <strong>Vehicle Management</strong>
+                        <div class="module-desc">Vehicle registration, VIN decoding, make/model/year tracking, full
+                            service history</div>
+                    </td>
+                    <td>5,000.00</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>
+                        <strong>Work Order Management</strong>
+                        <div class="module-desc">Job cards, task breakdown, technician assignment, status tracking, time
+                            & labour tracking</div>
+                    </td>
+                    <td>10,000.00</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>
+                        <strong>Billing & Invoicing</strong>
+                        <div class="module-desc">Estimates, quotations, invoices, payment tracking, multiple payment
+                            methods, PDF generation</div>
+                    </td>
+                    <td>10,000.00</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>
+                        <strong>Inventory & Parts Management</strong>
+                        <div class="module-desc">Stock levels, supplier management, reorder alerts, parts requests,
+                            stock transfers</div>
+                    </td>
+                    <td>8,000.00</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>
+                        <strong>Accounting & Financial Management</strong>
+                        <div class="module-desc">General ledger, journal entries, accruals, fixed assets, depreciation,
+                            financial analytics</div>
+                    </td>
+                    <td>7,000.00</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>
+                        <strong>Appointments & Scheduling</strong>
+                        <div class="module-desc">Online booking, visual calendar, technician scheduling, service
+                            reminders</div>
+                    </td>
+                    <td>4,000.00</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>
+                        <strong>Vehicle Inspections</strong>
+                        <div class="module-desc">Digital checklists, photo attachments, defect tracking, inspection
+                            reports</div>
+                    </td>
+                    <td>4,000.00</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>
+                        <strong>HR & Staff Management</strong>
+                        <div class="module-desc">Employee records, payroll, attendance, leave management, training,
+                            performance tracking</div>
+                    </td>
+                    <td>6,000.00</td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>
+                        <strong>Notifications System</strong>
+                        <div class="module-desc">Email notifications, SMS (Twilio), WhatsApp messaging, push
+                            notifications (Firebase)</div>
+                    </td>
+                    <td>5,000.00</td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>
+                        <strong>Reporting & Analytics Dashboard</strong>
+                        <div class="module-desc">KPI dashboards, interactive charts, financial reports, PDF/Excel
+                            exports</div>
+                    </td>
+                    <td>4,000.00</td>
+                </tr>
+                <tr>
+                    <td>13</td>
+                    <td>
+                        <strong>QuickBooks Online Integration</strong>
+                        <div class="module-desc">Automated sync of invoices, payments, and branch data with QuickBooks
+                        </div>
+                    </td>
+                    <td>3,000.00</td>
+                </tr>
+                <tr>
+                    <td>14</td>
+                    <td>
+                        <strong>AI-Powered Diagnostics</strong>
+                        <div class="module-desc">Photo-based damage assessment, smart diagnostics, predictive service
+                            recommendations</div>
+                    </td>
+                    <td>4,000.00</td>
+                </tr>
+                <tr>
+                    <td>15</td>
+                    <td>
+                        <strong>Customer Portal</strong>
+                        <div class="module-desc">Dedicated customer-facing portal for service tracking, estimate
+                            approvals, vehicle history, invoice viewing, and real-time job status updates</div>
+                    </td>
+                    <td>4,000.00</td>
+                </tr>
+                <tr>
+                    <td>16</td>
+                    <td>
+                        <strong>Additional Modules</strong>
+                        <div class="module-desc">Subscriptions, roadside assistance (with maps), gate pass, document
+                            management, feedback (QR), SMS campaigns, multi-branch support</div>
+                    </td>
+                    <td>5,000.00</td>
+                </tr>
+                <tr>
+                    <td>17</td>
+                    <td>
+                        <strong>Admin Panel & System Configuration</strong>
+                        <div class="module-desc">System settings, user management, branch setup, role/permission
+                            management, audit logs</div>
+                    </td>
+                    <td>3,000.00</td>
+                </tr>
+                <tr>
+                    <td>18</td>
+                    <td>
+                        <strong>Deployment Infrastructure & DevOps</strong>
+                        <div class="module-desc">Docker containerisation, Nginx configuration, database setup, backup
+                            scripts, SSL, CI/CD pipeline</div>
+                    </td>
+                    <td>5,000.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="totals-section">
+            <div class="total-row subtotal">
+                <span>Subtotal</span>
+                <span>GH₵ 90,000.00</span>
+            </div>
+            <div class="total-row paid">
+                <span>Amount Paid (Deposit)</span>
+                <span>- GH₵ 10,000.00</span>
+            </div>
+            <div class="total-row grand-total">
+                <span>Balance Due</span>
+                <span>GH₵ 80,000.00</span>
+            </div>
+        </div>
+
+        <!-- Project Timeline -->
+        <!-- <div class="timeline-section">
+            <h3>📅 Estimated Project Timeline</h3>
+            <div class="timeline-bar">
+                <div class="timeline-phase phase-1">Foundation</div>
+                <div class="timeline-phase phase-2">Core Modules</div>
+                <div class="timeline-phase phase-3">Finance</div>
+                <div class="timeline-phase phase-4">Advanced</div>
+                <div class="timeline-phase phase-5">Deploy</div>
+            </div>
+            <div class="timeline-details">
+                <div class="detail-item">
+                    <div class="dot" style="background:#3b82f6"></div> Foundation — Auth, Customers, Vehicles (Months
+                    1–2)
+                </div>
+                <div class="detail-item">
+                    <div class="dot" style="background:#6366f1"></div> Core — Work Orders, Billing, Inventory (Months
+                    3–5)
+                </div>
+                <div class="detail-item">
+                    <div class="dot" style="background:#8b5cf6"></div> Finance — Accounting, Reports, QBO (Months 6–7)
+                </div>
+                <div class="detail-item">
+                    <div class="dot" style="background:#a855f7"></div> Advanced — AI, HR, Portal, Inspections (Months
+                    8–9)
+                </div>
+                <div class="detail-item">
+                    <div class="dot" style="background:#10b981"></div> Deployment — Server, Testing, Handover (Month 10)
+                </div>
+                <div class="detail-item" style="font-weight:600; color: var(--primary);">📌 Total Estimated Delivery:
+                    8–10 Months</div>
+            </div>
+        </div> -->
+
+        <!-- Recurring / Ongoing Costs -->
+        <div class="recurring-note">
+            <h3>📌 Recurring Costs (Billed Separately)</h3>
+            <p style="font-size: 12px; color: var(--gray-500); margin-bottom: 12px;">
+                The following are <strong>not included</strong> in the project cost above and will be billed separately
+                on a monthly basis after deployment.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60%;">Item</th>
+                        <th>Estimated Monthly Cost (GH₵)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Server Hosting & Infrastructure</td>
+                        <td>500 – 2,000</td>
+                    </tr>
+                    <tr>
+                        <td>Maintenance & Technical Support</td>
+                        <td>2,000 – 5,000</td>
+                    </tr>
+                    <tr>
+                        <td>Third-Party API Costs (SMS, WhatsApp, AI, etc.)</td>
+                        <td>300 – 1,500</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Notes -->
+        <div class="notes">
+            <h3>📝 Terms & Conditions</h3>
+            <ul>
+                <li>This estimate is valid for <strong>30 days</strong> from the date of issue.</li>
+                <li>The project includes full source code handover upon final payment.</li>
+                <li>Any additional features or modules not listed above will be quoted separately.</li>
+                <li>Training and onboarding for staff can be arranged at an additional cost.</li>
+                <li>A maintenance and support agreement is recommended post-deployment.</li>
+                <li>Payment terms: Balance due upon project completion and handover.</li>
+            </ul>
+        </div>
+
+        <!-- Signatures -->
+        <div class="footer">
+            <div class="signature-block">
+                <h4>Prepared By</h4>
+                <div class="signature-line">
+                    Name: Emmanuel K. Sackey<br>
+                    Date: 23/02/2026
+                </div>
+            </div>
+            <div class="signature-block">
+                <h4>Accepted By (Client)</h4>
+                <div class="signature-line">
+                    Name: ___________________________<br>
+                    Date: ____/____/________
+                </div>
+            </div>
+        </div>
+
+        <p class="thank-you">Thank you for your business. We look forward to working with you.</p>
+
+    </div>
+</body>
+
+</html>
