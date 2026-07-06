@@ -86,6 +86,11 @@ class PaymentScopingTests(TestCase):
         force_authenticate(request, user=user)
         return view(request)
 
+    def _response_items(self, response):
+        if isinstance(response.data, dict) and "results" in response.data:
+            return response.data["results"]
+        return response.data
+
     def _create_invoice(self, branch, total="100.00"):
         return Invoice.objects.create(
             customer=self.customer,
@@ -131,7 +136,7 @@ class PaymentScopingTests(TestCase):
         response = self._get_viewset_response(view, self.branch_user, "/payments/recent/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payment_ids = {item["id"] for item in response.data}
+        payment_ids = {item["id"] for item in self._response_items(response)}
         self.assertIn(visible_payment.id, payment_ids)
         self.assertNotIn(hidden_payment.id, payment_ids)
 
@@ -145,8 +150,9 @@ class PaymentScopingTests(TestCase):
         response = self._get_viewset_response(view, self.branch_user, "/payments/by_method/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["Cash"]["count"], 1)
-        self.assertEqual(response.data["Cash"]["total"], "30")
+        summary = response.data["payment_summary"]
+        self.assertEqual(summary["Cash"]["count"], 1)
+        self.assertEqual(summary["Cash"]["total"], "30")
 
     def test_payment_list_empty_branch_scope_does_not_fail_open(self):
         hidden_invoice = self._create_invoice(self.branch_b)
@@ -156,7 +162,7 @@ class PaymentScopingTests(TestCase):
         response = self._get_viewset_response(view, self.branch_user, "/payments/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payment_ids = {item["id"] for item in response.data}
+        payment_ids = {item["id"] for item in self._response_items(response)}
         self.assertNotIn(hidden_payment.id, payment_ids)
         self.assertEqual(payment_ids, set())
 
@@ -174,6 +180,6 @@ class PaymentScopingTests(TestCase):
         response = self._get_viewset_response(view, self.branch_user, "/payment-allocations/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        allocation_ids = {item["id"] for item in response.data}
+        allocation_ids = {item["id"] for item in self._response_items(response)}
         self.assertNotIn(allocation.id, allocation_ids)
         self.assertEqual(allocation_ids, set())
