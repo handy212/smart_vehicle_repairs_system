@@ -369,7 +369,7 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
     @action(detail=False, methods=['get'])
     def pending(self, request):
         """Get pending estimates (sent, viewed)"""
-        pending = self.queryset.filter(status__in=['sent', 'viewed'])
+        pending = self.get_queryset().filter(status__in=['sent', 'viewed'])
         
         page = self.paginate_queryset(pending)
         if page is not None:
@@ -385,7 +385,7 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
         days = int(request.query_params.get('days', 7))
         cutoff_date = timezone.now().date() + timedelta(days=days)
         
-        expiring = self.queryset.filter(
+        expiring = self.get_queryset().filter(
             status__in=['sent', 'viewed'],
             valid_until__lte=cutoff_date,
             valid_until__gte=timezone.now().date()
@@ -844,6 +844,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
             if getattr(self.request.user, 'role', None) == 'customer':
                 return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
+        elif self.action in ['recent', 'by_method']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action == 'create':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('process_payments')]
         elif self.action in ['update', 'partial_update']:
@@ -888,8 +890,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 request=self.request, 
                 use_active_branch=True
             ).values_list('id', flat=True)
-            if invoice_ids.exists():
-                queryset = queryset.filter(invoice_id__in=invoice_ids)
+            queryset = queryset.filter(invoice_id__in=invoice_ids)
         
         return queryset
     
@@ -936,7 +937,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def recent(self, request):
         """Get recent payments (last 100)"""
-        recent = self.queryset.order_by('-payment_date')[:100]
+        recent = self.get_queryset().order_by('-payment_date')[:100]
         serializer = self.get_serializer(recent, many=True)
         return Response(serializer.data)
     
@@ -953,7 +954,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if end_date:
             filters &= Q(payment_date__lte=end_date)
         
-        payments = self.queryset.filter(filters)
+        payments = self.get_queryset().filter(filters)
         
         # Group by payment method
         summary = {}
@@ -1793,6 +1794,14 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
     search_fields = ['payment__payment_number', 'invoice__invoice_number']
     ordering_fields = ['allocated_at', 'amount']
     ordering = ['-allocated_at']
+
+    def _accessible_invoice_ids(self):
+        return filter_queryset_for_user_branches(
+            Invoice.objects.all(),
+            self.request.user,
+            request=self.request,
+            use_active_branch=True
+        ).values_list('id', flat=True)
     
     def get_queryset(self):
         """Filter allocations by user's accessible branches"""
@@ -1808,15 +1817,8 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                 queryset = queryset.none()
         else:
             # For staff, filter by branch access
-            from apps.branches.utils import filter_queryset_for_user_branches
-            invoice_ids = filter_queryset_for_user_branches(
-                Invoice.objects.all(),
-                self.request.user,
-                request=self.request,
-                use_active_branch=True
-            ).values_list('id', flat=True)
-            if invoice_ids.exists():
-                queryset = queryset.filter(invoice_id__in=invoice_ids)
+            invoice_ids = self._accessible_invoice_ids()
+            queryset = queryset.filter(invoice_id__in=invoice_ids)
         
         return queryset
     
@@ -1853,8 +1855,10 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        accessible_invoice_ids = self._accessible_invoice_ids()
+        
         try:
-            payment = Payment.objects.get(id=payment_id)
+            payment = Payment.objects.get(id=payment_id, invoice_id__in=accessible_invoice_ids)
         except Payment.DoesNotExist:
             logger.error(f"Payment not found | payment_id: {payment_id}")
             return Response(
@@ -1900,7 +1904,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                         raise serializers.ValidationError(f"Allocation amount must be greater than 0")
                     
                     try:
-                        invoice = Invoice.objects.get(id=invoice_id)
+                        invoice = Invoice.objects.get(id=invoice_id, id__in=accessible_invoice_ids)
                     except Invoice.DoesNotExist:
                         logger.error(f"Invoice not found | invoice_id: {invoice_id}")
                         raise serializers.ValidationError(f"Invoice {invoice_id} not found")
@@ -1967,8 +1971,10 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        accessible_invoice_ids = self._accessible_invoice_ids()
+        
         try:
-            payment = Payment.objects.get(id=payment_id)
+            payment = Payment.objects.get(id=payment_id, invoice_id__in=accessible_invoice_ids)
         except Payment.DoesNotExist:
             logger.error(f"Payment not found | payment_id: {payment_id}")
             return Response(
@@ -1995,6 +2001,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         
         # Get unpaid invoices for this customer, ordered by invoice date (oldest first)
         unpaid_invoices = Invoice.objects.filter(
+            id__in=accessible_invoice_ids,
             customer=customer,
             status__in=['sent', 'viewed', 'partial', 'overdue', 'proforma'],
             amount_due__gt=0,
