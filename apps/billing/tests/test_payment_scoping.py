@@ -1,16 +1,16 @@
 from decimal import Decimal
 
 from django.test import TestCase
-from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
 from apps.accounts.permission_models import Permission, Role
 from apps.accounts.role_utils import clear_role_permission_cache
 from apps.billing.models import Invoice, Payment, PaymentAllocation
+from apps.billing.views import PaymentAllocationViewSet, PaymentViewSet
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 
@@ -79,7 +79,12 @@ class PaymentScopingTests(TestCase):
         )
 
     def setUp(self):
-        self.client = APIClient()
+        self.factory = APIRequestFactory()
+
+    def _get_viewset_response(self, view, user, path="/", data=None):
+        request = self.factory.get(path, data or {})
+        force_authenticate(request, user=user)
+        return view(request)
 
     def _create_invoice(self, branch, total="100.00"):
         return Invoice.objects.create(
@@ -111,8 +116,8 @@ class PaymentScopingTests(TestCase):
         invoice = self._create_invoice(self.branch_b)
         self._create_completed_payment(invoice)
 
-        self.client.force_authenticate(user=self.customer_user)
-        response = self.client.get(reverse("api_billing:payment-recent"))
+        view = PaymentViewSet.as_view({"get": "recent"})
+        response = self._get_viewset_response(view, self.customer_user, "/payments/recent/")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -122,8 +127,8 @@ class PaymentScopingTests(TestCase):
         visible_payment = self._create_completed_payment(visible_invoice)
         hidden_payment = self._create_completed_payment(hidden_invoice)
 
-        self.client.force_authenticate(user=self.branch_user)
-        response = self.client.get(reverse("api_billing:payment-recent"))
+        view = PaymentViewSet.as_view({"get": "recent"})
+        response = self._get_viewset_response(view, self.branch_user, "/payments/recent/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         payment_ids = {item["id"] for item in response.data}
@@ -136,8 +141,8 @@ class PaymentScopingTests(TestCase):
         self._create_completed_payment(visible_invoice, amount="30.00", method="cash")
         self._create_completed_payment(hidden_invoice, amount="70.00", method="cash")
 
-        self.client.force_authenticate(user=self.branch_user)
-        response = self.client.get(reverse("api_billing:payment-by-method"))
+        view = PaymentViewSet.as_view({"get": "by_method"})
+        response = self._get_viewset_response(view, self.branch_user, "/payments/by_method/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["Cash"]["count"], 1)
@@ -147,8 +152,8 @@ class PaymentScopingTests(TestCase):
         hidden_invoice = self._create_invoice(self.branch_b)
         hidden_payment = self._create_completed_payment(hidden_invoice)
 
-        self.client.force_authenticate(user=self.branch_user)
-        response = self.client.get(reverse("api_billing:payment-list"))
+        view = PaymentViewSet.as_view({"get": "list"})
+        response = self._get_viewset_response(view, self.branch_user, "/payments/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         payment_ids = {item["id"] for item in response.data}
@@ -165,8 +170,8 @@ class PaymentScopingTests(TestCase):
             allocated_by=self.admin,
         )
 
-        self.client.force_authenticate(user=self.branch_user)
-        response = self.client.get(reverse("api_billing:payment-allocation-list"))
+        view = PaymentAllocationViewSet.as_view({"get": "list"})
+        response = self._get_viewset_response(view, self.branch_user, "/payment-allocations/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         allocation_ids = {item["id"] for item in response.data}
