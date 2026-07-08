@@ -200,6 +200,7 @@ class SystemSettings(models.Model):
             )
 
 
+class SystemBackup(models.Model):
     """
     System backup records
     """

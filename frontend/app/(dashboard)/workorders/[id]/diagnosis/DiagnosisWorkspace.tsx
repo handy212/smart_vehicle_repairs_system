@@ -48,6 +48,7 @@ import {
   PlayCircle,
   CheckCircle2,
   RotateCcw,
+  Search,
   Send,
   User,
   Sparkles,

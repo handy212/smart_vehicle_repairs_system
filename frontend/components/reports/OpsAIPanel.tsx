@@ -119,7 +119,7 @@ export function OpsAINarrativeButton({
   resultKey = 'narrative',
 }: {
   label: string;
-  onGenerate: () => Promise<Record<string, string>>;
+  onGenerate: () => Promise<Record<string, string | number | undefined>>;
   resultKey?: string;
 }) {
   const { toast } = useToast();
@@ -127,7 +127,7 @@ export function OpsAINarrativeButton({
 
   const mutation = useMutation({
     mutationFn: onGenerate,
-    onSuccess: (data) => setText(data[resultKey] || data.analysis || ''),
+    onSuccess: (data) => setText(String(data[resultKey] ?? data.analysis ?? '')),
     onError: (err) => toast({ title: 'AI analysis failed', description: getUserFacingError(err), variant: 'destructive' }),
   });
 
