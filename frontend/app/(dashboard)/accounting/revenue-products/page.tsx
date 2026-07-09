@@ -19,6 +19,8 @@ import {
   type RevenueProduct,
   type RevenueProductPayload,
 } from "@/lib/api/revenue-products";
+import { branchesApi } from "@/lib/api/branches";
+import { useBranchStore } from "@/store/branchStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +74,7 @@ const EMPTY_FORM: RevenueProductPayload = {
   roadside_service_type: "",
   sort_order: 0,
   is_active: true,
+  branch: null,
 };
 
 const ALL_FILTER = "__all__";
@@ -89,6 +92,7 @@ export default function RevenueProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isLinked: qboConnected, isApiReady: qboApiReady } = useQuickBooksConnection();
+  const { activeBranchId } = useBranchStore();
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState(ALL_FILTER);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
@@ -98,12 +102,18 @@ export default function RevenueProductsPage() {
 
   const listParams = useMemo(
     () => ({
+      branch: "all" as const,
       ...(statusFilter === "active" ? { is_active: true } : {}),
       ...(statusFilter === "inactive" ? { is_active: false } : {}),
       ...(classFilter !== ALL_FILTER ? { revenue_class: classFilter } : {}),
     }),
     [classFilter, statusFilter],
   );
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches", "list"],
+    queryFn: () => branchesApi.list(),
+  });
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["revenue-products", "manage", listParams],
@@ -143,6 +153,7 @@ export default function RevenueProductsPage() {
 
   const openCreate = () => {
     resetDialog();
+    setForm((prev) => ({ ...prev, branch: activeBranchId ?? null }));
     setDialogOpen(true);
   };
 
@@ -151,6 +162,7 @@ export default function RevenueProductsPage() {
     setForm({
       code: product.code,
       name: product.name,
+      branch: product.branch ?? null,
       owner_account_code: product.owner_account_code ?? "",
       owner_account_label: product.owner_account_label ?? "",
       revenue_class: product.revenue_class,
@@ -316,6 +328,7 @@ export default function RevenueProductsPage() {
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Branch</TableHead>
                     <TableHead>{QBO_INCOME_ACCOUNT_SHORT}</TableHead>
                     <TableHead>QBO item</TableHead>
                     <TableHead className="text-right">Default price</TableHead>
@@ -338,6 +351,9 @@ export default function RevenueProductsPage() {
                             Roadside: {product.roadside_service_type}
                           </div>
                         ) : null}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {product.branch_name ? product.branch_name : "Company-wide"}
                       </TableCell>
                       <TableCell>
                         {product.owner_account_code ? (
@@ -383,7 +399,7 @@ export default function RevenueProductsPage() {
                   ))}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
                         No income categories found. Run{" "}
                         <code className="text-xs">seed_owner_revenue_products</code> or add your first category.
                       </TableCell>
@@ -431,6 +447,30 @@ export default function RevenueProductsPage() {
                   placeholder="Vehicle Assessment"
                   className="h-8 text-sm"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Branch scope</Label>
+                <Select
+                  value={form.branch != null ? String(form.branch) : "__company__"}
+                  onValueChange={(value) =>
+                    setForm((f) => ({
+                      ...f,
+                      branch: value === "__company__" ? null : Number(value),
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Company-wide default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__company__">Company-wide default</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">{QBO_INCOME_ACCOUNT_LABEL}</Label>

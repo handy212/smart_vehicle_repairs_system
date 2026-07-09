@@ -31,6 +31,7 @@ import { resolveIncomeCategoryForPart } from "@/lib/billing/resolve-income-categ
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useBranchStore } from "@/store/branchStore";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
@@ -147,6 +148,7 @@ export default function NewEstimatePage() {
   const { formatCurrency } = useCurrency();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { activeBranchId } = useBranchStore();
   const [serverError, setServerError] = useState<string | null>(null);
   const [partSearchTerm, setPartSearchTerm] = useState("");
   const [lineItems, setLineItems] = useState<ExtendedLineItem[]>([
@@ -736,6 +738,7 @@ export default function NewEstimatePage() {
                         <TableCell className="py-1 px-2">
                           <BillingLineIncomeCategorySelect
                             itemType={item.item_type}
+                            branchId={activeBranchId}
                             value={item.revenue_product ?? null}
                             onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                           />

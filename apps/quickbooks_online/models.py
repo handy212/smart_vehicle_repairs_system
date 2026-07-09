@@ -138,6 +138,7 @@ class QBOSyncLog(models.Model):
         ('bill_payment', 'Vendor Bill Payments'),
         ('customer', 'Customers'),
         ('item', 'Items (Parts catalog)'),
+        ('inv_adjustment', 'Inventory Adjustments'),
         ('all', 'Full Inbound Sync'),
     ]
 

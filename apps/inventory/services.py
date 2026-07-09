@@ -132,6 +132,7 @@ class InventoryService:
         inbound_types = {'receive', 'purchase', 'transfer_in', 'found'}
         outbound_types = {'sale', 'transfer_out', 'damage', 'loss', 'return'}
         signed_types = {'adjustment', 'correction', 'count'}
+        qbo_adjustment_types = signed_types | {'damage', 'loss', 'found'}
 
         with db_transaction.atomic():
             # Get or create stock item
@@ -180,8 +181,14 @@ class InventoryService:
                 transaction_quantity = -quantity
             else:
                 raise ValueError(f"Unsupported inventory transaction type: {transaction_type}")
-                
-            stock_item.save()
+
+            from apps.quickbooks_online.sync_context import suppress_qbo_item_qty_sync
+
+            if transaction_type in qbo_adjustment_types:
+                with suppress_qbo_item_qty_sync():
+                    stock_item.save()
+            else:
+                stock_item.save()
             
             # Create transaction record
             transaction = InventoryTransaction.objects.create(

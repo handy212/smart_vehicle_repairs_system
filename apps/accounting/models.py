@@ -927,8 +927,16 @@ class RevenueProduct(models.Model):
         ('other', 'Other'),
     ]
 
-    code = models.SlugField(max_length=64, unique=True)
+    code = models.SlugField(max_length=64)
     name = models.CharField(max_length=200)
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='revenue_products',
+        help_text='Branch-specific income category; null = company-wide default.',
+    )
     owner_account_code = models.CharField(
         max_length=20,
         blank=True,
@@ -957,7 +965,6 @@ class RevenueProduct(models.Model):
         max_length=50,
         blank=True,
         null=True,
-        unique=True,
         help_text='Matches roadside.RoadsideRequest.service_type when set.',
     )
     is_active = models.BooleanField(default=True)
@@ -979,6 +986,30 @@ class RevenueProduct(models.Model):
         indexes = [
             models.Index(fields=['revenue_class', 'is_active']),
             models.Index(fields=['owner_account_code']),
+            models.Index(fields=['branch', 'code']),
+            models.Index(fields=['branch', 'is_active']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['code'],
+                condition=Q(branch__isnull=True),
+                name='accounting_revenueproduct_code_company_unique',
+            ),
+            models.UniqueConstraint(
+                fields=['code', 'branch'],
+                condition=Q(branch__isnull=False),
+                name='accounting_revenueproduct_code_branch_unique',
+            ),
+            models.UniqueConstraint(
+                fields=['roadside_service_type'],
+                condition=Q(branch__isnull=True, roadside_service_type__isnull=False),
+                name='accounting_revenueproduct_roadside_company_unique',
+            ),
+            models.UniqueConstraint(
+                fields=['roadside_service_type', 'branch'],
+                condition=Q(branch__isnull=False, roadside_service_type__isnull=False),
+                name='accounting_revenueproduct_roadside_branch_unique',
+            ),
         ]
 
     def __str__(self):

@@ -2,6 +2,7 @@
 
 import re
 
+from django.db.models import Q
 from rest_framework import serializers
 
 from apps.accounting.models import RevenueProduct
@@ -20,11 +21,12 @@ class RevenueProductSerializer(serializers.ModelSerializer):
         read_only=True,
         default=None,
     )
+    branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
 
     class Meta:
         model = RevenueProduct
         fields = [
-            'id', 'code', 'name',
+            'id', 'code', 'name', 'branch', 'branch_name',
             'owner_account_code', 'owner_account_label',
             'revenue_class', 'default_billing_line_type',
             'default_unit_price',
@@ -33,7 +35,10 @@ class RevenueProductSerializer(serializers.ModelSerializer):
             'is_active', 'sort_order',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'catalog_part_number', 'catalog_part_selling_price']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at',
+            'catalog_part_number', 'catalog_part_selling_price', 'branch_name',
+        ]
 
     def validate_owner_account_code(self, value):
         code = (value or '').strip()
@@ -45,16 +50,49 @@ class RevenueProductSerializer(serializers.ModelSerializer):
             )
         return code
 
+    def _branch_scope_q(self, branch):
+        if branch is None:
+            return Q(branch__isnull=True)
+        branch_id = branch.id if hasattr(branch, 'id') else branch
+        return Q(branch_id=branch_id)
+
+    def validate(self, data):
+        branch = data.get('branch')
+        if self.instance is not None and branch is None and 'branch' not in data:
+            branch = self.instance.branch
+
+        code = data.get('code') or (self.instance.code if self.instance else None)
+        if code:
+            qs = RevenueProduct.objects.filter(code=code).filter(self._branch_scope_q(branch))
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                scope = 'this branch' if branch else 'company-wide'
+                raise serializers.ValidationError(
+                    {'code': f'An income category with code "{code}" already exists ({scope}).'},
+                )
+        return data
+
     def validate_roadside_service_type(self, value):
         service_type = (value or '').strip() or None
         if not service_type:
             return None
+        branch = None
+        if self.instance:
+            branch = self.instance.branch
+        if hasattr(self, 'initial_data') and 'branch' in self.initial_data:
+            from apps.branches.models import Branch
+            raw = self.initial_data.get('branch')
+            if raw:
+                branch = Branch.objects.filter(pk=raw).first()
+
         qs = RevenueProduct.objects.filter(roadside_service_type=service_type)
+        qs = qs.filter(self._branch_scope_q(branch))
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError(
-                'Another income category already uses this roadside service type.',
+                'Another income category already uses this roadside service type for the same scope.',
             )
         return service_type
 
@@ -88,11 +126,12 @@ class RevenueProductListSerializer(serializers.ModelSerializer):
         read_only=True,
         default=None,
     )
+    branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
 
     class Meta:
         model = RevenueProduct
         fields = [
-            'id', 'code', 'name',
+            'id', 'code', 'name', 'branch', 'branch_name',
             'owner_account_code', 'owner_account_label',
             'revenue_class', 'default_billing_line_type',
             'default_unit_price',

@@ -190,7 +190,9 @@ def all_mapping_rows():
             'control_field': None,
         })
 
-    for product in RevenueProduct.objects.filter(is_active=True).order_by('sort_order', 'name'):
+    for product in RevenueProduct.objects.filter(
+        is_active=True, branch__isnull=True,
+    ).order_by('sort_order', 'name'):
         label = product.name
         if product.owner_account_code:
             label = f'{product.name} ({product.owner_account_code})'
@@ -236,6 +238,10 @@ BRANCH_OVERRIDE_CONTROL_GROUPS = {
 BRANCH_OVERRIDE_SLOTS = frozenset(
     {(MAPPING_KIND_CONTROL, field_name) for field_name in BRANCH_OVERRIDE_CONTROL_FIELDS}
     | {(MAPPING_KIND_INVOICE_LINE, key) for key in INVOICE_LINE_TYPE_LABELS}
+    | {
+        (MAPPING_KIND_REVENUE_PRODUCT_CLASS, product.code)
+        for product in RevenueProduct.objects.filter(is_active=True, branch__isnull=True)
+    }
 )
 
 
@@ -270,6 +276,25 @@ def branch_mapping_rows(branch):
             'uses_item': True,
             'uses_tax_code': False,
             'uses_class': False,
+            'control_field': None,
+            'branch_id': branch.id,
+            'branch_name': branch.name,
+        })
+
+    for product in RevenueProduct.objects.filter(
+        is_active=True, branch__isnull=True,
+    ).order_by('sort_order', 'name'):
+        label = product.name
+        if product.owner_account_code:
+            label = f'{product.name} ({product.owner_account_code})'
+        rows.append({
+            'mapping_kind': MAPPING_KIND_REVENUE_PRODUCT_CLASS,
+            'mapping_key': product.code,
+            'label': label,
+            'group': 'QBO classes — income (category)',
+            'uses_item': False,
+            'uses_tax_code': False,
+            'uses_class': True,
             'control_field': None,
             'branch_id': branch.id,
             'branch_name': branch.name,

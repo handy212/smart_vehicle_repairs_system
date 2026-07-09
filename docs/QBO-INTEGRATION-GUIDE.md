@@ -109,7 +109,9 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 | **Invoice finalization** | When a proforma/deposit invoice moves to a finalized status, SVR runs a **chained** task: sync the issued invoice to QBO first, then re-push completed payments so `LinkedTxn` lines apply correctly. |
 | **PDF attachments** | After a successful invoice or estimate push, SVR renders the document PDF and uploads it as a QBO `Attachable` linked to the synced transaction. |
 
-**Intentionally not synced:** multi-branch stock breakdown, transfers between branches, and inventory adjustment audit detail remain SVR-only. QBO receives **total** qty on hand for Inventory-type parts only.
+**Intentionally not synced:** multi-branch stock breakdown, transfers between branches, and inventory adjustment audit detail remain SVR-only for branch qty. QBO receives **total** qty on hand for Inventory-type parts only.
+
+**Inventory adjustments (implemented):** SVR stock corrections (`adjustment`, `correction`, `count`, `damage`, `loss`, `found`) push QBO **InventoryAdjustment** documents with `QtyDiff` per part. Item `QtyOnHand` overwrite is suppressed for those transaction types to avoid double-counting; purchase/sale/transfer flows still use document + qty reconciliation as before.
 
 ### Catalog item types (Inventory / Non-inventory / Service)
 

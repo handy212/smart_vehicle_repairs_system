@@ -4,20 +4,60 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.db.models import Q
+
 from apps.accounting.models import RevenueProduct
 from apps.inventory.part_catalog import billing_line_type_for_part
 
 
-def _active_product(**filters):
-    return (
-        RevenueProduct.objects.filter(is_active=True, **filters)
-        .select_related('catalog_part')
-        .order_by('sort_order', 'id')
+def _branch_id(branch):
+    if branch is None:
+        return None
+    if hasattr(branch, 'id'):
+        return branch.id
+    return branch
+
+
+def _active_product(*, branch=None, **filters):
+    """Return branch-specific row first, then company-wide fallback."""
+    branch_id = _branch_id(branch)
+    base = RevenueProduct.objects.filter(is_active=True, **filters).select_related('catalog_part')
+
+    if branch_id is not None:
+        branch_row = base.filter(branch_id=branch_id).order_by('sort_order', 'id').first()
+        if branch_row:
+            return branch_row
+
+    return base.filter(branch__isnull=True).order_by('sort_order', 'id').first()
+
+
+def resolve_revenue_product_by_code(code: str, *, branch=None) -> RevenueProduct | None:
+    code = (code or '').strip()
+    if not code:
+        return None
+    return _active_product(branch=branch, code=code)
+
+
+def resolve_revenue_product_by_id(product_id, *, branch=None) -> RevenueProduct | None:
+    """Resolve explicit FK; re-map to branch override when code matches."""
+    if not product_id:
+        return None
+    product = (
+        RevenueProduct.objects.filter(pk=product_id, is_active=True)
+        .select_related('catalog_part', 'branch')
         .first()
     )
+    if not product:
+        return None
+    branch_id = _branch_id(branch)
+    if branch_id and (product.branch_id is None or product.branch_id != branch_id):
+        override = _active_product(branch=branch, code=product.code)
+        if override:
+            return override
+    return product
 
 
-def revenue_product_from_task_type_code(task_type_code: str) -> RevenueProduct | None:
+def revenue_product_from_task_type_code(task_type_code: str, *, branch=None) -> RevenueProduct | None:
     """Resolve revenue product configured on a ServiceTaskType row."""
     task_type_code = (task_type_code or '').strip()
     if not task_type_code:
@@ -31,23 +71,25 @@ def revenue_product_from_task_type_code(task_type_code: str) -> RevenueProduct |
         .first()
     )
     if task_type and task_type.revenue_product_id and task_type.revenue_product.is_active:
-        return task_type.revenue_product
+        return resolve_revenue_product_by_id(task_type.revenue_product_id, branch=branch)
     return None
 
 
-def resolve_revenue_product_for_task(task) -> RevenueProduct | None:
+def resolve_revenue_product_for_task(task, *, branch=None) -> RevenueProduct | None:
     """Map a work-order task to a revenue product."""
+    if branch is None:
+        work_order = getattr(task, 'work_order', None)
+        branch = getattr(work_order, 'branch', None) if work_order else None
+
     revenue_product_id = getattr(task, 'revenue_product_id', None)
     if revenue_product_id:
-        return (
-            RevenueProduct.objects.filter(pk=revenue_product_id, is_active=True)
-            .select_related('catalog_part')
-            .first()
-        )
+        product = resolve_revenue_product_by_id(revenue_product_id, branch=branch)
+        if product:
+            return product
 
     task_type_code = (getattr(task, 'task_type', '') or '').strip()
     if task_type_code:
-        product = revenue_product_from_task_type_code(task_type_code)
+        product = revenue_product_from_task_type_code(task_type_code, branch=branch)
         if product:
             return product
 
@@ -70,28 +112,28 @@ def resolve_revenue_product_for_task(task) -> RevenueProduct | None:
     )
     for keyword, code in keyword_map:
         if keyword in description:
-            product = _active_product(code=code)
+            product = _active_product(branch=branch, code=code)
             if product:
                 return product
 
-    return _active_product(code='labor_mechanical')
+    return _active_product(branch=branch, code='labor_mechanical')
 
 
-def resolve_revenue_product_for_part(part) -> RevenueProduct | None:
+def resolve_revenue_product_for_part(part, *, branch=None) -> RevenueProduct | None:
     """Map an inventory catalog part to a revenue product."""
     if part is None:
-        return _active_product(code='parts_general')
+        return _active_product(branch=branch, code='parts_general')
 
     if getattr(part, 'revenue_product_id', None):
-        product = getattr(part, 'revenue_product', None)
-        if product and product.is_active:
+        product = resolve_revenue_product_by_id(part.revenue_product_id, branch=branch)
+        if product:
             return product
 
     category = getattr(part, 'category', None)
     if category is not None:
         if getattr(category, 'revenue_product_id', None):
-            product = category.revenue_product
-            if product and product.is_active:
+            product = resolve_revenue_product_by_id(category.revenue_product_id, branch=branch)
+            if product:
                 return product
         category_name = (getattr(category, 'name', '') or '').lower()
         category_code_map = (
@@ -111,35 +153,42 @@ def resolve_revenue_product_for_part(part) -> RevenueProduct | None:
         )
         for keyword, code in category_code_map:
             if keyword in category_name:
-                product = _active_product(code=code)
+                product = _active_product(branch=branch, code=code)
                 if product:
                     return product
 
-    return _active_product(code='parts_general')
+    return _active_product(branch=branch, code='parts_general')
 
 
-def resolve_revenue_product_for_roadside(service_type: str) -> RevenueProduct | None:
+def resolve_revenue_product_for_roadside(service_type: str, *, branch=None) -> RevenueProduct | None:
     service_type = (service_type or '').strip()
     if service_type:
-        product = _active_product(roadside_service_type=service_type)
+        branch_id = _branch_id(branch)
+        if branch_id is not None:
+            product = _active_product(branch=branch, roadside_service_type=service_type)
+            if product:
+                return product
+        product = _active_product(branch=None, roadside_service_type=service_type)
         if product:
             return product
         if service_type == 'towing':
-            return _active_product(code='aa_towing')
-        if service_type in ('mechanical_first_aid', 'battery_boost', 'flat_tyre', 'key_lockout',
-                            'emergency_fuel', 'extrication', 'accident_estimate', 'pre_purchase_inspection'):
-            return _active_product(code='aa_outduty')
-    return _active_product(code='aa_outduty')
+            return _active_product(branch=branch, code='aa_towing')
+        if service_type in (
+            'mechanical_first_aid', 'battery_boost', 'flat_tyre', 'key_lockout',
+            'emergency_fuel', 'extrication', 'accident_estimate', 'pre_purchase_inspection',
+        ):
+            return _active_product(branch=branch, code='aa_outduty')
+    return _active_product(branch=branch, code='aa_outduty')
 
 
-def resolve_revenue_product_for_package(package) -> RevenueProduct | None:
+def resolve_revenue_product_for_package(package, *, branch=None) -> RevenueProduct | None:
     if package is None:
-        return _active_product(code='aa_subscription')
+        return _active_product(branch=branch, code='aa_subscription')
     if getattr(package, 'revenue_product_id', None):
-        product = package.revenue_product
-        if product and product.is_active:
+        product = resolve_revenue_product_by_id(package.revenue_product_id, branch=branch)
+        if product:
             return product
-    return _active_product(code='aa_subscription')
+    return _active_product(branch=branch, code='aa_subscription')
 
 
 def billing_line_type_for_revenue_product(revenue_product, *, part=None) -> str:
@@ -201,3 +250,11 @@ def merge_labor_pricing_fields(
             'labor_rate': (cost / hours).quantize(Decimal('0.01')) if cost else Decimal('0'),
         }
     return {'quantity': Decimal('1'), 'unit_price': cost}
+
+
+def scope_revenue_products_for_branch(queryset, branch=None):
+    """Filter queryset to branch overrides + company-wide defaults."""
+    branch_id = _branch_id(branch)
+    if branch_id is None:
+        return queryset.filter(branch__isnull=True)
+    return queryset.filter(Q(branch_id=branch_id) | Q(branch__isnull=True))

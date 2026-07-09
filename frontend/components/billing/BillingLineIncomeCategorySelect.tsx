@@ -27,6 +27,7 @@ export function lineTypeToRevenueClass(itemType: string): RevenueClass | undefin
 type Props = {
   itemType: string;
   value?: number | null;
+  branchId?: number | null;
   onResolvedChange: (patch: LineIncomeCategoryPatch) => void;
   className?: string;
 };
@@ -34,12 +35,14 @@ type Props = {
 export function BillingLineIncomeCategorySelect({
   itemType,
   value,
+  branchId,
   onResolvedChange,
   className,
 }: Props) {
   return (
     <RevenueProductSelect
       value={value}
+      branchId={branchId}
       revenueClass={lineTypeToRevenueClass(itemType)}
       className={className}
       onChange={() => {}}

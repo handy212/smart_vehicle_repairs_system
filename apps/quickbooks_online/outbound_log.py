@@ -28,6 +28,7 @@ ENTITY_LOG_TYPES = {
     'bill_payment': 'bill_payment',
     'vendor_expense': 'vendor_bill',
     'part': 'item',
+    'inventory_adjustment': 'inv_adjustment',
 }
 
 

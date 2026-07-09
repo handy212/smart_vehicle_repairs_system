@@ -907,7 +907,7 @@ class QuickBooksService:
 
             client = self.get_client()
             if class_tracking_enabled(client):
-                class_id = resolve_sales_line_class_id(mapping_service, item)
+                class_id = resolve_sales_line_class_id(mapping_service, item, branch=branch)
                 apply_class_ref_to_detail(sales_item, class_id)
 
             line.SalesItemLineDetail = sales_item
@@ -1838,6 +1838,14 @@ class QuickBooksService:
         """Sync SVR Part catalog row to QBO Item (NonInventory; SVR owns stock)."""
         from .item_sync import sync_part as _sync_part
         return _sync_part(self, local_part)
+
+    def sync_inventory_adjustment(self, local_txn):
+        """Sync SVR stock correction to QBO InventoryAdjustment."""
+        from .inventory_adjustment_sync import sync_inventory_adjustment as _sync_adj
+        result, error = _sync_adj(self, local_txn)
+        if error and not result:
+            self._fail_qbo_mapping(local_txn, error)
+        return result
 
     def pull_items(self, triggered_by=None):
         """Pull Item name/SKU/active metadata for mapped parts (no quantities)."""

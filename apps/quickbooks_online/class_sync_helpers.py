@@ -60,21 +60,30 @@ def apply_class_ref_to_txn(qb_txn, class_id: str | None) -> None:
     qb_txn.ClassRef.value = str(class_id)
 
 
-def resolve_sales_line_class_id(mapping_service, line_item) -> str | None:
+def resolve_sales_line_class_id(mapping_service, line_item, *, branch=None) -> str | None:
     """Map an invoice/estimate/credit line to a QBO Class id."""
     if mapping_service is None:
         return None
+
+    if branch is None:
+        invoice = getattr(line_item, 'invoice', None)
+        estimate = getattr(line_item, 'estimate', None)
+        credit_note = getattr(line_item, 'credit_note', None)
+        source = invoice or estimate or credit_note
+        branch = getattr(source, 'branch', None) if source else None
 
     revenue_product = getattr(line_item, 'revenue_product', None)
     if revenue_product is not None:
         code = getattr(revenue_product, 'code', None)
         if code:
-            class_id = mapping_service.resolve_qbo_class_id('revenue_product_class', code)
+            class_id = mapping_service.resolve_qbo_class_id(
+                'revenue_product_class', code, branch=branch,
+            )
             if class_id:
                 return class_id
 
     item_type = getattr(line_item, 'item_type', None) or 'other'
-    return mapping_service.resolve_qbo_class_id('income_class', str(item_type))
+    return mapping_service.resolve_qbo_class_id('income_class', str(item_type), branch=branch)
 
 
 def resolve_ap_line_class_id(mapping_service, *, is_inventory_line: bool) -> str | None:

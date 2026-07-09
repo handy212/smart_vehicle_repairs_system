@@ -48,7 +48,7 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
         else:
             desc = f"{task.description or 'Labor'} — WO {wo_ref}"
 
-        revenue_product = resolve_revenue_product_for_task(task)
+        revenue_product = resolve_revenue_product_for_task(task, branch=wo.branch)
         line_fields = build_invoice_line_fields(
             revenue_product=revenue_product,
             description=desc,
@@ -88,7 +88,7 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
             inventory_part = Part.objects.filter(pk=work_order_part.inventory_part_id).select_related(
                 'category', 'category__revenue_product', 'revenue_product',
             ).first()
-        revenue_product = resolve_revenue_product_for_part(inventory_part)
+        revenue_product = resolve_revenue_product_for_part(inventory_part, branch=wo.branch)
         part_item_type = (
             billing_line_type_for_part(inventory_part)
             if inventory_part is not None
@@ -134,7 +134,7 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
         if installed_part_lines == 0:
             parts_sub = wo.actual_parts_cost or Decimal('0')
             if parts_sub > 0:
-                revenue_product = _active_product(code='parts_general')
+                revenue_product = _active_product(branch=wo.branch, code='parts_general')
                 line_fields = build_invoice_line_fields(
                     revenue_product=revenue_product,
                     description=f"Parts & materials — WO {wo.work_order_number}"[:500],
@@ -162,7 +162,7 @@ def build_work_order_invoice_line_payloads(work_order) -> list[dict]:
                 profile_payload['order'] = idx
                 payloads.append(profile_payload)
         else:
-            revenue_product = _active_product(code='labor_mechanical')
+            revenue_product = _active_product(branch=wo.branch, code='labor_mechanical')
             line_fields = build_invoice_line_fields(
                 revenue_product=revenue_product,
                 description=f"Labor / services — WO {wo.work_order_number}"[:500],

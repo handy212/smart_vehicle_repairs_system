@@ -187,7 +187,7 @@ def log_journal_entry_delete(sender, instance, **kwargs):
 # ========================================================================
 
 from apps.inventory.models import InventoryTransaction, Transfer
-from apps.billing.models import CreditNote, Refund
+from apps.billing.models import CreditNote, CreditNoteApplication, Refund
 
 @receiver(post_save, sender=InventoryTransaction)
 def post_inventory_transaction_to_ledger(sender, instance, created, **kwargs):
@@ -198,6 +198,14 @@ def post_inventory_transaction_to_ledger(sender, instance, created, **kwargs):
         'adjustment', 'damage', 'count', 'correction', 'loss',
     ]:
         AccountingService.post_inventory_adjustment(instance)
+
+@receiver(post_save, sender=CreditNoteApplication)
+def post_credit_note_application_to_ledger(sender, instance, created, **kwargs):
+    """Post GL when credit is applied to an invoice (idempotent by application reference)."""
+    if not created:
+        return
+    AccountingService.post_credit_note_application(instance)
+
 
 @receiver(post_save, sender=Refund)
 def post_refund_to_ledger(sender, instance, created, **kwargs):

@@ -540,42 +540,51 @@ class AccountingService:
         ):
             return None
 
-        # Iterate over invoice line items, check if they are parts
-        # Determine cost (use Part.cost_price for standard costing)
-        # Note: In a real system we'd use FIFO/LIFO/Avg layers, but here we use current Unit Cost.
-        
+        from apps.inventory.models import InventoryTransaction, Part
+        from apps.inventory.part_catalog import part_contributes_inventory_cogs
+
+        def _sale_unit_cost_total(work_order, part) -> Decimal:
+            """COGS from inventory sale transactions (actual issue cost), not catalog cost_price."""
+            if not work_order or not part:
+                return Decimal('0')
+            raw = InventoryTransaction.objects.filter(
+                work_order=work_order,
+                part=part,
+                transaction_type='sale',
+            ).aggregate(total=Sum(models.F('quantity') * models.F('unit_cost')))['total']
+            return abs(Decimal(str(raw or 0))).quantize(cls.MONEY_QUANT)
+
+        def _line_cogs_cost(work_order, part, billed_qty) -> Decimal:
+            sale_cost = _sale_unit_cost_total(work_order, part)
+            if sale_cost > 0:
+                return sale_cost
+            qty = billed_qty or 0
+            unit_cost = part.cost_price or Decimal('0')
+            return (Decimal(str(qty)) * Decimal(str(unit_cost))).quantize(cls.MONEY_QUANT)
+
         cogs_total = Decimal('0.00')
-        line_costs = [] # (line_item, cost_amount)
-        
+        line_costs = []  # (line_item, cost_amount)
+
+        wo = invoice.work_order if invoice.work_order_id else None
+
         for line in invoice.line_items.all():
-            if line.part:
-                from apps.inventory.part_catalog import part_contributes_inventory_cogs
+            if not line.part:
+                continue
+            if not part_contributes_inventory_cogs(line.part):
+                continue
+            line_total_cost = _line_cogs_cost(wo, line.part, line.quantity)
+            if line_total_cost > 0:
+                cogs_total += line_total_cost
+                line_costs.append((line, line_total_cost))
 
-                if not part_contributes_inventory_cogs(line.part):
-                    continue
-                # Calculate cost: quantity * part.cost_price
-                qty = line.quantity or 0
-                cost = line.part.cost_price or 0
-                line_total_cost = (qty * cost).quantize(cls.MONEY_QUANT)
-                
-                if line_total_cost > 0:
-                    cogs_total += line_total_cost
-                    line_costs.append((line, line_total_cost))
-
-        if cogs_total == 0 and invoice.work_order_id:
-            from apps.inventory.models import Part
-            from apps.inventory.part_catalog import part_contributes_inventory_cogs
-
-            wo = invoice.work_order
+        if cogs_total == 0 and wo:
             for wo_part in wo.parts.filter(status='installed'):
                 if not wo_part.inventory_part_id:
                     continue
                 part = Part.objects.filter(pk=wo_part.inventory_part_id).first()
                 if not part or not part_contributes_inventory_cogs(part):
                     continue
-                qty = wo_part.quantity or Decimal('1')
-                unit_cost = part.cost_price or Decimal('0')
-                line_total_cost = (qty * unit_cost).quantize(cls.MONEY_QUANT)
+                line_total_cost = _line_cogs_cost(wo, part, wo_part.quantity or Decimal('1'))
                 if line_total_cost > 0:
                     cogs_total += line_total_cost
                     line_costs.append((wo_part, line_total_cost))

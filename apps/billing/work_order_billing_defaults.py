@@ -8,6 +8,7 @@ from apps.billing.revenue_resolution import (
     _active_product,
     build_invoice_line_fields,
     merge_labor_pricing_fields,
+    resolve_revenue_product_by_id,
 )
 from apps.workorders.workflow_profile_service import get_profile_code
 
@@ -35,26 +36,23 @@ def _product_meta(revenue_product) -> dict:
 
 def resolve_default_revenue_product_for_work_order(work_order):
     """Pick the income category for flat-fee / simplified billing on this work order."""
+    branch = getattr(work_order, 'branch', None)
     job_type = getattr(work_order, 'job_type', None)
     if job_type is not None:
         product = getattr(job_type, 'default_revenue_product', None)
         if product is not None and product.is_active:
-            return product
+            resolved = resolve_revenue_product_by_id(product.pk, branch=branch)
+            if resolved:
+                return resolved
         if job_type.default_revenue_product_id:
-            from apps.accounting.models import RevenueProduct
-
-            product = (
-                RevenueProduct.objects.filter(pk=job_type.default_revenue_product_id, is_active=True)
-                .select_related('catalog_part')
-                .first()
-            )
-            if product:
-                return product
+            resolved = resolve_revenue_product_by_id(job_type.default_revenue_product_id, branch=branch)
+            if resolved:
+                return resolved
 
     profile_code = get_profile_code(work_order)
     fallback_code = PROFILE_REVENUE_FALLBACK.get(profile_code or '')
     if fallback_code:
-        return _active_product(code=fallback_code)
+        return _active_product(branch=branch, code=fallback_code)
     return None
 
 
@@ -68,7 +66,11 @@ def resolve_unit_price_for_revenue_product(work_order, revenue_product) -> Decim
         job_type
         and job_type.default_service_fee
         and job_type.default_service_fee > 0
-        and job_type.default_revenue_product_id == revenue_product.pk
+        and job_type.default_revenue_product_id
+        and (
+            revenue_product.pk == job_type.default_revenue_product_id
+            or revenue_product.code == getattr(job_type.default_revenue_product, 'code', None)
+        )
     ):
         return Decimal(str(job_type.default_service_fee)).quantize(Decimal('0.01'))
 

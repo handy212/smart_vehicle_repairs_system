@@ -82,6 +82,8 @@ Dr  Cost of Goods Sold          parts_cost (from inventory issue unit_cost)
 
 **Target policy (Wave 2):** COGS must use inventory `sale` transaction `unit_cost`, not `part.cost_price`.
 
+**Status:** Implemented in `AccountingService.post_cogs()` — sums `InventoryTransaction` sale rows for the invoice work order; falls back to `part.cost_price` only when no sale transactions exist.
+
 ### Reversal
 
 **Trigger:** Invoice void (after remediation)  
@@ -120,6 +122,8 @@ Dr  Cash / Bank                  payment.amount
 ```
 
 **Current gap:** Excess posts entirely to AR on primary invoice branch. Must be fixed in Wave 2.
+
+**Status (implemented):** Overpayment remainder posts to `customer_prepayment_account` (2150) when wired.
 
 ---
 

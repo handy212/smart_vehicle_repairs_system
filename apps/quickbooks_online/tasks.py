@@ -116,6 +116,18 @@ def task_sync_part_to_qbo(part_id):
 
 
 @qbo_outbound_task()
+def task_sync_inventory_adjustment_to_qbo(transaction_id):
+    """Background task to sync a stock correction to QBO InventoryAdjustment."""
+    run_outbound_entity_sync(
+        'inventory_adjustment',
+        transaction_id,
+        'inventory',
+        'InventoryTransaction',
+        'sync_inventory_adjustment',
+    )
+
+
+@qbo_outbound_task()
 def task_resync_payments_for_invoice(invoice_id):
     """Re-push completed payments after a proforma invoice is finalized."""
     from apps.billing.models import Invoice

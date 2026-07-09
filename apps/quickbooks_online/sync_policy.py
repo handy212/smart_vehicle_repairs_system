@@ -118,6 +118,22 @@ def outbound_eligibility_reason(entity_type, instance):
             return False, 'Customer must have a customer number before QuickBooks sync.'
         return True, ''
 
+    if entity_type == 'inventory_adjustment':
+        from .inventory_adjustment_sync import QBO_INVENTORY_ADJUSTMENT_TYPES
+
+        txn_type = getattr(instance, 'transaction_type', '')
+        if txn_type not in QBO_INVENTORY_ADJUSTMENT_TYPES:
+            return False, (
+                f'Inventory transaction type "{txn_type}" is not eligible for QBO adjustment sync.'
+            )
+        part = getattr(instance, 'part', None)
+        if not part or not part.tracks_inventory():
+            return False, 'Only inventory-type parts sync as QBO inventory adjustments.'
+        qty = getattr(instance, 'quantity', 0) or 0
+        if qty == 0:
+            return False, 'Zero-quantity adjustment skipped.'
+        return True, ''
+
     # supplier, branch, and other master-data entities sync on save
     return True, ''
 

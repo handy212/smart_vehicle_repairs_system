@@ -105,4 +105,12 @@ OUTBOUND_SYNC_ENTITIES = {
         'task_name': 'task_sync_part_to_qbo',
         'service_method': 'sync_part',
     },
+    'inventory_adjustment': {
+        'app_label': 'inventory',
+        'model_name': 'InventoryTransaction',
+        'module': 'inventory',
+        'permission': 'view_inventory',
+        'task_name': 'task_sync_inventory_adjustment_to_qbo',
+        'service_method': 'sync_inventory_adjustment',
+    },
 }

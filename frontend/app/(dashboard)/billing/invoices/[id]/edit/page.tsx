@@ -29,6 +29,7 @@ import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions"
 import { Badge } from "@/components/ui/badge";
 import { BillingLineIncomeCategorySelect } from "@/components/billing/BillingLineIncomeCategorySelect";
 import { resolveIncomeCategoryForPart } from "@/lib/billing/resolve-income-category";
+import { useBranchStore } from "@/store/branchStore";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
@@ -80,6 +81,7 @@ export default function EditInvoicePage() {
   const params = useParams();
   const invoiceId = parseInt(params.id as string);
   const queryClient = useQueryClient();
+  const { activeBranchId } = useBranchStore();
   const [serverError, setServerError] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & {
     is_taxable: boolean;
@@ -703,6 +705,7 @@ export default function EditInvoicePage() {
                         <TableCell className="py-1 px-2">
                           <BillingLineIncomeCategorySelect
                             itemType={item.item_type}
+                            branchId={invoice?.branch ?? activeBranchId}
                             value={item.revenue_product ?? null}
                             onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                           />

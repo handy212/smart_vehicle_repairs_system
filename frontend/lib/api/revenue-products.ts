@@ -17,6 +17,8 @@ export interface RevenueProduct {
   id: number;
   code: string;
   name: string;
+  branch?: number | null;
+  branch_name?: string | null;
   owner_account_code?: string;
   owner_account_label?: string;
   revenue_class: RevenueClass;
@@ -46,6 +48,7 @@ export type RevenueProductPayload = Partial<
     | "roadside_service_type"
     | "is_active"
     | "sort_order"
+    | "branch"
   >
 >;
 
@@ -73,7 +76,11 @@ export const revenueProductsApi = {
     return response.data;
   },
 
-  list: async (params?: { is_active?: boolean; revenue_class?: string }): Promise<RevenueProduct[]> => {
+  list: async (params?: {
+    is_active?: boolean;
+    revenue_class?: string;
+    branch?: number | string;
+  }): Promise<RevenueProduct[]> => {
     const response = await apiClient.get("/accounting/revenue-products/", { params });
     return response.data.results ?? response.data;
   },

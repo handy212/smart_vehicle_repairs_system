@@ -260,7 +260,13 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_workorders')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
-        return [IsAuthenticated(), IsModuleEnabled('billing')(), HasPermission('view_billing')()]
+        return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['branch'] = resolve_branch(self.request)
+        return context
+
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'estimate_date']
     search_fields = [
@@ -678,6 +684,11 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('delete_invoices')]
         return [IsAuthenticated(), IsModuleEnabled('billing')]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['branch'] = resolve_branch(self.request)
+        return context
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
@@ -2136,6 +2147,7 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
             
+        credit_note.calculate_totals()
         credit_note.status = 'issued'
         credit_note.save()
         

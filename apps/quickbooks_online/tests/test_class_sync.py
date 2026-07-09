@@ -30,7 +30,7 @@ class ResolveSalesLineClassTests(SimpleTestCase):
 
         line = SimpleNamespace(revenue_product=None, item_type='part')
         self.assertEqual(resolve_sales_line_class_id(mapping_service, line), '202')
-        mapping_service.resolve_qbo_class_id.assert_called_with('income_class', 'part')
+        mapping_service.resolve_qbo_class_id.assert_called_with('income_class', 'part', branch=None)
 
 
 class ResolveApLineClassTests(SimpleTestCase):

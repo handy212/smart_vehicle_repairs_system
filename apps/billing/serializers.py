@@ -288,10 +288,11 @@ class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         from apps.billing.revenue_resolution import resolve_revenue_product_for_part
 
+        branch = self.context.get('branch')
         if not data.get('revenue_product'):
             part = data.get('part')
             if part is not None:
-                data['revenue_product'] = resolve_revenue_product_for_part(part)
+                data['revenue_product'] = resolve_revenue_product_for_part(part, branch=branch)
         item_type = data.get('item_type')
         
         # If item_type is labor, labor_hours and labor_rate should be provided
@@ -937,10 +938,11 @@ class InvoiceLineItemCreateSerializer(serializers.Serializer):
     def validate(self, data):
         from apps.billing.revenue_resolution import resolve_revenue_product_for_part
 
+        branch = self.context.get('branch')
         if not data.get('revenue_product'):
             part = data.get('part')
             if part is not None:
-                data['revenue_product'] = resolve_revenue_product_for_part(part)
+                data['revenue_product'] = resolve_revenue_product_for_part(part, branch=branch)
         return data
 
 

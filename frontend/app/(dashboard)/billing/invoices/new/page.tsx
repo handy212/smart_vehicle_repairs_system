@@ -789,6 +789,7 @@ export default function NewInvoicePage() {
                         <TableCell className="py-1 px-2">
                           <BillingLineIncomeCategorySelect
                             itemType={item.item_type}
+                            branchId={activeBranchId}
                             value={item.revenue_product ?? null}
                             onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                           />

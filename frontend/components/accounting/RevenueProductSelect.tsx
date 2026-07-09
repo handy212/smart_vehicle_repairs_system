@@ -25,6 +25,7 @@ type Props = {
   disabled?: boolean;
   placeholder?: string;
   revenueClass?: RevenueClass;
+  branchId?: number | null;
   className?: string;
 };
 
@@ -35,14 +36,16 @@ export function RevenueProductSelect({
   disabled,
   placeholder = INCOME_CATEGORY_SELECT_PLACEHOLDER,
   revenueClass,
+  branchId,
   className,
 }: Props) {
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ["revenue-products", revenueClass ?? "all"],
+    queryKey: ["revenue-products", revenueClass ?? "all", branchId ?? "company"],
     queryFn: () =>
       revenueProductsApi.list({
         is_active: true,
         ...(revenueClass ? { revenue_class: revenueClass } : {}),
+        ...(branchId ? { branch: branchId } : {}),
       }),
   });
 

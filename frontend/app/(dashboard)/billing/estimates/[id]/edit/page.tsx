@@ -43,6 +43,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
 import { BillingLineIncomeCategorySelect } from "@/components/billing/BillingLineIncomeCategorySelect";
 import { resolveIncomeCategoryForPart } from "@/lib/billing/resolve-income-category";
+import { useBranchStore } from "@/store/branchStore";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { VehicleSelector } from "@/components/vehicles/VehicleSelector";
 
@@ -144,6 +145,7 @@ export default function EditEstimatePage() {
   const params = useParams();
   const estimateId = parseInt(params.id as string);
   const queryClient = useQueryClient();
+  const { activeBranchId } = useBranchStore();
   const [serverError, setServerError] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & {
     is_taxable: boolean;
@@ -836,6 +838,7 @@ export default function EditEstimatePage() {
                       <TableCell className="py-1 px-2">
                         <BillingLineIncomeCategorySelect
                           itemType={item.item_type}
+                          branchId={estimate?.branch ?? activeBranchId}
                           value={item.revenue_product ?? null}
                           onResolvedChange={(patch) => applyLineIncomeCategory(index, patch)}
                         />
