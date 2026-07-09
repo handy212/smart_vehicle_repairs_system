@@ -51,10 +51,8 @@ export default function SubledgerIntegrityPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Subledger Integrity</h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Compare general ledger control balances to open invoices and bills. When numbers
-            disagree, review recent postings, control account setup, and open AR/AP reports before
-            escalating to your finance administrator.
+          <p className="text-sm text-muted-foreground mt-1">
+            GL control balances vs open AR/AP.
           </p>
         </div>
         <Button
@@ -105,11 +103,6 @@ export default function SubledgerIntegrityPage() {
                 {data?.overall_in_balance
                   ? "Subledgers are in balance"
                   : "Subledger drift detected"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {data?.overall_in_balance
-                  ? "GL control accounts match operational open balances."
-                  : "One or more subledgers differ from the general ledger. Review the sections below, confirm control accounts on Controls, and ask your finance administrator to investigate unmatched postings."}
               </p>
             </div>
           </div>

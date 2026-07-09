@@ -77,6 +77,7 @@ export interface Invoice {
   work_order?: number | { id: number };
   work_order_number?: string;
   work_order_status?: string;
+  branch?: number | null;
   invoice_date: string;
   due_date: string;
   status: string;
@@ -218,6 +219,7 @@ export interface Estimate {
   work_order?: number | { id: number };
   work_order_number?: string;
   work_order_status?: string;
+  branch?: number | null;
   work_order_quote_stage?: "waiting_for_stores_quotation" | "quotation_ready" | null;
   work_order_quote_stage_display?: string | null;
   can_mark_ready?: boolean;

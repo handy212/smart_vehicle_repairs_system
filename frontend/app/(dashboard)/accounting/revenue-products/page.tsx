@@ -56,11 +56,17 @@ import { CatalogPartSelect } from "@/components/accounting/CatalogPartSelect";
 import { QboIncomeAccountSelect } from "@/components/accounting/QboIncomeAccountSelect";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import {
-  CONTROLS_VS_INCOME_CATEGORIES_HELP,
+  BRANCH_SCOPE_LABEL,
+  INCOME_CATEGORY_PAGE_SUBTITLE,
   INCOME_CATEGORY_PAGE_TITLE,
   QBO_INCOME_ACCOUNT_LABEL,
   QBO_INCOME_ACCOUNT_SHORT,
 } from "@/lib/accounting/income-category-labels";
+
+const ALL_FILTER = "__all__";
+const COMPANY_SCOPE = "__company__";
+
+type DialogMode = "company" | "branch_override";
 
 const EMPTY_FORM: RevenueProductPayload = {
   code: "",
@@ -76,8 +82,6 @@ const EMPTY_FORM: RevenueProductPayload = {
   is_active: true,
   branch: null,
 };
-
-const ALL_FILTER = "__all__";
 
 function formatIncomeAccount(code?: string | null, label?: string | null) {
   const number = (code ?? "").trim();
@@ -96,7 +100,9 @@ export default function RevenueProductsPage() {
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState(ALL_FILTER);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
+  const [branchFilter, setBranchFilter] = useState<string>(ALL_FILTER);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<DialogMode>("company");
   const [editing, setEditing] = useState<RevenueProduct | null>(null);
   const [form, setForm] = useState<RevenueProductPayload>(EMPTY_FORM);
 
@@ -120,6 +126,11 @@ export default function RevenueProductsPage() {
     queryFn: () => revenueProductsApi.list(listParams),
   });
 
+  const companyWideProducts = useMemo(
+    () => products.filter((product) => !product.branch),
+    [products],
+  );
+
   const stats = useMemo(() => {
     const missingAccount = products.filter((p) => !p.owner_account_code?.trim()).length;
     const missingCatalog = products.filter((p) => !p.catalog_part).length;
@@ -133,32 +144,69 @@ export default function RevenueProductsPage() {
   }, [products]);
 
   const filtered = useMemo(() => {
+    let rows = products;
+    if (branchFilter === COMPANY_SCOPE) {
+      rows = rows.filter((product) => !product.branch);
+    } else if (branchFilter !== ALL_FILTER) {
+      rows = rows.filter((product) => String(product.branch) === branchFilter);
+    }
+
     const q = search.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
+    if (!q) return rows;
+    return rows.filter(
       (p) =>
         p.code.toLowerCase().includes(q) ||
         p.name.toLowerCase().includes(q) ||
         (p.owner_account_code ?? "").toLowerCase().includes(q) ||
         (p.owner_account_label ?? "").toLowerCase().includes(q) ||
         (p.catalog_part_number ?? "").toLowerCase().includes(q) ||
-        (p.roadside_service_type ?? "").toLowerCase().includes(q),
+        (p.roadside_service_type ?? "").toLowerCase().includes(q) ||
+        (p.branch_name ?? "").toLowerCase().includes(q),
     );
-  }, [products, search]);
+  }, [products, search, branchFilter]);
 
   const resetDialog = () => {
     setEditing(null);
+    setDialogMode("company");
     setForm(EMPTY_FORM);
   };
 
-  const openCreate = () => {
+  const applyCompanyTemplate = (template: RevenueProduct) => {
+    setForm((current) => ({
+      ...current,
+      code: template.code,
+      name: template.name,
+      revenue_class: template.revenue_class,
+      default_billing_line_type: template.default_billing_line_type,
+      default_unit_price: template.default_unit_price ?? "0.00",
+      catalog_part: template.catalog_part ?? null,
+      roadside_service_type: template.roadside_service_type ?? "",
+      sort_order: template.sort_order,
+      owner_account_code: "",
+      owner_account_label: "",
+    }));
+  };
+
+  const openCreateCompany = () => {
     resetDialog();
-    setForm((prev) => ({ ...prev, branch: activeBranchId ?? null }));
+    setDialogMode("company");
+    setForm({ ...EMPTY_FORM, branch: null });
+    setDialogOpen(true);
+  };
+
+  const openCreateBranchOverride = () => {
+    resetDialog();
+    setDialogMode("branch_override");
+    setForm({
+      ...EMPTY_FORM,
+      branch: activeBranchId ?? null,
+    });
     setDialogOpen(true);
   };
 
   const openEdit = (product: RevenueProduct) => {
     setEditing(product);
+    setDialogMode(product.branch ? "branch_override" : "company");
     setForm({
       code: product.code,
       name: product.name,
@@ -178,14 +226,19 @@ export default function RevenueProductsPage() {
 
   const saveMutation = useMutation({
     mutationFn: () => {
+      const isBranchOverride = dialogMode === "branch_override";
       const payload = {
         ...form,
+        branch: isBranchOverride ? (form.branch ?? null) : null,
         code: (form.code ?? "").trim().toLowerCase().replace(/\s+/g, "_"),
         roadside_service_type: form.roadside_service_type?.trim() || null,
         catalog_part: form.catalog_part ?? null,
         default_unit_price: form.default_unit_price ?? "0.00",
         sort_order: Number(form.sort_order ?? 0),
       };
+      if (isBranchOverride && !payload.branch) {
+        throw new Error("Select a branch for this override.");
+      }
       return editing
         ? revenueProductsApi.update(editing.id, payload)
         : revenueProductsApi.create(payload as RevenueProductPayload);
@@ -225,11 +278,7 @@ export default function RevenueProductsPage() {
               {INCOME_CATEGORY_PAGE_TITLE}
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Map workshop services, labour, parts, and AA offerings to QuickBooks income
-              accounts. Used on invoice lines and QBO item sync — SVR GL stays lean.
-            </p>
-            <p className="text-xs text-muted-foreground mt-2 max-w-3xl rounded-md border border-border bg-muted/40 px-3 py-2">
-              {CONTROLS_VS_INCOME_CATEGORIES_HELP}
+              {INCOME_CATEGORY_PAGE_SUBTITLE}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -240,9 +289,13 @@ export default function RevenueProductsPage() {
               </Link>
             </Button>
             <PermissionGuard permission="manage_accounting_periods">
-              <Button size="sm" onClick={openCreate}>
+              <Button size="sm" variant="outline" onClick={openCreateCompany}>
                 <Plus className="w-4 h-4 mr-1.5" />
-                Add category
+                Company category
+              </Button>
+              <Button size="sm" onClick={openCreateBranchOverride}>
+                <Plus className="w-4 h-4 mr-1.5" />
+                Branch override
               </Button>
             </PermissionGuard>
           </div>
@@ -308,6 +361,20 @@ export default function RevenueProductsPage() {
                     <SelectItem value="all">All statuses</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={branchFilter} onValueChange={setBranchFilter}>
+                  <SelectTrigger className="h-8 w-full sm:w-[180px] text-xs">
+                    <SelectValue placeholder="All branches" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER}>All branches</SelectItem>
+                    <SelectItem value={COMPANY_SCOPE}>Company-wide only</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.name} overrides
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   placeholder="Search code, name, account, item…"
                   value={search}
@@ -353,7 +420,9 @@ export default function RevenueProductsPage() {
                         ) : null}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {product.branch_name ? product.branch_name : "Company-wide"}
+                        <Badge variant={product.branch ? "outline" : "secondary"} className="text-[10px]">
+                          {product.branch_name ? product.branch_name : "Company-wide"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {product.owner_account_code ? (
@@ -382,6 +451,7 @@ export default function RevenueProductsPage() {
                             : "—"}
                       </TableCell>
                       <TableCell className="text-xs">
+                        {REVENUE_CLASS_LABELS[product.revenue_class]}
                       </TableCell>
                       <TableCell>
                         <Badge variant={product.is_active ? "success" : "secondary"} className="text-[10px]">
@@ -414,18 +484,88 @@ export default function RevenueProductsPage() {
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetDialog(); }}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit income category" : "New income category"}</DialogTitle>
+              <DialogTitle>
+                {editing
+                  ? dialogMode === "branch_override"
+                    ? "Edit branch income override"
+                    : "Edit company income category"
+                  : dialogMode === "branch_override"
+                    ? "New branch income override"
+                    : "New company income category"}
+              </DialogTitle>
             </DialogHeader>
             <div className="grid gap-3 py-2">
+              {dialogMode === "branch_override" ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{BRANCH_SCOPE_LABEL}</Label>
+                    <Select
+                      value={form.branch != null ? String(form.branch) : ""}
+                      onValueChange={(value) =>
+                        setForm((f) => ({
+                          ...f,
+                          branch: Number(value),
+                        }))
+                      }
+                      disabled={Boolean(editing)}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Select branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={String(branch.id)}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {!editing ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Copy from company category</Label>
+                      <Select
+                        value={
+                          companyWideProducts.some((product) => product.code === form.code)
+                            ? form.code
+                            : ""
+                        }
+                        onValueChange={(code) => {
+                          const template = companyWideProducts.find((product) => product.code === code);
+                          if (template) applyCompanyTemplate(template);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Pick company default to override" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companyWideProducts.length === 0 ? (
+                            <SelectItem value="__none__" disabled>
+                              No company-wide categories yet
+                            </SelectItem>
+                          ) : (
+                            companyWideProducts.map((product) => (
+                              <SelectItem key={product.id} value={product.code}>
+                                {product.name} ({product.code})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Code</Label>
                   <Input
                     value={form.code ?? ""}
                     onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                    disabled={Boolean(editing)}
-                    placeholder="service_vehicle_assessment"
-                    className="h-8 text-sm"
+                    disabled={Boolean(editing) || (dialogMode === "branch_override" && !editing)}
+                    placeholder="labor_mechanical"
+                    className="h-8 text-sm font-mono"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -436,6 +576,7 @@ export default function RevenueProductsPage() {
                     value={form.sort_order ?? 0}
                     onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) || 0 }))}
                     className="h-8 text-sm"
+                    disabled={dialogMode === "branch_override" && !editing}
                   />
                 </div>
               </div>
@@ -444,36 +585,17 @@ export default function RevenueProductsPage() {
                 <Input
                   value={form.name ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Vehicle Assessment"
+                  placeholder="Mechanical Labour"
                   className="h-8 text-sm"
+                  disabled={dialogMode === "branch_override" && !editing}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Branch scope</Label>
-                <Select
-                  value={form.branch != null ? String(form.branch) : "__company__"}
-                  onValueChange={(value) =>
-                    setForm((f) => ({
-                      ...f,
-                      branch: value === "__company__" ? null : Number(value),
-                    }))
-                  }
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Company-wide default" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__company__">Company-wide default</SelectItem>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={String(branch.id)}>
-                        {branch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">{QBO_INCOME_ACCOUNT_LABEL}</Label>
+                <Label className="text-xs">
+                  {dialogMode === "branch_override"
+                    ? "Branch QBO income account"
+                    : QBO_INCOME_ACCOUNT_LABEL}
+                </Label>
                 {qboConnected ? (
                   <QboIncomeAccountSelect
                     accountCode={form.owner_account_code ?? ""}
@@ -491,92 +613,96 @@ export default function RevenueProductsPage() {
                   <Input
                     value={form.owner_account_code ?? ""}
                     onChange={(e) => setForm((f) => ({ ...f, owner_account_code: e.target.value }))}
-                    placeholder="680"
+                    placeholder={dialogMode === "branch_override" ? "658K" : "658"}
                     className="h-8 text-sm font-mono"
                   />
                   <Input
                     value={form.owner_account_label ?? ""}
                     onChange={(e) => setForm((f) => ({ ...f, owner_account_label: e.target.value }))}
-                    placeholder="Vehicle Assessment Sales"
+                    placeholder="Mechanical Labour Sales"
                     className="h-8 text-sm"
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground">
-                  {qboConnected
-                    ? "Pick from QuickBooks or edit the code and label manually."
-                    : "Connect QuickBooks under Admin → Integrations to pick from your live chart."}
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">QBO item template</Label>
-                <CatalogPartSelect
-                  value={form.catalog_part ?? null}
-                  onChange={(catalogPart) => setForm((f) => ({ ...f, catalog_part: catalogPart }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Default unit price</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.default_unit_price ?? "0.00"}
-                  onChange={(e) => setForm((f) => ({ ...f, default_unit_price: e.target.value }))}
-                  placeholder="0.00"
-                  className="h-8 text-sm"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Flat fee used for inspection, diagnostic, spraying, and other chargeable services when no tasks exist yet.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Revenue class</Label>
-                  <Select
-                    value={form.revenue_class ?? "service"}
-                    onValueChange={(v) => setForm((f) => ({ ...f, revenue_class: v as RevenueProductPayload["revenue_class"] }))}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(REVENUE_CLASS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Default billing line type</Label>
-                  <Select
-                    value={form.default_billing_line_type ?? "other"}
-                    onValueChange={(v) => setForm((f) => ({ ...f, default_billing_line_type: v as RevenueProductPayload["default_billing_line_type"] }))}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["labor", "part", "fee", "sublet", "other"].map((value) => (
-                        <SelectItem key={value} value={value} className="capitalize">{value}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {form.revenue_class === "aa_roadside" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Roadside service type</Label>
-                  <Input
-                    value={form.roadside_service_type ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, roadside_service_type: e.target.value }))}
-                    placeholder="towing"
-                    className="h-8 text-sm"
-                  />
+                {dialogMode === "company" && !qboConnected ? (
                   <p className="text-[10px] text-muted-foreground">
-                    Must match roadside request service type when set (unique per category).
+                    Connect QuickBooks under Admin → Integrations to pick from your live chart.
                   </p>
-                </div>
-              )}
+                ) : null}
+              </div>
+              {dialogMode === "company" ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">QBO item template</Label>
+                    <CatalogPartSelect
+                      value={form.catalog_part ?? null}
+                      onChange={(catalogPart) => setForm((f) => ({ ...f, catalog_part: catalogPart }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Default unit price</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={form.default_unit_price ?? "0.00"}
+                      onChange={(e) => setForm((f) => ({ ...f, default_unit_price: e.target.value }))}
+                      placeholder="0.00"
+                      className="h-8 text-sm"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Flat fee used for inspection, diagnostic, spraying, and other chargeable services when no tasks exist yet.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Revenue class</Label>
+                      <Select
+                        value={form.revenue_class ?? "service"}
+                        onValueChange={(v) => setForm((f) => ({ ...f, revenue_class: v as RevenueClass }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(REVENUE_CLASS_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Default billing line type</Label>
+                      <Select
+                        value={form.default_billing_line_type ?? "other"}
+                        onValueChange={(v) => setForm((f) => ({ ...f, default_billing_line_type: v as RevenueProductPayload["default_billing_line_type"] }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["labor", "part", "fee", "sublet", "other"].map((value) => (
+                            <SelectItem key={value} value={value} className="capitalize">{value}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {form.revenue_class === "aa_roadside" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Roadside service type</Label>
+                      <Input
+                        value={form.roadside_service_type ?? ""}
+                        onChange={(e) => setForm((f) => ({ ...f, roadside_service_type: e.target.value }))}
+                        placeholder="towing"
+                        className="h-8 text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Must match roadside request service type when set (unique per category).
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : null}
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.is_active ?? true}
@@ -589,7 +715,12 @@ export default function RevenueProductsPage() {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
               <Button
                 onClick={() => saveMutation.mutate()}
-                disabled={!form.name?.trim() || !form.code?.trim() || saveMutation.isPending}
+                disabled={
+                  !form.name?.trim() ||
+                  !form.code?.trim() ||
+                  (dialogMode === "branch_override" && !form.branch) ||
+                  saveMutation.isPending
+                }
               >
                 {saveMutation.isPending ? "Saving…" : "Save"}
               </Button>

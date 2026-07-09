@@ -37,7 +37,7 @@ def scope_revenue_products_queryset(queryset, request):
 class RevenueProductViewSet(viewsets.ModelViewSet):
     queryset = RevenueProduct.objects.select_related('catalog_part', 'branch').order_by('sort_order', 'name')
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['revenue_class', 'is_active', 'owner_account_code', 'branch']
+    filterset_fields = ['revenue_class', 'is_active', 'owner_account_code']
     search_fields = ['code', 'name', 'owner_account_code', 'owner_account_label']
     ordering_fields = ['sort_order', 'name', 'owner_account_code', 'created_at']
     ordering = ['sort_order', 'name']
