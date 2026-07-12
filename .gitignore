@@ -110,3 +110,4 @@ firebase/*.json
 frontend/public/sw.js
 coverage.xml
 apps/accounts/tests/test_custom_roles.py
+877

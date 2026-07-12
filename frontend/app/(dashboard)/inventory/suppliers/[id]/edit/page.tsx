@@ -98,7 +98,7 @@ export default function EditSupplierPage() {
       address_line1: supplier.address_line1 ?? "",
       address_line2: supplier.address_line2 ?? "",
       city: supplier.city ?? "",
-      state: supplier.region ?? "",
+      region: supplier.region ?? "",
       country: supplier.country ?? "Ghana",
       tax_id: supplier.tax_id ?? "",
       payment_terms: supplier.payment_terms ?? "",

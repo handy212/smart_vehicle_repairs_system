@@ -40,7 +40,6 @@ export interface Customer {
   service_region?: string;
   service_area?: string;
   service_zip_code?: string;
-  billing_address?: string;
   billing_city?: string;
   billing_region?: string;
   billing_area?: string;

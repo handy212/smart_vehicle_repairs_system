@@ -48,6 +48,12 @@ export interface WorkOrder {
   approved_at?: string;
   approval_method?: string;
   approval_requested_at?: string;
+  approval_terms?: {
+    document_type?: string;
+    terms_key?: string;
+    terms_text?: string;
+    requires_acceptance?: boolean;
+  };
   diagnosis_completed_at?: string;
   diagnosis_by?: number;
   primary_technician?: number | { id: number; first_name: string; last_name: string };
