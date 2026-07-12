@@ -24,6 +24,7 @@ import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { INVENTORY_STATS_PERMISSIONS } from "@/lib/utils/permissions";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import {
@@ -107,7 +108,8 @@ function InventoryPageContent() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission } = usePermissions();
+  const canViewInventoryStats = hasAnyPermission([...INVENTORY_STATS_PERMISSIONS]);
 
   // Unified Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -162,6 +164,7 @@ function InventoryPageContent() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["inventory-stats"],
     queryFn: () => inventoryApi.partsDashboardStats(),
+    enabled: canViewInventoryStats,
   });
 
   // Fetch Branches for filter

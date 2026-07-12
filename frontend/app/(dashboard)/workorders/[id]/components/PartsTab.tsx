@@ -22,6 +22,7 @@ import AddPartDialog from "./AddPartDialog";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 interface PartsTabProps {
   workOrderId: number;
@@ -37,6 +38,7 @@ export default function WorkOrderPartsTab({
   workOrderId, workOrder, parts, onRefresh, isLoading = false }: PartsTabProps) {
   const { formatCurrency } = useCurrency();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [returningPart, setReturningPart] = useState<WorkOrderPart | null>(null);
   const [returnReason, setReturnReason] = useState("");
@@ -45,7 +47,7 @@ export default function WorkOrderPartsTab({
   const lockedStatuses = ["quality_check", "completed", "invoiced", "closed"];
   const currentStatus = workOrder?.status || "";
   const addingPartRequiresApproval = postApprovalStatuses.includes(currentStatus);
-  const canAddPart = !lockedStatuses.includes(currentStatus);
+  const canAddPart = hasPermission("edit_workorders") && !lockedStatuses.includes(currentStatus);
 
   const getFlowBadge = (part: WorkOrderPart): { label: string; variant: BadgeProps["variant"] } => {
     if (part.status === "installed") return { label: "Installed", variant: "success" };
@@ -122,10 +124,12 @@ export default function WorkOrderPartsTab({
                 </Link>
               </Button>
             )}
-            <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={!canAddPart}>
-              <Plus className="w-4 h-4 mr-2" />
-              {addingPartRequiresApproval ? "Add Extra Part" : "Add Part"}
-            </Button>
+            {canAddPart && (
+              <Button size="sm" onClick={() => setShowAddDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                {addingPartRequiresApproval ? "Add Extra Part" : "Add Part"}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
@@ -144,7 +148,7 @@ export default function WorkOrderPartsTab({
               </p>
             </div>
           )}
-          {!canAddPart && (
+          {!canAddPart && hasPermission("edit_workorders") && (
             <div className="mb-3 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
               Parts cannot be added at this stage. Return the work order to repairs or create a new work order.
             </div>
@@ -156,15 +160,16 @@ export default function WorkOrderPartsTab({
               <p className="mt-1 text-sm text-muted-foreground">
                 Add parts and materials as they are used.
               </p>
-              <Button
-                onClick={() => setShowAddDialog(true)}
-                variant="secondary"
-                disabled={!canAddPart}
-                className="mt-4"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add part
-              </Button>
+              {canAddPart && (
+                <Button
+                  onClick={() => setShowAddDialog(true)}
+                  variant="secondary"
+                  className="mt-4"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add part
+                </Button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">

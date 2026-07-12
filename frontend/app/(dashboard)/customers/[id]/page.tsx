@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
-import { Edit, MoreVertical, Trash2 } from "lucide-react";
+import { Edit, MoreVertical, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePermissions } from "@/lib/hooks/usePermissions";
@@ -47,6 +47,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
+import { authApi } from "@/lib/api/auth";
+import { useAuthStore } from "@/store/authStore";
 
 export default function CustomerDetailPage() {
   const params = useParams();
@@ -124,6 +126,28 @@ export default function CustomerDetailPage() {
 
   const canEditCustomer = hasPermission("edit_customers");
   const canDeleteCustomer = hasAnyPermission(["delete_customers", "manage_customers"]);
+  const canImpersonate = hasAnyPermission(["manage_customers", "manage_users"]);
+  const setUser = useAuthStore((s) => s.setUser);
+
+  const impersonateMutation = useMutation({
+    mutationFn: () => authApi.impersonateCustomer(customerId),
+    onSuccess: async (data) => {
+      setUser(data.user);
+      await queryClient.clear();
+      toast({
+        title: "Viewing as customer",
+        description: "You are now in the customer portal. Use Exit impersonation to return.",
+      });
+      router.push("/portal");
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Impersonation failed",
+        description: getUserFacingError(error, "Could not log in as this customer."),
+        variant: "destructive",
+      });
+    },
+  });
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading customer...</div>;
   if (error || !customer) return <div className="p-8 text-center text-destructive">Error loading customer</div>;
@@ -254,7 +278,29 @@ export default function CustomerDetailPage() {
                     Actions
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuContent align="end" className="w-52">
+                  {canImpersonate && customer.user?.id && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Open the customer portal as ${
+                              customer.company_name ||
+                              customer.full_name ||
+                              customer.user?.email ||
+                              "this customer"
+                            }?`
+                          )
+                        ) {
+                          impersonateMutation.mutate();
+                        }
+                      }}
+                      disabled={impersonateMutation.isPending}
+                    >
+                      <UserRound className="mr-2 h-4 w-4" />
+                      {impersonateMutation.isPending ? "Opening…" : "Login as customer"}
+                    </DropdownMenuItem>
+                  )}
                   {canEditCustomer && (
                     <DropdownMenuItem onClick={() => router.push(`/customers/${customerId}/edit`)}>
                       <Edit className="mr-2 h-4 w-4" />
@@ -263,7 +309,7 @@ export default function CustomerDetailPage() {
                   )}
                   {canDeleteCustomer && (
                     <>
-                      {canEditCustomer && <DropdownMenuSeparator />}
+                      {(canEditCustomer || canImpersonate) && <DropdownMenuSeparator />}
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => {

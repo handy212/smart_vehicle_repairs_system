@@ -39,6 +39,8 @@ import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { LIST_SERVICE_COORDINATORS_PERMISSIONS } from "@/lib/utils/permissions";
 import {
   getJobTypeLabel,
   getServicePackageName,
@@ -101,7 +103,12 @@ export default function WorkOrderOverviewTab({
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
+  const { hasAnyPermission } = usePermissions();
+  const canListServiceCoordinators = hasAnyPermission([
+    ...LIST_SERVICE_COORDINATORS_PERMISSIONS,
+  ]);
+  const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } =
+    useQuickBooksConnection();
 
   const branchId =
     typeof workOrder?.branch === "object" && workOrder?.branch
@@ -110,9 +117,16 @@ export default function WorkOrderOverviewTab({
         ? workOrder.branch
         : undefined;
 
+  const canEditServiceCoordinator =
+    canListServiceCoordinators &&
+    (workOrder?.status === "intake" ||
+      workOrder?.status === "draft" ||
+      workOrder?.status === "inspection");
+
   const { data: serviceCoordinators } = useQuery({
     queryKey: ["service-coordinators", branchId],
     queryFn: () => adminApi.users.serviceCoordinators(branchId ? { branch: branchId } : undefined),
+    enabled: canListServiceCoordinators && isEditingServiceCoordinator,
   });
 
   const serviceCoordinatorsList = serviceCoordinators || [];
@@ -186,11 +200,6 @@ export default function WorkOrderOverviewTab({
     }
     return "Not assigned";
   };
-
-  const canEditServiceCoordinator =
-    workOrder?.status === "intake" ||
-    workOrder?.status === "draft" ||
-    workOrder?.status === "inspection";
 
   const customerId =
     typeof workOrder.customer === "object"

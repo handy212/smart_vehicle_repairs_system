@@ -280,7 +280,8 @@ rebuild_frontend() {
     fi
 
     echo -e "${YELLOW}Building Next.js application...${NC}"
-    sudo -u svr npm run build
+    # Next + PWA + Sentry often exceeds Node's default ~2GB heap on this app.
+    sudo -u svr env NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" npm run build
 
     echo -e "${YELLOW}Preparing standalone server assets...${NC}"
     cp -r .next/static .next/standalone/.next/static

@@ -576,10 +576,12 @@ export default function WorkOrdersPage() {
                   Export PDF
                 </DropdownMenuItem>
               </PermissionGuard>
-              <DropdownMenuItem onClick={() => setShowTaskTypesDialog(true)} className="text-xs">
-                <Settings2 className="w-3.5 h-3.5 mr-2" />
-                Manage Task Types
-              </DropdownMenuItem>
+              <PermissionGuard permission="manage_workorders">
+                <DropdownMenuItem onClick={() => setShowTaskTypesDialog(true)} className="text-xs">
+                  <Settings2 className="w-3.5 h-3.5 mr-2" />
+                  Manage Task Types
+                </DropdownMenuItem>
+              </PermissionGuard>
             </DropdownMenuContent>
           </DropdownMenu>
 

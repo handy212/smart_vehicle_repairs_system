@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { usePrint } from "@/lib/hooks/usePrint";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils/cn";
 import { useRouter } from "next/navigation";
 import {
@@ -40,6 +40,10 @@ export default function InspectionsPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPermission } = usePermissions();
+  const userRole = useAuthStore((s) => s.user?.role);
+  // Technicians perform inspections; creating new records is front-desk / SC work.
+  const canCreateInspection =
+    hasPermission("create_inspections") && userRole !== "technician";
   const { openPrintWindow } = usePrint();
   const router = useRouter();
 
@@ -90,14 +94,14 @@ export default function InspectionsPage() {
               Templates
             </Button>
           </Link>
-          <PermissionGuard permission="create_inspections">
+          {canCreateInspection && (
             <Link href="/inspections/new">
               <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                 <Plus className="w-3.5 h-3.5 mr-2" />
                 New Inspection
               </Button>
             </Link>
-          </PermissionGuard>
+          )}
         </div>
       </div>
 
@@ -178,14 +182,14 @@ export default function InspectionsPage() {
                 Get started by creating a new inspection or try adjusting your filters.
               </p>
               <div className="mt-6">
-                <PermissionGuard permission="create_inspections">
+                {canCreateInspection && (
                   <Link href="/inspections/new">
                     <Button size="sm">
                       <Plus className="w-4 h-4 mr-2" />
                       New Inspection
                     </Button>
                   </Link>
-                </PermissionGuard>
+                )}
               </div>
             </div>
           ) : (

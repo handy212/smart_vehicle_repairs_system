@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import dynamic from "next/dynamic";
 import { PortalMobileActionsBar } from "./components/PortalMobileActionsBar";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
+import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
 
 // Lazy load sidebar and navbar for better performance
 const PortalNavbar = dynamic(() => import("@/components/layout/PortalNavbar").then(mod => ({ default: mod.PortalNavbar })), {
@@ -105,6 +106,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-muted bg-background">
+      <ImpersonationBanner />
       <PortalNavbar
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}

@@ -307,6 +307,36 @@ export const INVENTORY_REPORTS_VIEW_PERMISSIONS = [
   PERMISSIONS.MANAGE_INVENTORY,
 ] as const;
 
+/** Inventory dashboard stats / low-stock report actions (not bare browse). */
+export const INVENTORY_STATS_PERMISSIONS = [
+  PERMISSIONS.VIEW_INVENTORY_REPORTS,
+  PERMISSIONS.VIEW_LOW_STOCK_ALERTS,
+  PERMISSIONS.MANAGE_INVENTORY,
+] as const;
+
+/** List technicians for assignment (matches UserViewSet.technicians). */
+export const LIST_TECHNICIANS_PERMISSIONS = [
+  PERMISSIONS.VIEW_TECHNICIANS,
+  PERMISSIONS.ASSIGN_WORKORDERS,
+  PERMISSIONS.MANAGE_WORKORDERS,
+] as const;
+
+/** List service coordinators for assignment (matches UserViewSet.service_coordinators). */
+export const LIST_SERVICE_COORDINATORS_PERMISSIONS = [
+  PERMISSIONS.VIEW_USERS,
+  PERMISSIONS.ASSIGN_WORKORDERS,
+  PERMISSIONS.MANAGE_WORKORDERS,
+] as const;
+
+/** QuickBooks connection status / sync UI. */
+export const QBO_STATUS_PERMISSIONS = [
+  PERMISSIONS.MANAGE_SETTINGS,
+  PERMISSIONS.VIEW_BILLING,
+  PERMISSIONS.MANAGE_BILLING,
+  PERMISSIONS.VIEW_ACCOUNTING,
+  PERMISSIONS.MANAGE_INVENTORY,
+] as const;
+
 /** Accounts payable / vendor billing area. */
 export const BILLING_PAYABLES_VIEW_PERMISSIONS = [
   PERMISSIONS.VIEW_BILLS,

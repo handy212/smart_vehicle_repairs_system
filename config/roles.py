@@ -636,9 +636,8 @@ class Technician(AbstractUserRole):
         'add_repair_recommendations': True,
         'view_diagnostic_codes': True,
         
-        # Inspections
+        # Inspections (perform assigned/check-in inspections; creation is SC/front-desk)
         'view_inspections': True,
-        'create_inspections': True,
         'edit_inspections': True,
         'perform_inspections': True,
         'view_inspection_templates': True,

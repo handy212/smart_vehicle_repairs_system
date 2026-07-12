@@ -41,6 +41,13 @@ export interface User {
   customer?: {
     id: number;
   };
+  impersonating?: boolean;
+  impersonator?: {
+    id: number;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  } | null;
 }
 
 export interface UpdateProfileData {
@@ -177,5 +184,37 @@ export const authApi = {
     } catch {
       // Still clear local state if API is unreachable
     }
+  },
+
+  impersonateCustomer: async (
+    customerId: number
+  ): Promise<{ user: User; impersonating?: boolean }> => {
+    const response = await fetch("/api/auth/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ customer_id: customerId }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw Object.assign(new Error(data?.detail || "Impersonation failed"), {
+        response: { data, status: response.status },
+      });
+    }
+    return data as { user: User; impersonating?: boolean };
+  },
+
+  exitImpersonation: async (): Promise<{ user: User }> => {
+    const response = await fetch("/api/auth/impersonate/exit", {
+      method: "POST",
+      credentials: "include",
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw Object.assign(new Error(data?.detail || "Failed to exit impersonation"), {
+        response: { data, status: response.status },
+      });
+    }
+    return data as { user: User };
   },
 };

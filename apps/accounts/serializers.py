@@ -67,6 +67,8 @@ class UserSerializer(serializers.ModelSerializer):
     managed_branches_names = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     enabled_modules = serializers.SerializerMethodField()
+    impersonating = serializers.SerializerMethodField()
+    impersonator = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -78,12 +80,23 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active', 'created_at', 'updated_at', 'customer_profile',
             'branch', 'managed_branches', 'branch_name', 'managed_branches_names',
             'employee_id', 'hire_date', 'hourly_rate', 'permissions',
-            'enabled_modules', 'two_factor_enabled'
+            'enabled_modules', 'two_factor_enabled',
+            'impersonating', 'impersonator',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'two_factor_enabled']
         extra_kwargs = {
             'password': {'write_only': True}
         }
+
+    def _auth_claim(self, key, default=None):
+        request = self.context.get('request')
+        token = getattr(request, 'auth', None) if request is not None else None
+        if token is None:
+            return default
+        try:
+            return token.get(key, default)
+        except Exception:
+            return default
     
     def get_customer_profile(self, obj):
         """Include customer profile if user is a customer"""
@@ -125,6 +138,28 @@ class UserSerializer(serializers.ModelSerializer):
     def get_managed_branches_names(self, obj):
         """Return list of managed branch names"""
         return list(obj.managed_branches.values_list('name', flat=True))
+
+    def get_impersonating(self, obj):
+        return bool(self._auth_claim('impersonating'))
+
+    def get_impersonator(self, obj):
+        if not self.get_impersonating(obj):
+            return None
+        impersonator_id = self._auth_claim('impersonator_id')
+        if not impersonator_id:
+            return None
+        try:
+            admin = User.objects.only(
+                'id', 'email', 'first_name', 'last_name'
+            ).get(pk=impersonator_id)
+            return {
+                'id': admin.id,
+                'email': admin.email,
+                'first_name': admin.first_name,
+                'last_name': admin.last_name,
+            }
+        except User.DoesNotExist:
+            return {'id': impersonator_id}
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

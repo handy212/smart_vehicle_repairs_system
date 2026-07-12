@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogFooter } from "@/components/ui/dialog";
 import { CheckCircle } from "lucide-react";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { LIST_TECHNICIANS_PERMISSIONS } from "@/lib/utils/permissions";
 
 export type TechnicianAssignmentPayload = {
   technician: number;
@@ -94,10 +96,13 @@ export function StartDiagnosisForm({
   const [priority, setPriority] = useState(workOrder?.priority || "normal");
   const branchId = getBranchId(workOrder?.branch);
   const workOrderId = workOrder?.id;
+  const { hasAnyPermission } = usePermissions();
+  const canListTechnicians = hasAnyPermission([...LIST_TECHNICIANS_PERMISSIONS]);
 
   const { data: technicians } = useQuery({
     queryKey: ["technicians", "diagnosis-assignment", branchId],
     queryFn: () => adminApi.users.technicians(branchId ? { branch: branchId } : undefined),
+    enabled: canListTechnicians,
   });
 
   const { data: tasksData } = useQuery({

@@ -26,6 +26,8 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { LIST_TECHNICIANS_PERMISSIONS } from "@/lib/utils/permissions";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useForm, Controller } from "react-hook-form";
@@ -71,6 +73,7 @@ export default function RoadsideDetailPage() {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { currencySymbol } = useCurrency();
+    const { hasAnyPermission } = usePermissions();
 
     const requestIdStr = params?.id as string;
     const requestId = requestIdStr ? parseInt(requestIdStr) : NaN;
@@ -121,7 +124,9 @@ export default function RoadsideDetailPage() {
     const { data: technicians } = useQuery({
         queryKey: ["technicians", "list", request?.branch],
         queryFn: () => adminApi.users.technicians(request?.branch ? { branch: request.branch } : undefined),
-        enabled: !!request,
+        enabled:
+            !!request &&
+            hasAnyPermission([...LIST_TECHNICIANS_PERMISSIONS, "dispatch_roadside"]),
     });
 
     const dispatchMutation = useMutation({

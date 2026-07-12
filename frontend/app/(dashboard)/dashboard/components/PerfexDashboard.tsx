@@ -15,6 +15,7 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { DashboardShortcutBar } from "./DashboardShortcutBar";
 import { FinanceAtAGlancePanel } from "./FinanceAtAGlancePanel";
 import { useDashboardQuickAccess } from "@/lib/hooks/useDashboardQuickAccess";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import {
   type DashboardRoleConfig,
@@ -328,9 +329,15 @@ export function PerfexDashboard({
 }: PerfexDashboardProps) {
 
   const router = useRouter();
+  const { hasPermission } = usePermissions();
+  const canViewBilling = hasPermission("view_billing");
   const { isHidden: quickAccessHidden, show: showQuickAccess } = useDashboardQuickAccess();
   const showSection = (section: Parameters<typeof dashboardShowsSection>[1]) =>
     !roleConfig || dashboardShowsSection(roleConfig, section);
+
+  const mainTabs = (
+    canViewBilling ? (["workorders", "invoices"] as MainTab[]) : (["workorders"] as MainTab[])
+  );
 
   /* ── state ── */
   const [mainTab,         setMainTab]         = useState<MainTab>(roleConfig?.defaultMainTab ?? "workorders");
@@ -351,6 +358,12 @@ export function PerfexDashboard({
     if (roleConfig.defaultMainTab) setMainTab(roleConfig.defaultMainTab);
     if (roleConfig.defaultWoFilter) setWoFilter(roleConfig.defaultWoFilter);
   }, [roleConfig?.variant, roleConfig?.defaultMainTab, roleConfig?.defaultWoFilter]);
+
+  useEffect(() => {
+    if (!canViewBilling && mainTab === "invoices") {
+      setMainTab("workorders");
+    }
+  }, [canViewBilling, mainTab]);
 
   /* ── auto-refresh ── */
   useEffect(() => {
@@ -651,7 +664,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
             {/* Main tabs */}
             <div className="flex items-center gap-0">
-              {(["workorders", "invoices"] as MainTab[]).map((tab) => (
+              {mainTabs.map((tab) => (
                 <button key={tab} onClick={() => setMainTab(tab)}
                   className={`border-b-2 px-3 py-1.5 text-xs font-medium capitalize transition-colors
                     ${mainTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>

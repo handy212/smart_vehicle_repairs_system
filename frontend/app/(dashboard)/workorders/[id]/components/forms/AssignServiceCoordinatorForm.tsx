@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Sparkles } from "lucide-react";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { LIST_SERVICE_COORDINATORS_PERMISSIONS } from "@/lib/utils/permissions";
 
 interface AssignServiceCoordinatorFormProps {
     workOrder?: any;
@@ -28,6 +30,7 @@ export function AssignServiceCoordinatorForm({
     const [initialObservations, setInitialObservations] = useState<string>("");
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const { toast } = useToast();
+    const { hasAnyPermission } = usePermissions();
 
     const branchId =
         typeof workOrder?.branch === "object" && workOrder?.branch
@@ -63,6 +66,7 @@ export function AssignServiceCoordinatorForm({
     const { data: serviceCoordinators } = useQuery({
         queryKey: ["service-coordinators", branchId],
         queryFn: () => adminApi.users.serviceCoordinators(branchId ? { branch: branchId } : undefined),
+        enabled: hasAnyPermission([...LIST_SERVICE_COORDINATORS_PERMISSIONS]),
     });
 
     const serviceCoordinatorsList = serviceCoordinators || [];

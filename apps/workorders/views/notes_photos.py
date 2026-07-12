@@ -82,6 +82,20 @@ class WorkOrderPhotoViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermiss
     queryset = WorkOrderPhoto.objects.all().select_related('work_order', 'taken_by')
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['work_order', 'photo_type']
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return workorder_read_permissions()
+        # Technicians document repairs with photos without full WO edit access.
+        if self.action == 'create':
+            return workorder_module_permissions() + [
+                HasAnyPermission([
+                    'edit_workorders',
+                    'add_workorder_notes',
+                    'clock_work_time',
+                ])(),
+            ]
+        return workorder_edit_permissions()
     
     def get_serializer_class(self):
         if self.action == 'create':

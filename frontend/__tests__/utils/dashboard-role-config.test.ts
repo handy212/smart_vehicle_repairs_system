@@ -27,6 +27,9 @@ describe("getDashboardRoleConfig", () => {
     expect(config.defaultWoFilter).toBe("active");
     expect(dashboardShowsSection(config, "appointments")).toBe(true);
     expect(dashboardShowsSection(config, "technician_perf")).toBe(false);
+    expect(dashboardShowsSection(config, "low_stock")).toBe(false);
+    expect(dashboardShowsSection(config, "service_due")).toBe(false);
+    expect(dashboardShowsSection(config, "bottom_summary")).toBe(false);
   });
 
   it("maps technician login path via post-login redirect utility contract", () => {

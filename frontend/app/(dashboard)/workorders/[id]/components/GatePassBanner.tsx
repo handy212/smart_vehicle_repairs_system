@@ -6,15 +6,19 @@ import { Button } from "@/components/ui/button";
 import { FileText, Plus, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export function GatePassBanner({ workOrderId }: { workOrderId: number }) {
+  const { hasPermission } = usePermissions();
+  const canViewGatePass = hasPermission("view_gatepass");
+
   const { data: gatePass, isLoading } = useQuery({
     queryKey: ["gatepass", "workorder", workOrderId],
     queryFn: () => gatepassApi.getByWorkOrder(workOrderId),
-    enabled: !!workOrderId,
+    enabled: !!workOrderId && canViewGatePass,
   });
 
-  if (isLoading) {
+  if (!canViewGatePass || isLoading) {
     return null;
   }
 

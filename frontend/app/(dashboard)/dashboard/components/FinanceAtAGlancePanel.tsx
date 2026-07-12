@@ -26,10 +26,8 @@ export function FinanceAtAGlancePanel() {
 
   const canViewBilling = hasPermission("view_billing");
   const canViewAccounting = hasPermission("view_accounting");
-
-  if (!canViewBilling && !canViewAccounting) {
-    return null;
-  }
+  const canViewBank = hasAnyPermission(["reconcile_bank_statements", "view_bank_statements"]);
+  const enabled = canViewBilling || canViewAccounting;
 
   const today = format(new Date(), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
@@ -61,6 +59,10 @@ export function FinanceAtAGlancePanel() {
     enabled: canViewAccounting,
     staleTime: 5 * 60 * 1000,
   });
+
+  if (!enabled) {
+    return null;
+  }
 
   const outstandingAr = Number(invoiceStatsQuery.data?.financials?.outstanding_total ?? 0);
   const overdueCount = invoiceStatsQuery.data?.counts?.overdue ?? 0;
@@ -114,7 +116,7 @@ export function FinanceAtAGlancePanel() {
           tone: "text-violet-600",
         }
       : null,
-    canViewAccounting && hasAnyPermission(["reconcile_bank_statements", "view_bank_statements"])
+    canViewAccounting && canViewBank
       ? {
           key: "bank",
           label: "Bank Reconciliation",

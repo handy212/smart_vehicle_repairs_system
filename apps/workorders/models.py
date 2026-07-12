@@ -1431,7 +1431,7 @@ class WorkOrder(models.Model):
         else:
             return False
 
-        return candidate_parts.filter(status__in=['ready', 'installed']).exists()
+        return candidate_parts.filter(status__in=['ready', 'installed', 'returned']).exists()
 
     def _recommendation_parts_are_startable(self, parts_needed):
         """
@@ -1457,7 +1457,7 @@ class WorkOrder(models.Model):
             task_parts = list(task.parts.all())
             if not task_parts:
                 return True
-            if all(part.status in ['ready', 'installed'] for part in task_parts):
+            if all(part.status in ['ready', 'installed', 'returned'] for part in task_parts):
                 return True
 
         try:

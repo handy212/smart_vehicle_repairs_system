@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 /**
  * Parts Requests is consolidated into Stores Workbench → Fulfillment.
  * Keep this route as a redirect so old bookmarks and deep links still work.
  */
-export default function PartsRequestsRedirectPage() {
+function PartsRequestsRedirectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -22,5 +22,19 @@ export default function PartsRequestsRedirectPage() {
     <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
       Redirecting to Stores Workbench…
     </div>
+  );
+}
+
+export default function PartsRequestsRedirectPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
+          Redirecting to Stores Workbench…
+        </div>
+      }
+    >
+      <PartsRequestsRedirectInner />
+    </Suspense>
   );
 }

@@ -14,7 +14,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PerfexDashboard } from "./components/PerfexDashboard";
 import { useBranchStore } from "@/store/branchStore";
 import { useAuthStore } from "@/store/authStore";
-import { getDashboardRoleConfig } from "@/lib/utils/dashboard-role-config";
+import { getDashboardRoleConfig, dashboardShowsSection } from "@/lib/utils/dashboard-role-config";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { DASHBOARD_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 import {
@@ -75,12 +75,29 @@ export default function DashboardPage() {
   const canViewBilling = hasPermission("view_billing");
   const canViewCustomers = hasPermission("view_customers");
   const canViewVehicles = hasPermission("view_vehicles");
-  const canViewInventory = hasPermission("view_inventory");
   const canViewWorkOrders = hasAnyPermission(["view_workorders", "view_own_workorders"]);
+  const canViewLowStockAlerts = hasAnyPermission([
+    "view_low_stock_alerts",
+    "view_inventory_reports",
+    "manage_inventory",
+  ]);
+
+  const showSection = (section: Parameters<typeof dashboardShowsSection>[1]) =>
+    dashboardShowsSection(roleConfig, section);
 
   const useReportingOverview = canViewDashboardOverview;
-  const useReportingWorkOrderStats = canViewReports && canViewWorkOrders;
-  const useWorkOrderFallback = canViewWorkOrders && !useReportingWorkOrderStats;
+  const useReportingWorkOrderStats =
+    canViewReports && canViewWorkOrders && showSection("wo_status_breakdown");
+  const useWorkOrderFallback =
+    canViewWorkOrders && !useReportingWorkOrderStats && (showSection("kpi") || showSection("main_table") || showSection("wo_status_breakdown"));
+  const useBillingQueries =
+    canViewBilling &&
+    (showSection("bottom_summary") || roleConfig.defaultMainTab === "invoices");
+  const useLowStockQueries = canViewLowStockAlerts && showSection("low_stock");
+  const useServiceDueQueries = canViewReports && showSection("service_due");
+  const useTechPerfQueries = canViewReports && showSection("technician_perf");
+  const useRevenueQueries =
+    canViewReports && canViewBilling && showSection("bottom_summary");
 
   const {
     data: dashboardData,
@@ -143,7 +160,7 @@ export default function DashboardPage() {
   const { data: serviceDueData, refetch: refetchServiceDue } = useQuery({
     queryKey: ["dashboard", "service-due", activeBranchId],
     queryFn: () => reportingApi.serviceDue(),
-    enabled: canViewReports,
+    enabled: useServiceDueQueries,
     staleTime: 15 * 60 * 1000,
   });
 
@@ -151,7 +168,7 @@ export default function DashboardPage() {
     queryKey: ["dashboard", "low-stock", activeBranchId],
     queryFn: () => reportingApi.lowStock(),
     enabled:
-      canViewInventory &&
+      useLowStockQueries &&
       canViewReports &&
       (dashboardData?.alerts?.low_stock_items ?? 0) > 0,
     staleTime: 5 * 60 * 1000,
@@ -160,7 +177,7 @@ export default function DashboardPage() {
   const { data: inventoryLowStock, refetch: refetchInventoryLowStock } = useQuery({
     queryKey: ["dashboard", "inventory-low-stock", activeBranchId],
     queryFn: () => inventoryApi.lowStock(),
-    enabled: canViewInventory && !canViewReports,
+    enabled: useLowStockQueries && !canViewReports,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -171,28 +188,28 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["appointments", "today", activeBranchId],
     queryFn: () => appointmentsApi.today(),
-    enabled: canViewAppointments,
+    enabled: canViewAppointments && showSection("appointments"),
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: invoiceStatsData, refetch: refetchInvoiceStats } = useQuery({
     queryKey: ["dashboard", "invoice-stats", activeBranchId],
     queryFn: () => billingApi.invoices.stats(),
-    enabled: canViewBilling,
+    enabled: useBillingQueries,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: estimateStatsData, refetch: refetchEstimateStats } = useQuery({
     queryKey: ["dashboard", "estimate-stats", activeBranchId],
     queryFn: () => billingApi.estimates.stats(),
-    enabled: canViewBilling && !useReportingOverview,
+    enabled: useBillingQueries && !useReportingOverview,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: recentInvoicesData, refetch: refetchRecentInvoices } = useQuery({
     queryKey: ["dashboard", "recent-invoices", activeBranchId],
     queryFn: () => billingApi.invoices.list({ ordering: "-invoice_date", page: 1 }),
-    enabled: canViewBilling,
+    enabled: useBillingQueries,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -207,7 +224,7 @@ export default function DashboardPage() {
         end_date: format(today, "yyyy-MM-dd"),
       });
     },
-    enabled: canViewReports,
+    enabled: useTechPerfQueries,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -223,21 +240,21 @@ export default function DashboardPage() {
         period: "daily",
       });
     },
-    enabled: canViewReports && canViewBilling,
+    enabled: useRevenueQueries,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: customerStats } = useQuery({
     queryKey: ["customers", "dashboard-stats", activeBranchId],
     queryFn: () => customersApi.dashboardStats(),
-    enabled: canViewCustomers,
+    enabled: canViewCustomers && showSection("kpi"),
     staleTime: 10 * 60 * 1000,
   });
 
   const { data: vehicleStats } = useQuery({
     queryKey: ["vehicles", "dashboard-stats", activeBranchId],
     queryFn: () => vehiclesApi.dashboardStats(),
-    enabled: canViewVehicles,
+    enabled: canViewVehicles && showSection("kpi"),
     staleTime: 10 * 60 * 1000,
   });
 

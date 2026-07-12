@@ -4,6 +4,7 @@ import "../styles/print.css";
 import { Providers } from "./providers";
 import { ThemeScript } from "./theme-script";
 import { Toaster } from "@/components/ui/toaster";
+import { ServiceWorkerGuard } from "@/components/pwa/ServiceWorkerGuard";
 
 import { APP_CONFIG } from "@/lib/config";
 
@@ -107,6 +108,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <Providers>
+          <ServiceWorkerGuard />
           {children}
           <Toaster />
         </Providers>

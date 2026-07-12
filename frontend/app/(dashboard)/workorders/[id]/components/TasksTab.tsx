@@ -24,6 +24,9 @@ import Link from "next/link";
 import AddTaskDialog from "./AddTaskDialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { LIST_TECHNICIANS_PERMISSIONS } from "@/lib/utils/permissions";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
 import { RevenueProductSelect } from "@/components/accounting/RevenueProductSelect";
 import { INCOME_CATEGORY_SHORT } from "@/lib/accounting/income-category-labels";
@@ -64,22 +67,25 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
   const [billingCategoryId, setBillingCategoryId] = useState<number | null>(null);
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
   const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
+  const { hasAnyPermission } = usePermissions();
+  const canListTechnicians = hasAnyPermission([...LIST_TECHNICIANS_PERMISSIONS]);
+  const teamAssignees = workOrder?.assigned_technicians_detail || [];
 
   const { data: technicians } = useQuery({
     queryKey: ["technicians", "task-reassign", branchId],
     queryFn: () => adminApi.users.technicians(branchId ? { branch: branchId } : undefined),
+    enabled: canListTechnicians && teamAssignees.length === 0,
   });
 
   const assigneeOptions = useMemo(() => {
-    const fromTeam = workOrder?.assigned_technicians_detail || [];
-    if (fromTeam.length > 0) {
-      return fromTeam.map((t) => ({ id: t.id, name: t.name }));
+    if (teamAssignees.length > 0) {
+      return teamAssignees.map((t) => ({ id: t.id, name: t.name }));
     }
     return (technicians || []).map((t) => ({
       id: t.id,
       name: t.full_name || `${t.first_name || ""} ${t.last_name || ""}`.trim() || `User ${t.id}`,
     }));
-  }, [workOrder?.assigned_technicians_detail, technicians]);
+  }, [teamAssignees, technicians]);
 
   const reassignTaskMutation = useMutation({
     mutationFn: ({ taskId, assignedTo }: { taskId: number; assignedTo: number | null }) =>
@@ -520,10 +526,12 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
                   </Link>
                 </Button>
               )}
-              <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={useRepairWorkspace}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Task
-              </Button>
+              <PermissionGuard permission="edit_workorders">
+                <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={useRepairWorkspace}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Task
+                </Button>
+              </PermissionGuard>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">

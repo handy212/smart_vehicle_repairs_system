@@ -1,3 +1,24 @@
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (name) =>
+              name.includes("precache") ||
+              name.includes("workbox") ||
+              name.includes("next-") ||
+              name.startsWith("pages-") ||
+              name.startsWith("static-")
+          )
+          .map((name) => caches.delete(name))
+      );
+      await self.clients.claim();
+    })()
+  );
+});
+
 self.addEventListener("push", (event) => {
   let payload = {};
 

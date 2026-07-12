@@ -34,6 +34,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { LIST_TECHNICIANS_PERMISSIONS } from "@/lib/utils/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -271,9 +273,12 @@ export default function WorkOrderKanbanPage() {
   );
 
   // Fetch technicians
+  const { hasAnyPermission } = usePermissions();
+  const canListTechnicians = hasAnyPermission([...LIST_TECHNICIANS_PERMISSIONS]);
   const { data: technicians } = useQuery({
     queryKey: ["technicians"],
     queryFn: () => adminApi.users.technicians(),
+    enabled: canListTechnicians,
   });
 
   const {

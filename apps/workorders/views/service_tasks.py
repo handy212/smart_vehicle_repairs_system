@@ -239,12 +239,19 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
         serializer = self.get_serializer(task)
         return Response(serializer.data)
 
-class ServiceTaskTypeViewSet(WorkOrderRelatedPermissionMixin, viewsets.ModelViewSet):
-    """CRUD for service task types."""
+class ServiceTaskTypeViewSet(viewsets.ModelViewSet):
+    """CRUD for service task types (admin/settings — not for general workshop roles)."""
     queryset = ServiceTaskType.objects.all().select_related('revenue_product').order_by('sort_order', 'name')
     serializer_class = ServiceTaskTypeSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_billable']
     search_fields = ['code', 'name', 'description']
     ordering_fields = ['sort_order', 'name', 'created_at']
+
+    def get_permissions(self):
+        # Active type choices for adding tasks stay on ServiceTaskViewSet.task_types.
+        return [
+            IsAuthenticated(),
+            HasAnyPermission(['manage_workorders', 'manage_settings'])(),
+        ]
 

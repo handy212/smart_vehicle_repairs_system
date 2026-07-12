@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { getUserFacingError } from "@/lib/api/errors";
 import { workordersApi } from "@/lib/api/workorders";
 import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
@@ -57,8 +59,11 @@ type RepairTab = "tasks" | "parts" | "notes" | "photos" | "readiness";
 
 const repairStatuses = new Set(["approved", "in_progress", "paused", "additional_work_found", "quality_check"]);
 
+const PART_STATUSES_OK_FOR_TASK = new Set(["ready", "installed", "returned"]);
+
 const getTaskVariant = (status: string): BadgeProps["variant"] => {
   if (status === "completed") return "success";
+  if (status === "paused") return "warning";
   if (status === "in_progress") return "info";
   if (status === "skipped") return "secondary";
   return "warning";
@@ -84,15 +89,41 @@ const getTaskHours = (task: ServiceTask) => {
   return 0;
 };
 
-function getTaskExecutionPresentation(task: ServiceTask, parts: WorkOrderPart[]) {
+function getTaskExecutionPresentation(
+  task: ServiceTask,
+  parts: WorkOrderPart[],
+  workOrderStatus?: string
+) {
   const taskParts = parts.filter((part) => part.task === task.id);
+  const repairsPaused = workOrderStatus === "paused";
+
+  if (task.status === "in_progress" && repairsPaused) {
+    return {
+      badgeVariant: "warning" as const,
+      badgeLabel: "Paused",
+      canStart: false,
+      canComplete: false,
+      helperText: "Repairs are paused. Resume the work order before completing this task.",
+    };
+  }
 
   if (task.status !== "pending") {
     return {
       badgeVariant: getTaskVariant(task.status),
       badgeLabel: formatStatus(task.status),
-      canStart: task.status === "pending",
+      canStart: false,
+      canComplete: task.status === "in_progress" && !repairsPaused,
       helperText: "",
+    };
+  }
+
+  if (repairsPaused) {
+    return {
+      badgeVariant: "warning" as const,
+      badgeLabel: "Paused",
+      canStart: false,
+      canComplete: false,
+      helperText: "Repairs are paused. Resume before starting tasks.",
     };
   }
 
@@ -101,16 +132,18 @@ function getTaskExecutionPresentation(task: ServiceTask, parts: WorkOrderPart[])
       badgeVariant: "warning" as const,
       badgeLabel: "Pending",
       canStart: true,
+      canComplete: false,
       helperText: "",
     };
   }
 
-  const unresolvedParts = taskParts.filter((part) => !["ready", "installed"].includes(part.status));
+  const unresolvedParts = taskParts.filter((part) => !PART_STATUSES_OK_FOR_TASK.has(part.status));
   if (unresolvedParts.length > 0) {
     return {
       badgeVariant: "warning" as const,
       badgeLabel: "Pending | Waiting Allocation",
       canStart: false,
+      canComplete: false,
       helperText: `Waiting parts: ${unresolvedParts.map((part) => part.part_name).join(", ")}`,
     };
   }
@@ -119,7 +152,8 @@ function getTaskExecutionPresentation(task: ServiceTask, parts: WorkOrderPart[])
     badgeVariant: "info" as const,
     badgeLabel: "Pending | Ready to Start",
     canStart: true,
-    helperText: "All linked parts are allocated and ready for install.",
+    canComplete: false,
+    helperText: "All linked parts are allocated, installed, or returned.",
   };
 }
 
@@ -131,6 +165,8 @@ export default function RepairsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
+  const { hasPermission } = usePermissions();
+  const canAddRepairItems = hasPermission("edit_workorders");
 
   const [activeTab, setActiveTab] = useState<RepairTab>("tasks");
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
@@ -210,7 +246,13 @@ export default function RepairsPage() {
 
   const stats = useMemo(() => {
     const completedTasks = repairTasks.filter((task) => ["completed", "skipped"].includes(task.status)).length;
-    const activeTasks = repairTasks.filter((task) => task.status === "in_progress").length;
+    const repairsPaused = workOrder?.status === "paused";
+    const activeTasks = repairsPaused
+      ? 0
+      : repairTasks.filter((task) => task.status === "in_progress").length;
+    const pausedTasks = repairsPaused
+      ? repairTasks.filter((task) => task.status === "in_progress").length
+      : 0;
     const installedParts = parts.filter((part) => ["installed", "returned"].includes(part.status)).length;
     const totalLaborHours = repairTasks.reduce((sum, task) => {
       const value = getTaskHours(task);
@@ -224,13 +266,14 @@ export default function RepairsPage() {
     return {
       completedTasks,
       activeTasks,
+      pausedTasks,
       installedParts,
       totalLaborHours,
       totalPartsCost,
       taskProgress: repairTasks.length ? Math.round((completedTasks / repairTasks.length) * 100) : 0,
       partProgress: parts.length ? Math.round((installedParts / parts.length) * 100) : 0,
     };
-  }, [parts, repairTasks]);
+  }, [parts, repairTasks, workOrder?.status]);
 
   const readiness = useMemo(() => {
     const incompleteTasks = repairTasks.filter((task) => !["completed", "skipped"].includes(task.status));
@@ -548,12 +591,16 @@ export default function RepairsPage() {
   const isPaused = workOrder.status === "paused";
   const isActive = workOrder.status === "in_progress";
   const currentQuoteStage = workOrder.current_quote_stage;
-  const waitingForPartsAllocation = currentQuoteStage === "approved_waiting_for_parts";
+  const waitingForPartsAllocation =
+    currentQuoteStage === "approved_waiting_for_parts" &&
+    parts.some((part) => !PART_STATUSES_OK_FOR_TASK.has(part.status));
   const partsReadyForRepairs =
-    currentQuoteStage === "parts_ready_waiting_for_repairs" ||
-    currentQuoteStage === "approved_waiting_for_repairs" ||
-    currentQuoteStage === "quotation_ready" ||
-    !currentQuoteStage;
+    !waitingForPartsAllocation &&
+    (currentQuoteStage === "parts_ready_waiting_for_repairs" ||
+      currentQuoteStage === "approved_waiting_for_repairs" ||
+      currentQuoteStage === "quotation_ready" ||
+      currentQuoteStage === "approved_waiting_for_parts" ||
+      !currentQuoteStage);
   const branchId = typeof workOrder.branch === "object" ? workOrder.branch?.id : workOrder.branch;
   const hasReadinessBlockers = readiness.blockers.length > 0;
 
@@ -633,7 +680,16 @@ export default function RepairsPage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Repair Tasks" value={`${stats.completedTasks}/${repairTasks.length}`} detail={`${stats.taskProgress}% complete`} icon={Wrench} />
         <MetricCard title="Parts Resolved" value={`${stats.installedParts}/${parts.length}`} detail={`${stats.partProgress}% resolved`} icon={Package} />
-        <MetricCard title="Labor Logged" value={`${stats.totalLaborHours.toFixed(2)}h`} detail={`${stats.activeTasks} active task${stats.activeTasks === 1 ? "" : "s"}`} icon={Clock} />
+        <MetricCard
+          title="Labor Logged"
+          value={`${stats.totalLaborHours.toFixed(2)}h`}
+          detail={
+            isPaused
+              ? `${stats.pausedTasks} paused task${stats.pausedTasks === 1 ? "" : "s"}`
+              : `${stats.activeTasks} active task${stats.activeTasks === 1 ? "" : "s"}`
+          }
+          icon={Clock}
+        />
         <MetricCard title="Parts Cost" value={formatCurrency(stats.totalPartsCost)} detail={`${photos.length} repair photo${photos.length === 1 ? "" : "s"}`} icon={Camera} />
       </div>
 
@@ -693,10 +749,12 @@ export default function RepairsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
               <CardTitle className="text-base">Repair Tasks</CardTitle>
-              <Button size="sm" onClick={() => setShowAddTaskDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Task
-              </Button>
+              <PermissionGuard permission="edit_workorders">
+                <Button size="sm" onClick={() => setShowAddTaskDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Task
+                </Button>
+              </PermissionGuard>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
               {tasksLoading ? (
@@ -710,7 +768,9 @@ export default function RepairsPage() {
                       key={task.id}
                       task={task}
                       parts={parts}
+                      workOrderStatus={workOrder.status}
                       assigneeOptions={assigneeOptions}
+                      canReassign={canAddRepairItems}
                       onReassign={(assignedTo) =>
                         reassignTaskMutation.mutate({ taskId: task.id, assignedTo })
                       }
@@ -743,10 +803,12 @@ export default function RepairsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
               <CardTitle className="text-base">Parts & Materials</CardTitle>
-              <Button size="sm" onClick={() => setShowAddPartDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Part
-              </Button>
+              <PermissionGuard permission="edit_workorders">
+                <Button size="sm" onClick={() => setShowAddPartDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Part
+                </Button>
+              </PermissionGuard>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
               {partsLoading ? (
@@ -1144,7 +1206,9 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
 function RepairTaskRow({
   task,
   parts,
+  workOrderStatus,
   assigneeOptions,
+  canReassign,
   onReassign,
   onStart,
   onComplete,
@@ -1152,14 +1216,16 @@ function RepairTaskRow({
 }: {
   task: ServiceTask;
   parts: WorkOrderPart[];
+  workOrderStatus?: string;
   assigneeOptions: Array<{ id: number; name: string }>;
+  canReassign: boolean;
   onReassign: (assignedTo: number | null) => void;
   onStart: () => void;
   onComplete: () => void;
   isBusy: boolean;
 }) {
   const hours = getTaskHours(task);
-  const executionState = getTaskExecutionPresentation(task, parts);
+  const executionState = getTaskExecutionPresentation(task, parts, workOrderStatus);
   const currentAssigneeId =
     typeof task.assigned_to === "object" && task.assigned_to
       ? String(task.assigned_to.id)
@@ -1179,7 +1245,7 @@ function RepairTaskRow({
           {executionState.helperText && <p className="mt-1 text-xs text-muted-foreground">{executionState.helperText}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span>{task.task_type ? formatStatus(task.task_type) : "Repair task"}</span>
-            {task.status === "completed" || task.status === "skipped" ? (
+            {task.status === "completed" || task.status === "skipped" || !canReassign ? (
               <span>Mechanic: {task.assigned_to_name || "Unassigned"}</span>
             ) : (
               <label className="flex items-center gap-1.5">
@@ -1187,7 +1253,7 @@ function RepairTaskRow({
                 <select
                   className="rounded-md border border-border bg-muted px-1.5 py-1 text-xs text-foreground"
                   value={currentAssigneeId}
-                  disabled={isBusy}
+                  disabled={isBusy || workOrderStatus === "paused"}
                   onChange={(e) => onReassign(e.target.value ? Number(e.target.value) : null)}
                 >
                   <option value="">Unassigned</option>
@@ -1206,10 +1272,10 @@ function RepairTaskRow({
           {task.status === "pending" && (
             <Button size="sm" variant="outline" onClick={onStart} disabled={isBusy || !executionState.canStart}>
               <Play className="mr-2 h-4 w-4" />
-              {executionState.canStart ? "Start" : "Waiting Parts"}
+              {executionState.canStart ? "Start" : workOrderStatus === "paused" ? "Paused" : "Waiting Parts"}
             </Button>
           )}
-          {task.status === "in_progress" && (
+          {executionState.canComplete && (
             <Button size="sm" onClick={onComplete} disabled={isBusy}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Complete

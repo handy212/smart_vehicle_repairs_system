@@ -15,6 +15,8 @@ import { useState } from "react";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { LIST_TECHNICIANS_PERMISSIONS } from "@/lib/utils/permissions";
 
 const taskSchema = z.object({
   task_type: z.string().min(1, "Task type is required"),
@@ -43,10 +45,13 @@ export default function AddTaskDialog({ workOrderId, branchId, open, onClose, on
     enabled: open,
   });
 
+  const { hasAnyPermission } = usePermissions();
+  const canListTechnicians = hasAnyPermission([...LIST_TECHNICIANS_PERMISSIONS]);
+
   const { data: technicians = [], isLoading: techniciansLoading } = useQuery({
     queryKey: ["technicians", "task-assignment", branchId],
     queryFn: () => adminApi.users.technicians(branchId ? { branch: branchId } : undefined),
-    enabled: open,
+    enabled: open && canListTechnicians,
   });
 
   const {

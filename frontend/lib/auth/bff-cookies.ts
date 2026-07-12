@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 /** Match Django `apps.accounts.jwt_cookies` defaults. */
 export const ACCESS_COOKIE = 'access_token';
 export const REFRESH_COOKIE = 'svr_refresh_token';
+export const IMPERSONATOR_COOKIE = 'svr_impersonator_refresh';
 const REFRESH_COOKIE_PATH = '/api/auth';
 
 export function getDjangoApiBase(): string {
@@ -16,6 +17,7 @@ function cookieSecure(): boolean {
 type AuthTokenPayload = {
   access?: string;
   refresh?: string;
+  impersonator_refresh?: string;
   requires_2fa?: boolean;
 };
 
@@ -45,6 +47,16 @@ export function applyAuthCookies(
       maxAge: 60 * 60,
     });
   }
+
+  if (data.impersonator_refresh) {
+    response.cookies.set(IMPERSONATOR_COOKIE, data.impersonator_refresh, {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      path: REFRESH_COOKIE_PATH,
+      maxAge: 24 * 60 * 60,
+    });
+  }
 }
 
 /** Clear auth cookies on logout. */
@@ -64,6 +76,24 @@ export function clearAuthCookies(response: NextResponse): void {
     path: REFRESH_COOKIE_PATH,
     maxAge: 0,
   });
+  response.cookies.set(IMPERSONATOR_COOKIE, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
+}
+
+export function clearImpersonatorCookie(response: NextResponse): void {
+  const secure = cookieSecure();
+  response.cookies.set(IMPERSONATOR_COOKIE, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
 }
 
 /** Strip tokens from JSON returned to the browser. */
@@ -71,6 +101,7 @@ export function stripTokensFromBody<T extends Record<string, unknown>>(data: T):
   const next = { ...data };
   delete next.access;
   delete next.refresh;
+  delete next.impersonator_refresh;
   return next;
 }
 
@@ -78,4 +109,17 @@ export function stripTokensFromBody<T extends Record<string, unknown>>(data: T):
 export function refreshCookieHeader(cookieValue: string | undefined): string | undefined {
   if (!cookieValue) return undefined;
   return `${REFRESH_COOKIE}=${cookieValue}`;
+}
+
+export function authCookieHeader(requestCookies: {
+  get: (name: string) => { value: string } | undefined;
+}): string {
+  const parts: string[] = [];
+  const access = requestCookies.get(ACCESS_COOKIE)?.value;
+  const refresh = requestCookies.get(REFRESH_COOKIE)?.value;
+  const impersonator = requestCookies.get(IMPERSONATOR_COOKIE)?.value;
+  if (access) parts.push(`${ACCESS_COOKIE}=${access}`);
+  if (refresh) parts.push(`${REFRESH_COOKIE}=${refresh}`);
+  if (impersonator) parts.push(`${IMPERSONATOR_COOKIE}=${impersonator}`);
+  return parts.join('; ');
 }

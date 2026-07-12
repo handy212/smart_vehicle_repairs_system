@@ -166,8 +166,29 @@ const withPWA = withPWAInit({
   customWorkerSrc: "worker",
   register: true,
   disable: process.env.NODE_ENV === "development",
+  // Keep default Workbox rules; only override hashed Next assets (see runtimeCaching).
+  extendDefaultRuntimeCaching: true,
   workboxOptions: {
     skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
+    // Hashed Next.js build assets must not be precached — stale SW entries after
+    // deploy cause NS_ERROR_CORRUPTED_CONTENT and cascading React hook errors.
+    exclude: [
+      /\/_next\/static\/chunks\//,
+      /\/_next\/static\/css\//,
+      /\.map$/,
+    ],
+    runtimeCaching: [
+      {
+        urlPattern: /\/_next\/static\/.+/i,
+        handler: "NetworkOnly",
+      },
+      {
+        urlPattern: /\/_next\/data\/.+/i,
+        handler: "NetworkOnly",
+      },
+    ],
   },
 });
 
@@ -182,7 +203,8 @@ const finalConfig = sentryEnabled
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
       silent: !process.env.CI,
-      widenClientFileUpload: true,
+      // widenClientFileUpload is memory-heavy on large apps; opt in via env if needed.
+      widenClientFileUpload: process.env.SENTRY_WIDEN_CLIENT_UPLOAD === "1",
       disableLogger: true,
       automaticVercelMonitors: false,
       telemetry: false,

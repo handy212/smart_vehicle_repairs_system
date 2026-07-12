@@ -255,12 +255,14 @@ export default function RoadsidePage() {
                             Roadside Activity
                         </h1>
                     </div>
-                    <Link href="/roadside/new">
-                        <Button className="h-9 shadow-sm">
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Request
-                        </Button>
-                    </Link>
+                    <PermissionGuard permission="create_roadside">
+                        <Link href="/roadside/new">
+                            <Button className="h-9 shadow-sm">
+                                <Plus className="w-4 h-4 mr-2" />
+                                New Request
+                            </Button>
+                        </Link>
+                    </PermissionGuard>
                 </div>
                 <StatsGrid stats={stats} />
             </div>
@@ -548,12 +550,14 @@ export default function RoadsidePage() {
                         <div className="text-center py-12">
                             <Truck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                             <p className="text-muted-foreground">No roadside requests found.</p>
-                            <Link href="/roadside/new">
-                                <Button className="mt-4" variant="secondary">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    New Request
-                                </Button>
-                            </Link>
+                            <PermissionGuard permission="create_roadside">
+                                <Link href="/roadside/new">
+                                    <Button className="mt-4" variant="secondary">
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        New Request
+                                    </Button>
+                                </Link>
+                            </PermissionGuard>
                         </div>
                     )}
 
