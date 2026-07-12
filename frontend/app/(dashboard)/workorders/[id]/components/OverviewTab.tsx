@@ -103,9 +103,16 @@ export default function WorkOrderOverviewTab({
   const { toast } = useToast();
   const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
 
+  const branchId =
+    typeof workOrder?.branch === "object" && workOrder?.branch
+      ? workOrder.branch.id
+      : typeof workOrder?.branch === "number"
+        ? workOrder.branch
+        : undefined;
+
   const { data: serviceCoordinators } = useQuery({
-    queryKey: ["service-coordinators"],
-    queryFn: () => adminApi.users.serviceCoordinators(),
+    queryKey: ["service-coordinators", branchId],
+    queryFn: () => adminApi.users.serviceCoordinators(branchId ? { branch: branchId } : undefined),
   });
 
   const serviceCoordinatorsList = serviceCoordinators || [];
@@ -273,9 +280,26 @@ export default function WorkOrderOverviewTab({
             </span>
           </SummaryItem>
           <SummaryItem label={JOB_TYPE_FIELD_LABEL}>
-            <Badge variant="secondary" className="text-xs font-normal">
-              {getJobTypeLabel(undefined, wo)}
-            </Badge>
+            <div className="flex flex-wrap gap-1">
+              {(workOrder.job_types_detail?.length
+                ? workOrder.job_types_detail
+                : workOrder.job_type_detail
+                  ? [workOrder.job_type_detail]
+                  : []
+              ).map((jt: { id?: number; code?: string; name?: string }, idx: number) => (
+                <Badge key={jt.code || jt.id || idx} variant="secondary" className="text-xs font-normal">
+                  {jt.name}
+                  {idx === 0 && (workOrder.job_types_detail?.length || 0) > 1
+                    ? " (primary)"
+                    : ""}
+                </Badge>
+              ))}
+              {!workOrder.job_types_detail?.length && !workOrder.job_type_detail ? (
+                <Badge variant="secondary" className="text-xs font-normal">
+                  {getJobTypeLabel(undefined, wo)}
+                </Badge>
+              ) : null}
+            </div>
           </SummaryItem>
           {isRoutine && (
             <SummaryItem label={SERVICE_PACKAGE_LABEL}>
@@ -600,11 +624,25 @@ export default function WorkOrderOverviewTab({
               {assignedTechnicians.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground">
-                    {assignedTechnicians.length > 1 ? "Technicians" : "Technician"}
+                    {assignedTechnicians.length > 1 ? "Mechanics / Technicians" : "Mechanic / Technician"}
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {assignedTechnicians.map((technician) => (
-                      <p key={`${technician.role}-${technician.id}`}>{technician.name}</p>
+                      <div key={`${technician.role}-${technician.id}`}>
+                        <p className="font-medium">
+                          {technician.name}
+                          {technician.isPrimary ? (
+                            <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                              (Primary)
+                            </span>
+                          ) : null}
+                        </p>
+                        {technician.responsibilityNotes ? (
+                          <p className="text-xs text-muted-foreground">
+                            {technician.responsibilityNotes}
+                          </p>
+                        ) : null}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -612,7 +650,7 @@ export default function WorkOrderOverviewTab({
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
-                    Coordinator {!workOrder?.service_coordinator && "*"}
+                    Service Coordinator {!workOrder?.service_coordinator && "*"}
                   </p>
                   {canEditServiceCoordinator && !isEditingServiceCoordinator && (
                     <Button

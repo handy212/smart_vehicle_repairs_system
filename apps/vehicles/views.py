@@ -59,7 +59,18 @@ class VehicleViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('edit_vehicles')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('delete_vehicles')]
-        return [IsAuthenticated(), IsModuleEnabled('vehicles')]
+        elif self.action in [
+            'dashboard_stats', 'ownership_history', 'history', 'mileage_history',
+            'documents', 'photos', 'search_vin', 'due_service', 'active',
+            'decode_vin', 'check_license_plate', 'suggested_service',
+        ]:
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('view_vehicles')]
+        elif self.action in ['reassign_owner', 'record_mileage', 'upload_document', 'upload_photo']:
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('edit_vehicles')]
+        elif self.action in ['import_excel', 'import_csv']:
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('import_vehicles')]
+        # Deny-by-default: custom actions must be explicitly listed above
+        return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('view_vehicles')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'make', 'model', 'year', 'engine_type', 'transmission_type', 'owner']
     search_fields = ['vin', 'license_plate', 'make', 'model', 'owner__user__first_name', 

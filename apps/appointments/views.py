@@ -7,7 +7,12 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.permissions import (
+    HasPermission,
+    HasAnyPermission,
+    user_has_permission,
+    IsModuleEnabled,
+)
 from apps.accounts.permission_utils import action_permission_instances
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count
@@ -43,6 +48,12 @@ class ServiceBayViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'equipment_available']
     ordering_fields = ['name', 'bay_type']
     ordering = ['name']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('appointments')]
+        if self.action in ['list', 'retrieve', 'available']:
+            return base + [HasPermission('view_appointments')]
+        return base + [HasAnyPermission(['manage_appointments', 'edit_appointments'])()]
     
     def get_queryset(self):
         return ServiceBay.objects.all()
@@ -90,10 +101,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             if getattr(self.request.user, 'role', None) == 'customer':
                 return [IsAuthenticated(), IsModuleEnabled('appointments')]
             return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('edit_appointments')]
-        elif self.action == 'my_schedule':
-            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('view_own_appointments')]
+        elif self.action in ['my_schedule', 'today', 'upcoming']:
+            # Technicians with view_own_appointments can see their own schedule/today list
+            return [
+                IsAuthenticated(),
+                IsModuleEnabled('appointments'),
+                HasAnyPermission(['view_appointments', 'view_own_appointments'])(),
+            ]
         elif self.action == 'technician_schedule':
-            return [IsAuthenticated(), IsModuleEnabled('appointments')]
+            return [
+                IsAuthenticated(),
+                IsModuleEnabled('appointments'),
+                HasAnyPermission(['view_appointments', 'view_own_appointments', 'manage_technician_schedules'])(),
+            ]
         return action_permission_instances(
             'appointments',
             self.action,
@@ -147,6 +167,14 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 request=self.request, 
                 use_active_branch=not show_all
             )
+
+            # Own-schedule users (technicians): only appointments assigned to them
+            user = self.request.user
+            if (
+                user_has_permission(user, 'view_own_appointments')
+                and not user_has_permission(user, 'view_appointments')
+            ):
+                queryset = queryset.filter(assigned_technicians=user).distinct()
         
         # Date range filtering for appointments
         if self.action == 'list':
@@ -853,6 +881,13 @@ class AppointmentReminderViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['appointment', 'reminder_type', 'status']
     ordering = ['-scheduled_send_time']
+
+    def get_permissions(self):
+        return [
+            IsAuthenticated(),
+            IsModuleEnabled('appointments'),
+            HasPermission('view_appointments'),
+        ]
     
     def get_queryset(self):
         return AppointmentReminder.objects.select_related(

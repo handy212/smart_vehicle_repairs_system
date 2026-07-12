@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasAnyPermission, IsModuleEnabled
 from apps.branches.utils import get_user_accessible_branches, resolve_branch
 
 from .management_reports import InventoryManagementReports
@@ -37,7 +37,7 @@ def _parse_range(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def availability_top_100(request):
     limit = min(int(request.query_params.get('limit', 100)), 100)
     report = InventoryManagementReports.get_top_availability(limit=limit, branch_id=_branch_id(request))
@@ -45,14 +45,14 @@ def availability_top_100(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def inventory_accuracy_report(request):
     report = InventoryManagementReports.get_inventory_accuracy(branch_id=_branch_id(request))
     return Response(report)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def shrinkage_report(request):
     start, end = _parse_range(request)
     if not start:
@@ -62,7 +62,7 @@ def shrinkage_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def obsolescence_report(request):
     days = int(request.query_params.get('days_unused', 180))
     report = InventoryManagementReports.get_obsolescence_report(days_unused=days, branch_id=_branch_id(request))
@@ -70,7 +70,7 @@ def obsolescence_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def p2p_compliance_report(request):
     start, end = _parse_range(request)
     if not start:
@@ -80,7 +80,7 @@ def p2p_compliance_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def orphan_supply_report(request):
     start, end = _parse_range(request)
     if not start:
@@ -90,7 +90,7 @@ def orphan_supply_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def unbilled_delivered_report(request):
     start_str = request.query_params.get('start_date')
     end_str = request.query_params.get('end_date')
@@ -107,7 +107,7 @@ def unbilled_delivered_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def inventory_control_report(request):
     start, end = _parse_range(request)
     if not start:
@@ -121,7 +121,7 @@ def _include_zero(request) -> bool:
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def inventory_valuation_detail_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
@@ -136,7 +136,7 @@ def inventory_valuation_detail_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def inventory_valuation_summary_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
@@ -150,7 +150,7 @@ def inventory_valuation_summary_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def open_purchase_order_list_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
@@ -168,7 +168,7 @@ def open_purchase_order_list_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def open_purchase_order_detail_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
@@ -186,7 +186,7 @@ def open_purchase_order_detail_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasAnyPermission(['view_inventory_reports', 'manage_inventory'])])
 def stock_take_worksheet_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 

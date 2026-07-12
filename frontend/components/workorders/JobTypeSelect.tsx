@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import {
   jobTypesApi,
   isFastTrackJobType,
@@ -17,21 +19,30 @@ import {
   type JobType,
 } from "@/lib/api/job-types";
 import { JOB_TYPE_FIELD_LABEL } from "@/lib/workorders/job-type-labels";
+import { cn } from "@/lib/utils/cn";
 
 export interface JobTypeSelectProps {
+  /** Primary job type code (drives workflow when single; first/primary when multi). */
   value: string;
   onChange: (code: string, jobType: JobType | null) => void;
+  /** When set, enables multi-select of job types. */
+  values?: string[];
+  onChangeMultiple?: (codes: string[], jobTypes: JobType[]) => void;
   id?: string;
   disabled?: boolean;
   showDescription?: boolean;
+  multiple?: boolean;
 }
 
 export function JobTypeSelect({
   value,
   onChange,
+  values,
+  onChangeMultiple,
   id = "job-type-select",
   disabled = false,
   showDescription = true,
+  multiple = false,
 }: JobTypeSelectProps) {
   const { data: jobTypesData, isLoading } = useQuery({
     queryKey: ["workorders", "job-types"],
@@ -40,9 +51,19 @@ export function JobTypeSelect({
 
   const jobTypes = useMemo(() => jobTypesData?.results ?? [], [jobTypesData]);
 
-  const selectedJobType = useMemo(
-    () => jobTypes.find((jt) => jt.code === value) ?? null,
-    [jobTypes, value]
+  const selectedCodes = useMemo(() => {
+    if (multiple && values && values.length > 0) return values;
+    return value ? [value] : [];
+  }, [multiple, values, value]);
+
+  const selectedJobTypes = useMemo(
+    () => jobTypes.filter((jt) => selectedCodes.includes(jt.code)),
+    [jobTypes, selectedCodes]
+  );
+
+  const primaryJobType = useMemo(
+    () => jobTypes.find((jt) => jt.code === (selectedCodes[0] || value)) ?? null,
+    [jobTypes, selectedCodes, value]
   );
 
   const jobTypesByCategory = useMemo(() => {
@@ -55,6 +76,117 @@ export function JobTypeSelect({
     }
     return Array.from(groups.entries());
   }, [jobTypes]);
+
+  const emitMultiple = (codes: string[]) => {
+    const unique = Array.from(new Set(codes.filter(Boolean)));
+    const types = unique
+      .map((code) => jobTypes.find((jt) => jt.code === code))
+      .filter(Boolean) as JobType[];
+    onChangeMultiple?.(unique, types);
+    const primary = unique[0] || "";
+    onChange(primary, types[0] ?? null);
+  };
+
+  const toggleCode = (code: string) => {
+    if (!multiple) {
+      onChange(code, jobTypes.find((jt) => jt.code === code) ?? null);
+      return;
+    }
+    if (selectedCodes.includes(code)) {
+      if (selectedCodes.length <= 1) return; // keep at least one
+      emitMultiple(selectedCodes.filter((c) => c !== code));
+    } else {
+      emitMultiple([...selectedCodes, code]);
+    }
+  };
+
+  const removeCode = (code: string) => {
+    if (!multiple || selectedCodes.length <= 1) return;
+    emitMultiple(selectedCodes.filter((c) => c !== code));
+  };
+
+  if (multiple) {
+    return (
+      <div>
+        <Label htmlFor={id}>{JOB_TYPE_FIELD_LABEL}s</Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Select one or more. The first selected type is primary (billing / defaults).
+          Workflow uses the most complete path across all selected types.
+        </p>
+        {selectedJobTypes.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {selectedJobTypes.map((jt, idx) => (
+              <Badge
+                key={jt.code}
+                variant={idx === 0 ? "default" : "secondary"}
+                className="gap-1 pr-1"
+              >
+                {jt.name}
+                {idx === 0 ? (
+                  <span className="text-[10px] opacity-80">(primary)</span>
+                ) : null}
+                {selectedCodes.length > 1 ? (
+                  <button
+                    type="button"
+                    className="rounded-sm p-0.5 hover:bg-background/20"
+                    onClick={() => removeCode(jt.code)}
+                    aria-label={`Remove ${jt.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                ) : null}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div
+          id={id}
+          className={cn(
+            "mt-2 max-h-48 overflow-y-auto rounded-md border border-border p-2",
+            disabled || isLoading ? "opacity-60 pointer-events-none" : ""
+          )}
+        >
+          {jobTypesByCategory.map(([category, types]) => (
+            <div key={category} className="mb-2 last:mb-0">
+              <div className="px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {category}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {types.map((jt) => {
+                  const checked = selectedCodes.includes(jt.code);
+                  return (
+                    <label
+                      key={jt.code}
+                      className={cn(
+                        "flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+                        checked && "bg-primary/5"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+                        checked={checked}
+                        disabled={disabled || isLoading}
+                        onChange={() => toggleCode(jt.code)}
+                      />
+                      <span>
+                        <span className="font-medium">{jt.name}</span>
+                        {jt.description ? (
+                          <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                            {jt.description}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -80,8 +212,8 @@ export function JobTypeSelect({
           ))}
         </SelectContent>
       </Select>
-      {showDescription && selectedJobType?.description ? (
-        <p className="mt-2 text-xs text-muted-foreground">{selectedJobType.description}</p>
+      {showDescription && primaryJobType?.description ? (
+        <p className="mt-2 text-xs text-muted-foreground">{primaryJobType.description}</p>
       ) : null}
     </div>
   );

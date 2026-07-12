@@ -9,12 +9,19 @@ from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from .serializers import TechnicianSerializer, SkillSerializer, TimeOffRequestSerializer, ShiftSerializer, TechnicianJobHistorySerializer, CertificationSerializer
 from django.db import models
 from apps.branches.utils import filter_queryset_for_user_branches
-from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
+from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled, user_has_permission
 
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.filter(is_active=True)
     serializer_class = SkillSerializer
     permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('technicians')]
+
+    def get_permissions(self):
+        base = [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
+        if self.action in ['list', 'retrieve']:
+            return base + [HasPermission('view_technicians')]
+        return base + [HasPermission('manage_technician_skills')]
+
 
 class TechnicianViewSet(viewsets.ModelViewSet):
     queryset = Technician.objects.all()
@@ -30,18 +37,35 @@ class TechnicianViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['my_profile', 'job_history', 'shifts', 'performance_metrics', 'update_location']:
-            # Allow technicians to view their own profile/stats
+        if self.action in ['my_profile', 'update_location']:
+            # Self-service (update_location also checks object ownership)
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
+        elif self.action in ['job_history', 'shifts', 'performance_metrics']:
+            # Peer data requires view permission; self access enforced in the action
             return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
         elif self.action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_technicians')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_technicians')]
-        return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
+        return [
+            permissions.IsAuthenticated(),
+            IsModuleEnabled('technicians'),
+            HasPermission('view_technicians'),
+        ]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def _can_manage_other_technicians(self):
         return user_has_permission(self.request.user, 'manage_technicians')
+
+    def _can_view_technician_detail(self, technician, user):
+        """Own profile always; peers need view_technicians or performance permission."""
+        if technician.user_id == getattr(user, 'id', None):
+            return True
+        return (
+            user_has_permission(user, 'view_technicians')
+            or user_has_permission(user, 'view_technician_performance')
+            or user_has_permission(user, 'manage_technicians')
+        )
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('user').filter(user__role='technician')
@@ -94,6 +118,11 @@ class TechnicianViewSet(viewsets.ModelViewSet):
         """
         from apps.workorders.models import WorkOrder
         technician = self.get_object()
+        if not self._can_view_technician_detail(technician, request.user):
+            return Response(
+                {'detail': "You don't have permission to view this technician's job history."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         
         # Find work orders where this technician was primary or assigned
         work_orders = WorkOrder.objects.filter(
@@ -112,6 +141,11 @@ class TechnicianViewSet(viewsets.ModelViewSet):
         Get shifts for this technician
         """
         technician = self.get_object()
+        if not self._can_view_technician_detail(technician, request.user):
+            return Response(
+                {'detail': "You don't have permission to view this technician's shifts."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         shifts = technician.shifts.all().order_by('-start_time')
         
         # Optional date filtering
@@ -135,6 +169,11 @@ class TechnicianViewSet(viewsets.ModelViewSet):
         from datetime import datetime, timedelta
         
         technician = self.get_object()
+        if not self._can_view_technician_detail(technician, request.user):
+            return Response(
+                {'detail': "You don't have permission to view this technician's performance."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         
         # Get period parameter (default to 'all')
         period = request.query_params.get('period', 'all')
@@ -234,6 +273,16 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
         'Leave is managed in HR. Use **HR → Leave Management** (managers) or **My HR** (employees) '
         'to apply, approve, and track leave.'
     )
+
+    def get_permissions(self):
+        user = self.request.user
+        # Technicians may only see their own legacy rows (queryset-scoped)
+        if getattr(user, 'is_technician', False):
+            return [permissions.IsAuthenticated()]
+        return [
+            permissions.IsAuthenticated(),
+            HasAnyPermission(['view_leave', 'manage_leave', 'approve_time_off', 'view_technicians'])(),
+        ]
 
     def create(self, request, *args, **kwargs):
         raise DRFValidationError({'detail': self._HR_LEAVE_MESSAGE})

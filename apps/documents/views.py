@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
+from apps.accounts.permissions import HasPermission, HasAnyPermission, user_has_permission, IsModuleEnabled
 from apps.accounts.throttles import ShareAccessCodeRateThrottle
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
@@ -720,6 +720,12 @@ class DocumentVersionViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['version_number', 'uploaded_at']
     ordering = ['-version_number']
     filterset_fields = ['document', 'uploaded_by']
+
+    def get_permissions(self):
+        base = [IsAuthenticated(), IsModuleEnabled('workorders')()]
+        if self.action == 'download':
+            return base + [HasAnyPermission(['download_documents', 'view_documents'])()]
+        return base + [HasPermission('view_documents')()]
     
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):

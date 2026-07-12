@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ClipboardList, ExternalLink, Grid2X2, List, Package, RefreshCw, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { diagnosisApi, QuotationQueueRecommendation } from "@/lib/api/diagnosis";
 import { workordersApi, WorkOrderPart } from "@/lib/api/workorders";
@@ -17,6 +18,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import {
+  PARTS_REQUESTS_VIEW_PERMISSIONS,
   STORES_QUOTATION_COMPLETE_PERMISSIONS,
   STORES_QUOTATION_VIEW_PERMISSIONS,
 } from "@/lib/utils/permissions";
@@ -49,19 +51,68 @@ const fulfillmentStatusOptions = [
 ] as const;
 
 type FulfillmentView = "list" | "grid";
+type WorkbenchTab = "quotes" | "fulfillment";
+
+function fulfillmentStageLabel(parts: WorkOrderPart[]): string {
+  const first = parts[0];
+  if (!first) return "—";
+  if (first.work_order_is_approved === false) {
+    if (first.work_order_quote_stage === "waiting_for_stores_quotation") return "Waiting Quote";
+    if (
+      first.work_order_quote_stage === "waiting_for_customer_approval" ||
+      first.work_order_quote_stage === "quotation_ready"
+    ) {
+      return "Quote Ready";
+    }
+    return first.work_order_quote_stage_display || "Awaiting Approval";
+  }
+  const statusCounts = parts.reduce((acc: Record<string, number>, part) => {
+    acc[part.status] = (acc[part.status] || 0) + 1;
+    return acc;
+  }, {});
+  const keys = Object.keys(statusCounts);
+  if (keys.length > 1) return `${keys.length} statuses`;
+  return (keys[0] || "pending").replace(/_/g, " ");
+}
 
 export default function QuotationRequestsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const workOrderParam = searchParams.get("work_order");
   const [search, setSearch] = useState("");
   const [activeStatus, setActiveStatus] = useState("all");
   const [fulfillmentView, setFulfillmentView] = useState<FulfillmentView>("list");
   const [selectedWoId, setSelectedWoId] = useState<number | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [activeTab, setActiveTab] = useState<WorkbenchTab>(
+    tabParam === "fulfillment" ? "fulfillment" : "quotes"
+  );
   const { hasAnyPermission } = usePermissions();
 
   const canViewQuotationQueue = hasAnyPermission([...STORES_QUOTATION_VIEW_PERMISSIONS]);
+  const canViewFulfillment = hasAnyPermission([
+    ...STORES_QUOTATION_VIEW_PERMISSIONS,
+    ...PARTS_REQUESTS_VIEW_PERMISSIONS,
+  ]);
   const canCompleteQuotes = hasAnyPermission([...STORES_QUOTATION_COMPLETE_PERMISSIONS]);
+
+  useEffect(() => {
+    if (tabParam === "fulfillment" || tabParam === "quotes") {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  useEffect(() => {
+    if (workOrderParam) {
+      const id = Number(workOrderParam);
+      if (Number.isFinite(id)) {
+        setSelectedWoId(id);
+        setActiveTab("fulfillment");
+      }
+    }
+  }, [workOrderParam]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["diagnosis", "quotation-queue", search],
@@ -72,7 +123,7 @@ export default function QuotationRequestsPage() {
   const { data: partsStats, isLoading: partsStatsLoading } = useQuery<PartsRequestStats>({
     queryKey: ["parts-requests-stats"],
     queryFn: () => workordersApi.parts.dashboardStats(),
-    enabled: canViewQuotationQueue,
+    enabled: canViewFulfillment,
   });
 
   const handleSort = (field: string) => {
@@ -106,7 +157,7 @@ export default function QuotationRequestsPage() {
         page += 1;
       }
     },
-    enabled: canViewQuotationQueue,
+    enabled: canViewFulfillment,
   });
 
   const markQuotedMutation = useMutation({
@@ -201,9 +252,9 @@ export default function QuotationRequestsPage() {
 
   return (
     <PermissionPageGuard
-      permissions={[...STORES_QUOTATION_VIEW_PERMISSIONS]}
-      deniedTitle="Stores quotation access required"
-      deniedDescription="This workspace is for stores, inventory, or billing staff handling quotation handoff."
+      permissions={[...STORES_QUOTATION_VIEW_PERMISSIONS, ...PARTS_REQUESTS_VIEW_PERMISSIONS]}
+      deniedTitle="Stores workbench access required"
+      deniedDescription="This workspace is for stores and inventory staff handling quotation and parts fulfillment."
     >
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -211,11 +262,11 @@ export default function QuotationRequestsPage() {
           <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
             <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
             <span>/</span>
-            <span className="text-foreground font-medium">Quotation Requests</span>
+            <span className="text-foreground font-medium">Stores Workbench</span>
           </div>
           <h1 className="text-lg font-semibold tracking-tight text-foreground">Stores Workbench</h1>
           <p className="text-xs text-muted-foreground">
-            Quote, order, receive, and allocate diagnosis parts from one queue.
+            Quotes: price diagnosis recommendations. Fulfillment: order, receive, and allocate parts.
           </p>
         </div>
         <div className="flex gap-2">
@@ -271,16 +322,22 @@ export default function QuotationRequestsPage() {
         <p className="text-[11px] text-muted-foreground">Stores quote and fulfillment queue</p>
       </div>
 
-      <Tabs defaultValue="quotes" className="space-y-3">
+      <Tabs
+        value={canViewQuotationQueue ? activeTab : "fulfillment"}
+        onValueChange={(value) => setActiveTab(value as WorkbenchTab)}
+        className="space-y-3"
+      >
         <TabsList className="h-8 w-full justify-start rounded-md border bg-muted/30 p-0.5 sm:w-auto">
-          <TabsTrigger value="quotes" className="h-7 px-3 text-xs">
-            Quotes
-            {recommendations.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 h-4 min-w-4 px-1 text-[10px]">
-                {recommendations.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          {canViewQuotationQueue && (
+            <TabsTrigger value="quotes" className="h-7 px-3 text-xs">
+              Quotes
+              {recommendations.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-4 min-w-4 px-1 text-[10px]">
+                  {recommendations.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="fulfillment" className="h-7 px-3 text-xs">
             Fulfillment
             {pendingFulfillmentCount > 0 && (
@@ -291,6 +348,7 @@ export default function QuotationRequestsPage() {
           </TabsTrigger>
         </TabsList>
 
+        {canViewQuotationQueue && (
         <TabsContent value="quotes" className="space-y-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
@@ -308,123 +366,136 @@ export default function QuotationRequestsPage() {
               </CardContent>
             </Card>
           ) : recommendations.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-              {recommendations.map((recommendation) => (
-                <Card key={recommendation.id} className="rounded-md border shadow-none">
-                  <CardContent className="space-y-3 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={recommendation.priority === "critical" ? "danger" : recommendation.priority === "necessary" ? "default" : "secondary"} className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
-                            {recommendation.priority_display || recommendation.priority}
-                          </Badge>
-                          <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
-                            {recommendation.recommendation_type_display || recommendation.recommendation_type}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-semibold leading-5 text-foreground">
-                          {recommendation.work_order_number}
-                          {recommendation.vehicle_display ? ` • ${recommendation.vehicle_display}` : ""}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {recommendation.customer_name || "Unknown customer"}
-                          {recommendation.branch_name ? ` • ${recommendation.branch_name}` : ""}
-                        </p>
-                        {recommendation.quotation_estimate_number && (
-                          <p className="text-xs text-muted-foreground">
-                            Quote: <span className="font-medium text-foreground">{recommendation.quotation_estimate_number}</span>
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
-                        {recommendation.quotation_status_display || "Requested"}
-                      </Badge>
-                    </div>
-
-                    <div className="rounded-md border bg-muted/20 px-2.5 py-2">
-                      <p className="text-xs leading-5 text-foreground">{recommendation.description}</p>
-                    </div>
-
-                    {Array.isArray(recommendation.parts_needed) && recommendation.parts_needed.length > 0 && (
-                      <div className="rounded-md border bg-muted/20 px-2.5 py-2">
-                        <p className="text-[11px] font-medium uppercase text-muted-foreground">Parts Needed</p>
-                        <div className="mt-1.5 grid gap-1 text-xs text-foreground sm:grid-cols-2">
-                          {recommendation.parts_needed.map((part, index) => (
-                            <p key={`${recommendation.id}-part-${index}`} className="truncate">
-                              {part.part_name} x{part.quantity}
-                              {part.part_number ? ` (${part.part_number})` : ""}
+            <div className="overflow-hidden rounded-md border bg-card">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Work Order</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Customer / Vehicle</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Recommendation</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Parts</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Requested</TableHead>
+                      <TableHead className="h-9 px-3 text-[10px] font-semibold uppercase text-muted-foreground">Status</TableHead>
+                      <TableHead className="h-9 px-3 text-right text-[10px] font-semibold uppercase text-muted-foreground">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recommendations.map((recommendation) => {
+                      const partsNeeded = Array.isArray(recommendation.parts_needed)
+                        ? recommendation.parts_needed
+                        : [];
+                      const partsSummary = partsNeeded.length
+                        ? `${partsNeeded[0].part_name}${partsNeeded.length > 1 ? ` +${partsNeeded.length - 1}` : ""}`
+                        : "No parts listed";
+                      return (
+                        <TableRow key={recommendation.id}>
+                          <TableCell className="px-3 py-2 align-top">
+                            <p className="font-mono text-xs font-medium text-primary">
+                              {recommendation.work_order_number}
                             </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {Array.isArray(recommendation.linked_findings) && recommendation.linked_findings.length > 0 && (
-                      <div className="rounded-md border bg-muted/20 px-2.5 py-2">
-                        <p className="text-[11px] font-medium uppercase text-muted-foreground">Supporting Findings</p>
-                        <div className="mt-1.5 space-y-1.5 text-xs text-muted-foreground">
-                          {recommendation.linked_findings.map((finding) => (
-                            <div key={finding.id}>
-                              <p className="font-medium text-foreground">{finding.finding_title}</p>
-                              {Array.isArray(finding.diagnostic_codes) && finding.diagnostic_codes.length > 0 && (
-                                <p>Codes: {finding.diagnostic_codes.map((code) => code.code_number).join(", ")}</p>
-                              )}
+                            {recommendation.quotation_estimate_number && (
+                              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                Quote {recommendation.quotation_estimate_number}
+                              </p>
+                            )}
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              <Badge
+                                variant={
+                                  recommendation.priority === "critical"
+                                    ? "danger"
+                                    : recommendation.priority === "necessary"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="h-5 rounded-sm px-1.5 text-[10px] capitalize"
+                              >
+                                {recommendation.priority_display || recommendation.priority}
+                              </Badge>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 gap-2 rounded-md border bg-muted/10 px-2.5 py-2 text-[11px] text-muted-foreground sm:grid-cols-2">
-                      <div>
-                        <p className="font-medium uppercase">Requested</p>
-                        <p className="mt-1">
-                          {recommendation.quotation_requested_at
-                            ? new Date(recommendation.quotation_requested_at).toLocaleString()
-                            : "Not captured"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium uppercase">Requested By</p>
-                        <p className="mt-1">{recommendation.quotation_requested_by_name || "Not captured"}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 border-t pt-3">
-                      <Button
-                        className="h-7 px-2 text-xs"
-                        size="sm"
-                        onClick={() => markQuotedMutation.mutate(recommendation.id)}
-                        disabled={!canCompleteQuotes || markQuotedMutation.isPending}
-                        title={!canCompleteQuotes ? "You do not have permission to complete stores quotations." : undefined}
-                      >
-                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                        Mark Quoted
-                      </Button>
-                      {recommendation.quotation_estimate_id && (
-                        <Link href={`/billing/estimates/${recommendation.quotation_estimate_id}`} className="inline-flex">
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                            Open Quote
-                          </Button>
-                        </Link>
-                      )}
-                      <Link href={`/workorders/${recommendation.work_order_id}`} className="inline-flex">
-                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                          <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                          Open Work Order
-                        </Button>
-                      </Link>
-                      <Link href={`/workorders/${recommendation.work_order_id}/diagnosis`} className="inline-flex">
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                          <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
-                          View Diagnosis
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <p className="max-w-[200px] truncate text-xs font-medium text-foreground">
+                              {recommendation.customer_name || "Unknown customer"}
+                            </p>
+                            <p className="max-w-[200px] truncate text-[11px] text-muted-foreground">
+                              {recommendation.vehicle_display || "—"}
+                            </p>
+                            {recommendation.branch_name && (
+                              <p className="text-[11px] text-muted-foreground">{recommendation.branch_name}</p>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <p className="max-w-[280px] text-xs leading-5 text-foreground line-clamp-2">
+                              {recommendation.description}
+                            </p>
+                            <p className="mt-1 text-[11px] capitalize text-muted-foreground">
+                              {recommendation.recommendation_type_display || recommendation.recommendation_type}
+                            </p>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <p className="max-w-[180px] truncate text-xs text-foreground">{partsSummary}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {partsNeeded.length} line{partsNeeded.length === 1 ? "" : "s"}
+                            </p>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top text-xs text-muted-foreground">
+                            <p>
+                              {recommendation.quotation_requested_at
+                                ? new Date(recommendation.quotation_requested_at).toLocaleString()
+                                : "—"}
+                            </p>
+                            <p className="mt-0.5">{recommendation.quotation_requested_by_name || "—"}</p>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
+                              {recommendation.quotation_status_display || "Requested"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top text-right">
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                              <Button
+                                className="h-7 px-2 text-xs"
+                                size="sm"
+                                onClick={() => markQuotedMutation.mutate(recommendation.id)}
+                                disabled={!canCompleteQuotes || markQuotedMutation.isPending}
+                                title={
+                                  !canCompleteQuotes
+                                    ? "You do not have permission to complete stores quotations."
+                                    : undefined
+                                }
+                              >
+                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                                Mark Quoted
+                              </Button>
+                              {recommendation.quotation_estimate_id && (
+                                <Link
+                                  href={`/billing/estimates/${recommendation.quotation_estimate_id}`}
+                                  className="inline-flex"
+                                >
+                                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                    Quote
+                                  </Button>
+                                </Link>
+                              )}
+                              <Link
+                                href={`/workorders/${recommendation.work_order_id}/diagnosis`}
+                                className="inline-flex"
+                              >
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                                  <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                                  Diagnosis
+                                </Button>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
             <Card className="border-dashed">
@@ -432,12 +503,13 @@ export default function QuotationRequestsPage() {
                 <ClipboardList className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
                 <h2 className="text-sm font-medium text-foreground">No quotation requests</h2>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Diagnosis recommendations sent to stores will appear here. Once priced, the linked quote stays available from the work order and billing screens.
+                  Diagnosis recommendations sent to stores will appear here. Once priced, mark them quoted so the coordinator can seek customer approval.
                 </p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
+        )}
 
         <TabsContent value="fulfillment" className="space-y-3">
           <div className="flex flex-col gap-2 rounded-md border bg-card p-2 sm:flex-row sm:items-center sm:justify-between">
@@ -510,11 +582,8 @@ export default function QuotationRequestsPage() {
                     {sortedWorkOrderIds.map((workOrderId) => {
                       const workOrderParts = groupedParts[workOrderId] || [];
                       const firstPart = workOrderParts[0];
-                      const statusCounts = workOrderParts.reduce((acc: Record<string, number>, part) => {
-                        acc[part.status] = (acc[part.status] || 0) + 1;
-                        return acc;
-                      }, {});
-                      const primaryStatus = Object.keys(statusCounts)[0] || activeStatus;
+                      const stageLabel = fulfillmentStageLabel(workOrderParts);
+                      const waitingQuote = firstPart?.work_order_quote_stage === "waiting_for_stores_quotation";
 
                       return (
                         <TableRow key={workOrderId} className="cursor-pointer" onClick={() => setSelectedWoId(workOrderId)}>
@@ -545,10 +614,17 @@ export default function QuotationRequestsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="px-3 py-2">
-                            <Badge variant={primaryStatus === "ready" ? "success" : "secondary"} className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
-                              {activeStatus === "all" && Object.keys(statusCounts).length > 1
-                                ? `${Object.keys(statusCounts).length} statuses`
-                                : primaryStatus.replace("_", " ")}
+                            <Badge
+                              variant={
+                                waitingQuote
+                                  ? "warning"
+                                  : stageLabel.toLowerCase().includes("ready")
+                                    ? "success"
+                                    : "secondary"
+                              }
+                              className="h-5 rounded-sm px-1.5 text-[10px] capitalize"
+                            >
+                              {stageLabel}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-3 py-2 text-right">

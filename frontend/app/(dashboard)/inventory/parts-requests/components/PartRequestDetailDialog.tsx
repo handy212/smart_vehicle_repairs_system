@@ -350,7 +350,14 @@ export function PartRequestDetailDialog({
                                                     <TableCell className="py-2.5 text-right pr-4">
                                                         <div className="inline-flex items-center gap-2">
                                                             {!customerApproved ? (
-                                                                <Badge variant="warning" className="h-6 px-2">Awaiting Customer</Badge>
+                                                                <Badge variant="warning" className="h-6 px-2">
+                                                                    {part.work_order_quote_stage === "waiting_for_stores_quotation"
+                                                                        ? "Waiting Quote"
+                                                                        : part.work_order_quote_stage === "waiting_for_customer_approval" ||
+                                                                            part.work_order_quote_stage === "quotation_ready"
+                                                                          ? "Quote Ready"
+                                                                          : part.work_order_quote_stage_display || "Awaiting Approval"}
+                                                                </Badge>
                                                             ) : isReady ? (
                                                                 <Badge variant="success" className="h-6 px-2">Ready</Badge>
                                                             ) : isReceived || isAwaitingStock || isOrdered ? (

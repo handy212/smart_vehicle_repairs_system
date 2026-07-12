@@ -115,7 +115,10 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         if self.action in ['public_branding', 'public_firebase', 'public_integrations', 'public_display']:
             return [AllowAny()]
         if self.action == 'by_category':
-            return [IsAuthenticated(), HasAnyPermission(['view_settings', 'manage_settings'])()]
+            # Authenticated staff may read non-secret settings for safe categories
+            # (branding/payment/general/integration). Category + secret filtering
+            # is enforced in by_category(); manage_settings still required to write.
+            return [IsAuthenticated()]
         return [IsAuthenticated(), HasPermission('manage_settings')()]
 
     def list(self, request, *args, **kwargs):

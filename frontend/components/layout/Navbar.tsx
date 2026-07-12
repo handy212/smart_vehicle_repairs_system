@@ -47,7 +47,17 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
   // Fetch branding settings for theme_mode (still needed for side-effects)
   const { data: brandingSettings, isLoading: brandingLoading } = useQuery<SystemSetting[]>({
     queryKey: ["settings", "branding"],
-    queryFn: () => adminApi.settings.byCategory("branding"),
+    queryFn: async () => {
+      try {
+        return await adminApi.settings.byCategory("branding");
+      } catch (error) {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status === 401 || status === 403) {
+          return adminApi.settings.publicBranding();
+        }
+        throw error;
+      }
+    },
     enabled: isAuthenticated,
     staleTime: 1 * 60 * 1000,
     refetchOnWindowFocus: true,

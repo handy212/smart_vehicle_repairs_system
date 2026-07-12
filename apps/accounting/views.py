@@ -11,7 +11,6 @@ from decimal import Decimal, InvalidOperation
 from django.utils import timezone
 from django.db.models import Q
 from datetime import datetime
-from apps.accounts.permissions import IsModuleEnabled
 from .services import AccountingService, ReportingService, DashboardService, ExportService
 from .models import JournalEntry, Account, AccountingControl, AuditLog, Transaction
 from .serializers import (
@@ -26,7 +25,7 @@ from .serializers import (
 )
 
 from django.http import HttpResponse
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled
 from apps.branches.utils import resolve_branch
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.types import OpenApiTypes
@@ -911,7 +910,9 @@ class BudgetViewSet(viewsets.ModelViewSet):
     serializer_class = BudgetSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
-        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+        if self.action == 'approve':
+            permission_classes.append(HasPermission('approve_budgets'))
+        elif hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_budgets'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
             permission_classes.append(HasPermission('view_budgets'))
@@ -1048,14 +1049,11 @@ class WireAccountingControlsView(APIView):
 
 class AuditLogView(ListAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
-        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
-            permission_classes.append(HasPermission('view_accounting'))
-        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
-            permission_classes.append(HasPermission('view_accounting'))
-        else:
-            permission_classes.append(HasPermission('manage_accounting_periods'))
-        return [permission() for permission in permission_classes]
+        return [
+            IsAuthenticated(),
+            IsModuleEnabled('accounting')(),
+            HasAnyPermission(['view_audit_logs', 'view_accounting'])(),
+        ]
     serializer_class = AuditLogSerializer
     queryset = AuditLog.objects.all()
     filterset_fields = ['action', 'resource_type', 'user']

@@ -1,5 +1,12 @@
 import type { NavGroup } from "./nav-group-types";
-import { PARTS_REQUESTS_VIEW_PERMISSIONS, STORES_QUOTATION_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
+import {
+  INVENTORY_REPORTS_VIEW_PERMISSIONS,
+  INVENTORY_TRANSFERS_VIEW_PERMISSIONS,
+  PARTS_REQUESTS_VIEW_PERMISSIONS,
+  PHYSICAL_COUNTS_VIEW_PERMISSIONS,
+  PURCHASE_ORDERS_VIEW_PERMISSIONS,
+  STORES_QUOTATION_VIEW_PERMISSIONS,
+} from "@/lib/utils/permissions";
 import { ACCOUNTING_NAV_GROUPS } from "./accounting-nav-config";
 import {
   Activity,
@@ -55,8 +62,13 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: Package,
       items: [
         { name: "Inventory", href: "/inventory", permission: "view_inventory", icon: Package },
-        { name: "Suppliers", href: "/inventory/suppliers", permission: "view_inventory", icon: Truck },
-        { name: "Service Bundles", href: "/inventory/bundles", permission: "view_inventory", icon: Boxes },
+        { name: "Suppliers", href: "/inventory/suppliers", permission: "view_suppliers", icon: Truck },
+        {
+          name: "Service Bundles",
+          href: "/inventory/bundles",
+          permission: "manage_inventory",
+          icon: Boxes,
+        },
       ],
     },
     {
@@ -67,14 +79,28 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         {
           name: "Stores Workbench",
           href: "/inventory/quotation-requests",
-          permissions: [...STORES_QUOTATION_VIEW_PERMISSIONS],
+          permissions: [...STORES_QUOTATION_VIEW_PERMISSIONS, ...PARTS_REQUESTS_VIEW_PERMISSIONS],
           icon: ListChecks,
         },
-        { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_inventory", icon: FileText },
-        { name: "Transfers", href: "/inventory/transfers", permission: "view_inventory", icon: ArrowLeftRight },
-        { name: "Physical Counts", href: "/inventory/physical-counts", permission: "view_inventory", icon: ClipboardList },
+        {
+          name: "Purchase Orders",
+          href: "/inventory/purchase-orders",
+          permissions: [...PURCHASE_ORDERS_VIEW_PERMISSIONS],
+          icon: FileText,
+        },
+        {
+          name: "Transfers",
+          href: "/inventory/transfers",
+          permissions: [...INVENTORY_TRANSFERS_VIEW_PERMISSIONS],
+          icon: ArrowLeftRight,
+        },
+        {
+          name: "Physical Counts",
+          href: "/inventory/physical-counts",
+          permissions: [...PHYSICAL_COUNTS_VIEW_PERMISSIONS],
+          icon: ClipboardList,
+        },
         { name: "Stock Alerts", href: "/inventory/alerts", permission: "view_low_stock_alerts", icon: AlertCircle },
-        { name: "Parts Requests", href: "/inventory/parts-requests", permissions: [...PARTS_REQUESTS_VIEW_PERMISSIONS], icon: Inbox },
       ],
     },
     {
@@ -82,10 +108,30 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       label: "Reports",
       icon: BarChart3,
       items: [
-        { name: "Compliance Reports", href: "/inventory/reports/compliance", permission: "view_inventory", icon: BarChart3 },
-        { name: "Inventory Reports", href: "/inventory/reports/standard", permission: "view_inventory", icon: ClipboardList },
-        { name: "Inventory GL Report", href: "/inventory/reports/accounting", permission: "view_inventory", icon: PieChart },
-        { name: "Reorder Reports", href: "/inventory/reorder-reports", permission: "view_inventory", icon: AlertCircle },
+        {
+          name: "Compliance Reports",
+          href: "/inventory/reports/compliance",
+          permissions: [...INVENTORY_REPORTS_VIEW_PERMISSIONS],
+          icon: BarChart3,
+        },
+        {
+          name: "Inventory Reports",
+          href: "/inventory/reports/standard",
+          permissions: [...INVENTORY_REPORTS_VIEW_PERMISSIONS],
+          icon: ClipboardList,
+        },
+        {
+          name: "Inventory GL Report",
+          href: "/inventory/reports/accounting",
+          permissions: [...INVENTORY_REPORTS_VIEW_PERMISSIONS],
+          icon: PieChart,
+        },
+        {
+          name: "Reorder Reports",
+          href: "/inventory/reorder-reports",
+          permissions: [...INVENTORY_REPORTS_VIEW_PERMISSIONS],
+          icon: AlertCircle,
+        },
       ],
     },
   ],
@@ -95,11 +141,36 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       label: "Receivables",
       icon: Receipt,
       items: [
-        { name: "Invoices", href: "/billing/invoices", permission: "view_billing", icon: Receipt },
-        { name: "Estimates", href: "/billing/estimates", permission: "view_billing", icon: Calculator },
-        { name: "Payments", href: "/billing/payments", permission: "view_billing", icon: Wallet },
-        { name: "Credit Notes", href: "/billing/credit-notes", permission: "view_billing", icon: MinusSquare },
-        { name: "Receivables", href: "/billing/receivables", permission: "view_billing", icon: HandCoins },
+        {
+          name: "Invoices",
+          href: "/billing/invoices",
+          permissions: ["view_billing", "view_own_invoices", "create_invoices", "manage_billing"],
+          icon: Receipt,
+        },
+        {
+          name: "Estimates",
+          href: "/billing/estimates",
+          permissions: ["view_billing", "create_estimates", "edit_estimates", "approve_estimates", "manage_billing"],
+          icon: Calculator,
+        },
+        {
+          name: "Payments",
+          href: "/billing/payments",
+          permissions: ["view_billing", "process_payments", "view_payment_history", "manage_billing"],
+          icon: Wallet,
+        },
+        {
+          name: "Credit Notes",
+          href: "/billing/credit-notes",
+          permissions: ["view_billing", "manage_billing"],
+          icon: MinusSquare,
+        },
+        {
+          name: "Receivables",
+          href: "/billing/receivables",
+          permissions: ["view_billing", "manage_billing", "view_payment_history"],
+          icon: HandCoins,
+        },
       ],
     },
     {
@@ -107,12 +178,12 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       label: "Payables",
       icon: CreditCard,
       items: [
-        { name: "Bills", href: "/billing/bills", permission: "view_billing", icon: CreditCard },
-        { name: "Pay Bills", href: "/billing/pay-bills", permission: "view_billing", icon: HandCoins },
-        { name: "Vendor Expenses", href: "/billing/expenses", permission: "view_billing", icon: Receipt },
-        { name: "Vendor Credits", href: "/billing/vendor-credits", permission: "view_billing", icon: MinusSquare },
-        { name: "Payment History", href: "/billing/vendor-payments", permission: "view_billing", icon: Clock },
-        { name: "Payables", href: "/billing/payables", permission: "view_billing", icon: Building2 },
+        { name: "Bills", href: "/billing/bills", permissions: ["view_bills", "create_bills", "edit_bills", "manage_billing"], icon: CreditCard },
+        { name: "Pay Bills", href: "/billing/pay-bills", permissions: ["edit_bills", "manage_billing"], icon: HandCoins },
+        { name: "Vendor Expenses", href: "/billing/expenses", permissions: ["view_bills", "manage_billing"], icon: Receipt },
+        { name: "Vendor Credits", href: "/billing/vendor-credits", permissions: ["view_bills", "create_bills", "edit_bills", "manage_billing"], icon: MinusSquare },
+        { name: "Payment History", href: "/billing/vendor-payments", permissions: ["view_bills", "manage_billing"], icon: Clock },
+        { name: "Payables", href: "/billing/payables", permissions: ["view_bills", "manage_billing"], icon: Building2 },
       ],
     },
   ],

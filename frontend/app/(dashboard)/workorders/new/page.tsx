@@ -50,6 +50,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { getCommonConcernsForCategories } from "@/lib/constants/common-concerns";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -66,47 +67,12 @@ const workOrderSchema = z.object({
   customer_concerns: z.string().min(1, "Customer concerns are required"),
   odometer_in: z.number().min(0),
   job_type_code: z.string().min(1, "Job type is required"),
+  job_type_codes: z.array(z.string()).optional(),
   service_type: z.number().optional(),
   service_bundle: z.number().optional(),
 });
 
 type WorkOrderFormData = z.input<typeof workOrderSchema>;
-
-// Predefined common vehicle concerns
-const COMMON_CONCERNS = [
-  { value: "", label: "Select a common concern (optional)" },
-  { value: "Check engine light is on", label: "Check engine light is on" },
-  { value: "Engine makes unusual noise", label: "Engine makes unusual noise" },
-  { value: "Engine won't start", label: "Engine won't start" },
-  { value: "Vehicle is overheating", label: "Vehicle is overheating" },
-  { value: "Brakes are making noise", label: "Brakes are making noise" },
-  { value: "Brakes feel spongy or soft", label: "Brakes feel spongy or soft" },
-  { value: "Brake pedal vibrates", label: "Brake pedal vibrates" },
-  { value: "Transmission slipping", label: "Transmission slipping" },
-  { value: "Transmission shifting rough", label: "Transmission shifting rough" },
-  { value: "Steering wheel vibration", label: "Steering wheel vibration" },
-  { value: "Vehicle pulls to one side", label: "Vehicle pulls to one side" },
-  { value: "Squeaking or rattling noise", label: "Squeaking or rattling noise" },
-  { value: "Exhaust smoke", label: "Exhaust smoke" },
-  { value: "AC not working", label: "AC not working" },
-  { value: "Heater not working", label: "Heater not working" },
-  { value: "Electrical issues", label: "Electrical issues" },
-  { value: "Battery keeps dying", label: "Battery keeps dying" },
-  { value: "Headlights not working", label: "Headlights not working" },
-  { value: "Windshield wipers not working", label: "Windshield wipers not working" },
-  { value: "Oil leak", label: "Oil leak" },
-  { value: "Fluid leak (unknown)", label: "Fluid leak (unknown)" },
-  { value: "Flat tire", label: "Flat tire" },
-  { value: "Tire wear issues", label: "Tire wear issues" },
-  { value: "Suspension problems", label: "Suspension problems" },
-  { value: "Alignment needed", label: "Alignment needed" },
-  { value: "Regular maintenance/service", label: "Regular maintenance/service" },
-  { value: "Oil change needed", label: "Oil change needed" },
-  { value: "Tire rotation needed", label: "Tire rotation needed" },
-  { value: "State inspection due", label: "State inspection due" },
-  { value: "Safety inspection needed", label: "Safety inspection needed" },
-  { value: "Other (describe below)", label: "Other (describe below)" },
-];
 
 export default function NewWorkOrderPage() {
   const router = useRouter();
@@ -221,6 +187,7 @@ export default function NewWorkOrderPage() {
   const [workOrderSearchQuery, setWorkOrderSearchQuery] = useState<string>("");
   const [showWorkOrderSearch, setShowWorkOrderSearch] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const advancedOptionsRef = useRef<HTMLDivElement | null>(null);
   const [selectedRelatedWorkOrderDetail, setSelectedRelatedWorkOrderDetail] = useState<{
     id: number;
     work_order_number: string;
@@ -291,6 +258,7 @@ export default function NewWorkOrderPage() {
       brought_by_relationship: "",
       customer_concerns: "",
       job_type_code: "general_repairs",
+      job_type_codes: ["general_repairs"],
       service_bundle: undefined,
     },
   });
@@ -298,16 +266,32 @@ export default function NewWorkOrderPage() {
   const customer = watch("customer");
   const vehicle = watch("vehicle");
   const jobTypeCode = watch("job_type_code");
+  const jobTypeCodes = watch("job_type_codes") || [jobTypeCode || "general_repairs"];
 
   const { data: jobTypesData } = useQuery({
     queryKey: ["workorders", "job-types"],
     queryFn: () => jobTypesApi.list({ active_only: true }),
   });
 
-  const selectedJobType = useMemo<JobType | null>(() => {
+  const selectedJobTypes = useMemo<JobType[]>(() => {
     const jobTypes = jobTypesData?.results ?? [];
-    return jobTypes.find((jt) => jt.code === jobTypeCode) ?? null;
-  }, [jobTypesData, jobTypeCode]);
+    return jobTypeCodes
+      .map((code) => jobTypes.find((jt) => jt.code === code))
+      .filter(Boolean) as JobType[];
+  }, [jobTypesData, jobTypeCodes]);
+
+  const selectedJobType = useMemo<JobType | null>(
+    () => selectedJobTypes[0] ?? null,
+    [selectedJobTypes]
+  );
+
+  const filteredCommonConcerns = useMemo(
+    () =>
+      getCommonConcernsForCategories(
+        selectedJobTypes.length > 0 ? selectedJobTypes.map((jt) => jt.category) : []
+      ),
+    [selectedJobTypes]
+  );
 
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
   const isFastTrack = isFastTrackJobType(selectedJobType);
@@ -756,6 +740,10 @@ export default function NewWorkOrderPage() {
       ...data,
       odometer_in: data.odometer_in ?? 0,
       customer_concerns: data.customer_concerns || "",
+      job_type_code: data.job_type_code || (data.job_type_codes?.[0] ?? "general_repairs"),
+      job_type_codes: data.job_type_codes?.length
+        ? data.job_type_codes
+        : [data.job_type_code || "general_repairs"],
     };
 
     // Add warranty rework fields if applicable
@@ -1315,25 +1303,57 @@ export default function NewWorkOrderPage() {
                     </CardTitle>
                     <CardDescription>Priority and description for this job</CardDescription>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs w-fit"
-                    onClick={() => setShowAdvanced((v) => !v)}
-                  >
-                    {showAdvanced ? "Hide advanced options" : "Show advanced options"}
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs w-fit"
+                      onClick={() => {
+                        setShowAdvanced((v) => {
+                          const next = !v;
+                          if (next) {
+                            requestAnimationFrame(() => {
+                              advancedOptionsRef.current?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "nearest",
+                              });
+                            });
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      {showAdvanced ? "Hide return / rework options" : "Show return / rework options"}
+                    </Button>
+                    <p className="max-w-[16rem] text-right text-[11px] text-muted-foreground">
+                      Optional: link this job to a previous visit for warranty or rework.
+                    </p>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <JobTypeSelect
+                      multiple
                       value={jobTypeCode || "general_repairs"}
+                      values={jobTypeCodes}
                       onChange={(code, jobType) => {
                         setValue("job_type_code", code, { shouldValidate: true });
                         if (!jobTypeRequiresBundle(jobType)) {
+                          setValue("service_bundle", undefined);
+                          setValue("service_type", undefined);
+                          setProgressionWarning(null);
+                        }
+                      }}
+                      onChangeMultiple={(codes, types) => {
+                        setValue("job_type_codes", codes, { shouldValidate: true });
+                        setValue("job_type_code", codes[0] || "general_repairs", {
+                          shouldValidate: true,
+                        });
+                        const primary = types[0] ?? null;
+                        if (!jobTypeRequiresBundle(primary)) {
                           setValue("service_bundle", undefined);
                           setValue("service_type", undefined);
                           setProgressionWarning(null);
@@ -1436,44 +1456,42 @@ export default function NewWorkOrderPage() {
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0" align="start">
                           <div className="max-h-60 overflow-y-auto p-2">
+                            {selectedJobTypes.length > 0 ? (
+                              <p className="px-1.5 pb-1.5 text-[10px] text-muted-foreground">
+                                Filtered for{" "}
+                                {selectedJobTypes.map((jt) => jt.name).join(", ")}
+                              </p>
+                            ) : null}
                             <div className="flex flex-col gap-1">
-                              {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
+                              {filteredCommonConcerns.map((concernText) => (
                                 <label
-                                  key={concern.value}
+                                  key={concernText}
                                   className="flex items-center space-x-2 cursor-pointer hover:bg-muted p-1.5 rounded"
                                 >
                                   <input
                                     type="checkbox"
-                                    checked={selectedConcerns.includes(concern.value)}
+                                    checked={selectedConcerns.includes(concernText)}
                                     onChange={(e) => {
                                       const isChecked = e.target.checked;
                                       let updatedConcerns: string[];
 
                                       if (isChecked) {
-                                        if (concern.value === "Other (describe below)") {
-                                          updatedConcerns = [concern.value];
-                                          setValue("customer_concerns", "");
-                                        } else {
-                                          updatedConcerns = selectedConcerns
-                                            .filter(c => c !== "Other (describe below)")
-                                            .concat(concern.value);
-                                        }
+                                        updatedConcerns = selectedConcerns.concat(concernText);
                                       } else {
-                                        updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
+                                        updatedConcerns = selectedConcerns.filter((c) => c !== concernText);
                                       }
 
                                       setSelectedConcerns(updatedConcerns);
 
-                                      const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
-                                      if (concernsToAdd.length > 0) {
-                                        setValue("customer_concerns", concernsToAdd.join("\n"));
+                                      if (updatedConcerns.length > 0) {
+                                        setValue("customer_concerns", updatedConcerns.join("\n"));
                                       } else {
                                         setValue("customer_concerns", "");
                                       }
                                     }}
                                     className="rounded border-border text-primary focus:ring-primary"
                                   />
-                                  <span className="text-xs text-card-foreground">{concern.label}</span>
+                                  <span className="text-xs text-card-foreground">{concernText}</span>
                                 </label>
                               ))}
                             </div>
@@ -1522,7 +1540,13 @@ export default function NewWorkOrderPage() {
             </Card>
 
             {showAdvanced && (
+            <div ref={advancedOptionsRef}>
             <Card className={`border overflow-hidden transition-colors ${isWarrantyRework ? "border-primary/30" : "border-border"}`}>
+              <div className="border-b border-border/60 px-4 py-2 bg-muted/30">
+                <p className="text-xs text-muted-foreground">
+                  Return / rework options — turn on below only when this visit is related to a previous job.
+                </p>
+              </div>
               <button
                 type="button"
                 className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${isWarrantyRework ? "bg-primary/5" : "hover:bg-muted/40"}`}
@@ -1676,6 +1700,7 @@ export default function NewWorkOrderPage() {
                 </CardContent>
               )}
             </Card>
+            </div>
             )}
         </div>
       </form>

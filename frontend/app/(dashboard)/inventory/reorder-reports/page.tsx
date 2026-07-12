@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { reportingApi } from "@/lib/api/reporting";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
+import { INVENTORY_REPORTS_VIEW_PERMISSIONS } from "@/lib/utils/permissions";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,7 @@ export default function ReorderReportsPage() {
   const items = ((data as { items?: LowStockItem[] })?.items ?? []) as LowStockItem[];
 
   return (
-    <PermissionPageGuard permission="view_inventory">
+    <PermissionPageGuard permissions={[...INVENTORY_REPORTS_VIEW_PERMISSIONS]}>
       <div className="space-y-6 p-4 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

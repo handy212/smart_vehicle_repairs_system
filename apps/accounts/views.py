@@ -255,15 +255,35 @@ class UserViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def service_coordinators(self, request):
-        """Get list of service coordinators and managers filtered by accessible branches"""
+        """Get list of service coordinators and managers filtered by accessible branches.
+
+        Optional ?branch=<id> narrows to coordinators eligible for that work-order branch
+        (SC primary branch match, or manager with access to that branch).
+        """
         from apps.branches.utils import get_user_accessible_branches
-        
+        from django.db.models import Q
+
         coordinators = User.objects.filter(role__in=['service_coordinator', 'manager'], is_active=True)
-        
+
         # Apply branch filtering to show only coordinators from accessible branches
         accessible_branches = get_user_accessible_branches(request.user)
-        coordinators = coordinators.filter(branch__in=accessible_branches)
-        
+        coordinators = coordinators.filter(
+            Q(branch__in=accessible_branches) | Q(managed_branches__in=accessible_branches)
+        ).distinct()
+
+        branch_id = request.query_params.get('branch')
+        if branch_id:
+            try:
+                branch_pk = int(branch_id)
+            except (TypeError, ValueError):
+                branch_pk = None
+            if branch_pk is not None:
+                coordinators = coordinators.filter(
+                    Q(role='service_coordinator', branch_id=branch_pk)
+                    | Q(role='manager', branch_id=branch_pk)
+                    | Q(role='manager', managed_branches__id=branch_pk)
+                ).distinct()
+
         serializer = PublicUserSerializer(coordinators, many=True)
         return Response(serializer.data)
     

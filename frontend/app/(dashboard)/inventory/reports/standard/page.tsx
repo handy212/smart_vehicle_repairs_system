@@ -1,11 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2, Play, Printer } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Loader2,
+  Play,
+  Printer,
+} from "lucide-react";
 import { inventoryApi } from "@/lib/api/inventory";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
 import { QueryErrorState } from "@/components/shared/QueryErrorState";
@@ -21,6 +36,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import { getUserFacingError } from "@/lib/api/errors";
+import { cn } from "@/lib/utils";
 
 type TabKey =
   | "valuation_detail"
@@ -59,7 +75,7 @@ function ReportTable({
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="bg-muted/40 hover:bg-muted/40">
             {headers.map((header) => (
               <TableHead key={header}>{header}</TableHead>
             ))}
@@ -75,6 +91,175 @@ function ReportTable({
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+type TreeGroup = {
+  id: string;
+  label: string;
+  childCount: number;
+  /** Cells for the group header after the label column (optional summary when collapsed). */
+  headerCells?: (string | number | ReactNode)[];
+  children: (string | number | ReactNode)[][];
+  /** Subtotal row shown while expanded (full width cells). */
+  subtotal?: (string | number | ReactNode)[];
+};
+
+function TreeReportTable({
+  headers,
+  groups,
+  footer,
+  defaultExpanded = true,
+  emptyMessage = "Your selection doesn’t have any info. Change your selection or start a new search.",
+}: {
+  headers: string[];
+  groups: TreeGroup[];
+  footer?: (string | number | ReactNode)[];
+  defaultExpanded?: boolean;
+  emptyMessage?: string;
+}) {
+  const groupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const id of groupIds) {
+        next[id] = prev[id] ?? defaultExpanded;
+      }
+      return next;
+    });
+  }, [groupIds, defaultExpanded]);
+
+  const allExpanded = groupIds.length > 0 && groupIds.every((id) => expanded[id]);
+  const noneExpanded = groupIds.every((id) => !expanded[id]);
+
+  const expandAll = useCallback(() => {
+    setExpanded(Object.fromEntries(groupIds.map((id) => [id, true])));
+  }, [groupIds]);
+
+  const collapseAll = useCallback(() => {
+    setExpanded(Object.fromEntries(groupIds.map((id) => [id, false])));
+  }, [groupIds]);
+
+  const toggle = useCallback((id: string) => {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  if (groups.length === 0) {
+    return <p className="text-sm text-muted-foreground py-4">{emptyMessage}</p>;
+  }
+
+  const colCount = headers.length;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1.5 text-xs"
+          onClick={expandAll}
+          disabled={allExpanded}
+        >
+          <ChevronsUpDown className="h-3.5 w-3.5" />
+          Expand all
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1.5 text-xs"
+          onClick={collapseAll}
+          disabled={noneExpanded}
+        >
+          <ChevronsDownUp className="h-3.5 w-3.5" />
+          Collapse all
+        </Button>
+      </div>
+      <div className="overflow-x-auto rounded-md border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              {headers.map((header) => (
+                <TableHead key={header} className="whitespace-nowrap">
+                  {header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {groups.map((group) => {
+              const isOpen = expanded[group.id] ?? defaultExpanded;
+              const pad = Array.from({ length: Math.max(0, colCount - 1 - (group.headerCells?.length ?? 0)) }, () => "");
+              return (
+                <Fragment key={group.id}>
+                  <TableRow
+                    className="bg-muted/20 hover:bg-muted/30 cursor-pointer select-none"
+                    onClick={() => toggle(group.id)}
+                  >
+                    <TableCell className="font-semibold">
+                      <span className="inline-flex items-center gap-1.5">
+                        {isOpen ? (
+                          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        )}
+                        <span>
+                          {group.label}
+                          <span className="ml-1 font-normal text-muted-foreground">
+                            ({group.childCount})
+                          </span>
+                        </span>
+                      </span>
+                    </TableCell>
+                    {(group.headerCells ?? []).map((cell, i) => (
+                      <TableCell key={i}>{cell}</TableCell>
+                    ))}
+                    {pad.map((_, i) => (
+                      <TableCell key={`pad-${i}`} />
+                    ))}
+                  </TableRow>
+                  {isOpen &&
+                    group.children.map((child, childIndex) => (
+                      <TableRow key={`${group.id}-child-${childIndex}`} className="hover:bg-muted/10">
+                        {child.map((cell, cellIndex) => (
+                          <TableCell
+                            key={cellIndex}
+                            className={cn(cellIndex === 0 && "pl-9 text-muted-foreground")}
+                          >
+                            {cell}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  {isOpen && group.subtotal && (
+                    <TableRow className="border-y border-border/80 bg-background">
+                      {group.subtotal.map((cell, cellIndex) => (
+                        <TableCell
+                          key={cellIndex}
+                          className={cn(cellIndex === 0 && "pl-9 font-medium")}
+                        >
+                          {cell}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )}
+                </Fragment>
+              );
+            })}
+            {footer && (
+              <TableRow className="border-t-2 border-border font-semibold bg-muted/10">
+                {footer.map((cell, i) => (
+                  <TableCell key={i}>{cell}</TableCell>
+                ))}
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
@@ -178,6 +363,69 @@ export default function StandardInventoryReportsPage() {
     open_po_detail: openPoDetailQuery,
     stock_take: stockTakeQuery,
   }[activeTab];
+
+  const valuationTreeGroups = useMemo((): TreeGroup[] => {
+    return (valuationDetailQuery.data?.groups ?? []).map((group: any) => ({
+      id: String(group.part_id),
+      label: group.product_service,
+      childCount: group.lines?.length ?? 0,
+      children: (group.lines ?? []).map((line: any) => [
+        line.product_service,
+        line.transaction_date || "—",
+        line.transaction_type,
+        line.number || "—",
+        line.name || "",
+        fmtNum(line.qty),
+        fmtNum(line.rate),
+        fmtNum(line.inventory_cost),
+        fmtNum(line.qty_on_hand),
+        fmtNum(line.asset_value),
+      ]),
+      subtotal: [
+        `Total for ${group.product_service}`,
+        "",
+        "",
+        "",
+        "",
+        fmtNum(group.subtotal?.qty),
+        "",
+        formatCurrency(group.subtotal?.inventory_cost ?? 0),
+        fmtNum(group.subtotal?.qty_on_hand),
+        formatCurrency(group.subtotal?.asset_value ?? 0),
+      ],
+    }));
+  }, [valuationDetailQuery.data, formatCurrency]);
+
+  const openPoTreeGroups = useMemo((): TreeGroup[] => {
+    return (openPoListQuery.data?.groups ?? []).map((group: any) => ({
+      id: group.supplier_display_name || "no-supplier",
+      label: group.supplier_display_name || "No supplier",
+      childCount: group.rows?.length ?? 0,
+      children: (group.rows ?? []).map((row: any) => [
+        row.date || "—",
+        <Link
+          key={row.po_id}
+          href={`/inventory/purchase-orders/${row.po_id}`}
+          className="text-primary hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {row.number}
+        </Link>,
+        row.memo || "",
+        row.ship_via || "",
+        formatCurrency(row.amount),
+        formatCurrency(row.open_balance),
+      ]),
+      subtotal: [
+        `Total for ${group.supplier_display_name}`,
+        "",
+        "",
+        "",
+        formatCurrency(group.subtotal_amount ?? 0),
+        formatCurrency(group.subtotal_open_balance ?? 0),
+      ],
+    }));
+  }, [openPoListQuery.data, formatCurrency]);
 
   const exportPayload = useMemo((): TableExportPayload | null => {
     const branchLabel = activeBranch?.name || "All branches";
@@ -344,119 +592,6 @@ export default function StandardInventoryReportsPage() {
     activeTab === "valuation_summary" ||
     activeTab === "stock_take";
 
-  const valuationDetailRows = useMemo(() => {
-    const groups = valuationDetailQuery.data?.groups ?? [];
-    const rows: (string | number | ReactNode)[][] = [];
-    for (const group of groups) {
-      rows.push([
-        <span key={`h-${group.part_id}`} className="font-semibold">
-          {group.product_service}
-        </span>,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-      ]);
-      for (const line of group.lines ?? []) {
-        rows.push([
-          line.product_service,
-          line.transaction_date || "—",
-          line.transaction_type,
-          line.number || "—",
-          line.name || "",
-          fmtNum(line.qty),
-          fmtNum(line.rate),
-          fmtNum(line.inventory_cost),
-          fmtNum(line.qty_on_hand),
-          fmtNum(line.asset_value),
-        ]);
-      }
-      rows.push([
-        <span key={`t-${group.part_id}`} className="font-medium">
-          Total for {group.product_service}
-        </span>,
-        "",
-        "",
-        "",
-        "",
-        fmtNum(group.subtotal?.qty),
-        "",
-        formatCurrency(group.subtotal?.inventory_cost ?? 0),
-        fmtNum(group.subtotal?.qty_on_hand),
-        formatCurrency(group.subtotal?.asset_value ?? 0),
-      ]);
-    }
-    if (groups.length > 0) {
-      const summary = valuationDetailQuery.data?.summary;
-      rows.push([
-        <span key="grand" className="font-semibold">
-          TOTAL
-        </span>,
-        "",
-        "",
-        "",
-        "",
-        fmtNum(summary?.total_qty),
-        "",
-        formatCurrency(summary?.total_inventory_cost ?? 0),
-        fmtNum(summary?.total_qty_on_hand),
-        formatCurrency(summary?.total_asset_value ?? 0),
-      ]);
-    }
-    return rows;
-  }, [valuationDetailQuery.data, formatCurrency]);
-
-  const openPoListRows = useMemo(() => {
-    const groups = openPoListQuery.data?.groups ?? [];
-    const rows: (string | number | ReactNode)[][] = [];
-    for (const group of groups) {
-      rows.push([
-        <span key={`s-${group.supplier_display_name}`} className="font-semibold">
-          {group.supplier_display_name}
-        </span>,
-        "",
-        "",
-        "",
-        "",
-        "",
-      ]);
-      for (const row of group.rows ?? []) {
-        rows.push([
-          row.date || "—",
-          <Link
-            key={row.po_id}
-            href={`/inventory/purchase-orders/${row.po_id}`}
-            className="text-primary hover:underline"
-          >
-            {row.number}
-          </Link>,
-          row.memo || "",
-          row.ship_via || "",
-          formatCurrency(row.amount),
-          formatCurrency(row.open_balance),
-        ]);
-      }
-    }
-    if (groups.length > 0) {
-      rows.push([
-        <span key="po-total" className="font-semibold">
-          TOTAL
-        </span>,
-        "",
-        "",
-        "",
-        formatCurrency(openPoListQuery.data?.summary?.total_amount ?? 0),
-        formatCurrency(openPoListQuery.data?.summary?.total_open_balance ?? 0),
-      ]);
-    }
-    return rows;
-  }, [openPoListQuery.data, formatCurrency]);
-
   return (
     <div className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -568,7 +703,7 @@ export default function StandardInventoryReportsPage() {
                   <CardTitle className="text-base">Inventory Valuation Detail</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ReportTable
+                  <TreeReportTable
                     headers={[
                       "Product/Service",
                       "Transaction date",
@@ -581,7 +716,27 @@ export default function StandardInventoryReportsPage() {
                       "Qty on hand",
                       "Asset value",
                     ]}
-                    rows={valuationDetailRows}
+                    groups={valuationTreeGroups}
+                    footer={
+                      valuationTreeGroups.length
+                        ? [
+                            "TOTAL",
+                            "",
+                            "",
+                            "",
+                            "",
+                            fmtNum(valuationDetailQuery.data.summary?.total_qty),
+                            "",
+                            formatCurrency(
+                              valuationDetailQuery.data.summary?.total_inventory_cost ?? 0
+                            ),
+                            fmtNum(valuationDetailQuery.data.summary?.total_qty_on_hand),
+                            formatCurrency(
+                              valuationDetailQuery.data.summary?.total_asset_value ?? 0
+                            ),
+                          ]
+                        : undefined
+                    }
                   />
                 </CardContent>
               </Card>
@@ -676,9 +831,23 @@ export default function StandardInventoryReportsPage() {
                   <CardTitle className="text-base">Open Purchase Order List by Supplier</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ReportTable
+                  <TreeReportTable
                     headers={["Date", "Number", "Memo", "Ship via", "Amount", "Open Balance"]}
-                    rows={openPoListRows}
+                    groups={openPoTreeGroups}
+                    footer={
+                      openPoTreeGroups.length
+                        ? [
+                            "TOTAL",
+                            "",
+                            "",
+                            "",
+                            formatCurrency(openPoListQuery.data.summary?.total_amount ?? 0),
+                            formatCurrency(
+                              openPoListQuery.data.summary?.total_open_balance ?? 0
+                            ),
+                          ]
+                        : undefined
+                    }
                   />
                 </CardContent>
               </Card>

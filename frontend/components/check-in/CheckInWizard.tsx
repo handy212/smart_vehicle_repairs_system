@@ -56,7 +56,7 @@ import { findDuplicateCustomerByEmail } from "@/lib/utils/duplicate-customer";
 import type { DuplicateCustomerMatch } from "@/lib/utils/duplicate-customer";
 import { DuplicateCustomerBanner } from "@/components/customers/DuplicateCustomerBanner";
 import {
-  COMMON_CUSTOMER_CONCERNS,
+  getCommonConcernsForCategories,
   mergeConcernSelections,
 } from "@/lib/constants/common-concerns";
 import { AxiosError } from "axios";
@@ -100,7 +100,9 @@ export function CheckInWizard() {
   const [odometer, setOdometer] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [selectedJobTypeCode, setSelectedJobTypeCode] = useState("general_repairs");
+  const [selectedJobTypeCodes, setSelectedJobTypeCodes] = useState<string[]>(["general_repairs"]);
   const [selectedJobType, setSelectedJobType] = useState<JobType | null>(null);
+  const [selectedJobTypes, setSelectedJobTypes] = useState<JobType[]>([]);
   const [serviceBundleId, setServiceBundleId] = useState<number | null>(null);
   const [serviceTypeId, setServiceTypeId] = useState<number | null>(null);
   const [progressionWarning, setProgressionWarning] = useState<string | null>(null);
@@ -141,6 +143,18 @@ export function CheckInWizard() {
 
   const isFastTrack = isFastTrackJobType(selectedJobType);
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
+
+  const filteredCommonConcerns = useMemo(
+    () =>
+      getCommonConcernsForCategories(
+        selectedJobTypes.length > 0
+          ? selectedJobTypes.map((jt) => jt.category)
+          : selectedJobType
+            ? [selectedJobType.category]
+            : []
+      ),
+    [selectedJobTypes, selectedJobType]
+  );
 
   const bundles = useMemo(() => {
     if (!bundlesData) return [] as ServiceBundle[];
@@ -217,6 +231,12 @@ export function CheckInWizard() {
         setRoutineConcerns(`Perform ${bundle.name}`);
       }
     }
+  };
+
+  const handleJobTypesChange = (codes: string[], types: JobType[]) => {
+    setSelectedJobTypeCodes(codes);
+    setSelectedJobTypes(types);
+    handleJobTypeChange(codes[0] || "general_repairs", types[0] ?? null);
   };
 
   const handleServiceBundleChange = (bundleId: number) => {
@@ -351,6 +371,9 @@ export function CheckInWizard() {
         priority,
         status: "draft",
         job_type_code: selectedJobTypeCode,
+        job_type_codes: selectedJobTypeCodes.length
+          ? selectedJobTypeCodes
+          : [selectedJobTypeCode],
         ...(serviceTypeId ? { service_type: serviceTypeId } : {}),
         ...(serviceBundleId ? { service_bundle: serviceBundleId } : {}),
       });
@@ -610,8 +633,11 @@ export function CheckInWizard() {
 
               <JobTypeSelect
                 id="check-in-job-type"
+                multiple
                 value={selectedJobTypeCode}
+                values={selectedJobTypeCodes}
                 onChange={handleJobTypeChange}
+                onChangeMultiple={handleJobTypesChange}
               />
 
               {bundleRequired && (
@@ -681,10 +707,14 @@ export function CheckInWizard() {
                   <div>
                     <Label>Common concerns</Label>
                     <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-                      Select one or more — they appear in the summary below.
+                      Select one or more
+                      {selectedJobType
+                        ? ` — filtered for ${selectedJobType.name}`
+                        : ""}
+                      . They appear in the summary below.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto rounded-lg border border-border p-3 bg-muted/20">
-                      {COMMON_CUSTOMER_CONCERNS.map((item) => {
+                      {filteredCommonConcerns.map((item) => {
                         const checked = selectedConcerns.includes(item);
                         return (
                           <label

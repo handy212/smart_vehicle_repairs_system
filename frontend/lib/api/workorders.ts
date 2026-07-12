@@ -53,7 +53,22 @@ export interface WorkOrder {
   primary_technician?: number | { id: number; first_name: string; last_name: string };
   primary_technician_name?: string;
   assigned_technicians?: Array<number | { id: number; first_name?: string; last_name?: string }>;
-  assigned_technicians_detail?: Array<{ id: number; name: string; email?: string; role?: string }>;
+  assigned_technicians_detail?: Array<{
+    id: number;
+    name: string;
+    email?: string;
+    role?: string;
+    responsibility_notes?: string;
+    is_primary?: boolean;
+  }>;
+  technician_assignments?: Array<{
+    technician: number;
+    responsibility_notes?: string;
+    is_primary?: boolean;
+  }>;
+  job_types?: Array<{ id: number; code: string; name: string; category?: string }>;
+  job_types_detail?: Array<{ id: number; code: string; name: string; category?: string }>;
+  job_type_codes?: string[];
   service_coordinator?: number | { id: number; first_name: string; last_name: string };
   service_coordinator_name?: string;
   brought_by_type?: "account_holder" | "saved_contact" | "third_party";
@@ -725,6 +740,8 @@ export interface WorkOrderPart {
   work_order_number?: string;
   work_order_status?: string;
   work_order_is_approved?: boolean;
+  work_order_quote_stage?: string | null;
+  work_order_quote_stage_display?: string | null;
   customer_name?: string;
   vehicle_info?: string;
   purchase_order_number?: string;

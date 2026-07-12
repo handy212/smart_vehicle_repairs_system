@@ -54,8 +54,11 @@ export function useBranding(
                 try {
                     return await adminApi.settings.byCategory("branding");
                 } catch (error) {
-                    // Stale persisted auth state — fall back to the public branding endpoint.
-                    if (isAxiosError(error) && error.response?.status === 401) {
+                    // No settings permission (e.g. technician) or stale auth — use public branding.
+                    if (
+                        isAxiosError(error) &&
+                        (error.response?.status === 401 || error.response?.status === 403)
+                    ) {
                         return adminApi.settings.publicBranding();
                     }
                     throw error;

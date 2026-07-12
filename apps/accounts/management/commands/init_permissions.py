@@ -69,12 +69,12 @@ class Command(BaseCommand):
                 'import_vehicles': ('vehicles', 'Import Vehicles', 'Import vehicles from Excel'),
                 
                 # ==================== ROADSIDE ASSISTANCE ====================
-                'view_roadside': ('vehicles', 'View Roadside', 'View roadside assistance requests'),
-                'create_roadside': ('vehicles', 'Create Roadside', 'Create roadside assistance requests'),
-                'edit_roadside': ('vehicles', 'Edit Roadside', 'Edit roadside assistance requests'),
-                'manage_roadside': ('vehicles', 'Manage Roadside', 'Full roadside assistance management'),
-                'dispatch_roadside': ('vehicles', 'Dispatch Roadside', 'Dispatch technicians for roadside assistance'),
-                'export_roadside': ('vehicles', 'Export Roadside', 'Export roadside assistance data'),
+                'view_roadside': ('roadside', 'View Roadside', 'View roadside assistance requests'),
+                'create_roadside': ('roadside', 'Create Roadside', 'Create roadside assistance requests'),
+                'edit_roadside': ('roadside', 'Edit Roadside', 'Edit roadside assistance requests'),
+                'manage_roadside': ('roadside', 'Manage Roadside', 'Full roadside assistance management'),
+                'dispatch_roadside': ('roadside', 'Dispatch Roadside', 'Dispatch technicians for roadside assistance'),
+                'export_roadside': ('roadside', 'Export Roadside', 'Export roadside assistance data'),
                 
                 # ==================== APPOINTMENTS ====================
                 'view_appointments': ('appointments', 'View Appointments', 'View appointment schedules'),
@@ -152,6 +152,7 @@ class Command(BaseCommand):
                 'manage_categories': ('inventory', 'Manage Categories', 'Manage part categories'),
                 'manage_suppliers': ('inventory', 'Manage Suppliers', 'Manage supplier information'),
                 'view_suppliers': ('inventory', 'View Suppliers', 'View supplier information'),
+                'view_purchasing': ('inventory', 'View Purchasing', 'View purchase orders and procurement'),
                 'create_purchase_orders': ('inventory', 'Create Purchase Orders', 'Create purchase orders'),
                 'edit_purchase_orders': ('inventory', 'Edit Purchase Orders', 'Edit purchase orders'),
                 'approve_purchase_orders': ('inventory', 'Approve Purchase Orders', 'Approve purchase orders'),

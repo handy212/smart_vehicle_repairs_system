@@ -327,9 +327,21 @@ def filter_workorders_for_user(queryset, user):
     """
     Scope work-order querysets: full branch access vs assigned-only.
     Call after branch filtering for staff users.
+
+    Technicians always see only jobs they are assigned to (or created),
+    even if their role also grants broad view_workorders.
     """
     if not user or not user.is_authenticated:
         return queryset.none()
+
+    role = getattr(user, 'role', None)
+    if role == 'technician':
+        return queryset.filter(
+            Q(primary_technician=user)
+            | Q(assigned_technicians=user)
+            | Q(service_coordinator=user)
+            | Q(created_by=user)
+        ).distinct()
 
     if user_has_permission(user, 'view_workorders'):
         return queryset
@@ -343,6 +355,25 @@ def filter_workorders_for_user(queryset, user):
         ).distinct()
 
     return queryset.none()
+
+
+def filter_queryset_to_technician_assignments(queryset, user, *, work_order_lookup='work_order'):
+    """
+    Restrict a related queryset (diagnosis/inspections) to work orders
+    assigned to the given technician.
+    """
+    if not user or not user.is_authenticated:
+        return queryset.none()
+    if getattr(user, 'role', None) != 'technician':
+        return queryset
+
+    prefix = f'{work_order_lookup}__' if work_order_lookup else ''
+    return queryset.filter(
+        Q(**{f'{prefix}primary_technician': user})
+        | Q(**{f'{prefix}assigned_technicians': user})
+        | Q(**{f'{prefix}service_coordinator': user})
+        | Q(**{f'{prefix}created_by': user})
+    ).distinct()
 
 
 def check_object_permission(user, permission_code, obj):
@@ -383,3 +414,26 @@ def check_object_permission(user, permission_code, obj):
         return True
     
     return False
+
+
+def require_any_permission(*permission_codes):
+    """
+    Django view decorator: login required + any of the given permission codes.
+    Returns HttpResponseForbidden when the user lacks all listed permissions.
+    """
+    from functools import wraps
+    from django.contrib.auth.decorators import login_required
+    from django.http import HttpResponseForbidden
+
+    def decorator(view_func):
+        @login_required
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            if not any(user_has_permission(request.user, code) for code in permission_codes):
+                return HttpResponseForbidden(
+                    "You don't have permission to view this report. "
+                    "Contact your administrator if you need access."
+                )
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator

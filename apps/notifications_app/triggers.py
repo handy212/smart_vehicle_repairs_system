@@ -1248,7 +1248,15 @@ Please contact us to schedule an appointment or book online.'''
         role = getattr(recipient, 'role', None) if recipient else None
         if role == 'technician':
             return f'{base}/workorders/{work_order.id}?tab=parts'
-        return f'{base}/inventory/parts-requests?work_order={work_order.id}'
+        return f'{base}/inventory/quotation-requests?tab=fulfillment&work_order={work_order.id}'
+
+    def _quotation_queue_url(self, work_order, recipient=None):
+        base = self._get_base_url().rstrip('/')
+        return f'{base}/inventory/quotation-requests?tab=quotes&work_order={work_order.id}'
+
+    def _work_order_diagnosis_url(self, work_order):
+        base = self._get_base_url().rstrip('/')
+        return f'{base}/workorders/{work_order.id}/diagnosis'
 
     def _technician_parts_url(self, work_order, recipient=None):
         base = self._get_base_url().rstrip('/')
@@ -1298,18 +1306,65 @@ Please contact us to schedule an appointment or book online.'''
         parts_count,
         diagnosis_id=None,
         source='diagnosis',
+        recommendations_count=0,
     ):
-        """Batch notification when parts land in the stores queue."""
-        if parts_count <= 0:
+        """Batch notification when parts/quotes land in the stores queue."""
+        # Quote submissions must always notify stores even when there are no parts lines
+        if parts_count <= 0 and source != 'recommendations_quote':
             return 0
 
         requester = requested_by.get_full_name() if requested_by else 'A technician'
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
+
+        if source == 'recommendations_quote':
+            rec_label = (
+                f'{recommendations_count} recommendation(s)'
+                if recommendations_count
+                else 'repair recommendations'
+            )
+            title = f'Quote requested — WO {work_order.work_order_number}'
+            message = (
+                f'{requester} sent {rec_label} to stores for quotation on WO {work_order.work_order_number}.\n\n'
+                f'Vehicle: {vehicle_display}\n'
+                f'Parts synced: {parts_count}\n\n'
+                f'Open Stores Workbench → Quotes to price and mark ready.'
+            )
+            data = {
+                'parts_count': parts_count,
+                'recommendations_count': recommendations_count,
+                'source': source,
+                'action': 'quotation_request',
+            }
+            if diagnosis_id:
+                data['diagnosis_id'] = diagnosis_id
+            count = 0
+            for recipient in self._stores_recipients_for_work_order(work_order, exclude_user=requested_by):
+                payload = {
+                    **data,
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                    'url': self._quotation_queue_url(work_order, recipient),
+                    'action': 'quotation_request',
+                }
+                self._create_notification_for_channels(
+                    recipient=recipient,
+                    notification_type='inventory',
+                    channels=['in_app', 'email'],
+                    priority='high',
+                    title=title,
+                    message=message,
+                    data=payload,
+                    related_object_type='work_order',
+                    related_object_id=work_order.id,
+                )
+                count += 1
+            return count
+
         title = f'Parts requested — WO {work_order.work_order_number}'
         message = (
             f'{requester} submitted {parts_count} part request(s) for WO {work_order.work_order_number}.\n\n'
             f'Vehicle: {vehicle_display}\n'
-            f'Open Parts Requests to review, approve, and fulfill.'
+            f'Open Stores Workbench → Fulfillment to review, approve, and fulfill.'
         )
         data = {'parts_count': parts_count, 'source': source}
         if diagnosis_id:
@@ -1322,6 +1377,78 @@ Please contact us to schedule an appointment or book online.'''
             data=data,
             exclude_user=requested_by,
         )
+
+    def stores_quotation_ready(
+        self,
+        work_order,
+        *,
+        quoted_by=None,
+        recommendations_count=1,
+        estimate=None,
+        diagnosis_id=None,
+    ):
+        """Notify service coordinator and branch seniors when stores marks a quote ready."""
+        from apps.accounts.models import User
+        from apps.accounts.permissions import user_has_permission
+        from django.db.models import Q
+
+        quoted_by_name = quoted_by.get_full_name() if quoted_by else 'Stores'
+        vehicle_display = self._build_vehicle_display(work_order.vehicle)
+        estimate_number = getattr(estimate, 'estimate_number', None)
+        title = f'Quote ready — WO {work_order.work_order_number}'
+        message = (
+            f'{quoted_by_name} marked {recommendations_count} recommendation(s) as quotation ready '
+            f'for WO {work_order.work_order_number}.\n\n'
+            f'Vehicle: {vehicle_display}\n'
+            + (f'Estimate: {estimate_number}\n' if estimate_number else '')
+            + '\nReview the diagnosis and send for customer approval when ready.'
+        )
+
+        recipients = {}
+        if work_order.service_coordinator_id:
+            recipients[work_order.service_coordinator_id] = work_order.service_coordinator
+
+        branch = work_order.branch
+        query = User.objects.filter(is_active=True, role__in=['service_coordinator', 'manager', 'admin'])
+        if branch:
+            query = query.filter(Q(branch=branch) | Q(managed_branches=branch)).distinct()
+        for user in query:
+            if quoted_by and user.pk == quoted_by.pk:
+                continue
+            if branch and hasattr(user, 'has_branch_access') and not user.has_branch_access(branch):
+                continue
+            if user.role in ('service_coordinator', 'manager', 'admin') or user_has_permission(
+                user, 'manage_workorders'
+            ):
+                recipients[user.pk] = user
+
+        count = 0
+        for recipient in recipients.values():
+            if quoted_by and recipient.pk == quoted_by.pk:
+                continue
+            payload = {
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'recommendations_count': recommendations_count,
+                'diagnosis_id': diagnosis_id,
+                'estimate_id': getattr(estimate, 'id', None),
+                'estimate_number': estimate_number,
+                'url': self._work_order_diagnosis_url(work_order),
+                'action': 'quotation_ready',
+            }
+            self._create_notification_for_channels(
+                recipient=recipient,
+                notification_type='work_order',
+                channels=['in_app', 'email'],
+                priority='high',
+                title=title,
+                message=message,
+                data=payload,
+                related_object_type='work_order',
+                related_object_id=work_order.id,
+            )
+            count += 1
+        return count
     
     def part_requisition_created(self, part):
         """Notify stores staff when a part is requested via requisition."""

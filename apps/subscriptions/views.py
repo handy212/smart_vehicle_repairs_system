@@ -478,13 +478,14 @@ class SubscriptionUsageViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        base = [IsAuthenticated(), IsModuleEnabled('subscriptions')]
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['view_subscriptions', 'manage_subscriptions'])]
+            return base + [HasAnyPermission(['view_subscriptions', 'manage_subscriptions'])]
         elif self.action == 'create':
-            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['manage_subscriptions', 'record_usage'])]
+            return base + [HasAnyPermission(['manage_subscriptions', 'record_usage'])]
         elif self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('manage_subscriptions')]
-        return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            return base + [HasPermission('manage_subscriptions')]
+        return base + [HasPermission('view_subscriptions')]
     
     def get_serializer_class(self):
         if self.action == 'create':

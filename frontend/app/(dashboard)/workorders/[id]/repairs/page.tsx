@@ -267,6 +267,29 @@ export default function RepairsPage() {
     onSuccess: refreshRepairs,
   });
 
+  const reassignTaskMutation = useMutation({
+    mutationFn: ({ taskId, assignedTo }: { taskId: number; assignedTo: number | null }) =>
+      workOrderTasksApi.patch(taskId, { assigned_to: assignedTo }),
+    onSuccess: () => {
+      refreshRepairs();
+      toast({ title: "Task assignee updated", variant: "success" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Reassign failed",
+        description: getUserFacingError(error, "Could not update task assignee."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assigneeOptions = useMemo(() => {
+    return (workOrder?.assigned_technicians_detail || []).map((t) => ({
+      id: t.id,
+      name: t.name,
+    }));
+  }, [workOrder?.assigned_technicians_detail]);
+
   const completeTaskMutation = useMutation({
     mutationFn: ({ taskId, data }: { taskId: number; data?: { notes?: string; actual_hours?: number } }) =>
       workOrderTasksApi.complete(taskId, data),
@@ -687,6 +710,10 @@ export default function RepairsPage() {
                       key={task.id}
                       task={task}
                       parts={parts}
+                      assigneeOptions={assigneeOptions}
+                      onReassign={(assignedTo) =>
+                        reassignTaskMutation.mutate({ taskId: task.id, assignedTo })
+                      }
                       onStart={() => startTaskMutation.mutate(task.id)}
                       onComplete={() => {
                         setCompleteTask(task);
@@ -699,7 +726,11 @@ export default function RepairsPage() {
                               : ""
                         );
                       }}
-                      isBusy={startTaskMutation.isPending || completeTaskMutation.isPending}
+                      isBusy={
+                        startTaskMutation.isPending ||
+                        completeTaskMutation.isPending ||
+                        reassignTaskMutation.isPending
+                      }
                     />
                   ))}
                 </div>
@@ -1113,18 +1144,28 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
 function RepairTaskRow({
   task,
   parts,
+  assigneeOptions,
+  onReassign,
   onStart,
   onComplete,
   isBusy,
 }: {
   task: ServiceTask;
   parts: WorkOrderPart[];
+  assigneeOptions: Array<{ id: number; name: string }>;
+  onReassign: (assignedTo: number | null) => void;
   onStart: () => void;
   onComplete: () => void;
   isBusy: boolean;
 }) {
   const hours = getTaskHours(task);
   const executionState = getTaskExecutionPresentation(task, parts);
+  const currentAssigneeId =
+    typeof task.assigned_to === "object" && task.assigned_to
+      ? String(task.assigned_to.id)
+      : typeof task.assigned_to === "number"
+        ? String(task.assigned_to)
+        : "";
 
   return (
     <div className="rounded-md border border-border p-3">
@@ -1136,9 +1177,28 @@ function RepairTaskRow({
           </div>
           {task.detailed_notes && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{task.detailed_notes}</p>}
           {executionState.helperText && <p className="mt-1 text-xs text-muted-foreground">{executionState.helperText}</p>}
-          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span>{task.task_type ? formatStatus(task.task_type) : "Repair task"}</span>
-            <span>{task.assigned_to_name || "Unassigned"}</span>
+            {task.status === "completed" || task.status === "skipped" ? (
+              <span>Mechanic: {task.assigned_to_name || "Unassigned"}</span>
+            ) : (
+              <label className="flex items-center gap-1.5">
+                <span>Mechanic:</span>
+                <select
+                  className="rounded-md border border-border bg-muted px-1.5 py-1 text-xs text-foreground"
+                  value={currentAssigneeId}
+                  disabled={isBusy}
+                  onChange={(e) => onReassign(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">Unassigned</option>
+                  {assigneeOptions.map((opt) => (
+                    <option key={opt.id} value={String(opt.id)}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <span>{hours > 0 ? `${hours.toFixed(2)}h` : "No hours logged"}</span>
           </div>
         </div>

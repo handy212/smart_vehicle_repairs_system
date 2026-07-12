@@ -135,7 +135,7 @@ export const workflowGuides: HelpGuide[] = [
                         ],
                     },
                 ],
-                actionLink: "/inventory/parts-requests",
+                actionLink: "/inventory/quotation-requests",
                 actionLabel: "Parts Requests",
             },
         ],

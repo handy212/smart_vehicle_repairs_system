@@ -6,6 +6,19 @@ export interface WorkOrderAssignee {
   id: number | string;
   name: string;
   role: AssigneeRole;
+  /** Short UI label for the role */
+  roleLabel: string;
+  isPrimary?: boolean;
+  responsibilityNotes?: string;
+}
+
+export function getAssigneeRoleLabel(
+  role: AssigneeRole,
+  options?: { isPrimary?: boolean }
+): string {
+  if (role === "coordinator") return "Service Coordinator";
+  if (options?.isPrimary) return "Primary Mechanic/Technician";
+  return "Mechanic/Technician";
 }
 
 function getFullName(person?: {
@@ -34,11 +47,23 @@ export function getWorkOrderAssignees(workOrder?: WorkOrder | null): WorkOrderAs
     assignees.push(assignee);
   };
 
+  const primaryId =
+    typeof workOrder.primary_technician === "object" && workOrder.primary_technician
+      ? workOrder.primary_technician.id
+      : typeof workOrder.primary_technician === "number"
+        ? workOrder.primary_technician
+        : null;
+
   for (const tech of workOrder.assigned_technicians_detail || []) {
+    const isPrimary =
+      Boolean(tech.is_primary) || (primaryId != null && Number(tech.id) === Number(primaryId));
     pushAssignee({
       id: tech.id,
       name: tech.name,
       role: "technician",
+      isPrimary,
+      responsibilityNotes: tech.responsibility_notes || undefined,
+      roleLabel: getAssigneeRoleLabel("technician", { isPrimary }),
     });
   }
 
@@ -49,12 +74,16 @@ export function getWorkOrderAssignees(workOrder?: WorkOrder | null): WorkOrderAs
         id: primary.id,
         name: getFullName(primary),
         role: "technician",
+        isPrimary: true,
+        roleLabel: getAssigneeRoleLabel("technician", { isPrimary: true }),
       });
     } else if (workOrder.primary_technician_name) {
       pushAssignee({
         id: workOrder.primary_technician_name,
         name: workOrder.primary_technician_name,
         role: "technician",
+        isPrimary: true,
+        roleLabel: getAssigneeRoleLabel("technician", { isPrimary: true }),
       });
     }
   }
@@ -65,12 +94,14 @@ export function getWorkOrderAssignees(workOrder?: WorkOrder | null): WorkOrderAs
       id: coordinator.id,
       name: getFullName(coordinator),
       role: "coordinator",
+      roleLabel: getAssigneeRoleLabel("coordinator"),
     });
   } else if (workOrder.service_coordinator_name) {
     pushAssignee({
       id: workOrder.service_coordinator_name,
       name: workOrder.service_coordinator_name,
       role: "coordinator",
+      roleLabel: getAssigneeRoleLabel("coordinator"),
     });
   }
 

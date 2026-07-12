@@ -198,14 +198,26 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
     ordering = ['-started_at']
     
     def get_queryset(self):
-        """Filter diagnoses by active branch from session"""
+        """Filter diagnoses by active branch; technicians only see their assigned jobs."""
+        from django.db.models import Q
+
         queryset = super().get_queryset()
-        return filter_diagnosis_queryset_for_branches(
-            queryset, 
-            self.request.user, 
-            self.request, 
-            branch_lookup='work_order__branch'
+        queryset = filter_diagnosis_queryset_for_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup='work_order__branch',
         )
+        user = self.request.user
+        if getattr(user, 'role', None) == 'technician':
+            queryset = queryset.filter(
+                Q(work_order__primary_technician=user)
+                | Q(work_order__assigned_technicians=user)
+                | Q(work_order__service_coordinator=user)
+                | Q(work_order__created_by=user)
+                | Q(technician=user)
+            ).distinct()
+        return queryset
 
     @staticmethod
     def _user_has_quote_submission_role(user):
@@ -754,6 +766,14 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
     def start(self, request, pk=None):
         """Start the diagnosis"""
         diagnosis = self.get_object()
+        work_order = diagnosis.work_order
+        if work_order is not None:
+            allowed, blockers = work_order.can_technician_perform_diagnosis(request.user)
+            if not allowed:
+                return Response(
+                    {'error': blockers[0] if blockers else 'Assignment must be accepted before starting diagnosis.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         
         if diagnosis.start(user=request.user):
             diagnosis.refresh_from_db()
@@ -1229,6 +1249,7 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
                 parts_count=parts_synced,
                 diagnosis_id=diagnosis.id,
                 source='recommendations_quote',
+                recommendations_count=recommendations.count(),
             )
         except Exception as e:
             import logging
@@ -1317,6 +1338,21 @@ class DiagnosisViewSet(DiagnosisPermissionMixin, viewsets.ModelViewSet):
         for recommendation in recommendations:
             self._sync_recommendation_costs_from_quote_estimate(recommendation)
             recommendation.mark_quoted(quoted_by=request.user)
+
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.stores_quotation_ready(
+                diagnosis.work_order,
+                quoted_by=request.user,
+                recommendations_count=recommendations.count(),
+                estimate=estimate,
+                diagnosis_id=diagnosis.id,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to notify staff after marking recommendations quoted: %s", e, exc_info=True
+            )
 
         serializer = RepairRecommendationSerializer(recommendations, many=True)
         return Response({
@@ -1663,6 +1699,25 @@ class RepairRecommendationViewSet(
             recommendation.mark_quoted(quoted_by=request.user)
         except ValueError as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            estimate = None
+            if recommendation.quotation_estimate_id:
+                from apps.billing.models import Estimate
+                estimate = Estimate.objects.filter(pk=recommendation.quotation_estimate_id).first()
+            notification_triggers.stores_quotation_ready(
+                recommendation.diagnosis.work_order,
+                quoted_by=request.user,
+                recommendations_count=1,
+                estimate=estimate,
+                diagnosis_id=recommendation.diagnosis_id,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to notify staff after mark_quoted: %s", e, exc_info=True
+            )
 
         serializer = self.get_serializer(recommendation)
         return Response({

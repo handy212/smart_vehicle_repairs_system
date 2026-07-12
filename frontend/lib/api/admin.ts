@@ -433,8 +433,8 @@ export const adminApi = {
       return response.data;
     },
 
-    serviceCoordinators: async (): Promise<User[]> => {
-      const response = await apiClient.get("/accounts/users/service_coordinators/");
+    serviceCoordinators: async (params?: { branch?: number }): Promise<User[]> => {
+      const response = await apiClient.get("/accounts/users/service_coordinators/", { params });
       return response.data;
     },
   },

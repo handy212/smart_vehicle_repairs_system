@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
+import { useAuthStore } from "@/store/authStore";
 import {
   ArrowLeft,
   CheckCircle,
@@ -53,6 +54,7 @@ import {
   User,
   Sparkles,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -60,6 +62,7 @@ import { CodesTab } from "./components/CodesTab";
 import { ComplaintTab } from "./components/ComplaintTab";
 import { TestsTab } from "./components/TestsTab";
 import { RecommendationDialog } from "./components/RecommendationDialog";
+import { AssignmentActions } from "../components/AssignmentActions";
 import { useOfflineStore } from "@/store/offlineStore";
 import {
   fetchDiagnosisForWorkOrder,
@@ -459,6 +462,35 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
   const canCompleteDiagnosis = diagnosis.status === "awaiting_approval" && !!workOrder.approved_by_customer;
   const shouldSendForApproval = diagnosis.requires_approval && !workOrder.approved_by_customer;
   const assignedPeople = getWorkOrderAssignees(workOrder);
+  const currentUser = useAuthStore((s) => s.user);
+  const assignmentPending = workOrder?.requires_assignment_acceptance === true;
+  const assignmentGate = workOrder?.technician_assignment_status as string | undefined;
+  const isAssignedTechnician =
+    !!currentUser &&
+    (Number(workOrder?.primary_technician) === Number(currentUser.id) ||
+      (typeof workOrder?.primary_technician === "object" &&
+        workOrder?.primary_technician?.id === currentUser.id) ||
+      (workOrder?.assigned_technicians_detail || []).some(
+        (t: { id: number }) => Number(t.id) === Number(currentUser.id)
+      ) ||
+      (Array.isArray(workOrder?.assigned_technicians) &&
+        workOrder.assigned_technicians.some((t: number | { id: number }) =>
+          typeof t === "number"
+            ? t === currentUser.id
+            : Number(t?.id) === Number(currentUser.id)
+        )));
+  const isTechnicianRole = currentUser?.role === "technician";
+  const blocksTechDiagnosisWork =
+    isTechnicianRole &&
+    isAssignedTechnician &&
+    (assignmentPending || assignmentGate === "rejected" || assignmentGate === "released");
+  const assignmentBlockMessage = assignmentPending
+    ? "Accept this job assignment before starting diagnosis."
+    : assignmentGate === "rejected"
+      ? "This assignment was rejected. Ask the coordinator to reassign before diagnosing."
+      : assignmentGate === "released"
+        ? "This assignment was released. Wait for a new assignment before diagnosing."
+        : null;
 
   const refreshWorkOrderViews = () => {
     queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -469,8 +501,15 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     queryClient.invalidateQueries({ queryKey: ["dashboard", "workorder-stats"] });
   };
 
-  // Get status color and icon
+  // Get status color and icon (overlay stores quote stage when present)
   const getStatusConfig = (status: string) => {
+    const quoteStage = workOrder?.current_quote_stage;
+    if (quoteStage === "waiting_for_stores_quotation") {
+      return { color: "warning", icon: Clock, label: "Waiting Quote" };
+    }
+    if (quoteStage === "waiting_for_customer_approval" || quoteStage === "quotation_ready") {
+      return { color: "warning", icon: Send, label: "Quote Ready" };
+    }
     switch (status) {
       case "not_started":
         return { color: "secondary", icon: Clock, label: "Not Started" };
@@ -491,6 +530,13 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
 
   const statusConfig = getStatusConfig(diagnosis.status);
   const StatusIcon = statusConfig.icon;
+  const diagnosisStageLabel =
+    workOrder?.current_quote_stage === "waiting_for_stores_quotation"
+      ? "Diagnosis | Waiting Quote"
+      : workOrder?.current_quote_stage === "waiting_for_customer_approval" ||
+          workOrder?.current_quote_stage === "quotation_ready"
+        ? "Diagnosis | Quote Ready"
+        : `Diagnosis | ${statusConfig.label}`;
 
   return (
     <div className={cn("space-y-6", isMobile && "space-y-4 pb-28")}>
@@ -540,10 +586,11 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
           {diagnosis.status === "not_started" && (
             <Button
               onClick={() => startDiagnosisMutation.mutate()}
-              disabled={startDiagnosisMutation.isPending}
+              disabled={startDiagnosisMutation.isPending || blocksTechDiagnosisWork}
               size="sm"
               className="h-9"
               variant="default"
+              title={blocksTechDiagnosisWork ? assignmentBlockMessage || undefined : undefined}
             >
               <Play className="w-3.5 h-3.5 mr-2" />
               {startDiagnosisMutation.isPending ? "Starting..." : "Start Diagnosis"}
@@ -674,6 +721,32 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
         </div>
       </div>
 
+      {blocksTechDiagnosisWork && assignmentBlockMessage ? (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Assignment required</p>
+            <p className="text-xs opacity-90">{assignmentBlockMessage}</p>
+            <p className="mt-1 text-xs opacity-80">
+              Accept, reject, or release the assignment below before diagnosing.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {workOrder ? (
+        <div className="mb-4">
+          <AssignmentActions
+            workOrder={workOrder}
+            workOrderId={workOrderId}
+            onStatusChange={() => {
+              queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+              queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+            }}
+          />
+        </div>
+      ) : null}
+
       {/* Workflow Status & Info Banner */}
       <Card className="border-none shadow-sm bg-muted/50">
         <CardContent className="p-4">
@@ -689,26 +762,42 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   }`}
               >
                 <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
-                {statusConfig.label}
+                {diagnosisStageLabel}
               </Badge>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 {assignedPeople.length > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5" />
-                    <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex items-start gap-2">
+                    <User className="w-3.5 h-3.5 mt-1 shrink-0" />
+                    <div className="flex flex-col gap-1.5">
                       <span className="text-xs uppercase tracking-wide text-muted-foreground">
                         Assigned to
                       </span>
-                      {assignedPeople.map((person) => (
-                        <Badge
-                          key={`${person.role}-${person.id}`}
-                          variant="secondary"
-                          className="h-6 rounded-full px-2.5 text-[11px] font-medium"
-                        >
-                          {person.name}
-                        </Badge>
-                      ))}
+                      <div className="flex flex-wrap items-start gap-1.5">
+                        {assignedPeople.map((person) => (
+                          <div
+                            key={`${person.role}-${person.id}`}
+                            className="flex flex-col gap-0.5"
+                          >
+                            <Badge
+                              variant="secondary"
+                              className="h-auto rounded-md px-2.5 py-1 text-[11px] font-medium"
+                            >
+                              <span className="flex flex-col items-start gap-0.5">
+                                <span className="text-[10px] font-normal uppercase tracking-wide opacity-70">
+                                  {person.roleLabel}
+                                </span>
+                                <span>{person.name}</span>
+                              </span>
+                            </Badge>
+                            {person.responsibilityNotes ? (
+                              <span className="max-w-[14rem] px-1 text-[10px] leading-snug text-muted-foreground">
+                                {person.responsibilityNotes}
+                              </span>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : diagnosis.technician_name && (

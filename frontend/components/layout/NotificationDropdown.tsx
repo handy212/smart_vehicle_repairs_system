@@ -129,7 +129,10 @@ export function NotificationDropdown() {
         }
 
         if (data?.work_order_id && notification.notification_type === 'inventory') {
-            return `/inventory/parts-requests?work_order=${data.work_order_id}`;
+            if (data?.action === 'quotation_request' || data?.source === 'recommendations_quote') {
+                return `/inventory/quotation-requests?tab=quotes&work_order=${data.work_order_id}`;
+            }
+            return `/inventory/quotation-requests?tab=fulfillment&work_order=${data.work_order_id}`;
         }
 
         // Use related_object_type if available, otherwise fallback to notification_type
@@ -179,9 +182,9 @@ export function NotificationDropdown() {
                     return `/workorders/${id}`;
                 case "work_order_part":
                     if (data?.work_order_id) {
-                        return `/inventory/parts-requests?work_order=${data.work_order_id}`;
+                        return `/inventory/quotation-requests?tab=fulfillment&work_order=${data.work_order_id}`;
                     }
-                    return `/inventory/parts-requests`;
+                    return `/inventory/quotation-requests?tab=fulfillment`;
                 case "invoice":
                     return `/billing/invoices/${id}`;
                 case "estimate":
@@ -203,7 +206,7 @@ export function NotificationDropdown() {
                 case "part":
                 case "inventory":
                     if (data?.work_order_id) {
-                        return `/inventory/parts-requests?work_order=${data.work_order_id}`;
+                        return `/inventory/quotation-requests?tab=fulfillment&work_order=${data.work_order_id}`;
                     }
                     return `/inventory/${id}`;
                 case "subscription":

@@ -42,6 +42,7 @@ const workOrderSchema = z.object({
   ]),
   customer_concerns: z.string().optional(),
   job_type_code: z.string().min(1, "Job type is required"),
+  job_type_codes: z.array(z.string()).optional(),
   service_type: z.number().optional(),
   service_bundle: z.number().optional(),
 });
@@ -134,6 +135,7 @@ export default function EditWorkOrderPage() {
   });
 
   const jobTypeCode = watch("job_type_code");
+  const jobTypeCodes = watch("job_type_codes") || [jobTypeCode || "general_repairs"];
   const selectedJobType = useMemo<JobType | null>(() => {
     const jobTypes = jobTypesData?.results ?? [];
     return jobTypes.find((jt) => jt.code === jobTypeCode) ?? null;
@@ -280,6 +282,14 @@ export default function EditWorkOrderPage() {
         job_type_code:
           workOrder.job_type_detail?.code ??
           (workOrder.maintenance_type === "routine" ? "routine_maintenance" : "general_repairs"),
+        job_type_codes:
+          (workOrder.job_type_codes?.length
+            ? workOrder.job_type_codes
+            : workOrder.job_types_detail?.map((jt) => jt.code).filter(Boolean)) ||
+          [
+            workOrder.job_type_detail?.code ??
+              (workOrder.maintenance_type === "routine" ? "routine_maintenance" : "general_repairs"),
+          ],
         service_type: serviceTypeId,
         service_bundle: serviceBundleId,
       });
@@ -381,7 +391,14 @@ export default function EditWorkOrderPage() {
       setErrorMessage("Select a service package for this job type.");
       return;
     }
-    await updateMutation.mutateAsync(data);
+    const codes = data.job_type_codes?.length
+      ? data.job_type_codes
+      : [data.job_type_code || "general_repairs"];
+    await updateMutation.mutateAsync({
+      ...data,
+      job_type_code: codes[0],
+      job_type_codes: codes,
+    });
   };
 
   if (isLoading) {
@@ -660,10 +677,23 @@ export default function EditWorkOrderPage() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <JobTypeSelect
+                      multiple
                       value={jobTypeCode || "general_repairs"}
+                      values={jobTypeCodes}
                       onChange={(code, jobType) => {
                         setValue("job_type_code", code, { shouldValidate: true });
                         if (!jobTypeRequiresBundle(jobType)) {
+                          setValue("service_bundle", undefined);
+                          setValue("service_type", undefined);
+                        }
+                      }}
+                      onChangeMultiple={(codes, types) => {
+                        setValue("job_type_codes", codes, { shouldValidate: true });
+                        setValue("job_type_code", codes[0] || "general_repairs", {
+                          shouldValidate: true,
+                        });
+                        const primary = types[0] ?? null;
+                        if (!jobTypeRequiresBundle(primary)) {
                           setValue("service_bundle", undefined);
                           setValue("service_type", undefined);
                         }

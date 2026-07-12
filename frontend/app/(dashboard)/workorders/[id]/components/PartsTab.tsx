@@ -258,7 +258,7 @@ export default function WorkOrderPartsTab({
                             )}
                             {["draft", "pending", "po_created", "awaiting_stock"].includes(part.status) && (
                               <DropdownMenuItem asChild>
-                                <Link href={`/inventory/parts-requests?work_order=${workOrderId}`}>
+                                <Link href={`/inventory/quotation-requests?tab=fulfillment&work_order=${workOrderId}`}>
                                   <ExternalLink className="mr-2 h-4 w-4" />
                                   Review in Stores
                                 </Link>

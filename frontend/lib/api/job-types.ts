@@ -118,11 +118,15 @@ export function jobTypeRequiresBundle(jobType?: JobType | null): boolean {
 export function getJobTypeDisplayName(
   workOrder?: {
     job_type_detail?: JobType | null;
+    job_types_detail?: Array<{ name?: string; code?: string } | JobType> | null;
     job_type?: number | JobType | null;
     maintenance_type?: string | null;
   } | null
 ): string {
   if (!workOrder) return "General repair";
+  const multi = workOrder.job_types_detail?.map((jt) => jt.name).filter(Boolean) as string[] | undefined;
+  if (multi && multi.length > 1) return multi.join(", ");
+  if (multi && multi.length === 1) return multi[0];
   if (workOrder.job_type_detail?.name) return workOrder.job_type_detail.name;
   if (typeof workOrder.job_type === "object" && workOrder.job_type?.name) {
     return workOrder.job_type.name;

@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from .models import (
     WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart,
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto, RepeatVisitAlert,
-    JobType, WorkflowProfile,
+    JobType, WorkflowProfile, WorkOrderTechnicianAssignment,
 )
 
 
@@ -59,6 +59,13 @@ class TechnicianTimeLogInline(admin.TabularInline):
     readonly_fields = ['duration_hours', 'labor_cost']
 
 
+class WorkOrderTechnicianAssignmentInline(admin.TabularInline):
+    model = WorkOrderTechnicianAssignment
+    extra = 0
+    fields = ['technician', 'responsibility_notes', 'is_primary', 'assigned_at']
+    readonly_fields = ['assigned_at']
+
+
 @admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
     list_display = ['work_order_number', 'customer', 'vehicle', 'status_badge', 
@@ -73,7 +80,7 @@ class WorkOrderAdmin(admin.ModelAdmin):
     readonly_fields = ['work_order_number', 'created_at', 'updated_at', 'started_at', 
                        'completed_at', 'estimated_total', 'actual_total', 'is_overdue',
                        'days_in_shop', 'cost_variance', 'cost_variance_percentage']
-    filter_horizontal = ['assigned_technicians']
+    filter_horizontal = ['job_types']
     date_hierarchy = 'created_at'
     
     fieldsets = (
@@ -84,7 +91,10 @@ class WorkOrderAdmin(admin.ModelAdmin):
             'fields': ('customer', 'vehicle', 'odometer_in', 'odometer_out')
         }),
         ('Technician Assignment', {
-            'fields': ('primary_technician', 'assigned_technicians')
+            'fields': ('primary_technician',)
+        }),
+        ('Job Types', {
+            'fields': ('job_type', 'job_types')
         }),
         ('Customer Information', {
             'fields': ('customer_concerns', 'special_instructions')
@@ -130,7 +140,13 @@ class WorkOrderAdmin(admin.ModelAdmin):
         }),
     )
     
-    inlines = [ServiceTaskInline, WorkOrderPartInline, TechnicianTimeLogInline, WorkOrderNoteInline]
+    inlines = [
+        WorkOrderTechnicianAssignmentInline,
+        ServiceTaskInline,
+        WorkOrderPartInline,
+        TechnicianTimeLogInline,
+        WorkOrderNoteInline,
+    ]
     
     def status_badge(self, obj):
         colors = {

@@ -176,6 +176,7 @@ class WorkOrder(models.Model):
     )
     assigned_technicians = models.ManyToManyField(
         User,
+        through='WorkOrderTechnicianAssignment',
         related_name='assigned_work_orders',
         limit_choices_to={'role__in': ['technician', 'manager']},
         blank=True
@@ -412,7 +413,13 @@ class WorkOrder(models.Model):
         null=True,
         blank=True,
         related_name='work_orders',
-        help_text="Configurable job type (e.g. Brake Service, Routine Maintenance)",
+        help_text="Primary job type (drives billing defaults; also included in job_types)",
+    )
+    job_types = models.ManyToManyField(
+        JobType,
+        related_name='work_orders_multi',
+        blank=True,
+        help_text="All job types for this work order (workflow merges conservatively)",
     )
 
     BROUGHT_BY_TYPE_CHOICES = [
@@ -1235,6 +1242,56 @@ class WorkOrder(models.Model):
     def requires_technician_assignment_acceptance(self):
         return self.get_technician_assignment_gate_status() == 'pending'
 
+    def get_technician_assignment_blockers_for_work(self):
+        """
+        Human-readable blockers when assignment is not accepted.
+        Used for both diagnosis work and repair start.
+        """
+        errors = []
+        if self.requires_technician_assignment_acceptance():
+            errors.append(
+                "Technician must accept the assignment before starting diagnosis or repairs."
+            )
+        else:
+            gate_status = self.get_technician_assignment_gate_status()
+            if gate_status == 'rejected':
+                errors.append(
+                    "Technician assignment was rejected. Reassign a technician before continuing."
+                )
+            elif gate_status == 'released':
+                errors.append(
+                    "Technician assignment was released. Assign a technician before continuing."
+                )
+        return errors
+
+    def can_technician_perform_diagnosis(self, user=None):
+        """
+        Whether diagnosis work (start/continue) is allowed given assignment acceptance.
+        Service coordinators / managers / admins may prepare the diagnosis phase;
+        assigned technicians must accept first.
+        """
+        blockers = self.get_technician_assignment_blockers_for_work()
+        if not blockers:
+            return True, []
+
+        role = getattr(user, 'role', None) if user else None
+        # Coordinators/managers can open/prepare the phase, but assigned techs cannot work yet
+        if role in ('manager', 'admin', 'service_coordinator'):
+            if user and self.service_coordinator_id == getattr(user, 'id', None):
+                return True, []
+            if role in ('manager', 'admin'):
+                return True, []
+
+        if user and self.user_can_respond_to_technician_assignment(user):
+            # Assigned tech (or responder) — must accept first
+            return False, blockers
+
+        # No tech assigned yet — allow SC path to create diagnosis shell
+        if not self.has_technician_assigned():
+            return True, []
+
+        return False, blockers
+
     def user_can_respond_to_technician_assignment(self, user):
         if not user or not getattr(user, 'is_authenticated', False):
             return False
@@ -1630,18 +1687,7 @@ class WorkOrder(models.Model):
         if not self.primary_technician and not self.assigned_technicians.exists():
             errors.append("No technician assigned")
 
-        if self.requires_technician_assignment_acceptance():
-            errors.append("Technician must accept the assignment before starting work")
-        else:
-            gate_status = self.get_technician_assignment_gate_status()
-            if gate_status == 'rejected':
-                errors.append(
-                    "Technician assignment was rejected. Reassign a technician before starting work."
-                )
-            elif gate_status == 'released':
-                errors.append(
-                    "Technician assignment was released. Assign a technician before starting work."
-                )
+        errors.extend(self.get_technician_assignment_blockers_for_work())
         
         # Check if there are any executable tasks or recommendations ready to convert.
         has_tasks = self.tasks.filter(is_workflow_task=False).exists()
@@ -2088,8 +2134,40 @@ class WorkOrder(models.Model):
         
         unresolved_parts = self.parts.exclude(status__in=['ready', 'installed', 'returned'])
         return unresolved_parts.count() == 0
-    
-    
+
+
+class WorkOrderTechnicianAssignment(models.Model):
+    """Per-technician assignment on a work order, with optional responsibility notes."""
+
+    work_order = models.ForeignKey(
+        WorkOrder,
+        on_delete=models.CASCADE,
+        related_name='technician_assignments',
+    )
+    technician = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='work_order_technician_assignments',
+        limit_choices_to={'role__in': ['technician', 'manager']},
+    )
+    responsibility_notes = models.TextField(
+        blank=True,
+        help_text='What this technician is responsible for on this job',
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        help_text='Marks the primary technician for the work order team',
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('work_order', 'technician')
+        ordering = ['-is_primary', 'assigned_at']
+        verbose_name = 'Work Order Technician Assignment'
+        verbose_name_plural = 'Work Order Technician Assignments'
+
+    def __str__(self):
+        return f'{self.work_order_id} → {self.technician_id}'
 
 
 class ServiceTask(models.Model):

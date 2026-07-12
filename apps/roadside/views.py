@@ -160,12 +160,10 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         action = getattr(self, 'action', None)
         permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
         is_customer = getattr(self.request.user, 'role', None) == 'customer'
-        is_technician = getattr(self.request.user, 'is_technician', False)
         if action in ['list', 'retrieve']:
             if is_customer:
                 return self._customer_portal_permissions()
-            if is_technician:
-                return [p() for p in permission_classes]
+            # All staff (including technicians) need view_roadside; queryset scopes techs to assignments
             permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
         if action == 'dashboard_stats':
@@ -189,8 +187,10 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
             return [p() for p in permission_classes]
         elif action == 'my_assignments':
+            permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
         elif action in ['accept_assignment', 'reject_assignment']:
+            permission_classes.append(HasPermission('view_roadside'))
             return [p() for p in permission_classes]
         elif action in ['en_route', 'in_progress', 'arrive', 'complete', 'fail']:
              # Allow dispatchers OR the assigned technician (via object permission or get_queryset security)
@@ -198,8 +198,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
              if getattr(self.request.user, "role", None) == "customer":
                  permission_classes.append(HasAnyPermission(['manage_roadside'])) # Effectively blocks customers
                  return [p() for p in permission_classes]
+             permission_classes.append(HasAnyPermission([
+                 'view_roadside', 'manage_roadside', 'dispatch_roadside',
+             ]))
              return [p() for p in permission_classes]
         elif action in ['site_notes', 'site_photos']:
+             permission_classes.append(HasPermission('view_roadside'))
              return [p() for p in permission_classes]
         elif action in ['update', 'partial_update']:
              permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))

@@ -683,7 +683,7 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('delete_invoices')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('delete_invoices')]
-        return [IsAuthenticated(), IsModuleEnabled('billing')]
+        return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -863,7 +863,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('refund_payments')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
-        return [IsAuthenticated(), IsModuleEnabled('billing')]
+        return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
 
     serializer_class = PaymentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -2730,7 +2730,7 @@ class BillViewSet(viewsets.ModelViewSet):
 class BillPaymentViewSet(viewsets.ReadOnlyModelViewSet):
     """Vendor bill payment history."""
 
-    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_bills')]
     serializer_class = BillPaymentListSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['payment_method', 'payment_date']
@@ -2809,7 +2809,7 @@ class PayBillsBatchView(APIView):
 class VendorExpenseViewSet(viewsets.ModelViewSet):
     """Immediate vendor expenses (QBO Purchase / Expense)."""
 
-    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_bills')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'vendor', 'branch', 'payment_method']
     search_fields = ['expense_number', 'vendor__name', 'reference_number', 'notes']
@@ -2818,8 +2818,16 @@ class VendorExpenseViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'void']:
-            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
-        return super().get_permissions()
+            return [
+                IsAuthenticated(),
+                IsModuleEnabled('billing'),
+                HasAnyPermission(['edit_bills', 'manage_billing']),
+            ]
+        return [
+            IsAuthenticated(),
+            IsModuleEnabled('billing'),
+            HasAnyPermission(['view_bills', 'manage_billing']),
+        ]
 
     def get_queryset(self):
         qs = VendorExpense.objects.select_related(

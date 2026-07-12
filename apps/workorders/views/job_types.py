@@ -30,7 +30,10 @@ class JobTypeViewSet(viewsets.ModelViewSet):
         'default_service_bundle',
         'default_revenue_product',
     ).order_by('sort_order', 'name')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        IsAuthenticated,
+        HasAnyPermission(['view_workorders', 'view_own_workorders', 'manage_settings', 'manage_workorders']),
+    ]
     lookup_field = 'code'
     filterset_fields = ['category', 'is_active', 'allows_bundle', 'workflow_profile']
     search_fields = ['name', 'code', 'description']
@@ -50,8 +53,16 @@ class JobTypeViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy'):
-            return [IsAuthenticated(), HasAnyPermission(['manage_workorders'])]
-        return super().get_permissions()
+            return [IsAuthenticated(), HasPermission('manage_workorders')]
+        return [
+            IsAuthenticated(),
+            HasAnyPermission([
+                'view_workorders',
+                'view_own_workorders',
+                'manage_settings',
+                'manage_workorders',
+            ])(),
+        ]
 
     def perform_destroy(self, instance):
         if instance.is_predefined:

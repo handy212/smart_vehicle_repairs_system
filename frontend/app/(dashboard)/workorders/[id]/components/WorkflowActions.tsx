@@ -426,7 +426,17 @@ export default function WorkflowActions({
 
   // Start Diagnosis (Phase 1: Diagnosis) - Using new diagnosis system
   const startDiagnosisMutation = useMutation({
-    mutationFn: async (data?: { primary_technician?: number; assigned_technicians?: number[]; priority?: string }) => {
+    mutationFn: async (data?: {
+      primary_technician?: number;
+      assigned_technicians?: number[];
+      technician_assignments?: Array<{
+        technician: number;
+        responsibility_notes?: string;
+        is_primary?: boolean;
+      }>;
+      priority?: string;
+      task_assignments?: Array<{ task_id: number; assigned_to: number | null }>;
+    }) => {
       // Validate Service Coordinator is assigned before starting diagnosis
       if (!currentWorkOrder?.service_coordinator) {
         throw new Error('A Service Coordinator must be assigned before diagnosis can be carried out. Please assign a Service Coordinator during intake.');
@@ -463,14 +473,31 @@ export default function WorkflowActions({
       await workordersApi.startDiagnosis(workOrderId);
 
       // Update work order with additional info if provided
-      if (data && (data.primary_technician || data.assigned_technicians?.length || data.priority)) {
-
-        const updateData: any = {};
+      if (
+        data &&
+        (data.primary_technician ||
+          data.assigned_technicians?.length ||
+          data.technician_assignments?.length ||
+          data.priority)
+      ) {
+        const updateData: Record<string, unknown> = {};
         if (data.primary_technician) updateData.primary_technician = data.primary_technician;
         if (data.assigned_technicians?.length) updateData.assigned_technicians = data.assigned_technicians;
+        if (data.technician_assignments?.length) {
+          updateData.technician_assignments = data.technician_assignments;
+        }
         if (data.priority) updateData.priority = data.priority;
 
         await workordersApi.update(workOrderId, updateData);
+      }
+
+      if (data?.task_assignments?.length) {
+        const { workOrderTasksApi } = await import("@/lib/api/workorder-tasks");
+        await Promise.all(
+          data.task_assignments.map((row) =>
+            workOrderTasksApi.patch(row.task_id, { assigned_to: row.assigned_to })
+          )
+        );
       }
 
       return diagnosis;

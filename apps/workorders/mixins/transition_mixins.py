@@ -954,6 +954,54 @@ class WorkOrderStateTransitionMixin:
             
             # If Service Coordinator is provided, assign them and transition to assigned
             if service_coordinator_id:
+                from apps.accounts.models import User
+
+                try:
+                    coordinator = User.objects.get(pk=service_coordinator_id)
+                except User.DoesNotExist:
+                    return Response(
+                        {'error': 'Selected Service Coordinator was not found.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                if coordinator.role not in ('service_coordinator', 'manager'):
+                    return Response(
+                        {
+                            'error': (
+                                'Only users with role Service Coordinator or Manager '
+                                'can be assigned as Service Coordinator.'
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                if work_order.branch_id:
+                    if (
+                        coordinator.role == 'service_coordinator'
+                        and coordinator.branch_id != work_order.branch_id
+                    ):
+                        return Response(
+                            {
+                                'error': (
+                                    'Service Coordinator must belong to the same branch '
+                                    'as the work order.'
+                                )
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    if coordinator.role == 'manager' and not coordinator.has_branch_access(
+                        work_order.branch
+                    ):
+                        return Response(
+                            {
+                                'error': (
+                                    'Selected manager does not have access to this '
+                                    'work order branch.'
+                                )
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
                 work_order.service_coordinator_id = service_coordinator_id
                 work_order.save(update_fields=['service_coordinator'])
                 # Transition to assigned status

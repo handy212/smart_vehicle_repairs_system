@@ -7,7 +7,7 @@ export interface ServiceTask {
   description: string;
   detailed_notes?: string;
   sequence_order?: number;
-  assigned_to?: number | { id: number; first_name: string; last_name: string };
+  assigned_to?: number | { id: number; first_name: string; last_name: string } | null;
   assigned_to_name?: string;
   status: string;
   estimated_hours?: number;

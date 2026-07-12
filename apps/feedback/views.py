@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions, status
-from apps.accounts.permissions import IsModuleEnabled
+from apps.accounts.permissions import HasAnyPermission, IsModuleEnabled
 from rest_framework.response import Response
 from .models import Feedback
 from .serializers import FeedbackSerializer
@@ -11,11 +11,14 @@ class FeedbackViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        Allow anyone to submit feedback, but only admins/managers to list or retrieve.
+        Allow anyone to submit feedback, but only staff with settings/admin perms to list or manage.
         """
         if self.action == 'create':
             return [permissions.AllowAny()]
-        return [permissions.IsAuthenticated(), IsModuleEnabled('reports'), permissions.DjangoModelPermissions()]
+        return [
+            permissions.IsAuthenticated(),
+            HasAnyPermission(['view_settings', 'manage_settings', 'view_audit_logs'])(),
+        ]
 
     def create(self, request, *args, **kwargs):
         """

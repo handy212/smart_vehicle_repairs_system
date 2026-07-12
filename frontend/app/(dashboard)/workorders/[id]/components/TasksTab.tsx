@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
+import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,8 @@ interface TasksTabProps {
     branch?: number | { id: number; name?: string } | null;
     service_coordinator?: number | { id: number; first_name: string; last_name: string };
     service_coordinator_name?: string;
+    primary_technician?: number | { id: number } | null;
+    assigned_technicians_detail?: Array<{ id: number; name: string }>;
   };
 }
 
@@ -61,6 +64,39 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
   const [billingCategoryId, setBillingCategoryId] = useState<number | null>(null);
   const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
   const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
+
+  const { data: technicians } = useQuery({
+    queryKey: ["technicians", "task-reassign", branchId],
+    queryFn: () => adminApi.users.technicians(branchId ? { branch: branchId } : undefined),
+  });
+
+  const assigneeOptions = useMemo(() => {
+    const fromTeam = workOrder?.assigned_technicians_detail || [];
+    if (fromTeam.length > 0) {
+      return fromTeam.map((t) => ({ id: t.id, name: t.name }));
+    }
+    return (technicians || []).map((t) => ({
+      id: t.id,
+      name: t.full_name || `${t.first_name || ""} ${t.last_name || ""}`.trim() || `User ${t.id}`,
+    }));
+  }, [workOrder?.assigned_technicians_detail, technicians]);
+
+  const reassignTaskMutation = useMutation({
+    mutationFn: ({ taskId, assignedTo }: { taskId: number; assignedTo: number | null }) =>
+      workOrderTasksApi.patch(taskId, { assigned_to: assignedTo }),
+    onSuccess: () => {
+      onRefresh();
+      toast({ title: "Task assignee updated", variant: "success" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Reassign failed",
+        description: getUserFacingError(error, "Could not update task assignee."),
+        variant: "destructive",
+      });
+    },
+  });
+
   const routineSkipWorkflowPhases = new Set([
     "inspection",
     "intake",
@@ -296,9 +332,35 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
             {isWorkflow && task.workflow_phase === 'assigned' && (
               <User className="w-3 h-3 text-muted-foreground" />
             )}
-            <span className="text-sm">
-              {task.assigned_to_name || "-"}
-            </span>
+            {task.status === "completed" || task.status === "skipped" ? (
+              <span className="text-sm">{task.assigned_to_name || "-"}</span>
+            ) : (
+              <select
+                className="max-w-[10rem] rounded-md border border-border bg-muted px-1.5 py-1 text-xs text-foreground"
+                value={
+                  typeof task.assigned_to === "object" && task.assigned_to
+                    ? String(task.assigned_to.id)
+                    : typeof task.assigned_to === "number"
+                      ? String(task.assigned_to)
+                      : ""
+                }
+                disabled={reassignTaskMutation.isPending}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  reassignTaskMutation.mutate({
+                    taskId: task.id,
+                    assignedTo: val ? Number(val) : null,
+                  });
+                }}
+              >
+                <option value="">Unassigned</option>
+                {assigneeOptions.map((opt) => (
+                  <option key={opt.id} value={String(opt.id)}>
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </TableCell>
         <TableCell className="py-3">

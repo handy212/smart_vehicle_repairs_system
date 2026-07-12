@@ -2,7 +2,7 @@
 Frontend views for Reporting & Analytics
 """
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from apps.accounts.permissions import require_any_permission
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Sum, Count, Avg, Q, F
@@ -18,7 +18,7 @@ from apps.vehicles.models import Vehicle
 from apps.appointments.models import Appointment
 
 
-@login_required
+@require_any_permission('view_reports', 'view_all_reports')
 def report_dashboard(request):
     """Report center landing page"""
     # Get scheduled reports (if model exists)
@@ -33,7 +33,7 @@ def report_dashboard(request):
     return render(request, 'reporting/report_dashboard.html', context)
 
 
-@login_required
+@require_any_permission('view_financial_reports', 'view_sales_reports', 'view_reports', 'view_all_reports')
 def financial_report(request):
     """Financial analytics and revenue reports"""
     # Date range filter
@@ -132,7 +132,7 @@ def financial_report(request):
     return render(request, 'reporting/financial_report.html', context)
 
 
-@login_required
+@require_any_permission('view_service_reports', 'view_reports', 'view_all_reports')
 def operational_report(request):
     """Operational metrics and technician performance"""
     # Date range filter
@@ -189,7 +189,7 @@ def operational_report(request):
     return render(request, 'reporting/operational_report.html', context)
 
 
-@login_required
+@require_any_permission('view_inventory_reports', 'view_reports', 'view_all_reports')
 def inventory_report(request):
     """Inventory analytics"""
     parts = Part.objects.all()
@@ -218,7 +218,7 @@ def inventory_report(request):
     return render(request, 'reporting/inventory_report.html', context)
 
 
-@login_required
+@require_any_permission('view_customer_reports', 'view_reports', 'view_all_reports')
 def customer_report(request):
     """Customer analytics"""
     customers = Customer.objects.all()
@@ -241,7 +241,7 @@ def customer_report(request):
     return render(request, 'reporting/customer_report.html', context)
 
 
-@login_required
+@require_any_permission('view_reports', 'view_all_reports')
 def vehicle_report(request):
     """Vehicle analytics"""
     vehicles = Vehicle.objects.all()
@@ -262,14 +262,14 @@ def vehicle_report(request):
     return render(request, 'reporting/vehicle_report.html', context)
 
 
-@login_required
+@require_any_permission('generate_reports', 'view_reports', 'view_all_reports')
 def custom_report(request):
     """Custom report builder"""
     context = {}
     return render(request, 'reporting/custom_report.html', context)
 
 
-@login_required
+@require_any_permission('generate_reports', 'view_reports', 'view_all_reports')
 def generate_custom_report(request):
     """Generate custom report via AJAX"""
     if request.method != 'POST':
@@ -295,7 +295,7 @@ def generate_custom_report(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@require_any_permission('export_reports', 'generate_reports', 'view_all_reports')
 def email_report(request):
     """Email report to recipient"""
     if request.method != 'POST':
@@ -315,7 +315,7 @@ def email_report(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@require_any_permission('generate_reports', 'view_all_reports')
 def save_report(request):
     """Save report configuration"""
     if request.method != 'POST':
@@ -332,7 +332,7 @@ def save_report(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@require_any_permission('generate_reports', 'view_all_reports')
 def schedule_edit(request, pk):
     """Edit scheduled report"""
     # TODO: Implement schedule editing
@@ -340,7 +340,7 @@ def schedule_edit(request, pk):
     return redirect('reporting:report-dashboard')
 
 
-@login_required
+@require_any_permission('generate_reports', 'view_all_reports')
 def schedule_delete(request, pk):
     """Delete scheduled report"""
     # TODO: Implement schedule deletion

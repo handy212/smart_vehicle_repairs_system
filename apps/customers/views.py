@@ -56,7 +56,15 @@ class CustomerViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('grant_customer_portal_access')]
         if self.action == 'revoke_portal_access':
             return base + [HasPermission('revoke_customer_portal_access')]
-        return base
+        if self.action in (
+            'statement', 'statement_pdf', 'history', 'notes', 'search', 'active',
+            'dashboard_stats', 'check_email', 'workorders',
+        ):
+            return base + [HasPermission('view_customers')]
+        if self.action == 'add_note':
+            return base + [HasPermission('edit_customers')]
+        # Deny-by-default for unlisted custom actions
+        return base + [HasPermission('view_customers')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'customer_type', 'payment_terms', 'loyalty_tier']
     search_fields = [
@@ -888,7 +896,7 @@ class CustomerNoteViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_customers')]
         if self.action == 'destroy':
             return base + [HasPermission('delete_customers')]
-        return base
+        return base + [HasPermission('view_customers')]
     
     def get_queryset(self):
         return CustomerNote.objects.select_related('customer', 'created_by').all()
@@ -918,7 +926,7 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_customers')]
         if self.action == 'destroy':
             return base + [HasPermission('delete_customers')]
-        return base
+        return base + [HasPermission('view_customers')]
 
     def get_queryset(self):
         return CustomerContact.objects.filter(customer__user__is_active=True).select_related('customer')
@@ -942,7 +950,7 @@ class CustomerReminderViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_customers')]
         if self.action == 'destroy':
             return base + [HasPermission('delete_customers')]
-        return base
+        return base + [HasPermission('view_customers')]
 
     def get_queryset(self):
         return CustomerReminder.objects.select_related('customer', 'created_by').all()
@@ -972,7 +980,7 @@ class CustomerDocumentViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_customers')]
         if self.action == 'destroy':
             return base + [HasPermission('delete_customers')]
-        return base
+        return base + [HasPermission('view_customers')]
     
     def get_queryset(self):
         return CustomerDocument.objects.select_related('customer', 'uploaded_by').all()
@@ -999,7 +1007,7 @@ class CustomerContractViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_customers')]
         if self.action == 'destroy':
             return base + [HasPermission('delete_customers')]
-        return base
+        return base + [HasPermission('view_customers')]
     
     def get_queryset(self):
         return CustomerContract.objects.select_related('customer', 'created_by').all()

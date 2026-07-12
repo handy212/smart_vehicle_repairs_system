@@ -122,6 +122,14 @@ export const PERMISSIONS = {
   MANAGE_INVENTORY: "manage_inventory",
   EXPORT_INVENTORY: "export_inventory",
   IMPORT_INVENTORY: "import_inventory",
+  VIEW_INVENTORY_REPORTS: "view_inventory_reports",
+  ADJUST_INVENTORY: "adjust_inventory",
+  TRANSFER_INVENTORY: "transfer_inventory",
+  VIEW_LOW_STOCK_ALERTS: "view_low_stock_alerts",
+  VIEW_SUPPLIERS: "view_suppliers",
+  MANAGE_SUPPLIERS: "manage_suppliers",
+  EDIT_PURCHASE_ORDERS: "edit_purchase_orders",
+  RECEIVE_PARTS: "receive_parts",
 
   // Purchasing
   VIEW_PURCHASING: "view_purchasing",
@@ -130,12 +138,19 @@ export const PERMISSIONS = {
 
   // Billing
   VIEW_BILLING: "view_billing",
+  VIEW_OWN_INVOICES: "view_own_invoices",
   CREATE_INVOICES: "create_invoices",
   EDIT_INVOICES: "edit_invoices",
   PROCESS_PAYMENTS: "process_payments",
   CREATE_PAYMENTS: "create_payments",
+  VIEW_PAYMENT_HISTORY: "view_payment_history",
   PRINT_INVOICES: "print_invoices",
   EXPORT_BILLING: "export_billing",
+  CREATE_ESTIMATES: "create_estimates",
+  VIEW_BILLS: "view_bills",
+  CREATE_BILLS: "create_bills",
+  EDIT_BILLS: "edit_bills",
+  DELETE_BILLS: "delete_bills",
 
   // Accounting
   VIEW_ACCOUNTING: "view_accounting",
@@ -238,10 +253,11 @@ export const DASHBOARD_VIEW_PERMISSIONS = [
   PERMISSIONS.VIEW_ALL_REPORTS,
 ] as const;
 
-/** Stores Workbench (/inventory/quotation-requests) — view quotation queue. */
+/** Stores Workbench (/inventory/quotation-requests) — view quotation queue.
+ * Intentionally excludes bare view_inventory so technicians (parts browse only)
+ * do not see the stores workbench.
+ */
 export const STORES_QUOTATION_VIEW_PERMISSIONS = [
-  PERMISSIONS.VIEW_DIAGNOSIS,
-  PERMISSIONS.VIEW_INVENTORY,
   PERMISSIONS.MANAGE_INVENTORY,
   PERMISSIONS.APPROVE_PART_REQUESTS,
   PERMISSIONS.EDIT_ESTIMATES,
@@ -262,6 +278,55 @@ export const PARTS_REQUESTS_VIEW_PERMISSIONS = [
   PERMISSIONS.APPROVE_PART_REQUESTS,
   PERMISSIONS.MANAGE_INVENTORY,
   PERMISSIONS.REQUEST_PARTS,
+] as const;
+
+/** Purchase Orders list — procurement staff only. */
+export const PURCHASE_ORDERS_VIEW_PERMISSIONS = [
+  PERMISSIONS.CREATE_PURCHASE_ORDERS,
+  PERMISSIONS.EDIT_PURCHASE_ORDERS,
+  PERMISSIONS.APPROVE_PURCHASE_ORDERS,
+  PERMISSIONS.MANAGE_INVENTORY,
+  PERMISSIONS.VIEW_PURCHASING,
+] as const;
+
+/** Inventory transfers. */
+export const INVENTORY_TRANSFERS_VIEW_PERMISSIONS = [
+  PERMISSIONS.TRANSFER_INVENTORY,
+  PERMISSIONS.MANAGE_INVENTORY,
+] as const;
+
+/** Physical counts / stocktakes. */
+export const PHYSICAL_COUNTS_VIEW_PERMISSIONS = [
+  PERMISSIONS.ADJUST_INVENTORY,
+  PERMISSIONS.MANAGE_INVENTORY,
+] as const;
+
+/** Inventory reports (compliance, standard, GL, reorder). */
+export const INVENTORY_REPORTS_VIEW_PERMISSIONS = [
+  PERMISSIONS.VIEW_INVENTORY_REPORTS,
+  PERMISSIONS.MANAGE_INVENTORY,
+] as const;
+
+/** Accounts payable / vendor billing area. */
+export const BILLING_PAYABLES_VIEW_PERMISSIONS = [
+  PERMISSIONS.VIEW_BILLS,
+  PERMISSIONS.CREATE_BILLS,
+  PERMISSIONS.EDIT_BILLS,
+  PERMISSIONS.MANAGE_BILLING,
+] as const;
+
+/** Any billing area entry (AR or AP). */
+export const BILLING_AREA_PERMISSIONS = [
+  PERMISSIONS.VIEW_BILLING,
+  PERMISSIONS.VIEW_OWN_INVOICES,
+  PERMISSIONS.CREATE_INVOICES,
+  PERMISSIONS.CREATE_ESTIMATES,
+  PERMISSIONS.EDIT_ESTIMATES,
+  PERMISSIONS.APPROVE_ESTIMATES,
+  PERMISSIONS.PROCESS_PAYMENTS,
+  PERMISSIONS.VIEW_PAYMENT_HISTORY,
+  PERMISSIONS.MANAGE_BILLING,
+  ...BILLING_PAYABLES_VIEW_PERMISSIONS,
 ] as const;
 
 /** Super-admin role still used only for module bypass; capabilities come from permissions list. */

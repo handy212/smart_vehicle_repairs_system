@@ -13,7 +13,80 @@ from .models import (
 )
 from .job_type_serializers import JobTypeListSerializer
 from .job_types import JobType
-from .workflow_profile_service import resolve_job_type_for_create, apply_job_type_on_create
+from .workflow_profile_service import (
+    resolve_job_type_for_create,
+    resolve_job_types_for_create,
+    apply_job_type_on_create,
+)
+
+
+def sync_technician_assignments(
+    work_order,
+    *,
+    assigned_technicians=None,
+    technician_assignments=None,
+    primary_technician=None,
+):
+    """
+    Sync WorkOrderTechnicianAssignment rows from either a plain ID list
+    or nested technician_assignments with responsibility notes.
+    """
+    from .models import WorkOrderTechnicianAssignment
+    from apps.accounts.models import User
+
+    primary_id = getattr(primary_technician, 'id', primary_technician)
+
+    if technician_assignments is not None:
+        desired = []
+        for row in technician_assignments:
+            tech_id = row.get('technician') if isinstance(row, dict) else None
+            if tech_id is None:
+                continue
+            tech_id = getattr(tech_id, 'id', tech_id)
+            desired.append({
+                'technician_id': int(tech_id),
+                'responsibility_notes': (row.get('responsibility_notes') or '').strip(),
+                'is_primary': bool(row.get('is_primary')) or (primary_id and int(tech_id) == int(primary_id)),
+            })
+        # Ensure primary is included
+        if primary_id and not any(d['technician_id'] == int(primary_id) for d in desired):
+            desired.insert(0, {
+                'technician_id': int(primary_id),
+                'responsibility_notes': '',
+                'is_primary': True,
+            })
+        keep_ids = {d['technician_id'] for d in desired}
+        work_order.technician_assignments.exclude(technician_id__in=keep_ids).delete()
+        for d in desired:
+            WorkOrderTechnicianAssignment.objects.update_or_create(
+                work_order=work_order,
+                technician_id=d['technician_id'],
+                defaults={
+                    'responsibility_notes': d['responsibility_notes'],
+                    'is_primary': d['is_primary'],
+                },
+            )
+        return
+
+    if assigned_technicians is None:
+        return
+
+    tech_ids = []
+    for tech in assigned_technicians:
+        tech_ids.append(getattr(tech, 'id', tech))
+    if primary_id and int(primary_id) not in [int(t) for t in tech_ids]:
+        tech_ids.insert(0, int(primary_id))
+
+    keep_ids = {int(t) for t in tech_ids}
+    work_order.technician_assignments.exclude(technician_id__in=keep_ids).delete()
+    for tid in tech_ids:
+        WorkOrderTechnicianAssignment.objects.update_or_create(
+            work_order=work_order,
+            technician_id=int(tid),
+            defaults={
+                'is_primary': bool(primary_id and int(tid) == int(primary_id)),
+            },
+        )
 from django.contrib.auth import get_user_model
 from apps.customers.serializers import CustomerListSerializer
 from apps.vehicles.serializers import VehicleListSerializer
@@ -313,6 +386,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     current_quote_stage = serializers.SerializerMethodField()
     current_quote_stage_display = serializers.SerializerMethodField()
     job_type_detail = JobTypeListSerializer(source='job_type', read_only=True)
+    job_types_detail = JobTypeListSerializer(source='job_types', many=True, read_only=True)
+    job_type_codes = serializers.SerializerMethodField()
     workflow_profile_code = serializers.SerializerMethodField()
     technician_assignment_status_display = serializers.SerializerMethodField()
     requires_assignment_acceptance = serializers.SerializerMethodField()
@@ -349,6 +424,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'is_customer_waiting', 'is_warranty_rework', 'related_work_order',
             'related_work_order_detail', 'rework_work_orders', 'warranty_reason',
             'maintenance_type', 'service_type', 'service_bundle', 'job_type', 'job_type_detail',
+            'job_types', 'job_types_detail', 'job_type_codes',
             'workflow_profile_code',
             'is_overdue', 'days_in_shop', 'is_approved',
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
@@ -525,14 +601,31 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_assigned_technicians_detail(self, obj):
-        return [
-            {
+        primary_id = obj.primary_technician_id
+        assignments = {
+            a.technician_id: a
+            for a in obj.technician_assignments.select_related('technician').all()
+        }
+        result = []
+        for tech in obj.assigned_technicians.all():
+            assignment = assignments.get(tech.id)
+            result.append({
                 'id': tech.id,
-                'name': f"{tech.first_name} {tech.last_name}",
-                'email': tech.email
-            }
-            for tech in obj.assigned_technicians.all()
-        ]
+                'name': f"{tech.first_name} {tech.last_name}".strip() or tech.email,
+                'email': tech.email,
+                'responsibility_notes': assignment.responsibility_notes if assignment else '',
+                'is_primary': bool(
+                    (assignment and assignment.is_primary) or (primary_id and tech.id == primary_id)
+                ),
+            })
+        return result
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_job_type_codes(self, obj):
+        codes = list(obj.job_types.values_list('code', flat=True))
+        if not codes and obj.job_type_id:
+            return [obj.job_type.code]
+        return codes
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_created_by_name(self, obj):
@@ -573,7 +666,19 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
     job_type_code = serializers.SlugField(
         write_only=True,
         required=False,
-        help_text='Job type code (e.g. brake_service). Preferred over legacy maintenance_type.',
+        help_text='Primary job type code (e.g. brake_service). Preferred over legacy maintenance_type.',
+    )
+    job_type_codes = serializers.ListField(
+        child=serializers.SlugField(),
+        write_only=True,
+        required=False,
+        help_text='All job type codes for this work order (multi-select). First/primary used when job_type_code omitted.',
+    )
+    technician_assignments = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+        help_text='Optional [{technician, responsibility_notes, is_primary}] for team assignment with notes.',
     )
     
     class Meta:
@@ -585,7 +690,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'brought_by_type', 'brought_by_contact', 'brought_by_name',
             'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'service_coordinator',
-            'primary_technician', 'assigned_technicians',
+            'primary_technician', 'assigned_technicians', 'technician_assignments',
             'estimated_completion',
             'customer_concerns', 'special_instructions',
             'estimated_labor_hours', 'estimated_labor_cost',
@@ -595,7 +700,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'is_customer_waiting', 'quality_check_required',
             'is_warranty_rework', 'related_work_order', 'warranty_reason',
             'maintenance_type', 'service_type', 'service_bundle',
-            'job_type', 'job_type_code',
+            'job_type', 'job_type_code', 'job_type_codes',
         ]
     
     def validate(self, data):
@@ -764,29 +869,34 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                     or 'Business Contact'
                 )
 
-        job_type = resolve_job_type_for_create(
+        job_type_codes = self.initial_data.get('job_type_codes')
+        primary, resolved_types = resolve_job_types_for_create(
+            job_type_codes=job_type_codes,
             job_type=data.get('job_type'),
             job_type_code=self.initial_data.get('job_type_code'),
             maintenance_type=data.get('maintenance_type'),
         )
-        if job_type is None:
+        if primary is None:
             raise serializers.ValidationError({
                 'job_type': 'A valid job type is required. Run seed_job_types or choose an active job type.',
             })
-        data['job_type'] = job_type
+        data['job_type'] = primary
+        self.context['_resolved_job_types'] = resolved_types
 
-        if job_type.allows_bundle:
+        # Bundle required when effective profile needs it (all selected types)
+        from .workflow_profile_service import _merge_profiles
+        profiles = [jt.workflow_profile for jt in resolved_types if jt.workflow_profile_id]
+        effective = _merge_profiles(profiles) if profiles else None
+        if effective and effective.apply_service_bundle_on_create:
             if not data.get('service_bundle') and not data.get('service_type'):
-                if job_type.workflow_profile.apply_service_bundle_on_create:
-                    raise serializers.ValidationError({
-                        'service_bundle': 'A service package is required for this job type.',
-                    })
-        elif data.get('service_bundle') or data.get('service_type'):
-            if job_type.code != 'routine_maintenance':
-                pass  # allow optional service_type link for scheduling on repair jobs
+                raise serializers.ValidationError({
+                    'service_bundle': 'A service package is required for this job type.',
+                })
 
-        # Legacy maintenance_type for backwards-compatible clients
-        if job_type.code == 'routine_maintenance' or job_type.workflow_profile.code == 'routine_fast_track':
+        if (
+            primary.code == 'routine_maintenance'
+            or (effective and effective.code == 'routine_fast_track' and effective.allows_fast_track_to_approved)
+        ):
             data['maintenance_type'] = 'routine'
         else:
             data['maintenance_type'] = data.get('maintenance_type') or 'general'
@@ -813,8 +923,10 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        # Extract many-to-many field
+        # Extract many-to-many / nested fields
         assigned_technicians = validated_data.pop('assigned_technicians', [])
+        technician_assignments = validated_data.pop('technician_assignments', None)
+        validated_data.pop('job_type_codes', None)
         
         # Extract repeat visit related fields
         is_warranty_rework = validated_data.pop('is_warranty_rework', False)
@@ -845,9 +957,13 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         validated_data.pop('job_type_code', None)
         work_order = WorkOrder.objects.create(**validated_data)
         
-        # Add assigned technicians
-        if assigned_technicians:
-            work_order.assigned_technicians.set(assigned_technicians)
+        # Add assigned technicians (with optional responsibility notes)
+        sync_technician_assignments(
+            work_order,
+            assigned_technicians=assigned_technicians,
+            technician_assignments=technician_assignments,
+            primary_technician=validated_data.get('primary_technician'),
+        )
         
         # Create RepeatVisitAlert if matches were found
         repeat_visit_matches = self.context.get('repeat_visit_matches', [])
@@ -898,11 +1014,13 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             except WorkOrder.DoesNotExist:
                 pass  # Related work order not found, skip alert creation
         
-        # Apply job type profile (bundle + fast-track)
+        # Apply job type profile (bundle + fast-track) + multi job types
+        resolved_types = self.context.get('_resolved_job_types') or ([job_type] if job_type else [])
         apply_job_type_on_create(
             work_order,
             job_type,
             user=request.user if request and request.user.is_authenticated else None,
+            job_types=resolved_types,
         )
         work_order.refresh_from_db()
         
@@ -913,13 +1031,23 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
     """Update work order"""
 
     job_type_code = serializers.SlugField(write_only=True, required=False)
+    job_type_codes = serializers.ListField(
+        child=serializers.SlugField(),
+        write_only=True,
+        required=False,
+    )
+    technician_assignments = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+    )
     
     class Meta:
         model = WorkOrder
         fields = [
             'status', 'priority',
             'service_coordinator',
-            'primary_technician', 'assigned_technicians',
+            'primary_technician', 'assigned_technicians', 'technician_assignments',
             'brought_by_type', 'brought_by_contact', 'brought_by_name',
             'brought_by_phone', 'brought_by_email', 'brought_by_relationship',
             'started_at', 'completed_at', 'estimated_completion',
@@ -932,7 +1060,8 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'quality_check_required', 'quality_check_completed',
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'is_customer_waiting',
-            'maintenance_type', 'service_type', 'service_bundle', 'job_type', 'job_type_code',
+            'maintenance_type', 'service_type', 'service_bundle',
+            'job_type', 'job_type_code', 'job_type_codes',
         ]
 
     def _validate_branch_technician(self, technician, work_order, field_name):
@@ -1002,16 +1131,25 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         if service_coordinator:
             self._validate_branch_service_coordinator(service_coordinator, work_order)
 
+        job_type_codes = data.pop('job_type_codes', None)
+        if job_type_codes is None:
+            job_type_codes = self.initial_data.get('job_type_codes')
+
         job_type_code = data.pop('job_type_code', None)
         if job_type_code is None:
             job_type_code = self.initial_data.get('job_type_code')
-        if job_type_code:
-            job_type = resolve_job_type_for_create(job_type_code=job_type_code)
-            if job_type is None:
+
+        if job_type_codes or job_type_code:
+            primary, resolved_types = resolve_job_types_for_create(
+                job_type_codes=job_type_codes,
+                job_type_code=job_type_code,
+                job_type=data.get('job_type'),
+            )
+            if primary is None:
                 raise serializers.ValidationError({
-                    'job_type_code': f'Unknown or inactive job type: {job_type_code}',
+                    'job_type_code': f'Unknown or inactive job type: {job_type_code or job_type_codes}',
                 })
-            if work_order and work_order.job_type_id and job_type.pk != work_order.job_type_id:
+            if work_order and work_order.job_type_id and primary.pk != work_order.job_type_id:
                 from .workflow_profile_service import JOB_TYPE_CHANGE_ALLOWED_STATUSES
                 if work_order.status not in JOB_TYPE_CHANGE_ALLOWED_STATUSES:
                     raise serializers.ValidationError({
@@ -1020,7 +1158,8 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
                             f'Current status: {work_order.get_status_display()}.'
                         ),
                     })
-            data['job_type'] = job_type
+            data['job_type'] = primary
+            self.context['_resolved_job_types'] = resolved_types
 
         incoming_job_type = data.get('job_type')
         if (
@@ -1029,6 +1168,7 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             and work_order.job_type_id
             and incoming_job_type.pk != work_order.job_type_id
             and not job_type_code
+            and not job_type_codes
         ):
             from .workflow_profile_service import JOB_TYPE_CHANGE_ALLOWED_STATUSES
             if work_order.status not in JOB_TYPE_CHANGE_ALLOWED_STATUSES:
@@ -1061,6 +1201,8 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         # Extract status if it's being updated
         new_status = validated_data.pop('status', None)
         assigned_technicians = validated_data.pop('assigned_technicians', None)
+        technician_assignments = validated_data.pop('technician_assignments', None)
+        validated_data.pop('job_type_codes', None)
         old_primary_technician_id = instance.primary_technician_id
         old_assigned_ids = set(instance.assigned_technicians.values_list('id', flat=True))
         if assigned_technicians is not None:
@@ -1088,30 +1230,49 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        if assigned_technicians is not None:
-            instance.assigned_technicians.set(assigned_technicians)
+        if technician_assignments is not None or assigned_technicians is not None:
+            sync_technician_assignments(
+                instance,
+                assigned_technicians=assigned_technicians,
+                technician_assignments=technician_assignments,
+                primary_technician=validated_data.get('primary_technician', instance.primary_technician),
+            )
 
+        resolved_types = self.context.get('_resolved_job_types')
         if instance.job_type_id and instance.job_type_id != old_job_type_id:
             user = self.context.get('request').user if self.context.get('request') else None
             if old_status in ('draft', 'inspection'):
-                apply_job_type_on_create(instance, instance.job_type, user=user)
+                apply_job_type_on_create(
+                    instance,
+                    instance.job_type,
+                    user=user,
+                    job_types=resolved_types,
+                )
             else:
                 instance.job_type.apply_defaults_to_work_order(instance, overwrite=True)
+                if resolved_types:
+                    instance.job_types.set(resolved_types)
                 from .workflow_profile_service import sync_legacy_maintenance_type
                 instance.maintenance_type = sync_legacy_maintenance_type(instance)
-                instance.save(update_fields=['maintenance_type', 'is_warranty', 'is_insurance_claim',
-                                             'requires_inspection', 'requires_diagnosis', 'requires_approval',
-                                             'quality_check_required'])
+                instance.save(update_fields=[
+                    'maintenance_type', 'is_warranty', 'is_insurance_claim',
+                    'requires_approval', 'quality_check_required',
+                ])
+        elif resolved_types is not None:
+            instance.job_types.set(resolved_types)
 
         new_primary_id = instance.primary_technician_id
         new_assigned_ids = (
             set(instance.assigned_technicians.values_list('id', flat=True))
-            if assigned_technicians is not None
+            if (assigned_technicians is not None or technician_assignments is not None)
             else old_assigned_ids
         )
         technician_assignment_changed = (
             ('primary_technician' in validated_data and new_primary_id != old_primary_technician_id)
-            or (assigned_technicians is not None and new_assigned_ids != old_assigned_ids)
+            or (
+                (assigned_technicians is not None or technician_assignments is not None)
+                and new_assigned_ids != old_assigned_ids
+            )
         )
         if technician_assignment_changed:
             if new_primary_id or new_assigned_ids:
@@ -1354,6 +1515,8 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
     purchase_order_number = serializers.SerializerMethodField()
     work_order_status = serializers.CharField(source='work_order.status', read_only=True)
     work_order_is_approved = serializers.BooleanField(source='work_order.is_approved', read_only=True)
+    work_order_quote_stage = serializers.SerializerMethodField()
+    work_order_quote_stage_display = serializers.SerializerMethodField()
     
     work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
     
@@ -1366,6 +1529,14 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
         if obj.work_order.vehicle:
             return f"{obj.work_order.vehicle.year} {obj.work_order.vehicle.make} {obj.work_order.vehicle.model}"
         return "Unknown Vehicle"
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_work_order_quote_stage(self, obj):
+        return obj.work_order.get_current_quote_stage()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_work_order_quote_stage_display(self, obj):
+        return obj.work_order.get_current_quote_stage_display()
     
     @extend_schema_field(inline_serializer(
         name='InventoryStatus',

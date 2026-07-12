@@ -198,9 +198,9 @@ def delete_staff_member(profile):
 class EmployeeProfileViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
-        if self.action in ['my_profile', 'org_chart', 'summary']:
-            pass
-        elif self.action in ['list', 'retrieve']:
+        if self.action == 'my_profile':
+            pass  # authenticated HR-module users may view own profile
+        elif self.action in ['org_chart', 'summary', 'list', 'retrieve']:
             permission_classes.append(HasPermission('view_staff'))
         else:
             permission_classes.append(HasPermission('manage_staff'))

@@ -319,7 +319,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             return base_permissions + [HasPermission('perform_inspections')]
         elif self.action in ['send_to_customer', 'pdf', 'print', 'by_vehicle', 'recent', 'statistics']:
             return base_permissions + [HasPermission('view_inspections')]
-        return base_permissions
+        return base_permissions + [HasPermission('view_inspections')]
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'overall_result', 'vehicle', 'work_order', 'template', 'performed_by']
@@ -328,7 +328,9 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     ordering = ['-inspection_date']
     
     def get_queryset(self):
-        """Filter inspections by active branch from session"""
+        """Filter inspections by active branch; technicians only see related assigned jobs."""
+        from django.db.models import Q
+
         queryset = super().get_queryset()
         
         # If user is a customer, only show inspections for their vehicles
@@ -339,12 +341,23 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
-        return filter_queryset_for_user_branches(
+        queryset = filter_queryset_for_user_branches(
             queryset, 
             self.request.user, 
             request=self.request, 
             use_active_branch=not show_all
         )
+
+        if getattr(user, 'role', None) == 'technician':
+            queryset = queryset.filter(
+                Q(work_order__primary_technician=user)
+                | Q(work_order__assigned_technicians=user)
+                | Q(work_order__service_coordinator=user)
+                | Q(work_order__created_by=user)
+                | Q(performed_by=user)
+            ).distinct()
+
+        return queryset
     
     def create(self, request, *args, **kwargs):
         """Create inspection and return with full details including ID"""
@@ -973,7 +986,9 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_inspections')]
         if self.action == 'destroy':
             return base + [HasPermission('delete_inspections')]
-        return base
+        if self.action in ('critical', 'needs_attention'):
+            return base + [HasPermission('view_inspections')]
+        return base + [HasPermission('view_inspections')]
 
     def get_queryset(self):
         """Filter results by customer ownership or active/accessible branch."""

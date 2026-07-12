@@ -30,6 +30,18 @@ export function isDiagnosisPausedWorkOrder(workOrder?: WorkOrderLike | null): bo
 }
 
 function getDiagnosisLifecycleLabel(workOrder?: WorkOrderLike | null): string {
+  const quoteStage = workOrder?.current_quote_stage;
+  // Overlay live stores/customer quote stage while diagnosis is still open
+  if (quoteStage === "waiting_for_stores_quotation") {
+    return "Diagnosis | Waiting Quote";
+  }
+  if (quoteStage === "waiting_for_customer_approval") {
+    return "Diagnosis | Quote Ready";
+  }
+  if (quoteStage === "quotation_ready") {
+    return "Diagnosis | Quote Ready";
+  }
+
   switch (workOrder?.diagnosis_status) {
     case "in_progress":
       return "Diagnosis | In Progress";
@@ -220,9 +232,28 @@ export function getWorkOrderStagePresentation(
   }
 
   if (workflowStatus === "awaiting_approval") {
+    if (workOrder?.current_quote_stage === "waiting_for_stores_quotation") {
+      return { workflowStatus, label: "Diagnosis | Waiting Quote" };
+    }
+    if (workOrder?.current_quote_stage === "waiting_for_customer_approval") {
+      return { workflowStatus, label: "Diagnosis | Awaiting Approval" };
+    }
     return {
       workflowStatus,
       label: "Diagnosis | Awaiting Approval",
+    };
+  }
+
+  if (
+    workflowStatus === "diagnosis" &&
+    workOrder?.current_quote_stage_display &&
+    ["waiting_for_stores_quotation", "waiting_for_customer_approval", "quotation_ready"].includes(
+      workOrder.current_quote_stage || ""
+    )
+  ) {
+    return {
+      workflowStatus,
+      label: getDiagnosisLifecycleLabel(workOrder),
     };
   }
 

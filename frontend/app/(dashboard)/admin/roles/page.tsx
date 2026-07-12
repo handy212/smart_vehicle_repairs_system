@@ -30,10 +30,15 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   users: "User Management",
   customers: "Customer Management",
   vehicles: "Vehicle Management",
+  roadside: "Roadside Assistance",
   appointments: "Appointments",
   workorders: "Work Orders",
   inventory: "Inventory",
   billing: "Billing & Payments",
+  subscriptions: "Subscriptions",
+  accounting: "Accounting",
+  fixed_assets: "Fixed Assets",
+  hr: "Human Resources",
   reports: "Reports",
   settings: "Settings",
   system: "System Administration",
@@ -41,6 +46,7 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   diagnosis: "Diagnosis",
   inspections: "Inspections",
   notifications: "Notifications",
+  gatepass: "Gate Passes",
 };
 
 export default function RolesPage() {

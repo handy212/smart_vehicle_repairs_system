@@ -502,6 +502,21 @@ class EstimateActionMixin:
             DiagnosisViewSet._sync_recommendation_costs_from_quote_estimate(recommendation)
             recommendation.mark_quoted(quoted_by=request.user)
 
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.stores_quotation_ready(
+                work_order,
+                quoted_by=request.user,
+                recommendations_count=recommendations.count(),
+                estimate=estimate,
+                diagnosis_id=diagnosis.id,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to notify staff after estimate mark-quoted: %s", e, exc_info=True
+            )
+
         estimate.refresh_from_db()
         work_order.refresh_from_db()
         return Response({

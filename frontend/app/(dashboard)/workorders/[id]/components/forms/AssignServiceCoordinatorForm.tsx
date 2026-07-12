@@ -29,6 +29,13 @@ export function AssignServiceCoordinatorForm({
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const { toast } = useToast();
 
+    const branchId =
+        typeof workOrder?.branch === "object" && workOrder?.branch
+            ? workOrder.branch.id
+            : typeof workOrder?.branch === "number"
+              ? workOrder.branch
+              : undefined;
+
     const handleGenerateAI = async () => {
         if (!workOrder?.id) return;
 
@@ -54,8 +61,8 @@ export function AssignServiceCoordinatorForm({
     };
 
     const { data: serviceCoordinators } = useQuery({
-        queryKey: ["service-coordinators"],
-        queryFn: () => adminApi.users.serviceCoordinators(),
+        queryKey: ["service-coordinators", branchId],
+        queryFn: () => adminApi.users.serviceCoordinators(branchId ? { branch: branchId } : undefined),
     });
 
     const serviceCoordinatorsList = serviceCoordinators || [];
@@ -88,14 +95,22 @@ export function AssignServiceCoordinatorForm({
                             {serviceCoordinatorsList.map((coord: any) => (
                                 <option key={coord.id} value={String(coord.id)}>
                                     {coord.full_name || `${coord.first_name || ""} ${coord.last_name || ""}`.trim() || `User ${coord.id}`}
+                                    {coord.branch_name ? ` — ${coord.branch_name}` : ""}
                                 </option>
                             ))}
                         </select>
                         {serviceCoordinatorsList.length === 0 && (
                             <p className="text-xs text-muted-foreground mt-1">
-                                No service coordinators available. Please ensure there are users with the Service Coordinator role.
+                                {branchId
+                                    ? "No service coordinators available for this work order branch."
+                                    : "No service coordinators available. Please ensure there are users with the Service Coordinator role."}
                             </p>
                         )}
+                        {branchId ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Only coordinators for this work order&apos;s branch are listed.
+                            </p>
+                        ) : null}
                     </div>
 
                     <div>
