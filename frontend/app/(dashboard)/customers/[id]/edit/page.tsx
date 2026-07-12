@@ -155,9 +155,9 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
     status: customer.status as any || "active",
     
     service_address: customer.service_address || "",
+    service_region: customer.service_region || "",
     service_city: customer.service_city || "",
-    service_state: customer.service_state || "",
-    service_zip_code: customer.service_zip_code || "",
+    service_area: customer.service_area || "",
     preferred_contact_method: customer.preferred_contact_method as any || "email",
     notes: customer.notes || "",
   };

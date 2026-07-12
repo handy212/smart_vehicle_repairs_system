@@ -61,7 +61,7 @@
             {% endif %}
             {% if branch.city %}
             <div>
-                {{ branch.city }}{% if branch.state %}, {{ branch.state }}{% endif %} {{ branch.zip_code }}
+                {{ branch.city }}{% if branch.area %}, {{ branch.area }}{% endif %}{% if branch.region %}, {{ branch.region }}{% endif %}
             </div>
             {% endif %}
             {% if branch.phone %}

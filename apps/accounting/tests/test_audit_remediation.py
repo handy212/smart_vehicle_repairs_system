@@ -33,7 +33,7 @@ class Wave1RemediationTests(TestCase):
             phone='555-1000',
             address='1 Alpha St',
             city='Alpha',
-            state='AL',
+            region='AL',
             zip_code='10001',
             created_by=self.user,
         )
@@ -43,7 +43,7 @@ class Wave1RemediationTests(TestCase):
             phone='555-2000',
             address='2 Beta St',
             city='Beta',
-            state='BE',
+            region='BE',
             zip_code='20002',
             created_by=self.user,
         )

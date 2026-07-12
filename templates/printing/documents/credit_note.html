@@ -9,8 +9,6 @@
 {% block document_meta %}
 <div>Date: {{ document.credit_note_date|date:"F d, Y" }}</div>
 <div>Reference: {{ document.invoice.invoice_number|default:"—" }}</div>
-<div>Status: <span
-        class="font-bold uppercase {% if document.status == 'applied' %}text-success{% elif document.status == 'cancelled' %}text-danger{% endif %}">{{ document.get_status_display }}</span></div>
 {% endblock %}
 
 {% block content %}
@@ -108,13 +106,6 @@
     <div class="clearfix"></div>
 </div>
 
-<!-- Notes & Comments -->
-{% if document.internal_notes %}
-<div class="mb-8 p-3 bg-gray-50 rounded italic text-xs text-gray-500">
-    <strong>Admin Notes:</strong> {{ document.internal_notes }}
-</div>
-{% endif %}
-
 <!-- Signatures -->
 <div class="grid-2-col mt-12 pt-8" style="page-break-inside: avoid;">
     <div class="col-1-2 pr-4">
@@ -142,4 +133,10 @@
     This credit note is for adjustment of previous billing and may be applied against outstanding balances or future
     invoices as per company policy.
 </div>
+{% if invoice_terms_and_conditions %}
+<div class="notes-box document-terms mt-4 avoid-break">
+    <div class="document-terms-title">Terms &amp; Conditions</div>
+    <div class="document-terms-body">{{ invoice_terms_and_conditions|linebreaks }}</div>
+</div>
+{% endif %}
 {% endblock %}

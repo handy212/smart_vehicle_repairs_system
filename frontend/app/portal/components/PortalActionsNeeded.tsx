@@ -37,7 +37,11 @@ export function PortalActionsNeeded({ actions, className }: PortalActionsNeededP
   const { formatCurrency } = useCurrency();
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => portalApi.approveEstimate(id, { notes: "Approved from portal home" }),
+    mutationFn: (id: number) =>
+      portalApi.approveEstimate(id, {
+        notes: "Approved from portal home",
+        accepted_terms: true,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["portal", "estimates"] });
@@ -51,10 +55,7 @@ export function PortalActionsNeeded({ actions, className }: PortalActionsNeededP
   if (!actions.length) return null;
 
   const handlePrimary = (action: PortalActionNeeded) => {
-    if (action.type === "approve_estimate") {
-      approveMutation.mutate(action.id);
-      return;
-    }
+    // Always open the detail page so Terms & Conditions can be reviewed/accepted.
     router.push(action.href);
   };
 

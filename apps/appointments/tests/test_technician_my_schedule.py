@@ -52,7 +52,7 @@ def appointment_for_technician(technician_user):
         phone="0244000000",
         address="123 Schedule St",
         city="Accra",
-        state="Greater Accra",
+        region="Greater Accra",
         zip_code="00233",
         country="Ghana",
         is_active=True,

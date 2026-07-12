@@ -5,6 +5,24 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import User
+from .terms_models import TermsAcceptance
+
+
+@admin.register(TermsAcceptance)
+class TermsAcceptanceAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'document_type', 'customer', 'acceptance_channel',
+        'accepted_at', 'accepted_by_user', 'terms_key',
+    ]
+    list_filter = ['document_type', 'acceptance_channel', 'accepted_at']
+    search_fields = ['customer__customer_number', 'terms_key', 'notes']
+    readonly_fields = [
+        'customer', 'document_type', 'terms_key', 'terms_text', 'accepted',
+        'accepted_at', 'acceptance_channel', 'accepted_by_user',
+        'work_order', 'estimate', 'ip_address', 'user_agent',
+        'signature_data', 'notes',
+    ]
+    ordering = ['-accepted_at']
 
 
 @admin.register(User)
@@ -23,7 +41,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('first_name', 'last_name', 'phone', 'date_of_birth', 'profile_picture')
         }),
         (_('Address'), {
-            'fields': ('address', 'city', 'state', 'zip_code', 'country'),
+            'fields': ('address', 'city', 'region', 'area', 'country'),
             'classes': ('collapse',)
         }),
         (_('Role & Permissions'), {

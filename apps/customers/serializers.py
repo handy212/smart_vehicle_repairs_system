@@ -141,8 +141,8 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
             'status', 'contact_person_name', 'company_email', 'company_phone',
-            'service_address', 'service_city', 'service_state', 'service_zip_code',
-            'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
+            'service_address', 'service_city', 'service_region', 'service_area', 'service_zip_code',
+            'billing_address', 'billing_city', 'billing_region', 'billing_area', 'billing_zip_code',
             'payment_terms', 'credit_limit', 'default_payment_method',
             'preferred_contact_method',
             'emergency_contact_name', 'emergency_contact_phone', 
@@ -287,8 +287,8 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             'first_name', 'last_name', 'email', 'phone', 'gender', 'date_of_birth',
             # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
-            'service_address', 'service_city', 'service_state', 'service_zip_code',
-            'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
+            'service_address', 'service_city', 'service_region', 'service_area', 'service_zip_code',
+            'billing_address', 'billing_city', 'billing_region', 'billing_area', 'billing_zip_code',
             'payment_terms', 'credit_limit', 'current_balance', 'status',
             'default_payment_method', 'contact_person_name', 'company_email', 
             'company_phone', 'alternative_phone', 'occupation', 'assigned_manager',

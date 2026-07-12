@@ -60,7 +60,7 @@ class Command(BaseCommand):
                 'email': 'orders@autozone.com',
                 'phone': '555-0100',
                 'city': 'Memphis',
-                'state': 'TN',
+                'region': 'TN',
                 'payment_terms': 'Net 30',
             },
             {
@@ -71,7 +71,7 @@ class Command(BaseCommand):
                 'email': 'sales@napaparts.com',
                 'phone': '555-0200',
                 'city': 'Atlanta',
-                'state': 'GA',
+                'region': 'GA',
                 'payment_terms': 'Net 30',
                 'is_preferred': True,
             },
@@ -83,7 +83,7 @@ class Command(BaseCommand):
                 'email': 'wholesale@oemdirect.com',
                 'phone': '555-0300',
                 'city': 'Detroit',
-                'state': 'MI',
+                'region': 'MI',
                 'payment_terms': 'Net 45',
             },
             {
@@ -94,7 +94,7 @@ class Command(BaseCommand):
                 'email': 'orders@budgetauto.com',
                 'phone': '555-0400',
                 'city': 'Chicago',
-                'state': 'IL',
+                'region': 'IL',
                 'payment_terms': 'Net 15',
             },
         ]

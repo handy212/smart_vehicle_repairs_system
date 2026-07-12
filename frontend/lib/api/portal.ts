@@ -162,7 +162,10 @@ export const portalApi = {
     return response.data;
   },
 
-  approveEstimate: async (id: number, data: { notes?: string }): Promise<unknown> => {
+  approveEstimate: async (
+    id: number,
+    data: { notes?: string; accepted_terms?: boolean; signature_data?: string }
+  ): Promise<unknown> => {
     const response = await apiClient.post(`/billing/estimates/${id}/approve/`, data);
     return response.data;
   },

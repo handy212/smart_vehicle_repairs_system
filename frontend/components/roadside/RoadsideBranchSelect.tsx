@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { branchesApi, type Branch } from "@/lib/api/branches";
+import { formatBranchLocation } from "@/lib/constants/ghana-regions";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils/cn";
 import { Building2, Loader2 } from "lucide-react";
@@ -19,7 +20,7 @@ type RoadsideBranchSelectProps = {
 };
 
 function formatBranchLabel(branch: Branch): string {
-  const location = [branch.city, branch.state].filter(Boolean).join(", ");
+  const location = formatBranchLocation(branch);
   if (location) {
     return `${branch.name} (${location})`;
   }

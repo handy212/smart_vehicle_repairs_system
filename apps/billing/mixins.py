@@ -370,29 +370,49 @@ class EstimateActionMixin:
         if work_order_error:
             return Response({"error": work_order_error}, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            work_order = getattr(estimate, 'work_order', None)
-            if work_order:
-                can_transition, error_message = work_order.can_transition_to('approved')
-                if not can_transition:
-                    transaction.set_rollback(True)
-                    return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from apps.accounts.terms_service import enforce_and_record_approval_terms
+        from apps.accounts.terms_models import TermsAcceptance
 
-                work_order.approve_customer_work(
-                    user=request.user,
-                    method='digital' if getattr(request.user, 'role', None) == 'customer' else 'staff',
-                    notes=f"Estimate {estimate.estimate_number} approved.",
-                    linked_estimate=estimate,
+        approval_method = (
+            'digital' if getattr(request.user, 'role', None) == 'customer' else 'staff'
+        )
+
+        try:
+            with transaction.atomic():
+                work_order = getattr(estimate, 'work_order', None)
+                enforce_and_record_approval_terms(
+                    request=request,
+                    customer=estimate.customer,
+                    document_type=TermsAcceptance.DOCUMENT_ESTIMATE,
+                    work_order=work_order,
+                    estimate=estimate,
+                    method=approval_method,
                 )
-            else:
-                estimate.status = 'approved'
-                estimate.approved_date = timezone.now()
-                estimate.approved_by = request.user
-                estimate.save(update_fields=['status', 'approved_date', 'approved_by', 'updated_at'])
+                if work_order:
+                    can_transition, error_message = work_order.can_transition_to('approved')
+                    if not can_transition:
+                        transaction.set_rollback(True)
+                        return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
 
-            estimate.refresh_from_db()
-            if estimate.status == 'approved':
-                estimate.apply_quoted_prices_to_work_order()
+                    work_order.approve_customer_work(
+                        user=request.user,
+                        method=approval_method,
+                        notes=f"Estimate {estimate.estimate_number} approved.",
+                        linked_estimate=estimate,
+                    )
+                else:
+                    estimate.status = 'approved'
+                    estimate.approved_date = timezone.now()
+                    estimate.approved_by = request.user
+                    estimate.save(update_fields=['status', 'approved_date', 'approved_by', 'updated_at'])
+
+                estimate.refresh_from_db()
+                if estimate.status == 'approved':
+                    estimate.apply_quoted_prices_to_work_order()
+        except DjangoValidationError as e:
+            from apps.accounts.terms_service import format_terms_validation_error
+            return Response({"error": format_terms_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         self._schedule_estimate_qbo_sync(estimate.id)
         

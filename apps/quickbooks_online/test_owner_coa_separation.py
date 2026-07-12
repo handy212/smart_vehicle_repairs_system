@@ -283,7 +283,7 @@ class OwnerCOASetupServiceTests(APITestCase):
             phone='1234567890',
             address='1 Test St',
             city='Kumasi',
-            state='Ashanti',
+            region='Ashanti',
             zip_code='00233',
             country='Ghana',
             created_by=self.admin,

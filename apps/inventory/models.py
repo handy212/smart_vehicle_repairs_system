@@ -66,13 +66,14 @@ class Supplier(models.Model):
     fax = models.CharField(max_length=20, blank=True)
     website = models.URLField(blank=True)
     
-    # Address
+    # Address (Ghana: Region, City, Area)
     address_line1 = models.CharField(max_length=255, blank=True)
     address_line2 = models.CharField(max_length=255, blank=True)
     city = models.CharField(max_length=100, blank=True)
-    state = models.CharField(max_length=50, blank=True)
+    region = models.CharField(max_length=100, blank=True, help_text='Ghana administrative region')
+    area = models.CharField(max_length=150, blank=True, help_text='Neighborhood / suburb / locality')
     postal_code = models.CharField(max_length=20, blank=True)
-    country = models.CharField(max_length=100, default='USA')
+    country = models.CharField(max_length=100, default='Ghana')
     
     # Business details
     tax_id = models.CharField(max_length=50, blank=True, verbose_name='Tax ID/EIN')

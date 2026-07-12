@@ -34,8 +34,8 @@ class BranchForm(forms.ModelForm):
         model = Branch
         fields = [
             'name', 'code', 'description',
-            'phone', 'email', 'fax',
-            'address', 'city', 'state', 'zip_code', 'country',
+            'phone', 'email',
+            'address', 'region', 'city', 'area', 'country',
             'is_active', 'is_headquarters',
             'opening_time', 'closing_time', 'timezone'
         ]
@@ -55,36 +55,31 @@ class BranchForm(forms.ModelForm):
             }),
             'phone': forms.TextInput(attrs={
                 'class': INPUT_CLASS,
-                'placeholder': '(555) 123-4567'
+                'placeholder': '030 123 4567'
             }),
             'email': forms.EmailInput(attrs={
                 'class': INPUT_CLASS,
                 'placeholder': 'branch@example.com'
             }),
-            'fax': forms.TextInput(attrs={
-                'class': INPUT_CLASS,
-                'placeholder': 'Optional fax number'
-            }),
             'address': forms.Textarea(attrs={
                 'class': f"{TEXTAREA_CLASS} min-h-[5rem]",
                 'rows': 2,
-                'placeholder': 'Street address'
+                'placeholder': 'Street address / landmark'
+            }),
+            'region': forms.Select(attrs={
+                'class': SELECT_CLASS,
             }),
             'city': forms.TextInput(attrs={
                 'class': INPUT_CLASS,
-                'placeholder': 'City'
+                'placeholder': 'e.g., Accra, Kumasi'
             }),
-            'state': forms.TextInput(attrs={
+            'area': forms.TextInput(attrs={
                 'class': INPUT_CLASS,
-                'placeholder': 'State'
-            }),
-            'zip_code': forms.TextInput(attrs={
-                'class': INPUT_CLASS,
-                'placeholder': 'ZIP Code'
+                'placeholder': 'e.g., East Legon, Adum'
             }),
             'country': forms.TextInput(attrs={
                 'class': INPUT_CLASS,
-                'placeholder': 'Country'
+                'placeholder': 'Ghana'
             }),
             'opening_time': forms.TimeInput(attrs={
                 'class': INPUT_CLASS,

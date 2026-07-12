@@ -29,6 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { Textarea } from "@/components/ui/textarea";
 import { getUserFacingError } from "@/lib/api/errors";
+import { TermsAcceptanceBlock } from "@/components/terms/TermsAcceptanceBlock";
 
 export default function WorkOrderDetailPage() {
     const params = useParams();
@@ -38,6 +39,7 @@ export default function WorkOrderDetailPage() {
     const { formatCurrency } = useCurrency();
     const workOrderId = parseInt(params.id as string);
     const [showApproveDialog, setShowApproveDialog] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [customerSignature, setCustomerSignature] = useState<string | null>(null);
     const signaturePadRef = useRef<SignatureCanvas>(null);
     const [rating, setRating] = useState(5);
@@ -76,14 +78,24 @@ export default function WorkOrderDetailPage() {
     });
 
     const approveWorkOrderMutation = useMutation({
-        mutationFn: async (data?: { approval_notes?: string }) => {
+        mutationFn: async (data?: {
+            approval_notes?: string;
+            accepted_terms?: boolean;
+            signature_data?: string;
+        }) => {
             const linkedEstimateId = workOrder?.estimate_summary?.id;
+            const payload = {
+                accepted_terms: true,
+                signature_data: data?.signature_data,
+                notes: data?.approval_notes,
+                approval_notes: data?.approval_notes,
+            };
 
             if (linkedEstimateId) {
-                return billingApi.estimates.approve(linkedEstimateId);
+                return billingApi.estimates.approve(linkedEstimateId, payload);
             }
 
-            return workordersApi.approve(workOrderId, data);
+            return workordersApi.approve(workOrderId, payload);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["portal", "workorder", workOrderId] });
@@ -94,6 +106,7 @@ export default function WorkOrderDetailPage() {
             }
             setShowApproveDialog(false);
             setCustomerSignature(null);
+            setAcceptedTerms(false);
             toast({
                 title: "Work Order Approved",
                 description: workOrder?.estimate_summary?.id
@@ -168,9 +181,19 @@ export default function WorkOrderDetailPage() {
             });
             return;
         }
+        if (!acceptedTerms) {
+            toast({
+                title: "Terms Required",
+                description: "Please accept the Terms & Conditions to continue",
+                variant: "destructive",
+            });
+            return;
+        }
 
         approveWorkOrderMutation.mutate({
-            approval_notes: "Approved via Customer Portal with Signature"
+            approval_notes: "Approved via Customer Portal with Signature",
+            accepted_terms: true,
+            signature_data: customerSignature,
         });
     };
 
@@ -850,6 +873,12 @@ export default function WorkOrderDetailPage() {
                             )}
                         </div>
 
+                        <TermsAcceptanceBlock
+                            terms={workOrder?.approval_terms}
+                            accepted={acceptedTerms}
+                            onAcceptedChange={setAcceptedTerms}
+                        />
+
                         {/* Action Buttons */}
                         <DialogFooter className="gap-2 sm:gap-3 pt-4 border-t">
                             <Button
@@ -858,6 +887,7 @@ export default function WorkOrderDetailPage() {
                                 onClick={() => {
                                     setShowApproveDialog(false);
                                     setCustomerSignature(null);
+                                    setAcceptedTerms(false);
                                     if (signaturePadRef.current) {
                                         signaturePadRef.current.clear();
                                     }
@@ -869,7 +899,7 @@ export default function WorkOrderDetailPage() {
                             <Button
                                 className="flex-1 sm:flex-none bg-success hover:bg-green-700 text-white"
                                 onClick={handleApproveWorkOrder}
-                                disabled={!customerSignature || approveWorkOrderMutation.isPending}
+                                disabled={!customerSignature || !acceptedTerms || approveWorkOrderMutation.isPending}
                             >
                                 {approveWorkOrderMutation.isPending ? (
                                     <>

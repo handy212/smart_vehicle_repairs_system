@@ -184,8 +184,8 @@
                     {% if estimate.customer.company_name %}{{ estimate.customer.company_name }}{% else %}{{ estimate.customer.full_name }}{% endif %}
                 </strong><br>
                 {% if estimate.customer.service_address %}{{ estimate.customer.service_address }}<br>{% endif %}
-                {% if estimate.customer.service_city or estimate.customer.service_state %}
-                {{ estimate.customer.service_city }}{% if estimate.customer.service_city and estimate.customer.service_state %}, {% endif %}{{ estimate.customer.service_state }} {{ estimate.customer.service_zip_code|default:"" }}<br>
+                {% if estimate.customer.service_city or estimate.customer.service_region %}
+                {% if estimate.customer.service_area %}{{ estimate.customer.service_area }}{% if estimate.customer.service_city or estimate.customer.service_region %}, {% endif %}{% endif %}{{ estimate.customer.service_city }}{% if estimate.customer.service_city and estimate.customer.service_region %}, {% endif %}{{ estimate.customer.service_region }}<br>
                 {% endif %}
                 {% if estimate.customer.phone %}Phone: {{ estimate.customer.phone }}<br>{% endif %}
                 {% if estimate.customer.email %}Email: {{ estimate.customer.email }}{% endif %}

@@ -12,7 +12,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-from apps.accounts.settings_utils import get_company_info, get_branding_settings
+from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
 
 
 def _get_pdf_footer_logos() -> list[str]:
@@ -411,6 +411,7 @@ class DocumentPrinter:
             system_settings = {}
             system_settings.update(get_company_info())
             system_settings.update(get_branding_settings())
+            system_settings.update(get_document_terms())
             
             # Convert logo_path to absolute file:// URL for WeasyPrint
             if 'logo_path' in system_settings and system_settings['logo_path']:
@@ -438,6 +439,7 @@ class DocumentPrinter:
                 'document_type': self.document_type,
                 'settings': settings,
                 'print_footer_logos': _get_pdf_footer_logos(),
+                'is_pdf': True,
                 **system_settings, # Flatten settings into context (company_name, logo_path etc)
             })
             context['watermark'] = _get_document_watermark(
@@ -744,10 +746,11 @@ def _make_logo_absolute(branding: dict, base_url: str) -> None:
 
 def render_invoice_print_html(invoice, branch=None, request=None):
     """Render invoice as HTML for browser print (same layout as PDF)."""
-    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
     base_url = request.build_absolute_uri('/') if request else '/'
     company_info = get_company_info()
     branding = get_branding_settings()
+    document_terms = get_document_terms()
     _make_logo_absolute(branding, base_url)
     context = {
         'document': invoice,
@@ -757,16 +760,18 @@ def render_invoice_print_html(invoice, branch=None, request=None):
         'base_url': base_url.rstrip('/'),
         **company_info,
         **branding,
+        **document_terms,
     }
     return render_to_string('printing/documents/invoice.html', context)
 
 
 def render_estimate_print_html(estimate, branch=None, request=None):
     """Render estimate as HTML for browser print (same layout as PDF)."""
-    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
     base_url = request.build_absolute_uri('/') if request else '/'
     company_info = get_company_info()
     branding = get_branding_settings()
+    document_terms = get_document_terms()
     _make_logo_absolute(branding, base_url)
     context = {
         'document': estimate,
@@ -776,17 +781,19 @@ def render_estimate_print_html(estimate, branch=None, request=None):
         'base_url': base_url.rstrip('/'),
         **company_info,
         **branding,
+        **document_terms,
     }
     return render_to_string('printing/documents/estimate.html', context)
 
 
 def render_receipt_print_html(payment, branch=None, request=None):
     """Render payment receipt as HTML for browser print."""
-    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
     from decimal import Decimal
     base_url = request.build_absolute_uri('/') if request else '/'
     company_info = get_company_info()
     branding = get_branding_settings()
+    document_terms = get_document_terms()
     _make_logo_absolute(branding, base_url)
     previous_payments = Decimal('0')
     if payment.invoice:
@@ -803,16 +810,18 @@ def render_receipt_print_html(payment, branch=None, request=None):
         'base_url': base_url.rstrip('/'),
         **company_info,
         **branding,
+        **document_terms,
     }
     return render_to_string('printing/documents/receipt.html', context)
 
 
 def render_work_order_print_html(work_order, branch=None, request=None):
     """Render work order as HTML for browser print."""
-    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
     base_url = request.build_absolute_uri('/') if request else '/'
     company_info = get_company_info()
     branding = get_branding_settings()
+    document_terms = get_document_terms()
     _make_logo_absolute(branding, base_url)
     context = {
         'document': work_order,
@@ -823,6 +832,7 @@ def render_work_order_print_html(work_order, branch=None, request=None):
         **_build_work_order_print_context(work_order),
         **company_info,
         **branding,
+        **document_terms,
     }
     return render_to_string('printing/documents/work_order.html', context)
 
@@ -892,10 +902,11 @@ def render_gate_pass_print_html(gate_pass, branch=None, request=None):
 
 def render_credit_note_print_html(credit_note, branch=None, request=None):
     """Render credit note as HTML for browser print."""
-    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
     base_url = request.build_absolute_uri('/') if request else '/'
     company_info = get_company_info()
     branding = get_branding_settings()
+    document_terms = get_document_terms()
     _make_logo_absolute(branding, base_url)
     context = {
         'document': credit_note,
@@ -906,6 +917,7 @@ def render_credit_note_print_html(credit_note, branch=None, request=None):
         'base_url': base_url.rstrip('/'),
         **company_info,
         **branding,
+        **document_terms,
     }
     return render_to_string('printing/documents/credit_note.html', context)
 

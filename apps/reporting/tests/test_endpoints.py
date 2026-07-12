@@ -34,7 +34,7 @@ class ReportingEndpointTests(TestCase):
             phone='1234567890',
             address='Main Street',
             city='Accra',
-            state='Greater Accra',
+            region='Greater Accra',
             zip_code='00000',
             created_by=self.user,
         )
@@ -44,7 +44,7 @@ class ReportingEndpointTests(TestCase):
             phone='1234567890',
             address='Other Street',
             city='Kumasi',
-            state='Ashanti',
+            region='Ashanti',
             zip_code='00000',
             created_by=self.user,
         )

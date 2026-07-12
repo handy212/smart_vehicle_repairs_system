@@ -11,12 +11,12 @@ class BranchAdmin(admin.ModelAdmin):
     """Admin interface for Branch model"""
     
     list_display = [
-        'name', 'code', 'city', 'state', 'phone', 
-        'is_active', 'is_headquarters', 'staff_count', 
+        'name', 'code', 'city', 'region', 'area', 'phone',
+        'is_active', 'is_headquarters', 'staff_count',
         'manager_count', 'created_at'
     ]
-    list_filter = ['is_active', 'is_headquarters', 'state', 'city', 'created_at']
-    search_fields = ['name', 'code', 'city', 'address', 'phone', 'email']
+    list_filter = ['is_active', 'is_headquarters', 'region', 'city', 'created_at']
+    search_fields = ['name', 'code', 'city', 'area', 'address', 'phone', 'email']
     ordering = ['name']
     date_hierarchy = 'created_at'
     
@@ -30,14 +30,14 @@ class BranchAdmin(admin.ModelAdmin):
             'fields': ('name', 'code', 'description')
         }),
         (_('Contact Information'), {
-            'fields': ('phone', 'email', 'fax')
+            'fields': ('phone', 'email')
         }),
         (_('Address'), {
-            'fields': ('address', 'city', 'state', 'zip_code', 'country', 'full_address')
+            'fields': ('address', 'region', 'city', 'area', 'country', 'full_address')
         }),
         (_('Operational Settings'), {
             'fields': (
-                'is_active', 'is_headquarters', 
+                'is_active', 'is_headquarters',
                 'opening_time', 'closing_time', 'timezone'
             )
         }),

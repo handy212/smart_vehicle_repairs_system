@@ -41,7 +41,7 @@ class Wave3RemediationTests(TestCase):
             phone='555-4000',
             address='4 Wave St',
             city='Wave',
-            state='WV',
+            region='WV',
             zip_code='40004',
             created_by=self.user,
         )
@@ -176,7 +176,7 @@ class Wave3RemediationTests(TestCase):
             phone='555-4001',
             address='5 Long St',
             city='Wave',
-            state='WV',
+            region='WV',
             zip_code='40005',
             created_by=self.user,
         )

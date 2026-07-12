@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Controller } from "react-hook-form";
+import { GHANA_REGIONS } from "@/lib/constants/ghana-regions";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { CheckCircle2, RefreshCw, Copy, Eye, EyeOff, Building2, User, Briefcase } from "lucide-react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -44,9 +46,9 @@ export const customerSchema = z.object({
     default_payment_method: z.enum(["cash", "momo", "card", "bank_transfer", "check"]).optional(),
     status: z.enum(["active", "inactive", "suspended", "blacklisted"]),
     service_address: z.string().optional(),
+    service_region: z.string().optional(),
     service_city: z.string().optional(),
-    service_state: z.string().optional(),
-    service_zip_code: z.string().optional(),
+    service_area: z.string().optional(),
     preferred_contact_method: z.enum(["email", "phone", "sms", "mail"]).optional(),
     notes: z.string().optional(),
 }).superRefine((data, ctx) => {
@@ -81,6 +83,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
     const {
         register,
         handleSubmit,
+        control,
         formState: { errors },
         watch,
         setValue,
@@ -387,19 +390,36 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                         <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
                             <div className="space-y-2 sm:col-span-2">
                                 <Label htmlFor="service_address">Street address</Label>
-                                <Input id="service_address" placeholder="123 Main St, Area" {...register("service_address")} />
+                                <Input id="service_address" placeholder="Street / landmark" {...register("service_address")} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_region">Region</Label>
+                                <Controller
+                                    name="service_region"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                                            <SelectTrigger id="service_region" className="w-full">
+                                                <SelectValue placeholder="Select region" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {GHANA_REGIONS.map((region) => (
+                                                    <SelectItem key={region} value={region}>
+                                                        {region}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="service_city">City</Label>
-                                <Input id="service_city" placeholder="Accra" {...register("service_city")} />
+                                <Input id="service_city" placeholder="e.g. Accra" {...register("service_city")} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="service_state">State / region</Label>
-                                <Input id="service_state" placeholder="Greater Accra" {...register("service_state")} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="service_zip_code">Zip / postcode</Label>
-                                <Input id="service_zip_code" placeholder="00233" {...register("service_zip_code")} />
+                                <Label htmlFor="service_area">Area</Label>
+                                <Input id="service_area" placeholder="e.g. East Legon" {...register("service_area")} />
                             </div>
                         </CardContent>
                     </Card>

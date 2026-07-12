@@ -126,7 +126,18 @@ class Customer(models.Model):
         help_text="Primary service/pickup address"
     )
     service_city = models.CharField(max_length=100, blank=True, null=True)
-    service_state = models.CharField(max_length=50, blank=True, null=True)
+    service_region = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='Ghana administrative region',
+    )
+    service_area = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        help_text='Neighborhood / suburb / locality',
+    )
     service_zip_code = models.CharField(max_length=20, blank=True, null=True)
     
     # Billing address (inherited from User model, but can override)
@@ -135,7 +146,16 @@ class Customer(models.Model):
         help_text="Billing address if different from service address"
     )
     billing_city = models.CharField(max_length=100, blank=True)
-    billing_state = models.CharField(max_length=50, blank=True)
+    billing_region = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Ghana administrative region',
+    )
+    billing_area = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text='Neighborhood / suburb / locality',
+    )
     billing_zip_code = models.CharField(max_length=20, blank=True)
     
     # Financial information

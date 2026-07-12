@@ -186,7 +186,7 @@ class CustomerPortalWorkOrderAPITests(APITestCase):
     def test_public_token_approval_approves_linked_estimate(self):
         response = self.client.post(
             f"/api/workorders/public/{self.work_order.access_token}/approve/",
-            {"approval_notes": "Customer approved portal quote"},
+            {"notes": "Customer approved portal quote", "accepted_terms": True},
             format="json",
         )
 

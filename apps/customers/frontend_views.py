@@ -439,12 +439,12 @@ def import_customers(request):
                                 status=row.get('status', 'active').strip() or 'active',
                                 service_address=row.get('service_address', '').strip() or None,
                                 service_city=row.get('service_city', '').strip() or None,
-                                service_state=row.get('service_state', '').strip() or None,
-                                service_zip_code=row.get('service_zip_code', '').strip() or None,
+                                service_region=row.get('service_region', '').strip() or None,
+                                service_area=row.get('service_area', '').strip() or None,
                                 billing_address=row.get('billing_address', '').strip() or None,
                                 billing_city=row.get('billing_city', '').strip() or None,
-                                billing_state=row.get('billing_state', '').strip() or None,
-                                billing_zip_code=row.get('billing_zip_code', '').strip() or None,
+                                billing_region=row.get('billing_region', '').strip() or None,
+                                billing_area=row.get('billing_area', '').strip() or None,
                                 payment_terms=row.get('payment_terms', 'due_on_receipt').strip() or 'due_on_receipt',
                                 preferred_contact_method=row.get('preferred_contact_method', 'email').strip() or 'email',
                             )
@@ -491,9 +491,9 @@ def import_customers(request):
     # Define required and optional headers for the template
     required_headers = ['first_name', 'last_name', 'email', 'phone']
     optional_headers = [
-        'company_name', 'customer_type', 'status', 'service_address', 
-        'service_city', 'service_state', 'service_zip_code',
-        'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
+        'company_name', 'customer_type', 'status', 'service_address',
+        'service_region', 'service_city', 'service_area',
+        'billing_address', 'billing_region', 'billing_city', 'billing_area',
         'payment_terms', 'preferred_contact_method'
     ]
     

@@ -401,6 +401,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     requires_assignment_acceptance = serializers.SerializerMethodField()
     inventory_availability_summary = serializers.SerializerMethodField()
     quality_check_assigned_to_name = serializers.SerializerMethodField()
+    approval_terms = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -423,7 +424,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'customer_rating', 'customer_feedback',
             'diagnosis_notes', 'diagnosis_completed_at', 'diagnosis_by',
             'requires_approval', 'approval_requested_at', 'approved_at',
-            'approved_by_customer', 'approval_method', 'approval_notes',
+            'approved_by_customer', 'approval_method', 'approval_notes', 'approval_terms',
             'estimated_labor_hours', 'estimated_labor_cost', 'estimated_parts_cost',
             'estimated_total', 'actual_labor_hours', 'actual_labor_cost',
             'actual_parts_cost', 'actual_total', 'odometer_in', 'odometer_out',
@@ -676,6 +677,14 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             }
             for wo in reworks
         ]
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_approval_terms(self, obj):
+        from apps.accounts.terms_service import get_terms_for_document
+        from apps.accounts.terms_models import TermsAcceptance
+        if getattr(obj, 'estimate', None) or getattr(obj, 'estimate_id', None):
+            return get_terms_for_document(TermsAcceptance.DOCUMENT_ESTIMATE)
+        return get_terms_for_document(TermsAcceptance.DOCUMENT_WORK_ORDER)
 
 
 class WorkOrderCreateSerializer(serializers.ModelSerializer):
@@ -1869,6 +1878,7 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
     total_cost = serializers.SerializerMethodField()
     estimate_summary = serializers.SerializerMethodField()
     invoice_summary = serializers.SerializerMethodField()
+    approval_terms = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -1880,9 +1890,17 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
             'customer_concerns',
             'customer_rating', 'customer_feedback',
             'recommendations', 'approved_jobs', 'timeline_status',
-            'estimate_summary', 'invoice_summary',
+            'estimate_summary', 'invoice_summary', 'approval_terms',
         ]
         read_only_fields = fields
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_approval_terms(self, obj):
+        from apps.accounts.terms_service import get_terms_for_document
+        from apps.accounts.terms_models import TermsAcceptance
+        if getattr(obj, 'estimate', None) or getattr(obj, 'estimate_id', None):
+            return get_terms_for_document(TermsAcceptance.DOCUMENT_ESTIMATE)
+        return get_terms_for_document(TermsAcceptance.DOCUMENT_WORK_ORDER)
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):

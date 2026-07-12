@@ -1599,6 +1599,7 @@ export default function WorkflowActions({
             onSubmit={(data) => approveMutation.mutate(data)}
             onCancel={() => setShowApproveDialog(false)}
             isSubmitting={approveMutation.isPending}
+            approvalTerms={(workOrder as any)?.approval_terms}
           />
         </DialogContent>
       </Dialog>

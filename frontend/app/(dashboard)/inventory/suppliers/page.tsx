@@ -348,9 +348,7 @@ export default function SuppliersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2 text-xs text-muted-foreground">
-                        {supplier.city && supplier.state
-                          ? `${supplier.city}, ${supplier.state}`
-                          : supplier.city || supplier.state || "-"}
+                        {[supplier.area, supplier.city, supplier.region].filter(Boolean).join(", ") || "-"}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-center">
                         <Badge variant="outline" className="border-border text-muted-foreground">

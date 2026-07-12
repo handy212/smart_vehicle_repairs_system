@@ -39,7 +39,7 @@ class PostingStandardTests(TestCase):
             phone='555-6000',
             address='6 Standard St',
             city='Std',
-            state='ST',
+            region='ST',
             zip_code='60006',
             created_by=self.user,
         )

@@ -14,6 +14,9 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { Controller } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GHANA_REGIONS } from "@/lib/constants/ghana-regions";
 
 const supplierSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -22,13 +25,12 @@ const supplierSchema = z.object({
   contact_person: z.string().optional(),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
-  fax: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
   address_line1: z.string().optional(),
   address_line2: z.string().optional(),
   city: z.string().optional(),
-  state: z.string().optional(),
-  postal_code: z.string().optional(),
+  region: z.string().optional(),
+  area: z.string().optional(),
   country: z.string().optional(),
   tax_id: z.string().optional(),
   payment_terms: z.string().optional(),
@@ -48,6 +50,7 @@ export default function NewSupplierPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     setError,
   } = useForm<SupplierFormData>({
@@ -56,7 +59,7 @@ export default function NewSupplierPage() {
       supplier_type: "distributor",
       is_active: true,
       is_preferred: false,
-      country: "USA",
+      country: "Ghana",
     },
   });
 
@@ -241,17 +244,7 @@ export default function NewSupplierPage() {
                 </label>
                 <Input
                   {...register("phone")}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Fax
-                </label>
-                <Input
-                  {...register("fax")}
-                  placeholder="+1 (555) 123-4568"
+                  placeholder="030 123 4567"
                 />
               </div>
 
@@ -300,20 +293,34 @@ export default function NewSupplierPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
-                    City
+                    Region
                   </label>
-                  <Input
-                    {...register("city")}
-                    placeholder="City"
+                  <Controller
+                    name="region"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GHANA_REGIONS.map((region) => (
+                            <SelectItem key={region} value={region}>
+                              {region}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
-                    State
+                    City
                   </label>
                   <Input
-                    {...register("state")}
-                    placeholder="State"
+                    {...register("city")}
+                    placeholder="e.g. Accra"
                   />
                 </div>
               </div>
@@ -321,11 +328,11 @@ export default function NewSupplierPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
-                    Postal Code
+                    Area
                   </label>
                   <Input
-                    {...register("postal_code")}
-                    placeholder="12345"
+                    {...register("area")}
+                    placeholder="e.g. East Legon"
                   />
                 </div>
                 <div>
@@ -334,7 +341,7 @@ export default function NewSupplierPage() {
                   </label>
                   <Input
                     {...register("country")}
-                    placeholder="USA"
+                    placeholder="Ghana"
                   />
                 </div>
               </div>

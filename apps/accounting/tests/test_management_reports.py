@@ -30,7 +30,7 @@ class ManagementReportsServiceTests(TestCase):
             phone='555-0001',
             address='1 Main St',
             city='City',
-            state='ST',
+            region='ST',
             zip_code='00001',
             created_by=self.user,
         )
@@ -80,7 +80,7 @@ class ManagementReportsAPITests(TestCase):
             phone='555-0002',
             address='2 API St',
             city='City',
-            state='ST',
+            region='ST',
             zip_code='00002',
             created_by=self.user,
         )

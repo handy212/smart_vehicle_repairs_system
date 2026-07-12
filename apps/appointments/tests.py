@@ -38,7 +38,7 @@ class AppointmentModelTest(TestCase):
             phone='1234567890',
             address='123 Test St',
             city='Test City',
-            state='Test State',
+            region='Test State',
             zip_code='12345',
             created_by=self.admin_user
         )
@@ -212,7 +212,7 @@ class AppointmentReminderModelTest(TestCase):
         )
         self.branch = Branch.objects.create(
             name='Test Branch 2', code='TS2', phone='1234567890',
-            address='456 Test Ave', city='Test City', state='TS',
+            address='456 Test Ave', city='Test City', region='TS',
             zip_code='12345', created_by=self.admin_user
         )
         self.user = User.objects.create_user(
@@ -265,7 +265,7 @@ class AppointmentAPITest(APITestCase):
         )
         self.branch = Branch.objects.create(
             name='API Branch', code='API', phone='1234567890',
-            address='789 API Blvd', city='API City', state='AP',
+            address='789 API Blvd', city='API City', region='AP',
             zip_code='99999', created_by=self.admin_user
         )
         self.customer_user = User.objects.create_user(
@@ -507,7 +507,7 @@ class AppointmentRatingAPITest(APITestCase):
         )
         self.branch = Branch.objects.create(
             name='Rating Branch', code='RAT', phone='1234567890',
-            address='123 Rating St', city='Accra', state='GA',
+            address='123 Rating St', city='Accra', region='GA',
             zip_code='00000', created_by=self.admin_user
         )
         self.customer = Customer.objects.create(user=self.customer_user)

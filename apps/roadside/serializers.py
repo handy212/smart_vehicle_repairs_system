@@ -21,7 +21,7 @@ class BranchBriefSerializer(serializers.ModelSerializer):
         model = Branch
         fields = [
             'id', 'name', 'code', 'phone', 'email',
-            'address', 'city', 'state', 'full_address', 'is_headquarters',
+            'address', 'city', 'region', 'area', 'full_address', 'is_headquarters',
         ]
 
 

@@ -90,8 +90,8 @@ class BranchSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
         model = Branch
         fields = [
             'id', 'name', 'code', 'description',
-            'phone', 'email', 'fax',
-            'address', 'city', 'state', 'zip_code', 'country', 'full_address',
+            'phone', 'email',
+            'address', 'city', 'region', 'area', 'country', 'full_address',
             'is_active', 'is_headquarters',
             'opening_time', 'closing_time', 'timezone',
             'next_workorder_number', 'next_estimate_number',
@@ -116,8 +116,8 @@ class BranchListSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
         model = Branch
         fields = [
             'id', 'name', 'code', 'description',
-            'phone', 'email', 'fax',
-            'address', 'city', 'state', 'zip_code', 'country',
+            'phone', 'email',
+            'address', 'city', 'region', 'area', 'country',
             'is_active', 'is_headquarters',
             'opening_time', 'closing_time', 'timezone',
             'staff_count', 'manager_count',
@@ -132,8 +132,8 @@ class BranchCreateUpdateSerializer(serializers.ModelSerializer):
         model = Branch
         fields = [
             'name', 'code', 'description',
-            'phone', 'email', 'fax',
-            'address', 'city', 'state', 'zip_code', 'country',
+            'phone', 'email',
+            'address', 'city', 'region', 'area', 'country',
             'is_active', 'is_headquarters',
             'opening_time', 'closing_time', 'timezone'
         ]
@@ -198,4 +198,4 @@ class PublicBranchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Branch
-        fields = ['id', 'name', 'code', 'address', 'city', 'state', 'phone', 'is_headquarters']
+        fields = ['id', 'name', 'code', 'address', 'city', 'region', 'area', 'phone', 'is_headquarters']

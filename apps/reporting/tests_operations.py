@@ -24,7 +24,7 @@ class OperationsReportingTests(TestCase):
             phone='1',
             address='A',
             city='C',
-            state='S',
+            region='S',
             zip_code='0',
             created_by=self.user,
         )

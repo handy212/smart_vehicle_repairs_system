@@ -80,7 +80,7 @@ class ResolvePaymentBranchTests(TestCase):
             phone='000',
             address='1 Main',
             city='Kumasi',
-            state='Ashanti',
+            region='Ashanti',
             zip_code='00000',
             created_by=cls.admin,
         )
@@ -90,7 +90,7 @@ class ResolvePaymentBranchTests(TestCase):
             phone='000',
             address='2 Main',
             city='Accra',
-            state='Greater Accra',
+            region='Greater Accra',
             zip_code='00001',
             created_by=cls.admin,
         )
@@ -170,7 +170,7 @@ class SyncPaymentDepartmentRefTests(TestCase):
             phone='000',
             address='1 Main',
             city='Kumasi',
-            state='Ashanti',
+            region='Ashanti',
             zip_code='00000',
             created_by=cls.admin,
         )

@@ -108,6 +108,9 @@ class PublicWorkOrderViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
         approval_notes = request.data.get('notes', 'Approved via Digital Portal')
         
         try:
+            from apps.accounts.terms_service import enforce_and_record_approval_terms
+            from apps.accounts.terms_models import TermsAcceptance
+
             recommendation_counts = work_order.pending_recommendation_approval_counts()
             if recommendation_counts['waiting_for_estimate']:
                 return Response(
@@ -129,6 +132,15 @@ class PublicWorkOrderViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            enforce_and_record_approval_terms(
+                request=request,
+                customer=work_order.customer,
+                document_type=TermsAcceptance.DOCUMENT_WORK_ORDER,
+                work_order=work_order,
+                estimate=getattr(work_order, 'estimate', None),
+                method='digital',
+                is_public=True,
+            )
             work_order.approve_customer_work(
                 user=None,
                 method='digital',
@@ -138,7 +150,8 @@ class PublicWorkOrderViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
             return Response({'status': 'approved'})
             
         except ValidationError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            from apps.accounts.terms_service import format_terms_validation_error
+            return Response({'error': format_terms_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         request=inline_serializer(

@@ -22,7 +22,7 @@ def _create_branch(name: str, code: str, created_by: User) -> Branch:
         phone='123-456-7890',
         address='123 Main St',
         city='Sample City',
-        state='CA',
+        region='CA',
         zip_code='90001',
         country='USA',
         created_by=created_by,

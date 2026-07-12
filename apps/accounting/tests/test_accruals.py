@@ -19,7 +19,7 @@ class AccrualServiceTests(TestCase):
             phone='555-0200',
             address='100 Accrual Way',
             city='Testville',
-            state='TS',
+            region='TS',
             zip_code='12345',
             created_by=self.user,
         )

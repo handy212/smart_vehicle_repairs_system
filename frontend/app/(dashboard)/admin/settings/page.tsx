@@ -169,7 +169,14 @@ function isImageSetting(key: string) {
 }
 
 function isLongTextSetting(key: string, value: string) {
-  return key.includes("address") || key.includes("footer") || key.includes("message") || value.length > 90;
+  return (
+    key.includes("address") ||
+    key.includes("footer") ||
+    key.includes("message") ||
+    key.includes("terms") ||
+    key.includes("policy") ||
+    value.length > 90
+  );
 }
 
 function isNumberSetting(key: string) {
@@ -593,13 +600,15 @@ export default function SystemSettingsPage() {
     }
 
     if (isLongTextSetting(setting.key, value)) {
+      const isDocumentTerms =
+        setting.key.includes("terms_and_conditions") || setting.key.includes("policy");
       return (
         <Textarea
           value={value}
           onChange={(event) => updateDraft(setting, { value: event.target.value })}
           disabled={!canManage}
-          rows={2}
-          className="min-h-16 text-xs"
+          rows={isDocumentTerms ? 6 : 2}
+          className={isDocumentTerms ? "min-h-28 text-xs" : "min-h-16 text-xs"}
         />
       );
     }

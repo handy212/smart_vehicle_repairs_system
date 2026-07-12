@@ -44,12 +44,12 @@ class CustomerAdmin(admin.ModelAdmin):
         }),
         ('Service Address', {
             'fields': (
-                'service_address', 'service_city', 'service_state', 'service_zip_code'
+                'service_address', 'service_region', 'service_city', 'service_area'
             )
         }),
         ('Billing Address', {
             'fields': (
-                'billing_address', 'billing_city', 'billing_state', 'billing_zip_code'
+                'billing_address', 'billing_region', 'billing_city', 'billing_area'
             ),
             'classes': ('collapse',)
         }),

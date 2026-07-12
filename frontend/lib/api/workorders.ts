@@ -419,6 +419,8 @@ export const workordersApi = {
     data?: {
       approval_method?: string;
       approval_notes?: string;
+      accepted_terms?: boolean;
+      signature_data?: string;
     }
   ): Promise<WorkOrder> => {
     const response = await apiClient.post(`/workorders/work-orders/${id}/approve/`, data || {});
@@ -704,7 +706,7 @@ export const workordersApi = {
       return response.data;
     },
 
-    approve: async (token: string, data: { notes?: string }): Promise<any> => {
+    approve: async (token: string, data: { notes?: string; accepted_terms?: boolean; signature_data?: string }): Promise<any> => {
       const response = await apiClient.post(`/workorders/public/${token}/approve/`, data);
       return response.data;
     },

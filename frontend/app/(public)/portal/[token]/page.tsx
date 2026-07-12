@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { TermsAcceptanceBlock } from "@/components/terms/TermsAcceptanceBlock";
+
 export default function PortalPage() {
     const { formatCurrency } = useCurrency();
     const params = useParams();
@@ -30,6 +32,7 @@ export default function PortalPage() {
     const [approveNotes, setApproveNotes] = useState("");
     const [declineReason, setDeclineReason] = useState("");
     const [showDeclineInput, setShowDeclineInput] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     useEffect(() => {
         if (!token) return;
@@ -52,11 +55,22 @@ export default function PortalPage() {
     }, [token]);
 
     const handleApprove = async () => {
+        if (!acceptedTerms) {
+            toast({
+                title: "Terms Required",
+                description: "Please accept the Terms & Conditions before approving.",
+                variant: "destructive",
+            });
+            return;
+        }
         if (!confirm("Are you sure you want to approve this estimate?")) return;
 
         try {
             setProcessing(true);
-            await workordersApi.public.approve(token, { notes: approveNotes });
+            await workordersApi.public.approve(token, {
+                notes: approveNotes,
+                accepted_terms: true,
+            });
             toast({
                 title: "Estimate Approved",
                 description: "Thank you! We have received your approval and will proceed with the work.",
@@ -65,6 +79,7 @@ export default function PortalPage() {
             // specific success logic - maybe reload data
             const result = await workordersApi.public.get(token);
             setData(result);
+            setAcceptedTerms(false);
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
             toast({
@@ -262,10 +277,16 @@ export default function PortalPage() {
                                         />
                                     </div>
 
+                                    <TermsAcceptanceBlock
+                                        terms={data?.approval_terms}
+                                        accepted={acceptedTerms}
+                                        onAcceptedChange={setAcceptedTerms}
+                                    />
+
                                     <Button
                                         className="w-full bg-primary hover:bg-primary/90 h-11 text-base group"
                                         onClick={handleApprove}
-                                        disabled={processing}
+                                        disabled={processing || !acceptedTerms}
                                     >
                                         {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />}
                                         Approve Estimate

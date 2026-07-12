@@ -798,8 +798,15 @@
     </div>
 </div>
 
-<div class="clear-both mt-8 text-xs text-gray-500 text-center border-t pt-4">
-    <strong>INTERNAL WORK ORDER</strong> - Operational record for diagnosis, repairs, quality control, invoicing, and release follow-up.
+{% if work_order_terms_and_conditions %}
+<div class="clear-both mt-6 notes-box document-terms avoid-break">
+    <div class="document-terms-title">Please Note</div>
+    <div class="document-terms-body">{{ work_order_terms_and_conditions|linebreaks }}</div>
+</div>
+{% endif %}
+
+<div class="clear-both mt-6 text-xs text-gray-500 text-center border-t pt-2 avoid-break">
+    <strong>INTERNAL WORK ORDER</strong> — Operational record for diagnosis, repairs, quality control, invoicing, and release follow-up.
     {% if document.branch %}| Branch: {{ document.branch.name }}{% endif %}
 </div>
 {% endblock %}

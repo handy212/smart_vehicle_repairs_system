@@ -47,8 +47,8 @@ export interface StaffProfile {
         employee_id?: string;
         address?: string;
         city?: string;
-        state?: string;
-        zip_code?: string;
+        region?: string;
+        area?: string;
         country?: string;
     };
     full_name: string;

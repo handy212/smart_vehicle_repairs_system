@@ -216,7 +216,7 @@ class CustomerNumberingTest(TestCase):
             phone='555-0100',
             address='1 High Street',
             city='Kumasi',
-            state='Ashanti',
+            region='Ashanti',
             zip_code='00233',
             country='Ghana',
             is_active=True,

@@ -17,6 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 import Link from "next/link";
+import { Controller } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GHANA_REGIONS } from "@/lib/constants/ghana-regions";
 
 const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -26,8 +29,8 @@ const profileSchema = z.object({
   date_of_birth: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
+  region: z.string().optional(),
+  area: z.string().optional(),
   country: z.string().optional(),
 });
 
@@ -55,6 +58,7 @@ export default function ProfilePage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<ProfileFormData>({
@@ -67,9 +71,9 @@ export default function ProfilePage() {
       date_of_birth: user?.date_of_birth || "",
       address: user?.address || "",
       city: user?.city || "",
-      state: user?.state || "",
-      zip_code: user?.zip_code || "",
-      country: user?.country || "",
+      region: user?.region || "",
+      area: user?.area || "",
+      country: user?.country || "Ghana",
     },
   });
 
@@ -84,9 +88,9 @@ export default function ProfilePage() {
         date_of_birth: profileData.date_of_birth || "",
         address: profileData.address || "",
         city: profileData.city || "",
-        state: profileData.state || "",
-        zip_code: profileData.zip_code || "",
-        country: profileData.country || "",
+        region: profileData.region || "",
+        area: profileData.area || "",
+        country: profileData.country || "Ghana",
       });
     }
   }, [profileData, reset]);
@@ -284,22 +288,32 @@ export default function ProfilePage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
+                    <Label htmlFor="region" className="text-xs font-semibold text-foreground">Region</Label>
+                    <Controller
+                      name="region"
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value || ""} onValueChange={field.onChange} disabled={!canEditProfile}>
+                          <SelectTrigger id="region" className="h-8 text-sm">
+                            <SelectValue placeholder="Select region" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {GHANA_REGIONS.map((region) => (
+                              <SelectItem key={region} value={region}>
+                                {region}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="city" className="text-xs font-semibold text-foreground">City</Label>
                     <Input
                       id="city"
                       {...register("city")}
-                      placeholder="New York"
-                      disabled={!canEditProfile}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="state" className="text-xs font-semibold text-foreground">State</Label>
-                    <Input
-                      id="state"
-                      {...register("state")}
-                      placeholder="NY"
+                      placeholder="e.g. Accra"
                       disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />
@@ -308,22 +322,21 @@ export default function ProfilePage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="zip_code" className="text-xs font-semibold text-foreground">Zip Code</Label>
+                    <Label htmlFor="area" className="text-xs font-semibold text-foreground">Area</Label>
                     <Input
-                      id="zip_code"
-                      {...register("zip_code")}
-                      placeholder="10001"
+                      id="area"
+                      {...register("area")}
+                      placeholder="e.g. East Legon"
                       disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />
                   </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor="country" className="text-xs font-semibold text-foreground">Country</Label>
                     <Input
                       id="country"
                       {...register("country")}
-                      placeholder="USA"
+                      placeholder="Ghana"
                       disabled={!canEditProfile}
                       className="h-8 text-sm"
                     />

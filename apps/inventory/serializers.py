@@ -47,7 +47,7 @@ class SupplierListSerializer(serializers.ModelSerializer):
         model = Supplier
         fields = [
             'id', 'name', 'supplier_code', 'supplier_type', 'contact_person',
-            'email', 'phone', 'city', 'state', 'is_active', 'is_preferred',
+            'email', 'phone', 'city', 'region', 'is_active', 'is_preferred',
             'parts_count', 'active_po_count', 'created_at',
             'open_balance', 'overdue_payment'
         ]

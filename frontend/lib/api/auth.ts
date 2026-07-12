@@ -27,7 +27,8 @@ export interface User {
   date_of_birth?: string;
   address?: string;
   city?: string;
-  state?: string;
+  region?: string;
+  area?: string;
   zip_code?: string;
   country?: string;
   employee_id?: string;
@@ -58,7 +59,8 @@ export interface UpdateProfileData {
   date_of_birth?: string;
   address?: string;
   city?: string;
-  state?: string;
+  region?: string;
+  area?: string;
   zip_code?: string;
   country?: string;
 }

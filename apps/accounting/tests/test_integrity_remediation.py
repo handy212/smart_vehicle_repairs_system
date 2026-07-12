@@ -32,7 +32,7 @@ class IntegrityRemediationCommandTests(TestCase):
             phone='555-9000',
             address='9 Remediation St',
             city='Rem',
-            state='RM',
+            region='RM',
             zip_code='90009',
             created_by=self.user,
         )
@@ -481,7 +481,7 @@ class ResetDemoAccountingCommandTests(TestCase):
             phone='555-9100',
             address='10 Reset St',
             city='Reset',
-            state='RD',
+            region='RD',
             zip_code='91010',
             created_by=self.user,
         )

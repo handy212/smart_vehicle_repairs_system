@@ -39,7 +39,7 @@ import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -52,6 +52,7 @@ import { BranchQuickBooksHub } from "@/components/branches/BranchQuickBooksHub";
 import { BranchOnboardingWizard } from "@/components/branches/BranchOnboardingWizard";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
+import { GHANA_REGIONS, formatBranchLocation } from "@/lib/constants/ghana-regions";
 
 const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -59,11 +60,10 @@ const branchSchema = z.object({
   description: z.string().optional(),
   phone: z.string().min(1, "Phone is required"),
   email: z.string().email().optional().or(z.literal("")),
-  fax: z.string().optional(),
   address: z.string().min(1, "Address is required"),
+  region: z.string().min(1, "Region is required"),
   city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
-  zip_code: z.string().min(1, "Zip code is required"),
+  area: z.string().optional(),
   country: z.string().optional(),
   is_active: z.boolean().optional(),
   is_headquarters: z.boolean().optional(),
@@ -339,7 +339,7 @@ export default function BranchesPage() {
                           <MapPin className="w-3 h-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                           <div>
                             <div className="text-xs text-foreground">
-                              {branch.city}, {branch.state}
+                              {formatBranchLocation(branch)}
                             </div>
                             <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
                               {branch.address}
@@ -576,6 +576,7 @@ function BranchDialog({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<BranchFormData>({
@@ -587,23 +588,23 @@ function BranchDialog({
         description: branch.description || "",
         phone: branch.phone || "",
         email: branch.email || "",
-        fax: branch.fax || "",
         address: branch.address || "",
+        region: branch.region || "Greater Accra",
         city: branch.city || "",
-        state: branch.state || "",
-        zip_code: branch.zip_code || "",
-        country: branch.country || "USA",
+        area: branch.area || "",
+        country: branch.country || "Ghana",
         is_active: branch.is_active ?? true,
         is_headquarters: branch.is_headquarters ?? false,
         opening_time: branch.opening_time || "",
         closing_time: branch.closing_time || "",
-        timezone: branch.timezone || "America/New_York",
+        timezone: branch.timezone || "Africa/Accra",
       }
       : {
+        region: "Greater Accra",
         country: "Ghana",
         is_active: true,
         is_headquarters: false,
-        timezone: "Africa/accra",
+        timezone: "Africa/Accra",
       },
   });
 
@@ -616,24 +617,24 @@ function BranchDialog({
         description: branch.description || "",
         phone: branch.phone || "",
         email: branch.email || "",
-        fax: branch.fax || "",
         address: branch.address || "",
+        region: branch.region || "Greater Accra",
         city: branch.city || "",
-        state: branch.state || "",
-        zip_code: branch.zip_code || "",
+        area: branch.area || "",
         country: branch.country || "Ghana",
         is_active: branch.is_active ?? true,
         is_headquarters: branch.is_headquarters ?? false,
         opening_time: branch.opening_time || "",
         closing_time: branch.closing_time || "",
-        timezone: branch.timezone || "Africa/accra",
+        timezone: branch.timezone || "Africa/Accra",
       });
     } else {
       reset({
+        region: "Greater Accra",
         country: "Ghana",
         is_active: true,
         is_headquarters: false,
-        timezone: "Africa/accra",
+        timezone: "Africa/Accra",
       });
     }
   }, [branch, reset]);
@@ -679,10 +680,10 @@ function BranchDialog({
 
     if (cleanedData.description === "") delete cleanedData.description;
     if (cleanedData.email === "") delete cleanedData.email;
-    if (cleanedData.fax === "") delete cleanedData.fax;
     if (cleanedData.opening_time === "" || cleanedData.opening_time === null) delete cleanedData.opening_time;
     if (cleanedData.closing_time === "" || cleanedData.closing_time === null) delete cleanedData.closing_time;
-    if (cleanedData.timezone === "") cleanedData.timezone = "America/New_York";
+    if (cleanedData.timezone === "") cleanedData.timezone = "Africa/Accra";
+    if (cleanedData.area === "") delete cleanedData.area;
 
     if (cleanedData.code) {
       cleanedData.code = cleanedData.code.toUpperCase().trim();
@@ -735,7 +736,7 @@ function BranchDialog({
             <Label htmlFor="description" className="text-xs">Description</Label>
             <Textarea id="description" {...register("description")} rows={2} className="w-full text-sm mt-1 bg-muted border-border" />
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="phone" className="text-xs">
                 Phone <span className="text-destructive">*</span>
@@ -749,47 +750,55 @@ function BranchDialog({
               <Label htmlFor="email" className="text-xs">Email</Label>
               <Input id="email" type="email" {...register("email")} className="w-full h-8 text-sm mt-1" />
             </div>
-            <div>
-              <Label htmlFor="fax" className="text-xs">Fax</Label>
-              <Input id="fax" {...register("fax")} className="w-full h-8 text-sm mt-1" />
-            </div>
           </div>
           <div>
             <Label htmlFor="address" className="text-xs">
-              Address <span className="text-destructive">*</span>
+              Street address <span className="text-destructive">*</span>
             </Label>
-            <Input id="address" {...register("address")} className="w-full h-8 text-sm mt-1" />
+            <Input id="address" {...register("address")} className="w-full h-8 text-sm mt-1" placeholder="Street / landmark" />
             {errors.address && (
               <p className="text-destructive text-[10px] mt-0.5">{errors.address.message}</p>
             )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
+              <Label htmlFor="region" className="text-xs">
+                Region <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="region"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="region" className="w-full h-8 text-sm mt-1">
+                      <SelectValue placeholder="Select region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GHANA_REGIONS.map((region) => (
+                        <SelectItem key={region} value={region}>
+                          {region}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.region && (
+                <p className="text-destructive text-[10px] mt-0.5">{errors.region.message}</p>
+              )}
+            </div>
+            <div>
               <Label htmlFor="city" className="text-xs">
                 City <span className="text-destructive">*</span>
               </Label>
-              <Input id="city" {...register("city")} className="w-full h-8 text-sm mt-1" />
+              <Input id="city" {...register("city")} className="w-full h-8 text-sm mt-1" placeholder="e.g. Accra" />
               {errors.city && (
                 <p className="text-destructive text-[10px] mt-0.5">{errors.city.message}</p>
               )}
             </div>
             <div>
-              <Label htmlFor="state" className="text-xs">
-                State <span className="text-destructive">*</span>
-              </Label>
-              <Input id="state" {...register("state")} className="w-full h-8 text-sm mt-1" />
-              {errors.state && (
-                <p className="text-destructive text-[10px] mt-0.5">{errors.state.message}</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="zip_code" className="text-xs">
-                Zip Code <span className="text-destructive">*</span>
-              </Label>
-              <Input id="zip_code" {...register("zip_code")} className="w-full h-8 text-sm mt-1" />
-              {errors.zip_code && (
-                <p className="text-destructive text-[10px] mt-0.5">{errors.zip_code.message}</p>
-              )}
+              <Label htmlFor="area" className="text-xs">Area</Label>
+              <Input id="area" {...register("area")} className="w-full h-8 text-sm mt-1" placeholder="e.g. East Legon" />
             </div>
             <div>
               <Label htmlFor="country" className="text-xs">Country</Label>

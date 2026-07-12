@@ -1137,7 +1137,7 @@ def supplier_create_view(request):
                 phone=request.POST.get('phone', ''),
                 address_line1=request.POST.get('address_line1', ''),
                 city=request.POST.get('city', ''),
-                state=request.POST.get('state', ''),
+                state=request.POST.get('region', ''),
                 postal_code=request.POST.get('postal_code', ''),
                 country=request.POST.get('country', 'USA'),
                 payment_terms=request.POST.get('payment_terms', ''),
@@ -1203,7 +1203,7 @@ def supplier_edit_view(request, pk):
             supplier.phone = request.POST.get('phone', '')
             supplier.address_line1 = request.POST.get('address_line1', '')
             supplier.city = request.POST.get('city', '')
-            supplier.state = request.POST.get('state', '')
+            supplier.state = request.POST.get('region', '')
             supplier.postal_code = request.POST.get('postal_code', '')
             supplier.country = request.POST.get('country', 'USA')
             supplier.payment_terms = request.POST.get('payment_terms', '')

@@ -130,9 +130,9 @@ export function ProfileView({ customer }: ProfileViewProps) {
                             <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Service Address</p>
                             <p className="text-sm text-foreground">
                                 {customer.service_address || "-"}
-                                {(customer.service_city || customer.service_state) && (
+                                {(customer.service_area || customer.service_city || customer.service_region) && (
                                     <span className="block text-xs text-muted-foreground mt-0.5">
-                                        {[customer.service_city, customer.service_state, customer.service_zip_code].filter(Boolean).join(", ")}
+                                        {[customer.service_area, customer.service_city, customer.service_region].filter(Boolean).join(", ")}
                                     </span>
                                 )}
                             </p>
@@ -141,6 +141,11 @@ export function ProfileView({ customer }: ProfileViewProps) {
                             <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Billing Address</p>
                             <p className="text-sm text-foreground">
                                 {customer.billing_address || customer.user?.address || "-"}
+                                {(customer.billing_area || customer.billing_city || customer.billing_region) && (
+                                    <span className="block text-xs text-muted-foreground mt-0.5">
+                                        {[customer.billing_area, customer.billing_city, customer.billing_region].filter(Boolean).join(", ")}
+                                    </span>
+                                )}
                             </p>
                         </div>
                     </CardContent>

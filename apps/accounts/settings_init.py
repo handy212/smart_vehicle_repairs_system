@@ -11,9 +11,9 @@ DEFAULT_SETTINGS = {
         {'key': 'company_phone', 'value': '', 'description': 'Company phone number'},
         {'key': 'company_address', 'value': '', 'description': 'Company street address'},
         {'key': 'company_city', 'value': '', 'description': 'Company city'},
-        {'key': 'company_state', 'value': '', 'description': 'Company state/province'},
-        {'key': 'company_zip', 'value': '', 'description': 'Company zip/postal code'},
-        {'key': 'company_country', 'value': 'USA', 'description': 'Company country'},
+        {'key': 'company_region', 'value': '', 'description': 'Company region (Ghana)'},
+        {'key': 'company_area', 'value': '', 'description': 'Company area / locality'},
+        {'key': 'company_country', 'value': 'Ghana', 'description': 'Company country'},
         {'key': 'company_website', 'value': '', 'description': 'Company website URL'},
         {'key': 'company_tax_id', 'value': '', 'description': 'Company tax ID', 'is_secret': True},
         {'key': 'company_registration', 'value': '', 'description': 'Company registration number'},
@@ -103,6 +103,55 @@ DEFAULT_SETTINGS = {
         {'key': 'deposit_required', 'value': 'false', 'description': 'Require deposit for appointments'},
         {'key': 'deposit_percentage', 'value': '0', 'description': 'Deposit percentage'},
         {'key': 'cancellation_policy', 'value': '', 'description': 'Cancellation policy'},
+        {
+            'key': 'invoice_terms_and_conditions',
+            'value': (
+                '1. Ghs 100.00 per day Vehicle Storage Fee applicable when waiting on customer beyond 48 hours.\n'
+                '2. PLEASE NOTE: GHS 380 or 30% of labour charge - whichever is higher, comprising '
+                '(Disassembling, Assessment/Diagnosis and Assembling) is payable in the event that the '
+                'requested service is suspended by client after proforma is issued.\n'
+                '3. WARRANTY: 1–3 months on work done, depending on the type of service.'
+            ),
+            'description': 'Terms & Conditions printed on invoices (PDF and print)',
+        },
+        {
+            'key': 'estimate_terms_and_conditions',
+            'value': (
+                '1. Ghs 100.00 per day Vehicle Storage Fee applicable when waiting on customer beyond 48 hours.\n'
+                '2. PLEASE NOTE: GHS 380 or 30% of labour charge - whichever is higher, comprising '
+                '(Disassembling, Assessment/Diagnosis and Assembling) is payable in the event that the '
+                'requested service is suspended by client after proforma is issued.\n'
+                '3. WARRANTY: 1–3 months on work done, depending on the type of service.'
+            ),
+            'description': 'Terms & Conditions printed on estimates / quotations',
+        },
+        {
+            'key': 'proforma_notice',
+            'value': (
+                'This is a PROFORMA invoice for quotation / approval purposes only. '
+                'It is not a tax invoice and does not create a payment obligation until a final invoice is issued.'
+            ),
+            'description': 'Notice shown on proforma invoices',
+        },
+        {
+            'key': 'receipt_terms_and_conditions',
+            'value': (
+                'This receipt acknowledges payment received. Keep this document for your records. '
+                'Refunds and adjustments are subject to company policy.'
+            ),
+            'description': 'Notice / terms printed on payment receipts',
+        },
+        {
+            'key': 'work_order_terms_and_conditions',
+            'value': (
+                'PLEASE NOTE:\n'
+                '1. Ghs 100.00 per day Vehicle Storage Fee applicable when waiting on customer beyond 48 hours.\n'
+                '2. GHS 380 or 30% of labour charge - whichever is higher, comprising '
+                '(Disassembling, Assessment/Diagnosis and Assembling) is payable in the event that the '
+                'requested service is suspended by client after proforma is issued.'
+            ),
+            'description': 'Terms / PLEASE NOTE text printed on work order job cards',
+        },
     ],
     'integration': [
         {'key': 'recaptcha_enabled', 'value': 'false', 'description': ''},

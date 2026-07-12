@@ -688,6 +688,17 @@ class WorkOrderStateTransitionMixin:
             )
         
         try:
+            from apps.accounts.terms_service import enforce_and_record_approval_terms
+            from apps.accounts.terms_models import TermsAcceptance
+
+            enforce_and_record_approval_terms(
+                request=request,
+                customer=work_order.customer,
+                document_type=TermsAcceptance.DOCUMENT_WORK_ORDER,
+                work_order=work_order,
+                estimate=getattr(work_order, 'estimate', None),
+                method=approval_method,
+            )
             work_order.approve_customer_work(
                 user=request.user,
                 method=approval_method,
@@ -700,8 +711,9 @@ class WorkOrderStateTransitionMixin:
             response_data['recommendations_approved'] = recommendations_approved
             return Response(response_data)
         except ValidationError as e:
+            from apps.accounts.terms_service import format_terms_validation_error
             return Response(
-                {'error': str(e)},
+                {'error': format_terms_validation_error(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

@@ -385,7 +385,7 @@ export default function SupplierDetailPage() {
                         <>
                           <p>{supplier.address_line1}</p>
                           {supplier.address_line2 && <p>{supplier.address_line2}</p>}
-                          <p>{[supplier.city, supplier.state, supplier.postal_code].filter(Boolean).join(", ")}</p>
+                          <p>{[supplier.area, supplier.city, supplier.region].filter(Boolean).join(", ")}</p>
                           <p className="text-muted-foreground text-[10px]">{supplier.country}</p>
                         </>
                       ) : (

@@ -32,8 +32,8 @@ class BranchViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'is_headquarters']
-    search_fields = ['name', 'code', 'city', 'state']
-    ordering_fields = ['name', 'code', 'city', 'state', 'is_active', 'created_at']
+    search_fields = ['name', 'code', 'city', 'region', 'area']
+    ordering_fields = ['name', 'code', 'city', 'region', 'is_active', 'created_at']
     ordering = ['name']
     
     def get_permissions(self):

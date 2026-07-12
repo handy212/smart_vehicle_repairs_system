@@ -19,7 +19,8 @@ export interface User {
   date_of_birth?: string;
   address?: string;
   city?: string;
-  state?: string;
+  region?: string;
+  area?: string;
   zip_code?: string;
   country?: string;
   email_notifications: boolean;
@@ -63,7 +64,8 @@ export interface UserUpdate {
   date_of_birth?: string;
   address?: string;
   city?: string;
-  state?: string;
+  region?: string;
+  area?: string;
   zip_code?: string;
   country?: string;
   email_notifications?: boolean;
@@ -256,11 +258,10 @@ export interface Branch {
   description?: string;
   phone: string;
   email?: string;
-  fax?: string;
   address: string;
   city: string;
-  state: string;
-  zip_code: string;
+  region: string;
+  area?: string;
   country: string;
   full_address?: string;
   is_active: boolean;
@@ -304,11 +305,10 @@ export interface BranchCreate {
   description?: string;
   phone: string;
   email?: string;
-  fax?: string;
   address: string;
   city: string;
-  state: string;
-  zip_code: string;
+  region: string;
+  area?: string;
   country?: string;
   is_active?: boolean;
   is_headquarters?: boolean;

@@ -24,7 +24,7 @@ class PartInventoryCreateTests(TestCase):
             phone='555-9200',
             address='9 Inv St',
             city='Inv',
-            state='PA',
+            region='PA',
             zip_code='92009',
             created_by=self.user,
         )

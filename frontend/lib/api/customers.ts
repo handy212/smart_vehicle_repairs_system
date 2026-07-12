@@ -37,8 +37,14 @@ export interface Customer {
   company_phone?: string;
   service_address?: string;
   service_city?: string;
-  service_state?: string;
+  service_region?: string;
+  service_area?: string;
   service_zip_code?: string;
+  billing_address?: string;
+  billing_city?: string;
+  billing_region?: string;
+  billing_area?: string;
+  billing_zip_code?: string;
   default_payment_method?: string;
   customer_since: string;
   created_at: string;

@@ -230,8 +230,8 @@ def get_company_info():
         'company_phone',
         'company_address',
         'company_city',
-        'company_state',
-        'company_zip',
+        'company_region',
+        'company_area',
         'company_country',
         'company_website',
         'company_tax_id',
@@ -240,6 +240,26 @@ def get_company_info():
     ]
     
     return get_settings(keys, {'currency_symbol': '$'}) | {'site_url': get_site_url()}
+
+
+def get_document_terms():
+    """Shop-wide legal / notice text for printed documents."""
+    return get_settings(
+        [
+            'invoice_terms_and_conditions',
+            'estimate_terms_and_conditions',
+            'proforma_notice',
+            'receipt_terms_and_conditions',
+            'work_order_terms_and_conditions',
+        ],
+        {
+            'invoice_terms_and_conditions': '',
+            'estimate_terms_and_conditions': '',
+            'proforma_notice': '',
+            'receipt_terms_and_conditions': '',
+            'work_order_terms_and_conditions': '',
+        },
+    )
 
 
 def get_branding_settings():

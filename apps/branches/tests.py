@@ -37,7 +37,7 @@ class BranchModelTest(TestCase):
             phone='555-0100',
             address='123 Main St',
             city='Springfield',
-            state='IL',
+            region='IL',
             zip_code='62701',
             created_by=self.admin
         )
@@ -56,7 +56,7 @@ class BranchModelTest(TestCase):
             phone='555-0200',
             address='456 Test St',
             city='TestCity',
-            state='TS',
+            region='TS',
             zip_code='12345',
             created_by=self.admin
         )
@@ -97,7 +97,7 @@ class BranchModelTest(TestCase):
             phone='555-0300',
             address='789 Second St',
             city='OtherCity',
-            state='OC',
+            region='OC',
             zip_code='54321',
             is_headquarters=True,
             created_by=self.admin
@@ -140,7 +140,7 @@ class BranchApiPermissionTest(TestCase):
             phone='555-0100',
             address='123 Main St',
             city='Springfield',
-            state='IL',
+            region='IL',
             zip_code='62701',
             created_by=self.admin,
         )
@@ -151,10 +151,10 @@ class BranchApiPermissionTest(TestCase):
             'code': 'SECOND',
             'phone': '555-0200',
             'address': '456 Second St',
-            'city': 'Springfield',
-            'state': 'IL',
-            'zip_code': '62702',
-            'country': 'USA',
+            'city': 'Accra',
+            'region': 'Greater Accra',
+            'area': 'Osu',
+            'country': 'Ghana',
             'is_active': True,
         }
 
@@ -414,7 +414,7 @@ class BranchApiPermissionTest(TestCase):
             phone='555-0300',
             address='789 Archive St',
             city='Springfield',
-            state='IL',
+            region='IL',
             zip_code='62703',
             created_by=self.admin,
         )
@@ -438,7 +438,7 @@ class BranchApiPermissionTest(TestCase):
             phone='555-0400',
             address='100 Delete St',
             city='Tema',
-            state='Greater Accra',
+            region='Greater Accra',
             zip_code='00233',
             created_by=self.admin,
         )
@@ -517,7 +517,7 @@ class PrintFooterTemplateTest(TestCase):
             phone='555-1000',
             address='1 Ring Road',
             city='Accra',
-            state='Greater Accra',
+            region='Greater Accra',
             zip_code='00233',
             created_by=self.admin,
         )
@@ -527,7 +527,7 @@ class PrintFooterTemplateTest(TestCase):
             phone='555-2000',
             address='2 Old Road',
             city='Tema',
-            state='Greater Accra',
+            region='Greater Accra',
             zip_code='00234',
             is_active=False,
             created_by=self.admin,
@@ -538,7 +538,7 @@ class PrintFooterTemplateTest(TestCase):
             phone='555-3000',
             address='3 Lake Road',
             city='Kumasi',
-            state='Ashanti',
+            region='Ashanti',
             zip_code='00235',
             created_by=self.admin,
         )
@@ -622,7 +622,7 @@ class BranchListApiTest(TestCase):
             phone='555-0199',
             address='1 Portal Rd',
             city='Accra',
-            state='GA',
+            region='GA',
             zip_code='00000',
             is_active=True,
             created_by=self.admin,

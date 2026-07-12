@@ -336,6 +336,7 @@ class EstimateListSerializer(serializers.ModelSerializer):
     is_expired = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(read_only=True)
     can_be_approved = serializers.BooleanField(read_only=True)
+    approval_terms = serializers.SerializerMethodField()
     
     class Meta:
         model = Estimate
@@ -345,10 +346,16 @@ class EstimateListSerializer(serializers.ModelSerializer):
             'work_order_status', 'status', 'title', 'reference_number',
             'estimate_date', 'valid_until', 'is_expired', 'days_until_expiration',
             'subtotal', 'discount_amount', 'tax_amount', 'total',
-            'can_be_approved', 'created_by', 'created_by_name',
+            'can_be_approved', 'approval_terms', 'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_approval_terms(self, obj):
+        from apps.accounts.terms_service import get_terms_for_document
+        from apps.accounts.terms_models import TermsAcceptance
+        return get_terms_for_document(TermsAcceptance.DOCUMENT_ESTIMATE)
+
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if not obj.vehicle:
@@ -384,6 +391,7 @@ class EstimateDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
     days_until_expiration = serializers.IntegerField(read_only=True)
     can_be_approved = serializers.BooleanField(read_only=True)
     can_be_converted = serializers.BooleanField(read_only=True)
+    approval_terms = serializers.SerializerMethodField()
     qbo_sync_status = serializers.SerializerMethodField()
     qbo_sync_error = serializers.SerializerMethodField()
     
@@ -404,7 +412,7 @@ class EstimateDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
             'tax_amount', 'shop_supplies_fee', 'environmental_fee', 'total',
             'taxable_subtotal', 'tax_breakdown', 'line_items',
             'latest_invoice_summary',
-            'is_expired', 'days_until_expiration', 'can_be_approved', 'can_be_converted',
+            'is_expired', 'days_until_expiration', 'can_be_approved', 'can_be_converted', 'approval_terms',
             'approved_date', 'declined_date', 'converted_date',
             'created_by', 'created_by_name',
             'approved_by', 'approved_by_name',
@@ -425,6 +433,12 @@ class EstimateDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
             ).first()
         return self._qbo_mapping_cache[obj.id]
     
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_approval_terms(self, obj):
+        from apps.accounts.terms_service import get_terms_for_document
+        from apps.accounts.terms_models import TermsAcceptance
+        return get_terms_for_document(TermsAcceptance.DOCUMENT_ESTIMATE)
+
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if obj.vehicle:
@@ -825,26 +839,32 @@ class InvoiceDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
         # Try service address first
         if customer.service_address:
             parts.append(customer.service_address)
-            if customer.service_city:
-                city_state_zip = f"{customer.service_city}, {customer.service_state} {customer.service_zip_code}".strip()
-                if city_state_zip and city_state_zip != ", ":
-                    parts.append(city_state_zip)
+            locality = ', '.join(
+                p for p in [customer.service_area, customer.service_city, customer.service_region or '']
+                if p
+            )
+            if locality:
+                parts.append(locality)
         # Fall back to billing address
         elif customer.billing_address:
             parts.append(customer.billing_address)
-            if customer.billing_city:
-                city_state_zip = f"{customer.billing_city}, {customer.billing_state} {customer.billing_zip_code}".strip()
-                if city_state_zip and city_state_zip != ", ":
-                    parts.append(city_state_zip)
+            locality = ', '.join(
+                p for p in [customer.billing_area, customer.billing_city, customer.billing_region or '']
+                if p
+            )
+            if locality:
+                parts.append(locality)
         # Fall back to user address
         elif hasattr(customer, 'user') and customer.user:
             user = customer.user
             if user.address:
                 parts.append(user.address)
-            if user.city:
-                city_state_zip = f"{user.city}, {user.state} {user.zip_code}".strip()
-                if city_state_zip and city_state_zip != ", ":
-                    parts.append(city_state_zip)
+            locality = ', '.join(
+                p for p in [getattr(user, 'area', '') or '', user.city or '', getattr(user, 'region', '') or '']
+                if p
+            )
+            if locality:
+                parts.append(locality)
         
         return ", ".join(filter(None, parts))
     

@@ -39,11 +39,11 @@ class SupplierAdmin(admin.ModelAdmin):
             'fields': ('name', 'supplier_code', 'supplier_type')
         }),
         ('Contact Information', {
-            'fields': ('contact_person', 'email', 'phone', 'fax', 'website')
+            'fields': ('contact_person', 'email', 'phone', 'website')
         }),
         ('Address', {
-            'fields': ('address_line1', 'address_line2', 'city', 'state', 
-                      'postal_code', 'country')
+            'fields': ('address_line1', 'address_line2', 'region', 'city',
+                      'area', 'country')
         }),
         ('Business Details', {
             'fields': ('tax_id', 'payment_terms', 'credit_limit')

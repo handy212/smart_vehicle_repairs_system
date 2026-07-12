@@ -42,7 +42,7 @@ class Wave5RemediationTests(TestCase):
             phone='555-6000',
             address='6 Wave St',
             city='Wave',
-            state='WV',
+            region='WV',
             zip_code='60006',
             created_by=self.user,
         )

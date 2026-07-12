@@ -32,7 +32,7 @@ class PaymentAllocationBalanceTests(TestCase):
             phone='555-9000',
             address='9 Pay St',
             city='Pay',
-            state='PA',
+            region='PA',
             zip_code='90009',
             created_by=self.user,
         )

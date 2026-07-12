@@ -38,7 +38,7 @@ class Wave2RemediationTests(TestCase):
             phone='555-3000',
             address='3 Wave St',
             city='Wave',
-            state='WV',
+            region='WV',
             zip_code='30003',
             created_by=self.user,
         )

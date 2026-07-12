@@ -29,9 +29,8 @@
         <div class="info-label">Address</div>
         <div class="info-value">
             {% if customer.service_address %}{{ customer.service_address }}<br>{% endif %}
-            {% if customer.service_city %}
-            {{ customer.service_city }}{% if customer.service_state %}, {{ customer.service_state }}{% endif %}
-            {{ customer.service_zip_code|default:"" }}
+            {% if customer.service_area or customer.service_city or customer.service_region %}
+            {% if customer.service_area %}{{ customer.service_area }}{% if customer.service_city or customer.service_region %}, {% endif %}{% endif %}{% if customer.service_city %}{{ customer.service_city }}{% if customer.service_region %}, {% endif %}{% endif %}{% if customer.service_region %}{{ customer.service_region }}{% endif %}
             {% endif %}
         </div>
     </div>

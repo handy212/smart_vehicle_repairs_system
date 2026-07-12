@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { EstimateLineItem, billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { getUserFacingError } from "@/lib/api/errors";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TermsAcceptanceBlock } from "@/components/terms/TermsAcceptanceBlock";
 
 type ApiError = {
   response?: {
@@ -32,6 +35,8 @@ export default function EstimateDetailPage() {
   const estimateId = parseInt(params.id as string);
   const { formatCurrency } = useCurrency();
   const { openPrintWindow, isOpeningPrint } = usePrint();
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["portal", "estimate", estimateId],
@@ -40,10 +45,12 @@ export default function EstimateDetailPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => billingApi.estimates.approve(estimateId),
+    mutationFn: () => billingApi.estimates.approve(estimateId, { accepted_terms: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["portal", "estimates"] });
+      setShowApproveDialog(false);
+      setAcceptedTerms(false);
       toast({
         title: "Estimate Approved",
         description: "The estimate has been successfully approved.",
@@ -132,7 +139,7 @@ export default function EstimateDetailPage() {
           {canApprove && (
             <Button
               variant="default"
-              onClick={() => approveMutation.mutate()}
+              onClick={() => setShowApproveDialog(true)}
               disabled={approveMutation.isPending}
             >
               <CheckCircle className="w-4 h-4 mr-2" />
@@ -367,6 +374,36 @@ export default function EstimateDetailPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={showApproveDialog}
+        onOpenChange={(open) => {
+          setShowApproveDialog(open);
+          if (!open) setAcceptedTerms(false);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve estimate</DialogTitle>
+          </DialogHeader>
+          <TermsAcceptanceBlock
+            terms={estimate?.approval_terms}
+            accepted={acceptedTerms}
+            onAcceptedChange={setAcceptedTerms}
+          />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowApproveDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => approveMutation.mutate()}
+              disabled={!acceptedTerms || approveMutation.isPending}
+            >
+              {approveMutation.isPending ? "Approving..." : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -35,7 +35,7 @@ def seed_rbac(django_db_setup, django_db_blocker):
                 'phone': '0000000000',
                 'address': '1 Test St',
                 'city': 'Accra',
-                'state': 'Greater Accra',
+                'region': 'Greater Accra',
                 'zip_code': '00000',
                 'is_active': True,
                 'is_headquarters': True,

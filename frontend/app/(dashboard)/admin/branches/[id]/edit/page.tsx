@@ -16,6 +16,9 @@ import { z } from "zod";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import React from "react";
 import { getUserFacingError } from "@/lib/api/errors";
+import { Controller } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GHANA_REGIONS } from "@/lib/constants/ghana-regions";
 
 const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -23,11 +26,10 @@ const branchSchema = z.object({
   description: z.string().optional(),
   phone: z.string().min(1, "Phone is required"),
   email: z.string().email().optional().or(z.literal("")),
-  fax: z.string().optional(),
   address: z.string().min(1, "Address is required"),
+  region: z.string().min(1, "Region is required"),
   city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
-  zip_code: z.string().min(1, "Zip code is required"),
+  area: z.string().optional(),
   country: z.string().optional(),
   is_active: z.boolean().optional(),
   is_headquarters: z.boolean().optional(),
@@ -54,6 +56,7 @@ export default function BranchEditPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<BranchFormData>({
@@ -65,23 +68,23 @@ export default function BranchEditPage() {
         description: branch.description || "",
         phone: branch.phone || "",
         email: branch.email || "",
-        fax: branch.fax || "",
-        address: branch.address || "",
+                address: branch.address || "",
         city: branch.city || "",
-        state: branch.state || "",
-        zip_code: branch.zip_code || "",
-        country: branch.country || "USA",
+        region: branch.region || "Greater Accra",
+        area: branch.area || "",
+        country: branch.country || "Ghana",
         is_active: branch.is_active ?? true,
         is_headquarters: branch.is_headquarters ?? false,
         opening_time: branch.opening_time || "",
         closing_time: branch.closing_time || "",
-        timezone: branch.timezone || "America/New_York",
+        timezone: branch.timezone || "Africa/Accra",
       }
       : {
-        country: "USA",
+        region: "Greater Accra",
+        country: "Ghana",
         is_active: true,
         is_headquarters: false,
-        timezone: "America/New_York",
+        timezone: "Africa/Accra",
       },
   });
 
@@ -94,17 +97,16 @@ export default function BranchEditPage() {
         description: branch.description || "",
         phone: branch.phone || "",
         email: branch.email || "",
-        fax: branch.fax || "",
-        address: branch.address || "",
+                address: branch.address || "",
         city: branch.city || "",
-        state: branch.state || "",
-        zip_code: branch.zip_code || "",
-        country: branch.country || "USA",
+        region: branch.region || "Greater Accra",
+        area: branch.area || "",
+        country: branch.country || "Ghana",
         is_active: branch.is_active ?? true,
         is_headquarters: branch.is_headquarters ?? false,
         opening_time: branch.opening_time || "",
         closing_time: branch.closing_time || "",
-        timezone: branch.timezone || "America/New_York",
+        timezone: branch.timezone || "Africa/Accra",
       });
     }
   }, [branch, reset]);
@@ -135,10 +137,10 @@ export default function BranchEditPage() {
     // Convert empty strings to null for optional fields
     if (cleanedData.description === "") delete cleanedData.description;
     if (cleanedData.email === "") delete cleanedData.email;
-    if (cleanedData.fax === "") delete cleanedData.fax;
+    if (cleanedData.area === "") delete cleanedData.area;
     if (cleanedData.opening_time === "" || cleanedData.opening_time === null) delete cleanedData.opening_time;
     if (cleanedData.closing_time === "" || cleanedData.closing_time === null) delete cleanedData.closing_time;
-    if (cleanedData.timezone === "") cleanedData.timezone = "America/New_York";
+    if (cleanedData.timezone === "") cleanedData.timezone = "Africa/Accra";
 
     // Ensure code is uppercase (but don't send it if it's disabled/read-only)
     if (cleanedData.code) {
@@ -264,10 +266,6 @@ export default function BranchEditPage() {
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" {...register("email")} className="w-full" />
                 </div>
-                <div>
-                  <Label htmlFor="fax">Fax</Label>
-                  <Input id="fax" {...register("fax")} className="w-full" />
-                </div>
               </div>
 
               <div>
@@ -282,31 +280,43 @@ export default function BranchEditPage() {
 
               <div className="grid grid-cols-4 gap-4">
                 <div>
+                  <Label htmlFor="region">
+                    Region <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="region"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="region" className="w-full">
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GHANA_REGIONS.map((region) => (
+                            <SelectItem key={region} value={region}>
+                              {region}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.region && (
+                    <p className="text-destructive text-xs mt-1">{errors.region.message}</p>
+                  )}
+                </div>
+                <div>
                   <Label htmlFor="city">
                     City <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="city" {...register("city")} className="w-full" />
+                  <Input id="city" {...register("city")} className="w-full" placeholder="e.g. Accra" />
                   {errors.city && (
                     <p className="text-destructive text-xs mt-1">{errors.city.message}</p>
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="state">
-                    State <span className="text-destructive">*</span>
-                  </Label>
-                  <Input id="state" {...register("state")} className="w-full" />
-                  {errors.state && (
-                    <p className="text-destructive text-xs mt-1">{errors.state.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="zip_code">
-                    Zip Code <span className="text-destructive">*</span>
-                  </Label>
-                  <Input id="zip_code" {...register("zip_code")} className="w-full" />
-                  {errors.zip_code && (
-                    <p className="text-destructive text-xs mt-1">{errors.zip_code.message}</p>
-                  )}
+                  <Label htmlFor="area">Area</Label>
+                  <Input id="area" {...register("area")} className="w-full" placeholder="e.g. East Legon" />
                 </div>
                 <div>
                   <Label htmlFor="country">Country</Label>

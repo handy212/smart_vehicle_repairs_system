@@ -264,12 +264,12 @@ function StaffDetailContent() {
                                         <h4 className="text-sm font-medium text-muted-foreground mb-1">Address</h4>
                                         <div className="space-y-1">
                                             <p>{staff.user_details?.address || "No address provided"}</p>
-                                            {(staff.user_details?.city || staff.user_details?.state || staff.user_details?.zip_code) && (
+                                            {(staff.user_details?.area || staff.user_details?.city || staff.user_details?.region) && (
                                                 <p>
                                                     {[
+                                                        staff.user_details?.area,
                                                         staff.user_details?.city,
-                                                        staff.user_details?.state,
-                                                        staff.user_details?.zip_code
+                                                        staff.user_details?.region
                                                     ].filter(Boolean).join(", ")}
                                                 </p>
                                             )}

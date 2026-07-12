@@ -10,8 +10,7 @@
 
 {% block document_meta %}
 <div>Date: {{ document.invoice_date|date:"F d, Y" }}</div>
-<div>Due: {{ document.due_date|date:"F d, Y" }}</div>
-<div>Status: <span class="font-bold uppercase">{{ document.get_status_display }}</span></div>
+{% if document.due_date %}<div>Due: {{ document.due_date|date:"F d, Y" }}</div>{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -138,8 +137,15 @@
 <!-- Financial Summary -->
 {% include 'printing/base/components/financial_summary.html' %}
 
-<!-- Footer Section: Notes & Terms -->
-<div class="clear-both mt-8">
+<!-- Notes & Terms (document body — stays with content) -->
+<div class="clear-both mt-8 avoid-break">
+    {% if document.status == 'proforma' and proforma_notice %}
+    <div class="notes-box mb-4">
+        <div class="document-terms-title">Proforma Notice</div>
+        <div class="document-terms-body">{{ proforma_notice|linebreaks }}</div>
+    </div>
+    {% endif %}
+
     {% if document.customer_notes %}
     <div class="notes-box mb-4">
         <div class="font-bold mb-1">Notes:</div>
@@ -147,9 +153,16 @@
     </div>
     {% endif %}
 
-    {% if document.payment_terms %}
-    <div class="text-sm text-gray-500">
-        <span class="font-semibold">Payment Terms:</span> {{ document.payment_terms }}
+    {% if document.terms %}
+    <div class="text-sm text-gray-500 mb-3">
+        <span class="font-semibold">Payment Terms:</span> {{ document.terms }}
+    </div>
+    {% endif %}
+
+    {% if invoice_terms_and_conditions %}
+    <div class="notes-box document-terms">
+        <div class="document-terms-title">Terms &amp; Conditions</div>
+        <div class="document-terms-body">{{ invoice_terms_and_conditions|linebreaks }}</div>
     </div>
     {% endif %}
 </div>

@@ -26,6 +26,7 @@ import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
+import { TermsAcceptanceBlock } from "@/components/terms/TermsAcceptanceBlock";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
 import { RevenueProductBadge } from "@/components/billing/RevenueProductBadge";
@@ -51,6 +52,7 @@ export default function EstimateDetailPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
   const {
     isSyncing,
@@ -186,7 +188,7 @@ export default function EstimateDetailPage() {
   });
 
   const approveEstimateMutation = useMutation({
-    mutationFn: () => billingApi.estimates.approve(estimateId),
+    mutationFn: () => billingApi.estimates.approve(estimateId, { accepted_terms: true }),
     onSuccess: () => {
       toast({
         title: "Success",
@@ -194,6 +196,7 @@ export default function EstimateDetailPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      setAcceptedTerms(false);
     },
 
     onError: (error: unknown) => {
@@ -315,6 +318,7 @@ export default function EstimateDetailPage() {
   };
 
   const confirmApproveEstimate = () => {
+    if (!acceptedTerms) return;
     setShowApproveDialog(false);
     approveEstimateMutation.mutate();
   };
@@ -1015,7 +1019,10 @@ export default function EstimateDetailPage() {
         </Tabs>
 
         {/* Approve Estimate Confirmation Dialog */}
-        <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <Dialog open={showApproveDialog} onOpenChange={(open) => {
+          setShowApproveDialog(open);
+          if (!open) setAcceptedTerms(false);
+        }}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
@@ -1040,6 +1047,13 @@ export default function EstimateDetailPage() {
                       </div>
                     </div>
                   )}
+
+                    <TermsAcceptanceBlock
+                    terms={estimate?.approval_terms}
+                    accepted={acceptedTerms}
+                    onAcceptedChange={setAcceptedTerms}
+                    staffMode
+                  />
                 </div>
               </div>
             </DialogHeader>
@@ -1053,7 +1067,7 @@ export default function EstimateDetailPage() {
               </Button>
               <Button
                 onClick={confirmApproveEstimate}
-                disabled={approveEstimateMutation.isPending}
+                disabled={approveEstimateMutation.isPending || !acceptedTerms}
                 className="bg-primary hover:bg-primary/90 text-white"
               >
                 {approveEstimateMutation.isPending ? (

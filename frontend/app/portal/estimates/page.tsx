@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils/cn";
 import { Estimate } from "@/lib/api/portal";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -23,6 +24,7 @@ export default function MyEstimatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const queryClient = useQueryClient();
   const { formatCurrency } = useCurrency();
+  const router = useRouter();
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -50,7 +52,11 @@ export default function MyEstimatesPage() {
   const estimates = (Array.isArray(estimatesData) ? estimatesData : estimatesData?.results || []) as Estimate[];
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => portalApi.approveEstimate(id, { notes: "Approved via portal" }),
+    mutationFn: (id: number) =>
+      portalApi.approveEstimate(id, {
+        notes: "Approved via portal",
+        accepted_terms: true,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "estimates"] });
       toast.success("Estimate Approved", {
@@ -175,10 +181,9 @@ export default function MyEstimatesPage() {
                       <Button
                         size="sm"
                         className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl px-4 font-bold shadow-lg shadow-emerald-500/20"
-                        onClick={() => approveMutation.mutate(est.id)}
-                        disabled={approveMutation.isPending}
+                        onClick={() => router.push(`/portal/estimates/${est.id}`)}
                       >
-                        {approveMutation.isPending ? "..." : "Approve"}
+                        Review & Approve
                       </Button>
                       <Button
                         size="sm"
@@ -235,9 +240,12 @@ export default function MyEstimatesPage() {
                             <Button
                                 size="sm"
                                 className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold h-10"
-                                onClick={() => approveMutation.mutate(est.id)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    router.push(`/portal/estimates/${est.id}`);
+                                }}
                             >
-                                Approve
+                                Review & Approve
                             </Button>
                             <Button
                                 variant="outline"

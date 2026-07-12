@@ -40,11 +40,9 @@
                 {% if document.customer.service_address %}
                 <div>{{ document.customer.service_address }}</div>
                 {% endif %}
-                {% if document.customer.service_city %}
+                {% if document.customer.service_area or document.customer.service_city or document.customer.service_region %}
                 <div>
-                    {{ document.customer.service_city }}
-                    {% if document.customer.service_state %}, {{ document.customer.service_state }}{% endif %}
-                    {{ document.customer.service_zip_code|default:"" }}
+                    {% if document.customer.service_area %}{{ document.customer.service_area }}{% if document.customer.service_city or document.customer.service_region %}, {% endif %}{% endif %}{% if document.customer.service_city %}{{ document.customer.service_city }}{% if document.customer.service_region %}, {% endif %}{% endif %}{% if document.customer.service_region %}{{ document.customer.service_region }}{% endif %}
                 </div>
                 {% endif %}
                 {% if document.customer.phone %}
@@ -125,14 +123,20 @@
 </div>
 
 <!-- Footer -->
-<div class="mt-12 text-center">
+<div class="mt-12 text-center avoid-break">
     <div class="text-gray-900 font-bold text-lg mb-2">Thank You for Your Business!</div>
     {% if branch %}
     {% if branch.phone or branch.email %}
-    <div class="text-sm text-gray-500">
+    <div class="text-sm text-gray-500 mb-4">
         If you have any questions about this receipt, please contact us{% if branch.phone %} at {{ branch.phone }}{% endif %}{% if branch.phone and branch.email %} or{% endif %}{% if branch.email %} {{ branch.email }}{% endif %}.
     </div>
     {% endif %}
+    {% endif %}
+    {% if receipt_terms_and_conditions %}
+    <div class="notes-box document-terms text-left">
+        <div class="document-terms-title">Please Note</div>
+        <div class="document-terms-body">{{ receipt_terms_and_conditions|linebreaks }}</div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

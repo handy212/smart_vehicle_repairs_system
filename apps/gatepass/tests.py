@@ -27,7 +27,7 @@ class GatePassModelTest(TestCase):
         )
         self.branch = Branch.objects.create(
             name='GP Branch', code='GPB', phone='1234567890',
-            address='100 GP St', city='GP City', state='GP',
+            address='100 GP St', city='GP City', region='GP',
             zip_code='10000', created_by=self.admin_user
         )
         self.customer_user = User.objects.create_user(
@@ -184,7 +184,7 @@ class GatePassAPITest(APITestCase):
         )
         self.branch = Branch.objects.create(
             name='GPAPI Branch', code='GPA', phone='1234567890',
-            address='200 API St', city='API City', state='AP',
+            address='200 API St', city='API City', region='AP',
             zip_code='20000', created_by=self.admin
         )
         self.cust_user = User.objects.create_user(

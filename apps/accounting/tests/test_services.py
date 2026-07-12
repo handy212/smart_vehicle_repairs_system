@@ -30,7 +30,7 @@ class AccountingServiceTests(TestCase):
             phone='555-0100',
             address='123 Test Street',
             city='Testville',
-            state='TS',
+            region='TS',
             zip_code='12345',
             created_by=self.user,
         )
@@ -422,7 +422,7 @@ class AccountingServiceTests(TestCase):
             phone='555-0101',
             address='456 Test Street',
             city='Elsewhere',
-            state='TS',
+            region='TS',
             zip_code='12346',
             created_by=self.user,
         )
@@ -458,7 +458,7 @@ class AccountingServiceTests(TestCase):
             phone='555-0102',
             address='789 Test Street',
             city='Elsewhere',
-            state='TS',
+            region='TS',
             zip_code='12347',
             created_by=self.user,
         )

@@ -21,43 +21,51 @@
             line-height: 1.2;
             color: #000;
             background: #e5e7eb;
+            min-height: 297mm;
         }
 
-        /* A4 sheet view - when shown in browser tab (not when printing) */
-        .a4-sheet {
+        /* Full document frame — keeps footer at bottom of the sheet when content is short */
+        .document-shell {
             width: 210mm;
             min-height: 297mm;
             margin: 12px auto;
-            padding: 8mm;
+            padding: 8mm 8mm 10mm;
             background: #fff;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .document-shell.is-browser-preview {
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
         }
 
         @media print {
             body {
                 background: #fff;
+                min-height: 0;
             }
-            .a4-sheet {
+            .document-shell {
                 width: auto;
-                min-height: auto;
+                min-height: 0;
                 margin: 0;
-                padding: 0;
+                padding: 0 0 28mm;
+                overflow: visible;
+                display: block;
+                box-shadow: none;
             }
         }
 
         /* Page Configuration */
         @page {
             size: {% block page_size %}A4{% endblock %};
-            margin: 6mm;
+            margin: 6mm 6mm 30mm 6mm;
 
             @bottom-center {
-                content: "Page " counter(page) " of " counter(pages) " | {{ footer_company_name|escapejs }}";
-                font-family: Arial, Helvetica, sans-serif;
-                font-size: 7pt;
-                color: #6b7280;
+                content: element(print-footer);
+                width: 100%;
             }
         }
 
@@ -550,6 +558,42 @@
             flex: 1 1 auto;
         }
 
+        .notes-box {
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 4px;
+            padding: 6px 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .document-terms {
+            margin-top: 10px;
+        }
+
+        .document-terms-title {
+            font-weight: 700;
+            font-size: 7.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+            color: #111827;
+        }
+
+        .document-terms-body {
+            color: #374151;
+            font-size: 7pt;
+            line-height: 1.45;
+        }
+
+        .document-terms-body p {
+            margin: 0 0 3px;
+        }
+
+        .document-terms-body p:last-child {
+            margin-bottom: 0;
+        }
+
         /* Components */
         .table,
         .data-table {
@@ -680,22 +724,26 @@
             width: 100%;
             border-top: 1px solid #d1d5db;
             border-collapse: collapse;
-            margin-top: 12px;
             color: #4b5563;
             font-size: 7pt;
             line-height: 1.25;
             page-break-inside: avoid;
             break-inside: avoid;
-            position: relative;
             z-index: 3;
             background: #fff;
             margin-top: auto;
             flex-shrink: 0;
         }
 
+        /* PDF (WeasyPrint): pin footer into @page bottom margin on every page */
+        body.is-pdf .print-footer {
+            position: running(print-footer);
+            margin-top: 0;
+        }
+
         .print-footer td {
             border: 0;
-            padding: 7px 0 0;
+            padding: 6px 0 0;
             vertical-align: top;
             background: #fff;
         }
@@ -733,6 +781,21 @@
             margin-top: 4px;
         }
 
+        .print-footer-page {
+            margin-top: 2px;
+            color: #6b7280;
+        }
+
+        .print-footer-page::after {
+            content: "Page " counter(page) " of " counter(pages);
+        }
+
+        @media screen {
+            .print-footer-page {
+                display: none;
+            }
+        }
+
         .print-footer-logos {
             width: 245px;
             text-align: right;
@@ -748,9 +811,6 @@
         }
 
         @media print {
-            body {
-            }
-
             .watermark {
                 position: fixed;
                 top: 34%;
@@ -778,6 +838,24 @@
                 page-break-inside: avoid;
                 break-inside: avoid;
             }
+
+            /*
+              Browser print only (not PDF): browsers ignore running()/element(),
+              so fix the HTML footer to the bottom of each printed page.
+            */
+            body:not(.is-pdf) .print-footer {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                margin-top: 0;
+                padding: 4px 0 0;
+                background: #fff;
+            }
+
+            body:not(.is-pdf) .document-shell {
+                padding-bottom: 28mm;
+            }
         }
     </style>
 
@@ -792,14 +870,14 @@
     {% block extra_styles %}{% endblock %}
 </head>
 
-<body data-company-name="{% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}">
+<body class="{% if is_pdf %}is-pdf{% endif %}" data-company-name="{% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}">
     {% if show_print_controls %}
     <div class="no-print" style="position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:6px;">
         <button onclick="window.print()" style="padding:6px 10px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Print</button>
         <button onclick="window.close()" style="padding:6px 10px;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Close</button>
     </div>
     {% endif %}
-    <div class="{% if show_print_controls %}a4-sheet{% endif %}">
+    <div class="document-shell{% if show_print_controls %} is-browser-preview{% endif %}">
     {% if watermark %}
     <div class="watermark">{{ watermark.text }}</div>
     {% endif %}
@@ -824,29 +902,32 @@
                 <!-- Company Address / Contact -->
                 <div class="text-xs text-gray-500">
                     {% if company_address %}<div>{{ company_address }}</div>{% endif %}
+                    {% if company_area or company_city or company_region or company_state or company_zip %}
                     <div>
-                        {% if company_city %}{{ company_city }}{% endif %}
-                        {% if company_state %}, {{ company_state }}{% endif %}
-                        {% if company_zip %} {{ company_zip }}{% endif %}
+                        {% if company_area %}{{ company_area }}{% if company_city or company_region or company_state %}, {% endif %}{% endif %}{% if company_city %}{{ company_city }}{% if company_region or company_state %}, {% endif %}{% endif %}{% if company_region %}{{ company_region }}{% elif company_state %}{{ company_state }}{% endif %}{% if company_zip and not company_area and not company_region %} {{ company_zip }}{% endif %}
                     </div>
+                    {% endif %}
                     {% if company_phone %}<div>Phone: {{ company_phone }}</div>{% endif %}
                     {% if company_email %}<div>Email: {{ company_email }}</div>{% endif %}
+                    {% if company_website %}<div>{{ company_website }}</div>{% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- Right: Tax ID & Branch/Reg Info (Replacing Doc Name) -->
+        {% if company_tax_id or company_registration or branch or company_tagline %}
         <div class="header-right text-right text-xs text-gray-500">
             {% if company_tax_id %}
             <div>Tax ID: <span class="font-semibold text-gray-900">{{ company_tax_id }}</span></div>
             {% endif %}
-
+            {% if company_registration %}
+            <div>Reg. No: <span class="font-semibold text-gray-900">{{ company_registration }}</span></div>
+            {% endif %}
             {% if branch %}<div>{{ branch.name }}</div>{% endif %}
-
             {% if company_tagline %}
             <div class="mt-2 text-gray-400 italic">{{ company_tagline }}</div>
             {% endif %}
         </div>
+        {% endif %}
     </div>
 
     <!-- Document Title Bar (Moved out of header) -->

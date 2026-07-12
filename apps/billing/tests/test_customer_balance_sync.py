@@ -27,7 +27,7 @@ class CustomerBalanceSyncTests(TestCase):
             phone='555-9100',
             address='9 Balance St',
             city='Bal',
-            state='PA',
+            region='PA',
             zip_code='91009',
             created_by=self.user,
         )

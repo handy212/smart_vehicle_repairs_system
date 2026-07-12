@@ -66,7 +66,7 @@ def smoke_admin(db):
         phone='0000000000',
         address='1 Test St',
         city='Accra',
-        state='Greater Accra',
+        region='Greater Accra',
         zip_code='00000',
         created_by=user,
     )

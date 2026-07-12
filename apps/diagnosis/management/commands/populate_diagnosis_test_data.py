@@ -105,7 +105,7 @@ class Command(BaseCommand):
             code='MAIN',
             address='123 Test St',
             city='Test City',
-            state='TS',
+            region='TS',
             zip_code='12345',
             phone='555-0100',
             is_active=True,

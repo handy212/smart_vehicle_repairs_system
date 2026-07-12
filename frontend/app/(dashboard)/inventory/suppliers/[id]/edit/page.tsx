@@ -14,6 +14,9 @@ import { ArrowLeft, AlertCircle, Save } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AxiosError } from "axios";
+import { Controller } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GHANA_REGIONS } from "@/lib/constants/ghana-regions";
 
 const supplierSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -22,13 +25,12 @@ const supplierSchema = z.object({
   contact_person: z.string().optional(),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
-  fax: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
   address_line1: z.string().optional(),
   address_line2: z.string().optional(),
   city: z.string().optional(),
-  state: z.string().optional(),
-  postal_code: z.string().optional(),
+  region: z.string().optional(),
+  area: z.string().optional(),
   country: z.string().optional(),
   tax_id: z.string().optional(),
   payment_terms: z.string().optional(),
@@ -69,6 +71,7 @@ export default function EditSupplierPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     setError,
     reset,
@@ -78,7 +81,7 @@ export default function EditSupplierPage() {
       supplier_type: "distributor",
       is_active: true,
       is_preferred: false,
-      country: "USA",
+      country: "Ghana",
     },
   });
 
@@ -91,14 +94,12 @@ export default function EditSupplierPage() {
       contact_person: supplier.contact_person ?? "",
       email: supplier.email ?? "",
       phone: supplier.phone ?? "",
-      fax: supplier.fax ?? "",
       website: supplier.website ?? "",
       address_line1: supplier.address_line1 ?? "",
       address_line2: supplier.address_line2 ?? "",
       city: supplier.city ?? "",
-      state: supplier.state ?? "",
-      postal_code: supplier.postal_code ?? "",
-      country: supplier.country ?? "USA",
+      state: supplier.region ?? "",
+      country: supplier.country ?? "Ghana",
       tax_id: supplier.tax_id ?? "",
       payment_terms: supplier.payment_terms ?? "",
       credit_limit:
@@ -290,14 +291,7 @@ export default function EditSupplierPage() {
                 <label className="block text-sm font-medium text-foreground mb-1">
                   Phone
                 </label>
-                <Input {...register("phone")} placeholder="+1 (555) 123-4567" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Fax
-                </label>
-                <Input {...register("fax")} placeholder="+1 (555) 123-4568" />
+                <Input {...register("phone")} placeholder="030 123 4567" />
               </div>
 
               <div>
@@ -333,27 +327,44 @@ export default function EditSupplierPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">City</label>
-                  <Input {...register("city")} placeholder="City" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Region</label>
+                  <Controller
+                    name="region"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GHANA_REGIONS.map((region) => (
+                            <SelectItem key={region} value={region}>
+                              {region}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">State</label>
-                  <Input {...register("state")} placeholder="State" />
+                  <label className="block text-sm font-medium text-foreground mb-1">City</label>
+                  <Input {...register("city")} placeholder="e.g. Accra" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
-                    Postal Code
+                    Area
                   </label>
-                  <Input {...register("postal_code")} placeholder="12345" />
+                  <Input {...register("area")} placeholder="e.g. East Legon" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     Country
                   </label>
-                  <Input {...register("country")} placeholder="USA" />
+                  <Input {...register("country")} placeholder="Ghana" />
                 </div>
               </div>
             </CardContent>

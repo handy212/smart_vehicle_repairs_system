@@ -48,8 +48,8 @@ class CustomerForm(forms.ModelForm):
         model = Customer
         fields = [
             'customer_type', 'company_name', 'tax_id',
-            'service_address', 'service_city', 'service_state', 'service_zip_code',
-            'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
+            'service_address', 'service_city', 'service_region', 'service_area',
+            'billing_address', 'billing_city', 'billing_region', 'billing_area',
             'preferred_contact_method', 'payment_terms', 'credit_limit', 'status'
         ]
         widgets = {
@@ -60,24 +60,24 @@ class CustomerForm(forms.ModelForm):
             }),
             'tax_id': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '12-3456789'
+                'placeholder': 'C0001234567'
             }),
             'service_address': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 2,
-                'placeholder': 'Service address'
+                'placeholder': 'Street / landmark'
             }),
             'service_city': forms.TextInput(attrs={
                 'class': 'form-control', 
-                'placeholder': 'City'
+                'placeholder': 'e.g. Accra'
             }),
-            'service_state': forms.TextInput(attrs={
+            'service_region': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'State'
+                'placeholder': 'e.g. Greater Accra'
             }),
-            'service_zip_code': forms.TextInput(attrs={
+            'service_area': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '12345'
+                'placeholder': 'e.g. East Legon'
             }),
             'billing_address': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -88,13 +88,13 @@ class CustomerForm(forms.ModelForm):
                 'class': 'form-control', 
                 'placeholder': 'Billing city'
             }),
-            'billing_state': forms.TextInput(attrs={
+            'billing_region': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Billing state'
+                'placeholder': 'Billing region'
             }),
-            'billing_zip_code': forms.TextInput(attrs={
+            'billing_area': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '12345'
+                'placeholder': 'Billing area'
             }),
             'preferred_contact_method': forms.Select(attrs={'class': 'form-select'}),
             'payment_terms': forms.Select(attrs={'class': 'form-select'}),

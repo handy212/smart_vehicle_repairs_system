@@ -69,7 +69,11 @@ class CustomerEstimateActionTests(APITestCase):
         estimate = self._create_estimate(self.customer)
         self.client.force_authenticate(self.customer_user)
 
-        response = self.client.post(f"/api/billing/estimates/{estimate.id}/approve/")
+        response = self.client.post(
+            f"/api/billing/estimates/{estimate.id}/approve/",
+            {"accepted_terms": True},
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         estimate.refresh_from_db()
@@ -81,7 +85,11 @@ class CustomerEstimateActionTests(APITestCase):
         estimate = self._create_estimate(self.other_customer)
         self.client.force_authenticate(self.customer_user)
 
-        response = self.client.post(f"/api/billing/estimates/{estimate.id}/approve/")
+        response = self.client.post(
+            f"/api/billing/estimates/{estimate.id}/approve/",
+            {"accepted_terms": True},
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         estimate.refresh_from_db()
@@ -119,7 +127,11 @@ class CustomerEstimateActionTests(APITestCase):
         estimate.save(update_fields=["work_order"])
         self.client.force_authenticate(self.customer_user)
 
-        response = self.client.post(f"/api/billing/estimates/{estimate.id}/approve/")
+        response = self.client.post(
+            f"/api/billing/estimates/{estimate.id}/approve/",
+            {"accepted_terms": True},
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("no longer actionable", response.data["error"])
@@ -142,7 +154,11 @@ class CustomerEstimateActionTests(APITestCase):
         estimate.save(update_fields=["work_order"])
         self.client.force_authenticate(self.customer_user)
 
-        response = self.client.post(f"/api/billing/estimates/{estimate.id}/approve/")
+        response = self.client.post(
+            f"/api/billing/estimates/{estimate.id}/approve/",
+            {"accepted_terms": True},
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         estimate.refresh_from_db()

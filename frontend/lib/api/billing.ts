@@ -256,6 +256,12 @@ export interface Estimate {
   is_expired?: boolean;
   days_until_expiration?: number;
   can_be_approved?: boolean;
+  approval_terms?: {
+    document_type?: string;
+    terms_key?: string;
+    terms_text?: string;
+    requires_acceptance?: boolean;
+  };
   can_be_converted?: boolean;
   approved_date?: string;
   declined_date?: string;
@@ -985,8 +991,11 @@ export const billingApi = {
       await apiClient.post(`/billing/estimates/${id}/send/`);
     },
 
-    approve: async (id: number): Promise<Estimate> => {
-      const response = await apiClient.post(`/billing/estimates/${id}/approve/`);
+    approve: async (
+      id: number,
+      data?: { accepted_terms?: boolean; notes?: string; signature_data?: string }
+    ): Promise<Estimate> => {
+      const response = await apiClient.post(`/billing/estimates/${id}/approve/`, data || {});
       return response.data;
     },
 

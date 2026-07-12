@@ -57,9 +57,10 @@ class User(AbstractUser):
     date_of_birth = models.DateField(_('date of birth'), blank=True, null=True)
     address = models.TextField(_('address'), blank=True)
     city = models.CharField(_('city'), max_length=100, blank=True)
-    state = models.CharField(_('state'), max_length=100, blank=True)
+    region = models.CharField(_('region'), max_length=100, blank=True, help_text='Ghana administrative region')
+    area = models.CharField(_('area'), max_length=150, blank=True, help_text='Neighborhood / suburb / locality')
     zip_code = models.CharField(_('zip code'), max_length=20, blank=True)
-    country = models.CharField(_('country'), max_length=100, default='USA')
+    country = models.CharField(_('country'), max_length=100, default='Ghana')
     
     # Employment fields (for staff members)
     employee_id = models.CharField(_('employee ID'), max_length=50, blank=True, unique=True, null=True)
@@ -197,6 +198,7 @@ class User(AbstractUser):
 
 # Import permission models
 from .permission_models import Permission, Role, UserPermissionOverride
+from .terms_models import TermsAcceptance  # noqa: F401 — register for migrations
 
 
 class RegistrationOTP(models.Model):

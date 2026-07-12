@@ -26,7 +26,7 @@ class AccountingReportPrintAPITests(TestCase):
             phone='555-0099',
             address='9 Print St',
             city='City',
-            state='ST',
+            region='ST',
             zip_code='00099',
             created_by=self.user,
         )

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { branchesApi } from "@/lib/api/branches";
+import { formatBranchLocation } from "@/lib/constants/ghana-regions";
 import type { User } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -223,7 +224,7 @@ export default function BranchDetailPage() {
                   <p className="mt-1 text-foreground">
                     {branch.address}
                     <br />
-                    {branch.city}, {branch.state} {branch.zip_code}
+                    {formatBranchLocation(branch)}
                     <br />
                     {branch.country}
                   </p>
@@ -235,12 +236,6 @@ export default function BranchDetailPage() {
                   </label>
                   <p className="mt-1 text-foreground">
                     {branch.phone}
-                    {branch.fax && (
-                      <>
-                        <br />
-                        Fax: {branch.fax}
-                      </>
-                    )}
                     {branch.email && (
                       <>
                         <br />

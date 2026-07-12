@@ -7,6 +7,8 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 
+from apps.core.ghana import GHANA_REGION_CHOICES
+
 
 class Branch(models.Model):
     """
@@ -38,12 +40,23 @@ class Branch(models.Model):
     email = models.EmailField(_('email address'), blank=True)
     fax = models.CharField(_('fax number'), max_length=20, blank=True)
     
-    # Address
+    # Address (Ghana: Region, City, Area)
     address = models.TextField(_('street address'))
     city = models.CharField(_('city'), max_length=100)
-    state = models.CharField(_('state'), max_length=100)
-    zip_code = models.CharField(_('zip code'), max_length=20)
-    country = models.CharField(_('country'), max_length=100, default='USA')
+    region = models.CharField(
+        _('region'),
+        max_length=100,
+        choices=GHANA_REGION_CHOICES,
+        help_text='Ghana administrative region',
+    )
+    area = models.CharField(
+        _('area'),
+        max_length=150,
+        blank=True,
+        help_text='Neighborhood / suburb / locality (e.g. East Legon, Adum)',
+    )
+    zip_code = models.CharField(_('zip code'), max_length=20, blank=True, default='')
+    country = models.CharField(_('country'), max_length=100, default='Ghana')
     
     # Operational Settings
     is_active = models.BooleanField(
@@ -58,7 +71,7 @@ class Branch(models.Model):
     )
     opening_time = models.TimeField(_('opening time'), null=True, blank=True)
     closing_time = models.TimeField(_('closing time'), null=True, blank=True)
-    timezone = models.CharField(_('timezone'), max_length=50, default='America/New_York')
+    timezone = models.CharField(_('timezone'), max_length=50, default='Africa/Accra')
     
     # Document Sequence Numbers
     # These track the next available number for each document type
@@ -212,8 +225,21 @@ class Branch(models.Model):
     
     @property
     def full_address(self):
-        """Get formatted full address"""
-        return f"{self.address}, {self.city}, {self.state} {self.zip_code}, {self.country}"
+        """Get formatted full address (Ghana: Area, City, Region)."""
+        parts = [self.address]
+        locality = ', '.join(p for p in [self.area, self.city] if p)
+        if locality:
+            parts.append(locality)
+        if self.region:
+            parts.append(self.region)
+        if self.country:
+            parts.append(self.country)
+        return ', '.join(parts)
+
+    @property
+    def state(self):
+        """Backward-compatible alias for region (legacy integrations)."""
+        return self.region
     
     def get_or_create_ledger_entity(self):
         """Get or create Django Ledger entity for this branch"""
@@ -256,9 +282,9 @@ class Branch(models.Model):
                         name=self.name,
                         address_1=self.address or '',
                         city=self.city or '',
-                        state=self.state or '',
+                        state=self.region or '',
                         zip_code=self.zip_code or '',
-                        country=self.country or 'USA',
+                        country=self.country or 'Ghana',
                         email=self.email or '',
                         phone=self.phone or '',
                         admin=admin_user,
