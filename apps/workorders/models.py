@@ -837,13 +837,8 @@ class WorkOrder(models.Model):
                 if returned_without_reason.exists():
                     return False, "Every returned part must include a return reason before completing"
 
-                tasks_missing_charge = [
-                    task.description
-                    for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                    if (task.labor_cost or Decimal('0')) <= 0
-                ]
-                if tasks_missing_charge:
-                    return False, "A flat charge is required for every completed mechanical task before completing the work order"
+                # Labor/parts pricing is enforced at diagnosis quote + customer approval,
+                # not again when technicians finish execution tasks.
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -918,13 +913,7 @@ class WorkOrder(models.Model):
                 if returned_without_reason.exists():
                     errors.append("Every returned part must include a return reason")
 
-                tasks_missing_charge = [
-                    task.description
-                    for task in self.tasks.filter(is_workflow_task=False, status='completed')
-                    if (task.labor_cost or Decimal('0')) <= 0
-                ]
-                if tasks_missing_charge:
-                    errors.append("A flat charge is required for every completed mechanical task")
+                # Pricing is validated at quote/approval time, not at task execution.
         
         if new_status == 'invoiced':
             if not self.odometer_out:

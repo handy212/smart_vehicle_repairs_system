@@ -88,8 +88,12 @@ export default function DashboardPage() {
   const useReportingOverview = canViewDashboardOverview;
   const useReportingWorkOrderStats =
     canViewReports && canViewWorkOrders && showSection("wo_status_breakdown");
+  // Prefer reporting overview when available; avoid duplicate unscoped/fallback WO calls
   const useWorkOrderFallback =
-    canViewWorkOrders && !useReportingWorkOrderStats && (showSection("kpi") || showSection("main_table") || showSection("wo_status_breakdown"));
+    canViewWorkOrders &&
+    !useReportingOverview &&
+    !useReportingWorkOrderStats &&
+    (showSection("kpi") || showSection("main_table") || showSection("wo_status_breakdown"));
   const useBillingQueries =
     canViewBilling &&
     (showSection("bottom_summary") || roleConfig.defaultMainTab === "invoices");
@@ -98,6 +102,12 @@ export default function DashboardPage() {
   const useTechPerfQueries = canViewReports && showSection("technician_perf");
   const useRevenueQueries =
     canViewReports && canViewBilling && showSection("bottom_summary");
+  const kpiNeedsCustomerCount =
+    roleConfig.kpiLabels === "all" ||
+    (Array.isArray(roleConfig.kpiLabels) && roleConfig.kpiLabels.includes("Customers"));
+  const kpiNeedsVehicleCount =
+    roleConfig.kpiLabels === "all" ||
+    (Array.isArray(roleConfig.kpiLabels) && roleConfig.kpiLabels.includes("Vehicles"));
 
   const {
     data: dashboardData,
@@ -247,14 +257,14 @@ export default function DashboardPage() {
   const { data: customerStats } = useQuery({
     queryKey: ["customers", "dashboard-stats", activeBranchId],
     queryFn: () => customersApi.dashboardStats(),
-    enabled: canViewCustomers && showSection("kpi"),
+    enabled: canViewCustomers && showSection("kpi") && kpiNeedsCustomerCount,
     staleTime: 10 * 60 * 1000,
   });
 
   const { data: vehicleStats } = useQuery({
     queryKey: ["vehicles", "dashboard-stats", activeBranchId],
     queryFn: () => vehiclesApi.dashboardStats(),
-    enabled: canViewVehicles && showSection("kpi"),
+    enabled: canViewVehicles && showSection("kpi") && kpiNeedsVehicleCount,
     staleTime: 10 * 60 * 1000,
   });
 

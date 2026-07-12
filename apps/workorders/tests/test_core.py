@@ -421,7 +421,8 @@ class WorkOrderModelTest(TestCase):
         self.assertFalse(can_transition)
         self.assertIn('return reason', error)
 
-    def test_workorder_cannot_complete_when_completed_task_has_no_charge(self):
+    def test_workorder_can_complete_when_completed_task_has_no_charge(self):
+        """Task labor_cost is optional at execution; pricing is enforced at quote approval."""
         workorder = baker.make(
             WorkOrder,
             customer=self.customer,
@@ -441,8 +442,7 @@ class WorkOrderModelTest(TestCase):
 
         can_transition, error = workorder.can_transition_to('completed')
 
-        self.assertFalse(can_transition)
-        self.assertIn('flat charge', error.lower())
+        self.assertTrue(can_transition, error)
 
 
 class ServiceTaskModelTest(TestCase):

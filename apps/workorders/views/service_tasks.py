@@ -204,27 +204,15 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
                     Decimal('0.01')
                 )
 
+        # Best-effort: fill labor_cost from task type / income category if missing.
+        # Do NOT block completion — customer pricing is enforced at diagnosis quote /
+        # approval (stores must price estimate lines before marking quoted).
         from apps.workorders.task_billing import resolve_flat_unit_price_for_task
 
         if (task.labor_cost or Decimal('0')) <= 0:
             flat = resolve_flat_unit_price_for_task(task)
             if flat > 0:
                 task.labor_cost = flat
-
-        if (task.labor_cost or Decimal('0')) <= 0:
-            return Response(
-                {
-                    'error': 'This task has no flat charge configured. Set a price on the task type or income category.',
-                    'field': 'labor_cost',
-                    'next_step': 'Open Manage Task Types or Income categories and set a default price.',
-                    'task': {
-                        'id': task.id,
-                        'description': task.description,
-                        'status': task.get_status_display(),
-                    },
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
         task.status = 'completed'
 

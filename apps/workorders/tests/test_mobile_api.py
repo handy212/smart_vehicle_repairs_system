@@ -274,6 +274,51 @@ class MobileAPITestCase(TestCase):
         self.assertEqual(self.task.status, 'completed')
         self.assertGreater(self.task.labor_cost, 0)
 
+    def test_can_complete_task_without_labor_cost(self, mock_filter):
+        """Execution must not be blocked by missing flat charge (priced at quote stage)."""
+        self.task.labor_cost = Decimal('0.00')
+        self.task.save(update_fields=['labor_cost'])
+
+        self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/start_work/')
+        self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')
+
+        response = self.client.post(
+            f'/api/workorders/tasks/{self.task.id}/complete/',
+            {'notes': 'Done without task flat fee'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, 'completed')
+
+    def test_technician_can_mark_part_installed_without_edit_workorders(self, mock_filter):
+        from apps.workorders.models import WorkOrderPart
+
+        self.tech_role.permissions.remove(self.edit_wo_perm)
+        update_status, _ = Permission.objects.update_or_create(
+            code='update_workorder_status',
+            defaults={
+                'name': 'Update Work Order Status',
+                'category': 'workorders',
+                'is_active': True,
+            },
+        )
+        self.tech_role.permissions.add(update_status, self.clock_work_time_perm)
+
+        part = WorkOrderPart.objects.create(
+            work_order=self.work_order,
+            part_name='Oil Filter',
+            quantity=1,
+            status='ready',
+        )
+
+        response = self.client.post(f'/api/workorders/parts/{part.id}/mark_installed/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        part.refresh_from_db()
+        self.assertEqual(part.status, 'installed')
+
     def test_request_quality_check_is_idempotent_when_already_requested(self, mock_filter):
         """Repeated QC requests should return the current work order instead of failing."""
         self.work_order.status = 'quality_check'

@@ -52,7 +52,9 @@ class ServiceBayViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         base = [IsAuthenticated(), IsModuleEnabled('appointments')]
         if self.action in ['list', 'retrieve', 'available']:
-            return base + [HasPermission('view_appointments')]
+            return base + [
+                HasAnyPermission(['view_appointments', 'view_own_appointments'])(),
+            ]
         return base + [HasAnyPermission(['manage_appointments', 'edit_appointments'])()]
     
     def get_queryset(self):
@@ -85,7 +87,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             # Allow customers to view their own appointments
             if getattr(self.request.user, 'role', None) == 'customer':
                 return [IsAuthenticated(), IsModuleEnabled('appointments')]
-            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('view_appointments')]
+            # Technicians with view_own_appointments: queryset scopes to assigned jobs
+            return [
+                IsAuthenticated(),
+                IsModuleEnabled('appointments'),
+                HasAnyPermission(['view_appointments', 'view_own_appointments'])(),
+            ]
         elif self.action == 'create':
             # Allow customers to book appointments
             if getattr(self.request.user, 'role', None) == 'customer':
@@ -168,9 +175,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 use_active_branch=not show_all
             )
 
-            # Own-schedule users (technicians): only appointments assigned to them
+            # Technicians / own-schedule users: only appointments assigned to them
             user = self.request.user
-            if (
+            if getattr(user, 'role', None) == 'technician' or (
                 user_has_permission(user, 'view_own_appointments')
                 and not user_has_permission(user, 'view_appointments')
             ):
@@ -886,7 +893,7 @@ class AppointmentReminderViewSet(viewsets.ReadOnlyModelViewSet):
         return [
             IsAuthenticated(),
             IsModuleEnabled('appointments'),
-            HasPermission('view_appointments'),
+            HasAnyPermission(['view_appointments', 'view_own_appointments'])(),
         ]
     
     def get_queryset(self):

@@ -40,7 +40,7 @@ import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { usePermissions } from "@/lib/hooks/usePermissions";
-import { LIST_SERVICE_COORDINATORS_PERMISSIONS } from "@/lib/utils/permissions";
+import { LIST_SERVICE_COORDINATORS_PERMISSIONS, BILLING_AREA_PERMISSIONS } from "@/lib/utils/permissions";
 import {
   getJobTypeLabel,
   getServicePackageName,
@@ -107,8 +107,9 @@ export default function WorkOrderOverviewTab({
   const canListServiceCoordinators = hasAnyPermission([
     ...LIST_SERVICE_COORDINATORS_PERMISSIONS,
   ]);
+  const canViewBilling = hasAnyPermission([...BILLING_AREA_PERMISSIONS]);
   const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } =
-    useQuickBooksConnection();
+    useQuickBooksConnection({ enabled: canViewBilling });
 
   const branchId =
     typeof workOrder?.branch === "object" && workOrder?.branch
@@ -452,7 +453,7 @@ export default function WorkOrderOverviewTab({
 
         {/* Right rail */}
         <div className="space-y-4 lg:w-72">
-          {(invoiceSummary?.id || canCreateInvoice) && (
+          {canViewBilling && (invoiceSummary?.id || canCreateInvoice) && (
             <Card className="border-primary/15 shadow-sm">
               <CardHeader className="px-4 py-3">
                 <CardTitle className="text-sm font-semibold">Billing</CardTitle>
@@ -507,6 +508,7 @@ export default function WorkOrderOverviewTab({
             </Card>
           )}
 
+          {canViewBilling && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
               <CardTitle className="text-sm font-semibold">Financial</CardTitle>
@@ -624,6 +626,7 @@ export default function WorkOrderOverviewTab({
               )}
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader className="px-4 py-3">

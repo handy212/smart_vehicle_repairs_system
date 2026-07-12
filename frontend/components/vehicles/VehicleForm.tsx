@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 export const vehicleSchema = z.object({
     vin: z.string()
@@ -63,10 +64,13 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
 
     const [showScanner, setShowScanner] = useState(false);
     const [vinOtherInfo, setVinOtherInfo] = useState<any | null>(null);
+    const { hasPermission } = usePermissions();
+    const canListCustomers = hasPermission("view_customers");
 
     const { data: customersData } = useQuery({
         queryKey: ["customers", "list"],
         queryFn: () => customersApi.list({ page: 1 }),
+        enabled: canListCustomers,
     });
 
     const {

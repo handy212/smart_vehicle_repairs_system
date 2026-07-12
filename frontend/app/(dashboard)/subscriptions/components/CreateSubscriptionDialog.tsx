@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getUserFacingError } from "@/lib/api/errors";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const subscriptionCreateSchema = z.object({
     customer: z.number().min(1, "Customer is required"),
@@ -47,6 +48,8 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { formatCurrency } = useCurrency();
+    const { hasPermission } = usePermissions();
+    const canListCustomers = hasPermission("view_customers");
 
     const {
         register,
@@ -66,11 +69,13 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
     const { data: packagesData } = useQuery({
         queryKey: ["packages", "available"],
         queryFn: () => packagesApi.getAvailable(),
+        enabled: open,
     });
 
     const { data: customersData } = useQuery({
         queryKey: ["customers", "for-subscription"],
         queryFn: () => customersApi.list({}),
+        enabled: open && canListCustomers,
     });
 
     const packages = Array.isArray(packagesData) ? packagesData : [];

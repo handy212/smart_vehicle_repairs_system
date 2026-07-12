@@ -85,16 +85,68 @@ export default function CustomerDetailPage() {
     }
   }, [customer, addRecentItem]);
 
-  // Fetch counts for sidebar
-  const { data: vehicles = [] } = useQuery({ queryKey: ["customer", customerId, "vehicles"], queryFn: () => customersApi.vehicles(customerId), enabled: !!customerId });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices", "customer", customerId], queryFn: () => billingApi.invoices.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
-  const { data: estimates = [] } = useQuery({ queryKey: ["estimates", "customer", customerId], queryFn: () => billingApi.estimates.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
-  const { data: payments = [] } = useQuery({ queryKey: ["payments", "customer", customerId], queryFn: () => billingApi.payments.list({ customer: customerId }), enabled: !!customerId });
-  const { data: subscriptions = [] } = useQuery({ queryKey: ["subscriptions", "customer", customerId], queryFn: () => subscriptionsApi.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
-  const { data: appointments = [] } = useQuery({ queryKey: ["appointments", "customer", customerId], queryFn: () => appointmentsApi.list({ customer: customerId, all_branches: true, ordering: "-appointment_date" }).then(res => res.results), enabled: !!customerId });
-  const { data: workOrders = [] } = useQuery({ queryKey: ["workorders", "customer", customerId], queryFn: () => workordersApi.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
-  const { data: reminders = [] } = useQuery({ queryKey: ["customer-reminders", customerId], queryFn: () => customersApi.reminders.list(customerId), enabled: !!customerId });
-  const { data: contacts = [] } = useQuery({ queryKey: ["customer-contacts", customerId], queryFn: () => customersApi.contacts.list(customerId), enabled: !!customerId });
+  // Fetch counts for sidebar — gate each API to the permission that authorizes it
+  const canViewVehicles = hasAnyPermission(["view_vehicles", "view_own_vehicles"]);
+  const canViewBilling = hasAnyPermission([
+    "view_billing",
+    "create_invoices",
+    "create_estimates",
+    "manage_billing",
+    "process_payments",
+    "view_payment_history",
+  ]);
+  const canViewSubscriptions = hasAnyPermission(["view_subscriptions", "manage_subscriptions", "view_billing"]);
+  const canViewAppointments = hasAnyPermission(["view_appointments", "view_own_appointments"]);
+  const canViewWorkOrders = hasAnyPermission(["view_workorders", "view_own_workorders"]);
+
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["customer", customerId, "vehicles"],
+    queryFn: () => customersApi.vehicles(customerId),
+    enabled: !!customerId && canViewVehicles,
+  });
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices", "customer", customerId],
+    queryFn: () => billingApi.invoices.list({ customer: customerId }).then((res) => res.results),
+    enabled: !!customerId && canViewBilling,
+  });
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["estimates", "customer", customerId],
+    queryFn: () => billingApi.estimates.list({ customer: customerId }).then((res) => res.results),
+    enabled: !!customerId && canViewBilling,
+  });
+  const { data: payments = [] } = useQuery({
+    queryKey: ["payments", "customer", customerId],
+    queryFn: () => billingApi.payments.list({ customer: customerId }),
+    enabled: !!customerId && canViewBilling,
+  });
+  const { data: subscriptions = [] } = useQuery({
+    queryKey: ["subscriptions", "customer", customerId],
+    queryFn: () => subscriptionsApi.list({ customer: customerId }).then((res) => res.results),
+    enabled: !!customerId && canViewSubscriptions,
+  });
+  const { data: appointments = [] } = useQuery({
+    queryKey: ["appointments", "customer", customerId],
+    queryFn: () =>
+      appointmentsApi
+        .list({ customer: customerId, all_branches: true, ordering: "-appointment_date" })
+        .then((res) => res.results),
+    enabled: !!customerId && canViewAppointments,
+  });
+  const { data: workOrders = [] } = useQuery({
+    queryKey: ["workorders", "customer", customerId],
+    queryFn: () => workordersApi.list({ customer: customerId }).then((res) => res.results),
+    enabled: !!customerId && canViewWorkOrders,
+  });
+  const { data: reminders = [] } = useQuery({
+    queryKey: ["customer-reminders", customerId],
+    queryFn: () => customersApi.reminders.list(customerId),
+    enabled: !!customerId,
+  });
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["customer-contacts", customerId],
+    queryFn: () => customersApi.contacts.list(customerId),
+    enabled: !!customerId,
+  });
 
   const counts = {
     vehicles: vehicles.length,
@@ -153,6 +205,50 @@ export default function CustomerDetailPage() {
   if (error || !customer) return <div className="p-8 text-center text-destructive">Error loading customer</div>;
 
   const renderContent = () => {
+    const billingViews = new Set([
+      "invoices",
+      "estimates",
+      "statement",
+      "payments",
+      "credit-notes",
+      "contracts",
+    ]);
+    if (billingViews.has(activeView) && !canViewBilling) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          You don&apos;t have permission to view billing details for this customer.
+        </div>
+      );
+    }
+    if (activeView === "subscriptions" && !canViewSubscriptions) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          You don&apos;t have permission to view subscriptions.
+        </div>
+      );
+    }
+    if (activeView === "appointments" && !canViewAppointments) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          You don&apos;t have permission to view appointments.
+        </div>
+      );
+    }
+    if (activeView === "vehicles" && !canViewVehicles) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          You don&apos;t have permission to view vehicles.
+        </div>
+      );
+    }
+    if (activeView === "workorders" && !canViewWorkOrders) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          You don&apos;t have permission to view work orders.
+        </div>
+      );
+    }
+
     switch (activeView) {
       case "profile":
         return <ProfileView customer={customer} />;

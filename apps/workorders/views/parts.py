@@ -89,6 +89,9 @@ class WorkOrderPartViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermissi
                     'approve_part_requests',
                 ])(),
             ]
+        # Technicians install/return parts during repairs without full WO edit access
+        if self.action in ('mark_installed', 'mark_returned'):
+            return workorder_task_workflow_permissions()
         return workorder_edit_permissions()
     
     @action(detail=False, methods=['get'])

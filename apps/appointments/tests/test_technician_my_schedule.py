@@ -121,3 +121,36 @@ def test_my_schedule_denied_for_other_technician_id(technician_user, appointment
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_list_allows_view_own_appointments(technician_user, appointment_for_technician):
+    """Technicians with only view_own_appointments can list (scoped to assigned)."""
+    other_tech = User.objects.create_user(
+        username="other_tech_list",
+        email="other_tech_list@example.com",
+        password="password123",
+        role="technician",
+        branch=technician_user.branch,
+    )
+    other_appt = Appointment.objects.create(
+        customer=appointment_for_technician.customer,
+        vehicle=appointment_for_technician.vehicle,
+        appointment_date=date.today() + timedelta(days=1),
+        appointment_time=time(11, 0),
+        branch=appointment_for_technician.branch,
+        service_type="maintenance",
+        status="confirmed",
+        estimated_duration=60,
+        customer_concerns="Other tech job",
+    )
+    other_appt.assigned_technicians.add(other_tech)
+
+    client = APIClient()
+    client.force_authenticate(user=technician_user)
+
+    response = client.get("/api/appointments/appointments/?page=1")
+
+    assert response.status_code == status.HTTP_200_OK
+    ids = [row["id"] for row in response.data["results"]]
+    assert appointment_for_technician.id in ids
+    assert other_appt.id not in ids

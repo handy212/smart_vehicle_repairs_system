@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 
+import { usePermissions } from "@/lib/hooks/usePermissions";
+
 interface CustomerSelectorProps {
 
     onSelect: (customer: any) => void;
@@ -26,6 +28,8 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedQuery, setDebouncedQuery] = useState("");
+    const { hasPermission } = usePermissions();
+    const canListCustomers = hasPermission("view_customers");
 
     // Debounce search
     useEffect(() => {
@@ -42,7 +46,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
             page_size: 10,
             status: 'active'
         }),
-        enabled: open,
+        enabled: open && canListCustomers,
     });
 
     const customers = data?.results || [];
@@ -58,7 +62,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
     const { data: selectedCustomer } = useQuery({
         queryKey: ["customer", selectedCustomerId],
         queryFn: () => customersApi.get(selectedCustomerId!),
-        enabled: !!selectedCustomerId,
+        enabled: !!selectedCustomerId && canListCustomers,
     });
 
     return (

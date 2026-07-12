@@ -96,29 +96,36 @@ export default function VehicleDetailPage() {
     }
   }, [vehicle, addRecentItem]);
 
-  // Fetch work orders and appointments for this vehicle
-  // We can optimize this later to only fetch when needed, but for now pre-fetching is fine for similar UX
+  const canViewWorkOrders = hasAnyPermission(["view_workorders", "view_own_workorders"]);
+  const canViewAppointments = hasAnyPermission(["view_appointments", "view_own_appointments"]);
+  const canViewRoadside = hasPermission("view_roadside");
+  const canViewCustomers = hasPermission("view_customers");
+  const canReassignOwner = hasPermission("edit_vehicles") && canViewCustomers;
+
+  // Fetch related data only when the user can access those APIs
   const { data: workOrdersData } = useQuery({
     queryKey: ["workorders", "vehicle", vehicleId],
-    queryFn: () => workordersApi.list({ vehicle: vehicleId }), // Optimized to search by vehicle ID if API supports it
-    enabled: !!vehicleId,
+    queryFn: () => workordersApi.list({ vehicle: vehicleId }),
+    enabled: !!vehicleId && canViewWorkOrders,
   });
 
   const { data: appointmentsData } = useQuery({
     queryKey: ["appointments", "vehicle", vehicleId],
-    queryFn: () => appointmentsApi.list(),
-    enabled: !!vehicleId,
+    queryFn: () => appointmentsApi.list({ vehicle: vehicleId }),
+    enabled: !!vehicleId && canViewAppointments,
   });
 
   const { data: roadsideRequestsData } = useQuery({
     queryKey: ["roadside", "vehicle", vehicleId],
     queryFn: () => roadsideApi.list({ vehicle: vehicleId }),
-    enabled: !!vehicleId,
+    enabled: !!vehicleId && canViewRoadside,
   });
 
+  // Customer list only for owner reassignment (requires view_customers)
   const { data: customersData } = useQuery({
     queryKey: ["customers", "list"],
     queryFn: () => customersApi.list({ page: 1 }),
+    enabled: canReassignOwner && showReassignDialog,
   });
 
   const roadsideRequests = roadsideRequestsData?.results || [];
@@ -298,7 +305,7 @@ export default function VehicleDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <PermissionGuard permission="edit_vehicles">
+          <PermissionGuard permissions={["edit_vehicles", "view_customers"]} requireAll>
             <Button
               variant="outline"
               size="sm"

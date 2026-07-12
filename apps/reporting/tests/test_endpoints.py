@@ -275,3 +275,68 @@ class ReportingEndpointTests(TestCase):
         response = self.client.get('/api/reporting/dashboard-overview/')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_technician_dashboard_overview_scopes_work_orders(self):
+        from django.core.management import call_command
+        from apps.accounts.permission_models import Permission, Role
+
+        call_command('init_permissions', verbosity=0)
+        SystemModule.objects.get_or_create(
+            slug='dashboard',
+            defaults={'name': 'Dashboard', 'is_enabled': True},
+        )
+        view_dashboard = Permission.objects.get(code='view_dashboard')
+        tech_role, _ = Role.objects.update_or_create(
+            code='technician',
+            defaults={'name': 'Technician', 'is_active': True},
+        )
+        tech_role.permissions.set([view_dashboard])
+
+        technician = User.objects.create_user(
+            username='tech-dash',
+            email='tech-dash@example.com',
+            password='password',
+            role='technician',
+            is_staff=True,
+            branch=self.branch,
+        )
+        other_tech = User.objects.create_user(
+            username='other-tech-dash',
+            email='other-tech-dash@example.com',
+            password='password',
+            role='technician',
+            is_staff=True,
+            branch=self.branch,
+        )
+        customer, vehicle = self._create_customer_vehicle(90)
+        mine = WorkOrder.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=self.branch,
+            status='in_progress',
+            primary_technician=technician,
+            customer_concerns='My assigned job',
+            odometer_in=10000,
+            created_by=self.user,
+        )
+        other = WorkOrder.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=self.branch,
+            status='in_progress',
+            primary_technician=other_tech,
+            customer_concerns='Other tech job',
+            odometer_in=10000,
+            created_by=self.user,
+        )
+
+        self.client.force_authenticate(technician)
+        response = self.client.get('/api/reporting/dashboard-overview/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        wo_ids = [row['id'] for row in response.data['recent_activity']['work_orders']]
+        self.assertIn(mine.id, wo_ids)
+        self.assertNotIn(other.id, wo_ids)
+        self.assertEqual(response.data['alerts']['active_work_orders'], 1)
+        self.assertEqual(response.data['today']['revenue'], 0)
+        self.assertEqual(response.data['alerts']['overdue_invoices']['count'], 0)

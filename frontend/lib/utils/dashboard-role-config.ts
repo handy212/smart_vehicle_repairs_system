@@ -83,7 +83,7 @@ export function getDashboardRoleConfig(role: string | undefined | null): Dashboa
         variant: "technician",
         title: "My Workshop",
         subtitle: "Assigned jobs and today's schedule",
-        kpiLabels: ["Active Jobs", "Appointments", "Customers"],
+        kpiLabels: ["Active Jobs", "Appointments"],
         sections: ["kpi", "main_table", "appointments"],
         defaultMainTab: "workorders",
         defaultWoFilter: "active",

@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const appointmentSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -35,6 +36,8 @@ export default function EditAppointmentPage() {
   const params = useParams();
   const appointmentId = parseInt(params.id as string);
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canListCustomers = hasPermission("view_customers");
 
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
 
@@ -47,6 +50,7 @@ export default function EditAppointmentPage() {
   const { data: customersData } = useQuery({
     queryKey: ["customers", "list"],
     queryFn: () => customersApi.list({ page: 1 }),
+    enabled: canListCustomers,
   });
 
   // Fetch vehicles for selected customer

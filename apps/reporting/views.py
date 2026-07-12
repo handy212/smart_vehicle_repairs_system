@@ -30,6 +30,7 @@ from apps.accounts.permissions import (
     HasAnyPermission,
     IsModuleEnabled,
     REPORTS_VIEW_PERMISSIONS,
+    filter_workorders_for_user,
     user_has_permission,
 )
 
@@ -272,9 +273,20 @@ def dashboard_overview(request):
         
         appointments_qs = filter_queryset_for_user_branches(Appointment.objects.all(), request.user, request)
         invoices_qs = filter_queryset_for_user_branches(Invoice.objects.all(), request.user, request)
-        work_orders_qs = filter_queryset_for_user_branches(WorkOrder.objects.all(), request.user, request)
+        work_orders_qs = filter_workorders_for_user(
+            filter_queryset_for_user_branches(WorkOrder.objects.all(), request.user, request),
+            request.user,
+        )
         parts_qs = filter_queryset_for_user_branches(Part.objects.all(), request.user, request)
         estimates_qs = filter_queryset_for_user_branches(Estimate.objects.all(), request.user, request)
+
+        # Own-schedule users / technicians: only appointments they are assigned to
+        user = request.user
+        if getattr(user, 'role', None) == 'technician' or (
+            user_has_permission(user, 'view_own_appointments')
+            and not user_has_permission(user, 'view_appointments')
+        ):
+            appointments_qs = appointments_qs.filter(assigned_technicians=user).distinct()
         
         # Roadside requests
         try:
@@ -528,6 +540,38 @@ def dashboard_overview(request):
             except Exception:
                 continue
         
+        # Technicians get operational metrics only (no shop-wide finance/inventory)
+        is_technician = getattr(request.user, 'role', None) == 'technician'
+        can_view_finance = user_has_permission(request.user, 'view_billing') or user_has_permission(
+            request.user, 'view_financial_reports'
+        )
+        can_view_inventory_alerts = user_has_permission(request.user, 'view_low_stock_alerts') or (
+            user_has_permission(request.user, 'view_inventory_reports')
+            or user_has_permission(request.user, 'manage_inventory')
+        )
+
+        if is_technician or not can_view_finance:
+            revenue_today = Decimal('0')
+            revenue_week = Decimal('0')
+            revenue_month = Decimal('0')
+            overdue_invoices = {'count': 0, 'total': Decimal('0')}
+            pending_estimates = 0
+            active_subscriptions = 0
+            mrr = Decimal('0')
+            arr = Decimal('0')
+            # Strip billing payloads from WO cards
+            for item in work_orders_list:
+                item['estimate_summary'] = None
+                item['invoice_summary'] = None
+
+        if is_technician or not can_view_inventory_alerts:
+            low_stock_count = 0
+
+        if is_technician:
+            roadside_today = 0
+            roadside_completed_today = 0
+            roadside_active = 0
+
         return Response({
             'today': {
                 'appointments': appointments_today,

@@ -24,6 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/lib/hooks/useToast";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { BILLING_AREA_PERMISSIONS } from "@/lib/utils/permissions";
 import {
   Play,
   Pause,
@@ -91,6 +93,16 @@ export default function WorkflowActions({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { hasPermission, hasAnyPermission } = usePermissions();
+  const canViewBilling = hasAnyPermission([...BILLING_AREA_PERMISSIONS]);
+  const canCreateWorkOrders = hasPermission("create_workorders");
+  const canDiscontinueJob = hasAnyPermission([
+    "edit_workorders",
+    "manage_workorders",
+    "update_workorder_status",
+    "create_invoices",
+    "view_billing",
+  ]);
   const [showCompleteDiagnosisDialog, setShowCompleteDiagnosisDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showQualityCheckDialog, setShowQualityCheckDialog] = useState(false);
@@ -1194,7 +1206,7 @@ export default function WorkflowActions({
         break;
 
       case "completed":
-        if (hasActiveInvoice) {
+        if (canViewBilling && hasActiveInvoice) {
           const viewDescription = invoicePayment
             ? `${invoiceSummary?.invoice_number} · ${invoicePayment.paymentLabel}${
                 invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
@@ -1217,7 +1229,7 @@ export default function WorkflowActions({
             variant: hasIssuedInvoice ? "outline" : "default",
             description: viewDescription,
           });
-        } else if (canCreateNewInvoice) {
+        } else if (canViewBilling && canCreateNewInvoice) {
           actions.push({
             label: "Create invoice",
             icon: DollarSign,
@@ -1239,7 +1251,7 @@ export default function WorkflowActions({
               description: "Alternatively, convert the approved estimate to an invoice",
             });
           }
-        } else if (linkedEstimateId) {
+        } else if (canViewBilling && linkedEstimateId) {
           actions.push({
             label: "Open estimate",
             icon: DollarSign,
@@ -1250,7 +1262,7 @@ export default function WorkflowActions({
         break;
 
       case "discontinued_pending_bill":
-        if (hasActiveInvoice) {
+        if (canViewBilling && hasActiveInvoice) {
           const viewDescriptionDisc = invoicePayment
             ? `${invoiceSummary?.invoice_number} · ${invoicePayment.paymentLabel}${
                 invoicePayment.markBlockedReason ? ` — ${invoicePayment.markBlockedReason}` : ""
@@ -1284,7 +1296,7 @@ export default function WorkflowActions({
             variant: hasIssuedInvoice ? "outline" : "default",
             description: viewDescriptionDisc,
           });
-        } else if (canCreateNewInvoice) {
+        } else if (canViewBilling && canCreateNewInvoice) {
           actions.push({
             label: "Create invoice",
             icon: DollarSign,
@@ -1298,28 +1310,32 @@ export default function WorkflowActions({
 
       // Phase 5: Vehicle Handover & Post-Service
       case "invoiced":
-        actions.push({
-          label: "Close Work Order",
-          icon: Lock,
-          onClick: () => setShowCloseDialog(true),
-          disabled: closeMutation.isPending,
-          description: "Final vehicle handover and closeout after billing is complete",
-        });
+        if (canViewBilling || hasPermission("edit_workorders") || hasPermission("manage_workorders")) {
+          actions.push({
+            label: "Close Work Order",
+            icon: Lock,
+            onClick: () => setShowCloseDialog(true),
+            disabled: closeMutation.isPending,
+            description: "Final vehicle handover and closeout after billing is complete",
+          });
+        }
         break;
 
       case "closed":
-        actions.push({
-          label: "Create Rework",
-          icon: RotateCcw,
-          onClick: () => router.push(`/workorders/new?related_work_order=${workOrderId}&rework=true`),
-          disabled: false,
-          variant: "outline",
-          description: "Create a linked warranty/rework order",
-        });
+        if (canCreateWorkOrders) {
+          actions.push({
+            label: "Create Rework",
+            icon: RotateCcw,
+            onClick: () => router.push(`/workorders/new?related_work_order=${workOrderId}&rework=true`),
+            disabled: false,
+            variant: "outline",
+            description: "Create a linked warranty/rework order",
+          });
+        }
         break;
     }
 
-    if (DISCONTINUE_ELIGIBLE_STATUSES.has(status)) {
+    if (canDiscontinueJob && DISCONTINUE_ELIGIBLE_STATUSES.has(status)) {
       actions.push({
         label: "Discontinue & bill…",
         icon: AlertTriangle,
@@ -1428,18 +1444,26 @@ export default function WorkflowActions({
             </div>
           ) : (
             <div className="space-y-4">
-              <Button asChild className="w-full">
-                <Link
-                  href={existingInvoiceId ? `/billing/invoices/${existingInvoiceId}` : `/billing/invoices/new?work_order=${workOrderId}`}
-                  onClick={() => setShowDiscontinueDialog(false)}
-                >
-                  {existingInvoiceId ? "Open invoice" : "Open create invoice"}
-                </Link>
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                After the invoice is <strong>issued</strong> (not draft), use <strong>Mark as invoiced</strong> on this work
-                order, then <strong>Close</strong> after pickup.
-              </p>
+              {canViewBilling ? (
+                <>
+                  <Button asChild className="w-full">
+                    <Link
+                      href={existingInvoiceId ? `/billing/invoices/${existingInvoiceId}` : `/billing/invoices/new?work_order=${workOrderId}`}
+                      onClick={() => setShowDiscontinueDialog(false)}
+                    >
+                      {existingInvoiceId ? "Open invoice" : "Open create invoice"}
+                    </Link>
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    After the invoice is <strong>issued</strong> (not draft), use <strong>Mark as invoiced</strong> on this work
+                    order, then <strong>Close</strong> after pickup.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Job discontinued. A billing user will create and issue the invoice, then close the work order.
+                </p>
+              )}
               <Button variant="outline" className="w-full" type="button" onClick={() => setShowDiscontinueDialog(false)}>
                 Done
               </Button>

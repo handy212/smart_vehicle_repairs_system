@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const toHHMM = (d: Date) => {
     const hh = String(d.getHours()).padStart(2, "0");
@@ -48,10 +49,13 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(
         initialData?.customer || (customerId ? parseInt(customerId) : null)
     );
+    const { hasPermission } = usePermissions();
+    const canListCustomers = hasPermission("view_customers");
 
     const { data: customersData } = useQuery({
         queryKey: ["customers", "list"],
         queryFn: () => customersApi.list({ page: 1 }),
+        enabled: canListCustomers,
     });
 
     const { data: vehiclesData } = useQuery({

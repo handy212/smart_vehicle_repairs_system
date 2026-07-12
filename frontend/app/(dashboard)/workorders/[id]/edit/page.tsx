@@ -29,6 +29,7 @@ import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -94,6 +95,8 @@ export default function EditWorkOrderPage() {
   const params = useParams();
   const workOrderId = parseInt(params.id as string);
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canListCustomers = hasPermission("view_customers");
 
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
   const [selectedCustomerData, setSelectedCustomerData] = useState<{
@@ -151,6 +154,7 @@ export default function EditWorkOrderPage() {
   const { data: customersData } = useQuery({
     queryKey: ["customers", "list"],
     queryFn: () => customersApi.list({ page: 1 }),
+    enabled: canListCustomers,
   });
 
   // Fetch vehicles for selected customer
