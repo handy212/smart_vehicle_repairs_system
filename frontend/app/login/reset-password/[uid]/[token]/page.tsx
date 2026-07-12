@@ -228,9 +228,11 @@ export default function ResetPasswordPage() {
 
             {/* Footer */}
             <footer className="bg-card border-t border-border py-4 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-muted-foreground">
-                    <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.</p>
-                    <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a></p>
+                <div className="max-w-7xl mx-auto flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+                    <p>
+                        Copyright American AutoParts @2026. Developed by{" "}
+                        <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
+                    </p>
                 </div>
             </footer>
         </div>

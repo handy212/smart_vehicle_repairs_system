@@ -107,7 +107,7 @@ class BranchSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
 
 
 class BranchListSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
-    """Minimal serializer for branch lists"""
+    """Serializer for branch lists (includes contact fields for edit forms)."""
     
     staff_count = serializers.ReadOnlyField()
     manager_count = serializers.ReadOnlyField()
@@ -115,8 +115,11 @@ class BranchListSerializer(BranchQboFieldsMixin, serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = [
-            'id', 'name', 'code', 'city', 'state',
+            'id', 'name', 'code', 'description',
+            'phone', 'email', 'fax',
+            'address', 'city', 'state', 'zip_code', 'country',
             'is_active', 'is_headquarters',
+            'opening_time', 'closing_time', 'timezone',
             'staff_count', 'manager_count',
             'qbo_department_id', 'qbo_department_name', 'qbo_sync_status', 'qbo_sync_error',
         ]

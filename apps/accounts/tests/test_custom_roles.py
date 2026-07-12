@@ -156,6 +156,33 @@ class CustomRoleTests(TestCase):
         editor.refresh_from_db()
         self.assertEqual(editor.role, 'user_editor_only')
 
+    def test_edit_users_can_list_assignable_roles(self):
+        edit_users = Permission.objects.get(code='edit_users')
+        editor_role = Role.objects.create(
+            code='user_editor_assignable',
+            name='User Editor Assignable',
+            is_active=True,
+            priority=40,
+        )
+        editor_role.permissions.set([edit_users])
+        editor = create_role_user(
+            'user_editor_assignable',
+            email='user_editor_assignable@test.com',
+            username='user_editor_assignable',
+            branch=self.branch,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=editor)
+        response = client.get('/api/accounts/admin/roles/assignable/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        codes = {role['code'] for role in response.data}
+        self.assertIn('custom_viewer', codes)
+        self.assertIn('receptionist', codes)
+        self.assertNotIn('super-admin', codes)
+        self.assertNotIn('customer', codes)
+
     def test_create_users_cannot_create_user_with_role_extra_permissions(self):
         create_users = Permission.objects.get(code='create_users')
         creator_role = Role.objects.create(

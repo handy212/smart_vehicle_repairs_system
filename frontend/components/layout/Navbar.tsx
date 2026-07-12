@@ -56,7 +56,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
   // Apply theme_mode from system settings
   useEffect(() => {
-    if (brandingSettings && !brandingLoading) {
+    if (brandingSettings && Array.isArray(brandingSettings) && !brandingLoading) {
       if (localStorage.getItem('theme_override') === 'true') return;
       const themeModeSetting = brandingSettings.find(s => s.key === 'theme_mode');
       if (themeModeSetting?.value) {
@@ -82,7 +82,9 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
     enabled: isAuthenticated,
   });
 
-  const branchOptions = accessibleBranchesData ?? [];
+  const branchOptions = Array.isArray(accessibleBranchesData)
+    ? accessibleBranchesData
+    : [];
   const sortedBranches = [...branchOptions].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
@@ -121,12 +123,8 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
       activeBranchId !== null &&
       activeBranchId !== previousBranchIdRef.current
     ) {
-      queryClient.clear();
-      if (typeof window !== "undefined") {
-        window.location.reload();
-      } else {
-        router.refresh();
-      }
+      void queryClient.invalidateQueries();
+      router.refresh();
     }
 
     previousBranchIdRef.current = activeBranchId ?? null;

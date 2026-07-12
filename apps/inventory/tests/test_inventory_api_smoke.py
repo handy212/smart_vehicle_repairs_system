@@ -265,3 +265,29 @@ class TestInventoryAPI:
         response = api_client.delete(reverse('api_inventory:supplier-detail', kwargs={'pk': supplier_id}))
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not Supplier.objects.filter(id=supplier_id).exists()
+
+    def test_part_delete_succeeds_without_protected_history(self, branch_api_client, setup_data):
+        category, part, stock_item = setup_data
+        # StockItem cascades; no PROTECT relations yet.
+        url = reverse('api_inventory:part-detail', args=[part.id])
+        response = branch_api_client.delete(url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not Part.objects.filter(id=part.id).exists()
+
+    def test_part_delete_returns_400_when_transactions_protect_part(self, branch_api_client, setup_data, branch, user):
+        category, part, stock_item = setup_data
+        InventoryTransaction.objects.create(
+            part=part,
+            transaction_type='adjustment',
+            quantity=1,
+            balance_after=11,
+            branch=branch,
+            created_by=user,
+            notes='History that must block hard delete',
+        )
+
+        url = reverse('api_inventory:part-detail', args=[part.id])
+        response = branch_api_client.delete(url)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'Cannot delete part' in response.data['detail']
+        assert Part.objects.filter(id=part.id).exists()

@@ -9,8 +9,12 @@ export const useCurrency = () => {
         refetchOnWindowFocus: false,
     });
 
-    const currencyCode = settings?.find((s) => s.key === 'currency')?.value || 'USD';
-    const currencySymbol = settings?.find((s) => s.key === 'currency_symbol')?.value || '$';
+    const currencyCode = Array.isArray(settings)
+        ? settings.find((s) => s.key === 'currency')?.value || 'USD'
+        : 'USD';
+    const currencySymbol = Array.isArray(settings)
+        ? settings.find((s) => s.key === 'currency_symbol')?.value || '$'
+        : '$';
 
     const formatCurrency = (
         amount: number | string | null | undefined,

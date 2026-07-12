@@ -105,5 +105,6 @@ describe('UserMenu branch switcher', () => {
         expect.objectContaining({ id: 20, name: 'Beta Branch' }),
       );
     });
+    expect(window.location.reload).not.toHaveBeenCalled();
   });
 });

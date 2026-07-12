@@ -1029,6 +1029,39 @@ class RoleViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'detail': 'Cannot delete system roles'})
         instance.delete()
+
+    @action(
+        detail=False,
+        methods=['get'],
+        url_path='assignable',
+        permission_classes=[
+            IsAuthenticated,
+            HasAnyPermission([
+                'manage_roles',
+                'create_users',
+                'edit_users',
+                'manage_users',
+                'view_users',
+            ]),
+        ],
+    )
+    def assignable(self, request):
+        """Lightweight active role list for user create/edit dropdowns."""
+        roles = (
+            Role.objects.filter(is_active=True)
+            .exclude(code__in=['super-admin', 'customer'])
+            .order_by('-priority', 'name')
+            .only('id', 'code', 'name', 'is_system')
+        )
+        return Response([
+            {
+                'id': role.id,
+                'code': role.code,
+                'name': role.name,
+                'is_system': role.is_system,
+            }
+            for role in roles
+        ])
     
     @action(detail=True, methods=['get'])
     def permissions(self, request, pk=None):

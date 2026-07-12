@@ -111,7 +111,7 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 
 **Intentionally not synced:** multi-branch stock breakdown, transfers between branches, and inventory adjustment audit detail remain SVR-only for branch qty. QBO receives **total** qty on hand for Inventory-type parts only.
 
-**Inventory adjustments (implemented):** SVR stock corrections (`adjustment`, `correction`, `count`, `damage`, `loss`, `found`) push QBO **InventoryAdjustment** documents with `QtyDiff` per part. Item `QtyOnHand` overwrite is suppressed for those transaction types to avoid double-counting; purchase/sale/transfer flows still use document + qty reconciliation as before.
+**Inventory adjustments (implemented):** SVR stock corrections (`adjustment`, `correction`, `count`, `damage`, `loss`, `found`) push QBO **InventoryAdjustment** documents with `QtyDiff` per part. Item `QtyOnHand` overwrite is suppressed on the StockItem save signal for those types; the adjustment sync ensures the QBO Item exists **without** rewriting company-wide qty, so only `QtyDiff` moves QBO inventory. Receive/sale/transfer flows still reconcile `QtyOnHand` to the **sum of all branch** `StockItem` rows.
 
 ### Catalog item types (Inventory / Non-inventory / Service)
 

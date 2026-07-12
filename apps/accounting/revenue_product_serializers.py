@@ -7,7 +7,10 @@ from rest_framework import serializers
 
 from apps.accounting.models import RevenueProduct
 
-_OWNER_ACCOUNT_CODE_RE = re.compile(r'^[0-9]+(?:[.\-][0-9a-z]+)?$', re.IGNORECASE)
+_OWNER_ACCOUNT_CODE_RE = re.compile(
+    r'^[0-9]+(?:[.\-][0-9a-z]+|[a-z]{1,4})?$',
+    re.IGNORECASE,
+)
 
 
 class RevenueProductSerializer(serializers.ModelSerializer):
@@ -46,7 +49,7 @@ class RevenueProductSerializer(serializers.ModelSerializer):
             return ''
         if not _OWNER_ACCOUNT_CODE_RE.match(code):
             raise serializers.ValidationError(
-                'Use a numeric income account code (e.g. 658 or 118.4).',
+                'Use a numeric income account code (e.g. 658, 658K, or 118.4).',
             )
         return code
 

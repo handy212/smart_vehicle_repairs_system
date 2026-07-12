@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, ArrowLeft, Plus } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import apiClient from "@/lib/api/client";
+import { getUserFacingError } from "@/lib/api/errors";
 
 type CountItem = {
   id: number;
@@ -42,6 +43,7 @@ export default function PhysicalCountDetailPage() {
   const queryClient = useQueryClient();
   const [stockItemId, setStockItemId] = useState("");
   const [physicalQty, setPhysicalQty] = useState("");
+  const [draftCounts, setDraftCounts] = useState<Record<number, string>>({});
 
   const { data: session, isLoading, isError } = useQuery({
     queryKey: ["physical-count", id],
@@ -55,9 +57,19 @@ export default function PhysicalCountDetailPage() {
     branch?: number;
     branch_name?: string;
     count_date: string;
+    notes?: string;
     items?: CountItem[];
     unreconciled_count?: number;
   } | undefined;
+
+  useEffect(() => {
+    if (!s?.items) return;
+    const next: Record<number, string> = {};
+    for (const item of s.items) {
+      next[item.id] = String(item.physical_quantity ?? "");
+    }
+    setDraftCounts(next);
+  }, [s?.items]);
 
   const { data: stockData } = useQuery({
     queryKey: ["stock-items", "count", s?.branch],
@@ -107,19 +119,25 @@ export default function PhysicalCountDetailPage() {
       toast({ title: "Count line saved" });
     },
     onError: (e: unknown) => {
-      const err = e as { response?: { data?: { error?: string; detail?: string } & Record<string, string[]> } };
-      const data = err.response?.data;
-      const detail =
-        data?.error ||
-        data?.detail ||
-        (data && typeof data === "object"
-          ? Object.entries(data)
-              .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-              .join("; ")
-          : null);
       toast({
         title: "Could not add line",
-        description: detail || (e instanceof Error ? e.message : "Request failed"),
+        description: getUserFacingError(e, "Request failed"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCountMutation = useMutation({
+    mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
+      inventoryApi.updatePhysicalCountItem(itemId, { physical_quantity: quantity }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["physical-count", id] });
+      toast({ title: "Counted quantity updated" });
+    },
+    onError: (e: unknown) => {
+      toast({
+        title: "Could not update count",
+        description: getUserFacingError(e, "Request failed"),
         variant: "destructive",
       });
     },
@@ -145,6 +163,23 @@ export default function PhysicalCountDetailPage() {
   }
 
   const canEdit = s.status === "in_progress";
+  const existingStockIds = new Set((s.items ?? []).map((item) => item.stock_item).filter(Boolean));
+  const availableStockRows = stockRows.filter((row) => !existingStockIds.has(row.id));
+
+  const saveCount = (item: CountItem) => {
+    const raw = draftCounts[item.id];
+    const qty = parseInt(raw ?? "", 10);
+    if (Number.isNaN(qty) || qty < 0) {
+      toast({
+        title: "Invalid count",
+        description: "Enter a valid whole-number quantity.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (qty === item.physical_quantity) return;
+    updateCountMutation.mutate({ itemId: item.id, quantity: qty });
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -157,6 +192,7 @@ export default function PhysicalCountDetailPage() {
           <p className="text-sm text-muted-foreground">
             {s.branch_name} · {s.count_date} · {s.status}
           </p>
+          {s.notes ? <p className="text-xs text-muted-foreground mt-1">{s.notes}</p> : null}
         </div>
         <div className="flex gap-2">
           {s.status === "draft" && (
@@ -188,7 +224,7 @@ export default function PhysicalCountDetailPage() {
                 onChange={(e) => setStockItemId(e.target.value)}
               >
                 <option value="">Select part…</option>
-                {stockRows.map((row) => (
+                {availableStockRows.map((row) => (
                   <option key={row.id} value={row.id}>
                     {[row.part_number, row.part_name].filter(Boolean).join(" — ") ||
                       `Part #${row.part}`}{" "}
@@ -238,30 +274,74 @@ export default function PhysicalCountDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(s.items ?? []).map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      {[item.part_number, item.part_name].filter(Boolean).join(" — ") ||
-                        (item.part ? `Part #${item.part}` : String(item.id))}
-                    </TableCell>
-                    <TableCell>{item.system_quantity ?? "—"}</TableCell>
-                    <TableCell>{item.physical_quantity ?? "—"}</TableCell>
-                    <TableCell>{item.discrepancy ?? item.variance ?? "—"}</TableCell>
-                    <TableCell>{item.reconciled ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      {!item.reconciled && s.status === "completed" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => reconcileMutation.mutate(item.id)}
-                          disabled={reconcileMutation.isPending}
-                        >
-                          Reconcile
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {(s.items ?? []).map((item) => {
+                  const draft = draftCounts[item.id] ?? "";
+                  const draftQty = parseInt(draft, 10);
+                  const dirty =
+                    !Number.isNaN(draftQty) && draftQty !== (item.physical_quantity ?? null);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        {[item.part_number, item.part_name].filter(Boolean).join(" — ") ||
+                          (item.part ? `Part #${item.part}` : String(item.id))}
+                      </TableCell>
+                      <TableCell>{item.system_quantity ?? "—"}</TableCell>
+                      <TableCell>
+                        {canEdit ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            step="1"
+                            className="h-8 w-24"
+                            value={draft}
+                            onChange={(e) =>
+                              setDraftCounts((current) => ({
+                                ...current,
+                                [item.id]: e.target.value,
+                              }))
+                            }
+                            onBlur={() => saveCount(item)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                          />
+                        ) : (
+                          item.physical_quantity ?? "—"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {canEdit && dirty
+                          ? draftQty - (item.system_quantity ?? 0)
+                          : item.discrepancy ?? item.variance ?? "—"}
+                      </TableCell>
+                      <TableCell>{item.reconciled ? "Yes" : "No"}</TableCell>
+                      <TableCell>
+                        {canEdit && dirty && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => saveCount(item)}
+                            disabled={updateCountMutation.isPending}
+                          >
+                            Save
+                          </Button>
+                        )}
+                        {!item.reconciled && s.status === "completed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => reconcileMutation.mutate(item.id)}
+                            disabled={reconcileMutation.isPending}
+                          >
+                            Reconcile
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

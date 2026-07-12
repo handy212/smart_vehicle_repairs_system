@@ -805,6 +805,31 @@ export const inventoryApi = {
     return response.data;
   },
 
+  getValuationDetail: async (params?: { include_zero?: boolean }) => {
+    const response = await apiClient.get("/inventory/reports/valuation-detail/", { params });
+    return response.data;
+  },
+
+  getValuationSummary: async (params?: { include_zero?: boolean }) => {
+    const response = await apiClient.get("/inventory/reports/valuation-summary/", { params });
+    return response.data;
+  },
+
+  getOpenPurchaseOrders: async () => {
+    const response = await apiClient.get("/inventory/reports/open-purchase-orders/");
+    return response.data;
+  },
+
+  getOpenPurchaseOrderDetail: async () => {
+    const response = await apiClient.get("/inventory/reports/open-purchase-order-detail/");
+    return response.data;
+  },
+
+  getStockTakeWorksheet: async (params?: { include_zero?: boolean }) => {
+    const response = await apiClient.get("/inventory/reports/stock-take-worksheet/", { params });
+    return response.data;
+  },
+
   listPhysicalCounts: async (params?: { status?: string; branch?: number; ordering?: string }) => {
     const response = await apiClient.get("/inventory/physical-counts/", { params });
     return response.data;
@@ -817,6 +842,17 @@ export const inventoryApi = {
 
   createPhysicalCount: async (data: { branch: number; count_date: string; notes?: string }) => {
     const response = await apiClient.post("/inventory/physical-counts/", data);
+    return response.data;
+  },
+
+  createPhysicalCountFromStockTake: async (data: {
+    branch: number;
+    count_date?: string;
+    include_zero?: boolean;
+    start?: boolean;
+    notes?: string;
+  }) => {
+    const response = await apiClient.post("/inventory/physical-counts/from-stock-take/", data);
     return response.data;
   },
 
@@ -835,6 +871,14 @@ export const inventoryApi = {
     data: { part: number; stock_item: number; physical_quantity: number }
   ) => {
     const response = await apiClient.post(`/inventory/physical-counts/${id}/add_item/`, data);
+    return response.data;
+  },
+
+  updatePhysicalCountItem: async (
+    itemId: number,
+    data: { physical_quantity: number; notes?: string }
+  ) => {
+    const response = await apiClient.patch(`/inventory/physical-count-items/${itemId}/`, data);
     return response.data;
   },
 

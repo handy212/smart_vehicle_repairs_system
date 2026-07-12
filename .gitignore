@@ -108,3 +108,5 @@ Attached_image.png
 firebase/*.json
 !firebase/.gitkeep
 frontend/public/sw.js
+coverage.xml
+apps/accounts/tests/test_custom_roles.py

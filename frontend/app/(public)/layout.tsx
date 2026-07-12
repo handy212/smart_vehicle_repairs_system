@@ -8,7 +8,7 @@ export default function PublicLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { siteName, companyName, logoSrc } = useBranding("public");
+    const { siteName, logoSrc } = useBranding("public");
 
     return (
         <div className="min-h-screen bg-muted flex flex-col">
@@ -35,7 +35,7 @@ export default function PublicLayout({
             </main>
             <footer className="bg-card border-t border-border mt-auto">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-muted-foreground">
-                    &copy; {new Date().getFullYear()} {companyName}. All rights reserved.
+                    Copyright American AutoParts @2026. Developed by SafeTrack Systems
                 </div>
             </footer>
         </div>

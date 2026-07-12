@@ -213,6 +213,13 @@ export interface Role {
   updated_at: string;
 }
 
+export interface AssignableRole {
+  id: number;
+  code: string;
+  name: string;
+  is_system: boolean;
+}
+
 export interface Permission {
   id: number;
   code: string;
@@ -774,7 +781,7 @@ export const branchesApi = {
 
   accessible: async (): Promise<Branch[]> => {
     const response = await apiClient.get("/branches/accessible/");
-    return response.data;
+    return normalizeBranchList(response.data);
   },
 
   staff: async (id: number): Promise<User[]> => {
@@ -800,8 +807,35 @@ export const rolesApi = {
     is_system?: boolean;
     search?: string;
   }): Promise<Role[]> => {
-    const response = await apiClient.get("/accounts/admin/roles/", { params });
-    return response.data.results || response.data;
+    let page = 1;
+    const allRoles: Role[] = [];
+    while (true) {
+      const response = await apiClient.get("/accounts/admin/roles/", {
+        params: { ...params, page },
+      });
+      const data = response.data;
+      if (data?.results) {
+        allRoles.push(...data.results);
+        if (!data.next) break;
+        page += 1;
+        continue;
+      }
+      if (Array.isArray(data)) {
+        return data;
+      }
+      break;
+    }
+    return allRoles;
+  },
+
+  assignable: async (): Promise<AssignableRole[]> => {
+    const response = await apiClient.get("/accounts/admin/roles/assignable/");
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === "object" && Array.isArray(data.results)) {
+      return data.results;
+    }
+    return [];
   },
 
   get: async (id: number): Promise<Role> => {

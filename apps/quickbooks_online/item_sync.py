@@ -139,9 +139,14 @@ def _apply_item_account_refs(qb_item, income_id, expense_id, asset_id=None):
         qb_item.AssetAccountRef.value = asset_id
 
 
-def _part_quantity_on_hand(local_part) -> float:
+def part_quantity_on_hand_across_branches(local_part) -> float:
+    """Company-wide qty for QBO: sum of every branch StockItem (scales as branches are added)."""
     total = local_part.stock_items.aggregate(total=Sum('quantity_in_stock'))['total']
     return float(total or 0)
+
+
+def _part_quantity_on_hand(local_part) -> float:
+    return part_quantity_on_hand_across_branches(local_part)
 
 
 def _inventory_start_date(local_part) -> date:
@@ -236,12 +241,16 @@ def _validate_accounts_for_part(local_part, income_id, expense_id, asset_id):
     return None
 
 
-def sync_part(service, local_part):
+def sync_part(service, local_part, *, update_qty_on_hand: bool = True):
     """
     Push SVR Part catalog row to QBO Item.
 
     Inventory parts sync as QBO Inventory items with qty on hand and asset account.
     Non-inventory parts sync as NonInventory. Service parts sync as Service.
+
+    When ``update_qty_on_hand`` is False (inventory adjustment path), existing QBO
+  items keep their current qty; only metadata is refreshed. New items are created
+    with QtyOnHand=0 so the InventoryAdjustment QtyDiff is the sole qty movement.
     """
     if QBItem is None or Ref is None:
         service._update_qbo_mapping(local_part, None, error=_sdk_message())
@@ -315,7 +324,10 @@ def sync_part(service, local_part):
 
     if local_part.item_type == 'inventory':
         qb_item.TrackQtyOnHand = True
-        qb_item.QtyOnHand = _part_quantity_on_hand(local_part)
+        if update_qty_on_hand:
+            qb_item.QtyOnHand = _part_quantity_on_hand(local_part)
+        elif is_new_qbo_item:
+            qb_item.QtyOnHand = 0
         inv_start = _inv_start_date_for_sync(
             local_part,
             is_new_qbo_item=is_new_qbo_item,
@@ -352,6 +364,15 @@ def sync_part(service, local_part):
         logger.error('QBO Part/Item sync error for %s: %s', local_part.part_number, exc)
         service._update_qbo_mapping(local_part, None, error=str(exc))
         return None
+
+
+def ensure_part_item_for_inventory_adjustment(service, local_part):
+    """
+    Ensure a QBO Item exists for an adjustment without overwriting company-wide qty.
+
+    Qty changes on corrections/counts flow only through InventoryAdjustment QtyDiff.
+    """
+    return sync_part(service, local_part, update_qty_on_hand=False)
 
 
 def ensure_inventory_start_on_or_before_txn_date(service, local_part, txn_date: date) -> None:

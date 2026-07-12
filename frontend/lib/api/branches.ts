@@ -278,7 +278,7 @@ export const branchesApi = {
 
   getAccessible: async (): Promise<Branch[]> => {
     const response = await apiClient.get("/branches/accessible/");
-    return response.data;
+    return normalizeBranchList(response.data);
   },
 
   listQboDepartments: async (): Promise<QboDepartmentsResponse> => {

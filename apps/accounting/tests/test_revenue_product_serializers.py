@@ -12,13 +12,27 @@ class RevenueProductSerializerTests(TestCase):
             data={
                 'code': 'test_invalid_code',
                 'name': 'Test',
-                'owner_account_code': '658x',
+                'owner_account_code': 'bad-code',
                 'revenue_class': 'service',
                 'default_billing_line_type': 'other',
             },
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn('owner_account_code', serializer.errors)
+
+    def test_accepts_branch_suffix_owner_account_code(self):
+        serializer = RevenueProductSerializer(
+            data={
+                'code': 'labor_mechanical',
+                'name': 'Mechanical Labour (Kumasi)',
+                'owner_account_code': '658K',
+                'revenue_class': 'labor',
+                'default_billing_line_type': 'labor',
+                'branch': None,
+            },
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data['owner_account_code'], '658K')
 
     def test_roadside_service_type_must_be_unique(self):
         RevenueProduct.objects.create(

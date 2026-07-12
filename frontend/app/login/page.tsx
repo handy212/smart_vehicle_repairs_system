@@ -466,12 +466,10 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
-          <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-            © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.
-          </p>
-          <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-            Developed by <a href="https://safetracksystems.com/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+          <p className="w-full max-w-full px-2 text-balance break-words">
+            Copyright American AutoParts @2026. Developed by{" "}
+            <a href="https://safetracksystems.com/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
           </p>
         </div>
       </footer>

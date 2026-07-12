@@ -3,8 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { adminApi, UserUpdate, User } from "@/lib/api/admin";
-import { branchesApi } from "@/lib/api/admin";
+import { adminApi, UserUpdate, User, rolesApi, branchesApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,11 @@ import { Badge } from "@/components/ui/badge";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
+import {
+  roleRequiresSingleBranch,
+  roleUsesManagedBranches,
+} from "@/lib/utils/role-utils";
+
 const userUpdateSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
@@ -29,15 +33,7 @@ const userUpdateSchema = z.object({
   email_notifications: z.boolean(),
   sms_notifications: z.boolean(),
   is_active: z.boolean(),
-  role: z.enum([
-    "admin",
-    "manager",
-    "service_coordinator",
-    "technician",
-    "receptionist",
-    "parts_manager",
-    "accountant",
-  ]).optional(),
+  role: z.string().min(1, "Role is required").optional(),
   branch: z.number().nullable().optional(),
   managed_branches: z.array(z.number()).optional(),
   employee_id: z.string().optional(),
@@ -46,8 +42,7 @@ const userUpdateSchema = z.object({
 })
   .refine(
     (data) => {
-      // Managers should have managed_branches, not branch
-      if (data.role === "manager") {
+      if (data.role && roleUsesManagedBranches(data.role)) {
         return !data.branch || (data.managed_branches && data.managed_branches.length > 0);
       }
       return true;
@@ -59,8 +54,7 @@ const userUpdateSchema = z.object({
   )
   .refine(
     (data) => {
-      // Staff roles should have a single branch
-      if (data.role && ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(data.role)) {
+      if (data.role && roleRequiresSingleBranch(data.role)) {
         return !!data.branch;
       }
       return true;
@@ -72,16 +66,6 @@ const userUpdateSchema = z.object({
   );
 
 type UserUpdateFormData = z.infer<typeof userUpdateSchema>;
-
-const ROLE_OPTIONS = [
-  { value: "receptionist", label: "Receptionist" },
-  { value: "technician", label: "Technician" },
-  { value: "parts_manager", label: "Parts Manager" },
-  { value: "service_coordinator", label: "Service Coordinator" },
-  { value: "accountant", label: "Accountant" },
-  { value: "manager", label: "Manager" },
-  { value: "admin", label: "Admin" },
-];
 
 export default function UserDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -109,6 +93,21 @@ export default function UserDetailPage() {
   });
 
   const branches = branchesData ?? [];
+
+  const { data: fetchedRoleOptions = [] } = useQuery({
+    queryKey: ["admin", "roles", "assignable"],
+    queryFn: () => rolesApi.assignable(),
+    select: (roles) =>
+      roles.map((role) => ({ value: role.code, label: role.name })),
+  });
+
+  const roleOptions =
+    user?.role &&
+    user.role !== "customer" &&
+    user.role !== "super-admin" &&
+    !fetchedRoleOptions.some((option) => option.value === user.role)
+      ? [...fetchedRoleOptions, { value: user.role, label: user.role }]
+      : fetchedRoleOptions;
 
   const queryClient = useQueryClient();
 
@@ -142,20 +141,9 @@ export default function UserDetailPage() {
   });
 
   const watchedRole = watch("role");
-  const selectedRole = (watchedRole || user?.role) as
-    | "admin"
-    | "manager"
-    | "service_coordinator"
-    | "technician"
-    | "receptionist"
-    | "parts_manager"
-    | "accountant"
-    | "customer"
-    | undefined;
-  const isManager = selectedRole === "manager";
-  const isStaff = ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(
-    selectedRole || ""
-  );
+  const selectedRole = watchedRole || user?.role;
+  const isManager = roleUsesManagedBranches(selectedRole);
+  const isStaff = roleRequiresSingleBranch(selectedRole);
 
   // Clear branch assignments when role changes
   useEffect(() => {
@@ -346,6 +334,8 @@ export default function UserDetailPage() {
   };
 
   const getRoleLabel = (role: string) => {
+    const fromApi = roleOptions.find((option) => option.value === role)?.label;
+    if (fromApi) return fromApi;
     const roleMap: Record<string, string> = {
       admin: "Admin",
       manager: "Manager",
@@ -532,7 +522,7 @@ export default function UserDetailPage() {
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ROLE_OPTIONS.map((option) => (
+                        {roleOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>

@@ -114,3 +114,61 @@ def inventory_control_report(request):
         return Response({'detail': 'Invalid dates'}, status=400)
     report = InventoryManagementReports.get_inventory_control_summary(start, end, branch_id=_branch_id(request))
     return Response(report)
+
+
+def _include_zero(request) -> bool:
+    return str(request.query_params.get('include_zero', 'false')).lower() in ('1', 'true', 'yes')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+def inventory_valuation_detail_report(request):
+    from .qbo_style_reports import QboStyleInventoryReports
+
+    report = QboStyleInventoryReports.inventory_valuation_detail(
+        branch_id=_branch_id(request),
+        include_zero=_include_zero(request),
+    )
+    return Response(report)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+def inventory_valuation_summary_report(request):
+    from .qbo_style_reports import QboStyleInventoryReports
+
+    report = QboStyleInventoryReports.inventory_valuation_summary(
+        branch_id=_branch_id(request),
+        include_zero=_include_zero(request),
+    )
+    return Response(report)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+def open_purchase_order_list_report(request):
+    from .qbo_style_reports import QboStyleInventoryReports
+
+    return Response(QboStyleInventoryReports.open_purchase_order_list(branch_id=_branch_id(request)))
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+def open_purchase_order_detail_report(request):
+    from .qbo_style_reports import QboStyleInventoryReports
+
+    return Response(QboStyleInventoryReports.open_purchase_order_detail(branch_id=_branch_id(request)))
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsModuleEnabled('inventory'), HasPermission('view_inventory')])
+def stock_take_worksheet_report(request):
+    from .qbo_style_reports import QboStyleInventoryReports
+
+    include_zero = str(request.query_params.get('include_zero', 'true')).lower() in ('1', 'true', 'yes')
+    return Response(
+        QboStyleInventoryReports.stock_take_worksheet(
+            branch_id=_branch_id(request),
+            include_zero=include_zero,
+        )
+    )

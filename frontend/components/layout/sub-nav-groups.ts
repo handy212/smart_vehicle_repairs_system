@@ -83,6 +83,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: BarChart3,
       items: [
         { name: "Compliance Reports", href: "/inventory/reports/compliance", permission: "view_inventory", icon: BarChart3 },
+        { name: "Inventory Reports", href: "/inventory/reports/standard", permission: "view_inventory", icon: ClipboardList },
         { name: "Inventory GL Report", href: "/inventory/reports/accounting", permission: "view_inventory", icon: PieChart },
         { name: "Reorder Reports", href: "/inventory/reorder-reports", permission: "view_inventory", icon: AlertCircle },
       ],

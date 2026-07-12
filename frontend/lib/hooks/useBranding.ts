@@ -81,12 +81,16 @@ export function useBranding(
 
     const branding = useMemo(() => {
         const getSetting = (key: string): string | null => {
-            const setting = brandingSettings?.find((s) => s.key === key);
+            const setting = Array.isArray(brandingSettings)
+                ? brandingSettings.find((s) => s.key === key)
+                : undefined;
             return setting?.value && setting.value.trim() !== "" ? setting.value : null;
         };
 
         const getUpdatedAt = (key: string): string | null => {
-            const setting = brandingSettings?.find((s) => s.key === key);
+            const setting = Array.isArray(brandingSettings)
+                ? brandingSettings.find((s) => s.key === key)
+                : undefined;
             return setting?.updated_at || null;
         };
 

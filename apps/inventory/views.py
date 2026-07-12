@@ -312,6 +312,28 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
             return PartDetailSerializer
         return PartListSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        """Delete a part, returning a clear 400 when protected history blocks it."""
+        from django.db.models.deletion import ProtectedError
+
+        part = self.get_object()
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError as exc:
+            protected_types = sorted({
+                obj._meta.verbose_name
+                for obj in exc.protected_objects
+            })
+            types_str = ', '.join(protected_types) if protected_types else 'related records'
+            message = (
+                f'Cannot delete part "{part.name}" ({part.part_number}) because it is linked to '
+                f'{types_str}. Remove or reassign those records first, or deactivate the part instead.'
+            )
+            return Response(
+                {'detail': message, 'error': message, 'blocking_types': protected_types},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     # Removed redundant actions (adjust, bulk_adjust, reserve, etc.)
     # provided by StockManagementMixin and InventoryReportMixin
     
@@ -2600,7 +2622,10 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
         base = [IsAuthenticated(), IsModuleEnabled('inventory')]
         if self.action in ['list', 'retrieve', 'discrepancies', 'unreconciled', 'print_count_sheet']:
             return base + [HasPermission('view_inventory')()]
-        if self.action in ['create', 'update', 'partial_update', 'start', 'complete', 'cancel', 'add_item']:
+        if self.action in [
+            'create', 'update', 'partial_update', 'start', 'complete', 'cancel',
+            'add_item', 'from_stock_take',
+        ]:
             return base + [HasPermission('manage_inventory')()]
         return base
     
@@ -2633,6 +2658,99 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create a new physical count session"""
         serializer.save(created_by=self.request.user)
+
+    @action(detail=False, methods=['post'], url_path='from-stock-take')
+    def from_stock_take(self, request):
+        """
+        Create a physical count session pre-seeded from the stock take worksheet.
+
+        Body:
+          - branch (optional if X-Branch-ID / session branch resolves)
+          - count_date (optional, YYYY-MM-DD)
+          - include_zero (optional, default false)
+          - start (optional, default true) — move session to in_progress
+          - notes (optional)
+        """
+        from django.utils.dateparse import parse_date
+        from apps.branches.utils import resolve_branch
+        from .part_catalog import part_tracks_stock
+
+        branch = resolve_branch(request)
+        branch_id = request.data.get('branch') or (branch.id if branch else None)
+        if not branch_id:
+            return Response(
+                {'detail': 'Select a branch before starting a stock take count.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.branches.models import Branch
+        from apps.branches.utils import get_user_accessible_branches
+
+        try:
+            target_branch = Branch.objects.get(pk=branch_id)
+        except Branch.DoesNotExist:
+            return Response({'detail': 'Branch not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not user_can_access_all_branches(request.user):
+            if not get_user_accessible_branches(request.user).filter(pk=target_branch.id).exists():
+                return Response(
+                    {'detail': 'You do not have access to this branch.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        count_date_raw = request.data.get('count_date')
+        count_date = parse_date(count_date_raw) if count_date_raw else timezone.now().date()
+        if count_date_raw and not count_date:
+            return Response({'detail': 'Invalid count_date.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        include_zero = str(request.data.get('include_zero', 'false')).lower() in ('1', 'true', 'yes')
+        auto_start = str(request.data.get('start', 'true')).lower() in ('1', 'true', 'yes')
+        notes = request.data.get('notes') or 'Seeded from stock take worksheet'
+
+        stock_qs = (
+            StockItem.objects.select_related('part')
+            .filter(branch_id=target_branch.id, part__is_active=True, part__item_type='inventory')
+            .order_by('part__part_number', 'part__name')
+        )
+        if not include_zero:
+            stock_qs = stock_qs.filter(quantity_in_stock__gt=0)
+
+        stock_rows = [row for row in stock_qs if part_tracks_stock(row.part)]
+        if not stock_rows:
+            return Response(
+                {'detail': 'No stock lines available to seed for this branch.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        session = PhysicalCountSession.objects.create(
+            branch=target_branch,
+            count_date=count_date,
+            notes=notes,
+            created_by=request.user,
+            status='draft',
+        )
+
+        items = [
+            PhysicalCountItem(
+                session=session,
+                part=stock.part,
+                stock_item=stock,
+                system_quantity=int(stock.quantity_in_stock or 0),
+                # Prefill counted qty to system qty; counters overwrite during the count.
+                physical_quantity=int(stock.quantity_in_stock or 0),
+                discrepancy=0,
+            )
+            for stock in stock_rows
+        ]
+        PhysicalCountItem.objects.bulk_create(items, batch_size=500)
+        session.total_items_counted = len(items)
+        session.save(update_fields=['total_items_counted', 'updated_at'])
+
+        if auto_start:
+            session.start()
+
+        output = PhysicalCountSessionSerializer(session, context=self.get_serializer_context())
+        return Response(output.data, status=status.HTTP_201_CREATED)
 
     def create(self, request, *args, **kwargs):
         """Return full session payload (including id) after create."""

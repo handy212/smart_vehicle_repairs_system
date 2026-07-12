@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { branchesApi, type Branch } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -33,7 +33,6 @@ export function UserMenu() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { activeBranchId, activeBranch, setBranch } = useBranchStore();
     const router = useRouter();
-    const queryClient = useQueryClient();
 
     const {
         data: accessibleBranchesData,
@@ -44,7 +43,9 @@ export function UserMenu() {
         enabled: !!user,
     });
 
-    const branchOptions = accessibleBranchesData ?? [];
+    const branchOptions = Array.isArray(accessibleBranchesData)
+        ? accessibleBranchesData
+        : [];
     const sortedBranches = [...branchOptions].sort((a, b) =>
         a.name.localeCompare(b.name)
     );
@@ -57,15 +58,8 @@ export function UserMenu() {
         const selectedBranch = sortedBranches.find(
             (branch) => branch.id === selectedId
         );
-        if (selectedBranch) {
+        if (selectedBranch && selectedBranch.id !== currentBranchId) {
             setBranch(selectedBranch);
-            // The Navbar has a logic to reload on branch change, 
-            // but we should probably centralize it or ensure it's handled.
-            // For now, let's trigger the reload if needed.
-            queryClient.clear();
-            if (typeof window !== "undefined") {
-                window.location.reload();
-            }
         }
     };
 

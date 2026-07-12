@@ -1834,10 +1834,10 @@ class QuickBooksService:
             )
             return None
 
-    def sync_part(self, local_part):
+    def sync_part(self, local_part, *, update_qty_on_hand: bool = True):
         """Sync SVR Part catalog row to QBO Item (NonInventory; SVR owns stock)."""
         from .item_sync import sync_part as _sync_part
-        return _sync_part(self, local_part)
+        return _sync_part(self, local_part, update_qty_on_hand=update_qty_on_hand)
 
     def sync_inventory_adjustment(self, local_txn):
         """Sync SVR stock correction to QBO InventoryAdjustment."""

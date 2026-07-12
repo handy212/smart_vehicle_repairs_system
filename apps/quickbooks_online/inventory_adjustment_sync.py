@@ -69,7 +69,8 @@ def sync_inventory_adjustment(service, local_txn):
     """
     Push a stock correction to QBO as an InventoryAdjustment document.
 
-    Uses QtyDiff on the mapped Part Item. Skips when part is not inventory or not in QBO.
+    Uses QtyDiff on the mapped Part Item. Ensures the Item exists without overwriting
+    QtyOnHand (company-wide total); the adjustment document owns the qty delta.
     """
     if local_txn is None:
         return None, 'Missing inventory transaction.'
@@ -90,9 +91,9 @@ def sync_inventory_adjustment(service, local_txn):
     if not client:
         return None, 'QuickBooks not connected or unauthorized.'
 
-    from .item_sync import sync_part
+    from .item_sync import ensure_part_item_for_inventory_adjustment
 
-    qb_item = sync_part(service, part)
+    qb_item = ensure_part_item_for_inventory_adjustment(service, part)
     if not qb_item or not getattr(qb_item, 'Id', None):
         return None, (get_mapping_error(part) if hasattr(service, '_mapping_error') else '') or 'Part is not synced to QuickBooks.'
 

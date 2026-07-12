@@ -62,12 +62,7 @@ const userSchema = z
   .refine(
     (data) => {
       // Staff should have branch, not managed_branches
-      if (
-        data.role &&
-        ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant", "hr_manager"].includes(
-          data.role
-        )
-      ) {
+      if (data.role && roleRequiresSingleBranch(data.role)) {
         return !data.managed_branches || data.managed_branches.length === 0;
       }
       return true;
@@ -122,11 +117,9 @@ export default function NewUserPage() {
 
   const { data: roleOptions = [] } = useQuery({
     queryKey: ["admin", "roles", "assignable"],
-    queryFn: () => rolesApi.list({ is_active: true }),
+    queryFn: () => rolesApi.assignable(),
     select: (roles) =>
-      roles
-        .filter((role) => role.code !== "customer" && role.code !== "super-admin")
-        .map((role) => ({ value: role.code, label: role.name })),
+      roles.map((role) => ({ value: role.code, label: role.name })),
   });
 
   // Fetch existing users to generate next employee ID
