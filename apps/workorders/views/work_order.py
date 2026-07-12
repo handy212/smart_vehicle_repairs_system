@@ -149,8 +149,19 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         if self.action in ('update', 'partial_update'):
             return workorder_edit_permissions()
         if self.action == 'discontinue_job':
-            # Technicians need this for customer walk-aways during diagnosis/repairs
-            return workorder_status_change_permissions()
+            # Front desk / coordinators / billing — not technicians
+            return workorder_module_permissions() + [
+                HasAnyPermission([
+                    'edit_workorders',
+                    'manage_workorders',
+                    'create_invoices',
+                    'view_billing',
+                ])(),
+            ]
+        if self.action == 'quality_check':
+            return workorder_module_permissions() + [
+                HasPermission('perform_quality_check')(),
+            ]
         if self.action == 'destroy':
             return workorder_module_permissions() + [HasPermission('delete_workorders')()]
         if self.action == 'check_repeat_visit':

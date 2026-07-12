@@ -26,6 +26,8 @@ import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { BILLING_AREA_PERMISSIONS } from "@/lib/utils/permissions";
+import { useAuthStore } from "@/store/authStore";
+import { adminApi } from "@/lib/api/admin";
 import {
   Play,
   Pause,
@@ -94,18 +96,23 @@ export default function WorkflowActions({
   const queryClient = useQueryClient();
   const router = useRouter();
   const { hasPermission, hasAnyPermission } = usePermissions();
+  const user = useAuthStore((s) => s.user);
   const canViewBilling = hasAnyPermission([...BILLING_AREA_PERMISSIONS]);
   const canCreateWorkOrders = hasPermission("create_workorders");
-  const canDiscontinueJob = hasAnyPermission([
-    "edit_workorders",
-    "manage_workorders",
-    "update_workorder_status",
-    "create_invoices",
-    "view_billing",
-  ]);
+  const canPerformQualityCheck = hasPermission("perform_quality_check");
+  const canDiscontinueJob =
+    user?.role !== "technician" &&
+    hasAnyPermission([
+      "edit_workorders",
+      "manage_workorders",
+      "create_invoices",
+      "view_billing",
+    ]);
   const [showCompleteDiagnosisDialog, setShowCompleteDiagnosisDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showQualityCheckDialog, setShowQualityCheckDialog] = useState(false);
+  const [showRequestQcDialog, setShowRequestQcDialog] = useState(false);
+  const [qcInspectorId, setQcInspectorId] = useState<string>("");
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showMarkInvoicedDialog, setShowMarkInvoicedDialog] = useState(false);
@@ -131,6 +138,26 @@ export default function WorkflowActions({
   });
 
   const currentWorkOrder = workOrderData ?? workOrder;
+  const branchId =
+    typeof currentWorkOrder?.branch === "object"
+      ? currentWorkOrder?.branch?.id
+      : currentWorkOrder?.branch;
+
+  const { data: qualityInspectors = [] } = useQuery({
+    queryKey: ["quality-inspectors", branchId],
+    queryFn: () =>
+      adminApi.users.qualityInspectors(branchId ? { branch: Number(branchId) } : undefined),
+    enabled: showRequestQcDialog,
+  });
+
+  const qcAssigneeId =
+    typeof currentWorkOrder?.quality_check_assigned_to === "object"
+      ? currentWorkOrder?.quality_check_assigned_to?.id
+      : currentWorkOrder?.quality_check_assigned_to;
+  const canOpenPerformQc =
+    canPerformQualityCheck &&
+    (!qcAssigneeId || qcAssigneeId === user?.id || hasPermission("manage_workorders"));
+
   const isRoutine = isRoutineMaintenanceWorkOrder(currentWorkOrder);
   const isInspectionOnly = isInspectionOnlyWorkOrder(currentWorkOrder);
   const isDiagnosticOnly = isDiagnosticOnlyWorkOrder(currentWorkOrder);
@@ -709,9 +736,12 @@ export default function WorkflowActions({
 
   // Request Quality Check (Phase 4: Quality Control Requested)
   const requestQualityCheckMutation = useMutation({
-    mutationFn: () => workordersApi.requestQualityCheck(workOrderId),
+    mutationFn: (assignedTo: number) =>
+      workordersApi.requestQualityCheck(workOrderId, { assigned_to: assignedTo }),
     onSuccess: () => {
-      toast({ title: "Success", description: "Quality check requested." });
+      toast({ title: "Success", description: "Quality check requested and assigned." });
+      setShowRequestQcDialog(false);
+      setQcInspectorId("");
       refreshWorkOrder();
     },
 
@@ -723,6 +753,15 @@ export default function WorkflowActions({
       });
     },
   });
+
+  const openRequestQcDialog = () => {
+    const existing =
+      typeof currentWorkOrder?.quality_check_assigned_to === "object"
+        ? currentWorkOrder?.quality_check_assigned_to?.id
+        : currentWorkOrder?.quality_check_assigned_to;
+    setQcInspectorId(existing ? String(existing) : "");
+    setShowRequestQcDialog(true);
+  };
 
   // Quality Check (Phase 4: Quality Control Performed)
   const qualityCheckMutation = useMutation({
@@ -1117,10 +1156,10 @@ export default function WorkflowActions({
           {
             label: "Request Quality Check",
             icon: FileCheck,
-            onClick: () => requestQualityCheckMutation.mutate(),
+            onClick: openRequestQcDialog,
             disabled: requestQualityCheckMutation.isPending,
             variant: "outline",
-            description: "Request quality control inspection",
+            description: "Assign an authorized inspector for QC",
           },
           // Only allow direct "Complete" when QC is not required. If QC is required,
           // the correct next step is to request/perform QC (which transitions to completed).
@@ -1197,12 +1236,31 @@ export default function WorkflowActions({
 
       // Phase 4: Quality Control & Billing
       case "quality_check":
-        actions.push({
-          label: "Perform Quality Check",
-          icon: FileCheck,
-          onClick: () => setShowQualityCheckDialog(true),
-          disabled: qualityCheckMutation.isPending,
-        });
+        if (canOpenPerformQc) {
+          actions.push({
+            label: "Perform Quality Check",
+            icon: FileCheck,
+            onClick: () => setShowQualityCheckDialog(true),
+            disabled: qualityCheckMutation.isPending,
+            description: currentWorkOrder?.quality_check_assigned_to_name
+              ? `Assigned to ${currentWorkOrder.quality_check_assigned_to_name}`
+              : "Complete the quality inspection",
+          });
+        }
+        if (user?.role !== "technician") {
+          actions.push({
+            label: currentWorkOrder?.quality_check_assigned_to
+              ? "Reassign QC Inspector"
+              : "Assign QC Inspector",
+            icon: User,
+            onClick: openRequestQcDialog,
+            disabled: requestQualityCheckMutation.isPending,
+            variant: "outline",
+            description: currentWorkOrder?.quality_check_assigned_to_name
+              ? `Currently assigned to ${currentWorkOrder.quality_check_assigned_to_name}`
+              : "Assign authorized personnel to perform QC",
+          });
+        }
         break;
 
       case "completed":
@@ -1542,6 +1600,68 @@ export default function WorkflowActions({
             onCancel={() => setShowApproveDialog(false)}
             isSubmitting={approveMutation.isPending}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Request / assign Quality Check */}
+      <Dialog
+        open={showRequestQcDialog}
+        onOpenChange={(open) => {
+          setShowRequestQcDialog(open);
+          if (!open) setQcInspectorId("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle>Assign quality inspector</DialogTitle>
+            <DialogDescription>
+              QC must be performed by authorized personnel — not the technician who repaired the vehicle.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="qc-inspector">Quality inspector</Label>
+              <Select value={qcInspectorId} onValueChange={setQcInspectorId}>
+                <SelectTrigger id="qc-inspector">
+                  <SelectValue placeholder="Select authorized inspector…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {qualityInspectors.map((inspector) => {
+                    const name =
+                      [inspector.first_name, inspector.last_name].filter(Boolean).join(" ") ||
+                      inspector.username ||
+                      `User #${inspector.id}`;
+                    return (
+                      <SelectItem key={inspector.id} value={String(inspector.id)}>
+                        {name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {qualityInspectors.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No users with quality-check permission found for this branch.
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={() => setShowRequestQcDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!qcInspectorId || requestQualityCheckMutation.isPending}
+                onClick={() => requestQualityCheckMutation.mutate(Number(qcInspectorId))}
+              >
+                {requestQualityCheckMutation.isPending
+                  ? "Assigning…"
+                  : status === "quality_check"
+                    ? "Update assignment"
+                    : "Request QC"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

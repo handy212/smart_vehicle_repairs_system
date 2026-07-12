@@ -437,6 +437,11 @@ export const adminApi = {
       const response = await apiClient.get("/accounts/users/service_coordinators/", { params });
       return response.data;
     },
+
+    qualityInspectors: async (params?: { branch?: number }): Promise<User[]> => {
+      const response = await apiClient.get("/accounts/users/quality_inspectors/", { params });
+      return response.data;
+    },
   },
 
   // Dashboard Stats

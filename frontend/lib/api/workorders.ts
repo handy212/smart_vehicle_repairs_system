@@ -124,6 +124,8 @@ export interface WorkOrder {
   quality_check_passed?: boolean;
   quality_check_at?: string;
   quality_check_notes?: string;
+  quality_check_assigned_to?: number | { id: number; first_name?: string; last_name?: string } | null;
+  quality_check_assigned_to_name?: string | null;
   odometer_in?: number;
   odometer_out?: number;
   is_overdue?: boolean;
@@ -443,8 +445,14 @@ export const workordersApi = {
     return response.data;
   },
 
-  requestQualityCheck: async (id: number): Promise<WorkOrder> => {
-    const response = await apiClient.post(`/workorders/work-orders/${id}/request_quality_check/`);
+  requestQualityCheck: async (
+    id: number,
+    data?: { assigned_to?: number }
+  ): Promise<WorkOrder> => {
+    const response = await apiClient.post(
+      `/workorders/work-orders/${id}/request_quality_check/`,
+      data || {}
+    );
     return response.data;
   },
 

@@ -22,6 +22,7 @@ import {
   Play,
   Plus,
   Send,
+  SkipForward,
   Undo2,
   Wrench,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +47,7 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { getUserFacingError } from "@/lib/api/errors";
 import { workordersApi } from "@/lib/api/workorders";
+import { adminApi } from "@/lib/api/admin";
 import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
 import { workOrderPartsApi, WorkOrderPart } from "@/lib/api/workorder-parts";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
@@ -103,6 +106,7 @@ function getTaskExecutionPresentation(
       badgeLabel: "Paused",
       canStart: false,
       canComplete: false,
+      canSkip: false,
       helperText: "Repairs are paused. Resume the work order before completing this task.",
     };
   }
@@ -113,6 +117,7 @@ function getTaskExecutionPresentation(
       badgeLabel: formatStatus(task.status),
       canStart: false,
       canComplete: task.status === "in_progress" && !repairsPaused,
+      canSkip: task.status === "in_progress" && !repairsPaused,
       helperText: "",
     };
   }
@@ -123,6 +128,7 @@ function getTaskExecutionPresentation(
       badgeLabel: "Paused",
       canStart: false,
       canComplete: false,
+      canSkip: false,
       helperText: "Repairs are paused. Resume before starting tasks.",
     };
   }
@@ -133,6 +139,7 @@ function getTaskExecutionPresentation(
       badgeLabel: "Pending",
       canStart: true,
       canComplete: false,
+      canSkip: true,
       helperText: "",
     };
   }
@@ -144,6 +151,7 @@ function getTaskExecutionPresentation(
       badgeLabel: "Pending | Waiting Allocation",
       canStart: false,
       canComplete: false,
+      canSkip: true,
       helperText: `Waiting parts: ${unresolvedParts.map((part) => part.part_name).join(", ")}`,
     };
   }
@@ -153,7 +161,11 @@ function getTaskExecutionPresentation(
     badgeLabel: "Pending | Ready to Start",
     canStart: true,
     canComplete: false,
-    helperText: "All linked parts are allocated, installed, or returned.",
+    canSkip: true,
+    helperText:
+      taskParts.every((part) => part.status === "returned")
+        ? "All linked parts were returned. Start if labor is still needed, or skip this task."
+        : "All linked parts are allocated, installed, or returned.",
   };
 }
 
@@ -175,6 +187,8 @@ export default function RepairsPage() {
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
+  const [showRequestQcDialog, setShowRequestQcDialog] = useState(false);
+  const [qcInspectorId, setQcInspectorId] = useState("");
   const [completeTask, setCompleteTask] = useState<ServiceTask | null>(null);
   const [returningPart, setReturningPart] = useState<WorkOrderPart | null>(null);
   const [additionalWorkSummary, setAdditionalWorkSummary] = useState("");
@@ -229,6 +243,18 @@ export default function RepairsPage() {
     queryKey: ["workorder-photos", workOrderId],
     queryFn: () => workOrderPhotosApi.list({ work_order: workOrderId }),
     enabled: Number.isFinite(workOrderId),
+  });
+
+  const inspectorsBranchId =
+    typeof workOrder?.branch === "object" ? workOrder?.branch?.id : workOrder?.branch;
+
+  const { data: qualityInspectors = [] } = useQuery({
+    queryKey: ["quality-inspectors", inspectorsBranchId],
+    queryFn: () =>
+      adminApi.users.qualityInspectors(
+        inspectorsBranchId ? { branch: Number(inspectorsBranchId) } : undefined
+      ),
+    enabled: showRequestQcDialog,
   });
 
   const refreshRepairs = () => {
@@ -308,6 +334,22 @@ export default function RepairsPage() {
   const startTaskMutation = useMutation({
     mutationFn: (taskId: number) => workOrderTasksApi.start(taskId),
     onSuccess: refreshRepairs,
+  });
+
+  const skipTaskMutation = useMutation({
+    mutationFn: (taskId: number) =>
+      workOrderTasksApi.skip(taskId, { notes: "Skipped from repairs workspace" }),
+    onSuccess: () => {
+      refreshRepairs();
+      toast({ title: "Task skipped" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not skip task",
+        description: getUserFacingError(error, "Unable to skip task."),
+        variant: "destructive",
+      });
+    },
   });
 
   const reassignTaskMutation = useMutation({
@@ -470,8 +512,11 @@ export default function RepairsPage() {
   });
 
   const requestQualityCheckMutation = useMutation({
-    mutationFn: () => workordersApi.requestQualityCheck(workOrderId),
+    mutationFn: (assignedTo: number) =>
+      workordersApi.requestQualityCheck(workOrderId, { assigned_to: assignedTo }),
     onSuccess: () => {
+      setShowRequestQcDialog(false);
+      setQcInspectorId("");
       refreshRepairs();
       toast({ title: "Quality check requested" });
       router.push(`/workorders/${workOrderId}`);
@@ -668,7 +713,10 @@ export default function RepairsPage() {
                 <AlertTriangle className="mr-2 h-4 w-4" />
                 Additional Work
               </Button>
-              <Button onClick={() => requestQualityCheckMutation.mutate()} disabled={requestQualityCheckMutation.isPending || hasReadinessBlockers}>
+              <Button
+                onClick={() => setShowRequestQcDialog(true)}
+                disabled={requestQualityCheckMutation.isPending || hasReadinessBlockers}
+              >
                 <FileCheck className="mr-2 h-4 w-4" />
                 Request QC
               </Button>
@@ -775,6 +823,15 @@ export default function RepairsPage() {
                         reassignTaskMutation.mutate({ taskId: task.id, assignedTo })
                       }
                       onStart={() => startTaskMutation.mutate(task.id)}
+                      onSkip={() => {
+                        if (
+                          confirm(
+                            `Skip task "${task.description}"? Use this when the linked part was returned and no further work is needed.`
+                          )
+                        ) {
+                          skipTaskMutation.mutate(task.id);
+                        }
+                      }}
                       onComplete={() => {
                         setCompleteTask(task);
                         setCompletionNotes(task.detailed_notes || "");
@@ -788,6 +845,7 @@ export default function RepairsPage() {
                       }}
                       isBusy={
                         startTaskMutation.isPending ||
+                        skipTaskMutation.isPending ||
                         completeTaskMutation.isPending ||
                         reassignTaskMutation.isPending
                       }
@@ -919,7 +977,10 @@ export default function RepairsPage() {
                 </div>
               )}
               <div className="mt-4 flex justify-end">
-                <Button onClick={() => requestQualityCheckMutation.mutate()} disabled={hasReadinessBlockers || requestQualityCheckMutation.isPending}>
+                <Button
+                  onClick={() => setShowRequestQcDialog(true)}
+                  disabled={hasReadinessBlockers || requestQualityCheckMutation.isPending}
+                >
                   <Send className="mr-2 h-4 w-4" />
                   Request Quality Check
                 </Button>
@@ -941,6 +1002,58 @@ export default function RepairsPage() {
           }}
         />
       )}
+
+      <Dialog
+        open={showRequestQcDialog}
+        onOpenChange={(open) => {
+          setShowRequestQcDialog(open);
+          if (!open) setQcInspectorId("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign quality inspector</DialogTitle>
+            <DialogDescription>
+              Select authorized personnel to perform QC. The repairing technician cannot QC their own job.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="repairs-qc-inspector">Quality inspector</Label>
+              <Select value={qcInspectorId} onValueChange={setQcInspectorId}>
+                <SelectTrigger id="repairs-qc-inspector">
+                  <SelectValue placeholder="Select authorized inspector…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {qualityInspectors.map((inspector) => {
+                    const name =
+                      [inspector.first_name, inspector.last_name].filter(Boolean).join(" ") ||
+                      inspector.username ||
+                      `User #${inspector.id}`;
+                    return (
+                      <SelectItem key={inspector.id} value={String(inspector.id)}>
+                        {name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setShowRequestQcDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!qcInspectorId || requestQualityCheckMutation.isPending}
+                onClick={() => requestQualityCheckMutation.mutate(Number(qcInspectorId))}
+              >
+                {requestQualityCheckMutation.isPending ? "Requesting…" : "Request QC"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {showAddPartDialog && (
         <AddPartDialog
@@ -1211,6 +1324,7 @@ function RepairTaskRow({
   canReassign,
   onReassign,
   onStart,
+  onSkip,
   onComplete,
   isBusy,
 }: {
@@ -1221,6 +1335,7 @@ function RepairTaskRow({
   canReassign: boolean;
   onReassign: (assignedTo: number | null) => void;
   onStart: () => void;
+  onSkip: () => void;
   onComplete: () => void;
   isBusy: boolean;
 }) {
@@ -1268,11 +1383,17 @@ function RepairTaskRow({
             <span>{hours > 0 ? `${hours.toFixed(2)}h` : "No hours logged"}</span>
           </div>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           {task.status === "pending" && (
             <Button size="sm" variant="outline" onClick={onStart} disabled={isBusy || !executionState.canStart}>
               <Play className="mr-2 h-4 w-4" />
               {executionState.canStart ? "Start" : workOrderStatus === "paused" ? "Paused" : "Waiting Parts"}
+            </Button>
+          )}
+          {executionState.canSkip && (
+            <Button size="sm" variant="ghost" onClick={onSkip} disabled={isBusy}>
+              <SkipForward className="mr-2 h-4 w-4" />
+              Skip
             </Button>
           )}
           {executionState.canComplete && (

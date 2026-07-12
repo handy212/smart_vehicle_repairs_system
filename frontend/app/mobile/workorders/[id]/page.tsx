@@ -38,9 +38,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { adminApi } from "@/lib/api/admin";
 import {
   getWorkOrderListBillingDisplay,
   parseWorkOrderMoney,
@@ -52,6 +55,8 @@ import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-sta
 
 export default function MobileWorkOrderDetailPage() {
   const { formatCurrency } = useCurrency();
+  const { hasPermission } = usePermissions();
+  const canPerformQualityCheck = hasPermission("perform_quality_check");
   const params = useParams();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
@@ -67,6 +72,11 @@ export default function MobileWorkOrderDetailPage() {
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [activeLog, setActiveLog] = useState<any | null>(null);
   const [showPartRequestDialog, setShowPartRequestDialog] = useState(false);
+  const [showRequestQcDialog, setShowRequestQcDialog] = useState(false);
+  const [qcInspectorId, setQcInspectorId] = useState("");
+  const [qualityInspectors, setQualityInspectors] = useState<
+    { id: number; first_name?: string; last_name?: string; username?: string }[]
+  >([]);
   const [newPart, setNewPart] = useState({
     part_name: "",
     quantity: 1,
@@ -77,6 +87,16 @@ export default function MobileWorkOrderDetailPage() {
     loadWorkOrder();
     checkActiveLog();
   }, [workOrderId]);
+
+  useEffect(() => {
+    if (!showRequestQcDialog || !isOnline) return;
+    const branchId =
+      typeof workOrder?.branch === "object" ? workOrder?.branch?.id : workOrder?.branch;
+    adminApi.users
+      .qualityInspectors(branchId ? { branch: Number(branchId) } : undefined)
+      .then(setQualityInspectors)
+      .catch(() => setQualityInspectors([]));
+  }, [showRequestQcDialog, isOnline, workOrder?.branch]);
 
   const checkActiveLog = async () => {
     try {
@@ -120,7 +140,8 @@ export default function MobileWorkOrderDetailPage() {
   };
 
   const handleStatusChangeAction = async (
-    action: "startWork" | "pause" | "resume" | "requestQualityCheck" | "complete"
+    action: "startWork" | "pause" | "resume" | "requestQualityCheck" | "complete",
+    options?: { assigned_to?: number }
   ) => {
     if (!workOrder) return;
 
@@ -131,8 +152,21 @@ export default function MobileWorkOrderDetailPage() {
         if (action === "startWork") await workordersApi.startWork(workOrder.id);
         else if (action === "pause") await workordersApi.pause(workOrder.id);
         else if (action === "resume") await workordersApi.resume(workOrder.id);
-        else if (action === "requestQualityCheck") await workordersApi.requestQualityCheck(workOrder.id);
-        else if (action === "complete") await workordersApi.complete(workOrder.id);
+        else if (action === "requestQualityCheck") {
+          if (!options?.assigned_to) {
+            toast({
+              title: "Inspector required",
+              description: "Assign an authorized quality inspector first.",
+              variant: "destructive",
+            });
+            return;
+          }
+          await workordersApi.requestQualityCheck(workOrder.id, {
+            assigned_to: options.assigned_to,
+          });
+          setShowRequestQcDialog(false);
+          setQcInspectorId("");
+        } else if (action === "complete") await workordersApi.complete(workOrder.id);
 
         await loadWorkOrder();
         toast({
@@ -143,6 +177,14 @@ export default function MobileWorkOrderDetailPage() {
               : "Status updated successfully",
         });
       } else {
+        if (action === "requestQualityCheck" && !options?.assigned_to) {
+          toast({
+            title: "Inspector required",
+            description: "Assign an authorized quality inspector before queuing QC.",
+            variant: "destructive",
+          });
+          return;
+        }
         const pathMap: Record<string, string> = {
           startWork: "start_work",
           pause: "pause",
@@ -166,10 +208,12 @@ export default function MobileWorkOrderDetailPage() {
           "create",
           `/workorders/work-orders/${workOrder.id}/${pathMap[action]}/`,
           "POST",
-          {}
+          action === "requestQualityCheck" ? { assigned_to: options?.assigned_to } : {}
         );
 
         setWorkOrder(updated);
+        setShowRequestQcDialog(false);
+        setQcInspectorId("");
         toast({
           title: "Queued",
           description: "Status change will sync when online",
@@ -366,7 +410,10 @@ export default function MobileWorkOrderDetailPage() {
   const canStart = workOrder.status === "approved";
   const canPause = workOrder.status === "in_progress";
   const canRequestQC = workOrder.status === "in_progress";
-  const canComplete = workOrder.status === "quality_check";
+  const canComplete =
+    workOrder.status === "quality_check" &&
+    canPerformQualityCheck &&
+    !workOrder.quality_check_required;
   const canResume = workOrder.status === "paused";
   const isDiagnosisPaused = isDiagnosisPausedWorkOrder(workOrder);
   const canOpenDiagnosis =
@@ -595,7 +642,7 @@ export default function MobileWorkOrderDetailPage() {
           {canRequestQC && (
             <Button
               className="w-full"
-              onClick={() => handleStatusChangeAction("requestQualityCheck")}
+              onClick={() => setShowRequestQcDialog(true)}
             >
               <CheckCheck className="h-4 w-4 mr-2" />
               Request Quality Check
@@ -767,6 +814,59 @@ export default function MobileWorkOrderDetailPage() {
       )}
 
       {/* Additional Work Dialog */}
+      <Dialog
+        open={showRequestQcDialog}
+        onOpenChange={(open) => {
+          setShowRequestQcDialog(open);
+          if (!open) setQcInspectorId("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign quality inspector</DialogTitle>
+            <DialogDescription>
+              QC must be done by authorized personnel, not the repairing technician.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="mobile-qc-inspector">Quality inspector</Label>
+            <Select value={qcInspectorId} onValueChange={setQcInspectorId}>
+              <SelectTrigger id="mobile-qc-inspector">
+                <SelectValue placeholder="Select inspector…" />
+              </SelectTrigger>
+              <SelectContent>
+                {qualityInspectors.map((inspector) => {
+                  const name =
+                    [inspector.first_name, inspector.last_name].filter(Boolean).join(" ") ||
+                    inspector.username ||
+                    `User #${inspector.id}`;
+                  return (
+                    <SelectItem key={inspector.id} value={String(inspector.id)}>
+                      {name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRequestQcDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!qcInspectorId}
+              onClick={() =>
+                handleStatusChangeAction("requestQualityCheck", {
+                  assigned_to: Number(qcInspectorId),
+                })
+              }
+            >
+              Request QC
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
         <DialogContent>
           <DialogHeader>

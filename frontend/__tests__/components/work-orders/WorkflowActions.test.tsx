@@ -17,6 +17,30 @@ vi.mock('@/lib/api/workorders', () => ({
     },
 }));
 
+vi.mock('@/lib/api/admin', () => ({
+    adminApi: {
+        users: {
+            qualityInspectors: vi.fn(() =>
+                Promise.resolve([
+                    { id: 42, first_name: 'QC', last_name: 'Inspector', username: 'qc1' },
+                ])
+            ),
+        },
+    },
+}));
+
+vi.mock('@/lib/hooks/usePermissions', () => ({
+    usePermissions: () => ({
+        hasPermission: () => true,
+        hasAnyPermission: () => true,
+    }),
+}));
+
+vi.mock('@/store/authStore', () => ({
+    useAuthStore: (selector: (s: { user: { id: number; role: string } }) => unknown) =>
+        selector({ user: { id: 1, role: 'service_coordinator' } }),
+}));
+
 // Mock inspections API
 vi.mock('@/lib/api/inspections', () => ({
     inspectionsApi: {
@@ -215,6 +239,7 @@ describe('WorkflowActions Component', () => {
                 id: 1,
                 status: 'in_progress',
                 work_order_number: 'WO-001',
+                branch: 1,
             };
 
             renderComponent({ workOrderId: 1, status: 'in_progress', workOrder });
@@ -227,8 +252,13 @@ describe('WorkflowActions Component', () => {
 
             await user.click(qcButton);
 
+            const inspectorTrigger = await screen.findByText(/Select authorized inspector/i);
+            await user.click(inspectorTrigger);
+            await user.click(await screen.findByText(/QC Inspector/i));
+            await user.click(screen.getByRole('button', { name: /^Request QC$/i }));
+
             await waitFor(() => {
-                expect(mockRequestQC).toHaveBeenCalledWith(1);
+                expect(mockRequestQC).toHaveBeenCalledWith(1, { assigned_to: 42 });
             });
         });
     });

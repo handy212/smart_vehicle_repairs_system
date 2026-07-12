@@ -99,6 +99,11 @@ export const workOrderTasksApi = {
     return response.data;
   },
 
+  skip: async (id: number, data?: { notes?: string }): Promise<ServiceTask> => {
+    const response = await apiClient.post(`/workorders/tasks/${id}/skip/`, data || {});
+    return response.data;
+  },
+
   complete: async (id: number, data?: { actual_hours?: number; notes?: string }): Promise<ServiceTask> => {
     const response = await apiClient.post(`/workorders/tasks/${id}/complete/`, data);
     return response.data;

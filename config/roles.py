@@ -92,6 +92,7 @@ class Admin(AbstractUserRole):
         'clock_work_time': True,
         'print_workorders': True,
         'export_workorders': True,
+        'perform_quality_check': True,
         
         # Gate Passes
         'view_gatepass': True,
@@ -341,6 +342,7 @@ class Manager(AbstractUserRole):
         'view_workorder_history': True,
         'print_workorders': True,
         'export_workorders': True,
+        'perform_quality_check': True,
         
         # Diagnosis
         'view_diagnosis': True,
@@ -506,6 +508,7 @@ class ServiceCoordinator(AbstractUserRole):
         'view_workorder_history': True,
         'print_workorders': True,
         'export_workorders': True,
+        'perform_quality_check': True,
         
         # Diagnosis
         'view_diagnosis': True,

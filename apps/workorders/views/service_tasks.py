@@ -70,7 +70,7 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
     ordering_fields = ['sequence_order', 'created_at']
     ordering = ['work_order', 'sequence_order']
 
-    TASK_WORKFLOW_ACTIONS = frozenset({'start', 'complete'})
+    TASK_WORKFLOW_ACTIONS = frozenset({'start', 'complete', 'skip'})
 
     def get_permissions(self):
         if getattr(self, 'action', None) in self.TASK_WORKFLOW_ACTIONS:
@@ -109,9 +109,11 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
         """Start task and auto-clock in technician"""
         task = self.get_object()
         
-        # Check if parts for this specific task are available
+        # Ready/installed for install work; returned means unused — do not block execution.
         unavailable_parts = list(
-            task.parts.exclude(status__in=['ready', 'installed']).values_list('part_name', flat=True)
+            task.parts.exclude(status__in=['ready', 'installed', 'returned']).values_list(
+                'part_name', flat=True
+            )
         )
                 
         if unavailable_parts:
@@ -153,6 +155,46 @@ class ServiceTaskViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPermission
                     description=f"Auto-started task: {task.description}"
                 )
         
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def skip(self, request, pk=None):
+        """Skip a mechanical task (e.g. linked parts were returned / not used)."""
+        task = self.get_object()
+        if task.is_workflow_task:
+            return Response(
+                {'error': 'Workflow phase tasks cannot be skipped from repairs.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if task.status in ('completed', 'skipped'):
+            return Response(
+                {'error': f'Task is already {task.status}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Clock out any open logs for this task
+        open_logs = TechnicianTimeLog.objects.filter(task=task, clock_out__isnull=True)
+        now = timezone.now()
+        for log in open_logs:
+            log.clock_out = now
+            note = (request.data.get('notes') or '').strip()
+            if note:
+                log.notes = f"{log.notes}\nSkip note: {note}".strip() if log.notes else f"Skip note: {note}"
+            log.save()
+
+        task.status = 'skipped'
+        task.completed_at = now
+        notes = (request.data.get('notes') or '').strip()
+        if notes:
+            task.detailed_notes = (
+                f"{task.detailed_notes}\nSkipped: {notes}".strip()
+                if task.detailed_notes
+                else f"Skipped: {notes}"
+            )
+        task.save()
+        task.work_order.recalculate_totals()
+
         serializer = self.get_serializer(task)
         return Response(serializer.data)
     

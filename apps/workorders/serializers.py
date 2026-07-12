@@ -242,6 +242,14 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         return None
 
     @extend_schema_field(OpenApiTypes.STR)
+    def get_quality_check_assigned_to_name(self, obj):
+        assignee = getattr(obj, 'quality_check_assigned_to', None)
+        if assignee:
+            name = f"{assignee.first_name} {assignee.last_name}".strip()
+            return name or assignee.username
+        return None
+
+    @extend_schema_field(OpenApiTypes.STR)
     def get_service_coordinator_name(self, obj):
         if obj.service_coordinator:
             return f"{obj.service_coordinator.first_name} {obj.service_coordinator.last_name}".strip()
@@ -392,6 +400,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     technician_assignment_status_display = serializers.SerializerMethodField()
     requires_assignment_acceptance = serializers.SerializerMethodField()
     inventory_availability_summary = serializers.SerializerMethodField()
+    quality_check_assigned_to_name = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -419,6 +428,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'estimated_total', 'actual_labor_hours', 'actual_labor_cost',
             'actual_parts_cost', 'actual_total', 'odometer_in', 'odometer_out',
             'quality_check_required', 'quality_check_completed', 'quality_check_by',
+            'quality_check_assigned_to', 'quality_check_assigned_to_name',
             'quality_check_at', 'quality_check_notes', 'quality_check_passed',
             'created_by', 'created_by_name', 'is_warranty', 'is_recall', 'is_insurance_claim',
             'is_customer_waiting', 'is_warranty_rework', 'related_work_order',
@@ -567,6 +577,14 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     def get_primary_technician_name(self, obj):
         if obj.primary_technician:
             return f"{obj.primary_technician.first_name} {obj.primary_technician.last_name}"
+        return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_quality_check_assigned_to_name(self, obj):
+        assignee = getattr(obj, 'quality_check_assigned_to', None)
+        if assignee:
+            name = f"{assignee.first_name} {assignee.last_name}".strip()
+            return name or assignee.username
         return None
 
     @extend_schema_field(OpenApiTypes.STR)

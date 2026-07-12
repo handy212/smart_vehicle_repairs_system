@@ -102,6 +102,13 @@ class UserViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasAnyPermission(['view_technicians', 'assign_workorders', 'manage_workorders'])]
         elif self.action == 'service_coordinators':
             return [IsAuthenticated(), HasAnyPermission(['view_users', 'assign_workorders', 'manage_workorders'])]
+        elif self.action == 'quality_inspectors':
+            return [IsAuthenticated(), HasAnyPermission([
+                'perform_quality_check',
+                'assign_workorders',
+                'manage_workorders',
+                'update_workorder_status',
+            ])]
         elif self.action in ('me', 'permissions', 'change_password'):
             return [IsAuthenticated()]
 
@@ -285,6 +292,41 @@ class UserViewSet(viewsets.ModelViewSet):
                 ).distinct()
 
         serializer = PublicUserSerializer(coordinators, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def quality_inspectors(self, request):
+        """Staff authorized to perform work-order quality checks."""
+        from apps.accounts.permission_models import Role
+        from apps.branches.utils import get_user_accessible_branches
+
+        role_codes = list(
+            Role.objects.filter(
+                is_active=True,
+                permissions__code='perform_quality_check',
+            ).values_list('code', flat=True).distinct()
+        )
+        if not role_codes:
+            role_codes = ['manager', 'service_coordinator', 'admin']
+
+        inspectors = User.objects.filter(role__in=role_codes, is_active=True)
+        accessible_branches = get_user_accessible_branches(request.user)
+        inspectors = inspectors.filter(
+            Q(branch__in=accessible_branches) | Q(managed_branches__in=accessible_branches)
+        ).distinct()
+
+        branch_id = request.query_params.get('branch')
+        if branch_id:
+            try:
+                branch_pk = int(branch_id)
+            except (TypeError, ValueError):
+                branch_pk = None
+            if branch_pk is not None:
+                inspectors = inspectors.filter(
+                    Q(branch_id=branch_pk) | Q(managed_branches__id=branch_pk)
+                ).distinct()
+
+        serializer = PublicUserSerializer(inspectors, many=True)
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])

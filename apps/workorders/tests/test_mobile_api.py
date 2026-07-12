@@ -70,12 +70,40 @@ class MobileAPITestCase(TestCase):
                 'is_active': True,
             },
         )
+        self.perform_qc_perm, _ = Permission.objects.update_or_create(
+            code='perform_quality_check',
+            defaults={
+                'name': 'Perform Quality Check',
+                'category': 'workorders',
+                'is_active': True,
+            },
+        )
+        self.update_status_perm, _ = Permission.objects.update_or_create(
+            code='update_workorder_status',
+            defaults={
+                'name': 'Update Work Order Status',
+                'category': 'workorders',
+                'is_active': True,
+            },
+        )
         self.tech_role.permissions.add(
             self.view_wo_perm,
             self.edit_wo_perm,
             self.view_own_appt_perm,
             self.view_notifications_perm,
             self.clock_work_time_perm,
+            self.update_status_perm,
+        )
+
+        self.manager_role, _ = Role.objects.update_or_create(
+            code='manager',
+            defaults={'name': 'Manager', 'is_active': True},
+        )
+        self.manager_role.permissions.add(
+            self.view_wo_perm,
+            self.edit_wo_perm,
+            self.perform_qc_perm,
+            self.update_status_perm,
         )
         
         # Create users
@@ -91,6 +119,12 @@ class MobileAPITestCase(TestCase):
             email='advisor1@example.com',
             password='password123',
             role='advisor'
+        )
+        self.manager = User.objects.create_user(
+            username='manager1',
+            email='manager1@example.com',
+            password='password123',
+            role='manager',
         )
         
         # Create customer user and profile
@@ -234,24 +268,40 @@ class MobileAPITestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # 5. Request Quality Check
+        # 5. Request Quality Check (assign authorized inspector — not the repairing tech)
         self.work_order.quality_check_required = True
         self.work_order.save()
         
-        response = self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/request_quality_check/')
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/request_quality_check/',
+            {'assigned_to': self.manager.id},
+            format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'quality_check')
-        
-        # 6. Perform Quality Check (Pass)
-        # Verify complete flow via quality check success
+        self.assertEqual(self.work_order.quality_check_assigned_to_id, self.manager.id)
+
+        # Repairing technician cannot perform QC
         qc_data = {
             'passed': True,
             'notes': 'QC Passed',
             'checklist': {'allTasksCompleted': True}
         }
-        
-        response = self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/quality_check/', qc_data, format='json')
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/quality_check/',
+            qc_data,
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # 6. Assigned inspector performs Quality Check (Pass)
+        self.client.force_authenticate(user=self.manager)
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/quality_check/',
+            qc_data,
+            format='json',
+        )
         if response.status_code != 200:
              print("QC/Complete failed:", response.data)
              
@@ -291,6 +341,47 @@ class MobileAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.task.refresh_from_db()
         self.assertEqual(self.task.status, 'completed')
+
+    def test_can_start_task_when_linked_part_is_returned(self, mock_filter):
+        from apps.workorders.models import WorkOrderPart
+
+        WorkOrderPart.objects.create(
+            work_order=self.work_order,
+            task=self.task,
+            part_name='Unused Filter',
+            quantity=1,
+            status='returned',
+            resolution_notes='Not needed after inspection',
+        )
+
+        self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/start_work/')
+        response = self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, 'in_progress')
+
+    def test_can_skip_task_when_part_returned(self, mock_filter):
+        from apps.workorders.models import WorkOrderPart
+
+        WorkOrderPart.objects.create(
+            work_order=self.work_order,
+            task=self.task,
+            part_name='Unused Filter',
+            quantity=1,
+            status='returned',
+            resolution_notes='Customer declined install',
+        )
+
+        response = self.client.post(
+            f'/api/workorders/tasks/{self.task.id}/skip/',
+            {'notes': 'Part returned — no install work'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, 'skipped')
 
     def test_technician_can_mark_part_installed_without_edit_workorders(self, mock_filter):
         from apps.workorders.models import WorkOrderPart

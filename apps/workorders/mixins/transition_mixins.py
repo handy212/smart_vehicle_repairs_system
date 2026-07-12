@@ -162,6 +162,11 @@ class WorkOrderStateTransitionMixin:
     @action(detail=True, methods=['post'])
     def discontinue_job(self, request, pk=None):
         """Customer discontinued repairs: set status to pending invoice, skip open mechanical tasks."""
+        if getattr(request.user, 'role', None) == 'technician':
+            return Response(
+                {'error': 'Technicians cannot discontinue jobs. Ask a service coordinator or front desk.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         work_order = self.get_object()
         reason_code = request.data.get('reason_code')
         notes = (request.data.get('notes') or '').strip()
@@ -273,11 +278,15 @@ class WorkOrderStateTransitionMixin:
 
     @action(detail=True, methods=['post'])
     def quality_check(self, request, pk=None):
-        """Perform quality check"""
+        """Perform quality check (authorized inspector only; not the repairing technician)."""
         import logging
         logger = logging.getLogger(__name__)
         
         work_order = self.get_object()
+        can_perform, deny_reason = work_order.user_can_perform_quality_check(request.user)
+        if not can_perform:
+            return Response({'error': deny_reason}, status=status.HTTP_403_FORBIDDEN)
+
         passed = request.data.get('passed', False)
         notes = request.data.get('notes', '')
         checklist = request.data.get('checklist', {})
@@ -382,10 +391,28 @@ class WorkOrderStateTransitionMixin:
 
     @action(detail=True, methods=['post'])
     def request_quality_check(self, request, pk=None):
-        """Request quality check"""
+        """Request quality check and assign an authorized inspector."""
+        from apps.accounts.models import User
+
         work_order = self.get_object()
 
         if work_order.status == 'quality_check':
+            # Allow (re)assigning inspector while waiting for QC
+            assigned_to_id = request.data.get('assigned_to')
+            if assigned_to_id:
+                try:
+                    assignee = User.objects.get(pk=assigned_to_id, is_active=True)
+                    work_order.assign_quality_inspector(request.user, assignee)
+                except User.DoesNotExist:
+                    return Response(
+                        {'error': 'Selected quality inspector was not found.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                except ValidationError as e:
+                    return Response(
+                        {'error': '; '.join(e.messages) if hasattr(e, 'messages') else str(e)},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
             serializer = self.get_serializer(work_order)
             response_data = serializer.data
             response_data['workflow_message'] = 'Quality check already requested.'
@@ -396,6 +423,29 @@ class WorkOrderStateTransitionMixin:
             response_data = serializer.data
             response_data['workflow_message'] = 'Quality check already completed.'
             return Response(response_data, status=status.HTTP_200_OK)
+
+        assigned_to_id = request.data.get('assigned_to')
+        if not assigned_to_id:
+            return Response(
+                {
+                    'error': 'Assign an authorized quality inspector before requesting QC.',
+                    'field': 'assigned_to',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            assignee = User.objects.get(pk=assigned_to_id, is_active=True)
+            work_order.assign_quality_inspector(request.user, assignee)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Selected quality inspector was not found.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationError as e:
+            return Response(
+                {'error': '; '.join(e.messages) if hasattr(e, 'messages') else str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         try:
             work_order.transition_to('quality_check', user=request.user)

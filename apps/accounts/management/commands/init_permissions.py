@@ -104,6 +104,11 @@ class Command(BaseCommand):
                 'clock_work_time': ('workorders', 'Clock Work Time', 'Track and log work hours on work orders'),
                 'print_workorders': ('workorders', 'Print Work Orders', 'Print work order job cards'),
                 'export_workorders': ('workorders', 'Export Work Orders', 'Export work order data'),
+                'perform_quality_check': (
+                    'workorders',
+                    'Perform Quality Check',
+                    'Perform final quality control on work orders (not the repairing technician)',
+                ),
                 
                 # ==================== GATE PASSES ====================
                 'view_gatepass': ('gatepass', 'View Gate Passes', 'View gate pass information'),

@@ -300,7 +300,7 @@ class WorkOrderWorkflowTests(TestCase):
         )
 
         url_qc = reverse('api_workorders:workorder-request-quality-check', args=[work_order.id])
-        response = self.client.post(url_qc, {}, format='json')
+        response = self.client.post(url_qc, {'assigned_to': self.manager.id}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('blocking_tasks', response.data)
@@ -355,25 +355,33 @@ class WorkOrderWorkflowTests(TestCase):
             code='delete_workorders',
             defaults={'name': 'Delete WO', 'category': 'workorders', 'is_active': True},
         )
+        perform_qc, _ = Permission.objects.update_or_create(
+            code='perform_quality_check',
+            defaults={'name': 'Perform QC', 'category': 'workorders', 'is_active': True},
+        )
+        update_status, _ = Permission.objects.update_or_create(
+            code='update_workorder_status',
+            defaults={'name': 'Update WO Status', 'category': 'workorders', 'is_active': True},
+        )
         
         # Create Roles
         sc_role, _ = Role.objects.update_or_create(
             code='service_coordinator',
             defaults={'name': 'Service Coordinator', 'is_active': True},
         )
-        sc_role.permissions.add(create_wo, view_wo, edit_wo)
+        sc_role.permissions.add(create_wo, view_wo, edit_wo, perform_qc, update_status)
         
         tech_role, _ = Role.objects.update_or_create(
             code='technician',
             defaults={'name': 'Technician', 'is_active': True},
         )
-        tech_role.permissions.add(view_wo, edit_wo)
+        tech_role.permissions.add(view_wo, edit_wo, update_status)
         
         manager_role, _ = Role.objects.update_or_create(
             code='manager',
             defaults={'name': 'Manager', 'is_active': True},
         )
-        manager_role.permissions.add(create_wo, view_wo, edit_wo, delete_wo)
+        manager_role.permissions.add(create_wo, view_wo, edit_wo, delete_wo, perform_qc, update_status)
 
     def test_full_happy_path_workflow(self):
         """
@@ -515,9 +523,9 @@ class WorkOrderWorkflowTests(TestCase):
                 payload['labor_cost'] = '20.00'
             self.client.patch(url_task, payload)
 
-        # 9. REQUEST QC (In Progress -> Quality Check)
+        # 9. REQUEST QC (In Progress -> Quality Check) — must assign authorized inspector
         url_qc = reverse('api_workorders:workorder-request-quality-check', args=[wo_id])
-        response = self.client.post(url_qc)
+        response = self.client.post(url_qc, {'assigned_to': self.manager.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'quality_check')
         

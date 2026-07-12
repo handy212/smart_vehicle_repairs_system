@@ -37,10 +37,22 @@ export function AssignmentActions({
   const assignmentStatus = workOrder.technician_assignment_status || "";
   const hasTechnician = workOrder.has_technician_assignment;
   const requiresAcceptance = workOrder.requires_assignment_acceptance;
-  const isTerminalStatus = ["completed", "invoiced", "closed", "discontinued_pending_bill"].includes(
-    workOrder.status
-  );
-  const isInProgress = workOrder.status === "in_progress";
+  // Accept/Reject/Release apply only to pre-work technician assignment — not QC or later stages
+  const assignmentActionStatuses = new Set([
+    "draft",
+    "inspection",
+    "intake",
+    "assigned",
+    "diagnosis",
+    "awaiting_approval",
+    "approved",
+    "paused",
+  ]);
+  const allowsAssignmentActions = assignmentActionStatuses.has(workOrder.status);
+  // Release is for reassignment before repair execution (not mid-repair pause)
+  const canReleaseAtStatus =
+    allowsAssignmentActions &&
+    !(workOrder.status === "paused" && workOrder.paused_from_status === "in_progress");
 
   const userRole = user?.role;
   const userId = user?.id;
@@ -126,13 +138,13 @@ export function AssignmentActions({
     },
   });
 
-  if (!hasTechnician || isTerminalStatus || !canRespond) {
+  if (!hasTechnician || !allowsAssignmentActions || !canRespond) {
     return null;
   }
 
   const showPendingActions = requiresAcceptance || assignmentStatus === "pending";
   const showRelease =
-    !isInProgress &&
+    canReleaseAtStatus &&
     (assignmentStatus === "accepted" ||
       assignmentStatus === "pending" ||
       (!assignmentStatus && hasTechnician));

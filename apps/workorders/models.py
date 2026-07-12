@@ -327,13 +327,20 @@ class WorkOrder(models.Model):
     # Quality Control
     quality_check_required = models.BooleanField(default=True)
     quality_check_completed = models.BooleanField(default=False)
+    quality_check_assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_quality_checks',
+        help_text='Authorized inspector assigned to perform quality check',
+    )
     quality_check_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='quality_checked_work_orders',
-        limit_choices_to={'role__in': ['technician', 'manager']}
     )
     quality_check_at = models.DateTimeField(null=True, blank=True)
     quality_check_notes = models.TextField(blank=True)
@@ -341,7 +348,7 @@ class WorkOrder(models.Model):
     quality_check_signature = models.TextField(
         null=True, 
         blank=True,
-        help_text="Base64 encoded signature of the technician who performed the quality check"
+        help_text="Base64 encoded signature of the inspector who performed the quality check"
     )
     
     # Tracking
@@ -1292,6 +1299,56 @@ class WorkOrder(models.Model):
             return True
         return self.assigned_technicians.filter(id=user.id).exists()
 
+    def user_is_repair_technician(self, user):
+        """True when the user is the primary or assigned technician on this job."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if self.primary_technician_id == user.id:
+            return True
+        return self.assigned_technicians.filter(id=user.id).exists()
+
+    def user_can_perform_quality_check(self, user):
+        """
+        Separation of duties: repairing technicians cannot QC their own job.
+        Prefer the assigned QC inspector when one is set.
+        """
+        from apps.accounts.permissions import user_has_permission
+
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False, 'Authentication required.'
+
+        if not user_has_permission(user, 'perform_quality_check'):
+            return False, 'You do not have permission to perform quality checks.'
+
+        if self.user_is_repair_technician(user) and not user_has_permission(user, 'manage_workorders'):
+            return False, 'The technician who worked this job cannot perform its quality check. Assign an authorized inspector.'
+
+        if self.quality_check_assigned_to_id and self.quality_check_assigned_to_id != user.id:
+            if not user_has_permission(user, 'manage_workorders'):
+                assignee = self.quality_check_assigned_to
+                name = ''
+                if assignee:
+                    name = (assignee.get_full_name() or assignee.username or '').strip()
+                label = name or 'another inspector'
+                return False, f'Quality check is assigned to {label}.'
+
+        return True, None
+
+    def assign_quality_inspector(self, user, assignee):
+        """Assign an authorized QC inspector. Raises ValidationError on invalid assignee."""
+        from apps.accounts.permissions import user_has_permission
+        from django.core.exceptions import ValidationError
+
+        if assignee is None:
+            raise ValidationError('A quality inspector is required.')
+        if not user_has_permission(assignee, 'perform_quality_check'):
+            raise ValidationError('Selected user is not authorized to perform quality checks.')
+        if self.user_is_repair_technician(assignee) and not user_has_permission(assignee, 'manage_workorders'):
+            raise ValidationError('Cannot assign the repairing technician as their own quality inspector.')
+
+        self.quality_check_assigned_to = assignee
+        self.save(update_fields=['quality_check_assigned_to', 'updated_at'])
+
     def mark_technician_assignment_pending(self):
         if self.has_technician_assigned():
             self.technician_assignment_status = 'pending'
@@ -1384,8 +1441,18 @@ class WorkOrder(models.Model):
     def release_technician_assignment(self, user, note=''):
         if not self.has_technician_assigned():
             raise ValidationError('No technician is assigned to release.')
-        if self.status == 'in_progress':
-            raise ValidationError('Pause or complete work before releasing the assignment.')
+        if self.status in {
+            'in_progress',
+            'additional_work_found',
+            'quality_check',
+            'completed',
+            'invoiced',
+            'closed',
+            'discontinued_pending_bill',
+        }:
+            raise ValidationError(
+                'Technician assignment cannot be released at this stage of the job.'
+            )
 
         self.primary_technician = None
         self.assigned_technicians.clear()
