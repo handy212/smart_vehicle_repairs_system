@@ -805,23 +805,33 @@ export const inventoryApi = {
     return response.data;
   },
 
-  getValuationDetail: async (params?: { include_zero?: boolean }) => {
+  getValuationDetail: async (params?: {
+    include_zero?: boolean;
+    start_date?: string;
+    end_date?: string;
+  }) => {
     const response = await apiClient.get("/inventory/reports/valuation-detail/", { params });
     return response.data;
   },
 
-  getValuationSummary: async (params?: { include_zero?: boolean }) => {
+  getValuationSummary: async (params?: {
+    include_zero?: boolean;
+    start_date?: string;
+    end_date?: string;
+  }) => {
     const response = await apiClient.get("/inventory/reports/valuation-summary/", { params });
     return response.data;
   },
 
-  getOpenPurchaseOrders: async () => {
-    const response = await apiClient.get("/inventory/reports/open-purchase-orders/");
+  getOpenPurchaseOrders: async (params?: { start_date?: string; end_date?: string }) => {
+    const response = await apiClient.get("/inventory/reports/open-purchase-orders/", { params });
     return response.data;
   },
 
-  getOpenPurchaseOrderDetail: async () => {
-    const response = await apiClient.get("/inventory/reports/open-purchase-order-detail/");
+  getOpenPurchaseOrderDetail: async (params?: { start_date?: string; end_date?: string }) => {
+    const response = await apiClient.get("/inventory/reports/open-purchase-order-detail/", {
+      params,
+    });
     return response.data;
   },
 

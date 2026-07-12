@@ -125,9 +125,12 @@ def _include_zero(request) -> bool:
 def inventory_valuation_detail_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
+    start, end = _parse_range(request)
     report = QboStyleInventoryReports.inventory_valuation_detail(
         branch_id=_branch_id(request),
         include_zero=_include_zero(request),
+        date_from=start,
+        date_to=end,
     )
     return Response(report)
 
@@ -137,9 +140,11 @@ def inventory_valuation_detail_report(request):
 def inventory_valuation_summary_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
+    _start, end = _parse_range(request)
     report = QboStyleInventoryReports.inventory_valuation_summary(
         branch_id=_branch_id(request),
         include_zero=_include_zero(request),
+        date_to=end,
     )
     return Response(report)
 
@@ -149,7 +154,17 @@ def inventory_valuation_summary_report(request):
 def open_purchase_order_list_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
-    return Response(QboStyleInventoryReports.open_purchase_order_list(branch_id=_branch_id(request)))
+    start_str = request.query_params.get('start_date')
+    end_str = request.query_params.get('end_date')
+    start = parse_date(start_str) if start_str else None
+    end = parse_date(end_str) if end_str else None
+    return Response(
+        QboStyleInventoryReports.open_purchase_order_list(
+            branch_id=_branch_id(request),
+            date_from=start,
+            date_to=end,
+        )
+    )
 
 
 @api_view(['GET'])
@@ -157,7 +172,17 @@ def open_purchase_order_list_report(request):
 def open_purchase_order_detail_report(request):
     from .qbo_style_reports import QboStyleInventoryReports
 
-    return Response(QboStyleInventoryReports.open_purchase_order_detail(branch_id=_branch_id(request)))
+    start_str = request.query_params.get('start_date')
+    end_str = request.query_params.get('end_date')
+    start = parse_date(start_str) if start_str else None
+    end = parse_date(end_str) if end_str else None
+    return Response(
+        QboStyleInventoryReports.open_purchase_order_detail(
+            branch_id=_branch_id(request),
+            date_from=start,
+            date_to=end,
+        )
+    )
 
 
 @api_view(['GET'])

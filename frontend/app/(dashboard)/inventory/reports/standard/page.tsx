@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ReportExportMenu } from "@/components/reports/ReportExportMenu";
 import type { TableExportPayload } from "@/lib/utils/report-export";
 import { getUserFacingError } from "@/lib/api/errors";
+
 type TabKey =
   | "valuation_detail"
   | "valuation_summary"
@@ -31,15 +32,21 @@ type TabKey =
 const TAB_TITLES: Record<TabKey, string> = {
   valuation_detail: "Inventory Valuation Detail",
   valuation_summary: "Inventory Valuation Summary",
-  open_po_list: "Open Purchase Order List",
+  open_po_list: "Open Purchase Order List by Supplier",
   open_po_detail: "Open Purchase Order Detail",
-  stock_take: "Stock Take Worksheet",
+  stock_take: "Stocktake Worksheet",
 };
+
+function fmtNum(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(2) : String(value);
+}
 
 function ReportTable({
   headers,
   rows,
-  emptyMessage = "No records",
+  emptyMessage = "Your selection doesn’t have any info. Change your selection or start a new search.",
 }: {
   headers: string[];
   rows: (string | number | ReactNode)[][];
@@ -174,56 +181,94 @@ export default function StandardInventoryReportsPage() {
 
   const exportPayload = useMemo((): TableExportPayload | null => {
     const branchLabel = activeBranch?.name || "All branches";
-    if (activeTab === "valuation_detail" && valuationDetailQuery.data?.lines) {
+    if (activeTab === "valuation_detail" && valuationDetailQuery.data?.groups) {
+      const rows: (string | number)[][] = [];
+      for (const group of valuationDetailQuery.data.groups) {
+        for (const line of group.lines ?? []) {
+          rows.push([
+            line.product_service,
+            line.transaction_date || "",
+            line.transaction_type,
+            line.number,
+            line.name,
+            line.qty,
+            line.rate,
+            line.inventory_cost,
+            line.qty_on_hand,
+            line.asset_value,
+          ]);
+        }
+        rows.push([
+          `Total for ${group.product_service}`,
+          "",
+          "",
+          "",
+          "",
+          group.subtotal?.qty ?? "",
+          "",
+          group.subtotal?.inventory_cost ?? "",
+          group.subtotal?.qty_on_hand ?? "",
+          group.subtotal?.asset_value ?? "",
+        ]);
+      }
       return {
         filename: "inventory-valuation-detail",
         reportTitle: "Inventory Valuation Detail",
         dateInfo: branchLabel,
-        headers: ["Part #", "Part name", "Category", "Branch", "Qty on hand", "Unit cost", "Asset value"],
-        rows: valuationDetailQuery.data.lines.map((line: any) => [
-          line.part_number,
-          line.part_name,
-          line.category,
-          line.branch_name,
-          line.quantity_on_hand,
-          line.unit_cost,
-          line.asset_value,
-        ]),
-        currencyColumnIndexes: [5, 6],
+        headers: [
+          "Product/Service",
+          "Transaction date",
+          "Transaction type",
+          "Number",
+          "Name",
+          "Qty",
+          "Rate",
+          "Inventory cost",
+          "Qty on hand",
+          "Asset value",
+        ],
+        rows,
+        currencyColumnIndexes: [6, 7, 9],
       };
     }
-    if (activeTab === "valuation_summary" && valuationSummaryQuery.data?.by_category) {
+    if (activeTab === "valuation_summary" && valuationSummaryQuery.data?.rows) {
       return {
         filename: "inventory-valuation-summary",
         reportTitle: "Inventory Valuation Summary",
         dateInfo: branchLabel,
-        headers: ["Category", "SKUs", "Qty on hand", "Asset value"],
-        rows: valuationSummaryQuery.data.by_category.map((row: any) => [
-          row.category,
-          row.sku_count,
-          row.quantity_on_hand,
+        headers: ["Product/Service", "SKU", "Qty", "Asset Value", "Calc. Avg"],
+        rows: valuationSummaryQuery.data.rows.map((row: any) => [
+          row.product_service,
+          row.sku,
+          row.qty,
           row.asset_value,
+          row.calc_avg,
         ]),
-        currencyColumnIndexes: [3],
+        currencyColumnIndexes: [3, 4],
       };
     }
-    if (activeTab === "open_po_list" && openPoListQuery.data?.purchase_orders) {
+    if (activeTab === "open_po_list" && openPoListQuery.data?.groups) {
+      const rows: (string | number)[][] = [];
+      for (const group of openPoListQuery.data.groups) {
+        rows.push([group.supplier_display_name, "", "", "", "", ""]);
+        for (const row of group.rows ?? []) {
+          rows.push([
+            row.date || "",
+            row.number,
+            row.memo || "",
+            row.ship_via || "",
+            row.amount,
+            row.open_balance,
+          ]);
+        }
+      }
       return {
         filename: "open-purchase-order-list",
-        reportTitle: "Open Purchase Order List",
+        reportTitle: "Open Purchase Order List by Supplier",
         dateInfo: branchLabel,
-        headers: ["PO #", "Supplier", "Status", "Order date", "Expected", "Open lines", "Open qty", "Open value"],
-        rows: openPoListQuery.data.purchase_orders.map((po: any) => [
-          po.po_number,
-          po.supplier_name,
-          po.status_display,
-          po.order_date || "",
-          po.expected_delivery_date || "",
-          po.open_line_count,
-          po.open_quantity,
-          po.open_value,
-        ]),
-        currencyColumnIndexes: [7],
+        headers: ["Date", "Number", "Memo", "Ship via", "Amount", "Open Balance"],
+        rows,
+        currencyColumnIndexes: [4, 5],
       };
     }
     if (activeTab === "open_po_detail" && openPoDetailQuery.data?.lines) {
@@ -232,43 +277,53 @@ export default function StandardInventoryReportsPage() {
         reportTitle: "Open Purchase Order Detail",
         dateInfo: branchLabel,
         headers: [
-          "PO #",
-          "Supplier",
-          "Part #",
-          "Part name",
-          "Ordered",
-          "Received",
-          "Open qty",
-          "Unit cost",
-          "Open value",
+          "Transaction date",
+          "Number",
+          "Supplier display name",
+          "Product/Service full name",
+          "Account Name",
+          "Quantity",
+          "Billed quantity",
+          "Backordered quantity",
+          "Total amount",
+          "Received amount",
+          "PO open balance",
         ],
         rows: openPoDetailQuery.data.lines.map((line: any) => [
-          line.po_number,
-          line.supplier_name,
-          line.part_number,
-          line.part_name,
-          line.ordered_quantity,
-          line.received_quantity,
-          line.open_quantity,
-          line.unit_cost,
-          line.open_value,
+          line.transaction_date || "",
+          line.number,
+          line.supplier_display_name,
+          line.product_service_full_name,
+          line.account_name,
+          line.quantity,
+          line.billed_quantity,
+          line.backordered_quantity,
+          line.total_amount,
+          line.received_amount,
+          line.po_open_balance,
         ]),
-        currencyColumnIndexes: [7, 8],
+        currencyColumnIndexes: [8, 9, 10],
       };
     }
     if (activeTab === "stock_take" && stockTakeQuery.data?.lines) {
       return {
-        filename: "stock-take-worksheet",
-        reportTitle: "Stock Take Worksheet",
+        filename: "stocktake-worksheet",
+        reportTitle: "Stocktake Worksheet",
         dateInfo: branchLabel,
-        headers: ["Part #", "Part name", "Category", "Bin", "System qty", "Physical qty", "Difference"],
+        headers: [
+          "Product/Service",
+          "Memo/Description",
+          "Category",
+          "Preferred supplier name",
+          "Quantity on hand",
+          "Physical Count",
+        ],
         rows: stockTakeQuery.data.lines.map((line: any) => [
-          line.part_number,
-          line.part_name,
-          line.category,
-          line.bin_location || "",
-          line.system_quantity,
-          "",
+          line.product_service,
+          line.memo_description || "",
+          line.category || "",
+          line.preferred_supplier_name || "",
+          line.quantity_on_hand,
           "",
         ]),
       };
@@ -289,13 +344,126 @@ export default function StandardInventoryReportsPage() {
     activeTab === "valuation_summary" ||
     activeTab === "stock_take";
 
+  const valuationDetailRows = useMemo(() => {
+    const groups = valuationDetailQuery.data?.groups ?? [];
+    const rows: (string | number | ReactNode)[][] = [];
+    for (const group of groups) {
+      rows.push([
+        <span key={`h-${group.part_id}`} className="font-semibold">
+          {group.product_service}
+        </span>,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]);
+      for (const line of group.lines ?? []) {
+        rows.push([
+          line.product_service,
+          line.transaction_date || "—",
+          line.transaction_type,
+          line.number || "—",
+          line.name || "",
+          fmtNum(line.qty),
+          fmtNum(line.rate),
+          fmtNum(line.inventory_cost),
+          fmtNum(line.qty_on_hand),
+          fmtNum(line.asset_value),
+        ]);
+      }
+      rows.push([
+        <span key={`t-${group.part_id}`} className="font-medium">
+          Total for {group.product_service}
+        </span>,
+        "",
+        "",
+        "",
+        "",
+        fmtNum(group.subtotal?.qty),
+        "",
+        formatCurrency(group.subtotal?.inventory_cost ?? 0),
+        fmtNum(group.subtotal?.qty_on_hand),
+        formatCurrency(group.subtotal?.asset_value ?? 0),
+      ]);
+    }
+    if (groups.length > 0) {
+      const summary = valuationDetailQuery.data?.summary;
+      rows.push([
+        <span key="grand" className="font-semibold">
+          TOTAL
+        </span>,
+        "",
+        "",
+        "",
+        "",
+        fmtNum(summary?.total_qty),
+        "",
+        formatCurrency(summary?.total_inventory_cost ?? 0),
+        fmtNum(summary?.total_qty_on_hand),
+        formatCurrency(summary?.total_asset_value ?? 0),
+      ]);
+    }
+    return rows;
+  }, [valuationDetailQuery.data, formatCurrency]);
+
+  const openPoListRows = useMemo(() => {
+    const groups = openPoListQuery.data?.groups ?? [];
+    const rows: (string | number | ReactNode)[][] = [];
+    for (const group of groups) {
+      rows.push([
+        <span key={`s-${group.supplier_display_name}`} className="font-semibold">
+          {group.supplier_display_name}
+        </span>,
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]);
+      for (const row of group.rows ?? []) {
+        rows.push([
+          row.date || "—",
+          <Link
+            key={row.po_id}
+            href={`/inventory/purchase-orders/${row.po_id}`}
+            className="text-primary hover:underline"
+          >
+            {row.number}
+          </Link>,
+          row.memo || "",
+          row.ship_via || "",
+          formatCurrency(row.amount),
+          formatCurrency(row.open_balance),
+        ]);
+      }
+    }
+    if (groups.length > 0) {
+      rows.push([
+        <span key="po-total" className="font-semibold">
+          TOTAL
+        </span>,
+        "",
+        "",
+        "",
+        formatCurrency(openPoListQuery.data?.summary?.total_amount ?? 0),
+        formatCurrency(openPoListQuery.data?.summary?.total_open_balance ?? 0),
+      ]);
+    }
+    return rows;
+  }, [openPoListQuery.data, formatCurrency]);
+
   return (
     <div className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Inventory Reports</h1>
           <p className="text-sm text-muted-foreground">
-            QuickBooks-style valuation, open purchase orders, and stock take worksheet.
+            QuickBooks Online–aligned valuation, open purchase orders, and stocktake worksheet.
           </p>
           <div className="mt-2">
             <BranchReportChip />
@@ -308,7 +476,11 @@ export default function StandardInventoryReportsPage() {
               <Button
                 type="button"
                 size="sm"
-                disabled={!activeBranchId || startCountMutation.isPending || !(stockTakeQuery.data?.lines?.length)}
+                disabled={
+                  !activeBranchId ||
+                  startCountMutation.isPending ||
+                  !(stockTakeQuery.data?.lines?.length)
+                }
                 onClick={() => startCountMutation.mutate()}
                 className="gap-1.5"
               >
@@ -376,16 +548,18 @@ export default function StandardInventoryReportsPage() {
               <SummaryCards
                 items={[
                   {
-                    label: "Lines",
-                    value: String(valuationDetailQuery.data.summary?.line_count ?? 0),
+                    label: "Products",
+                    value: String(valuationDetailQuery.data.summary?.group_count ?? 0),
                   },
                   {
-                    label: "Total quantity",
-                    value: String(valuationDetailQuery.data.summary?.total_quantity ?? 0),
+                    label: "Qty on hand",
+                    value: fmtNum(valuationDetailQuery.data.summary?.total_qty_on_hand),
                   },
                   {
                     label: "Asset value",
-                    value: formatCurrency(valuationDetailQuery.data.summary?.total_asset_value ?? 0),
+                    value: formatCurrency(
+                      valuationDetailQuery.data.summary?.total_asset_value ?? 0
+                    ),
                   },
                 ]}
               />
@@ -395,16 +569,19 @@ export default function StandardInventoryReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <ReportTable
-                    headers={["Part #", "Part name", "Category", "Branch", "Qty", "Unit cost", "Asset value"]}
-                    rows={(valuationDetailQuery.data.lines ?? []).map((line: any) => [
-                      line.part_number,
-                      line.part_name,
-                      line.category,
-                      line.branch_name,
-                      line.quantity_on_hand,
-                      formatCurrency(line.unit_cost),
-                      formatCurrency(line.asset_value),
-                    ])}
+                    headers={[
+                      "Product/Service",
+                      "Transaction date",
+                      "Transaction type",
+                      "Number",
+                      "Name",
+                      "Qty",
+                      "Rate",
+                      "Inventory cost",
+                      "Qty on hand",
+                      "Asset value",
+                    ]}
+                    rows={valuationDetailRows}
                   />
                 </CardContent>
               </Card>
@@ -418,16 +595,22 @@ export default function StandardInventoryReportsPage() {
               <SummaryCards
                 items={[
                   {
-                    label: "Categories",
-                    value: String(valuationSummaryQuery.data.by_category?.length ?? 0),
+                    label: "SKUs",
+                    value: String(valuationSummaryQuery.data.summary?.sku_count ?? 0),
                   },
                   {
-                    label: "SKUs",
-                    value: String(valuationSummaryQuery.data.summary?.line_count ?? 0),
+                    label: "Qty",
+                    value: fmtNum(valuationSummaryQuery.data.summary?.total_qty),
                   },
                   {
                     label: "Asset value",
-                    value: formatCurrency(valuationSummaryQuery.data.summary?.total_asset_value ?? 0),
+                    value: formatCurrency(
+                      valuationSummaryQuery.data.summary?.total_asset_value ?? 0
+                    ),
+                  },
+                  {
+                    label: "Calc. Avg",
+                    value: formatCurrency(valuationSummaryQuery.data.summary?.calc_avg ?? 0),
                   },
                 ]}
               />
@@ -437,13 +620,31 @@ export default function StandardInventoryReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <ReportTable
-                    headers={["Category", "SKUs", "Qty on hand", "Asset value"]}
-                    rows={(valuationSummaryQuery.data.by_category ?? []).map((row: any) => [
-                      row.category,
-                      row.sku_count,
-                      row.quantity_on_hand,
-                      formatCurrency(row.asset_value),
-                    ])}
+                    headers={["Product/Service", "SKU", "Qty", "Asset Value", "Calc. Avg"]}
+                    rows={[
+                      ...(valuationSummaryQuery.data.rows ?? []).map((row: any) => [
+                        row.product_service,
+                        row.sku,
+                        fmtNum(row.qty),
+                        fmtNum(row.asset_value),
+                        fmtNum(row.calc_avg),
+                      ]),
+                      ...(valuationSummaryQuery.data.rows?.length
+                        ? [
+                            [
+                              <span key="vs-total" className="font-semibold">
+                                TOTAL
+                              </span>,
+                              "",
+                              fmtNum(valuationSummaryQuery.data.summary?.total_qty),
+                              formatCurrency(
+                                valuationSummaryQuery.data.summary?.total_asset_value ?? 0
+                              ),
+                              formatCurrency(valuationSummaryQuery.data.summary?.calc_avg ?? 0),
+                            ],
+                          ]
+                        : []),
+                    ]}
                   />
                 </CardContent>
               </Card>
@@ -461,38 +662,23 @@ export default function StandardInventoryReportsPage() {
                     value: String(openPoListQuery.data.summary?.po_count ?? 0),
                   },
                   {
-                    label: "Open quantity",
-                    value: String(openPoListQuery.data.summary?.total_open_quantity ?? 0),
+                    label: "Amount",
+                    value: formatCurrency(openPoListQuery.data.summary?.total_amount ?? 0),
                   },
                   {
-                    label: "Open value",
-                    value: formatCurrency(openPoListQuery.data.summary?.total_open_value ?? 0),
+                    label: "Open balance",
+                    value: formatCurrency(openPoListQuery.data.summary?.total_open_balance ?? 0),
                   },
                 ]}
               />
               <Card className="border-border shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-base">Open Purchase Order List</CardTitle>
+                  <CardTitle className="text-base">Open Purchase Order List by Supplier</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ReportTable
-                    headers={["PO #", "Supplier", "Status", "Order date", "Expected", "Open lines", "Open qty", "Open value"]}
-                    rows={(openPoListQuery.data.purchase_orders ?? []).map((po: any) => [
-                      <Link
-                        key={po.id}
-                        href={`/inventory/purchase-orders/${po.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        {po.po_number}
-                      </Link>,
-                      po.supplier_name,
-                      po.status_display,
-                      po.order_date || "—",
-                      po.expected_delivery_date || "—",
-                      po.open_line_count,
-                      po.open_quantity,
-                      formatCurrency(po.open_value),
-                    ])}
+                    headers={["Date", "Number", "Memo", "Ship via", "Amount", "Open Balance"]}
+                    rows={openPoListRows}
                   />
                 </CardContent>
               </Card>
@@ -510,12 +696,10 @@ export default function StandardInventoryReportsPage() {
                     value: String(openPoDetailQuery.data.summary?.line_count ?? 0),
                   },
                   {
-                    label: "Open quantity",
-                    value: String(openPoDetailQuery.data.summary?.total_open_quantity ?? 0),
-                  },
-                  {
-                    label: "Open value",
-                    value: formatCurrency(openPoDetailQuery.data.summary?.total_open_value ?? 0),
+                    label: "PO open balance",
+                    value: formatCurrency(
+                      openPoDetailQuery.data.summary?.total_open_balance ?? 0
+                    ),
                   },
                 ]}
               />
@@ -526,32 +710,36 @@ export default function StandardInventoryReportsPage() {
                 <CardContent>
                   <ReportTable
                     headers={[
-                      "PO #",
-                      "Supplier",
-                      "Part #",
-                      "Part name",
-                      "Ordered",
-                      "Received",
-                      "Open qty",
-                      "Unit cost",
-                      "Open value",
+                      "Transaction date",
+                      "Number",
+                      "Supplier display name",
+                      "Product/Service full name",
+                      "Account Name",
+                      "Quantity",
+                      "Billed quantity",
+                      "Backordered quantity",
+                      "Total amount",
+                      "Received amount",
+                      "PO open balance",
                     ]}
                     rows={(openPoDetailQuery.data.lines ?? []).map((line: any) => [
+                      line.transaction_date || "—",
                       <Link
-                        key={`${line.po_id}-${line.part_id}-${line.part_number}`}
+                        key={`${line.po_id}-${line.product_service_full_name}`}
                         href={`/inventory/purchase-orders/${line.po_id}`}
                         className="text-primary hover:underline"
                       >
-                        {line.po_number}
+                        {line.number}
                       </Link>,
-                      line.supplier_name,
-                      line.part_number,
-                      line.part_name,
-                      line.ordered_quantity,
-                      line.received_quantity,
-                      line.open_quantity,
-                      formatCurrency(line.unit_cost),
-                      formatCurrency(line.open_value),
+                      line.supplier_display_name,
+                      line.product_service_full_name,
+                      line.account_name,
+                      fmtNum(line.quantity),
+                      fmtNum(line.billed_quantity),
+                      fmtNum(line.backordered_quantity),
+                      formatCurrency(line.total_amount),
+                      formatCurrency(line.received_amount),
+                      formatCurrency(line.po_open_balance),
                     ])}
                   />
                 </CardContent>
@@ -564,11 +752,11 @@ export default function StandardInventoryReportsPage() {
           {stockTakeQuery.data && (
             <Card className="border-border shadow-none print:border-0 print:shadow-none">
               <CardHeader className="print:pb-2">
-                <CardTitle className="text-base">Stock Take Worksheet</CardTitle>
+                <CardTitle className="text-base">Stocktake Worksheet</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Use system quantity as the expected count. Click{" "}
+                  Physical Count is blank for manual entry. Click{" "}
                   <span className="font-medium text-foreground">Start count from worksheet</span> to
-                  open a live Physical Count session with these lines preloaded. You can also{" "}
+                  open a live Physical Count session. You can also{" "}
                   <Link href="/inventory/physical-counts" className="text-primary hover:underline">
                     manage sessions
                   </Link>{" "}
@@ -577,15 +765,21 @@ export default function StandardInventoryReportsPage() {
               </CardHeader>
               <CardContent>
                 <ReportTable
-                  headers={["Part #", "Part name", "Category", "Bin", "System qty", "Physical qty", "Difference"]}
+                  headers={[
+                    "Product/Service",
+                    "Memo/Description",
+                    "Category",
+                    "Preferred supplier name",
+                    "Quantity on hand",
+                    "Physical Count",
+                  ]}
                   rows={(stockTakeQuery.data.lines ?? []).map((line: any) => [
-                    line.part_number,
-                    line.part_name,
-                    line.category,
-                    line.bin_location || "—",
-                    line.system_quantity,
-                    "",
-                    "",
+                    line.product_service,
+                    line.memo_description || "",
+                    line.category || "",
+                    line.preferred_supplier_name || "",
+                    fmtNum(line.quantity_on_hand),
+                    "______",
                   ])}
                   emptyMessage="No stocked items for this branch"
                 />

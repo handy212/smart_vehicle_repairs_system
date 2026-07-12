@@ -40,6 +40,11 @@ class QboStyleInventoryReportsTests(TestCase):
         self.client.defaults["HTTP_X_BRANCH_ID"] = str(self.branch.id)
 
         category = PartCategory.objects.create(name="Filters")
+        self.supplier = Supplier.objects.create(
+            name="Parts Co",
+            supplier_code="PC1",
+            created_by=self.user,
+        )
         self.part = Part.objects.create(
             name="Oil Filter",
             part_number="OF-100",
@@ -47,6 +52,8 @@ class QboStyleInventoryReportsTests(TestCase):
             cost_price=Decimal("12.50"),
             selling_price=Decimal("25.00"),
             item_type="inventory",
+            preferred_supplier=self.supplier,
+            description="Spin-on oil filter",
             created_by=self.user,
         )
         StockItem.objects.create(
@@ -55,18 +62,14 @@ class QboStyleInventoryReportsTests(TestCase):
             quantity_in_stock=4,
             bin_location="A-1",
         )
-        supplier = Supplier.objects.create(
-            name="Parts Co",
-            supplier_code="PC1",
-            created_by=self.user,
-        )
         self.po = PurchaseOrder.objects.create(
-            supplier=supplier,
+            supplier=self.supplier,
             branch=self.branch,
             status="approved",
             created_by=self.user,
             subtotal=Decimal("50.00"),
             total=Decimal("50.00"),
+            notes="Rush order",
         )
         PurchaseOrderItem.objects.create(
             purchase_order=self.po,
@@ -78,29 +81,49 @@ class QboStyleInventoryReportsTests(TestCase):
 
     def test_valuation_detail_and_summary(self):
         detail = QboStyleInventoryReports.inventory_valuation_detail(branch_id=self.branch.id)
-        self.assertEqual(detail["summary"]["line_count"], 1)
-        self.assertEqual(detail["lines"][0]["part_number"], "OF-100")
-        self.assertEqual(detail["lines"][0]["asset_value"], 50.0)
+        self.assertEqual(detail["summary"]["group_count"], 1)
+        group = detail["groups"][0]
+        self.assertEqual(group["product_service"], "Oil Filter")
+        self.assertEqual(group["lines"][0]["transaction_type"], "Inventory Starting Value")
+        self.assertEqual(group["lines"][0]["number"], "START")
+        self.assertEqual(group["lines"][0]["qty"], 4.0)
+        self.assertEqual(group["lines"][0]["asset_value"], 50.0)
 
         summary = QboStyleInventoryReports.inventory_valuation_summary(branch_id=self.branch.id)
-        self.assertEqual(summary["by_category"][0]["category"], "Filters")
-        self.assertEqual(summary["by_category"][0]["asset_value"], 50.0)
+        self.assertEqual(summary["rows"][0]["sku"], "OF-100")
+        self.assertEqual(summary["rows"][0]["qty"], 4.0)
+        self.assertEqual(summary["rows"][0]["asset_value"], 50.0)
+        self.assertEqual(summary["rows"][0]["calc_avg"], 12.5)
 
     def test_open_po_list_and_detail(self):
         listing = QboStyleInventoryReports.open_purchase_order_list(branch_id=self.branch.id)
         self.assertEqual(listing["summary"]["po_count"], 1)
-        self.assertEqual(listing["purchase_orders"][0]["open_quantity"], 8.0)
+        group = listing["groups"][0]
+        self.assertEqual(group["supplier_display_name"], "Parts Co")
+        self.assertEqual(group["rows"][0]["number"], self.po.po_number)
+        self.assertEqual(group["rows"][0]["open_balance"], 100.0)
+        self.assertEqual(group["rows"][0]["memo"], "Rush order")
 
         detail = QboStyleInventoryReports.open_purchase_order_detail(branch_id=self.branch.id)
         self.assertEqual(detail["summary"]["line_count"], 1)
-        self.assertEqual(detail["lines"][0]["open_quantity"], 8.0)
-        self.assertEqual(detail["lines"][0]["open_value"], 100.0)
+        line = detail["lines"][0]
+        self.assertEqual(line["supplier_display_name"], "Parts Co")
+        self.assertEqual(line["quantity"], 10.0)
+        self.assertEqual(line["billed_quantity"], 2.0)
+        self.assertEqual(line["backordered_quantity"], 8.0)
+        self.assertEqual(line["po_open_balance"], 100.0)
+        self.assertEqual(line["account_name"], "Inventory Asset")
 
     def test_stock_take_worksheet(self):
         sheet = QboStyleInventoryReports.stock_take_worksheet(branch_id=self.branch.id)
         self.assertEqual(sheet["summary"]["line_count"], 1)
-        self.assertEqual(sheet["lines"][0]["system_quantity"], 4.0)
-        self.assertIsNone(sheet["lines"][0]["physical_quantity"])
+        line = sheet["lines"][0]
+        self.assertEqual(line["product_service"], "Oil Filter")
+        self.assertEqual(line["memo_description"], "Spin-on oil filter")
+        self.assertEqual(line["category"], "Filters")
+        self.assertEqual(line["preferred_supplier_name"], "Parts Co")
+        self.assertEqual(line["quantity_on_hand"], 4.0)
+        self.assertIsNone(line["physical_count"])
 
     def test_api_endpoints_return_200(self):
         endpoints = [
