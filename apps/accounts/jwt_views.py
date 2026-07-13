@@ -42,6 +42,10 @@ def _is_impersonating(request) -> bool:
     return bool(_token_claim(getattr(request, 'auth', None), 'impersonating'))
 
 
+def _same_user_id(left, right) -> bool:
+    return left is not None and right is not None and str(left) == str(right)
+
+
 def _impersonator_payload(user):
     return {
         'id': user.id,
@@ -219,6 +223,12 @@ class ImpersonateCustomerView(APIView):
                 {'detail': 'Refresh token required to start impersonation.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            admin_token = RefreshToken(admin_refresh)
+        except TokenError:
+            return Response({'detail': 'Invalid refresh token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        if not _same_user_id(admin_token.get('user_id'), request.user.id):
+            return Response({'detail': 'Invalid refresh token.'}, status=status.HTTP_403_FORBIDDEN)
 
         tokens = _issue_tokens_for_user(target, impersonator_id=request.user.id)
         from .serializers import UserSerializer
@@ -277,6 +287,12 @@ class ExitImpersonationView(APIView):
                 {'detail': 'Impersonator session expired. Please log in again.'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        impersonator_id = _token_claim(getattr(request, 'auth', None), 'impersonator_id')
+        if impersonator_id is None:
+            return Response(
+                {'detail': 'Impersonator session expired. Please log in again.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         # Blacklist the customer impersonation refresh.
         current_refresh = get_refresh_from_request(request)
@@ -288,7 +304,12 @@ class ExitImpersonationView(APIView):
 
         try:
             admin_token = RefreshToken(impersonator_refresh)
-            admin_user = User.objects.get(pk=admin_token['user_id'])
+            if not _same_user_id(admin_token.get('user_id'), impersonator_id):
+                return Response(
+                    {'detail': 'Invalid impersonator session.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            admin_user = User.objects.get(pk=impersonator_id)
         except (TokenError, User.DoesNotExist, KeyError):
             clear_response = Response(
                 {'detail': 'Impersonator session expired. Please log in again.'},

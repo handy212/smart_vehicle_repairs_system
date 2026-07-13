@@ -94,3 +94,95 @@ def test_impersonate_and_exit():
     assert exit_resp.status_code == status.HTTP_200_OK
     assert exit_resp.data['user']['id'] == admin.id
     assert exit_resp.data.get('impersonating') is False
+
+
+@pytest.mark.django_db
+def test_impersonate_rejects_refresh_for_different_user():
+    admin = baker.make(
+        User,
+        role='admin',
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+        email='admin-refresh-owner@example.com',
+    )
+    other_admin = baker.make(
+        User,
+        role='admin',
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+        email='other-admin-refresh-owner@example.com',
+    )
+    customer_user = baker.make(
+        User,
+        role='customer',
+        is_active=True,
+        email='cust-refresh-owner@example.com',
+    )
+    customer = baker.make(Customer, user=customer_user, customer_number='CUS-TEST-IMP-000003')
+
+    client, _ = _auth_client(admin)
+    other_refresh = RefreshToken.for_user(other_admin)
+
+    response = client.post(
+        reverse('impersonate_customer'),
+        {'customer_id': customer.id, 'refresh': str(other_refresh)},
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data['detail'] == 'Invalid refresh token.'
+
+
+@pytest.mark.django_db
+def test_exit_impersonation_rejects_refresh_for_different_impersonator():
+    admin = baker.make(
+        User,
+        role='admin',
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+        email='admin-exit-owner@example.com',
+    )
+    other_admin = baker.make(
+        User,
+        role='admin',
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+        email='other-admin-exit-owner@example.com',
+    )
+    customer_user = baker.make(
+        User,
+        role='customer',
+        is_active=True,
+        email='cust-exit-owner@example.com',
+    )
+    customer = baker.make(Customer, user=customer_user, customer_number='CUS-TEST-IMP-000004')
+
+    client, admin_refresh = _auth_client(admin)
+    start = client.post(
+        reverse('impersonate_customer'),
+        {'customer_id': customer.id, 'refresh': str(admin_refresh)},
+        format='json',
+    )
+    assert start.status_code == status.HTTP_200_OK
+
+    other_refresh = RefreshToken.for_user(other_admin)
+    client.cookies['access_token'] = start.data['access']
+    client.cookies['svr_refresh_token'] = start.data['refresh']
+    client.cookies['svr_impersonator_refresh'] = str(other_refresh)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {start.data['access']}")
+
+    response = client.post(
+        reverse('exit_impersonation'),
+        {
+            'refresh': start.data['refresh'],
+            'impersonator_refresh': str(other_refresh),
+        },
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data['detail'] == 'Invalid impersonator session.'
