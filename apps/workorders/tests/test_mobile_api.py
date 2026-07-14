@@ -309,6 +309,86 @@ class MobileAPITestCase(TestCase):
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'completed')
 
+    def test_failed_quality_check_requires_fresh_pass_before_completion(self, mock_filter):
+        self.work_order.status = 'in_progress'
+        self.work_order.quality_check_required = True
+        self.work_order.save(update_fields=['status', 'quality_check_required'])
+        self.task.status = 'completed'
+        self.task.save(update_fields=['status'])
+
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/request_quality_check/',
+            {'assigned_to': self.manager.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        self.client.force_authenticate(user=self.manager)
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/quality_check/',
+            {'passed': False, 'notes': 'Brake vibration still present'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'in_progress')
+        self.assertTrue(self.work_order.quality_check_completed)
+        self.assertFalse(self.work_order.quality_check_passed)
+
+        self.client.force_authenticate(user=self.technician)
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/request_quality_check/',
+            {'assigned_to': self.manager.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'quality_check')
+        self.assertFalse(self.work_order.quality_check_completed)
+        self.assertFalse(self.work_order.quality_check_passed)
+
+        response = self.client.post(
+            f'/api/workorders/work-orders/{self.work_order.id}/complete/',
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'quality_check')
+
+    def test_patch_cannot_forge_quality_check_pass_to_complete(self, mock_filter):
+        self.work_order.status = 'quality_check'
+        self.work_order.quality_check_required = True
+        self.work_order.quality_check_completed = False
+        self.work_order.quality_check_passed = False
+        self.work_order.quality_check_assigned_to = self.manager
+        self.work_order.save(update_fields=[
+            'status',
+            'quality_check_required',
+            'quality_check_completed',
+            'quality_check_passed',
+            'quality_check_assigned_to',
+        ])
+        self.task.status = 'completed'
+        self.task.save(update_fields=['status'])
+
+        self.client.force_authenticate(user=self.manager)
+        response = self.client.patch(
+            f'/api/workorders/work-orders/{self.work_order.id}/',
+            {
+                'status': 'completed',
+                'quality_check_completed': True,
+                'quality_check_passed': True,
+                'quality_check_by': self.manager.id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'quality_check')
+        self.assertFalse(self.work_order.quality_check_completed)
+        self.assertFalse(self.work_order.quality_check_passed)
+
     def test_can_complete_started_task_without_manual_actual_hours(self, mock_filter):
         self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/start_work/')
         self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')

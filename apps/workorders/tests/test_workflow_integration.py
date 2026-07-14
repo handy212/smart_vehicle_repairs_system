@@ -96,6 +96,21 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.data['status'], 'assigned')
         self.assertEqual(int(response.data['service_coordinator']), self.coordinator.id)
 
+    def test_work_order_create_without_job_type_uses_default_profile(self):
+        response = self.client.post(reverse('api_workorders:workorder-list'), {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'branch': self.branch.id,
+            'odometer_in': 50000,
+            'customer_concerns': 'Intermittent no-start condition',
+            'priority': 'normal',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        work_order = WorkOrder.objects.get(id=response.data['id'])
+        self.assertIsNotNone(work_order.job_type)
+        self.assertEqual(work_order.status, 'draft')
+
     def test_service_task_can_be_assigned_to_same_branch_technician(self):
         work_order = WorkOrder.objects.create(
             customer=self.customer,

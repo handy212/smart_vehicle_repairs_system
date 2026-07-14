@@ -132,7 +132,7 @@ WORK_ORDER_GUARDS = {
         ('custom', 'all_tasks_completed_or_skipped', 'All mechanical tasks must be completed or skipped before quality check.'),
     ],
     ('quality_check', 'completed'): [
-        ('required_field', 'quality_check_completed', 'Quality check must be completed before closing repair work.'),
+        ('required_field', 'quality_check_passed', 'Quality check must pass before closing repair work.'),
     ],
     ('completed', 'invoiced'): [
         ('required_field', 'odometer_out', 'Odometer out is required before invoicing.'),
