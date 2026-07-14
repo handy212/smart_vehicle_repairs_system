@@ -14,11 +14,9 @@ import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -31,14 +29,13 @@ import { getUserFacingError } from "@/lib/api/errors";
 import {
   JOB_TYPE_FIELD_LABEL,
   SERVICE_PACKAGE_LABEL,
-  SERVICE_PACKAGE_PLACEHOLDER,
 } from "@/lib/workorders/job-type-labels";
 import {
   isFastTrackJobType,
   jobTypeRequiresBundle,
   type JobType,
 } from "@/lib/api/job-types";
-import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
+import { ServiceIntakeFields } from "@/components/workorders/ServiceIntakeFields";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -48,17 +45,11 @@ import {
   ClipboardList,
   Plus,
   User,
-  AlertTriangle,
-  HeartPulse,
-  PlusCircle,
 } from "lucide-react";
 import { findDuplicateCustomerByEmail } from "@/lib/utils/duplicate-customer";
 import type { DuplicateCustomerMatch } from "@/lib/utils/duplicate-customer";
 import { DuplicateCustomerBanner } from "@/components/customers/DuplicateCustomerBanner";
-import {
-  getCommonConcernsForCategories,
-  mergeConcernSelections,
-} from "@/lib/constants/common-concerns";
+import { mergeConcernSelections } from "@/lib/constants/common-concerns";
 import { AxiosError } from "axios";
 
 const STEPS = [
@@ -144,18 +135,6 @@ export function CheckInWizard() {
   const isFastTrack = isFastTrackJobType(selectedJobType);
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
 
-  const filteredCommonConcerns = useMemo(
-    () =>
-      getCommonConcernsForCategories(
-        selectedJobTypes.length > 0
-          ? selectedJobTypes.map((jt) => jt.category)
-          : selectedJobType
-            ? [selectedJobType.category]
-            : []
-      ),
-    [selectedJobTypes, selectedJobType]
-  );
-
   const bundles = useMemo(() => {
     if (!bundlesData) return [] as ServiceBundle[];
     return Array.isArray(bundlesData) ? bundlesData : (bundlesData as { results?: ServiceBundle[] }).results ?? [];
@@ -200,6 +179,10 @@ export function CheckInWizard() {
     vehiclesApi
       .getSuggestedService(vehicleId)
       .then((data) => {
+        if (!data?.suggested_service_id) {
+          setSuggestedService(null);
+          return;
+        }
         setSuggestedService(data as SuggestedService);
         if (isFastTrackJobType(selectedJobType) && !serviceBundleId && data.suggested_bundle_id) {
           setServiceBundleId(data.suggested_bundle_id);
@@ -459,20 +442,25 @@ export function CheckInWizard() {
           const Icon = s.icon;
           const isActive = step === s.id;
           const isDone = step > s.id;
+          const canJump = s.id < step;
           return (
             <div key={s.id} className="flex items-center flex-1 min-w-0">
-              <div
+              <button
+                type="button"
+                disabled={!canJump}
+                onClick={() => canJump && setStep(s.id)}
                 className={cn(
-                  "flex flex-col items-center gap-1 flex-1 min-w-0",
+                  "flex flex-col items-center gap-1 flex-1 min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isActive && "text-primary",
                   isDone && "text-primary",
-                  !isActive && !isDone && "text-muted-foreground"
+                  !isActive && !isDone && "text-muted-foreground",
+                  canJump && "cursor-pointer hover:opacity-90"
                 )}
               >
                 <div
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold",
-                    isActive && "border-primary bg-primary text-primary-foreground",
+                    "flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors",
+                    isActive && "border-primary bg-primary text-primary-foreground shadow-sm",
                     isDone && "border-primary bg-primary/10 text-primary",
                     !isActive && !isDone && "border-border bg-card"
                   )}
@@ -483,11 +471,11 @@ export function CheckInWizard() {
                 <span className="text-xs font-medium truncate w-full text-center hidden sm:block">
                   {s.label}
                 </span>
-              </div>
+              </button>
               {index < STEPS.length - 1 && (
                 <div
                   className={cn(
-                    "h-0.5 flex-1 mx-1 mb-5 sm:mb-6",
+                    "h-0.5 flex-1 mx-1 mb-5 sm:mb-6 transition-colors",
                     step > s.id ? "bg-primary" : "bg-border"
                   )}
                   aria-hidden="true"
@@ -503,13 +491,13 @@ export function CheckInWizard() {
           <CardTitle>
             {step === 1 && "Find or add customer"}
             {step === 2 && "Select vehicle"}
-            {step === 3 && "Service details"}
+            {step === 3 && "What are we doing today?"}
             {step === 4 && "Review & check in"}
           </CardTitle>
           <CardDescription>
             {step === 1 && "Search by name, phone, or customer number."}
             {step === 2 && "Choose the vehicle being dropped off today."}
-            {step === 3 && "Choose job type, service package if routine, and record intake details."}
+            {step === 3 && "Job type, package if needed, and the customer’s request."}
             {step === 4 && "Confirm details and open the work order."}
           </CardDescription>
         </CardHeader>
@@ -593,299 +581,96 @@ export function CheckInWizard() {
           )}
 
           {step === 3 && (
-            <div className="space-y-4">
-              {suggestedService?.smart_suggestions && suggestedService.smart_suggestions.length > 0 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50/80 dark:border-amber-900/50 dark:bg-amber-950/30 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-200">
-                    <HeartPulse className="h-4 w-4" />
-                    Smart preventive suggestions
-                  </div>
-                  <ul className="space-y-2">
-                    {suggestedService.smart_suggestions.map((service) => (
-                      <li
-                        key={service.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-md border bg-background/70 p-3 text-sm"
-                      >
-                        <div>
-                          <span className="font-medium flex items-center gap-2">
-                            {service.service_type_name}
-                            {service.is_due ? (
-                              <Badge variant="destructive" className="text-[10px] h-4 px-1">OVERDUE</Badge>
-                            ) : service.is_due_soon ? (
-                              <Badge variant="secondary" className="text-[10px] h-4 px-1">DUE SOON</Badge>
-                            ) : null}
-                          </span>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          onClick={() => toggleConcern(`Perform ${service.service_type_name}`)}
-                        >
-                          <PlusCircle className="h-4 w-4 mr-1" />
-                          Add to request
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <JobTypeSelect
-                id="check-in-job-type"
-                multiple
-                value={selectedJobTypeCode}
-                values={selectedJobTypeCodes}
-                onChange={handleJobTypeChange}
-                onChangeMultiple={handleJobTypesChange}
-              />
-
-              {bundleRequired && (
-                <div>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <Label htmlFor="check-in-service-type">{SERVICE_PACKAGE_LABEL} *</Label>
-                    {suggestedService && (
-                      <Badge variant="outline" className="text-[10px]">
-                        Suggested: {suggestedService.suggested_service_name}
-                      </Badge>
-                    )}
-                  </div>
-                  <Select
-                    value={serviceBundleId?.toString() ?? ""}
-                    onValueChange={(val) => handleServiceBundleChange(parseInt(val, 10))}
-                  >
-                    <SelectTrigger id="check-in-service-type">
-                      <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bundles.map((bundle) => (
-                        <SelectItem key={bundle.id} value={bundle.id.toString()}>
-                          {bundle.name}
-                          {bundle.service_type_name ? ` · ${bundle.service_type_name}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {progressionWarning && (
-                    <p className="mt-2 text-xs font-medium text-primary flex items-start gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                      {progressionWarning}
-                    </p>
-                  )}
-
-                  {bundleItems.length > 0 && (
-                    <div className="mt-4 rounded-lg border border-border bg-muted/30 overflow-hidden">
-                      <div className="px-3 py-2 border-b border-border bg-muted/50">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Included in this service ({bundleItems.length} items)
-                        </p>
-                      </div>
-                      <ul className="divide-y divide-border max-h-48 overflow-y-auto">
-                        {bundleItems.map((item) => (
-                          <li
-                            key={item.id}
-                            className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-                          >
-                            <span className="font-medium truncate">{item.part_name}</span>
-                            <span className="text-muted-foreground shrink-0 tabular-nums">
-                              ×{item.quantity}
-                              {item.unit ? ` ${item.unit}` : ""}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="px-3 py-2 text-[11px] text-muted-foreground border-t border-border">
-                        These parts and service tasks will be added to the work order automatically.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {!isFastTrack && (
-                <div className="space-y-3">
-                  <div>
-                    <Label>Common concerns</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-                      Select one or more
-                      {selectedJobType
-                        ? ` — filtered for ${selectedJobType.name}`
-                        : ""}
-                      . They appear in the summary below.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto rounded-lg border border-border p-3 bg-muted/20">
-                      {filteredCommonConcerns.map((item) => {
-                        const checked = selectedConcerns.includes(item);
-                        return (
-                          <label
-                            key={item}
-                            className={cn(
-                              "flex items-start gap-2 rounded-md border px-2.5 py-2 cursor-pointer text-xs leading-snug transition-colors",
-                              checked
-                                ? "border-primary bg-primary/5 text-foreground"
-                                : "border-transparent hover:border-border hover:bg-background"
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleConcern(item)}
-                              className="mt-0.5 rounded border-border text-primary focus:ring-primary"
-                            />
-                            <span>{item}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {selectedConcerns.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedConcerns.map((item) => (
-                        <Badge key={item} variant="secondary" className="text-[11px] font-normal">
-                          {item}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="check-in-concerns">
-                  {isFastTrack ? "Service notes" : "Additional details"}
-                  {!isFastTrack ? " *" : ""}
-                </Label>
-                <Textarea
-                  id="check-in-concerns"
-                  value={customConcerns}
-                  onChange={(e) => setCustomConcerns(e.target.value)}
-                  placeholder={
-                    isFastTrack
-                      ? "Optional notes for this service..."
-                      : selectedConcerns.length > 0
-                        ? "Add any extra details not covered above..."
-                        : "Describe the issue or service requested..."
-                  }
-                  rows={3}
-                  className="mt-1"
-                />
-                {!isFastTrack && concerns.trim().length > 0 && (
-                  <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                      Request summary
-                    </p>
-                    <ul className="space-y-1 text-sm">
-                      {concerns.split("\n").filter(Boolean).map((line) => (
-                        <li key={line} className="flex gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{line}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="check-in-odometer">Odometer in *</Label>
-                  <Input
-                    id="check-in-odometer"
-                    type="number"
-                    min={0}
-                    value={odometer}
-                    onChange={(e) => setOdometer(e.target.value)}
-                    placeholder="Miles / km"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="check-in-priority">Priority</Label>
-                  <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
-                    <SelectTrigger id="check-in-priority" className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+            <ServiceIntakeFields
+              idPrefix="check-in"
+              jobTypeCode={selectedJobTypeCode}
+              jobTypeCodes={selectedJobTypeCodes}
+              onJobTypeChange={handleJobTypeChange}
+              onJobTypesChange={handleJobTypesChange}
+              primaryJobType={selectedJobType}
+              selectedJobTypes={selectedJobTypes}
+              bundles={bundles}
+              serviceBundleId={serviceBundleId}
+              onServiceBundleChange={(bundleId) => handleServiceBundleChange(bundleId)}
+              suggestedService={suggestedService}
+              progressionWarning={progressionWarning}
+              selectedConcerns={selectedConcerns}
+              onToggleConcern={toggleConcern}
+              customConcerns={customConcerns}
+              onCustomConcernsChange={setCustomConcerns}
+              concernsPreview={concerns}
+              odometer={odometer}
+              onOdometerChange={setOdometer}
+              priority={priority}
+              onPriorityChange={setPriority}
+            />
           )}
 
           {step === 4 && (
             <div className="space-y-4 text-sm">
-              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                <p>
-                  <span className="text-muted-foreground">Customer: </span>
-                  <span className="font-medium">
-                    {selectedCustomer?.full_name || selectedCustomer?.company_name}
-                  </span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Vehicle: </span>
-                  <span className="font-medium">
-                    {selectedVehicle
-                      ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
-                      : "—"}
-                  </span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">{JOB_TYPE_FIELD_LABEL}: </span>
-                  <span className="font-medium">
-                    {selectedJobType?.name ?? "General repair"}
-                  </span>
-                </p>
-                {bundleRequired && selectedBundle && (
-                  <p>
-                    <span className="text-muted-foreground">{SERVICE_PACKAGE_LABEL}: </span>
-                    <span className="font-medium">
-                      {selectedBundle.name}
-                      {selectedBundle.service_type_name ? ` (${selectedBundle.service_type_name})` : ""}
-                    </span>
-                  </p>
-                )}
+              <div className="overflow-hidden rounded-xl border border-border divide-y divide-border">
+                {[
+                  {
+                    label: "Customer",
+                    value: selectedCustomer?.full_name || selectedCustomer?.company_name || "—",
+                  },
+                  {
+                    label: "Vehicle",
+                    value: selectedVehicle
+                      ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.license_plate ? ` · ${selectedVehicle.license_plate}` : ""}`
+                      : "—",
+                  },
+                  {
+                    label: JOB_TYPE_FIELD_LABEL,
+                    value: selectedJobTypes.length > 1
+                      ? selectedJobTypes.map((jt) => jt.name).join(", ")
+                      : selectedJobType?.name ?? "General repair",
+                  },
+                  ...(bundleRequired && selectedBundle
+                    ? [{
+                        label: SERVICE_PACKAGE_LABEL,
+                        value: `${selectedBundle.name}${selectedBundle.service_type_name ? ` (${selectedBundle.service_type_name})` : ""}`,
+                      }]
+                    : []),
+                  {
+                    label: isFastTrack ? "Service notes" : "Concerns",
+                    value: concerns.trim() || "—",
+                    multiline: true,
+                  },
+                  { label: "Odometer", value: odometer || "—" },
+                  { label: "Priority", value: priority },
+                ].map((row) => (
+                  <div key={row.label} className="grid grid-cols-[7.5rem_1fr] gap-3 px-4 py-3">
+                    <span className="text-muted-foreground">{row.label}</span>
+                    {"multiline" in row && row.multiline && row.value !== "—" ? (
+                      <ul className="space-y-0.5 font-medium">
+                        {String(row.value)
+                          .split("\n")
+                          .filter(Boolean)
+                          .map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                      </ul>
+                    ) : (
+                      <span className="font-medium capitalize">{row.value}</span>
+                    )}
+                  </div>
+                ))}
                 {bundleRequired && bundleItems.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">Bundle items: </span>
-                    <ul className="mt-1 space-y-0.5 font-medium">
+                  <div className="px-4 py-3">
+                    <p className="mb-2 text-muted-foreground">Package includes</p>
+                    <ul className="grid gap-1 sm:grid-cols-2">
                       {bundleItems.map((item) => (
-                        <li key={item.id}>
+                        <li key={item.id} className="font-medium">
                           {item.part_name} ×{item.quantity}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
-                <div>
-                  <span className="text-muted-foreground">
-                    {isFastTrack ? "Service notes: " : "Concerns: "}
-                  </span>
-                  {concerns.trim() ? (
-                    <ul className="mt-1 space-y-0.5 font-medium">
-                      {concerns.split("\n").filter(Boolean).map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="font-medium">—</span>
-                  )}
-                </div>
-                <p>
-                  <span className="text-muted-foreground">Odometer: </span>
-                  <span className="font-medium">{odometer}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Priority: </span>
-                  <span className="font-medium capitalize">{priority}</span>
-                </p>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between rounded-xl border border-border p-4">
                 <div>
                   <p className="font-medium">Schedule appointment too</p>
                   <p className="text-xs text-muted-foreground">
@@ -928,7 +713,7 @@ export function CheckInWizard() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between gap-3">
+      <div className="sticky bottom-0 z-10 -mx-1 flex justify-between gap-3 border-t border-border/60 bg-background/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <Button
           type="button"
           variant="outline"
@@ -944,7 +729,7 @@ export function CheckInWizard() {
             disabled={!canProceed()}
             onClick={() => setStep((s) => s + 1)}
           >
-            Next
+            {step === 3 ? "Review" : "Next"}
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (

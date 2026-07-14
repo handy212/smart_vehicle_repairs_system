@@ -116,6 +116,9 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         { source: "/media/:path*", destination: `${backendOrigin}/media/:path*` },
+        // Short WhatsApp/document PDF codes → Django (also keep /api/d/ via api proxy)
+        { source: "/d/:code", destination: `${backendOrigin}/d/:code/` },
+        { source: "/d/:code/", destination: `${backendOrigin}/d/:code/` },
       ],
       afterFiles: [
         { source: "/api", destination: apiUrl },

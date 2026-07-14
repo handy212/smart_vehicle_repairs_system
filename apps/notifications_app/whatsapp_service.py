@@ -198,23 +198,9 @@ class WhatsAppService:
             return False, f"Unknown error: {str(e)}"
             
     def _format_phone_number(self, phone: str) -> str:
-        """Format phone number for WhatsApp (E.164 without +)"""
-        if not phone:
-            return ""
-            
-        # Remove all non-digit characters
-        digits = ''.join(filter(str.isdigit, phone))
-
-        # Ghana local mobile numbers are commonly stored as 0XXXXXXXXX.
-        # Meta expects international format without the leading +.
-        if digits.startswith('233'):
-            return digits
-        if digits.startswith('0') and len(digits) == 10:
-            return f"233{digits[1:]}"
-        if len(digits) == 9:
-            return f"233{digits}"
-
-        return digits
+        """Format phone number for WhatsApp (E.164 without +)."""
+        from apps.notifications_app.phone_utils import normalize_phone_e164
+        return normalize_phone_e164(phone)
 
 # Global instance
 _whatsapp_service = None

@@ -18,6 +18,8 @@ import { InspectionItemRow } from "@/components/inspections/InspectionItemRow";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getUserFacingError } from "@/lib/api/errors";
+import { workordersApi } from "@/lib/api/workorders";
+import { IntakeConditionCard } from "@/components/workorders/IntakeConditionCard";
 
 type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | undefined | null;
 
@@ -59,6 +61,20 @@ export default function PerformInspectionPage() {
 
   const categories = useMemo(() => templateData?.categories || [], [templateData]);
   const allowsPhotos = templateData?.allows_photos !== false;
+
+  const linkedWorkOrderId = useMemo(() => {
+    const wo = inspection?.work_order;
+    if (!wo) return null;
+    if (typeof wo === "object" && wo && "id" in wo) return Number(wo.id);
+    if (typeof wo === "number") return wo;
+    return null;
+  }, [inspection?.work_order]);
+
+  const { data: linkedWorkOrder } = useQuery({
+    queryKey: ["workorder", linkedWorkOrderId],
+    queryFn: () => workordersApi.get(linkedWorkOrderId!),
+    enabled: !!linkedWorkOrderId,
+  });
 
   /* --------------------- Local State -------------------------- */
   const [results, setResults] = useState<Record<
@@ -485,6 +501,27 @@ export default function PerformInspectionPage() {
           </div>
         </div>
       </div>
+
+      {linkedWorkOrderId && linkedWorkOrder && (
+        <div className="mb-6">
+          <IntakeConditionCard
+            workOrderId={linkedWorkOrderId}
+            workOrder={linkedWorkOrder}
+            compact
+            title="Job Card intake (during DVI)"
+            description="Record fuel, battery, valuables, and warning lights here while inspecting — they print on the Job Card."
+            defaultEditing={
+              inspection.status === "in_progress" &&
+              !linkedWorkOrder.fuel_level &&
+              !linkedWorkOrder.battery_condition &&
+              !linkedWorkOrder.valuables_notes &&
+              !linkedWorkOrder.warning_lights_notes
+            }
+            queryKey={["inspection", inspectionId]}
+            canEdit={inspection.status === "in_progress"}
+          />
+        </div>
+      )}
 
       {/* Categories & Vehicle Damage - Subnav Style */}
       <div className="flex gap-6">

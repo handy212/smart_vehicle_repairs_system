@@ -712,6 +712,25 @@ export const billingApi = {
       await apiClient.post(`/billing/invoices/${id}/send/`);
     },
 
+    sendWhatsApp: async (
+      id: number,
+      opts?: { confirm?: boolean }
+    ): Promise<{
+      mode: "api" | "manual" | "preview";
+      success?: boolean;
+      message?: string;
+      phone_number?: string;
+      phone_display?: string;
+      portal_url?: string;
+      document_pdf_url?: string;
+      error?: string;
+    }> => {
+      const response = await apiClient.post(`/billing/invoices/${id}/send-whatsapp/`, {
+        confirm: Boolean(opts?.confirm),
+      });
+      return response.data;
+    },
+
     convertToInvoice: async (id: number): Promise<Invoice> => {
       const response = await apiClient.post(`/billing/invoices/${id}/convert_to_invoice/`);
       return response.data.invoice || response.data;
@@ -989,6 +1008,25 @@ export const billingApi = {
 
     send: async (id: number): Promise<void> => {
       await apiClient.post(`/billing/estimates/${id}/send/`);
+    },
+
+    sendWhatsApp: async (
+      id: number,
+      opts?: { confirm?: boolean }
+    ): Promise<{
+      mode: "api" | "manual" | "preview";
+      success?: boolean;
+      message?: string;
+      phone_number?: string;
+      phone_display?: string;
+      portal_url?: string;
+      document_pdf_url?: string;
+      error?: string;
+    }> => {
+      const response = await apiClient.post(`/billing/estimates/${id}/send-whatsapp/`, {
+        confirm: Boolean(opts?.confirm),
+      });
+      return response.data;
     },
 
     approve: async (

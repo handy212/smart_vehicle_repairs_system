@@ -240,7 +240,7 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
         elif self.action in ['history', 'pdf', 'print', 'next_number']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
-        elif self.action in ['bulk_update_status', 'send', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
+        elif self.action in ['bulk_update_status', 'send', 'send_whatsapp', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
         elif self.action == 'approve':
             if getattr(self.request.user, 'role', None) == 'customer':
@@ -675,7 +675,7 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
         elif self.action in ['history', 'pdf', 'print', 'unpaid', 'overdue', 'work_order_line_preview']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
-        elif self.action in ['bulk_update_status', 'send', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
+        elif self.action in ['bulk_update_status', 'send', 'send_whatsapp', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
         elif self.action == 'convert_to_invoice':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_invoices')]

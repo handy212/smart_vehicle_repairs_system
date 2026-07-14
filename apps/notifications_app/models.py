@@ -412,3 +412,35 @@ class NotificationLog(models.Model):
     
     def __str__(self):
         return f"{self.get_action_display()} - {self.notification}"
+
+
+class DocumentShareLink(models.Model):
+    """
+    Short opaque codes for public PDF downloads (WhatsApp / Meta).
+    Keeps share URLs short instead of embedding signed payloads.
+    """
+    DOCUMENT_TYPE_CHOICES = [
+        ('invoice', 'Invoice'),
+        ('estimate', 'Estimate'),
+        ('job_card', 'Job Card'),
+    ]
+
+    code = models.CharField(max_length=16, unique=True, db_index=True)
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)
+    object_id = models.PositiveIntegerField()
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    access_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['document_type', 'object_id', 'expires_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} → {self.document_type}:{self.object_id}"
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() >= self.expires_at

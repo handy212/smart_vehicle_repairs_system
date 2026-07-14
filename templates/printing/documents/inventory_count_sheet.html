@@ -24,8 +24,8 @@
         <thead>
             <tr>
                 <th class="text-left w-[15%]">Location</th>
-                <th class="text-left w-[15%]">Part Number</th>
                 <th class="text-left w-[30%]">Description</th>
+                <th class="text-left w-[15%]">Part Number</th>
                 <th class="text-center w-[10%]">UoM</th>
                 <th class="text-right w-[15%]">Counted Qty</th>
                 <th class="text-left w-[15%]">Notes</th>
@@ -42,10 +42,10 @@
                     —
                     {% endif %}
                 </td>
-                <td class="font-mono text-xs">{{ item.part.part_number }}</td>
                 <td>
                     <div class="font-semibold text-sm">{{ item.part.name }}</div>
                 </td>
+                <td class="font-mono text-xs">{{ item.part.part_number }}</td>
                 <td class="text-center text-xs text-gray-500">Unit</td>
                 <td class="text-right align-bottom pb-1">
                     <div class="border-b border-gray-400 h-6 w-full"></div>

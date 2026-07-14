@@ -57,7 +57,7 @@ const invoiceSchema = z.object({
   work_order: z.number().optional(),
   invoice_date: z.string().min(1, "Invoice date is required"),
   due_date: z.string().min(1, "Due date is required"),
-  payment_terms: z.enum(["due_on_receipt", "net_15", "net_30", "net_60", "custom"]),
+  payment_terms: z.enum(["due_on_receipt", "net_15", "net_30", "net_60", "prepaid", "custom"]),
   notes: z.string().optional(),
   sales_agent: z.number().optional(),
   discount_percentage: z.number().min(0).max(100).optional(),
@@ -69,19 +69,28 @@ const invoiceSchema = z.object({
 
 type InvoiceFormData = z.infer<typeof invoiceSchema>;
 type LineItemFormData = z.infer<typeof lineItemSchema>;
+type PaymentTermsValue = InvoiceFormData["payment_terms"];
 
 function parsePositiveInt(val: string): number | undefined {
   const n = Number.parseInt(val, 10);
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
-const PAYMENT_TERMS = [
+const PAYMENT_TERMS: Array<{ value: PaymentTermsValue; label: string; days: number | null }> = [
   { value: "due_on_receipt", label: "Due on Receipt", days: 0 },
   { value: "net_15", label: "Net 15", days: 15 },
   { value: "net_30", label: "Net 30", days: 30 },
   { value: "net_60", label: "Net 60", days: 60 },
+  { value: "prepaid", label: "Prepaid", days: 0 },
   { value: "custom", label: "Custom", days: null },
 ];
+
+function resolvePaymentTerms(value?: string | null): PaymentTermsValue | undefined {
+  if (!value) return undefined;
+  return PAYMENT_TERMS.some((term) => term.value === value)
+    ? (value as PaymentTermsValue)
+    : undefined;
+}
 
 export default function NewInvoicePage() {
   const router = useRouter();
@@ -160,8 +169,8 @@ export default function NewInvoicePage() {
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
       invoice_date: new Date().toISOString().split("T")[0],
-      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      payment_terms: "net_30",
+      due_date: new Date().toISOString().split("T")[0],
+      payment_terms: "due_on_receipt",
       customer: workOrder ? (typeof workOrder.customer === 'object' ? workOrder.customer.id : workOrder.customer) : undefined,
       vehicle: workOrder ? (typeof workOrder.vehicle === 'object' ? workOrder.vehicle.id : workOrder.vehicle) : undefined,
       work_order: Number.isFinite(woNumericId) ? woNumericId : undefined,
@@ -172,6 +181,13 @@ export default function NewInvoicePage() {
       status: invoiceType === 'proforma' ? 'proforma' : 'draft',
     },
   });
+
+  const applyCustomerPaymentTerms = (customerLike?: { payment_terms?: string | null } | null) => {
+    const terms = resolvePaymentTerms(customerLike?.payment_terms);
+    if (!terms) return;
+    setValue("payment_terms", terms, { shouldValidate: true });
+    setDueDateManual(false);
+  };
 
   const customer = watch("customer");
   const vehicle = watch("vehicle");
@@ -216,6 +232,9 @@ export default function NewInvoicePage() {
     }
     setValue("work_order", woNumericId, { shouldValidate: true });
     setValue("notes", buildInvoiceNotesFromWorkOrder(workOrder), { shouldValidate: true });
+    if (typeof workOrder.customer === "object" && workOrder.customer) {
+      applyCustomerPaymentTerms(workOrder.customer);
+    }
 
     billingApi.invoices.workOrderLinePreview(woNumericId).then((preview) => {
       const built = preview.line_items.map((item) => ({
@@ -549,6 +568,7 @@ export default function NewInvoicePage() {
                     setValue("customer", selected.id, { shouldValidate: true });
                     setValue("vehicle", undefined, { shouldValidate: true });
                     setSelectedCustomer(selected.id);
+                    applyCustomerPaymentTerms(selected);
                   }}
                   placeholder="Search and select a customer..."
                 />

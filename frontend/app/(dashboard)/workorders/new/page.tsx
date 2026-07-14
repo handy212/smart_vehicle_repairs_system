@@ -16,14 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle, Plus } from "lucide-react";
+import { AlertCircle, XCircle, AlertTriangle, CheckCircle, Plus } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { format } from "date-fns";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { CustomerForm, CustomerFormData } from "@/components/customers/CustomerForm";
 import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm";
@@ -31,16 +29,12 @@ import { useToast } from "@/lib/hooks/useToast";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
-  SERVICE_PACKAGE_LABEL,
-  SERVICE_PACKAGE_PLACEHOLDER,
-} from "@/lib/workorders/job-type-labels";
-import {
   jobTypesApi,
   isFastTrackJobType,
   jobTypeRequiresBundle,
   type JobType,
 } from "@/lib/api/job-types";
-import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
+import { ServiceIntakeFields } from "@/components/workorders/ServiceIntakeFields";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 import {
   Dialog,
@@ -50,7 +44,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { getCommonConcernsForCategories } from "@/lib/constants/common-concerns";
+import { mergeConcernSelections } from "@/lib/constants/common-concerns";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -88,12 +82,7 @@ export default function NewWorkOrderPage() {
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false);
   const [vehicleFieldErrors, setVehicleFieldErrors] = useState<Record<string, string>>({});
-
-  // Fetch service types (for legacy or fallback)
-  const { data: serviceTypesData } = useQuery({
-    queryKey: ["serviceTypes"],
-    queryFn: () => vehiclesApi.getServiceTypes(),
-  });
+  const [customConcerns, setCustomConcerns] = useState("");
 
   // Fetch inventory bundles for service types
   const { data: bundlesData } = useQuery({
@@ -213,12 +202,12 @@ export default function NewWorkOrderPage() {
 
   // Service progression state
   const [suggestedService, setSuggestedService] = useState<{
-    suggested_service_id: number;
-    suggested_service_name: string;
+    suggested_service_id: number | null;
+    suggested_service_name: string | null;
     suggested_bundle_id?: number | null;
     reason: string;
     last_service_id?: number;
-    last_service_name?: string;
+    last_service_name?: string | null;
     last_service_date?: string;
     smart_suggestions?: Array<{
         id: number;
@@ -285,19 +274,43 @@ export default function NewWorkOrderPage() {
     [selectedJobTypes]
   );
 
-  const filteredCommonConcerns = useMemo(
-    () =>
-      getCommonConcernsForCategories(
-        selectedJobTypes.length > 0 ? selectedJobTypes.map((jt) => jt.category) : []
-      ),
-    [selectedJobTypes]
-  );
-
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
-  const isFastTrack = isFastTrackJobType(selectedJobType);
   const odometerIn = watch("odometer_in");
   const customerConcerns = watch("customer_concerns");
   const broughtByContact = watch("brought_by_contact");
+
+  const concernsMerged = useMemo(
+    () => mergeConcernSelections(selectedConcerns, customConcerns),
+    [selectedConcerns, customConcerns]
+  );
+
+  useEffect(() => {
+    setValue("customer_concerns", concernsMerged, { shouldValidate: false });
+  }, [concernsMerged, setValue]);
+
+  const toggleConcern = (concern: string) => {
+    setSelectedConcerns((prev) =>
+      prev.includes(concern) ? prev.filter((c) => c !== concern) : [...prev, concern]
+    );
+  };
+
+  const applyProgressionWarning = (bundle: ServiceBundle) => {
+    if (!suggestedService) {
+      setProgressionWarning(null);
+      return;
+    }
+    if (suggestedService.last_service_id === bundle.service_type) {
+      setProgressionWarning(
+        `Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`
+      );
+    } else if (suggestedService.suggested_service_id !== bundle.service_type) {
+      setProgressionWarning(
+        `Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`
+      );
+    } else {
+      setProgressionWarning(null);
+    }
+  };
 
   const { data: fetchedCustomer } = useQuery({
     queryKey: ["customer", customer],
@@ -521,15 +534,23 @@ export default function NewWorkOrderPage() {
       // Fetch suggested service for this vehicle
       vehiclesApi.getSuggestedService(vehicle)
         .then(data => {
-          setSuggestedService(data);
+          if (!data?.suggested_service_id) {
+            setSuggestedService(null);
+            return;
+          }
+          setSuggestedService(data as typeof suggestedService);
           // Pre-select suggested bundle when job type requires a service package
           if (bundleRequired && !watch("service_bundle") && data.suggested_bundle_id) {
             setValue("service_bundle", data.suggested_bundle_id);
             setValue("service_type", data.suggested_service_id);
+            const bundle = bundles.find((b: ServiceBundle) => b.id === data.suggested_bundle_id);
+            if (bundle && (!customConcerns.trim() || customConcerns.startsWith("Perform"))) {
+              setSelectedConcerns([]);
+              setCustomConcerns(`Perform ${bundle.name}`);
+            }
           }
         })
-        .catch(err => {
-          console.error("Error fetching suggested service:", err);
+        .catch(() => {
           setSuggestedService(null);
         });
     } else {
@@ -1240,68 +1261,18 @@ export default function NewWorkOrderPage() {
               </CardContent>
             </Card>
 
-            {/* Smart Preventive Suggestions */}
-            {suggestedService?.smart_suggestions && suggestedService.smart_suggestions.length > 0 && (
-              <Card className="border-warning/20 bg-warning/10 dark:border-amber-900/50 dark:bg-amber-900/20 shadow-sm animate-in fade-in slide-in-from-top-4">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-warning dark:text-amber-300 flex items-center gap-2 text-md">
-                    <HeartPulse className="w-5 h-5 animate-pulse" />
-                    Smart Preventive Suggestions
-                  </CardTitle>
-                  <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-                    Based on the vehicle&apos;s unique usage history, the following services are due or due very soon.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {suggestedService.smart_suggestions.map((service) => (
-                      <li key={service.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background/50 rounded-md border text-sm gap-2 hover:bg-background transition-colors">
-                        <div>
-                          <span className="font-semibold text-foreground flex items-center gap-2">
-                            {service.service_type_name}
-                            {service.is_due ? (
-                              <Badge variant="danger" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none">OVERDUE</Badge>
-                            ) : service.is_due_soon ? (
-                              <Badge variant="warning" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none bg-warning/100 text-amber-950">DUE SOON</Badge>
-                            ) : null}
-                          </span>
-                          <span className="text-muted-foreground font-mono text-xs mt-1 block">
-                            {service.estimated_due_date ? `Estimated Due: ${format(new Date(service.estimated_due_date), "MMM d, yyyy")}` : `Due in ${service.days_until_due} days`}
-                          </span>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          type="button" 
-                          className="shrink-0 bg-background"
-                          onClick={() => {
-                            const currentConcerns = watch("customer_concerns");
-                            const newConcern = `Perform ${service.service_type_name}`;
-                            if (!currentConcerns.includes(newConcern)) {
-                              setValue("customer_concerns", currentConcerns ? `${currentConcerns}\n${newConcern}` : newConcern);
-                            }
-                          }}
-                        >
-                          <PlusCircle className="w-4 h-4 mr-1" />
-                          Add to Request
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Work Order Details */}
+            {/* Service / Request */}
             <Card className="border-0 overflow-hidden">
               <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <PremiumIcons.FileText className="w-5 h-5 text-primary/80" />
-                      Work Order Details
+                      Service & request
                     </CardTitle>
-                    <CardDescription>Priority and description for this job</CardDescription>
+                    <CardDescription>
+                      Job type, package if needed, customer concerns, and intake reading
+                    </CardDescription>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Button
@@ -1332,210 +1303,88 @@ export default function NewWorkOrderPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <JobTypeSelect
-                      multiple
-                      value={jobTypeCode || "general_repairs"}
-                      values={jobTypeCodes}
-                      onChange={(code, jobType) => {
-                        setValue("job_type_code", code, { shouldValidate: true });
-                        if (!jobTypeRequiresBundle(jobType)) {
-                          setValue("service_bundle", undefined);
-                          setValue("service_type", undefined);
-                          setProgressionWarning(null);
+              <CardContent>
+                <ServiceIntakeFields
+                  idPrefix="new-wo"
+                  jobTypeCode={jobTypeCode || "general_repairs"}
+                  jobTypeCodes={jobTypeCodes}
+                  onJobTypeChange={(code, jobType) => {
+                    setValue("job_type_code", code, { shouldValidate: true });
+                    if (!jobTypeRequiresBundle(jobType)) {
+                      setValue("service_bundle", undefined);
+                      setValue("service_type", undefined);
+                      setProgressionWarning(null);
+                    }
+                  }}
+                  onJobTypesChange={(codes, types) => {
+                    setValue("job_type_codes", codes, { shouldValidate: true });
+                    setValue("job_type_code", codes[0] || "general_repairs", {
+                      shouldValidate: true,
+                    });
+                    const primary = types[0] ?? null;
+                    if (!jobTypeRequiresBundle(primary)) {
+                      setValue("service_bundle", undefined);
+                      setValue("service_type", undefined);
+                      setProgressionWarning(null);
+                    }
+                  }}
+                  primaryJobType={selectedJobType}
+                  selectedJobTypes={selectedJobTypes}
+                  bundles={bundles}
+                  serviceBundleId={watch("service_bundle")}
+                  onServiceBundleChange={(bundleId, bundle) => {
+                    setValue("service_bundle", bundleId, { shouldValidate: true });
+                    if (bundle.service_type) {
+                      setValue("service_type", bundle.service_type);
+                    }
+                    applyProgressionWarning(bundle);
+                    if (!customConcerns.trim() || customConcerns.startsWith("Perform")) {
+                      setSelectedConcerns([]);
+                      setCustomConcerns(`Perform ${bundle.name}`);
+                    }
+                  }}
+                  suggestedService={
+                    suggestedService?.suggested_service_id
+                      ? {
+                          ...suggestedService,
+                          suggested_service_id: suggestedService.suggested_service_id,
+                          suggested_service_name: suggestedService.suggested_service_name || "",
                         }
-                      }}
-                      onChangeMultiple={(codes, types) => {
-                        setValue("job_type_codes", codes, { shouldValidate: true });
-                        setValue("job_type_code", codes[0] || "general_repairs", {
-                          shouldValidate: true,
-                        });
-                        const primary = types[0] ?? null;
-                        if (!jobTypeRequiresBundle(primary)) {
-                          setValue("service_bundle", undefined);
-                          setValue("service_type", undefined);
-                          setProgressionWarning(null);
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {bundleRequired && (
-                    <div>
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <label htmlFor="service_bundle" className="block text-sm font-medium text-card-foreground">
-                          {SERVICE_PACKAGE_LABEL} *
-                        </label>
-                        {suggestedService && (
-                          <Badge variant="outline" className="border-info/20 bg-info/10 text-[10px] text-blue-700">
-                            Suggested: {suggestedService.suggested_service_name}
-                          </Badge>
-                        )}
-                      </div>
-                      <Select
-                        value={watch("service_bundle")?.toString()}
-                        onValueChange={(val) => {
-                          const bundleId = parseInt(val);
-                          setValue("service_bundle", bundleId, { shouldValidate: true });
-
-                          const bundle = bundles.find((b: ServiceBundle) => b.id === bundleId);
-                          if (bundle && bundle.service_type) {
-                            setValue("service_type", bundle.service_type);
-
-                            if (suggestedService) {
-                              if (suggestedService.last_service_id === bundle.service_type) {
-                                setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
-                              } else if (suggestedService.suggested_service_id !== bundle.service_type) {
-                                setProgressionWarning(`Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`);
-                              } else {
-                                setProgressionWarning(null);
-                              }
-                            }
-
-                            if (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform")) {
-                              setValue("customer_concerns", `Perform ${bundle.name}`);
-                            }
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="service_bundle">
-                          <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bundles.map((bundle: ServiceBundle) => (
-                            <SelectItem key={bundle.id} value={bundle.id.toString()}>
-                              {bundle.name}
-                              {bundle.service_type_name ? ` · ${bundle.service_type_name}` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.service_bundle && (
-                        <p className="mt-1 text-sm text-destructive">{errors.service_bundle.message}</p>
-                      )}
-                      {progressionWarning && (
-                        <p className="mt-1 flex animate-in fade-in slide-in-from-top-1 items-center text-xs font-medium text-primary">
-                          <AlertTriangle className="mr-1 h-3 w-3" />
-                          {progressionWarning}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-card-foreground mb-1">
-                      Priority
-                    </label>
-                    <Select
-                      defaultValue="normal"
-
-                      onValueChange={(val) => setValue("priority", val as any)}
-                    >
-                      <SelectTrigger id="priority">
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {!bundleRequired && (
-                    <div className="flex items-end">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" type="button" className="text-xs h-9 w-full justify-start text-muted-foreground">
-                            + Quick Select Common Concerns
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0" align="start">
-                          <div className="max-h-60 overflow-y-auto p-2">
-                            {selectedJobTypes.length > 0 ? (
-                              <p className="px-1.5 pb-1.5 text-[10px] text-muted-foreground">
-                                Filtered for{" "}
-                                {selectedJobTypes.map((jt) => jt.name).join(", ")}
-                              </p>
-                            ) : null}
-                            <div className="flex flex-col gap-1">
-                              {filteredCommonConcerns.map((concernText) => (
-                                <label
-                                  key={concernText}
-                                  className="flex items-center space-x-2 cursor-pointer hover:bg-muted p-1.5 rounded"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedConcerns.includes(concernText)}
-                                    onChange={(e) => {
-                                      const isChecked = e.target.checked;
-                                      let updatedConcerns: string[];
-
-                                      if (isChecked) {
-                                        updatedConcerns = selectedConcerns.concat(concernText);
-                                      } else {
-                                        updatedConcerns = selectedConcerns.filter((c) => c !== concernText);
-                                      }
-
-                                      setSelectedConcerns(updatedConcerns);
-
-                                      if (updatedConcerns.length > 0) {
-                                        setValue("customer_concerns", updatedConcerns.join("\n"));
-                                      } else {
-                                        setValue("customer_concerns", "");
-                                      }
-                                    }}
-                                    className="rounded border-border text-primary focus:ring-primary"
-                                  />
-                                  <span className="text-xs text-card-foreground">{concernText}</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-
-                  <div>
-                    <label htmlFor="customer_concerns" className="block text-sm font-medium text-card-foreground mb-1">
-                      Customer Concerns / Description *
-                    </label>
-                    <Textarea
-                      id="customer_concerns"
-                      {...register("customer_concerns")}
-                      rows={6}
-                      placeholder="Describe the issue or service needed... (You can select multiple common concerns above or type your own)"
-                      className={errors.customer_concerns ? "border-destructive" : ""}
-                      onChange={(e) => {
-                        // Update the textarea value
-                        setValue("customer_concerns", e.target.value);
-                        // If user types manually, clear "Other" selection if it was selected
-                        if (selectedConcerns.includes("Other (describe below)") && e.target.value.trim() !== "") {
-                          setSelectedConcerns(prev => prev.filter(c => c !== "Other (describe below)"));
-                        }
-                      }}
-                    />
-                    {errors.customer_concerns && (
-                      <p className="mt-1 text-sm text-destructive dark:text-red-400">{errors.customer_concerns.message}</p>
-                    )}
-                    {repeatVisitMatches.length > 0 && !showRepeatVisitDialog && (
-                      <div className="mt-2 rounded-md border border-primary/15 bg-primary/5 p-3">
+                      : null
+                  }
+                  progressionWarning={progressionWarning}
+                  bundleError={errors.service_bundle?.message}
+                  selectedConcerns={selectedConcerns}
+                  onToggleConcern={toggleConcern}
+                  customConcerns={customConcerns}
+                  onCustomConcernsChange={setCustomConcerns}
+                  concernsPreview={concernsMerged}
+                  concernsError={errors.customer_concerns?.message}
+                  concernsFooter={
+                    repeatVisitMatches.length > 0 && !showRepeatVisitDialog ? (
+                      <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
                         <p className="text-sm text-primary">
-                          <AlertCircle className="w-4 h-4 inline mr-1" />
+                          <AlertCircle className="mr-1 inline h-4 w-4" />
                           Similar concerns detected from recent work order(s). Check the alert dialog for details.
                         </p>
                       </div>
-                    )}
-                  </div>
-                </div>
+                    ) : null
+                  }
+                  odometer={
+                    typeof odometerIn === "number" && !Number.isNaN(odometerIn)
+                      ? String(odometerIn)
+                      : ""
+                  }
+                  onOdometerChange={(value) => {
+                    const parsed = value === "" ? 0 : parseInt(value, 10);
+                    setValue("odometer_in", Number.isNaN(parsed) ? 0 : parsed, {
+                      shouldValidate: true,
+                    });
+                  }}
+                  odometerError={errors.odometer_in?.message}
+                  priority={(watch("priority") as "low" | "normal" | "high" | "urgent") || "normal"}
+                  onPriorityChange={(value) => setValue("priority", value)}
+                />
               </CardContent>
             </Card>
 

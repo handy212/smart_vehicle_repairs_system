@@ -45,6 +45,8 @@ interface WorkOrderCommandBarProps {
   showRecommendationsAction?: boolean;
   canPrintRecommendations?: boolean;
   onPrintWorkOrder: () => void;
+  onPrintJobCard?: () => void;
+  onSendJobCardWhatsApp?: () => void;
   onDownloadPdf: () => void;
   onDelete?: () => void;
   canDelete?: boolean;
@@ -65,6 +67,8 @@ export function WorkOrderCommandBar({
   showRecommendationsAction,
   canPrintRecommendations,
   onPrintWorkOrder,
+  onPrintJobCard,
+  onSendJobCardWhatsApp,
   onDownloadPdf,
   onDelete,
   canDelete,
@@ -144,10 +148,22 @@ export function WorkOrderCommandBar({
                 <span className="sr-only">More actions</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-52">
+              {onPrintJobCard && (
+                <DropdownMenuItem onClick={onPrintJobCard}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  {isOpeningPrint ? "Opening…" : "Print Job Card"}
+                </DropdownMenuItem>
+              )}
+              {onSendJobCardWhatsApp && (
+                <DropdownMenuItem onClick={onSendJobCardWhatsApp}>
+                  <PremiumIcons.MessageSquare className="mr-2 h-4 w-4" />
+                  Via WhatsApp
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onPrintWorkOrder}>
                 <Printer className="mr-2 h-4 w-4" />
-                {isOpeningPrint ? "Opening…" : "Print work order"}
+                {isOpeningPrint ? "Opening…" : "Print Workorder"}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDownloadPdf}>
                 <FileText className="mr-2 h-4 w-4" />

@@ -108,13 +108,11 @@ export function JobTypeSelect({
   if (multiple) {
     return (
       <div>
-        <Label htmlFor={id}>{JOB_TYPE_FIELD_LABEL}s</Label>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Select one or more. The first selected type is primary (billing / defaults).
-          Workflow uses the most complete path across all selected types.
-        </p>
+        <Label htmlFor={id} className="sr-only">
+          {JOB_TYPE_FIELD_LABEL}s
+        </Label>
         {selectedJobTypes.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mb-2 flex flex-wrap gap-1.5">
             {selectedJobTypes.map((jt, idx) => (
               <Badge
                 key={jt.code}
@@ -123,7 +121,7 @@ export function JobTypeSelect({
               >
                 {jt.name}
                 {idx === 0 ? (
-                  <span className="text-[10px] opacity-80">(primary)</span>
+                  <span className="text-[10px] opacity-80">primary</span>
                 ) : null}
                 {selectedCodes.length > 1 ? (
                   <button
@@ -142,13 +140,13 @@ export function JobTypeSelect({
         <div
           id={id}
           className={cn(
-            "mt-2 max-h-48 overflow-y-auto rounded-md border border-border p-2",
-            disabled || isLoading ? "opacity-60 pointer-events-none" : ""
+            "max-h-44 overflow-y-auto rounded-xl border border-border bg-muted/10 p-1.5",
+            disabled || isLoading ? "pointer-events-none opacity-60" : ""
           )}
         >
           {jobTypesByCategory.map(([category, types]) => (
-            <div key={category} className="mb-2 last:mb-0">
-              <div className="px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <div key={category} className="mb-1 last:mb-0">
+              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {category}
               </div>
               <div className="flex flex-col gap-0.5">
@@ -158,21 +156,25 @@ export function JobTypeSelect({
                     <label
                       key={jt.code}
                       className={cn(
-                        "flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
-                        checked && "bg-primary/5"
+                        "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-2 py-2 text-sm transition-colors hover:bg-muted/60",
+                        checked
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-transparent"
                       )}
                     >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 rounded border-border text-primary focus:ring-primary"
-                        checked={checked}
-                        disabled={disabled || isLoading}
-                        onChange={() => toggleCode(jt.code)}
-                      />
-                      <span>
+                      <span className="flex h-5 shrink-0 items-center">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-primary"
+                          checked={checked}
+                          disabled={disabled || isLoading}
+                          onChange={() => toggleCode(jt.code)}
+                        />
+                      </span>
+                      <span className="min-w-0 text-sm leading-5">
                         <span className="font-medium">{jt.name}</span>
-                        {jt.description ? (
-                          <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        {showDescription && jt.description ? (
+                          <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
                             {jt.description}
                           </span>
                         ) : null}

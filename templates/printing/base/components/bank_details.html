@@ -1,0 +1,18 @@
+{% load settings_tags %}
+{% if invoice_bank_details %}
+{% with bank_accounts=invoice_bank_details|bank_detail_accounts %}
+{% if bank_accounts %}
+<div class="notes-box mb-2 bank-details-box">
+    <div class="document-terms-title">Bank Details</div>
+    <div class="bank-details-grid {% if bank_accounts|length == 1 %}cols-1{% elif bank_accounts|length == 2 %}cols-2{% else %}cols-3{% endif %}">
+        {% for account in bank_accounts %}
+        <div class="bank-account-card">
+            <div class="bank-account-title">{{ account.title }}</div>
+            <div class="bank-account-body">{{ account.body|linebreaks }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}

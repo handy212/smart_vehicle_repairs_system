@@ -552,10 +552,13 @@ class PrintFooterTemplateTest(TestCase):
             {'company_name': 'Smart Vehicle Repairs'},
         )
 
-        self.assertIn('Accra Branch', html)
-        self.assertIn('Kumasi Branch', html)
+        # Footer display strips the trailing "Branch" word from stored names.
+        self.assertIn('Accra', html)
+        self.assertIn('Kumasi', html)
+        self.assertNotIn('Accra Branch', html)
+        self.assertNotIn('Kumasi Branch', html)
         self.assertIn(' | ', html)
-        self.assertNotIn('Archived Branch', html)
+        self.assertNotIn('Archived', html)
         self.assertNotIn('555-1000', html)
         self.assertNotIn('555-3000', html)
         self.assertNotIn('Greater Accra', html)
@@ -563,6 +566,16 @@ class PrintFooterTemplateTest(TestCase):
         self.assertIn('images/logos/logo-1.jpeg', html)
         self.assertIn('images/logos/logo-2.jpeg', html)
         self.assertIn('images/logos/logo-3.jpeg', html)
+        self.assertIn('—Part of AA MobilityGroup—', html)
+
+    def test_branch_print_display_name_strips_trailing_branch(self):
+        from apps.branches.utils import branch_print_display_name
+
+        self.assertEqual(branch_print_display_name('Accra Branch'), 'Accra')
+        self.assertEqual(branch_print_display_name('Kumasi branch'), 'Kumasi')
+        self.assertEqual(branch_print_display_name('Downtown Location'), 'Downtown Location')
+        self.assertEqual(branch_print_display_name('Branch'), 'Branch')
+        self.assertEqual(branch_print_display_name(''), '')
 
     def test_default_watermark_covers_non_invoice_templates(self):
         from apps.core.services.print_service import _get_default_watermark

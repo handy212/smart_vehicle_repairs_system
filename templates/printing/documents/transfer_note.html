@@ -1,4 +1,5 @@
 {% extends 'printing/base/document_base.html' %}
+{% load settings_tags %}
 
 {% block title %}Transfer Note {{ document.transfer_number }}{% endblock %}
 
@@ -20,7 +21,7 @@
         <div class="info-card">
             <div class="info-item">
                 <div class="info-label">Branch</div>
-                <div class="info-value font-bold">{{ document.source_branch.name }}</div>
+                <div class="info-value font-bold">{{ document.source_branch.name|branch_print_name }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Address</div>
@@ -33,7 +34,7 @@
         <div class="info-card">
             <div class="info-item">
                 <div class="info-label">Branch</div>
-                <div class="info-value font-bold">{{ document.destination_branch.name }}</div>
+                <div class="info-value font-bold">{{ document.destination_branch.name|branch_print_name }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Address</div>
@@ -48,8 +49,8 @@
     <table class="table w-full">
         <thead>
             <tr>
-                <th class="text-left w-[15%]">Part Number</th>
                 <th class="text-left w-[35%]">Description</th>
+                <th class="text-left w-[15%]">Part Number</th>
                 <th class="text-right w-[15%]">Requested</th>
                 <th class="text-right w-[15%]">Sent</th>
                 {% if document.status == 'received' or document.status == 'partially_received' %}
@@ -62,13 +63,13 @@
         <tbody>
             {% for item in document.items.all %}
             <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
-                <td class="font-mono text-xs">{{ item.part.part_number }}</td>
                 <td>
                     <div class="font-semibold">{{ item.part.name }}</div>
                     {% if item.notes %}
                     <div class="text-xs text-gray-500 italic">{{ item.notes }}</div>
                     {% endif %}
                 </td>
+                <td class="font-mono text-xs">{{ item.part.part_number }}</td>
                 <td class="text-right">{{ item.quantity_requested }}</td>
                 <td class="text-right font-bold">{{ item.quantity_sent }}</td>
                 <td class="text-right">

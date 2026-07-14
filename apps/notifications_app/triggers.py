@@ -971,10 +971,12 @@ Please review and make payment when ready.'''
             channels.append('whatsapp')
             
         for channel in channels:
+            # Invoice PDF via WhatsApp requires notification_type=invoice
+            notif_type = 'invoice' if channel == 'whatsapp' and invoice else 'work_order'
             # Create notification for each channel
             notification = Notification.objects.create(
                 recipient=work_order.customer.user,
-                notification_type='work_order',
+                notification_type=notif_type,
                 channel=channel,
                 priority='normal',
                 template=self._get_template('invoice_generated', channel),  # Get template for specific channel
@@ -1554,14 +1556,20 @@ Please contact us to schedule an appointment or book online.'''
         self.invoice_sent(invoice)
     
     def invoice_sent(self, invoice):
-        """Notify customer when invoice is sent"""
+        """Notify customer when invoice is sent (email, SMS, and WhatsApp when enabled)."""
         if not invoice.customer.user:
             return
-        
+
+        from apps.notifications_app.whatsapp_share import (
+            build_invoice_share,
+            whatsapp_api_enabled_for_user,
+        )
+
         template = self._get_template('invoice_generated', 'email')
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
-        
+        share = build_invoice_share(invoice)
+
         context = self._with_money_context({
              'invoice_id': invoice.id,
              'invoice_number': invoice.invoice_number,
@@ -1574,14 +1582,18 @@ Please contact us to schedule an appointment or book online.'''
              'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
              'invoice_date': str(invoice.invoice_date),
              'amount_paid': str(invoice.amount_paid),
-             'invoice_link': f'{self._get_base_url()}/portal/invoices/{invoice.id}',
+             'invoice_link': share.get('portal_url') or f'{self._get_base_url()}/portal/invoices/{invoice.id}',
              'payment_link': f'{self._get_base_url()}/portal/payment/{invoice.id}',
+             'invoice_pdf_url': share.get('document_pdf_url'),
+             'document_pdf_url': share.get('document_pdf_url'),
+             'document_type': 'invoice',
+             'filename': share.get('filename'),
         })
-        
+
         title = f'Invoice {invoice.invoice_number} - {context["total_display"]}'
         if template and template.subject:
             title = self.service._render_template(template.subject, context)
-        
+
         message = f'''Dear {customer_name},
 
 Your invoice is ready for review.
@@ -1604,10 +1616,10 @@ Please remit payment by the due date to avoid late fees.
 For questions or to arrange payment, please contact us at your earliest convenience.
 
 Thank you for your business!'''
-        
+
         if template and template.body:
             message = self.service._render_template(template.body, context)
-        
+
         notification = Notification.objects.create(
             recipient=invoice.customer.user,
             notification_type='invoice',
@@ -1651,11 +1663,138 @@ Thank you for your business!'''
             )
             self.service.send_notification(sms_notification)
 
+        # --- WhatsApp delivery ---
+        if whatsapp_api_enabled_for_user(invoice.customer.user) and share.get('phone_number'):
+            wa_notification = Notification.objects.create(
+                recipient=invoice.customer.user,
+                notification_type='invoice',
+                channel='whatsapp',
+                priority='high',
+                template=self._get_template('invoice_generated', 'whatsapp'),
+                title=share['title'],
+                message=share['message'],
+                data=context,
+                related_object_type='invoice',
+                related_object_id=invoice.id,
+            )
+            self.service.send_notification(wa_notification)
+
         # --- Delivery tracking: stamp sent_at on the invoice ---
         from django.utils import timezone as tz
         if not invoice.sent_at:
             from apps.billing.models import Invoice as _Invoice
             _Invoice.objects.filter(pk=invoice.pk).update(sent_at=tz.now())
+
+    def send_invoice_whatsapp(self, invoice):
+        """Send invoice via WhatsApp API only. Returns share payload + success flag."""
+        from apps.notifications_app.whatsapp_share import build_invoice_share, whatsapp_api_enabled_for_user
+        from apps.notifications_app.whatsapp_service import get_whatsapp_service
+
+        share = build_invoice_share(invoice)
+        if not share.get('phone_number'):
+            return {**share, 'mode': 'manual', 'success': False, 'error': 'No phone number'}
+
+        wa = get_whatsapp_service()
+        if not (wa.is_available() and whatsapp_api_enabled_for_user(getattr(invoice.customer, 'user', None))):
+            return {**share, 'mode': 'manual', 'success': False}
+
+        if not invoice.customer.user:
+            return {**share, 'mode': 'manual', 'success': False, 'error': 'Customer has no user account'}
+
+        context = {
+            **share,
+            'invoice_id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'invoice_pdf_url': share.get('document_pdf_url'),
+        }
+        notification = Notification.objects.create(
+            recipient=invoice.customer.user,
+            notification_type='invoice',
+            channel='whatsapp',
+            priority='high',
+            template=self._get_template('invoice_generated', 'whatsapp'),
+            title=share['title'],
+            message=share['message'],
+            data=context,
+            related_object_type='invoice',
+            related_object_id=invoice.id,
+        )
+        ok = self.service.send_notification(notification)
+        return {**share, 'mode': 'api', 'success': bool(ok)}
+
+    def send_estimate_whatsapp(self, estimate):
+        """Send estimate via WhatsApp API only. Returns share payload + success flag."""
+        from apps.notifications_app.whatsapp_share import build_estimate_share, whatsapp_api_enabled_for_user
+        from apps.notifications_app.whatsapp_service import get_whatsapp_service
+
+        share = build_estimate_share(estimate)
+        if not share.get('phone_number'):
+            return {**share, 'mode': 'manual', 'success': False, 'error': 'No phone number'}
+
+        wa = get_whatsapp_service()
+        if not (wa.is_available() and whatsapp_api_enabled_for_user(getattr(estimate.customer, 'user', None))):
+            return {**share, 'mode': 'manual', 'success': False}
+
+        if not estimate.customer.user:
+            return {**share, 'mode': 'manual', 'success': False, 'error': 'Customer has no user account'}
+
+        context = {
+            **share,
+            'estimate_id': estimate.id,
+            'estimate_number': estimate.estimate_number,
+            'estimate_pdf_url': share.get('document_pdf_url'),
+        }
+        notification = Notification.objects.create(
+            recipient=estimate.customer.user,
+            notification_type='estimate',
+            channel='whatsapp',
+            priority='high',
+            template=self._get_template('estimate_sent', 'whatsapp'),
+            title=share['title'],
+            message=share['message'],
+            data=context,
+            related_object_type='estimate',
+            related_object_id=estimate.id,
+        )
+        ok = self.service.send_notification(notification)
+        return {**share, 'mode': 'api', 'success': bool(ok)}
+
+    def send_job_card_whatsapp(self, work_order):
+        """Send job card via WhatsApp API only. Returns share payload + success flag."""
+        from apps.notifications_app.whatsapp_share import build_job_card_share, whatsapp_api_enabled_for_user
+        from apps.notifications_app.whatsapp_service import get_whatsapp_service
+
+        share = build_job_card_share(work_order)
+        if not share.get('phone_number'):
+            return {**share, 'mode': 'manual', 'success': False, 'error': 'No phone number'}
+
+        wa = get_whatsapp_service()
+        user = getattr(work_order.customer, 'user', None)
+        if not (wa.is_available() and whatsapp_api_enabled_for_user(user)):
+            return {**share, 'mode': 'manual', 'success': False}
+
+        if not user:
+            return {**share, 'mode': 'manual', 'success': False, 'error': 'Customer has no user account'}
+
+        context = {
+            **share,
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'job_card_pdf_url': share.get('document_pdf_url'),
+        }
+        notification = Notification.objects.create(
+            recipient=user,
+            notification_type='work_order',
+            channel='whatsapp',
+            priority='normal',
+            title=share['title'],
+            message=share['message'],
+            data=context,
+            related_object_type='work_order',
+            related_object_id=work_order.id,
+        )
+        ok = self.service.send_notification(notification)
+        return {**share, 'mode': 'api', 'success': bool(ok)}
 
     def invoice_due_soon(self, invoice, days_until_due, channel='email'):
         """Remind customer that invoice is due soon"""
@@ -2951,11 +3090,14 @@ Best regards,
         """Notify customer when estimate is sent"""
         if not estimate.customer.user:
             return
-        
+
+        from apps.notifications_app.whatsapp_share import build_estimate_share
+
         template = self._get_template('estimate_sent', 'email')
         customer_name = self._build_customer_name(estimate.customer)
         vehicle_display = self._build_vehicle_display(estimate.vehicle) if estimate.vehicle else "N/A"
-        
+        share = build_estimate_share(estimate)
+
         estimate_ctx = self._with_money_context({
             'customer_name': customer_name,
             'estimate_number': estimate.estimate_number,
@@ -2963,12 +3105,16 @@ Best regards,
             'valid_until': str(estimate.valid_until),
             'vehicle_display': vehicle_display,
             'description': estimate.description or "See estimate for details",
-            'estimate_link': f'{self._get_base_url()}/portal/estimates/{estimate.id}',
+            'estimate_link': share.get('portal_url') or f'{self._get_base_url()}/portal/estimates/{estimate.id}',
+            'estimate_pdf_url': share.get('document_pdf_url'),
+            'document_pdf_url': share.get('document_pdf_url'),
+            'document_type': 'estimate',
+            'filename': share.get('filename'),
         })
         title = f'New Estimate #{estimate.estimate_number} - {estimate_ctx["total_display"]}'
         if template and template.subject:
             title = self.service._render_template(template.subject, estimate_ctx)
-        
+
         message = f'''A new estimate has been prepared for your review.
 
 Estimate Number: {estimate.estimate_number}
@@ -2981,22 +3127,23 @@ Description: {estimate.description or "See estimate for details"}
 Please review and approve or decline this estimate to proceed.'''
         if template and template.body:
             message = self.service._render_template(template.body, estimate_ctx)
-        
+
         # Determine enabled channels
         channels = ['email']
-        
+
         # Check if WhatsApp is enabled globally and for the user
         whatsapp_settings = get_whatsapp_settings()
         whatsapp_enabled = whatsapp_settings.get('whatsapp_enabled', 'false').lower() == 'true'
-        
+
         user_whatsapp_enabled = True
         if hasattr(estimate.customer.user, 'notification_preferences'):
             user_whatsapp_enabled = estimate.customer.user.notification_preferences.whatsapp_enabled
-            
+
         if whatsapp_enabled and user_whatsapp_enabled:
             channels.append('whatsapp')
-            
+
         for channel in channels:
+            channel_message = share['message'] if channel == 'whatsapp' else message
             notification = Notification.objects.create(
                 recipient=estimate.customer.user,
                 notification_type='estimate',
@@ -3004,7 +3151,7 @@ Please review and approve or decline this estimate to proceed.'''
                 priority='high',
                 template=self._get_template('estimate_sent', channel),
                 title=title,
-                message=message,
+                message=channel_message,
                 data=estimate_ctx,
                 related_object_type='estimate',
                 related_object_id=estimate.id

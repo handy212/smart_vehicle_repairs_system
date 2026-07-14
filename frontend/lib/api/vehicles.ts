@@ -233,13 +233,22 @@ export const vehiclesApi = {
   },
 
   getSuggestedService: async (id: number): Promise<{
-    suggested_service_id: number;
-    suggested_service_name: string;
+    suggested_service_id: number | null;
+    suggested_service_name: string | null;
     suggested_bundle_id?: number | null;
     reason: string;
     last_service_id?: number;
-    last_service_name?: string;
+    last_service_name?: string | null;
     last_service_date?: string;
+    smart_suggestions?: Array<{
+      id: number;
+      service_type_id: number;
+      service_type_name: string;
+      is_due: boolean;
+      is_due_soon: boolean;
+      estimated_due_date?: string | null;
+      days_until_due?: number | null;
+    }>;
   }> => {
     const response = await apiClient.get(`/vehicles/vehicles/${id}/suggested_service/`);
     return response.data;

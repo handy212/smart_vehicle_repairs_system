@@ -9,8 +9,9 @@ import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Car, MoveLeft, MailCheck } from "lucide-react";
+import { MoveLeft, MailCheck } from "lucide-react";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
+import AuthBrandMark from "@/components/auth/AuthBrandMark";
 import { useBranding } from "@/lib/hooks/useBranding";
 
 const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
@@ -110,20 +111,14 @@ export default function ForgotPasswordPage() {
                         }}
                     />
 
-                    <div className="relative z-10 flex items-center gap-3">
-                        {logoSrc ? (
-                            <div className="p-3 bg-card rounded-xl shadow-lg">
-                                <img
-                                    src={logoSrc}
-                                    alt={siteName}
-                                    className="h-10 w-auto object-contain"
-                                />
-                            </div>
-                        ) : (
-                            <div className="p-3 bg-card rounded-xl shadow-lg">
-                                <Car className="w-8 h-8" style={{ color: primaryColor }} />
-                            </div>
-                        )}
+                    <div className="relative z-10">
+                        <AuthBrandMark
+                            logoSrc={logoSrc}
+                            siteName={siteName}
+                            primaryColor={primaryColor}
+                            variant="hero"
+                            size="lg"
+                        />
                     </div>
 
                     <div className="relative z-10 space-y-4">

@@ -65,10 +65,11 @@
         <thead>
             <tr>
                 <th style="width: 10%;">Type</th>
-                <th style="width: 45%;">Description</th>
-                <th style="width: 12%; text-align: center;">Qty</th>
-                <th style="width: 15%; text-align: right;">Price</th>
-                <th style="width: 18%; text-align: right;">Total</th>
+                <th style="width: 36%;">Description</th>
+                <th style="width: 14%;">Part #</th>
+                <th style="width: 10%; text-align: center;">Qty</th>
+                <th style="width: 14%; text-align: right;">Price</th>
+                <th style="width: 16%; text-align: right;">Total</th>
             </tr>
         </thead>
         <tbody>
@@ -79,15 +80,13 @@
                 <td>
                     <div class="font-medium text-gray-900">{{ item.description }}</div>
                     {% if item.part_name %}
-                    <div class="row-notes">Part: {{ item.part_name }}</div>
-                    {% endif %}
-                    {% if item.part_number %}
-                    <div class="row-notes">Part #: {{ item.part_number }}</div>
+                    <div class="row-notes">{{ item.part_name }}</div>
                     {% endif %}
                     {% if item.notes %}
                     <div class="row-notes">{{ item.notes }}</div>
                     {% endif %}
                 </td>
+                <td class="font-mono text-xs">{{ item.part_number|default:"—" }}</td>
                 <td class="text-center">
                     {% if item.item_type == 'labor' and item.labor_hours %}
                     {{ item.labor_hours|floatformat:1 }} hrs
@@ -107,7 +106,7 @@
             {% endfor %}
             {% else %}
             <tr>
-                <td colspan="5" class="text-center text-gray-400 py-4">No line items</td>
+                <td colspan="6" class="text-center text-gray-400 py-4">No line items</td>
             </tr>
             {% endif %}
         </tbody>
@@ -118,19 +117,21 @@
 {% include 'printing/base/components/financial_summary.html' %}
 
 <!-- Notes, validity & Terms -->
-<div class="clear-both mt-8 avoid-break">
+<div class="clear-both mt-4 avoid-break">
     {% if document.customer_notes %}
-    <div class="notes-box mb-4">
+    <div class="notes-box mb-2">
         <div class="font-bold mb-1">Notes:</div>
         {{ document.customer_notes|linebreaks }}
     </div>
     {% endif %}
 
-    <div class="notes-box mb-4 text-sm text-gray-700">
+    <div class="notes-box mb-2 text-sm text-gray-700">
         <strong>Important:</strong> This estimate is valid until {{ document.valid_until|date:"F d, Y"|default:"the date shown above" }}.
         Prices are subject to change after this date. Final charges may vary based on additional findings during
         service.
     </div>
+
+    {% include 'printing/base/components/bank_details.html' %}
 
     {% if estimate_terms_and_conditions %}
     <div class="notes-box document-terms">

@@ -75,6 +75,7 @@ class CustomerListSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
         fields = [
             'id', 'user_id', 'customer_number', 'full_name', 'email', 'phone',
             'company_name', 'customer_type', 'status', 'customer_since',
+            'payment_terms',
             'vehicle_count', 'current_balance', 'available_credit',
             'loyalty_points', 'loyalty_tier', 'created_at',
             'last_visit_date', 'days_since_last_visit', 'is_inactive',

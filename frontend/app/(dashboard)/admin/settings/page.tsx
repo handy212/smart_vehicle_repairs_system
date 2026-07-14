@@ -175,6 +175,8 @@ function isLongTextSetting(key: string, value: string) {
     key.includes("message") ||
     key.includes("terms") ||
     key.includes("policy") ||
+    key.includes("bank_details") ||
+    key.includes("notice") ||
     value.length > 90
   );
 }

@@ -22,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { getInspectionApprovalLabel, getInspectionStageLabel, getInspectionStageTone, isInspectionStarted } from "@/lib/utils/inspection-status";
 import { getMediaUrl } from "@/lib/api/utils";
+import { workordersApi } from "@/lib/api/workorders";
+import { IntakeConditionCard } from "@/components/workorders/IntakeConditionCard";
 
 const statusColors: Record<string, string> = {
   draft: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 border-slate-200 dark:border-slate-700",
@@ -58,6 +60,19 @@ export default function InspectionDetailPage() {
   const { data: inspection, isLoading } = useQuery({
     queryKey: ["inspection", inspectionId],
     queryFn: () => inspectionsApi.get(inspectionId),
+  });
+
+  const linkedWorkOrderId =
+    inspection?.work_order == null
+      ? null
+      : typeof inspection.work_order === "object"
+        ? Number(inspection.work_order.id)
+        : Number(inspection.work_order);
+
+  const { data: linkedWorkOrder } = useQuery({
+    queryKey: ["workorder", linkedWorkOrderId],
+    queryFn: () => workordersApi.get(linkedWorkOrderId!),
+    enabled: !!linkedWorkOrderId,
   });
 
   useMutation({
@@ -433,6 +448,18 @@ export default function InspectionDetailPage() {
           </CardContent>
         </Card>
       </div>
+      {linkedWorkOrderId && linkedWorkOrder && (
+        <div className="mb-6">
+          <IntakeConditionCard
+            workOrderId={linkedWorkOrderId}
+            workOrder={linkedWorkOrder}
+            title="Job Card intake"
+            description="Captured during DVI and printed on the customer Job Card."
+            canEdit={inspection.status === "in_progress"}
+            queryKey={["inspection", inspectionId]}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (Main) */}
         <div className="lg:col-span-2 space-y-6">

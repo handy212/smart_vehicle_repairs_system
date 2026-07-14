@@ -246,6 +246,7 @@ def get_document_terms():
     """Shop-wide legal / notice text for printed documents."""
     return get_settings(
         [
+            'invoice_bank_details',
             'invoice_terms_and_conditions',
             'estimate_terms_and_conditions',
             'proforma_notice',
@@ -253,6 +254,7 @@ def get_document_terms():
             'work_order_terms_and_conditions',
         ],
         {
+            'invoice_bank_details': '',
             'invoice_terms_and_conditions': '',
             'estimate_terms_and_conditions': '',
             'proforma_notice': '',

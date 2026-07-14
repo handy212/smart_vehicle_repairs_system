@@ -15,4 +15,9 @@ router.register('push-subscriptions', views.WebPushSubscriptionViewSet, basename
 urlpatterns = [
     path('', include(router.urls)),
     path('render-template/', views.TemplateRenderView.as_view(), name='render-template'),
+    path(
+        'public/documents/<path:token>/',
+        views.PublicSignedDocumentPdfView.as_view(),
+        name='public-signed-document-pdf',
+    ),
 ]

@@ -38,6 +38,7 @@ import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { IntakeConditionCard } from "@/components/workorders/IntakeConditionCard";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { LIST_SERVICE_COORDINATORS_PERMISSIONS, BILLING_AREA_PERMISSIONS } from "@/lib/utils/permissions";
@@ -318,6 +319,19 @@ export default function WorkOrderOverviewTab({
           )}
         </CardContent>
       </Card>
+
+      <IntakeConditionCard
+        workOrderId={workOrderId!}
+        workOrder={workOrder}
+        title="Job Card intake"
+        description="Usually captured during DVI. You can also edit it here before printing the Job Card."
+        canEdit={
+          workOrder?.status === "draft" ||
+          workOrder?.status === "inspection" ||
+          workOrder?.status === "intake" ||
+          workOrder?.status === "assigned"
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_18rem]">
         <div className="space-y-4">

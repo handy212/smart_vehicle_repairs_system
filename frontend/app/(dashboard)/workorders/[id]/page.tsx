@@ -28,6 +28,7 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { WorkOrderCommandBar } from "./components/WorkOrderCommandBar";
+import { handleWhatsAppSendFlow } from "@/components/shared/DocumentWhatsAppButton";
 import { WorkOrderProgress } from "./components/WorkOrderProgress";
 import { GatePassBanner } from "./components/GatePassBanner";
 import { CheckInInspectionBanner } from "./components/CheckInInspectionBanner";
@@ -310,6 +311,24 @@ export default function WorkOrderDetailPage() {
         onPrintWorkOrder={() =>
           openPrintWindow({ documentType: "work_order", documentId: workOrderId })
         }
+        onPrintJobCard={() =>
+          openPrintWindow({ documentType: "job_card", documentId: workOrderId })
+        }
+        onSendJobCardWhatsApp={async () => {
+          try {
+            await handleWhatsAppSendFlow(
+              (opts) => workordersApi.sendJobCardWhatsApp(workOrderId, opts),
+              toast,
+              "Job Card WhatsApp"
+            );
+          } catch (error: unknown) {
+            toast({
+              title: "WhatsApp failed",
+              description: getUserFacingError(error, "Could not send job card via WhatsApp."),
+              variant: "destructive",
+            });
+          }
+        }}
         onDownloadPdf={() =>
           downloadPDF({
             documentType: "work_order",

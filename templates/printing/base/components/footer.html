@@ -6,33 +6,38 @@
         <td class="print-footer-branches">
             <div class="print-footer-branch-list">
                 {% for footer_branch in print_footer_branches %}
-                <span class="print-footer-branch-name">{{ footer_branch.name }}</span>{% if not forloop.last %}<span class="print-footer-separator"> | </span>{% endif %}
+                <span class="print-footer-branch-name">{{ footer_branch.display_name }}</span>{% if not forloop.last %}<span class="print-footer-separator"> | </span>{% endif %}
                 {% empty %}
                 {% if print_branch %}
-                <span class="print-footer-branch-name">{{ print_branch.name }}</span>
+                <span class="print-footer-branch-name">{{ print_branch.name|branch_print_name }}</span>
                 {% elif branch %}
-                <span class="print-footer-branch-name">{{ branch.name }}</span>
+                <span class="print-footer-branch-name">{{ branch.name|branch_print_name }}</span>
                 {% else %}
                 <span class="print-footer-branch-name">{% if company_name %}{{ company_name }}{% else %}Smart Vehicle Repairs{% endif %}</span>
                 {% endif %}
                 {% endfor %}
             </div>
             <div class="print-footer-generated">
-                {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% elif print_branch %}{{ print_branch.name }}{% else %}Smart Vehicle Repairs{% endif %}
+                {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name|branch_print_name }}{% elif print_branch %}{{ print_branch.name|branch_print_name }}{% else %}Smart Vehicle Repairs{% endif %}
                 | Generated on {% now "F d, Y" %}
             </div>
             <div class="print-footer-page" aria-hidden="true"></div>
         </td>
         <td class="print-footer-logos" aria-label="Company logos">
-            {% if print_footer_logos %}
-            {% for footer_logo in print_footer_logos %}
-            <img src="{{ footer_logo }}" class="print-footer-logo" alt="Company logo">
-            {% endfor %}
-            {% else %}
-            <img src="{% static 'images/logos/logo-1.jpeg' %}" class="print-footer-logo" alt="Company logo">
-            <img src="{% static 'images/logos/logo-2.jpeg' %}" class="print-footer-logo" alt="Company logo">
-            <img src="{% static 'images/logos/logo-3.jpeg' %}" class="print-footer-logo" alt="Company logo">
-            {% endif %}
+            <div class="print-footer-logo-block">
+                <div class="print-footer-logo-row">
+                    {% if print_footer_logos %}
+                    {% for footer_logo in print_footer_logos %}
+                    <img src="{{ footer_logo }}" class="print-footer-logo" alt="Company logo">
+                    {% endfor %}
+                    {% else %}
+                    <img src="{% static 'images/logos/logo-1.jpeg' %}" class="print-footer-logo" alt="Company logo">
+                    <img src="{% static 'images/logos/logo-2.jpeg' %}" class="print-footer-logo" alt="Company logo">
+                    <img src="{% static 'images/logos/logo-3.jpeg' %}" class="print-footer-logo" alt="Company logo">
+                    {% endif %}
+                </div>
+                <div class="print-footer-affiliation">—Part of AA MobilityGroup—</div>
+            </div>
         </td>
     </tr>
 </table>

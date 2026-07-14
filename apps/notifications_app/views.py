@@ -1226,6 +1226,50 @@ class TemplateRenderView(APIView):
                 {'error': 'template_type and object_id are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Built-in document share payloads (work without stored templates)
+        document_aliases = {
+            'invoice': 'invoice',
+            'invoice_generated': 'invoice',
+            'estimate': 'estimate',
+            'estimate_sent': 'estimate',
+            'job_card': 'job_card',
+            'work_order': 'job_card',
+        }
+        share_key = document_aliases.get(template_type)
+        if share_key:
+            try:
+                from apps.notifications_app.whatsapp_share import (
+                    build_invoice_share,
+                    build_estimate_share,
+                    build_job_card_share,
+                )
+                if share_key == 'invoice':
+                    from apps.billing.models import Invoice
+                    share = build_invoice_share(Invoice.objects.select_related(
+                        'customer', 'customer__user', 'vehicle'
+                    ).get(id=object_id))
+                elif share_key == 'estimate':
+                    from apps.billing.models import Estimate
+                    share = build_estimate_share(Estimate.objects.select_related(
+                        'customer', 'customer__user', 'vehicle'
+                    ).get(id=object_id))
+                else:
+                    from apps.workorders.models import WorkOrder
+                    share = build_job_card_share(WorkOrder.objects.select_related(
+                        'customer', 'customer__user', 'vehicle'
+                    ).get(id=object_id))
+                return Response({
+                    'message': share['message'],
+                    'phone_number': share['phone_number'],
+                    'template_used': f'builtin_{share_key}_whatsapp',
+                    'portal_url': share.get('portal_url'),
+                })
+            except Exception as e:
+                return Response(
+                    {'error': f'Error fetching object: {str(e)}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             
         # 1. Find Template
         try:
@@ -1442,3 +1486,55 @@ class WebPushSubscriptionViewSet(viewsets.GenericViewSet):
             'message': 'Successfully unsubscribed from push notifications',
             'count': count
         })
+
+
+class PublicSignedDocumentPdfView(APIView):
+    """
+    Public, time-limited PDF download for WhatsApp / Meta media fetch.
+
+    Accepts either:
+    - short share code (preferred): /d/<code>/ or /api/d/<code>/
+    - legacy signed token: /api/notifications/public/documents/<token>/
+    """
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, token=None, code=None):
+        from django.core.signing import BadSignature, SignatureExpired
+        from apps.notifications_app.document_links import resolve_document_ref
+
+        ref = code or token
+        try:
+            payload = resolve_document_ref(ref)
+        except SignatureExpired:
+            return Response({'error': 'This download link has expired.'}, status=status.HTTP_410_GONE)
+        except BadSignature:
+            return Response({'error': 'Invalid download link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        document_type = payload['document_type']
+        object_id = payload['object_id']
+
+        try:
+            if document_type == 'invoice':
+                from apps.billing.models import Invoice
+                from apps.core.services.print_service import generate_invoice_pdf
+                invoice = Invoice.objects.select_related('branch', 'customer', 'vehicle').get(pk=object_id)
+                return generate_invoice_pdf(invoice, branch=getattr(invoice, 'branch', None))
+            if document_type == 'estimate':
+                from apps.billing.models import Estimate
+                from apps.core.services.print_service import generate_estimate_pdf
+                estimate = Estimate.objects.select_related('branch', 'customer', 'vehicle').get(pk=object_id)
+                return generate_estimate_pdf(estimate, branch=getattr(estimate, 'branch', None))
+            if document_type == 'job_card':
+                from apps.workorders.models import WorkOrder
+                from apps.core.services.print_service import generate_job_card_pdf
+                work_order = WorkOrder.objects.select_related('branch', 'customer', 'vehicle').get(pk=object_id)
+                return generate_job_card_pdf(work_order, branch=work_order.branch)
+        except Exception as e:
+            logging.getLogger(__name__).error("Public signed PDF failed: %s", e, exc_info=True)
+            return Response(
+                {'error': 'Failed to generate document.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response({'error': 'Unsupported document type.'}, status=status.HTTP_400_BAD_REQUEST)

@@ -295,6 +295,8 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 # Social Account Settings
+GOOGLE_OAUTH_CLIENT_ID = env('GOOGLE_OAUTH_CLIENT_ID', default='')
+GOOGLE_OAUTH_CLIENT_SECRET = env('GOOGLE_OAUTH_CLIENT_SECRET', default='')
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -305,8 +307,8 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'APP': {
-            'client_id': env('GOOGLE_OAUTH_CLIENT_ID', default=''),
-            'secret': env('GOOGLE_OAUTH_CLIENT_SECRET', default=''),
+            'client_id': GOOGLE_OAUTH_CLIENT_ID,
+            'secret': GOOGLE_OAUTH_CLIENT_SECRET,
             'key': ''
         }
     }

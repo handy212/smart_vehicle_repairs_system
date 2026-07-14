@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Document{% endblock %} - {% block company_name %} {% endblock %}</title>
     {% if base_url %}<base href="{{ base_url }}/" />{% endif %}
-
-    {% firstof company_name branch.name "Smart Vehicle Repairs" as footer_company_name %}
+    {% load settings_tags %}
     <style>
         * {
             margin: 0;
@@ -21,25 +20,40 @@
             line-height: 1.2;
             color: #000;
             background: #e5e7eb;
-            min-height: 297mm;
+            min-height: 0;
         }
 
-        /* Full document frame — keeps footer at bottom of the sheet when content is short */
+        /* Page frame — height follows content so footer stays under the body (no giant bottom gap) */
         .document-shell {
             width: 210mm;
-            min-height: 297mm;
+            min-height: 0;
             margin: 12px auto;
-            padding: 8mm 8mm 10mm;
+            padding: 6mm;
             background: #fff;
             position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            overflow: visible;
+            display: block;
             box-sizing: border-box;
         }
 
         .document-shell.is-browser-preview {
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+        }
+
+        body.is-pdf {
+            background: #fff;
+            min-height: 0;
+        }
+
+        /* PDF uses the same content+footer flow as the browser print preview */
+        body.is-pdf .document-shell {
+            width: auto;
+            min-height: 0;
+            margin: 0;
+            padding: 0;
+            overflow: visible;
+            display: block;
+            box-shadow: none;
         }
 
         @media print {
@@ -51,22 +65,27 @@
                 width: auto;
                 min-height: 0;
                 margin: 0;
-                padding: 0 0 28mm;
+                padding: 0 0 20mm;
                 overflow: visible;
                 display: block;
                 box-shadow: none;
             }
         }
 
-        /* Page Configuration */
+        /* Page Configuration — same size for print preview and PDF */
         @page {
             size: {% block page_size %}A4{% endblock %};
-            margin: 6mm 6mm 30mm 6mm;
+            margin: 6mm;
+            {% if is_pdf %}
+            margin-bottom: 22mm;
 
             @bottom-center {
-                content: element(print-footer);
+                content: element(doc-footer);
+                vertical-align: bottom;
                 width: 100%;
+                padding-top: 1.5mm;
             }
+            {% endif %}
         }
 
         /* Utilities */
@@ -79,15 +98,15 @@
         }
 
         .mb-4 {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.35rem;
         }
 
         .mb-6 {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .mb-8 {
-            margin-bottom: 1rem;
+            margin-bottom: 0.65rem;
         }
 
         .mt-1 {
@@ -99,15 +118,15 @@
         }
 
         .mt-12 {
-            margin-top: 1.25rem;
+            margin-top: 0.75rem;
         }
 
         .mt-4 {
-            margin-top: 0.5rem;
+            margin-top: 0.35rem;
         }
 
         .mt-8 {
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
 
         .pt-2 {
@@ -483,42 +502,110 @@
             width: 32%;
         }
 
-        /* Header Layout */
+        /* Header Layout — table (WeasyPrint-safe; flex drifts meta/logos center) */
         .header-container {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
             border-bottom: 2px solid #000;
-            padding-bottom: 6px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
+            margin-bottom: 6px;
             position: relative;
             z-index: 2;
             background: #fff;
         }
 
+        .header-container > tbody > tr > td {
+            border: 0;
+            background: transparent;
+            vertical-align: top;
+            padding: 0 0 4px;
+        }
+
         .header-left {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            flex: 1 1 auto;
-            min-width: 0;
+            width: 62%;
+            padding-right: 12px !important;
+        }
+
+        .header-brand {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-brand > tbody > tr > td {
+            border: 0;
+            background: transparent;
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .header-brand-logo {
+            width: 1%;
+            padding-right: 12px !important;
+            white-space: nowrap;
         }
 
         .company-details {
-            flex: 1;
             min-width: 0;
         }
 
         .header-right {
-            text-align: right;
-            flex-shrink: 0;
-            max-width: 38%;
+            width: 32%;
+            text-align: left;
+            padding-left: 16px !important;
+            vertical-align: top;
+        }
+
+        /* Left-aligned "Label: value" pairs (same starting edge for every row) */
+        .header-meta {
+            width: auto;
+            border-collapse: collapse;
+            border-spacing: 0;
+            table-layout: auto;
+            margin: 0;
+            font-size: 7.5pt;
+            line-height: 1.45;
+            color: #111827;
+        }
+
+        .header-meta td {
+            border: 0;
+            background: transparent;
+            vertical-align: baseline;
+        }
+
+        .header-meta td.header-meta-line {
+            padding: 2px 0;
+            text-align: left;
+            white-space: nowrap;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .header-meta .header-meta-label {
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 6.5pt;
+            margin-right: 4px;
+        }
+
+        .header-meta tr.header-meta-branch td {
+            border-top: 1px solid #d1d5db;
+            padding-top: 6px;
+        }
+
+        .header-tagline {
+            margin-top: 6px;
+            font-size: 7pt;
+            color: #9ca3af;
+            font-style: italic;
+            text-align: left;
         }
 
         .logo-placeholder {
-            width: 40px;
-            height: 40px;
+            width: 72px;
+            height: 72px;
             background-color: #e5e7eb;
             border-radius: 4px;
             display: flex;
@@ -526,33 +613,84 @@
             justify-content: center;
             font-weight: bold;
             color: #6b7280;
-            font-size: 14pt;
+            font-size: 22pt;
+            flex-shrink: 0;
         }
 
         .logo-img {
-            max-height: 34px;
-            max-width: 88px;
+            max-height: 72px;
+            max-width: 160px;
+            width: auto;
+            height: auto;
             object-fit: contain;
             flex-shrink: 0;
         }
 
-        /* Document Title Bar */
+        /* Document Title Bar — table layout (WeasyPrint-safe) */
         .doc-title-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
             margin-bottom: 8px;
-            padding-bottom: 4px;
-            padding-left: 8px;
-            padding-right: 8px;
-            border-bottom: 1px solid #e5e7eb;
             position: relative;
             z-index: 2;
-            background: #fff;
+        }
+
+        .doc-title-bar > tbody > tr > td {
+            border: 0;
+            background: transparent;
+            vertical-align: bottom;
+            padding: 0 0 6px;
+        }
+
+        .doc-title-left {
+            width: 62%;
+            text-align: left;
+            padding-right: 10px !important;
+        }
+
+        .doc-title-meta {
+            width: 38%;
+            text-align: right;
+            font-size: 8pt;
+            color: #374151;
+            line-height: 1.35;
+        }
+
+        .doc-type {
+            font-size: 13pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #1d4ed8;
+            line-height: 1.15;
+            margin: 0 0 4px;
+        }
+
+        .doc-number {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            border-radius: 3px;
+            font-size: 10.5pt;
+            font-weight: 800;
+            color: #1e3a8a;
+            letter-spacing: 0.02em;
+            line-height: 1.2;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            color-adjust: exact;
+        }
+
+        .doc-number-hash {
+            color: #3b82f6;
+            font-weight: 700;
+            margin-right: 2px;
         }
 
         .content-wrapper {
-            padding: 0 8px 8px 8px;
+            padding: 0 4px 4px 4px;
             position: relative;
             z-index: 1;
             flex: 1 1 auto;
@@ -562,13 +700,13 @@
             border: 1px solid #e5e7eb;
             background: #f9fafb;
             border-radius: 4px;
-            padding: 6px 8px;
+            padding: 5px 7px;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
         .document-terms {
-            margin-top: 10px;
+            margin-top: 6px;
         }
 
         .document-terms-title {
@@ -592,6 +730,99 @@
 
         .document-terms-body p:last-child {
             margin-bottom: 0;
+        }
+
+        .bank-details-grid {
+            display: grid;
+            gap: 8px;
+            margin-top: 2px;
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .bank-details-grid.cols-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .bank-details-grid.cols-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .bank-details-grid.cols-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        /* WeasyPrint: CSS grid support varies — table layout is reliable for PDF */
+        body.is-pdf .bank-details-grid {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8px 0;
+            table-layout: fixed;
+            margin-left: -8px;
+            margin-right: -8px;
+        }
+
+        body.is-pdf .bank-details-grid .bank-account-card {
+            display: table-cell;
+            width: 33.33%;
+            vertical-align: top;
+        }
+
+        body.is-pdf .bank-details-grid.cols-1 .bank-account-card {
+            width: 100%;
+        }
+
+        body.is-pdf .bank-details-grid.cols-2 .bank-account-card {
+            width: 50%;
+        }
+
+        .bank-account-card {
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            border-radius: 4px;
+            padding: 6px 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .bank-account-title {
+            font-weight: 700;
+            font-size: 7.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #1e3a5f;
+            margin-bottom: 3px;
+            padding-bottom: 2px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .bank-account-body {
+            color: #374151;
+            font-size: 7pt;
+            line-height: 1.4;
+        }
+
+        .bank-account-body p {
+            margin: 0 0 2px;
+        }
+
+        .bank-account-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        @media print {
+            .bank-details-grid.cols-1 {
+                grid-template-columns: 1fr;
+            }
+
+            .bank-details-grid.cols-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .bank-details-grid.cols-3,
+            .bank-details-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
         }
 
         /* Components */
@@ -635,67 +866,108 @@
         .info-card {
             border: 1px solid #d1d5db;
             border-radius: 4px;
-            padding: 5px;
+            padding: 6px 8px;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
+        /* Compact "Label: value" rows (WeasyPrint-safe; no wide flex gap) */
         .info-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
+            display: block;
+            margin: 0 0 3px;
+            line-height: 1.35;
+            font-size: 8pt;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
         }
 
         .info-label {
+            display: inline;
             font-weight: 600;
-            width: 40%;
+            width: auto;
+            color: #6b7280;
+            margin-right: 0;
+        }
+
+        .info-label::after {
+            content: ": ";
+            color: #6b7280;
+            font-weight: 600;
         }
 
         .info-value {
-            width: 60%;
+            display: inline;
+            width: auto;
+            color: #111827;
+            font-weight: 700;
+            word-break: break-word;
         }
 
-        /* Financial Summary - Right Aligned */
+        /* Financial Summary — classic left labels / right amounts, compact width */
         .financial-summary {
             float: right;
-            max-width: 320px;
-            min-width: 260px;
-            margin-top: 8px;
-            margin-bottom: 8px;
+            width: 175px;
+            max-width: 175px;
+            margin-top: 4px;
+            margin-bottom: 4px;
+            border-collapse: collapse;
+            table-layout: fixed;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 3px 6px;
+        .financial-summary .summary-item td {
+            padding: 3px 0;
             border-bottom: 1px solid #e5e7eb;
             font-size: 7.5pt;
+            vertical-align: middle;
+            background: transparent;
         }
 
-        .summary-item.subtotal,
-        .summary-item.total {
+        .financial-summary .summary-label {
+            text-align: left;
+            width: 58%;
+            padding-right: 8px;
+            color: #4b5563;
             font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .financial-summary .summary-value {
+            text-align: right;
+            width: 42%;
+            font-weight: 700;
+            color: #111827;
+            white-space: nowrap;
+        }
+
+        .financial-summary .summary-item.subtotal td,
+        .financial-summary .summary-item.total td {
+            font-weight: 700;
             font-size: 9pt;
             border-top: 2px solid #000;
             border-bottom: 2px solid #000;
-            padding: 4px 6px;
+            padding: 4px 0;
+            color: #111827;
         }
 
-        .summary-item.total {
+        .financial-summary .summary-item.subtotal .summary-label,
+        .financial-summary .summary-item.total .summary-label {
+            color: #111827;
+            font-weight: 700;
+        }
+
+        .financial-summary .summary-item.total td {
             background-color: #f3f4f6;
-            margin-top: 8px;
+            padding-left: 4px;
+            padding-right: 4px;
         }
 
-        .summary-label {
-            flex: 1;
-        }
-
-        .summary-value {
-            font-weight: 600;
-            text-align: right;
-            min-width: 100px;
+        .financial-summary .summary-item.summary-paid td {
+            border-top: 1px solid #d1d5db;
+            padding-top: 5px;
         }
 
         .clearfix,
@@ -722,6 +994,7 @@
 
         .print-footer {
             width: 100%;
+            table-layout: fixed;
             border-top: 1px solid #d1d5db;
             border-collapse: collapse;
             color: #4b5563;
@@ -731,14 +1004,7 @@
             break-inside: avoid;
             z-index: 3;
             background: #fff;
-            margin-top: auto;
-            flex-shrink: 0;
-        }
-
-        /* PDF (WeasyPrint): pin footer into @page bottom margin on every page */
-        body.is-pdf .print-footer {
-            position: running(print-footer);
-            margin-top: 0;
+            margin-top: 8px;
         }
 
         .print-footer td {
@@ -749,7 +1015,7 @@
         }
 
         .print-footer-branches {
-            width: auto;
+            width: 58%;
             text-align: left;
         }
 
@@ -784,30 +1050,62 @@
         .print-footer-page {
             margin-top: 2px;
             color: #6b7280;
+            display: none;
         }
 
         .print-footer-page::after {
             content: "Page " counter(page) " of " counter(pages);
         }
 
-        @media screen {
-            .print-footer-page {
-                display: none;
+        @media print {
+            body.is-pdf .print-footer-page,
+            body:not(.is-pdf) .print-footer-page {
+                display: block;
             }
         }
 
+        body.is-pdf .print-footer-page {
+            display: block;
+        }
+
         .print-footer-logos {
-            width: 245px;
+            width: 42%;
             text-align: right;
+            vertical-align: top;
+        }
+
+        .print-footer-logo-block {
+            display: inline-block;
+            text-align: center;
+            vertical-align: top;
+            margin-left: auto;
+        }
+
+        body.is-pdf .print-footer-logo-block {
+            float: right;
+        }
+
+        .print-footer-logo-row {
             white-space: nowrap;
+            line-height: 1;
         }
 
         .print-footer-logo {
             max-height: 28px;
             max-width: 78px;
-            margin-left: 8px;
+            margin: 0 4px;
             object-fit: contain;
             vertical-align: middle;
+        }
+
+        .print-footer-affiliation {
+            margin-top: 4px;
+            color: #111827;
+            font-size: 6.5pt;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            text-align: center;
         }
 
         @media print {
@@ -849,13 +1147,20 @@
                 right: 0;
                 bottom: 0;
                 margin-top: 0;
-                padding: 4px 0 0;
+                padding: 4px 6mm 0;
                 background: #fff;
             }
 
             body:not(.is-pdf) .document-shell {
-                padding-bottom: 28mm;
+                padding-bottom: 20mm;
             }
+        }
+
+        /* PDF: pin shared footer to page bottom via WeasyPrint running elements */
+        body.is-pdf .print-footer {
+            position: running(doc-footer);
+            margin-top: 0;
+            width: 100%;
         }
     </style>
 
@@ -870,7 +1175,7 @@
     {% block extra_styles %}{% endblock %}
 </head>
 
-<body class="{% if is_pdf %}is-pdf{% endif %}" data-company-name="{% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}">
+<body class="{% if is_pdf %}is-pdf{% endif %}" data-company-name="{% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name|branch_print_name }}{% else %}Smart Vehicle Repairs{% endif %}">
     {% if show_print_controls %}
     <div class="no-print" style="position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:6px;">
         <button onclick="window.print()" style="padding:6px 10px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Print</button>
@@ -878,82 +1183,107 @@
     </div>
     {% endif %}
     <div class="document-shell{% if show_print_controls %} is-browser-preview{% endif %}">
+    {% if is_pdf %}
+    {# Running footers only apply from their source position onward — place first for every page. #}
+    {% include 'printing/base/components/footer.html' %}
+    {% endif %}
     {% if watermark %}
     <div class="watermark">{{ watermark.text }}</div>
     {% endif %}
 
-    <!-- New Header Section -->
-    <div class="header-container">
-        <!-- Left: Logo & Company Info -->
-        <div class="header-left">
-            {% if logo_path %}
-            <img src="{{ logo_path }}" class="logo-img" alt="Logo">
-            {% elif branch and branch.logo_url %}
-            <img src="{{ branch.logo_url }}" class="logo-img" alt="Logo">
-            {% else %}
-            <!-- Fallback Logo Placeholder -->
-            <div class="logo-placeholder">S</div>
-            {% endif %}
+    <!-- Header -->
+    <table class="header-container" role="presentation">
+        <tr>
+            <td class="header-left">
+                <table class="header-brand" role="presentation">
+                    <tr>
+                        <td class="header-brand-logo">
+                            {% if logo_path %}
+                            <img src="{{ logo_path }}" class="logo-img" alt="Logo">
+                            {% elif branch and branch.logo_url %}
+                            <img src="{{ branch.logo_url }}" class="logo-img" alt="Logo">
+                            {% else %}
+                            <div class="logo-placeholder">S</div>
+                            {% endif %}
+                        </td>
+                        <td class="company-details">
+                            <div class="text-xl font-bold text-gray-900 mb-1">
+                                {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name|branch_print_name }}{% else %}Smart Vehicle Repairs{% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {% if company_address %}<div>{{ company_address }}</div>{% endif %}
+                                {% if company_area or company_city or company_region or company_state or company_zip %}
+                                <div>
+                                    {% if company_area %}{{ company_area }}{% if company_city or company_region or company_state %}, {% endif %}{% endif %}{% if company_city %}{{ company_city }}{% if company_region or company_state %}, {% endif %}{% endif %}{% if company_region %}{{ company_region }}{% elif company_state %}{{ company_state }}{% endif %}{% if company_zip and not company_area and not company_region %} {{ company_zip }}{% endif %}
+                                </div>
+                                {% endif %}
+                                {% if company_phone %}<div>Phone: {{ company_phone }}</div>{% endif %}
+                                {% if company_email %}<div>Email: {{ company_email }}</div>{% endif %}
+                                {% if company_website %}<div>{{ company_website }}</div>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
 
-            <div class="company-details">
-                <div class="text-xl font-bold text-gray-900 mb-1">
-                    {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}
-                </div>
-                <!-- Company Address / Contact -->
-                <div class="text-xs text-gray-500">
-                    {% if company_address %}<div>{{ company_address }}</div>{% endif %}
-                    {% if company_area or company_city or company_region or company_state or company_zip %}
-                    <div>
-                        {% if company_area %}{{ company_area }}{% if company_city or company_region or company_state %}, {% endif %}{% endif %}{% if company_city %}{{ company_city }}{% if company_region or company_state %}, {% endif %}{% endif %}{% if company_region %}{{ company_region }}{% elif company_state %}{{ company_state }}{% endif %}{% if company_zip and not company_area and not company_region %} {{ company_zip }}{% endif %}
-                    </div>
+            {% if company_tax_id or company_registration or branch or company_tagline %}
+            <td class="header-right">
+                {% if company_tax_id or company_registration or branch %}
+                <table class="header-meta" role="presentation">
+                    {% if company_tax_id %}
+                    <tr>
+                        <td class="header-meta-line"><span class="header-meta-label">Tax ID:</span> {{ company_tax_id }}</td>
+                    </tr>
                     {% endif %}
-                    {% if company_phone %}<div>Phone: {{ company_phone }}</div>{% endif %}
-                    {% if company_email %}<div>Email: {{ company_email }}</div>{% endif %}
-                    {% if company_website %}<div>{{ company_website }}</div>{% endif %}
+                    {% if company_registration %}
+                    <tr>
+                        <td class="header-meta-line"><span class="header-meta-label">Reg. No:</span> {{ company_registration }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if branch %}
+                    <tr class="header-meta-branch">
+                        <td class="header-meta-line"><span class="header-meta-label">Branch:</span> {{ branch.name|branch_print_name }}</td>
+                    </tr>
+                    {% if branch.phone %}
+                    <tr>
+                        <td class="header-meta-line"><span class="header-meta-label">Phone:</span> {{ branch.phone }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endif %}
+                </table>
+                {% endif %}
+                {% if company_tagline %}
+                <div class="header-tagline">{{ company_tagline }}</div>
+                {% endif %}
+            </td>
+            {% endif %}
+        </tr>
+    </table>
+
+    <!-- Document Title Bar -->
+    <table class="doc-title-bar" role="presentation">
+        <tr>
+            <td class="doc-title-left">
+                <div class="doc-type">{% block document_type %}Document{% endblock %}</div>
+                <div class="doc-number">
+                    <span class="doc-number-hash">#</span>{% block document_number %}000000{% endblock %}
                 </div>
-            </div>
-        </div>
-
-        {% if company_tax_id or company_registration or branch or company_tagline %}
-        <div class="header-right text-right text-xs text-gray-500">
-            {% if company_tax_id %}
-            <div>Tax ID: <span class="font-semibold text-gray-900">{{ company_tax_id }}</span></div>
-            {% endif %}
-            {% if company_registration %}
-            <div>Reg. No: <span class="font-semibold text-gray-900">{{ company_registration }}</span></div>
-            {% endif %}
-            {% if branch %}<div>{{ branch.name }}</div>{% endif %}
-            {% if company_tagline %}
-            <div class="mt-2 text-gray-400 italic">{{ company_tagline }}</div>
-            {% endif %}
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Document Title Bar (Moved out of header) -->
-    <div class="doc-title-bar">
-        <div class="text-left">
-            <div class="text-2xl font-bold uppercase text-primary">
-                {% block document_type %}Document{% endblock %}
-            </div>
-            <div class="text-lg font-bold text-gray-900">
-                # {% block document_number %}000000{% endblock %}
-            </div>
-        </div>
-
-        <!-- Meta Data (Date, Status) -->
-        <div class="text-right text-sm">
-            {% block document_meta %}{% endblock %}
-        </div>
-    </div>
+            </td>
+            <td class="doc-title-meta">
+                {% block document_meta %}{% endblock %}
+            </td>
+        </tr>
+    </table>
 
     <!-- Main Content -->
     <div class="content-wrapper">
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Footer -->
+    {% if not is_pdf %}
+    <!-- Footer (browser print/preview — fixed to page bottom via CSS) -->
     {% include 'printing/base/components/footer.html' %}
+    {% endif %}
     </div>
 </body>
 

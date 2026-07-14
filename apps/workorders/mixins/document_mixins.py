@@ -173,7 +173,7 @@ class WorkOrderDocumentMixin:
 
     @action(detail=True, methods=['get'])
     def print(self, request, pk=None):
-        """Return HTML for print view (same layout as PDF)."""
+        """Return HTML for internal work order print view."""
         from django.http import HttpResponse
         from apps.core.services.print_service import render_work_order_print_html
         
@@ -189,10 +189,99 @@ class WorkOrderDocumentMixin:
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['get'], url_path='job-card/print')
+    def job_card_print(self, request, pk=None):
+        """Return HTML for customer-facing Job Card (handed over at intake)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_job_card_print_html
+
+        work_order = self.get_object()
+        try:
+            html = render_job_card_print_html(work_order, branch=work_order.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Job card print error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate job card: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['get'])
     def pdf(self, request, pk=None):
-        """Generate PDF for work order"""
+        """Generate PDF for internal work order"""
         from apps.core.services.print_service import generate_work_order_pdf
         
         work_order = self.get_object()
         return generate_work_order_pdf(work_order)
+
+    @action(detail=True, methods=['get'], url_path='job-card/pdf')
+    def job_card_pdf(self, request, pk=None):
+        """Generate customer-facing Job Card PDF."""
+        from apps.core.services.print_service import generate_job_card_pdf
+
+        work_order = self.get_object()
+        try:
+            return generate_job_card_pdf(work_order, branch=work_order.branch)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Job card PDF error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate job card PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], url_path='send-job-card-whatsapp')
+    def send_job_card_whatsapp(self, request, pk=None):
+        """Preview or send job card via WhatsApp (confirm=true to deliver)."""
+        work_order = self.get_object()
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            from apps.notifications_app.whatsapp_share import build_job_card_share
+
+            share = build_job_card_share(work_order)
+            if not share.get('phone_number'):
+                return Response(
+                    {"error": "Customer phone number not available"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            confirmed = bool(request.data.get('confirm'))
+            if not confirmed:
+                return Response({
+                    "mode": "preview",
+                    "success": False,
+                    "message": share.get("message"),
+                    "phone_number": share.get("phone_number"),
+                    "phone_display": share.get("phone_display"),
+                    "portal_url": share.get("portal_url"),
+                    "document_pdf_url": share.get("document_pdf_url"),
+                })
+
+            result = notification_triggers.send_job_card_whatsapp(work_order)
+            if result.get('mode') == 'api' and result.get('success'):
+                return Response({
+                    "mode": "api",
+                    "success": True,
+                    "message": "Job card sent via WhatsApp",
+                    "phone_number": result.get("phone_number"),
+                    "phone_display": result.get("phone_display") or share.get("phone_display"),
+                    "document_pdf_url": result.get("document_pdf_url") or share.get("document_pdf_url"),
+                })
+
+            return Response({
+                "mode": "manual",
+                "success": False,
+                "message": result.get("message") or share.get("message"),
+                "phone_number": result.get("phone_number") or share.get("phone_number"),
+                "phone_display": result.get("phone_display") or share.get("phone_display"),
+                "portal_url": result.get("portal_url") or share.get("portal_url"),
+                "document_pdf_url": result.get("document_pdf_url") or share.get("document_pdf_url"),
+            })
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("Job card WhatsApp send failed: %s", e, exc_info=True)
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

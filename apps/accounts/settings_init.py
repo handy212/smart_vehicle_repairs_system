@@ -78,6 +78,11 @@ DEFAULT_SETTINGS = {
         {'key': 'notification_email_enabled', 'value': 'true', 'description': 'Enable email notifications'},
         {'key': 'notification_sms_enabled', 'value': 'false', 'description': 'Enable SMS notifications'},
         {'key': 'notification_push_enabled', 'value': 'false', 'description': 'Enable push notifications'},
+        {'key': 'whatsapp_enabled', 'value': 'false', 'description': 'Enable Meta WhatsApp Cloud API sends'},
+        {'key': 'whatsapp_access_token', 'value': '', 'description': 'Meta WhatsApp permanent access token', 'is_secret': True},
+        {'key': 'whatsapp_phone_number_id', 'value': '', 'description': 'Meta WhatsApp phone number ID'},
+        {'key': 'whatsapp_business_account_id', 'value': '', 'description': 'Meta WhatsApp business account ID'},
+        {'key': 'whatsapp_api_version', 'value': 'v22.0', 'description': 'Meta Graph API version for WhatsApp'},
     ],
     'security': [
         {'key': 'password_min_length', 'value': '8', 'description': 'Minimum password length'},
@@ -104,6 +109,15 @@ DEFAULT_SETTINGS = {
         {'key': 'deposit_percentage', 'value': '0', 'description': 'Deposit percentage'},
         {'key': 'cancellation_policy', 'value': '', 'description': 'Cancellation policy'},
         {
+            'key': 'invoice_bank_details',
+            'value': '',
+            'description': (
+                'Bank / payment details printed on invoices and estimates. Separate each bank or MoMo '
+                'account with a blank line (or start each with BANK NAME: / MTN MOMO). '
+                'Leave blank to hide.'
+            ),
+        },
+        {
             'key': 'invoice_terms_and_conditions',
             'value': (
                 '1. Ghs 100.00 per day Vehicle Storage Fee applicable when waiting on customer beyond 48 hours.\n'
@@ -114,6 +128,7 @@ DEFAULT_SETTINGS = {
             ),
             'description': 'Terms & Conditions printed on invoices (PDF and print)',
         },
+
         {
             'key': 'estimate_terms_and_conditions',
             'value': (
@@ -157,6 +172,17 @@ DEFAULT_SETTINGS = {
         {'key': 'recaptcha_enabled', 'value': 'false', 'description': ''},
         {'key': 'recaptcha_site_key', 'value': '', 'description': ''},
         {'key': 'recaptcha_secret_key', 'value': '', 'description': '', 'is_secret': True},
+        {
+            'key': 'google_oauth_client_id',
+            'value': '',
+            'description': 'Google OAuth Web Client ID (public; used by Sign in with Google)',
+        },
+        {
+            'key': 'google_oauth_client_secret',
+            'value': '',
+            'description': 'Google OAuth Client Secret',
+            'is_secret': True,
+        },
         {'key': 'firebase_enabled', 'value': 'false', 'description': ''},
         {'key': 'firebase_api_key', 'value': '', 'description': '', 'is_secret': True},
         {'key': 'firebase_project_id', 'value': '', 'description': ''},

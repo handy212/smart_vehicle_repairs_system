@@ -390,7 +390,16 @@ class VehicleViewSet(viewsets.ModelViewSet):
                         })
                 response_data['smart_suggestions'] = smart_suggestions
                 return Response(response_data)
-            return Response({'message': 'No routine service types defined.'}, status=status.HTTP_404_NOT_FOUND)
+            # Missing seed data (e.g. init_service_types not run) — empty suggestion, not an error
+            return Response({
+                'suggested_service_id': None,
+                'suggested_service_name': None,
+                'suggested_bundle_id': None,
+                'reason': 'No routine service types defined.',
+                'last_service_name': None,
+                'is_repeat': False,
+                'smart_suggestions': [],
+            })
 
         # 2. Determine the next service in progression
         current_order = latest_schedule.service_type.progression_order

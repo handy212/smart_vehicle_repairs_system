@@ -17,6 +17,7 @@ from .views import (
 from apps.mobile_views import mobile_search_api
 # Import customer auth views
 from apps.customers import auth_views as customer_auth_views
+from apps.notifications_app.views import PublicSignedDocumentPdfView
 
 
 urlpatterns = [
@@ -41,6 +42,10 @@ urlpatterns = [
     path('api/health/', health_check, name='api-health'),
     path('api/health/live/', health_live, name='api-health-live'),
     path('api/health/ready/', health_ready, name='api-health-ready'),
+
+    # Short public document PDF links (WhatsApp / Meta) — /d/<code>/
+    path('d/<str:code>/', PublicSignedDocumentPdfView.as_view(), name='public-short-document-pdf'),
+    path('api/d/<str:code>/', PublicSignedDocumentPdfView.as_view(), name='api-public-short-document-pdf'),
     
     # Global Search API (accessible via /api/search/ for frontend proxy routing)
     path('api/search/', mobile_search_api, name='api-search'),

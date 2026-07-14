@@ -377,6 +377,14 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         data = {}
         for setting in settings:
             data[setting.key] = setting.value
+
+        # Google client ID is public by design — ensure env-configured value is available
+        # even when the DB setting row is empty.
+        if not (data.get('google_oauth_client_id') or '').strip():
+            from apps.accounts.settings_utils import get_setting
+            env_client_id = (get_setting('google_oauth_client_id', '') or '').strip()
+            if env_client_id:
+                data['google_oauth_client_id'] = env_client_id
         
         return Response(data)
     

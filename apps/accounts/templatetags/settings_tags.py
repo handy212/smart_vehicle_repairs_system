@@ -21,12 +21,34 @@ def get_setting_value(key, default=''):
 def get_print_footer_branches():
     try:
         from apps.branches.models import Branch
+        from apps.branches.utils import branch_print_display_name
 
-        return Branch.objects.filter(is_active=True).only(
-            'name',
-        ).order_by('name')
+        branches = Branch.objects.filter(is_active=True).only('name').order_by('name')
+        return [
+            {
+                'name': branch.name,
+                'display_name': branch_print_display_name(branch.name),
+            }
+            for branch in branches
+        ]
     except DatabaseError:
         return []
+
+
+@register.filter
+def branch_print_name(name):
+    """Strip trailing 'Branch' from a branch name for print footers."""
+    from apps.branches.utils import branch_print_display_name
+
+    return branch_print_display_name(name or '')
+
+
+@register.filter
+def bank_detail_accounts(text):
+    """Split free-text bank details into separate payment accounts for printing."""
+    from apps.accounts.bank_details import parse_invoice_bank_accounts
+
+    return parse_invoice_bank_accounts(text)
 
 
 @register.simple_tag

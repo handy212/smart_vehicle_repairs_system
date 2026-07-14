@@ -28,6 +28,7 @@ import { InvoiceActivityLog } from "./components/InvoiceActivityLog";
 import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { DocumentWhatsAppButton } from "@/components/shared/DocumentWhatsAppButton";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { Undo2 } from "lucide-react";
@@ -478,6 +479,16 @@ export default function InvoiceDetailPage() {
                           <Mail className="w-4 h-4" />
                           {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                         </button>
+                      )}
+                      {canSendInvoice && (
+                        <DocumentWhatsAppButton
+                          asMenuItem
+                          label="Send WhatsApp"
+                          successTitle="Invoice WhatsApp"
+                          send={(opts) => billingApi.invoices.sendWhatsApp(invoiceId, opts)}
+                          onComplete={() => setShowActionsMenu(false)}
+                          className="border-t border-border mt-1"
+                        />
                       )}
                       {/* // Only show Convert to Invoice for proforma invoices */}
                       {canConvertProforma && invoice.status === 'proforma' && (

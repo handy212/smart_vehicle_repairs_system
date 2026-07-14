@@ -801,7 +801,7 @@ export default function WorkOrdersPage() {
                               </PermissionGuard>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openPrintWindow({ documentType: 'work_order', documentId: workorder.id })} className="text-xs">
+                            <DropdownMenuItem onClick={() => openPrintWindow({ documentType: 'job_card', documentId: workorder.id })} className="text-xs">
                               <Printer className="mr-2 h-3.5 w-3.5" />
                               Print Job Card
                             </DropdownMenuItem>

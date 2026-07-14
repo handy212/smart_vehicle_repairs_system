@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils/cn";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useBranchStore } from "@/store/branchStore";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { DocumentWhatsAppButton } from "@/components/shared/DocumentWhatsAppButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EstimateNotes } from "./components/EstimateNotes";
 import { EstimateReminders } from "./components/EstimateReminders";
@@ -518,6 +519,15 @@ export default function EstimateDetailPage() {
                         <Mail className="w-4 h-4" />
                         {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                       </button>
+                    )}
+                    {canSendEstimate && (
+                      <DocumentWhatsAppButton
+                        asMenuItem
+                        label="Send WhatsApp"
+                        successTitle="Estimate WhatsApp"
+                        send={(opts) => billingApi.estimates.sendWhatsApp(estimateId, opts)}
+                        onComplete={() => setShowActionsMenu(false)}
+                      />
                     )}
                     {canEditInUi && (
                       <Link href={`/billing/estimates/${estimateId}/edit`}>

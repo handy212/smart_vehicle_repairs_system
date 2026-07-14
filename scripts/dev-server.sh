@@ -159,66 +159,22 @@ if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
     echo ""
 fi
 
-# Detect docker-compose command (v1: docker-compose, v2: docker compose)
-DOCKER_COMPOSE_CMD=""
+# Prefer start-docker-dev.sh (works with Docker Desktop / docker.exe on WSL)
 USE_DOCKER=false
-
-if command -v docker &> /dev/null; then
-    if command -v docker-compose &> /dev/null; then
-        DOCKER_COMPOSE_CMD="docker-compose"
-        USE_DOCKER=true
-    elif docker compose version &> /dev/null 2>&1; then
-        DOCKER_COMPOSE_CMD="docker compose"
-        USE_DOCKER=true
-    fi
-fi
-
-# Start Docker services (PostgreSQL and Redis)
-if [ "$USE_DOCKER" = true ] && [ -f "$PROJECT_DIR/scripts/start-docker-dev.sh" ]; then
+if [ -f "$PROJECT_DIR/scripts/start-docker-dev.sh" ]; then
     echo -e "${BLUE}Starting Docker services (PostgreSQL & Redis)...${NC}"
-    bash "$PROJECT_DIR/scripts/start-docker-dev.sh" 2>&1
-    
-    if [ $? -eq 0 ]; then
+    if bash "$PROJECT_DIR/scripts/start-docker-dev.sh" 2>&1; then
+        USE_DOCKER=true
         echo -e "${GREEN}✓ Docker services started${NC}"
         echo ""
     else
         echo -e "${YELLOW}Warning: Failed to start Docker services${NC}"
         echo -e "${YELLOW}Run: bash scripts/start-docker-dev.sh${NC}"
-        echo ""
-    fi
-elif [ "$USE_DOCKER" = true ] && [ ! -z "$DOCKER_COMPOSE_CMD" ] && [ -f "$PROJECT_DIR/docker-compose.dev.yml" ]; then
-    echo -e "${BLUE}Starting Docker services (PostgreSQL & Redis)...${NC}"
-    cd "$PROJECT_DIR"
-    $DOCKER_COMPOSE_CMD -f docker-compose.dev.yml up -d 2>&1
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓ Docker services started${NC}"
-        echo ""
-        
-        # Wait for PostgreSQL to be ready
-        echo -e "${YELLOW}Waiting for PostgreSQL to be ready...${NC}"
-        timeout=30
-        counter=0
-        while ! docker exec smart_vehicle_postgres_dev pg_isready -U postgres > /dev/null 2>&1; do
-            sleep 1
-            counter=$((counter + 1))
-            if [ $counter -ge $timeout ]; then
-                echo -e "${RED}✗ PostgreSQL failed to start${NC}"
-                echo -e "${YELLOW}Continuing anyway...${NC}"
-                break
-            fi
-        done
-        if [ $counter -lt $timeout ]; then
-            echo -e "${GREEN}✓ PostgreSQL is ready${NC}"
-        fi
-        echo ""
-    else
-        echo -e "${YELLOW}Warning: Failed to start Docker services${NC}"
-        echo -e "${YELLOW}Make sure PostgreSQL and Redis are running, or install Docker Compose${NC}"
+        echo -e "${YELLOW}Assuming PostgreSQL and Redis are already running...${NC}"
         echo ""
     fi
 else
-    echo -e "${YELLOW}Docker Compose not found. Skipping Docker services.${NC}"
+    echo -e "${YELLOW}Docker helper not found. Skipping Docker services.${NC}"
     echo -e "${YELLOW}Assuming PostgreSQL and Redis are already running...${NC}"
     echo ""
 fi
@@ -247,22 +203,21 @@ EOF
 echo -e "${GREEN}✓ Frontend proxy target: http://127.0.0.1:$DJANGO_PORT/api (browser calls /api)${NC}"
 echo ""
 
-# Check if development database exists
+# Check if development database is reachable (uses DATABASE_URL from .env)
 echo -e "${YELLOW}Checking database connection...${NC}"
-if python manage.py dbshell --command="\q" > /dev/null 2>&1; then
+if python -c "import django; django.setup(); from django.db import connection; connection.ensure_connection()" > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Database connection successful${NC}"
 else
-    echo -e "${YELLOW}Database connection failed. Attempting to create database...${NC}"
-    echo -e "${YELLOW}If this fails, create the database manually:${NC}"
-    echo -e "${YELLOW}  sudo -u postgres psql -c \"CREATE DATABASE aap_dev OWNER aap;\"${NC}"
-    echo -e "${YELLOW}  sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE aap_dev TO aap;\"${NC}"
+    echo -e "${YELLOW}Database connection failed.${NC}"
+    echo -e "${YELLOW}Ensure Docker Postgres is up (bash scripts/start-docker-dev.sh) and DATABASE_URL in .env points at it:${NC}"
+    echo -e "${YELLOW}  DATABASE_URL=postgresql://postgres:postgres@localhost:5433/smart_vehicle_repairs_dev${NC}"
     echo ""
 fi
 
-# Run migrations
+# Run migrations (--skip-checks: mapping_specs queries DB at import before tables exist)
 echo -e "${YELLOW}Running database migrations...${NC}"
 python scripts/patch_django52_libs.py
-python manage.py migrate
+python manage.py migrate --skip-checks
 
 echo -e "${GREEN}✓ Database ready${NC}"
 echo ""
@@ -285,6 +240,14 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}    ✓ E2E users ready${NC}"
 else
     echo -e "${YELLOW}    ⚠ E2E user seed skipped or failed${NC}"
+fi
+
+echo -e "${YELLOW}  - Initializing vehicle service types...${NC}"
+python manage.py init_service_types > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}    ✓ Service types ready${NC}"
+else
+    echo -e "${YELLOW}    ⚠ Service types already exist or failed${NC}"
 fi
 
 # Initialize system settings
