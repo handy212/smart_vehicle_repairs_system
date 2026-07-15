@@ -354,6 +354,14 @@ class TemplateRenderDocumentBranchScopeTests(TestCase):
 class WhatsAppSendApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        Permission.objects.update_or_create(
+            code='edit_invoices',
+            defaults={
+                'name': 'Edit Invoices',
+                'category': 'billing',
+                'is_active': True,
+            },
+        )
         self.staff = User.objects.create_user(
             username='wa-api-staff2',
             email='wa-api-staff2@example.com',
