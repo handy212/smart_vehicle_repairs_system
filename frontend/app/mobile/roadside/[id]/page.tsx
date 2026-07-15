@@ -24,7 +24,6 @@ import {
 } from "@/lib/mobile/roadside-display";
 import { getMediaUrl } from "@/lib/api/utils";
 import {
-  ArrowLeft,
   MapPin,
   User,
   Car,
@@ -229,16 +228,13 @@ export default function RoadsideDetailPage() {
     (accepted || phase === "done" || siteNotes.length > 0 || sitePhotos.length > 0);
 
   return (
-    <div className="min-h-0 flex-1 bg-muted">
-      <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-card px-3 py-3 shadow-sm">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Back">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <span className="text-sm font-medium text-muted-foreground">Roadside job</span>
-      </div>
-
+    <>
       <MobilePageShell
         withActionBar={roadsideHasActionBar(request, userId)}
+        backHref="/mobile/roadside"
+        backLabel="Jobs"
+        title={request.request_number}
+        description="Roadside job"
         className="space-y-4"
       >
         <RoadsideJobHeader
@@ -461,6 +457,6 @@ export default function RoadsideDetailPage() {
           </Card>
         )}
       </MobilePageShell>
-    </div>
+    </>
   );
 }

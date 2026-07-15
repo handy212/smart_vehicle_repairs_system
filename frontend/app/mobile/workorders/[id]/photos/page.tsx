@@ -7,7 +7,6 @@ import { photosDB, compressPhoto } from "@/lib/offline/photos";
 import { useOfflineStore } from "@/store/offlineStore";
 import { useToast } from "@/lib/hooks/useToast";
 import {
-    ArrowLeft,
     Camera,
     Image as ImageIcon,
     Upload,
@@ -18,9 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { cn } from "@/lib/utils";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { getUserFacingError } from "@/lib/api/errors";
 
 interface Photo {
@@ -173,22 +170,12 @@ export default function WorkOrderPhotosPage() {
     });
 
     return (
-        <div className="min-h-screen bg-muted bg-background">
-            {/* Header */}
-            <div className="bg-card border-b border-border sticky top-0 z-10">
-                <div className="px-4 py-3 flex items-center justify-between">
-                    <Link href={`/mobile/workorders/${workOrderId}`}>
-                        <Button variant="ghost" size="sm">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
-                        </Button>
-                    </Link>
-                    <h1 className="text-lg font-semibold">Photos</h1>
-                    <div className="w-20" /> {/* Spacer for centering */}
-                </div>
-            </div>
-
-            <div className="p-4 space-y-4">
+        <MobilePageShell
+            backHref={`/mobile/workorders/${workOrderId}`}
+            backLabel="Work order"
+            title="Photos"
+            className="space-y-4"
+        >
                 {/* Upload Section */}
                 <Card>
                     <CardContent className="pt-6">
@@ -310,7 +297,6 @@ export default function WorkOrderPhotosPage() {
                         ))}
                     </div>
                 )}
-            </div>
-        </div>
+        </MobilePageShell>
     );
 }

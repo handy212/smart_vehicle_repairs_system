@@ -1,40 +1,35 @@
 "use client";
 
 import { useOfflineStore } from "@/store/offlineStore";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Wifi, WifiOff, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { WifiOff } from "lucide-react";
 
-export function OfflineIndicator() {
-  const { isOnline, hasUnsyncedData, isSyncing, sync } = useOfflineStore();
+type OfflineIndicatorProps = {
+  /**
+   * Legacy Sync button in the header. Prefer SyncStatusBanner for Sync Now.
+   * @default false
+   */
+  showSync?: boolean;
+};
 
-  if (isOnline && !hasUnsyncedData) {
+/**
+ * Compact offline glyph for the app header.
+ * Sync CTA lives on SyncStatusBanner to avoid duplicate controls.
+ */
+export function OfflineIndicator({ showSync: _showSync = false }: OfflineIndicatorProps) {
+  const { isOnline } = useOfflineStore();
+
+  if (isOnline) {
     return null;
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {!isOnline && (
-        <div className="flex items-center gap-1 text-xs text-warning dark:text-warning">
-          <WifiOff className="h-4 w-4" />
-          <span className="hidden sm:inline">Offline</span>
-        </div>
-      )}
-      {hasUnsyncedData && isOnline && (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => sync()}
-          disabled={isSyncing}
-          className="h-7 px-2 text-xs"
-        >
-          <RefreshCw
-            className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")}
-          />
-          <span className="hidden sm:inline">Sync</span>
-        </Button>
-      )}
+    <div
+      className="flex items-center gap-1 px-1 text-xs text-warning"
+      title="You are offline"
+      aria-label="Offline"
+    >
+      <WifiOff className="h-4 w-4" />
+      <span className="sr-only sm:not-sr-only sm:inline">Offline</span>
     </div>
   );
 }

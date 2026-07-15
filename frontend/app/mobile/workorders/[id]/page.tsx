@@ -14,7 +14,6 @@ import apiClient from "@/lib/api/client";
 import { getUserFacingError } from "@/lib/api/apiErrors";
 import { timeLogsApi } from "@/lib/api/timeLogs";
 import {
-  ArrowLeft,
   Clock,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   CheckCircle,
@@ -28,6 +27,7 @@ import {
   Car,
   FileText,
   Package,
+  Camera,
   AlertTriangle,
   X,
   RefreshCw,
@@ -49,6 +49,7 @@ import {
   parseWorkOrderMoney,
   resolveWorkOrderInvoiceAmount,
 } from "@/lib/workorders/workOrderBillingDisplay";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { MobileWorkOrderSections } from "@/components/mobile/workorder/MobileWorkOrderSections";
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
@@ -386,24 +387,34 @@ export default function MobileWorkOrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-4 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+      <MobilePageShell
+        backHref="/mobile/workorders"
+        backLabel="Work Orders"
+        className="space-y-4"
+      >
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading...</p>
+          </div>
         </div>
-      </div>
+      </MobilePageShell>
     );
   }
 
   if (!workOrder) {
     return (
-      <div className="p-4 text-center">
-        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">Work order not found</p>
-        <Link href="/mobile/workorders">
-          <Button className="mt-4">Back to Work Orders</Button>
-        </Link>
-      </div>
+      <MobilePageShell
+        backHref="/mobile/workorders"
+        backLabel="Work Orders"
+        title="Work Order"
+        className="space-y-4"
+      >
+        <div className="text-center">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="text-muted-foreground">Work order not found</p>
+        </div>
+      </MobilePageShell>
     );
   }
 
@@ -433,133 +444,119 @@ export default function MobileWorkOrderDetailPage() {
     return colors[status] || "bg-muted text-foreground";
   };
 
+  const vehicleSummary =
+    workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle";
+
+  const statusBadgeClass = cn(
+    "text-xs shrink-0",
+    workOrder.status === "in_progress" &&
+      "bg-warning/15 text-primary dark:bg-warning/20 dark:text-warning",
+    workOrder.status === "assigned" && "bg-warning/15 text-warning",
+    workOrder.status === "approved" && "bg-success/15 text-success",
+    workOrder.status === "completed" && "bg-success/15 text-success",
+    workOrder.status === "paused" &&
+      "bg-warning/15 text-primary dark:bg-warning/20 dark:text-warning"
+  );
+
+  const billingDisplay = getWorkOrderListBillingDisplay(workOrder, {
+    audience: "staff",
+    formatDue: formatCurrency,
+  });
+  const invoiceAmount = resolveWorkOrderInvoiceAmount(workOrder);
+  const estimated = parseWorkOrderMoney(workOrder.estimated_total);
+
   return (
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link href="/mobile/workorders">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        {!isOnline && (
-          <Badge variant="outline" className="bg-warning/10 text-primary border-warning/20">
+    <MobilePageShell
+      backHref="/mobile/workorders"
+      backLabel="Work Orders"
+      title={workOrder.work_order_number || `WO #${workOrder.id}`}
+      description={vehicleSummary}
+      actions={
+        !isOnline ? (
+          <Badge variant="outline" className="border-warning/20 bg-warning/10 text-primary">
             Offline
           </Badge>
-        )}
-      </div>
-
-      {/* Work Order Info */}
+        ) : undefined
+      }
+      className="space-y-4"
+    >
+      {/* Compact Summary */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">
-              {workOrder.work_order_number || `WO #${workOrder.id}`}
-            </CardTitle>
-            <Badge
-              className={cn(
-                "text-xs",
-                workOrder.status === "in_progress" &&
-                "bg-warning/15 text-primary dark:bg-warning/20 dark:text-warning",
-                workOrder.status === "assigned" &&
-                "bg-warning/15 text-warning",
-                workOrder.status === "approved" &&
-                "bg-success/15 text-success",
-                workOrder.status === "completed" &&
-                "bg-success/15 text-success",
-                workOrder.status === "paused" &&
-                "bg-warning/15 text-primary dark:bg-warning/20 dark:text-warning"
-              )}
-            >
+        <CardContent className="space-y-3 pt-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-start gap-2">
+              <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-foreground">
+                  {getWorkOrderCustomerDisplayName(workOrder)}
+                </div>
+                {workOrder.primary_technician_name && (
+                  <div className="text-xs text-muted-foreground">
+                    Tech: {workOrder.primary_technician_name}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Badge className={statusBadgeClass}>
               {workOrder.status?.replace("_", " ").toUpperCase()}
             </Badge>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-2">
-            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div className="flex-1">
-              <div className="text-sm font-medium text-foreground">
-                {getWorkOrderCustomerDisplayName(workOrder)}
-              </div>
-              {workOrder.primary_technician_name && (
-                <div className="text-xs text-muted-foreground">
-                  Tech: {workOrder.primary_technician_name}
-                </div>
-              )}
-            </div>
-          </div>
 
           <div className="flex items-start gap-2">
-            <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div className="text-sm text-card-foreground">
-              {workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle"}
-            </div>
+            <Car className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="text-sm text-card-foreground">{vehicleSummary}</div>
           </div>
 
           {workOrder.customer_concerns && (
             <div className="flex items-start gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div className="text-sm text-card-foreground">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="line-clamp-2 text-sm text-card-foreground">
                 {workOrder.customer_concerns}
               </div>
             </div>
           )}
 
-          {(() => {
-            const billing = getWorkOrderListBillingDisplay(workOrder, {
-              audience: "staff",
-              formatDue: formatCurrency,
-            });
-            const invoiceAmount = resolveWorkOrderInvoiceAmount(workOrder);
-            const estimated = parseWorkOrderMoney(workOrder.estimated_total);
-            if (!billing && estimated <= 0) return null;
-            return (
-              <div className="pt-2 border-t border-border space-y-2">
-                {billing && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Invoice Total</span>
-                    <div className="text-right">
-                      <span className="font-semibold text-foreground">
-                        {formatCurrency(billing.amount)}
-                      </span>
-                      {billing.statusLine && (
-                        <span className="block text-[10px] text-muted-foreground capitalize">
-                          {billing.statusLine}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {!invoiceAmount && estimated > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Estimated (shop)</span>
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(estimated)}
+          {(billingDisplay || (!invoiceAmount && estimated > 0)) && (
+            <div className="space-y-2 border-t border-border pt-2">
+              {billingDisplay && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Invoice Total</span>
+                  <div className="text-right">
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(billingDisplay.amount)}
                     </span>
+                    {billingDisplay.statusLine && (
+                      <span className="block text-[10px] capitalize text-muted-foreground">
+                        {billingDisplay.statusLine}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Quick Link to Photos */}
-          <div className="pt-3 border-t border-border">
-            <Link href={`/mobile/workorders/${workOrderId}/photos`}>
-              <Button variant="outline" size="sm" className="w-full">
-                <Package className="h-4 w-4 mr-2" />
-                View/Add Photos
-              </Button>
-            </Link>
-          </div>
+                </div>
+              )}
+              {!invoiceAmount && estimated > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Estimated (shop)</span>
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(estimated)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
+      <Link href={`/mobile/workorders/${workOrderId}/photos`}>
+        <Button variant="outline" size="sm" className="w-full">
+          <Camera className="mr-2 h-4 w-4" />
+          View/Add Photos
+        </Button>
+      </Link>
+
+      {/* Actions */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quick Actions</CardTitle>
+          <CardTitle className="text-base">Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {/* Time Tracking */}
@@ -962,6 +959,6 @@ export default function MobileWorkOrderDetailPage() {
       {workOrder && (
         <MobileWorkOrderSections workOrder={workOrder} workOrderId={workOrderId} />
       )}
-    </div>
+    </MobilePageShell>
   );
 }

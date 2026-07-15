@@ -169,6 +169,9 @@ const withPWA = withPWAInit({
   customWorkerSrc: "worker",
   register: true,
   disable: process.env.NODE_ENV === "development",
+  fallbacks: {
+    document: "/offline",
+  },
   // Keep default Workbox rules; override Next assets, media, and cross-origin
   // (see runtimeCaching). Custom rules are registered first and win on match.
   extendDefaultRuntimeCaching: true,

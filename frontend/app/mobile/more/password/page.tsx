@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { useToast } from "@/lib/hooks/useToast";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -46,55 +45,63 @@ export default function MobileChangePasswordPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-4 p-4">
-      <Link href="/mobile/more">
-        <Button variant="ghost" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-      </Link>
+    <MobilePageShell
+      title="Change Password"
+      backHref="/mobile/more"
+      backLabel="More"
+      className="space-y-4"
+    >
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Change Password</CardTitle>
+          <CardTitle className="text-base">Update login password</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current">Current password</Label>
+              <Label htmlFor="current_password">Current password</Label>
               <Input
-                id="current"
+                id="current_password"
                 type="password"
+                autoComplete="current-password"
                 value={form.current_password}
-                onChange={(e) => setForm({ ...form, current_password: e.target.value })}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, current_password: e.target.value }))
+                }
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new">New password</Label>
+              <Label htmlFor="new_password">New password</Label>
               <Input
-                id="new"
+                id="new_password"
                 type="password"
+                autoComplete="new-password"
                 value={form.new_password}
-                onChange={(e) => setForm({ ...form, new_password: e.target.value })}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, new_password: e.target.value }))
+                }
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm">Confirm new password</Label>
+              <Label htmlFor="confirm_password">Confirm new password</Label>
               <Input
-                id="confirm"
+                id="confirm_password"
                 type="password"
+                autoComplete="new-password"
                 value={form.confirm_password}
-                onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, confirm_password: e.target.value }))
+                }
                 required
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Saving..." : "Update Password"}
+              {loading ? "Updating…" : "Update password"}
             </Button>
           </form>
         </CardContent>
       </Card>
-    </div>
+    </MobilePageShell>
   );
 }

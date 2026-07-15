@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowLeft, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { notificationsApi, Notification } from "@/lib/api/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MobileErrorState } from "@/components/mobile/MobileErrorState";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
 import { cn } from "@/lib/utils";
 
@@ -94,24 +95,19 @@ export default function MobileNotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="mx-auto max-w-md space-y-4 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Link href="/mobile/more">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-          </Link>
-          <h2 className="text-xl font-bold">Notifications</h2>
-        </div>
-        {unreadCount > 0 && (
+    <MobilePageShell
+      title="Notifications"
+      backHref="/mobile/more"
+      backLabel="More"
+      className="space-y-4"
+      actions={
+        unreadCount > 0 ? (
           <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
             Mark all read
           </Button>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
       {notifications.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center py-12 text-center">
@@ -157,6 +153,6 @@ export default function MobileNotificationsPage() {
           })}
         </div>
       )}
-    </div>
+    </MobilePageShell>
   );
 }

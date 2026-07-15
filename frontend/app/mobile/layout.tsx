@@ -52,7 +52,7 @@ export default function MobileLayout({
               return;
             }
 
-            const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
+            const allowedRoles = new Set(["technician", "admin", "manager", "super-admin"]);
             if (!hasMobileAccess(currentUser) && !allowedRoles.has(currentUser.role)) {
               router.push("/dashboard");
               return;
@@ -71,7 +71,7 @@ export default function MobileLayout({
           return;
         }
 
-        const allowedRoles = new Set(['technician', 'admin', 'manager', 'super-admin']);
+        const allowedRoles = new Set(["technician", "admin", "manager", "super-admin"]);
         if (!hasMobileAccess(user) && !allowedRoles.has(user.role)) {
           if (isMounted) router.push("/dashboard");
         }
@@ -127,25 +127,26 @@ export default function MobileLayout({
   ].filter((item) => item.show);
 
   return (
-    <div className="min-h-screen bg-muted bg-background flex flex-col">
-      <SyncStatusBanner />
-      <header className="bg-card border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary p-1.5 rounded-lg">
-            <Wrench className="h-5 w-5 text-white" />
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Single sticky chrome: sync strip (when visible) + app header */}
+      <div className="sticky top-0 z-40 border-b border-border bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/90">
+        <SyncStatusBanner sticky={false} />
+        <header className="flex h-14 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-primary p-1.5">
+              <Wrench className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-lg font-bold text-foreground">Tech App</h1>
           </div>
-          <h1 className="text-lg font-bold text-foreground">
-            Tech App
-          </h1>
-        </div>
-        <div className="flex items-center gap-1">
-          <OfflineIndicator />
-          <MobileNotificationBell />
-          <div className="hidden text-sm text-muted-foreground sm:block">
-            {user?.first_name} {user?.last_name}
+          <div className="flex items-center gap-1">
+            <OfflineIndicator showSync={false} />
+            <MobileNotificationBell />
+            <div className="hidden text-sm text-muted-foreground sm:block">
+              {user?.first_name} {user?.last_name}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       <main className="flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom,0px))]">
         {children}
@@ -169,24 +170,12 @@ export default function MobileLayout({
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 text-xs transition-colors min-h-[44px]",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground"
+                  "flex min-h-[44px] flex-col items-center justify-center gap-1 text-xs transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
-                <Icon
-                  className={cn(
-                    "h-5 w-5",
-                    isActive && "text-primary"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "font-medium",
-                    isActive && "text-primary"
-                  )}
-                >
+                <Icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                <span className={cn("font-medium", isActive && "text-primary")}>
                   {item.label}
                 </span>
               </Link>

@@ -81,6 +81,7 @@ const PUBLIC_PATHS = [
     '/offline',
     '/favicon.ico',
     '/manifest.json',
+    '/manifest.webmanifest',
     '/sw.js',
     '/workbox-',
     '/worker-',

@@ -5,11 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { workordersApi, WorkOrder } from "@/lib/api/workorders";
 import { useOfflineStore } from "@/store/offlineStore";
 import { workOrdersDB } from "@/lib/offline/db";
-import { Wrench, Search, RefreshCw } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MobileErrorState } from "@/components/mobile/MobileErrorState";
+import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
+import { useAuthStore } from "@/store/authStore";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Wrench, Search, RefreshCw } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillingDisplay";
 import { getStatusLabel } from "@/lib/utils/workorder-status";
@@ -19,9 +23,6 @@ import {
   MOBILE_WO_STATUS_FILTERS,
   getMobileWorkOrderStatusBadgeClass,
 } from "@/lib/utils/mobile-workorder-filters";
-import { MobileErrorState } from "@/components/mobile/MobileErrorState";
-import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
-import { useAuthStore } from "@/store/authStore";
 
 export default function MobileWorkOrdersPage() {
   const { formatCurrency } = useCurrency();
@@ -121,9 +122,10 @@ export default function MobileWorkOrdersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Work Orders</h2>
+    <MobilePageShell
+      title="Work Orders"
+      className="space-y-4"
+      actions={
         <Button
           size="sm"
           variant="outline"
@@ -133,8 +135,8 @@ export default function MobileWorkOrdersPage() {
         >
           <RefreshCw className="h-4 w-4" />
         </Button>
-      </div>
-
+      }
+    >
       <div className="relative">
         <Search
           className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
@@ -242,6 +244,6 @@ export default function MobileWorkOrdersPage() {
           })}
         </div>
       )}
-    </div>
+    </MobilePageShell>
   );
 }
