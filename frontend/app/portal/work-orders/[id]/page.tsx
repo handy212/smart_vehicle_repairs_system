@@ -254,7 +254,7 @@ export default function WorkOrderDetailPage() {
     const getRecommendationPartsTotal = (rec: any) => Number(rec.estimated_parts_cost ?? rec.estimated_total_cost ?? 0);
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-8">
+        <div className="space-y-6 w-full pb-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -480,7 +480,7 @@ export default function WorkOrderDetailPage() {
                                 {approvedRecommendations.length > 0 && (
                                     <div className="divide-y">
                                         <div className="p-3 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                            <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                            <CheckCircle className="w-3.5 h-3.5 text-success" />
                                             Approved
                                         </div>
 
@@ -488,7 +488,7 @@ export default function WorkOrderDetailPage() {
                                             <div key={rec.id} className="p-4 opacity-75">
                                                 <div className="flex items-start gap-4">
                                                     <div className="mt-1">
-                                                        <CheckCircle className="w-5 h-5 text-green-600/50" />
+                                                        <CheckCircle className="w-5 h-5 text-success/50" />
                                                     </div>
                                                     <div className="flex-1 space-y-1">
                                                         <div className="flex items-center justify-between">
@@ -500,7 +500,7 @@ export default function WorkOrderDetailPage() {
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs">
-                                                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                                                            <Badge variant="outline" className="text-success border-success/20 bg-success/10">
                                                                 Approved
                                                             </Badge>
                                                         </div>
@@ -556,10 +556,10 @@ export default function WorkOrderDetailPage() {
                     </Card> */}
 
                     {["completed", "invoiced", "closed"].includes(workOrder.status) && (
-                        <Card className="border-none shadow-premium bg-gradient-to-br from-orange-50 to-indigo-50 dark:from-orange-900/10 dark:to-indigo-900/10">
+                        <Card className="border-none shadow-premium bg-gradient-to-br from-warning/10 to-primary/10 dark:from-warning/10 dark:to-primary/10">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                                    <Star className="h-5 w-5 text-warning fill-warning" />
                                     Service Experience
                                 </CardTitle>
                             </CardHeader>
@@ -572,7 +572,7 @@ export default function WorkOrderDetailPage() {
                                                 {[1, 2, 3, 4, 5].map((star) => (
                                                     <Star
                                                         key={star}
-                                                        className={`h-4 w-4 ${star <= (workOrder.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`}
+                                                        className={`h-4 w-4 ${star <= (workOrder.customer_rating || 0) ? "text-warning fill-warning" : "text-muted-foreground"}`}
                                                     />
                                                 ))}
                                             </div>
@@ -592,7 +592,7 @@ export default function WorkOrderDetailPage() {
                                                     onClick={() => setRating(star)}
                                                     className="focus:outline-none transition-transform hover:scale-110"
                                                 >
-                                                    <Star className={`h-8 w-8 ${star <= rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} />
+                                                    <Star className={`h-8 w-8 ${star <= rating ? "text-warning fill-warning" : "text-muted-foreground"}`} />
                                                 </button>
                                             ))}
                                         </div>
@@ -897,7 +897,7 @@ export default function WorkOrderDetailPage() {
                                 Cancel
                             </Button>
                             <Button
-                                className="flex-1 sm:flex-none bg-success hover:bg-green-700 text-white"
+                                className="flex-1 sm:flex-none bg-success hover:bg-success text-white"
                                 onClick={handleApproveWorkOrder}
                                 disabled={!customerSignature || !acceptedTerms || approveWorkOrderMutation.isPending}
                             >

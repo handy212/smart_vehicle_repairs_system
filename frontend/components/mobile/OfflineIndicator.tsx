@@ -16,7 +16,7 @@ export function OfflineIndicator() {
   return (
     <div className="flex items-center gap-2">
       {!isOnline && (
-        <div className="flex items-center gap-1 text-xs text-warning dark:text-orange-400">
+        <div className="flex items-center gap-1 text-xs text-warning dark:text-warning">
           <WifiOff className="h-4 w-4" />
           <span className="hidden sm:inline">Offline</span>
         </div>

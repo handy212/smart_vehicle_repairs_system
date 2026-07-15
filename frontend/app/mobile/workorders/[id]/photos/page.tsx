@@ -294,7 +294,7 @@ export default function WorkOrderPhotosPage() {
                                     )}
                                     <button
                                         onClick={() => handleDelete(photo)}
-                                        className="absolute top-2 left-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute top-2 left-2 bg-destructive/50 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>

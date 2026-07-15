@@ -54,8 +54,8 @@ export function StatsGrid({ stats, className, columns = 4 }: StatsGridProps) {
                             <span
                                 className={cn(
                                     "font-medium",
-                                    stat.change.trend === "up" ? "text-success dark:text-green-400" :
-                                        stat.change.trend === "down" ? "text-destructive dark:text-red-400" :
+                                    stat.change.trend === "up" ? "text-success dark:text-success" :
+                                        stat.change.trend === "down" ? "text-destructive dark:text-destructive" :
                                             "text-muted-foreground"
                                 )}
                             >

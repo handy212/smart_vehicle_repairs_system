@@ -171,11 +171,11 @@ export function InvoiceReminders({ invoice, currentUser }: InvoiceRemindersProps
                                         </td>
                                         <td className="px-4 py-3">
                                             {reminder.status === 'sent' || reminder.status === 'read' ? (
-                                                <Badge variant="success" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
+                                                <Badge variant="success" className="bg-success/15 text-success border-success/20 hover:bg-success/15">
                                                     Yes
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="bg-warning/10 text-yellow-700 border-yellow-200">
+                                                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
                                                     No
                                                 </Badge>
                                             )}
@@ -187,7 +187,7 @@ export function InvoiceReminders({ invoice, currentUser }: InvoiceRemindersProps
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                        <Bell className="w-12 h-12 text-gray-300 mb-3" />
+                        <Bell className="w-12 h-12 text-muted-foreground mb-3" />
                         <p className="text-lg font-medium text-foreground">No Reminders</p>
                         <p className="text-sm max-w-sm mt-1 mb-4">
                             You haven't set any reminders for this invoice yet.

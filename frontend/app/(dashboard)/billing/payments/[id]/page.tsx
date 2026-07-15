@@ -143,7 +143,7 @@ export default function PaymentDetailPage() {
           </Button>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">Payment {payment.payment_number}</h1>
+              <h1 className="text-xl font-bold tracking-tight">Payment {payment.payment_number}</h1>
               <Badge variant={getStatusVariant(payment.status)}>
                 {payment.status.replace("_", " ").toUpperCase()}
               </Badge>
@@ -234,7 +234,7 @@ export default function PaymentDetailPage() {
       )}
 
       {canRequestRefund && (
-        <Card className="border-amber-200/60 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20">
+        <Card className="border-warning/20 bg-warning/10 border-warning/20">
           <CardContent className="py-3 text-sm text-muted-foreground">
             Refunds use the approval workflow: your request is reviewed, then completed on the{" "}
             <Link href="/billing/refunds" className="font-medium text-primary hover:underline">
@@ -354,7 +354,7 @@ export default function PaymentDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/15">
                   <User className="h-5 w-5 text-primary" />
                 </div>
                 <div>

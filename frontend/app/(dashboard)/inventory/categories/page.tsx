@@ -148,7 +148,7 @@ export default function PartCategoriesPage() {
               <span>/</span>
               <span className="text-foreground font-medium">Categories</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Part Categories
             </h1>
           </div>

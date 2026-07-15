@@ -135,7 +135,7 @@ export default function BudgetsPage() {
             {/* Compact Header */}
             <div className="flex justify-between items-center pt-2 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Budgets</h1>
+                    <h1 className="text-xl font-bold tracking-tight text-foreground">Budgets</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Manage fiscal year budgets and track variance
                     </p>
@@ -245,7 +245,7 @@ export default function BudgetsPage() {
             )}
 
             {/* Budgets Table - Compact */}
-            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border dark:ring-border">
                 <CardHeader className="pb-3 border-b border-border">
                     <CardTitle className="text-base">All Budgets ({budgets?.length || 0})</CardTitle>
                 </CardHeader>
@@ -312,7 +312,7 @@ export default function BudgetsPage() {
                                                             size="sm"
                                                             onClick={() => activateMutation.mutate(budget.id)}
                                                             disabled={activateMutation.isPending}
-                                                            className="h-7 text-xs bg-success hover:bg-green-700"
+                                                            className="h-7 text-xs bg-success hover:bg-success"
                                                         >
                                                             <TrendingUp className="w-3 h-3 mr-1" />
                                                             Activate

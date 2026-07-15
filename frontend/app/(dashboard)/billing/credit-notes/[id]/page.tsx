@@ -155,7 +155,7 @@ export default function CreditNoteDetailPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                        <h1 className="text-xl font-bold text-foreground flex items-center gap-3">
                             Credit Note #{creditNote.credit_note_number}
 
                             <Badge variant={getStatusVariant(creditNote.status) as BadgeProps["variant"]} className="text-base">
@@ -172,7 +172,7 @@ export default function CreditNoteDetailPage() {
                         <Button
                             onClick={() => approveMutation.mutate()}
                             disabled={approveMutation.isPending}
-                            className="bg-success hover:bg-green-700"
+                            className="bg-success hover:bg-success"
                         >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             {approveMutation.isPending ? "Approving..." : "Approve & Issue"}

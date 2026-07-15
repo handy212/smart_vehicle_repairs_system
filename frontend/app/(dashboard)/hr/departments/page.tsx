@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
@@ -132,7 +132,7 @@ function DepartmentsList({ onEdit, onDelete }: { onEdit: (d: Department) => void
                     <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                             <CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /> {dept.name}</CardTitle>
-                            {dept.is_active ? <Badge variant="secondary" className="bg-green-100 text-green-700">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                            {dept.is_active ? <Badge variant="secondary" className="bg-success/15 text-success">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
                         </div>
                         <CardDescription className="line-clamp-2 min-h-[2.5rem]">{dept.description || "No description"}</CardDescription>
                     </CardHeader>
@@ -203,7 +203,7 @@ function PositionsList({ onEdit, onDelete }: { onEdit: (p: Position) => void, on
                             <TableCell className="font-medium">{pos.title}</TableCell>
                             <TableCell>{pos.department_name}</TableCell>
                             <TableCell>{pos.min_salary || "0"} - {pos.max_salary || "∞"}</TableCell>
-                            <TableCell>{pos.is_active ? <Badge variant="secondary" className="bg-green-100 text-green-700">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
+                            <TableCell>{pos.is_active ? <Badge variant="secondary" className="bg-success/15 text-success">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                             <TableCell>
                                 <PermissionGuard permission="manage_departments">
                                     <div className="flex gap-1 justify-end">

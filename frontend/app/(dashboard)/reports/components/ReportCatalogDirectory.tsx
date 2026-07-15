@@ -99,9 +99,10 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
   governance: Settings2,
 };
 
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/table-typography";
+
 interface ReportCatalogDirectoryProps {
   reports: ReportCatalogItem[];
-  isPerfex?: boolean;
 }
 
 type DirectoryEntry = {
@@ -170,7 +171,6 @@ function matchesFilter(entry: DirectoryEntry, filter: FilterKey): boolean {
 
 export function ReportCatalogDirectory({
   reports,
-  isPerfex = false,
 }: ReportCatalogDirectoryProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -190,24 +190,20 @@ export function ReportCatalogDirectory({
     });
   }, [allEntries, filter, query]);
 
-  const pCard = isPerfex
-    ? "border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]"
-    : "border border-border bg-card rounded-lg";
-
   return (
-    <div className={pCard}>
-      <div className={`${isPerfex ? "px-4 py-3 border-b border-border" : "p-4 pb-3"} space-y-3`}>
+    <div className={WORKSHOP_PANEL_CLASS}>
+      <div className="space-y-3 border-b border-[color:var(--outline-variant)] px-4 py-3.5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className={`flex items-center gap-2 font-semibold text-foreground ${isPerfex ? "text-sm" : "text-base"}`}>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
               <FileBarChart className="h-4 w-4 text-primary" />
               Report Directory
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               Search and open any report — hub analytics, accounting, inventory, or operations.
             </p>
           </div>
-          <p className="text-xs text-muted-foreground tabular-nums shrink-0">
+          <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {filtered.length} of {allEntries.length} reports
           </p>
         </div>
@@ -218,7 +214,7 @@ export function ReportCatalogDirectory({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search reports…"
-            className={`pl-9 ${isPerfex ? "h-8 text-xs" : "h-9"}`}
+            className="h-9 pl-9 text-sm"
           />
         </div>
 
@@ -228,10 +224,10 @@ export function ReportCatalogDirectory({
               key={opt.key}
               type="button"
               onClick={() => setFilter(opt.key)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === opt.key
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted/60"
+                  : "border-[color:var(--outline-variant)] bg-background text-muted-foreground hover:bg-muted/60"
               }`}
             >
               {opt.label}
@@ -240,7 +236,7 @@ export function ReportCatalogDirectory({
         </div>
       </div>
 
-      <div className={`${isPerfex ? "p-4" : "p-4 pt-2"}`}>
+      <div className="p-4">
         {filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             No reports match your search. Try another filter or clear the search box.
@@ -252,12 +248,12 @@ export function ReportCatalogDirectory({
               const content = (
                 <>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Icon className="h-4 w-4" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   </div>
-                  <p className="mt-3 text-sm font-medium text-foreground leading-snug">{entry.name}</p>
+                  <p className="mt-3 text-sm font-medium leading-snug text-foreground">{entry.name}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     <Badge variant="outline" className="text-xs capitalize">
                       {entry.group.replace(/_/g, " ")}
@@ -276,11 +272,12 @@ export function ReportCatalogDirectory({
                 </>
               );
 
-              const cardClass =
-                "group flex flex-col rounded-lg border border-border/80 bg-muted/20 p-3 text-left transition-all hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm";
-
               return (
-                <Link key={entry.id} href={entry.href ?? "/reports"} className={cardClass}>
+                <Link
+                  key={entry.id}
+                  href={entry.href ?? "/reports"}
+                  className="group flex flex-col rounded-lg border border-[color:var(--outline-variant)] bg-muted/20 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/40"
+                >
                   {content}
                 </Link>
               );

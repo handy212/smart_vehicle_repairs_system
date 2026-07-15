@@ -28,8 +28,8 @@ export default function GlobalError({
         <div className="min-h-screen bg-muted flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center">
             <div className="mb-8">
-              <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <AlertCircle className="w-8 h-8 text-red-600" />
+              <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-destructive" />
               </div>
               <h1 className="text-3xl font-bold text-foreground mt-4">Critical Error</h1>
               <p className="text-muted-foreground mt-2">

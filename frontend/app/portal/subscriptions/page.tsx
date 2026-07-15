@@ -126,7 +126,7 @@ export default function MySubscriptionsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       <PortalPageHeader
         title="My Subscriptions"
         description="Manage your service subscription packages."
@@ -410,7 +410,7 @@ export default function MySubscriptionsPage() {
               <div className="space-y-2">
                 <Label htmlFor="sub-vehicle" className="flex items-center gap-1.5">
                   <Car className="h-3.5 w-3.5" />
-                  Select Vehicle <span className="text-red-500">*</span>
+                  Select Vehicle <span className="text-destructive">*</span>
                 </Label>
                 {vehicles.length === 0 ? (
                   <p className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-muted">

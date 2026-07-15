@@ -162,7 +162,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
                         </CardHeader>
                         <CardContent className="pt-6 grid grid-cols-2 gap-y-6 gap-x-4">
                             <div className="col-span-2 space-y-1 text-center border-b border-primary/10 pb-4">
-                                <p className="text-lg font-black tracking-tight text-foreground uppercase">{customer.company_name}</p>
+                                <p className="text-lg font-bold tracking-tight text-foreground uppercase">{customer.company_name}</p>
                                 <p className="text-xs font-bold text-primary tracking-widest uppercase">{customer.business_type || "General Business"}</p>
                             </div>
                             <div className="space-y-1">
@@ -212,7 +212,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
                         </div>
                         <div className="space-y-1 text-right">
                             <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Credit Limit</p>
-                            <p className="text-sm font-black text-foreground">{customer.available_credit ? formatCurrency(parseFloat(customer.available_credit)) : "-"}</p>
+                            <p className="text-sm font-bold text-foreground">{customer.available_credit ? formatCurrency(parseFloat(customer.available_credit)) : "-"}</p>
                         </div>
                     </CardContent>
                 </Card>

@@ -1,3 +1,10 @@
+/**
+ * Clear only Workbox precache shells on activate.
+ * Do not wipe runtime caches (static-image-assets, pages, cross-origin, etc.) —
+ * that races with in-flight favicon/media fetches and surfaces as
+ * "ServiceWorker intercepted the request and encountered an unexpected error".
+ * Hashed `_next/static` assets are NetworkOnly in next.config (not precached).
+ */
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
@@ -6,11 +13,7 @@ self.addEventListener("activate", (event) => {
         keys
           .filter(
             (name) =>
-              name.includes("precache") ||
-              name.includes("workbox") ||
-              name.includes("next-") ||
-              name.startsWith("pages-") ||
-              name.startsWith("static-")
+              name.includes("precache") || name.includes("workbox-precache")
           )
           .map((name) => caches.delete(name))
       );

@@ -182,13 +182,13 @@ export default function PhysicalCountDetailPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <Link href="/inventory/physical-counts" className="text-sm text-primary flex items-center gap-1">
         <ArrowLeft className="h-4 w-4" /> Back to counts
       </Link>
       <div className="flex flex-wrap justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{s.session_number}</h1>
+          <h1 className="text-xl font-bold">{s.session_number}</h1>
           <p className="text-sm text-muted-foreground">
             {s.branch_name} · {s.count_date} · {s.status}
           </p>
@@ -346,7 +346,7 @@ export default function PhysicalCountDetailPage() {
             </Table>
           )}
           {s.unreconciled_count != null && s.unreconciled_count > 0 && (
-            <p className="text-sm text-amber-600 mt-4">{s.unreconciled_count} unreconciled line(s)</p>
+            <p className="text-sm text-warning mt-4">{s.unreconciled_count} unreconciled line(s)</p>
           )}
         </CardContent>
       </Card>

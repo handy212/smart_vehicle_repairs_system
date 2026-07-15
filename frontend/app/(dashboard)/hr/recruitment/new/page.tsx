@@ -11,7 +11,7 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,7 +76,7 @@ function NewJobOpeningContent() {
     };
 
     return (
-        <div className="space-y-4 max-w-3xl mx-auto">
+        <div className="space-y-4 w-full">
             <StaffPageHeader
                 title="Post New Job"
                 breadcrumbs={[{ label: "Recruitment", href: "/hr/recruitment" }, { label: "New Job" }]}

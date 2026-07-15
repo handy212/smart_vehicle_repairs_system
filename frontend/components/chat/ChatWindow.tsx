@@ -125,17 +125,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden shadow-sm relative">
+    <div className="flex flex-col h-full bg-[var(--panel-bg,var(--card))] border border-[color:var(--outline-variant)] rounded-lg overflow-hidden shadow-workshop relative">
 
       {/* Header */}
-      <div className="px-6 py-5 border-b bg-white/80 dark:bg-slate-800/80 backdrop-blur-md flex justify-between items-center z-10 sticky top-0">
+      <div className="px-6 py-5 border-b bg-card/80 dark:bg-muted/80 backdrop-blur-md flex justify-between items-center z-10 sticky top-0">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl border border-primary/20 shadow-sm overflow-hidden">
               {conversation?.title?.charAt(0) || conversationTitle?.charAt(0) || "C"}
             </div>
             {isConnected && (
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-white dark:border-slate-800 shadow-sm" />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card dark:border-border shadow-sm" />
             )}
           </div>
           <div>
@@ -144,10 +144,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
               {conversation?.type === 'system' && <ShieldCheck className="w-4 h-4 text-primary" />}
             </h3>
             <div className="flex items-center gap-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
                 <span className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-success animate-pulse" : "bg-destructive")} />
                 {isConnected ? "Active Now" : "Reconnecting..."}
-                {/* <span className="text-slate-300 dark:text-slate-700 mx-1 font-normal opacity-50">/</span>
+                {/* <span className="text-muted-foreground dark:text-foreground mx-1 font-normal opacity-50">/</span>
                 <Zap className="w-3 h-3 text-warning fill-warning" /> */}
               </p>
             </div>
@@ -172,13 +172,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
               <MessageSkeleton />
             ) : messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-20">
-                <p className="font-black text-[10px] uppercase tracking-[0.5em]">No conversation history</p>
+                <p className="font-bold text-[10px] uppercase tracking-[0.5em]">No conversation history</p>
               </div>
             ) : (
               Object.entries(groupedMessages).map(([date, msgs]) => (
                 <div key={date} className="space-y-1">
                   <div className="flex justify-center my-8 sticky top-4 z-10">
-                    <span className="px-4 py-1.5 rounded-full bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm text-[10px] font-black text-slate-400 uppercase tracking-widest border border-border flex items-center gap-2 shadow-sm">
+                    <span className="px-4 py-1.5 rounded-full bg-muted/80 dark:bg-muted/80 backdrop-blur-sm text-[10px] font-bold text-muted-foreground uppercase tracking-widest border border-border flex items-center gap-2 shadow-sm">
                       <Calendar className="w-3 h-3" />
                       {getDateLabel(date)}
                     </span>
@@ -212,7 +212,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
                   </div>
-                  <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest leading-none">
+                  <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest leading-none">
                     {typingUsers.map(u => u.name).join(', ')} typing...
                   </span>
                 </motion.div>
@@ -238,7 +238,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
       </div>
 
       {/* Input — with reply context */}
-      <div className="px-6 py-5 bg-white dark:bg-slate-900 border-t border-border">
+      <div className="px-6 py-5 bg-card dark:bg-card border-t border-border">
         <ChatInput
           onSendMessage={handleSendMessage}
           onTyping={sendTyping}
@@ -252,7 +252,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
 };
 
 const HeaderButton = ({ icon }: { icon: React.ReactNode }) => (
-  <button className="w-10 h-10 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-muted-foreground/60 hover:text-primary transition-all active:scale-90 active:bg-primary/5">
+  <button className="w-10 h-10 rounded-xl hover:bg-muted dark:hover:bg-muted flex items-center justify-center text-muted-foreground/60 hover:text-primary transition-all active:scale-90 active:bg-primary/5">
     {icon}
   </button>
 );
@@ -261,9 +261,9 @@ const MessageSkeleton = () => (
   <div className="px-8 py-4 space-y-4 animate-pulse">
     {[...Array(5)].map((_, i) => (
       <div key={i} className={cn("flex gap-3", i % 2 === 0 ? "flex-row" : "flex-row-reverse")}>
-        <div className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0" />
+        <div className="w-9 h-9 rounded-2xl bg-muted dark:bg-muted shrink-0" />
         <div className={cn("space-y-2", i % 2 === 0 ? "items-start" : "items-end", "flex flex-col")}>
-          <div className="h-10 rounded-2xl bg-slate-100 dark:bg-slate-800" style={{ width: `${120 + (i * 30) % 100}px` }} />
+          <div className="h-10 rounded-2xl bg-muted dark:bg-muted" style={{ width: `${120 + (i * 30) % 100}px` }} />
         </div>
       </div>
     ))}

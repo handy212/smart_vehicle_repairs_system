@@ -368,7 +368,7 @@ export default function UserDetailPage() {
         </Link>
         <Card className="bg-muted border-border">
           <CardContent className="pt-6">
-            <p className="text-destructive dark:text-red-400">User not found</p>
+            <p className="text-destructive dark:text-destructive">User not found</p>
           </CardContent>
         </Card>
       </div>
@@ -387,7 +387,7 @@ export default function UserDetailPage() {
           </Link>
           <div>
             <div className="flex items-center space-x-2 flex-wrap">
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-xl font-bold text-foreground">
                 {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
               </h1>
 
@@ -395,7 +395,7 @@ export default function UserDetailPage() {
                 {getRoleLabel(user.role)}
               </Badge>
               {user.is_active ? (
-                <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                <Badge variant="default" className="bg-success/15 text-success dark:bg-success dark:text-success">
                   Active
                 </Badge>
               ) : (
@@ -429,7 +429,7 @@ export default function UserDetailPage() {
               >
                 {isSubmitting || updateMutation.isPending ? (
                   <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
                     Saving...
                   </span>
                 ) : (
@@ -458,7 +458,7 @@ export default function UserDetailPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {serverError && (
-                  <div className="bg-destructive/10 dark:bg-red-900/20 border-l-4 border-destructive text-destructive dark:text-red-400 px-4 py-3 rounded-r flex items-start">
+                  <div className="bg-destructive/10 dark:bg-destructive/20 border-l-4 border-destructive text-destructive dark:text-destructive px-4 py-3 rounded-r flex items-start">
                     <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
                     <span className="text-sm">{serverError}</span>
                   </div>
@@ -475,7 +475,7 @@ export default function UserDetailPage() {
                       className={errors.first_name ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                     />
                     {errors.first_name && (
-                      <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {errors.first_name.message}
                       </p>
@@ -492,7 +492,7 @@ export default function UserDetailPage() {
                       className={errors.last_name ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                     />
                     {errors.last_name && (
-                      <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {errors.last_name.message}
                       </p>
@@ -530,7 +530,7 @@ export default function UserDetailPage() {
                       </SelectContent>
                     </Select>
                     {errors.role && (
-                      <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {errors.role.message}
                       </p>
@@ -542,7 +542,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="is_active"
                       {...register("is_active")}
-                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-muted-foreground dark:border-border w-4 h-4"
                     />
                     <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                       User is active
@@ -554,7 +554,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="email_notifications"
                       {...register("email_notifications")}
-                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-muted-foreground dark:border-border w-4 h-4"
                     />
                     <label htmlFor="email_notifications" className="text-sm font-medium text-card-foreground">
                       Email Notifications
@@ -566,7 +566,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="sms_notifications"
                       {...register("sms_notifications")}
-                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-muted-foreground dark:border-border w-4 h-4"
                     />
                     <label htmlFor="sms_notifications" className="text-sm font-medium text-card-foreground">
                       SMS Notifications
@@ -604,7 +604,7 @@ export default function UserDetailPage() {
                                 return (
                                   <label
                                     key={branch.id}
-                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border transition-colors"
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-warning/20 p-3 rounded-lg border border-border transition-colors"
                                   >
                                     <input
                                       type="checkbox"
@@ -620,7 +620,7 @@ export default function UserDetailPage() {
                                           );
                                         }
                                       }}
-                                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
+                                      className="rounded border-border text-primary focus:ring-primary dark:bg-muted-foreground dark:border-border w-5 h-5"
                                     />
                                     <div className="flex-1">
                                       <span className="text-sm font-medium text-card-foreground">{branch.name}</span>
@@ -640,7 +640,7 @@ export default function UserDetailPage() {
                             )}
                           </div>
                           {errors.managed_branches && (
-                            <p className="text-destructive dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                            <p className="text-destructive dark:text-destructive text-xs mt-2 flex items-center gap-1">
                               <AlertCircle className="w-4 h-4" />
                               {errors.managed_branches.message}
                             </p>
@@ -670,14 +670,14 @@ export default function UserDetailPage() {
                             </SelectContent>
                           </Select>
                           {errors.branch && (
-                            <p className="text-destructive dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                            <p className="text-destructive dark:text-destructive text-xs mt-2 flex items-center gap-1">
                               <AlertCircle className="w-4 h-4" />
                               {errors.branch.message}
                             </p>
                           )}
                           {branches.length === 0 && (
-                            <div className="mt-3 p-3 bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                              <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
+                            <div className="mt-3 p-3 bg-warning/10 dark:bg-warning/15 border border-warning/20 dark:border-warning/40 rounded-md">
+                              <p className="text-xs text-warning dark:text-warning flex items-center gap-2">
                                 <Info className="w-4 h-4" />
                                 No active branches available. Create a branch first before assigning users.
                               </p>
@@ -730,7 +730,7 @@ export default function UserDetailPage() {
             )}
 
             {/* Password Reset Section */}
-            <Card className="bg-muted border-border border-l-4 border-l-orange-500">
+            <Card className="bg-muted border-border border-l-4 border-l-warning">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                   <KeyRound className="w-5 h-5 text-primary" />
@@ -787,7 +787,7 @@ export default function UserDetailPage() {
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             title={showPassword ? "Hide password" : "Show password"}
                           >
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -823,7 +823,7 @@ export default function UserDetailPage() {
                       <input
                         type="checkbox"
                         id="send_password_email"
-                        className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                        className="rounded border-border text-primary focus:ring-primary dark:bg-muted-foreground dark:border-border w-4 h-4"
                       />
                       <label htmlFor="send_password_email" className="text-sm font-medium text-card-foreground">
                         Send new password to user via email
@@ -856,11 +856,11 @@ export default function UserDetailPage() {
                           resetPasswordMutation.mutate({ password: newPassword, sendEmail });
                         }}
                         disabled={resetPasswordMutation.isPending || !newPassword}
-                        className="dark:bg-primary dark:hover:bg-orange-700 flex-1"
+                        className="dark:bg-primary dark:hover:bg-primary-container flex-1"
                       >
                         {resetPasswordMutation.isPending ? (
                           <span className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
                             Resetting...
                           </span>
                         ) : (
@@ -917,18 +917,18 @@ export default function UserDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
                     {user.is_active ? (
-                      <Badge variant="default" className="mt-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <Badge variant="default" className="mt-2 bg-success/15 text-success dark:bg-success dark:text-success">
                         Active
                       </Badge>
                     ) : (
                       <Badge variant="danger" className="mt-2">Inactive</Badge>
                     )}
                   </div>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.is_active ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.is_active ? "bg-success/15 dark:bg-success/20" : "bg-destructive/10 dark:bg-destructive/20"}`}>
                     {user.is_active ? (
-                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-success" : "text-destructive dark:text-red-400"}`} />
+                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-success" : "text-destructive dark:text-destructive"}`} />
                     ) : (
-                      <UserX className="w-6 h-6 text-destructive dark:text-red-400" />
+                      <UserX className="w-6 h-6 text-destructive dark:text-destructive" />
                     )}
                   </div>
                 </div>
@@ -946,7 +946,7 @@ export default function UserDetailPage() {
                       {getRoleLabel(user.role)}
                     </Badge>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-warning/15 flex items-center justify-center">
                     <Building2 className="w-6 h-6 text-primary" />
                   </div>
                 </div>
@@ -965,8 +965,8 @@ export default function UserDetailPage() {
                         : user.branch_name || "Not assigned"}
                     </p>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 ml-2">
-                    <Building2 className="w-6 h-6 text-primary dark:text-purple-400" />
+                  <div className="w-12 h-12 rounded-full bg-info/15 dark:bg-info/20 flex items-center justify-center flex-shrink-0 ml-2">
+                    <Building2 className="w-6 h-6 text-primary dark:text-info" />
                   </div>
                 </div>
               </CardContent>
@@ -1030,13 +1030,13 @@ export default function UserDetailPage() {
                     <dd className="space-y-2">
                       <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">Email</span>
-                        <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
+                        <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-success/15 text-success dark:bg-success dark:text-success text-xs" : "text-xs"}>
                           {user.email_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">SMS</span>
-                        <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
+                        <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-success/15 text-success dark:bg-success dark:text-success text-xs" : "text-xs"}>
                           {user.sms_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
@@ -1064,7 +1064,7 @@ export default function UserDetailPage() {
                     Branch Assignment
                   </dt>
                   {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
-                    <div className="p-4 bg-primary/10 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <div className="p-4 bg-primary/10 dark:bg-warning/20 rounded-lg border border-warning/20 dark:border-warning/30">
                       <p className="text-base font-semibold text-foreground mb-1">
                         {user.managed_branches_names.join(", ")}
                       </p>
@@ -1073,7 +1073,7 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   ) : user.branch_name ? (
-                    <div className="p-4 bg-primary/10 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <div className="p-4 bg-primary/10 dark:bg-warning/20 rounded-lg border border-warning/20 dark:border-warning/30">
                       <p className="text-base font-semibold text-foreground">{user.branch_name}</p>
                     </div>
                   ) : (
@@ -1118,7 +1118,7 @@ export default function UserDetailPage() {
           </Card>
 
           {/* Password Reset Section */}
-          <Card className="bg-muted border-border border-l-4 border-l-orange-500">
+          <Card className="bg-muted border-border border-l-4 border-l-warning">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 <KeyRound className="w-5 h-5 text-primary" />
@@ -1174,7 +1174,7 @@ export default function UserDetailPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           title={showPassword ? "Hide password" : "Show password"}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -1210,7 +1210,7 @@ export default function UserDetailPage() {
                     <input
                       type="checkbox"
                       id="send_password_email_view"
-                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-muted-foreground dark:border-border w-4 h-4"
                     />
                     <label htmlFor="send_password_email_view" className="text-sm font-medium text-card-foreground">
                       Send new password to user via email
@@ -1243,11 +1243,11 @@ export default function UserDetailPage() {
                         resetPasswordMutation.mutate({ password: newPassword, sendEmail });
                       }}
                       disabled={resetPasswordMutation.isPending || !newPassword}
-                      className="dark:bg-primary dark:hover:bg-orange-700 flex-1"
+                      className="dark:bg-primary dark:hover:bg-primary-container flex-1"
                     >
                       {resetPasswordMutation.isPending ? (
                         <span className="flex items-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
                           Resetting...
                         </span>
                       ) : (
@@ -1268,7 +1268,7 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 {user.two_factor_enabled ? (
-                  <ShieldCheck className="w-5 h-5 text-success dark:text-green-400" />
+                  <ShieldCheck className="w-5 h-5 text-success dark:text-success" />
                 ) : (
                   <ShieldAlert className="w-5 h-5 text-muted-foreground" />
                 )}
@@ -1281,7 +1281,7 @@ export default function UserDetailPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-semibold text-card-foreground">Status:</span>
                     {user.two_factor_enabled ? (
-                      <span className="text-sm text-green-700 dark:text-green-400 font-medium">Enabled</span>
+                      <span className="text-sm text-success dark:text-success font-medium">Enabled</span>
                     ) : (
                       <span className="text-sm text-muted-foreground">Disabled</span>
                     )}

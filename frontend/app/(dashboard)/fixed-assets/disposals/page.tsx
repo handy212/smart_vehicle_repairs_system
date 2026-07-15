@@ -86,7 +86,7 @@ function AssetDisposalsContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl p-4 sm:p-6">
+      <div className="w-full">
         <PageHeader
           title="Asset Disposal"
           breadcrumbs={[

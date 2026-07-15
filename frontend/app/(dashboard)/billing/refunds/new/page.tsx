@@ -119,14 +119,14 @@ export default function CreateRefundPage() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-2xl">
+    <div className="w-full space-y-6">
       <Button variant="ghost" onClick={() => router.back()}>
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Refunds
       </Button>
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Create Refund</h1>
+        <h1 className="text-xl font-bold tracking-tight">Create Refund</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Choose the original payment; invoice and customer are taken from that payment when
           available.

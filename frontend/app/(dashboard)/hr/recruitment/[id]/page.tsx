@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Link from "next/link";
 import { useState, useEffect } from "react";

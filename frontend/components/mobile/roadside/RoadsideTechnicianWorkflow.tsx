@@ -29,7 +29,7 @@ import {
   ThumbsUp,
   XCircle,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { queueRequest } from "@/lib/offline/queue";
 import { roadsideRequestsDB } from "@/lib/offline/db";
 import { useOfflineStore } from "@/store/offlineStore";

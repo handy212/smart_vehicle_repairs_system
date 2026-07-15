@@ -15,9 +15,9 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-blue-500/10 text-blue-600",
-  in_progress: "bg-amber-500/10 text-amber-600",
-  fulfilled: "bg-green-500/10 text-green-600",
+  confirmed: "bg-primary/10 text-primary",
+  in_progress: "bg-warning/15 text-warning",
+  fulfilled: "bg-success/15 text-success",
   cancelled: "bg-destructive/10 text-destructive",
 };
 
@@ -32,10 +32,10 @@ export default function SalesOrdersPage() {
   const orders: SalesOrder[] = data?.results || [];
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Sales Orders</h1>
+          <h1 className="text-xl font-bold tracking-tight">Sales Orders</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Commercial order documents linking customers, estimates, and work orders.
           </p>

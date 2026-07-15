@@ -43,9 +43,10 @@ const config: Config = {
       boxShadow: {
         card: "0 20px 45px -20px rgba(15, 23, 42, 0.25)",
         soft: "0 12px 30px -18px rgba(15, 23, 42, 0.18)",
+        workshop: "var(--elevated-shadow)",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Manrope", "system-ui", "sans-serif"],
       },
       keyframes: {
         "pulse-border": {

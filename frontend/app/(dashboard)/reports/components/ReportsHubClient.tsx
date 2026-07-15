@@ -3,6 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { reportingApi, type SavedReport } from "@/lib/api/reporting";
 import { ReportsSubNav, REPORT_HUB_SECTIONS } from "./ReportsSubNav";
+import {
+  PERFEX_TABLE_HEAD_CLASS,
+  PERFEX_TABLE_CELL_CLASS,
+  WORKSHOP_PANEL_CLASS,
+} from "@/lib/constants/table-typography";
+import { cn } from "@/lib/utils";
 import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +46,6 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { RevenueForecastChart } from "@/components/reporting/RevenueForecastChart";
 import { TechnicianProductivityHeatmap } from "@/components/reporting/TechnicianProductivityHeatmap";
 import { InventoryTurnoverChart } from "@/components/reporting/InventoryTurnoverChart";
-import { useTheme } from "@/lib/hooks/useTheme";
 import { getUserFacingError } from "@/lib/api/errors";
 import { downloadCsv } from "@/lib/utils/csvExport";
 import { BranchReportChip } from "@/components/reporting/BranchReportChip";
@@ -92,15 +97,12 @@ export function ReportsHubClient({ section }: { section: string }) {
   const [scheduleName, setScheduleName] = useState("");
   const [scheduleRecipients, setScheduleRecipients] = useState("");
   const [scheduleFrequency, setScheduleFrequency] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
-
-  const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme.startsWith("perfex");
-  const pCard = isPerfex ? "border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]" : "border-border";
-  const pCardHeader = isPerfex ? "py-3 px-4 border-b border-border" : "pb-3 sm:pb-6";
-  const pCardTitle = isPerfex ? "text-sm font-semibold text-foreground" : "text-base sm:text-lg";
-  const pCardContent = isPerfex ? "p-4" : "";
-  const pTH = isPerfex ? "bg-[#f1f5f9] text-xs font-semibold text-[#374151] px-4 py-2.5" : "text-xs sm:text-sm";
-  const pTD = isPerfex ? "px-4 py-2.5 text-xs" : "text-xs sm:text-sm";
+  const pCard = WORKSHOP_PANEL_CLASS;
+  const pCardHeader = "border-b border-[color:var(--outline-variant)] px-4 py-3";
+  const pCardTitle = "text-sm font-bold text-foreground";
+  const pCardContent = "p-4";
+  const pTH = PERFEX_TABLE_HEAD_CLASS;
+  const pTD = PERFEX_TABLE_CELL_CLASS;
   const currentReportType = REPORT_TYPE_BY_TAB[activeTab] || activeTab;
   const currentReportParams = useMemo(() => ({
     start_date: startDate,
@@ -403,11 +405,11 @@ export function ReportsHubClient({ section }: { section: string }) {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header - Mobile optimized */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className={`${isPerfex ? "text-base font-semibold" : "text-2xl sm:text-3xl font-bold"} text-foreground`}>
+          <h1 className={`${"text-xl font-bold tracking-tight sm:text-2xl"} text-foreground`}>
             Reports & Analytics
           </h1>
           <div className="mt-2">
@@ -427,10 +429,10 @@ export function ReportsHubClient({ section }: { section: string }) {
             <Filter className="w-4 h-4 mr-2" />
             Filters
           </Button>
-          <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : ""} onClick={() => setSaveDialogOpen(true)}>
+          <Button variant="outline" size="sm" className={"h-8 text-xs"} onClick={() => setSaveDialogOpen(true)}>
             Save View
           </Button>
-          <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : ""} onClick={() => setScheduleDialogOpen(true)}>
+          <Button variant="outline" size="sm" className={"h-8 text-xs"} onClick={() => setScheduleDialogOpen(true)}>
             Schedule
           </Button>
           <div
@@ -441,15 +443,15 @@ export function ReportsHubClient({ section }: { section: string }) {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className={`w-full sm:w-40 ${isPerfex ? "h-8 text-xs" : "h-10 text-sm"}`}
+              className="h-8 w-full rounded-lg text-xs sm:w-40"
             />
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className={`w-full sm:w-40 ${isPerfex ? "h-8 text-xs" : "h-10 text-sm"}`}
+              className="h-8 w-full rounded-lg text-xs sm:w-40"
             />
-            <Button variant="secondary" onClick={() => handleExport()} className={isPerfex ? "h-8 text-xs" : "h-10"}>
+            <Button variant="secondary" onClick={() => handleExport()} className={"h-8 text-xs"}>
               <Download className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Export</span>
             </Button>
@@ -457,170 +459,81 @@ export function ReportsHubClient({ section }: { section: string }) {
         </div>
       </div>
 
-      {/* Quick Date Range Filters - Mobile friendly */}
-      {isPerfex ? (
-        <div className="flex flex-wrap gap-1.5 items-center">
-          <span className="text-xs text-muted-foreground mr-1">Quick ranges:</span>
-          {dateRangeOptions.map((option) => (
-            <button
-              key={option.label}
-              onClick={() => handleQuickDateRange(option.days)}
-              className="px-3 py-1.5 rounded text-[11px] font-medium border bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <Card className={pCard}>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-wrap gap-2">
-              <span className="text-xs sm:text-sm text-muted-foreground self-center mr-2">
-                Quick ranges:
-              </span>
-              {dateRangeOptions.map((option) => (
-                <Button
-                  key={option.label}
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleQuickDateRange(option.days)}
-                  className="text-xs h-8"
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Quick Date Range Filters */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-xs text-muted-foreground">Quick ranges:</span>
+        {dateRangeOptions.map((option) => (
+          <button
+            key={option.label}
+            onClick={() => handleQuickDateRange(option.days)}
+            className="rounded-lg border border-[color:var(--outline-variant)] bg-[var(--panel-bg)] px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Dashboard Overview - Mobile responsive */}
+      {/* Dashboard Overview */}
       {dashboardData && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {isPerfex ? (
-            <>
-              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-                <div className="p-3 flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-success/10 text-success flex-shrink-0">
-                    <DollarSign className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold text-foreground leading-tight truncate">{formatCurrency(dashboardData.today.revenue)}</p>
-                    <p className="text-[11px] text-muted-foreground">Today&apos;s Revenue</p>
-                  </div>
-                </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className={cn(WORKSHOP_PANEL_CLASS, "flex flex-col justify-between gap-3 p-4")}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today&apos;s Revenue</p>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                <DollarSign className="h-4 w-4" />
               </div>
-              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-                <div className="p-3 flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-info/10 text-primary flex-shrink-0">
-                    <TrendingUp className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold text-foreground leading-tight truncate">{formatCurrency(dashboardData.week.revenue)}</p>
-                    <p className="text-[11px] text-muted-foreground">This Week</p>
-                  </div>
-                </div>
+            </div>
+            <p className="truncate text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatCurrency(dashboardData.today.revenue)}
+            </p>
+          </div>
+          <div className={cn(WORKSHOP_PANEL_CLASS, "flex flex-col justify-between gap-3 p-4")}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">This Week</p>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <TrendingUp className="h-4 w-4" />
               </div>
-              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-                <div className="p-3 flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold text-foreground leading-tight truncate">{formatCurrency(dashboardData.month.revenue)}</p>
-                    <p className="text-[11px] text-muted-foreground">This Month</p>
-                  </div>
-                </div>
+            </div>
+            <p className="truncate text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatCurrency(dashboardData.week.revenue)}
+            </p>
+          </div>
+          <div className={cn(WORKSHOP_PANEL_CLASS, "flex flex-col justify-between gap-3 p-4")}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">This Month</p>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                <Calendar className="h-4 w-4" />
               </div>
-              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-                <div className="p-3 flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-destructive/10 text-destructive flex-shrink-0">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold text-destructive leading-tight">{dashboardData.alerts?.overdue_invoices?.count || 0}</p>
-                    <p className="text-[11px] text-muted-foreground">Overdue Invoices</p>
-                    <p className="text-[11px] text-muted-foreground">{formatCurrency(dashboardData.alerts?.overdue_invoices?.total || 0)}</p>
-                  </div>
-                </div>
+            </div>
+            <p className="truncate text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatCurrency(dashboardData.month.revenue)}
+            </p>
+          </div>
+          <div className={cn(WORKSHOP_PANEL_CLASS, "flex flex-col justify-between gap-3 p-4")}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overdue Invoices</p>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <AlertCircle className="h-4 w-4" />
               </div>
-            </>
-          ) : (
-            <>
-              <Card className={pCard}>
-                <CardContent className="pt-4 sm:pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                        Today&apos;s Revenue
-                      </p>
-                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                        {formatCurrency(dashboardData.today.revenue)}
-                      </p>
-                    </div>
-                    <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0 ml-2" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className={pCard}>
-                <CardContent className="pt-4 sm:pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                        This Week
-                      </p>
-                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                        {formatCurrency(dashboardData.week.revenue)}
-                      </p>
-                    </div>
-                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 ml-2" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className={pCard}>
-                <CardContent className="pt-4 sm:pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                        This Month
-                      </p>
-                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                        {formatCurrency(dashboardData.month.revenue)}
-                      </p>
-                    </div>
-                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0 ml-2" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className={pCard}>
-                <CardContent className="pt-4 sm:pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                        Overdue Invoices
-                      </p>
-                      <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
-                        {dashboardData.alerts?.overdue_invoices?.count || 0}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrency((dashboardData.alerts?.overdue_invoices?.total || 0))}
-                      </p>
-                    </div>
-                    <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-destructive flex-shrink-0 ml-2" />
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+            </div>
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-destructive tabular-nums">
+                {dashboardData.alerts?.overdue_invoices?.count || 0}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {formatCurrency(dashboardData.alerts?.overdue_invoices?.total || 0)}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
-      <ReportsSubNav isPerfex={isPerfex} />
+      <ReportsSubNav />
 
       <Tabs value={activeTab} className="space-y-4">
 
         {/* Financial Reports */}
-        {(!isPerfex || activeTab === "financial") && (
+        {activeTab === "financial" && (
         <TabsContent value="financial" className="space-y-4 sm:space-y-6">
           {revenueLoading && (
             <div className="flex items-center justify-center h-64">
@@ -632,7 +545,7 @@ export function ReportsHubClient({ section }: { section: string }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className={pCard}>
                   <CardHeader className={pCardHeader}>
-                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
+                    <CardTitle className={"text-xs font-medium text-muted-foreground"}>
                       Total Invoiced
                     </CardTitle>
                   </CardHeader>
@@ -644,7 +557,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 </Card>
                 <Card className={pCard}>
                   <CardHeader className={pCardHeader}>
-                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
+                    <CardTitle className={"text-xs font-medium text-muted-foreground"}>
                       Total Paid
                     </CardTitle>
                   </CardHeader>
@@ -656,19 +569,19 @@ export function ReportsHubClient({ section }: { section: string }) {
                 </Card>
                 <Card className={pCard}>
                   <CardHeader className={pCardHeader}>
-                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
+                    <CardTitle className={"text-xs font-medium text-muted-foreground"}>
                       Outstanding
                     </CardTitle>
                   </CardHeader>
                   <CardContent className={pCardContent}>
-                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
+                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-destructive">
                       {formatCurrency(revenueData.summary.total_outstanding)}
                     </p>
                   </CardContent>
                 </Card>
                 <Card className={pCard}>
                   <CardHeader className={pCardHeader}>
-                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
+                    <CardTitle className={"text-xs font-medium text-muted-foreground"}>
                       Payment Rate
                     </CardTitle>
                   </CardHeader>
@@ -689,7 +602,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-indigo-400">
+                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-info">
                         {formatCurrency((revenueData.summary.subscription_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
@@ -926,7 +839,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Total Costs</p>
-                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
+                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-destructive">
                       {formatCurrency(profitMarginData.costs.parts)}
                     </p>
                   </div>
@@ -975,7 +888,7 @@ export function ReportsHubClient({ section }: { section: string }) {
         )}
 
         {/* Operational Reports */}
-        {(!isPerfex || activeTab === "operational") && (
+        {activeTab === "operational" && (
         <TabsContent value="operational" className="space-y-4 sm:space-y-6">
           {workOrderStats && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -1085,7 +998,7 @@ export function ReportsHubClient({ section }: { section: string }) {
               <CardHeader className={pCardHeader}>
                 <CardTitle className={pCardTitle}>Technician Performance</CardTitle>
               </CardHeader>
-              <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
+              <CardContent className={"p-0"}>
                 <div className="overflow-x-auto -mx-2 sm:mx-0">
                   <Table>
                     <TableHeader>
@@ -1101,7 +1014,7 @@ export function ReportsHubClient({ section }: { section: string }) {
 
                       {technicianPerf.technicians.map((tech: { technician: { id: number; name: string }; metrics: any }) => (
                         <TableRow key={tech.technician.id}>
-                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "font-medium text-xs sm:text-sm"}>
+                          <TableCell className={"px-4 py-2.5 text-xs font-medium"}>
                             {tech.technician.name}
                           </TableCell>
                           <TableCell className={pTD}>
@@ -1150,7 +1063,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">No-Show Rate</p>
-                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
+                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-destructive">
                       {appointmentStats.summary?.no_show_rate?.toFixed(1) || 0}%
                     </p>
                   </div>
@@ -1190,7 +1103,7 @@ export function ReportsHubClient({ section }: { section: string }) {
         )}
 
         {/* Inventory Reports */}
-        {(!isPerfex || activeTab === "inventory") && (
+        {activeTab === "inventory" && (
         <TabsContent value="inventory" className="space-y-4 sm:space-y-6">
           {turnoverData && (
             <Card className={pCard}>
@@ -1256,7 +1169,7 @@ export function ReportsHubClient({ section }: { section: string }) {
               <CardHeader className={pCardHeader}>
                 <CardTitle className={pCardTitle}>Low Stock Items</CardTitle>
               </CardHeader>
-              <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
+              <CardContent className={"p-0"}>
                 {lowStockData.items && lowStockData.items.length > 0 ? (
                   <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <Table>
@@ -1273,7 +1186,7 @@ export function ReportsHubClient({ section }: { section: string }) {
 
                         {lowStockData.items.map((item: any) => (
                           <TableRow key={item.part.id}>
-                            <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "font-medium text-xs sm:text-sm"}>
+                            <TableCell className={"px-4 py-2.5 text-xs font-medium"}>
                               {item.part.name}
                             </TableCell>
                             <TableCell className={pTD}>
@@ -1287,7 +1200,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                               <span
                                 className={
                                   item.is_critical
-                                    ? "text-destructive dark:text-red-400 font-medium"
+                                    ? "text-destructive dark:text-destructive font-medium"
                                     : "text-primary font-medium"
                                 }
                               >
@@ -1311,7 +1224,7 @@ export function ReportsHubClient({ section }: { section: string }) {
         )}
 
         {/* Customer Reports */}
-        {(!isPerfex || activeTab === "customers") && (
+        {activeTab === "customers" && (
         <TabsContent value="customers" className="space-y-4 sm:space-y-6">
           {customerStats && (
             <>
@@ -1372,7 +1285,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-indigo-400">
+                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-info">
                         {customerStats.customers_with_subscriptions || 0}
                       </p>
                       {customerStats.subscription_adoption_rate !== undefined && (
@@ -1390,7 +1303,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                   <CardHeader className={pCardHeader}>
                     <CardTitle className={pCardTitle}>Top Customers by Revenue</CardTitle>
                   </CardHeader>
-                  <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
+                  <CardContent className={"p-0"}>
                     <div className="overflow-x-auto -mx-2 sm:mx-0">
                       <Table>
                         <TableHeader>
@@ -1405,7 +1318,7 @@ export function ReportsHubClient({ section }: { section: string }) {
 
                           {customerStats.top_customers.map((customer: any) => (
                             <TableRow key={customer.id}>
-                              <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "font-medium text-xs sm:text-sm"}>
+                              <TableCell className={"px-4 py-2.5 text-xs font-medium"}>
                                 {customer.name}
                               </TableCell>
                               <TableCell className={pTD}>
@@ -1416,7 +1329,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                               </TableCell>
                               <TableCell className={pTD}>
                                 {customer.has_subscription ? (
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-info/15 text-info dark:bg-info/20 dark:text-info">
                                     Active
                                   </span>
                                 ) : (
@@ -1437,7 +1350,7 @@ export function ReportsHubClient({ section }: { section: string }) {
         )}
 
         {/* Subscription Analytics */}
-        {(!isPerfex || activeTab === "subscriptions") && (
+        {activeTab === "subscriptions" && (
         <TabsContent value="subscriptions" className="space-y-4 sm:space-y-6">
           {subscriptionStats && (() => {
             const s = (subscriptionStats as { summary?: { mrr?: number; arr?: number; new_subscriptions?: number; churned?: number } }).summary;
@@ -1477,7 +1390,7 @@ export function ReportsHubClient({ section }: { section: string }) {
         )}
 
         {/* Vehicle Reports */}
-        {(!isPerfex || activeTab === "vehicles") && (
+        {activeTab === "vehicles" && (
         <TabsContent value="vehicles" className="space-y-4 sm:space-y-6">
           {vehicleStats && (
             <Card className={pCard}>
@@ -1532,7 +1445,7 @@ export function ReportsHubClient({ section }: { section: string }) {
               <CardHeader className={pCardHeader}>
                 <CardTitle className={pCardTitle}>Service Due Report</CardTitle>
               </CardHeader>
-              <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
+              <CardContent className={"p-0"}>
                 {serviceDueData.vehicles && serviceDueData.vehicles.length > 0 ? (
                   <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <Table>
@@ -1582,7 +1495,7 @@ export function ReportsHubClient({ section }: { section: string }) {
         </TabsContent>
         )}
 
-        {(!isPerfex || activeTab === "controls") && (
+        {activeTab === "controls" && (
         <TabsContent value="controls" className="space-y-4 sm:space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className={pCard}>
@@ -1616,7 +1529,7 @@ export function ReportsHubClient({ section }: { section: string }) {
               <CardHeader className={pCardHeader}>
                 <CardTitle className={pCardTitle}>Saved Report Views</CardTitle>
               </CardHeader>
-              <CardContent className={isPerfex ? "p-0" : ""}>
+              <CardContent className={"p-0"}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1632,7 +1545,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                         className="cursor-pointer hover:bg-muted/40"
                         onClick={() => applySavedReportView(report)}
                       >
-                        <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{report.name}</TableCell>
+                        <TableCell className={"px-4 py-2.5 text-xs font-medium"}>{report.name}</TableCell>
                         <TableCell className={pTD}>{report.report_type.replace(/_/g, " ")}</TableCell>
                         <TableCell className={pTD}>{format(new Date(report.updated_at), "MMM dd, yyyy")}</TableCell>
                       </TableRow>
@@ -1653,7 +1566,7 @@ export function ReportsHubClient({ section }: { section: string }) {
               <CardHeader className={pCardHeader}>
                 <CardTitle className={pCardTitle}>Scheduled Reports</CardTitle>
               </CardHeader>
-              <CardContent className={isPerfex ? "p-0" : ""}>
+              <CardContent className={"p-0"}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1665,7 +1578,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                   <TableBody>
                     {(schedulesData?.results || []).slice(0, 5).map((schedule) => (
                       <TableRow key={schedule.id}>
-                        <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{schedule.name}</TableCell>
+                        <TableCell className={"px-4 py-2.5 text-xs font-medium"}>{schedule.name}</TableCell>
                         <TableCell className={pTD}>{schedule.frequency}</TableCell>
                         <TableCell className={pTD}>{format(new Date(schedule.next_run_date), "MMM dd, yyyy")}</TableCell>
                       </TableRow>
@@ -1687,7 +1600,7 @@ export function ReportsHubClient({ section }: { section: string }) {
             <CardHeader className={pCardHeader}>
               <CardTitle className={pCardTitle}>Discounts & Overrides Analysis</CardTitle>
             </CardHeader>
-            <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
+            <CardContent className={"p-0"}>
               <div className="overflow-x-auto -mx-2 sm:mx-0">
                 <Table>
                   <TableHeader>
@@ -1711,14 +1624,14 @@ export function ReportsHubClient({ section }: { section: string }) {
                     ) : (
                       discountedInvoices.map((inv) => (
                         <TableRow key={inv.id}>
-                          <TableCell className={isPerfex ? "font-mono px-4 py-2.5 text-xs" : "font-mono text-xs sm:text-sm"}>{inv.invoice_number}</TableCell>
+                          <TableCell className={"font-mono px-4 py-2.5 text-xs"}>{inv.invoice_number}</TableCell>
                           <TableCell className={pTD}>{format(new Date(inv.invoice_date), "MMM dd, yyyy")}</TableCell>
                           <TableCell className={pTD}>{formatCurrency(parseFloat(inv.subtotal || "0"))}</TableCell>
-                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-bold text-primary" : "text-xs sm:text-sm font-bold text-primary"}>
+                          <TableCell className={"px-4 py-2.5 text-xs font-bold text-primary"}>
                             {inv.discount_percentage ? `${inv.discount_percentage}%` : `${formatCurrency(parseFloat(inv.discount_amount || "0"))}`}
                           </TableCell>
-                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs italic" : "text-xs sm:text-sm italic"}>{inv.discount_reason || "-"}</TableCell>
-                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-bold" : "text-xs sm:text-sm font-bold"}>{formatCurrency(parseFloat(inv.total))}</TableCell>
+                          <TableCell className={"px-4 py-2.5 text-xs italic"}>{inv.discount_reason || "-"}</TableCell>
+                          <TableCell className={"px-4 py-2.5 text-xs font-bold"}>{formatCurrency(parseFloat(inv.total))}</TableCell>
                           <TableCell>
                             <Link href={`/billing/invoices/${inv.id}`} target="_blank">
                               <Button variant="ghost" size="sm">View</Button>
@@ -1737,7 +1650,7 @@ export function ReportsHubClient({ section }: { section: string }) {
             <CardHeader className={pCardHeader}>
               <CardTitle className={pCardTitle}>Export Audit Trail</CardTitle>
             </CardHeader>
-            <CardContent className={isPerfex ? "p-0" : ""}>
+            <CardContent className={"p-0"}>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1750,7 +1663,7 @@ export function ReportsHubClient({ section }: { section: string }) {
                 <TableBody>
                   {(exportLogsData?.results || []).slice(0, 8).map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{log.report_name || log.report_type}</TableCell>
+                      <TableCell className={"px-4 py-2.5 text-xs font-medium"}>{log.report_name || log.report_type}</TableCell>
                       <TableCell className={pTD}>{log.export_format.toUpperCase()}</TableCell>
                       <TableCell className={pTD}>{log.status}</TableCell>
                       <TableCell className={pTD}>{format(new Date(log.created_at), "MMM dd, yyyy h:mm a")}</TableCell>

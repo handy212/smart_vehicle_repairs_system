@@ -167,18 +167,18 @@ export function ServiceIntakeFields({
       {smartSuggestions.length > 0 && (
         <section
           aria-label="Preventive suggestions"
-          className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-4 dark:border-amber-900/40 dark:bg-amber-950/25"
+          className="rounded-xl border border-warning/20 bg-warning/10 p-4 dark:border-warning/30 dark:bg-warning/15"
         >
           <div className="flex items-start gap-2.5">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning">
               <HeartPulse className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1 space-y-3">
               <div>
-                <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                <p className="text-sm font-semibold text-warning dark:text-warning">
                   Due on this vehicle
                 </p>
-                <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                <p className="text-xs text-warning/80 dark:text-warning/80">
                   Suggested from service history — add any that apply to this visit.
                 </p>
               </div>
@@ -189,7 +189,7 @@ export function ServiceIntakeFields({
                   return (
                     <li
                       key={service.id}
-                      className="flex flex-col gap-2 rounded-lg border border-amber-200/60 bg-background/80 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/30"
+                      className="flex flex-col gap-2 rounded-lg border border-warning/20 bg-background/80 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-warning/30"
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

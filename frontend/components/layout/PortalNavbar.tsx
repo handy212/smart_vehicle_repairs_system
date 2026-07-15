@@ -100,7 +100,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
 
             <Link href="/portal" className="flex items-center space-x-3 group/logo" aria-label="Go to dashboard">
               {branding.logoSrc && !logoLoadError ? (
-                <div className="h-9 w-9 rounded-xl overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center shadow-sm border border-border group-hover/logo:border-primary/30 transition-all group-hover/logo:shadow-md group-hover/logo:shadow-primary/5 relative">
+                <div className="h-9 w-9 rounded-xl overflow-hidden bg-card dark:bg-card flex items-center justify-center shadow-sm border border-border group-hover/logo:border-primary/30 transition-all group-hover/logo:shadow-md group-hover/logo:shadow-primary/5 relative">
                   <img
                     src={branding.logoSrc}
                     alt={branding.siteName}
@@ -115,7 +115,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
                 </div>
               )}
               <div className="flex flex-col">
-                <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-700 to-gray-500 dark:from-white dark:via-gray-200 dark:to-gray-400 hidden sm:inline tracking-tight leading-none mb-0.5">
+                <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-br from-foreground via-muted-foreground to-muted-foreground dark:from-white dark:via-muted dark:to-muted-foreground hidden sm:inline tracking-tight leading-none mb-0.5">
                   {branding.siteName}
                 </span>
                 <span className="text-[10px] font-medium text-primary uppercase tracking-[0.2em] leading-none opacity-80 hidden sm:inline">Customer Portal</span>
@@ -132,7 +132,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className={cn(
-                  "flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 rounded-full text-muted-foreground hover:bg-muted/80 transition-all border border-transparent hover:border-border dark:hover:border-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20",
+                  "flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 rounded-full text-muted-foreground hover:bg-muted/80 transition-all border border-transparent hover:border-border dark:hover:border-border focus:outline-none focus:ring-2 focus:ring-primary/20",
                   showUserMenu && "bg-muted border-border"
                 )}
               >
@@ -150,10 +150,10 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
 
               {/* User Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-3 w-72 bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/10 dark:shadow-primary/5 border border-border/50 py-2 z-50 transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-5 py-4 border-b border-border/50 mb-2 bg-muted/30">
+                <div className="absolute right-0 mt-3 w-72 rounded-lg border border-[color:var(--outline-variant)] bg-[var(--panel-bg,var(--card))] py-2 z-50 shadow-workshop transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-4 py-3 border-b border-border mb-1 bg-muted/30">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary-foreground flex items-center justify-center text-white text-sm font-bold shadow-inner">
+                      <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
                         {user?.first_name?.[0]?.toUpperCase() || "U"}
                       </div>
                       <div className="flex flex-col">
@@ -191,10 +191,10 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
                         setShowUserMenu(false);
                         handleLogout();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-destructive dark:text-red-400 hover:bg-destructive/10 dark:hover:bg-red-950/20 rounded-xl transition-all group hover:translate-x-1"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-destructive dark:text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/15 rounded-xl transition-all group hover:translate-x-1"
                     >
                       <div className="p-1.5 rounded-lg bg-destructive/5 group-hover:bg-destructive/10 transition-colors">
-                        <LogOut className="w-4 h-4 group-hover:text-destructive dark:group-hover:text-red-400 transition-colors" />
+                        <LogOut className="w-4 h-4 group-hover:text-destructive dark:group-hover:text-destructive transition-colors" />
                       </div>
                       <span>Sign out securely</span>
                     </button>

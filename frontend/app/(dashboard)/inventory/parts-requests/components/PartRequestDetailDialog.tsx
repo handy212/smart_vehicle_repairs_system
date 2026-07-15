@@ -256,7 +256,7 @@ export function PartRequestDetailDialog({
                                 <DialogTitle className="text-xl font-bold flex items-center gap-3">
                                     Part Request
                                     <Link href={`/workorders/${workOrderId}`} target="_blank" className="hover:opacity-80 transition-opacity">
-                                        <Badge variant="outline" className="font-mono text-base font-normal text-primary bg-primary/10 border-orange-200 px-2 py-0.5 flex items-center gap-1">
+                                        <Badge variant="outline" className="font-mono text-base font-normal text-primary bg-primary/10 border-warning/20 px-2 py-0.5 flex items-center gap-1">
                                             {woNumber}
                                             <ExternalLink className="w-3 h-3" />
                                         </Badge>
@@ -264,7 +264,7 @@ export function PartRequestDetailDialog({
                                 </DialogTitle>
                                 <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
                                     <span className="font-medium text-card-foreground">{customerName}</span>
-                                    <span className="mx-2 text-gray-300">|</span>
+                                    <span className="mx-2 text-muted-foreground">|</span>
                                     {parts.length} item{parts.length !== 1 ? 's' : ''} requested
                                 </DialogDescription>
                             </div>
@@ -327,7 +327,7 @@ export function PartRequestDetailDialog({
                                                             {!isReady && !showPO && part.part_number && (
                                                                 <div className="mt-1">
                                                                     {inStock ? (
-                                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-success/10 text-green-700 border-green-200">
+                                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-success/15 text-success border-success/20">
                                                                             In Stock: {stockQty}
                                                                         </Badge>
                                                                     ) : (
@@ -340,7 +340,7 @@ export function PartRequestDetailDialog({
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="py-2.5 font-mono text-xs text-muted-foreground">
-                                                        {part.part_number || <span className="text-gray-300 italic">-</span>}
+                                                        {part.part_number || <span className="text-muted-foreground italic">-</span>}
                                                     </TableCell>
                                                     <TableCell className="py-2.5 text-center">
                                                         <Badge variant="secondary" className="font-mono text-[10px] h-5 px-1.5 min-w-[24px] justify-center">
@@ -453,7 +453,7 @@ export function PartRequestDetailDialog({
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    className="bg-primary/10 text-primary hover:bg-indigo-100 border border-primary/20"
+                                    className="bg-primary/10 text-primary hover:bg-info/15 border border-primary/20"
                                     onClick={() => bulkOrderMutation.mutate(outOfStockParts.map(p => p.id))}
                                     disabled={bulkOrderMutation.isPending}
                                 >

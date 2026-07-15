@@ -125,7 +125,7 @@ export default function GatePassDetailPage() {
 
   if (error || !gatePass) {
     return (
-      <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
+      <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive px-4 py-3 rounded">
         Error loading gate pass. Please try again.
       </div>
     );
@@ -469,11 +469,11 @@ export default function GatePassDetailPage() {
 
       {/* Print View - Only visible when printing */}
       <div className="hidden print:block fixed inset-0 bg-card z-[9999] p-8">
-        <div className="max-w-3xl mx-auto border-2 border-gray-800 rounded-xl p-8 space-y-8">
+        <div className="w-full border-2 border-border rounded-xl p-8 space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6">
+          <div className="flex justify-between items-start border-b-2 border-border pb-6">
             <div>
-              <h1 className="text-4xl font-black text-foreground tracking-tight">GATE PASS</h1>
+              <h1 className="text-4xl font-bold text-foreground tracking-tight">GATE PASS</h1>
               <p className="text-muted-foreground font-medium mt-1">Vehicle Release Authorization</p>
             </div>
             <div className="text-right">
@@ -527,24 +527,24 @@ export default function GatePassDetailPage() {
           </div>
 
           {/* Footer / Signatures */}
-          <div className="mt-16 pt-8 border-t-2 border-gray-800">
+          <div className="mt-16 pt-8 border-t-2 border-border">
             <div className="grid grid-cols-3 gap-8">
               <div className="space-y-12">
-                <div className="border-b border-gray-400 h-1"></div>
+                <div className="border-b border-border h-1"></div>
                 <div>
                   <p className="font-bold text-foreground uppercase text-xs">Issued By</p>
                   <p className="text-sm text-muted-foreground">{gatePass.issued_by_name || "Authorized Staff"}</p>
                 </div>
               </div>
               <div className="space-y-12">
-                <div className="border-b border-gray-400 h-1"></div>
+                <div className="border-b border-border h-1"></div>
                 <div>
                   <p className="font-bold text-foreground uppercase text-xs">Security Check</p>
                   <p className="text-sm text-muted-foreground">Signature & Date</p>
                 </div>
               </div>
               <div className="space-y-12">
-                <div className="border-b border-gray-400 h-1"></div>
+                <div className="border-b border-border h-1"></div>
                 <div>
                   <p className="font-bold text-foreground uppercase text-xs">Receiver Signature</p>
                   <p className="text-sm text-muted-foreground">I confirm receipt of vehicle</p>

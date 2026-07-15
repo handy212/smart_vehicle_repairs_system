@@ -142,7 +142,7 @@ export default function JournalEntryDetailPage() {
         .reduce((sum: number, t) => sum + parseFloat(String(t.amount || 0)), 0);
 
     return (
-        <div className="space-y-4 max-w-5xl mx-auto">
+        <div className="space-y-4 w-full">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/accounting/journal-entries">

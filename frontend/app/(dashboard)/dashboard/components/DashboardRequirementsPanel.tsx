@@ -17,6 +17,7 @@ import type { NavGroup, NavGroupItem, NavIcon } from "@/components/layout/nav-gr
 import { useModules } from "@/lib/hooks/useModules";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { cn } from "@/lib/utils/cn";
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/table-typography";
 
 function splitIntoGridColumns<T>(items: T[], columnCount: number): T[][] {
   if (columnCount <= 1) {
@@ -165,9 +166,9 @@ export function DashboardRequirementsPanel({ onHide }: { onHide?: () => void }) 
   }
 
   return (
-    <Card className="rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border/60 px-4 py-3">
-        <CardTitle className="text-sm font-semibold">Quick Access</CardTitle>
+    <Card className={cn(WORKSHOP_PANEL_CLASS, "overflow-hidden border-[color:var(--outline-variant)] shadow-workshop")}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-[color:var(--outline-variant)] px-4 py-3.5">
+        <CardTitle className="text-sm font-bold">Quick Access</CardTitle>
         {onHide ? (
           <Button
             type="button"

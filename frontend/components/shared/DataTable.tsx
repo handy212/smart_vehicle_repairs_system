@@ -69,7 +69,7 @@ export function DataTable<T>({
                                     key={index}
                                     className={cn(
                                         TABLE_HEAD_CLASS,
-                                        col.sortable && "cursor-pointer hover:bg-muted/50 hover:bg-muted/50",
+                                        col.sortable && "cursor-pointer hover:bg-muted/50",
                                         col.className
                                     )}
                                     onClick={() => col.sortable && col.accessorKey && onSort && onSort(col.accessorKey as string)}
@@ -92,7 +92,7 @@ export function DataTable<T>({
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
-                                    className="h-24 text-center text-sm text-muted-foreground"
+                                    className="h-28 text-center text-sm text-muted-foreground"
                                 >
                                     {emptyMessage}
                                 </TableCell>

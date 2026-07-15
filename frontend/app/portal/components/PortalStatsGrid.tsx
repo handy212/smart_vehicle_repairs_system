@@ -82,7 +82,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
                                         {item.value}
                                     </span>
                                     {item.alert && (
-                                        <span className="inline-flex h-2 w-2 rounded-full bg-red-500" />
+                                        <span className="inline-flex h-2 w-2 rounded-full bg-destructive/50" />
                                     )}
                                 </div>
                             </div>

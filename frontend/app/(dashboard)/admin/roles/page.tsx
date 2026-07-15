@@ -225,7 +225,7 @@ export default function RolesPage() {
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Users</p>
               <p className="text-xl font-bold text-foreground">{stats.totalUsers}</p>
             </div>
-            <Users className="w-5 h-5 text-purple-500 opacity-80" />
+            <Users className="w-5 h-5 text-info opacity-80" />
           </CardContent>
         </Card>
         <Card className="hidden md:block shadow-sm">
@@ -297,7 +297,7 @@ export default function RolesPage() {
             </div>
           ) : filteredRoles.length === 0 ? (
             <div className="text-center py-12">
-              <Shield className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <Shield className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">No roles found.</p>
               {search && (
                 <Button variant="link" size="sm" onClick={() => setSearch("")} className="mt-1 h-auto p-0">
@@ -319,7 +319,7 @@ export default function RolesPage() {
                     <th className="px-4 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-card divide-y divide-gray-100">
+                <tbody className="bg-card divide-y divide-border">
                   {filteredRoles.map((role) => (
                     <tr key={role.id} className="hover:bg-muted/80 transition-colors group">
                       <TableCell className="px-4 py-2.5">
@@ -356,12 +356,12 @@ export default function RolesPage() {
                         <div className="flex items-center gap-2">
                           {role.is_active ? (
                             <div className="flex items-center space-x-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-success/100"></span>
-                              <span className="text-xs text-green-700 font-medium">Active</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                              <span className="text-xs text-success font-medium">Active</span>
                             </div>
                           ) : (
                             <div className="flex items-center space-x-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
                               <span className="text-xs text-destructive">Inactive</span>
                             </div>
                           )}
@@ -429,13 +429,13 @@ export default function RolesPage() {
               <Link href="/admin/audit-log" className="text-xs text-primary hover:underline">View All</Link>
             </PermissionGuard>
           </CardHeader>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-border">
             {recentAuditLogs.map((log) => (
               <div key={log.id} className="px-4 py-2 hover:bg-muted transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-success/100' :
+                  <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-success' :
                     log.action === 'update' ? 'bg-primary' :
-                      log.action === 'delete' ? 'bg-destructive/100' : 'bg-gray-500'
+                      log.action === 'delete' ? 'bg-destructive' : 'bg-muted0'
                     }`}></span>
                   <span className="text-xs font-medium text-foreground">{log.object_repr}</span>
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1.5 bg-muted rounded-sm">{log.action}</span>
@@ -780,7 +780,7 @@ function PermissionsDialog({
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center justify-between">
             <span>Manage Permissions <span className="text-muted-foreground font-normal mx-2">|</span> {role.name}</span>
-            <span className="text-xs font-normal bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-orange-100">
+            <span className="text-xs font-normal bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-warning/20">
               {selectedCount} Selected
             </span>
           </DialogTitle>
@@ -840,7 +840,7 @@ function PermissionsDialog({
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {Object.keys(filteredCategories).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <Shield className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p>No permissions found</p>
               </div>
             ) : (
@@ -864,7 +864,7 @@ function PermissionsDialog({
                           {allSelected ? (
                             <CheckSquare className="w-4 h-4 text-primary" />
                           ) : selectedInCategory > 0 ? (
-                            <div className="w-4 h-4 bg-orange-100 border border-orange-400 rounded flex items-center justify-center">
+                            <div className="w-4 h-4 bg-warning/15 border border-warning/50 rounded flex items-center justify-center">
                               <span className="block w-2 h-2 bg-primary rounded-sm"></span>
                             </div>
                           ) : (
@@ -888,7 +888,7 @@ function PermissionsDialog({
                           {perms.map((perm) => (
                             <label
                               key={perm.id}
-                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-primary/10 border-orange-200 shadow-sm' : 'bg-card border-border hover:border-orange-200'}`}
+                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-primary/10 border-warning/20 shadow-sm' : 'bg-card border-border hover:border-warning/20'}`}
                             >
                               <Checkbox
                                 checked={selectedPermissions.includes(perm.id)}

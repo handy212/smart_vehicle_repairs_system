@@ -74,7 +74,7 @@ function StatsGrid({ stats }: { stats?: RoadsideDashboardStats }) {
             <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subscribed</span>
-                    <span className="text-lg font-bold text-success dark:text-emerald-400">{stats?.covered_by_subscription || 0}</span>
+                    <span className="text-lg font-bold text-success dark:text-success">{stats?.covered_by_subscription || 0}</span>
                 </CardContent>
             </Card>
         </div>
@@ -234,7 +234,7 @@ export default function RoadsidePage() {
 
     if (error) {
         return (
-            <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
+            <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive px-4 py-3 rounded">
                 Error loading roadside requests. Please try again.
             </div>
         );
@@ -251,7 +251,7 @@ export default function RoadsidePage() {
                             <span>/</span>
                             <span className="text-foreground font-medium">Roadside Assistance</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">
                             Roadside Activity
                         </h1>
                     </div>
@@ -502,7 +502,7 @@ export default function RoadsidePage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-6 w-6 p-0  data-[state=open]:bg-muted dark:data-[state=open]:bg-gray-800"
+                                                            className="h-6 w-6 p-0 data-[state=open]:bg-muted dark:data-[state=open]:bg-muted"
                                                         >
                                                             <span className="sr-only">Open menu</span>
                                                             <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />

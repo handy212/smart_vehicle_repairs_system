@@ -106,7 +106,7 @@ function AssetValuationReportContent() {
     ];
 
     return (
-        <div className="space-y-6 p-6 max-w-[1800px] mx-auto print:p-0 print:max-w-none">
+        <div className="space-y-6 p-6 w-full print:p-0 print:max-w-none">
             <div className="flex items-center justify-between print:hidden">
                 <div className="flex items-center gap-4">
                     <Link href="/fixed-assets">
@@ -116,7 +116,7 @@ function AssetValuationReportContent() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-black tracking-tight text-foreground">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">
                             Asset Valuation Report
                         </h1>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -157,7 +157,7 @@ function AssetValuationReportContent() {
 
             {/* Print Header */}
             <div className="hidden print:block mb-8">
-                <h1 className="text-2xl font-bold mb-2">Fixed Asset Valuation Report</h1>
+                <h1 className="text-xl font-bold mb-2">Fixed Asset Valuation Report</h1>
                 <p className="text-sm text-muted-foreground">Generated on {format(new Date(), "PPP")}</p>
             </div>
 

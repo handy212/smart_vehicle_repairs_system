@@ -210,10 +210,10 @@ export function Certifications({ technicianId }: CertificationsProps) {
             return <Badge variant="danger"><AlertTriangle className="h-3 w-3 mr-1" />Expired</Badge>;
         }
         if (cert.is_expiring_soon) {
-            return <Badge variant="warning" className="bg-orange-100 text-orange-800 border-orange-200"><Clock className="h-3 w-3 mr-1" />Expiring Soon</Badge>;
+            return <Badge variant="warning" className="bg-warning/15 text-warning border-warning/20"><Clock className="h-3 w-3 mr-1" />Expiring Soon</Badge>;
         }
         if (cert.status === 'active') {
-            return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+            return <Badge variant="default" className="bg-success/15 text-success border-success/20"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
         }
         return <Badge variant="outline">{cert.status}</Badge>;
     };

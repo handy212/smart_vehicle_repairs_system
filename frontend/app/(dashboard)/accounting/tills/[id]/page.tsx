@@ -182,7 +182,7 @@ export default function TillDetailPage() {
   const expectedBalance = till.current_expected_balance || till.expected_balance || till.opening_balance;
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-4">
       <div className="flex flex-col justify-between gap-3 border-b border-border pb-3 md:flex-row md:items-center">
         <div className="flex items-start gap-3">
           <Button variant="ghost" size="sm" asChild>

@@ -236,7 +236,7 @@ export function ReceivePaymentDialog({
                   </div>
                 </div>
                 {selectedCustomer ? (
-                  <div className="hidden items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 sm:inline-flex">
+                  <div className="hidden items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success sm:inline-flex">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Selected
                   </div>

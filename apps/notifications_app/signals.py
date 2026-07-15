@@ -4,8 +4,35 @@ from django.utils import timezone
 from apps.workorders.models import WorkOrder
 from apps.appointments.models import Appointment
 from .triggers import NotificationTriggers
+from .models import Notification
 
 triggers = NotificationTriggers()
+
+
+@receiver(post_save, sender=Notification)
+def broadcast_in_app_notification_created(sender, instance, created, **kwargs):
+    """
+    Fan out every new in-app notification over WebSocket.
+    Covers all triggers (job assign, appointments, inventory, subscriptions, etc.),
+    including rows that skip NotificationService.send_notification.
+    Frontend dedupes by notification id if _send_in_app also broadcasts.
+    """
+    if not created:
+        return
+    if instance.channel != "in_app":
+        return
+    if not instance.recipient_id:
+        return
+    try:
+        from .realtime import broadcast_in_app_notification
+        broadcast_in_app_notification(instance)
+    except Exception:
+        # Never break notification persistence because of realtime fan-out
+        import logging
+        logging.getLogger(__name__).exception(
+            "Realtime broadcast failed for notification %s", instance.pk
+        )
+
 
 @receiver(pre_save, sender=WorkOrder)
 def cache_work_order_status(sender, instance, **kwargs):

@@ -30,9 +30,9 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed left-0 bottom-0 z-40 flex flex-col transition-all duration-200 ease-out",
+          "fixed bottom-0 left-0 z-40 flex flex-col transition-all duration-200 ease-out",
           "lg:translate-x-0",
-          "border-r border-border bg-background shadow-sm",
+          "border-r border-[color:var(--sidebar-border)] bg-[var(--sidebar)]",
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-16" : ""
         )}
@@ -43,8 +43,8 @@ export function Sidebar({
       >
         <div
           className={cn(
-            "flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800",
-            isCollapsed && "px-1 py-4"
+            "flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-muted",
+            isCollapsed && "px-1.5 py-3"
           )}
         >
           <GroupedNavPanel
@@ -64,25 +64,25 @@ export function Sidebar({
         </div>
 
         {!isCollapsed && (
-          <div className="flex-shrink-0 border-t border-border bg-background p-4">
+          <div className="flex-shrink-0 border-t border-[color:var(--sidebar-border)] p-3">
             <Link
               href="/help"
-              className="flex items-center px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <HelpCircle className="w-4 h-4 mr-2" />
+              <HelpCircle className="mr-2.5 h-4 w-4" />
               Help & Support
             </Link>
           </div>
         )}
 
         {isCollapsed && (
-          <div className="flex-shrink-0 border-t border-border bg-background p-2">
+          <div className="flex-shrink-0 border-t border-[color:var(--sidebar-border)] p-2">
             <Link
               href="/help"
               title="Help & Support"
-              className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="flex w-full items-center justify-center rounded-lg p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <HelpCircle className="w-5 h-5" />
+              <HelpCircle className="h-5 w-5" />
             </Link>
           </div>
         )}

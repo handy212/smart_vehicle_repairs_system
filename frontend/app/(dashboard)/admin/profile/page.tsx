@@ -187,7 +187,7 @@ export default function ProfilePage() {
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3 border-b border-border bg-muted/50">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                <div className="p-1.5 bg-warning/15 rounded-md">
                   <User className="w-4 h-4 text-primary" />
                 </div>
                 <div>
@@ -371,7 +371,7 @@ export default function ProfilePage() {
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3 border-b border-border bg-muted/50">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                <div className="p-1.5 bg-warning/15 rounded-md">
                   <User className="w-4 h-4 text-primary" />
                 </div>
                 <div>
@@ -422,8 +422,8 @@ export default function ProfilePage() {
             <Card className="border border-border shadow-sm">
               <CardHeader className="pb-3 border-b border-border bg-muted/50">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-md">
-                    <Briefcase className="w-4 h-4 text-primary dark:text-purple-400" />
+                  <div className="p-1.5 bg-info/15 dark:bg-info/20 rounded-md">
+                    <Briefcase className="w-4 h-4 text-primary dark:text-info" />
                   </div>
                   <div>
                     <CardTitle className="text-sm font-semibold text-foreground">Employment</CardTitle>
@@ -461,7 +461,7 @@ export default function ProfilePage() {
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3 border-b border-border bg-muted/50">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                <div className="p-1.5 bg-warning/15 rounded-md">
                   <KeyRound className="w-4 h-4 text-primary" />
                 </div>
                 <div>

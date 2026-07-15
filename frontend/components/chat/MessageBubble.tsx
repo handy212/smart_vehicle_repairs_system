@@ -22,7 +22,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, showAvata
   if (isSystem) {
     return (
       <div className="flex justify-center w-full my-4">
-        <span className="px-4 py-1.5 rounded-2xl bg-slate-100/70 dark:bg-slate-800/70 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border border-border/50 flex items-center gap-2">
+        <span className="px-4 py-1.5 rounded-lg bg-muted/70 dark:bg-muted/70 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] border border-border/50 flex items-center gap-2">
           <Info className="w-3.5 h-3.5 text-primary/60 shrink-0" />
           {message.message}
         </span>
@@ -46,8 +46,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, showAvata
     >
       {/* Avatar */}
       <div className={cn(
-        "flex-shrink-0 w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-xs shadow-sm mt-1 transition-all border border-border/20 overflow-hidden",
-        isOwnMessage ? "bg-primary text-white" : "bg-white dark:bg-slate-800 text-slate-500",
+        "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm mt-1 transition-all border border-border/20 overflow-hidden",
+        isOwnMessage ? "bg-primary text-white" : "bg-card dark:bg-muted text-muted-foreground",
         !showAvatar && "opacity-0 pointer-events-none"
       )}>
         {message.sender_name?.charAt(0) || "?"}
@@ -56,7 +56,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, showAvata
       <div className={cn("flex flex-col max-w-[75%] md:max-w-[65%]", isOwnMessage ? "items-end" : "items-start")}>
         {/* Sender name */}
         {!isOwnMessage && showAvatar && (
-          <span className="text-[10px] font-black text-muted-foreground/40 ml-1 mb-1 uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-muted-foreground/40 ml-1 mb-1 uppercase tracking-widest">
             {message.sender_name}
           </span>
         )}
@@ -80,7 +80,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, showAvata
             "px-4 py-2.5 rounded-[1.25rem] text-[14px] leading-relaxed transition-all duration-300 border shadow-sm",
             isOwnMessage
               ? "bg-primary border-primary text-white rounded-tr-none"
-              : "bg-white dark:bg-slate-800 border-border text-foreground rounded-tl-none group-hover:shadow-md"
+              : "bg-card dark:bg-muted border-border text-foreground rounded-tl-none group-hover:shadow-md"
           )}>
             {/* Attachment rendering */}
             {hasAttachment && (
@@ -90,7 +90,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, showAvata
                     <img
                       src={message.attachment}
                       alt="attachment"
-                      className="max-w-full max-h-48 rounded-xl object-cover border border-white/20 hover:opacity-90 transition-opacity"
+                      className="max-w-full max-h-48 rounded-xl object-cover border border-card/20 hover:opacity-90 transition-opacity"
                     />
                   </a>
                 ) : (
@@ -101,8 +101,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, showAvata
                     className={cn(
                       "flex items-center gap-2 px-3 py-2 rounded-xl transition-colors text-sm font-medium",
                       isOwnMessage
-                        ? "bg-white/15 hover:bg-white/25 text-white"
-                        : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-foreground"
+                        ? "bg-card/15 hover:bg-card/25 text-white"
+                        : "bg-muted dark:bg-muted hover:bg-muted dark:hover:bg-muted-foreground text-foreground"
                     )}
                   >
                     <FileDown className="w-4 h-4 shrink-0" />
@@ -168,7 +168,7 @@ const ActionButton = ({
   <button
     onClick={onClick}
     title={title}
-    className="w-7 h-7 rounded-full bg-white dark:bg-slate-800 border border-border shadow-soft flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-90"
+    className="w-7 h-7 rounded-full bg-card dark:bg-muted border border-border shadow-soft flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-90"
   >
     {icon}
   </button>

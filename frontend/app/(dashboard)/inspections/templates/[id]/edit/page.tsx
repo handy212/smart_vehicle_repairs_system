@@ -165,7 +165,7 @@ export default function EditTemplatePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Edit Inspection Template</h1>
+          <h1 className="text-xl font-bold text-foreground">Edit Inspection Template</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Update template details and settings
           </p>

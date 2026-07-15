@@ -174,7 +174,7 @@ export function CreateInspectionForm({
                             </p>
                         )}
                         {fieldErrors?.odometer_reading && (
-                            <p className="mt-1 text-sm text-destructive dark:text-red-400">
+                            <p className="mt-1 text-sm text-destructive dark:text-destructive">
                                 {fieldErrors.odometer_reading}
                             </p>
                         )}
@@ -186,8 +186,8 @@ export function CreateInspectionForm({
                     </div>
 
                     {!vehicleId && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                            <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                        <div className="bg-warning/10 dark:bg-warning/15 border border-warning/20 dark:border-warning/40 rounded-lg p-3">
+                            <p className="text-sm text-warning dark:text-warning">
                                 <AlertCircle className="w-4 h-4 inline mr-1.5" />
                                 No vehicle selected for this work order. Please ensure the work order has a vehicle assigned.
                             </p>

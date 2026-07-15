@@ -214,7 +214,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
 
                                 {/* Basic Info Tab */}
                                 <TabsContent value="basic" className="p-4 space-y-4 sm:p-6">
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="part_number">{skuLabel} <span className="text-destructive">*</span></Label>
                                             <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-destructive" : ""} placeholder={skuPlaceholder} />
@@ -232,7 +232,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                         </div>
                                         )}
                                     </div>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <select
                                                 id="category"
@@ -332,7 +332,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                         </div>
                                     )}
                                     {isInventory && (
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="inventory_start_date">Inventory start date</Label>
                                             <Input id="inventory_start_date" type="date" {...register("inventory_start_date")} />
@@ -355,7 +355,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                             <Input type="number" id="reorder_quantity" {...register("reorder_quantity", { valueAsNumber: true })} />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="bin_location">Bin location</Label>
                                             <Input id="bin_location" {...register("bin_location")} />
@@ -367,7 +367,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                     </div>
                                     </>
                                     )}
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="unit">Unit <span className="text-destructive">*</span></Label>
                                             <select
@@ -402,7 +402,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
 
                                 {/* Pricing Tab */}
                                 <TabsContent value="pricing" className="p-4 space-y-4 sm:p-6">
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         {!isService && (
                                         <div className="space-y-2">
                                             <Label htmlFor="cost_price">Cost price</Label>
@@ -417,7 +417,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                         </div>
                                         )}
                                     </div>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="selling_price">{isService ? "Rate / price" : "Selling price"}</Label>
                                             <Input type="number" step="0.01" id="selling_price" {...register("selling_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
@@ -435,7 +435,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
 
                                 {/* Additional Tab */}
                                 <TabsContent value="additional" className="p-4 space-y-4 sm:p-6">
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="weight">Weight (lbs)</Label>
                                             <Input type="number" step="0.01" id="weight" {...register("weight", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
@@ -469,7 +469,7 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-6">
+                <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
                     <Card className="overflow-hidden">
                         <div className="relative aspect-square border-b border-border bg-muted/40 flex items-center justify-center">
                             {imagePreview ? (

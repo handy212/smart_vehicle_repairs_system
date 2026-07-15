@@ -17,8 +17,8 @@ export default function ModuleError({
 
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center bg-card rounded-lg border border-border shadow-sm my-4 min-h-[400px]">
-      <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-        <AlertCircle className="w-6 h-6 text-destructive dark:text-red-400" />
+      <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+        <AlertCircle className="w-6 h-6 text-destructive dark:text-destructive" />
       </div>
       <h2 className="text-xl font-semibold mb-2">Failed to load this section</h2>
       <p className="text-muted-foreground mb-6 max-w-md">

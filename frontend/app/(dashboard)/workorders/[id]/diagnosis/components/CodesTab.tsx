@@ -147,7 +147,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       case "critical":
         return <AlertTriangle className="w-4 h-4 text-destructive" />;
       case "warning":
-        return <AlertCircleIcon className="w-4 h-4 text-yellow-500" />;
+        return <AlertCircleIcon className="w-4 h-4 text-warning" />;
       default:
         return <Info className="w-4 h-4 text-primary" />;
     }
@@ -495,7 +495,7 @@ function CodeDialog({
                       }}
                       placeholder="e.g., P0301"
                       required
-                      className={isDuplicate ? "border-destructive focus:ring-red-500" : ""}
+                      className={isDuplicate ? "border-destructive focus:ring-destructive" : ""}
                     />
                     {isDuplicate && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">

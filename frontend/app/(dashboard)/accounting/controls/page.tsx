@@ -222,10 +222,10 @@ export default function ControlPanelPage() {
   };
 
   return (
-    <div className="space-y-4 p-4 md:p-0 max-w-6xl">
+    <div className="space-y-4 w-full">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-foreground">Controls & Compliance</h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+        <p className="text-sm text-muted-foreground mt-1 w-full">
           Configure SVR control accounts, QuickBooks mappings, accounting periods, and review ledger
           audit events. Subledger health:{" "}
           <Link href="/accounting/integrity" className="text-primary hover:underline">

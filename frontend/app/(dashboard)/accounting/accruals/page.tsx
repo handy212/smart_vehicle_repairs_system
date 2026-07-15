@@ -108,7 +108,7 @@ export default function AccrualsPage() {
     }
 
     return (
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+        <div className="p-6 space-y-6 w-full">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Accruals Management</h1>

@@ -43,9 +43,9 @@ function getDueStatusBadge(schedule: VehicleServiceSchedule) {
   if (!schedule.is_due) {
     if (schedule.days_until_due !== undefined && schedule.days_until_due > 0) {
       if (schedule.days_until_due <= 7) {
-        return <Badge variant="default" className="bg-warning/100 hover:bg-yellow-600">Due Soon</Badge>;
+        return <Badge variant="default" className="bg-warning hover:bg-warning">Due Soon</Badge>;
       }
-      return <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400">Upcoming</Badge>;
+      return <Badge variant="secondary" className="bg-success/15 text-success hover:bg-success/20 dark:bg-success/20 dark:text-success">Upcoming</Badge>;
     }
     return <Badge variant="secondary">Scheduled</Badge>;
   }
@@ -215,7 +215,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : schedules.length > 0 ? (
-        <Card className="overflow-hidden border-orange-100 border-border">
+        <Card className="overflow-hidden border-warning/20 border-border">
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-muted/50">
@@ -255,7 +255,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-sm">
-                        <span className={schedule.is_due ? "font-semibold text-destructive dark:text-red-400" : "text-card-foreground"}>
+                        <span className={schedule.is_due ? "font-semibold text-destructive dark:text-destructive" : "text-card-foreground"}>
                           {schedule.next_service_due_date
                             ? format(new Date(schedule.next_service_due_date), "MMM dd, yyyy")
                             : "Not set"}
@@ -306,7 +306,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             setSelectedSchedule(schedule);
                             setShowCompleteDialog(true);
                           }}
-                          className="h-8 px-2 text-success hover:text-green-700 hover:bg-success/10 dark:hover:bg-green-900/20"
+                          className="h-8 px-2 text-success hover:text-success hover:bg-success/10 dark:hover:bg-success/20"
                         >
                           <Check className="w-3.5 h-3.5 mr-1" />
                           Complete
@@ -317,7 +317,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => openDeleteDialog(schedule)}
-                            className="h-8 w-8 p-0 hover:bg-destructive/10 dark:hover:bg-red-900/20"
+                            className="h-8 w-8 p-0 hover:bg-destructive/10 dark:hover:bg-destructive/20"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-destructive" />
                           </Button>
@@ -379,7 +379,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="bg-info/10 dark:bg-blue-900/20 p-3 rounded-md flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300">
+            <div className="bg-info/10 dark:bg-primary/20 p-3 rounded-md flex items-start gap-3 text-sm text-primary dark:text-primary">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p>This will update the last service date/mileage and automatically calculate the next due date.</p>
             </div>
@@ -431,7 +431,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             <AlertDialogCancel onClick={() => setScheduleToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => scheduleToDelete && deleteMutation.mutate(scheduleToDelete.id)}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              className="bg-destructive hover:bg-destructive focus:ring-destructive"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete Schedule"}
             </AlertDialogAction>

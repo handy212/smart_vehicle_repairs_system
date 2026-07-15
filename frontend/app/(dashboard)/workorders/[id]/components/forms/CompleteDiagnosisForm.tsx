@@ -63,7 +63,7 @@ export function CompleteDiagnosisForm({
             <div className="flex-1 overflow-y-auto px-6 pb-4">
                 <div className="space-y-4">
                     {validationError && (
-                        <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+                        <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive px-4 py-3 rounded-lg text-sm">
                             {validationError}
                         </div>
                     )}

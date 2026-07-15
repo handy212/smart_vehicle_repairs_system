@@ -246,7 +246,7 @@ export default function AppointmentDetailPage() {
                   variant="secondary"
                   onClick={() => setShowCancelDialog(true)}
                   disabled={cancelMutation.isPending}
-                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  className="text-destructive hover:text-destructive dark:text-destructive dark:hover:text-destructive"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
                   Cancel Appointment
@@ -363,10 +363,10 @@ export default function AppointmentDetailPage() {
           )}
 
           {appointment.status === "completed" && (
-            <Card className="border-none shadow-premium bg-gradient-to-br from-orange-50 to-indigo-50 dark:from-orange-900/10 dark:to-indigo-900/10">
+            <Card className="border-none shadow-premium bg-gradient-to-br from-warning/10 to-primary/10 dark:from-warning/10 dark:to-primary/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                  <Star className="h-5 w-5 text-warning fill-warning" />
                   Appointment Experience
                 </CardTitle>
               </CardHeader>
@@ -379,7 +379,7 @@ export default function AppointmentDetailPage() {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
-                            className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`}
+                            className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-warning fill-warning" : "text-muted-foreground"}`}
                           />
                         ))}
                       </div>
@@ -399,7 +399,7 @@ export default function AppointmentDetailPage() {
                           onClick={() => setRating(star)}
                           className="focus:outline-none transition-transform hover:scale-110"
                         >
-                          <Star className={`h-8 w-8 ${star <= rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} />
+                          <Star className={`h-8 w-8 ${star <= rating ? "text-warning fill-warning" : "text-muted-foreground"}`} />
                         </button>
                       ))}
                     </div>

@@ -33,7 +33,7 @@ import {
   Loader2,
   StickyNote,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { photosDB, roadsideRequestsDB } from "@/lib/offline/db";
 import { queueRequest } from "@/lib/offline/queue";
 import { compressPhoto } from "@/lib/offline/photos";
@@ -297,7 +297,7 @@ export default function RoadsideDetailPage() {
             <CardContent className="space-y-2 pt-0 text-sm">
               {request.description && <p>{request.description}</p>}
               {request.notes && (
-                <p className="rounded-md border border-warning/30 bg-warning/10 p-2 text-warning dark:text-yellow-200">
+                <p className="rounded-md border border-warning/30 bg-warning/10 p-2 text-warning dark:text-warning">
                   {request.notes}
                 </p>
               )}

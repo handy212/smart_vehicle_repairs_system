@@ -341,7 +341,7 @@ export function PaymentAllocationModal({
                             variant="outline"
                             onClick={() => autoAllocateMutation.mutate(paymentId)}
                             disabled={autoAllocateMutation.isPending || outstandingInvoices.length === 0}
-                            className="text-primary hover:text-orange-700 border-orange-200 hover:bg-primary/10"
+                            className="text-primary hover:text-warning border-warning/20 hover:bg-primary/10"
                         >
                             {autoAllocateMutation.isPending ? "Auto-Allocating..." : "⚡ Auto-Allocate"}
                         </Button>

@@ -108,7 +108,7 @@ export default function NewCategoryPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">New Category</h1>
+          <h1 className="text-xl font-bold text-foreground">New Category</h1>
           <p className="text-sm text-muted-foreground mt-1">Create a new part category</p>
         </div>
       </div>

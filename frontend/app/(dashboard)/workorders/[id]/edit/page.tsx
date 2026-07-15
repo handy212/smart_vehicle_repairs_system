@@ -10,26 +10,29 @@ import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
 import {
-  SERVICE_PACKAGE_LABEL,
-  SERVICE_PACKAGE_PLACEHOLDER,
-} from "@/lib/workorders/job-type-labels";
-import {
   jobTypesApi,
   jobTypeRequiresBundle,
   type JobType,
 } from "@/lib/api/job-types";
-import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
+import { ServiceIntakeFields } from "@/components/workorders/ServiceIntakeFields";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { AlertCircle, Phone, Mail, Tag, Car, Hash } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { getUserFacingError } from "@/lib/api/errors";
 import { getCustomerDisplayName } from "@/lib/utils/customer-display";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
+import { FORM_PAGE_CLASS } from "@/lib/constants/layout";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
+import { getValidNextStatuses } from "@/lib/utils/workorder-transitions";
+import type { WorkflowWorkOrderContext } from "@/lib/utils/workorder-workflow-steps";
+import {
+  mergeConcernSelections,
+  splitConcernsText,
+} from "@/lib/constants/common-concerns";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -39,9 +42,10 @@ const workOrderSchema = z.object({
     "draft", "inspection", "intake", "assigned", "diagnosis",
     "awaiting_approval", "approved", "in_progress",
     "additional_work_found", "paused", "quality_check",
-    "completed", "invoiced", "closed"
+    "completed", "invoiced", "closed",
   ]),
   customer_concerns: z.string().optional(),
+  odometer_in: z.number().min(0).optional(),
   job_type_code: z.string().min(1, "Job type is required"),
   job_type_codes: z.array(z.string()).optional(),
   service_type: z.number().optional(),
@@ -49,9 +53,6 @@ const workOrderSchema = z.object({
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
-
-import { getValidNextStatuses } from "@/lib/utils/workorder-transitions";
-import type { WorkflowWorkOrderContext } from "@/lib/utils/workorder-workflow-steps";
 
 // Status display labels
 const STATUS_LABELS: Record<string, string> = {
@@ -109,9 +110,11 @@ export default function EditWorkOrderPage() {
     customer_number?: string;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedConcerns, setSelectedConcerns] = useState<string[]>([]);
+  const [customConcerns, setCustomConcerns] = useState("");
+  const concernsHydratedRef = useRef(false);
 
   const {
-    register,
     handleSubmit,
     formState: { errors, isSubmitting },
     watch,
@@ -139,11 +142,33 @@ export default function EditWorkOrderPage() {
 
   const jobTypeCode = watch("job_type_code");
   const jobTypeCodes = watch("job_type_codes") || [jobTypeCode || "general_repairs"];
-  const selectedJobType = useMemo<JobType | null>(() => {
+  const selectedJobTypes = useMemo<JobType[]>(() => {
     const jobTypes = jobTypesData?.results ?? [];
-    return jobTypes.find((jt) => jt.code === jobTypeCode) ?? null;
-  }, [jobTypesData, jobTypeCode]);
+    return jobTypeCodes
+      .map((code) => jobTypes.find((jt) => jt.code === code))
+      .filter(Boolean) as JobType[];
+  }, [jobTypesData, jobTypeCodes]);
+  const selectedJobType = useMemo<JobType | null>(
+    () => selectedJobTypes[0] ?? null,
+    [selectedJobTypes]
+  );
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
+
+  const concernsMerged = useMemo(
+    () => mergeConcernSelections(selectedConcerns, customConcerns),
+    [selectedConcerns, customConcerns]
+  );
+
+  useEffect(() => {
+    if (!concernsHydratedRef.current) return;
+    setValue("customer_concerns", concernsMerged, { shouldValidate: false });
+  }, [concernsMerged, setValue]);
+
+  const toggleConcern = (concern: string) => {
+    setSelectedConcerns((prev) =>
+      prev.includes(concern) ? prev.filter((c) => c !== concern) : [...prev, concern]
+    );
+  };
 
   const bundles = (() => {
     if (!bundlesData) return [] as ServiceBundle[];
@@ -283,6 +308,12 @@ export default function EditWorkOrderPage() {
 
         status: (workOrder.status || "draft") as WorkOrderFormData["status"],
         customer_concerns: workOrder.customer_concerns || "",
+        odometer_in:
+          typeof workOrder.odometer_in === "number"
+            ? workOrder.odometer_in
+            : workOrder.odometer_in != null
+              ? Number(workOrder.odometer_in)
+              : 0,
         job_type_code:
           workOrder.job_type_detail?.code ??
           (workOrder.maintenance_type === "routine" ? "routine_maintenance" : "general_repairs"),
@@ -297,6 +328,11 @@ export default function EditWorkOrderPage() {
         service_type: serviceTypeId,
         service_bundle: serviceBundleId,
       });
+
+      const split = splitConcernsText(workOrder.customer_concerns || "");
+      setSelectedConcerns(split.selected);
+      setCustomConcerns(split.custom);
+      concernsHydratedRef.current = true;
 
       // Explicitly sync local state for immediate feedback
       if (customerId) {
@@ -407,50 +443,55 @@ export default function EditWorkOrderPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className={`${FORM_PAGE_CLASS} flex h-64 items-center justify-center`}>
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!workOrder) {
     return (
-      <div className="space-y-4">
+      <div className={`${FORM_PAGE_CLASS} space-y-4`}>
+        <StaffPageHeader
+          title="Work order not found"
+          breadcrumbs={[
+            { label: "Work Orders", href: "/workorders" },
+            { label: "Edit" },
+          ]}
+        />
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+          This work order could not be loaded.
+        </div>
         <Link href="/workorders">
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
+          <Button variant="outline">Back to work orders</Button>
         </Link>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-destructive dark:text-red-400">Work order not found.</p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
   if (workOrder.status === "closed") {
     return (
-      <div className="space-y-4">
-        <Link href={`/workorders/${workOrderId}`}>
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
+      <div className={`${FORM_PAGE_CLASS} space-y-4`}>
+        <StaffPageHeader
+          title={`#${workOrder.work_order_number}`}
+          description="Closed work orders cannot be edited."
+          breadcrumbs={[
+            { label: "Work Orders", href: "/workorders" },
+            { label: workOrder.work_order_number, href: `/workorders/${workOrderId}` },
+            { label: "Edit" },
+          ]}
+        />
         <Card>
           <CardHeader>
             <CardTitle>Work Order Locked</CardTitle>
             <CardDescription>
-              Closed work orders cannot be edited.
+              Open the job card to review the final record.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Work order <span className="font-mono text-foreground">{workOrder.work_order_number}</span> is already closed. Open the job card to review the final record.
-            </p>
+            <Link href={`/workorders/${workOrderId}`}>
+              <Button>View job card</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -458,139 +499,140 @@ export default function EditWorkOrderPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href={`/workorders/${workOrderId}`}>
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Edit Work Order</h1>
-          <p className="text-sm text-muted-foreground mt-1">Update work order information</p>
-        </div>
-      </div>
+    <div className={`${FORM_PAGE_CLASS} space-y-6 pb-24`}>
+      <StaffPageHeader
+        title={`Edit #${workOrder.work_order_number}`}
+        description="Update customer, vehicle, job type, and status."
+        breadcrumbs={[
+          { label: "Work Orders", href: "/workorders" },
+          { label: workOrder.work_order_number, href: `/workorders/${workOrderId}` },
+          { label: "Edit" },
+        ]}
+      />
 
       {errorMessage && (
-        <Card className="border-destructive bg-destructive/10 dark:bg-red-900/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-destructive dark:text-red-200">
-                  Error updating work order
-                </p>
-                <p className="text-sm text-destructive dark:text-red-400 mt-1">
-                  {errorMessage}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div>
+            <p className="text-sm font-medium text-destructive">Could not save changes</p>
+            <p className="mt-1 text-sm text-destructive">{errorMessage}</p>
+          </div>
+        </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <form id="edit-work-order-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             {/* Customer & Vehicle */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer / Business & Vehicle</CardTitle>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border/40 bg-muted/30 pb-4">
+                <CardTitle className="text-base">Customer / Business & Vehicle</CardTitle>
                 <CardDescription>Select the customer or business account and vehicle</CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
                   {/* Customer */}
                   <div className="space-y-3">
                     <div>
                       <label
                         htmlFor="customer"
-                        className="block text-sm font-medium text-card-foreground mb-1"
+                        className="mb-1 block text-sm font-medium text-card-foreground"
                       >
                         Customer / Business *
                       </label>
 
-                      <Select
-                        key={`customer-${watchedCustomer || 'empty'}-${workOrder?.created_at || 'loading'}`}
-                        value={watchedCustomer ? String(watchedCustomer) : ""}
-                        onValueChange={(val) => {
-                          const numVal = parseInt(val);
-                          setValue("customer", numVal);
-                          setValue("vehicle", 0); // Reset vehicle when customer changes
-                          setSelectedCustomer(numVal);
-
-                          // Update selected customer data
-                          const customerData = customersData?.results?.find((c) => c.id === numVal);
-                          if (customerData) {
-                            setSelectedCustomerData({
-                              id: customerData.id,
-                              full_name: customerData.full_name,
-                              company_name: customerData.company_name,
-                              email: customerData.email,
-                              phone: customerData.phone,
-                              customer_type: customerData.customer_type,
-                              customer_number: customerData.customer_number,
-                            });
-                          } else {
-                            setSelectedCustomerData(null);
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-destructive" : ""}`}>
-                          <SelectValue placeholder="Select a customer or business" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customerOptions.map((option) => (
-                            <SelectItem key={option.id} value={option.id.toString()}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {canListCustomers ? (
+                        <div className={errors.customer ? "[&_button]:border-destructive" : ""}>
+                          <CustomerSelector
+                            selectedCustomerId={watchedCustomer || undefined}
+                            placeholder="Search by company, contact, phone..."
+                            onSelect={(cust) => {
+                              setValue("customer", cust.id, { shouldValidate: true });
+                              setValue("vehicle", 0);
+                              setSelectedCustomer(cust.id);
+                              setSelectedCustomerData({
+                                id: cust.id,
+                                full_name: cust.full_name,
+                                company_name: cust.company_name,
+                                email: cust.email,
+                                phone: cust.phone,
+                                customer_type: cust.customer_type,
+                                customer_number: cust.customer_number,
+                              });
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <Select
+                          key={`customer-${watchedCustomer || "empty"}-${workOrder?.created_at || "loading"}`}
+                          value={watchedCustomer ? String(watchedCustomer) : ""}
+                          onValueChange={(val) => {
+                            const numVal = parseInt(val);
+                            setValue("customer", numVal);
+                            setValue("vehicle", 0);
+                            setSelectedCustomer(numVal);
+                            const customerData = customersData?.results?.find((c) => c.id === numVal);
+                            if (customerData) {
+                              setSelectedCustomerData({
+                                id: customerData.id,
+                                full_name: customerData.full_name,
+                                company_name: customerData.company_name,
+                                email: customerData.email,
+                                phone: customerData.phone,
+                                customer_type: customerData.customer_type,
+                                customer_number: customerData.customer_number,
+                              });
+                            } else {
+                              setSelectedCustomerData(null);
+                            }
+                          }}
+                        >
+                          <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-destructive" : ""}`}>
+                            <SelectValue placeholder="Select a customer or business" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customerOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id.toString()}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
 
                       {errors.customer && (
-                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
+                        <p className="mt-1 text-sm text-destructive">
                           {errors.customer.message}
                         </p>
                       )}
                     </div>
 
-                    {/* Customer Info Display */}
                     {selectedCustomerData && (
-                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Customer / Business Information
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <span className="font-medium text-card-foreground w-20 flex-shrink-0">Name:</span>
-                            <span className="text-foreground">{getCustomerDisplayName(selectedCustomerData)}</span>
-                          </div>
-                          {selectedCustomerData.phone && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>
-                              <span className="text-foreground">{selectedCustomerData.phone}</span>
-                            </div>
-                          )}
-                          {selectedCustomerData.email && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Email:</span>
-                              <span className="text-foreground break-words">{selectedCustomerData.email}</span>
-                            </div>
-                          )}
-                          {selectedCustomerData.customer_type && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Type:</span>
-                              <span className="text-foreground capitalize">
-                                {selectedCustomerData.customer_type.replace('_', ' ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {getCustomerDisplayName(selectedCustomerData)}
+                        </span>
+                        {selectedCustomerData.phone && (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {selectedCustomerData.phone}
+                          </span>
+                        )}
+                        {selectedCustomerData.email && (
+                          <span className="inline-flex max-w-[200px] items-center gap-1 truncate">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            {selectedCustomerData.email}
+                          </span>
+                        )}
+                        {selectedCustomerData.customer_type && (
+                          <span className="inline-flex items-center gap-1 capitalize">
+                            <Tag className="h-3 w-3" />
+                            {selectedCustomerData.customer_type.replace("_", " ")}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -600,13 +642,13 @@ export default function EditWorkOrderPage() {
                     <div>
                       <label
                         htmlFor="vehicle"
-                        className="block text-sm font-medium text-card-foreground mb-1"
+                        className="mb-1 block text-sm font-medium text-card-foreground"
                       >
                         Vehicle *
                       </label>
 
                       <Select
-                        key={`vehicle-${watchedVehicle || 'empty'}-${workOrder?.created_at || 'loading'}`}
+                        key={`vehicle-${watchedVehicle || "empty"}-${workOrder?.created_at || "loading"}`}
                         value={watchedVehicle ? String(watchedVehicle) : ""}
                         onValueChange={(val) => setValue("vehicle", parseInt(val))}
                         disabled={!selectedCustomer}
@@ -616,7 +658,7 @@ export default function EditWorkOrderPage() {
                             ? "Select a customer first"
                             : isLoadingVehicles
                               ? "Loading vehicles..."
-                              : !vehiclesData?.results?.length && !(workOrder && typeof workOrder.vehicle === 'object')
+                              : !vehiclesData?.results?.length && !(workOrder && typeof workOrder.vehicle === "object")
                                 ? "No vehicles found"
                                 : "Select a vehicle"} />
                         </SelectTrigger>
@@ -630,38 +672,29 @@ export default function EditWorkOrderPage() {
                       </Select>
 
                       {errors.vehicle && (
-                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
+                        <p className="mt-1 text-sm text-destructive">
                           {errors.vehicle.message}
                         </p>
                       )}
                     </div>
 
-                    {/* Vehicle Info Display */}
                     {selectedVehicle && (
-                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Vehicle Info
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <span className="font-medium text-card-foreground w-24 flex-shrink-0">Make/Model:</span>
-                            <span className="text-foreground">
-                              {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
-                            </span>
-                          </div>
-                          {selectedVehicle.license_plate && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">License:</span>
-                              <span className="text-foreground">{selectedVehicle.license_plate}</span>
-                            </div>
-                          )}
-                          {selectedVehicle.vin && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
-                              <span className="text-foreground font-mono text-xs break-all">{selectedVehicle.vin}</span>
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                          <Car className="h-3 w-3" />
+                          {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
+                        </span>
+                        {selectedVehicle.license_plate && (
+                          <span className="inline-flex items-center gap-1">
+                            <Hash className="h-3 w-3" />
+                            {selectedVehicle.license_plate}
+                          </span>
+                        )}
+                        {selectedVehicle.vin && (
+                          <span>
+                            VIN: <span className="font-mono text-[11px]">{selectedVehicle.vin}</span>
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -672,174 +705,176 @@ export default function EditWorkOrderPage() {
 
 
             {/* Work Order Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Work Order Details</CardTitle>
-                <CardDescription>Priority, status, and description</CardDescription>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border/40 bg-muted/30 pb-4">
+                <CardTitle className="text-base">Service & request</CardTitle>
+                <CardDescription>
+                  Job type, package if needed, customer concerns, and intake reading
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <JobTypeSelect
-                      multiple
-                      value={jobTypeCode || "general_repairs"}
-                      values={jobTypeCodes}
-                      onChange={(code, jobType) => {
-                        setValue("job_type_code", code, { shouldValidate: true });
-                        if (!jobTypeRequiresBundle(jobType)) {
-                          setValue("service_bundle", undefined);
-                          setValue("service_type", undefined);
-                        }
-                      }}
-                      onChangeMultiple={(codes, types) => {
-                        setValue("job_type_codes", codes, { shouldValidate: true });
-                        setValue("job_type_code", codes[0] || "general_repairs", {
-                          shouldValidate: true,
-                        });
-                        const primary = types[0] ?? null;
-                        if (!jobTypeRequiresBundle(primary)) {
-                          setValue("service_bundle", undefined);
-                          setValue("service_type", undefined);
-                        }
-                      }}
-                    />
-                  </div>
+              <CardContent className="space-y-6 pt-6">
+                <ServiceIntakeFields
+                  idPrefix="edit-wo"
+                  jobTypeCode={jobTypeCode || "general_repairs"}
+                  jobTypeCodes={jobTypeCodes}
+                  onJobTypeChange={(code, jobType) => {
+                    setValue("job_type_code", code, { shouldValidate: true });
+                    if (!jobTypeRequiresBundle(jobType)) {
+                      setValue("service_bundle", undefined);
+                      setValue("service_type", undefined);
+                    }
+                  }}
+                  onJobTypesChange={(codes, types) => {
+                    setValue("job_type_codes", codes, { shouldValidate: true });
+                    setValue("job_type_code", codes[0] || "general_repairs", {
+                      shouldValidate: true,
+                    });
+                    const primary = types[0] ?? null;
+                    if (!jobTypeRequiresBundle(primary)) {
+                      setValue("service_bundle", undefined);
+                      setValue("service_type", undefined);
+                    }
+                  }}
+                  primaryJobType={selectedJobType}
+                  selectedJobTypes={selectedJobTypes}
+                  bundles={bundles}
+                  serviceBundleId={watch("service_bundle")}
+                  onServiceBundleChange={(bundleId, bundle) => {
+                    setValue("service_bundle", bundleId, { shouldValidate: true });
+                    if (bundle.service_type) {
+                      setValue("service_type", bundle.service_type);
+                    }
+                    if (!customConcerns.trim() || customConcerns.startsWith("Perform")) {
+                      setSelectedConcerns([]);
+                      setCustomConcerns(`Perform ${bundle.name}`);
+                    }
+                  }}
+                  bundleError={errors.service_bundle?.message}
+                  selectedConcerns={selectedConcerns}
+                  onToggleConcern={toggleConcern}
+                  customConcerns={customConcerns}
+                  onCustomConcernsChange={setCustomConcerns}
+                  concernsPreview={concernsMerged}
+                  concernsError={errors.customer_concerns?.message}
+                  odometer={
+                    typeof watch("odometer_in") === "number" && !Number.isNaN(watch("odometer_in"))
+                      ? String(watch("odometer_in"))
+                      : ""
+                  }
+                  onOdometerChange={(value) => {
+                    const parsed = value === "" ? 0 : parseInt(value, 10);
+                    setValue("odometer_in", Number.isNaN(parsed) ? 0 : parsed, {
+                      shouldValidate: true,
+                    });
+                  }}
+                  odometerError={errors.odometer_in?.message}
+                  priority={(watch("priority") as "low" | "normal" | "high" | "urgent") || "normal"}
+                  onPriorityChange={(value) => setValue("priority", value)}
+                />
 
-                  {bundleRequired && (
-                    <div>
-                      <label htmlFor="service_bundle" className="mb-1 block text-sm font-medium text-card-foreground">
-                        {SERVICE_PACKAGE_LABEL} *
-                      </label>
-                      <Select
-                        value={watch("service_bundle")?.toString() || ""}
-                        onValueChange={(val) => {
-                          const bundleId = parseInt(val, 10);
-                          setValue("service_bundle", bundleId, { shouldValidate: true });
-
-                          const bundle = bundles.find((b) => b.id === bundleId);
-                          if (bundle?.service_type) {
-                            setValue("service_type", bundle.service_type);
-                          }
-                          if (bundle && !watch("customer_concerns")) {
-                            setValue("customer_concerns", `Perform ${bundle.name}`);
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="service_bundle">
-                          <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bundles.map((bundle) => (
-                            <SelectItem key={bundle.id} value={bundle.id.toString()}>
-                              {bundle.name}
-                              {bundle.service_type_name ? ` · ${bundle.service_type_name}` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.service_bundle && (
-                        <p className="mt-1 text-sm text-destructive">{errors.service_bundle.message}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-foreground mb-1">
-                      Priority
-                    </label>
-                    <Select
-                      value={watch("priority")}
-
-                      onValueChange={(val) => setValue("priority", val as WorkOrderFormData["priority"])}
-                    >
-                      <SelectTrigger id="priority" className="w-full">
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-card-foreground mb-1">
-                      Status
-                    </label>
-                    <Select
-                      value={watch("status")}
-
-                      onValueChange={(val) => setValue("status", val as WorkOrderFormData["status"])}
-                      disabled={!workOrder}
-                    >
-                      <SelectTrigger id="status" className={`w-full ${errors.status ? "border-destructive" : ""}`}>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {workOrder ? (() => {
-                          const validStatuses = getValidStatuses(workOrder.status, workOrder);
-                          return validStatuses.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {STATUS_LABELS[status] || status}
-                              {status === workOrder.status ? " (current)" : ""}
-                            </SelectItem>
-                          ));
-                        })() : (
-                          <SelectItem value="loading">Loading...</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {workOrder && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Current: {STATUS_LABELS[workOrder.status] || workOrder.status}
-                      </p>
-                    )}
-                    {errors.status && (
-                      <p className="mt-1 text-sm text-destructive dark:text-red-400">
-                        {errors.status.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="customer_concerns" className="block text-sm font-medium text-card-foreground mb-1">
-                    Customer Concerns / Description
+                <div className="max-w-sm border-t border-border/60 pt-4">
+                  <label htmlFor="status" className="mb-1 block text-sm font-medium text-card-foreground">
+                    Status
                   </label>
-                  <Textarea
-                    id="customer_concerns"
-                    {...register("customer_concerns")}
-                    rows={6}
-                    placeholder="Describe the issue or service needed..."
-                  />
+                  <Select
+                    value={watch("status")}
+                    onValueChange={(val) => setValue("status", val as WorkOrderFormData["status"])}
+                    disabled={!workOrder}
+                  >
+                    <SelectTrigger id="status" className={`w-full ${errors.status ? "border-destructive" : ""}`}>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workOrder ? (() => {
+                        const validStatuses = getValidStatuses(workOrder.status, workOrder);
+                        return validStatuses.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {STATUS_LABELS[status] || status}
+                            {status === workOrder.status ? " (current)" : ""}
+                          </SelectItem>
+                        ));
+                      })() : (
+                        <SelectItem value="loading">Loading...</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {workOrder && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Current: {STATUS_LABELS[workOrder.status] || workOrder.status}
+                    </p>
+                  )}
+                  {errors.status && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {errors.status.message}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar Actions */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-                <Link href={`/workorders/${workOrderId}`}>
-                  <Button type="button" variant="secondary" className="w-full">
-                    Cancel
+          {/* Sidebar Actions — desktop */}
+          <div className="hidden space-y-6 lg:block">
+            <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium">Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button type="submit" className="w-full shadow-workshop" disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Save Changes"}
                   </Button>
-                </Link>
-              </CardContent>
-            </Card>
+                  <Link href={`/workorders/${workOrderId}`} className="block">
+                    <Button type="button" variant="outline" className="w-full">
+                      Cancel
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium">Job card</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex justify-between gap-2">
+                    <span>Number</span>
+                    <span className="font-mono text-foreground">{workOrder.work_order_number}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>Status</span>
+                    <span className="text-foreground">
+                      {STATUS_LABELS[workOrder.status] || workOrder.status}
+                    </span>
+                  </div>
+                  {typeof workOrder.branch === "object" && workOrder.branch?.name ? (
+                    <div className="flex justify-between gap-2">
+                      <span>Branch</span>
+                      <span className="text-right text-foreground">{workOrder.branch.name}</span>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </form>
+
+      {/* Mobile sticky actions */}
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-3 border-t border-border bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
+        <Link href={`/workorders/${workOrderId}`}>
+          <Button type="button" variant="outline" disabled={isSubmitting}>
+            Cancel
+          </Button>
+        </Link>
+        <Button
+          type="submit"
+          form="edit-work-order-form"
+          className="shadow-workshop"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
     </div>
   );
 }

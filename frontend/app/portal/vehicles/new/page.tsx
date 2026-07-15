@@ -189,10 +189,10 @@ export default function AddVehiclePage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {serverError && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="bg-destructive/5 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+                  <AlertCircle className="w-5 h-5 text-destructive dark:text-destructive flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-destructive dark:text-destructive">{serverError}</p>
                 </div>
               </div>
             )}
@@ -201,7 +201,7 @@ export default function AddVehiclePage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="vin">
-                  VIN (Vehicle Identification Number) <span className="text-red-500">*</span>
+                  VIN (Vehicle Identification Number) <span className="text-destructive">*</span>
                 </Label>
                 {vinValue && vinValue.length === 17 && (
                   <VINDecoderButton
@@ -217,10 +217,10 @@ export default function AddVehiclePage() {
                 })}
                 placeholder="Enter 17-character VIN"
                 maxLength={17}
-                className={errors.vin ? "border-red-500" : ""}
+                className={errors.vin ? "border-destructive" : ""}
               />
               {errors.vin && (
-                <p className="text-sm text-red-600 dark:text-red-400">{errors.vin.message}</p>
+                <p className="text-sm text-destructive dark:text-destructive">{errors.vin.message}</p>
               )}
               <p className="text-xs text-muted-foreground">
                 The VIN is usually found on the driver's side dashboard or door frame
@@ -277,7 +277,7 @@ export default function AddVehiclePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">
-                  Year <span className="text-red-500">*</span>
+                  Year <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="year"
@@ -285,40 +285,40 @@ export default function AddVehiclePage() {
                   {...register("year", { valueAsNumber: true })}
                   min={1900}
                   max={new Date().getFullYear() + 1}
-                  className={errors.year ? "border-red-500" : ""}
+                  className={errors.year ? "border-destructive" : ""}
                 />
                 {errors.year && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{errors.year.message}</p>
+                  <p className="text-sm text-destructive dark:text-destructive">{errors.year.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="make">
-                  Make <span className="text-red-500">*</span>
+                  Make <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="make"
                   {...register("make")}
                   placeholder="e.g., Toyota, Ford"
-                  className={errors.make ? "border-red-500" : ""}
+                  className={errors.make ? "border-destructive" : ""}
                 />
                 {errors.make && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{errors.make.message}</p>
+                  <p className="text-sm text-destructive dark:text-destructive">{errors.make.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="model">
-                  Model <span className="text-red-500">*</span>
+                  Model <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="model"
                   {...register("model")}
                   placeholder="e.g., Camry, F-150"
-                  className={errors.model ? "border-red-500" : ""}
+                  className={errors.model ? "border-destructive" : ""}
                 />
                 {errors.model && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{errors.model.message}</p>
+                  <p className="text-sm text-destructive dark:text-destructive">{errors.model.message}</p>
                 )}
               </div>
             </div>

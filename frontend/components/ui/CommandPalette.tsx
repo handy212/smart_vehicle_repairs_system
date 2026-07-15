@@ -205,12 +205,12 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 sm:px-6">
       <div
-        className="fixed inset-0 bg-gray-950/40 backdrop-blur-md transition-opacity duration-500 animate-in fade-in"
+        className="fixed inset-0 bg-foreground/40 dark:bg-black/70 transition-opacity duration-200 animate-in fade-in"
         onClick={() => setOpen(false)}
       />
 
-      <div className="relative w-full max-w-xl transform overflow-hidden rounded-2xl bg-card/70 backdrop-blur-xl shadow-2xl ring-1 ring-white/10 transition-all animate-in zoom-in-95 duration-200">
-        <div className="relative flex items-center border-b border-white/5 px-4 bg-background/30">
+      <div className="relative w-full max-w-xl transform overflow-hidden rounded-lg border border-[color:var(--outline-variant)] bg-[var(--panel-bg,var(--card))] shadow-workshop transition-all animate-in zoom-in-95 duration-200">
+        <div className="relative flex items-center border-b border-border px-4 bg-muted/30">
           <div className="absolute left-6 pointer-events-none">
             {isLoading ? (
               <div className="h-5 w-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -228,7 +228,7 @@ export function CommandPalette() {
             onKeyDown={handleKeyDown}
           />
           <div className="flex items-center gap-2">
-            <kbd className="hidden sm:flex items-center gap-1 rounded-md bg-white/5 border border-white/10 px-2 py-1 font-mono text-[10px] font-bold text-muted-foreground/70 uppercase tracking-tighter shadow-sm">
+            <kbd className="hidden sm:flex items-center gap-1 rounded-md bg-card/5 border border-card/10 px-2 py-1 font-mono text-[10px] font-bold text-muted-foreground/70 uppercase tracking-tighter shadow-sm">
               ESC
             </kbd>
           </div>
@@ -254,17 +254,17 @@ export function CommandPalette() {
                     type="button"
                     onClick={() => handleSelect({ ...action, paletteKind: "action" })}
                     className={cn(
-                      "group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-all duration-200",
+                      "group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-all duration-200",
                       isSelected
-                        ? "bg-primary shadow-lg shadow-primary/20"
+                        ? "bg-primary shadow-workshop"
                         : "hover:bg-primary/5 text-foreground"
                     )}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
                     <div
                       className={cn(
-                        "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl",
-                        isSelected ? "bg-white/20 text-white" : "bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                        "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg",
+                        isSelected ? "bg-card/20 text-white" : "bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -321,15 +321,15 @@ export function CommandPalette() {
                           type="button"
                           onClick={() => handleSelect({ ...item, paletteKind: "search" })}
                           className={cn(
-                            "group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-all duration-200",
-                            isSelected ? "bg-primary shadow-lg shadow-primary/20" : "hover:bg-primary/5 text-foreground"
+                            "group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-all duration-200",
+                            isSelected ? "bg-primary shadow-workshop" : "hover:bg-primary/5 text-foreground"
                           )}
                           onMouseEnter={() => setSelectedIndex(flatIndex)}
                         >
                           <div
                             className={cn(
-                              "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl",
-                              isSelected ? "bg-white/20 text-white" : "bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                              "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg",
+                              isSelected ? "bg-card/20 text-white" : "bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                             )}
                           >
                             <Icon className="h-4 w-4" />
@@ -354,21 +354,21 @@ export function CommandPalette() {
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/5 px-6 py-4 bg-background/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between border-t border-border px-6 py-3 bg-muted/30">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <kbd className="flex h-5 w-5 items-center justify-center rounded bg-white/5 border border-white/10 font-mono text-[10px] text-muted-foreground">↑</kbd>
-              <kbd className="flex h-5 w-5 items-center justify-center rounded bg-white/5 border border-white/10 font-mono text-[10px] text-muted-foreground">↓</kbd>
+              <kbd className="flex h-5 w-5 items-center justify-center rounded bg-card/5 border border-card/10 font-mono text-[10px] text-muted-foreground">↑</kbd>
+              <kbd className="flex h-5 w-5 items-center justify-center rounded bg-card/5 border border-card/10 font-mono text-[10px] text-muted-foreground">↓</kbd>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Navigate</span>
             </div>
             <div className="flex items-center gap-2">
-              <kbd className="flex h-5 px-1.5 items-center justify-center rounded bg-white/5 border border-white/10 font-mono text-[10px] text-muted-foreground">↵</kbd>
+              <kbd className="flex h-5 px-1.5 items-center justify-center rounded bg-card/5 border border-card/10 font-mono text-[10px] text-muted-foreground">↵</kbd>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Select</span>
             </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
             <CommandIcon className="w-3 h-3 text-primary/50" />
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-primary/70">⌘K</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary/70">⌘K</span>
           </div>
         </div>
       </div>

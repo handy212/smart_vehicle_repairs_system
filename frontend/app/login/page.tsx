@@ -232,7 +232,7 @@ export default function LoginPage() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
         {/* Left side: Hero Image & Branding */}
         <div
-          className="hidden lg:flex relative flex-col justify-between p-10 xl:p-12 overflow-hidden bg-gray-900 group"
+          className="hidden lg:flex relative flex-col justify-between p-10 xl:p-12 overflow-hidden bg-foreground group"
           style={{ backgroundColor: primaryColor }}
         >
           {isMounted && (

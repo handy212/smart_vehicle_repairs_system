@@ -75,7 +75,7 @@ export function CloseWorkOrderForm({
                                         </div>
                                         <div className="flex items-center justify-between gap-3">
                                             <span>Balance</span>
-                                            <span className={`font-semibold ${hasOutstandingBalance ? "text-amber-600 dark:text-amber-300" : "text-success"}`}>
+                                            <span className={`font-semibold ${hasOutstandingBalance ? "text-warning dark:text-warning" : "text-success"}`}>
                                                 {formatCurrency(amountDue)}
                                             </span>
                                         </div>
@@ -95,7 +95,7 @@ export function CloseWorkOrderForm({
                             </div>
                             <div className={`rounded-lg border px-3 py-2 text-sm ${
                                 hasOutstandingBalance
-                                    ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                                    ? "border-warning/20 bg-warning/10 text-warning dark:text-warning"
                                     : "border-success/20 bg-success/10 text-success"
                             }`}>
                                 {hasOutstandingBalance

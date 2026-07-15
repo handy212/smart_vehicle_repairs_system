@@ -202,7 +202,7 @@ export default function PaymentPage() {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      <tbody className="divide-y divide-border dark:divide-border">
 
                         {invoice.line_items.map((item: any, index: number) => (
                           <tr key={index}>
@@ -296,10 +296,10 @@ export default function PaymentPage() {
               </div>
 
               {isPaid ? (
-                <div className="bg-success/10 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <div className="bg-success/10 dark:bg-success/20 border border-success/20 dark:border-success/30 rounded-lg p-4">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-5 h-5 text-success" />
-                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    <p className="text-sm font-medium text-success dark:text-success">
                       This invoice has been paid
                     </p>
                   </div>
@@ -325,10 +325,10 @@ export default function PaymentPage() {
                     )}
                   </Button>
 
-                  <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                  <div className="bg-primary/10 dark:bg-warning/20 border border-warning/20 dark:border-warning/30 rounded-lg p-4">
                     <div className="flex items-start space-x-2">
                       <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-orange-800 dark:text-orange-300">
+                      <div className="text-sm text-warning dark:text-warning">
                         <p className="font-medium mb-1">Secure Payment</p>
 
                       </div>
@@ -336,10 +336,10 @@ export default function PaymentPage() {
                   </div>
                 </>
               ) : (
-                <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div className="bg-warning/10 dark:bg-warning/15 border border-warning/20 dark:border-warning/40 rounded-lg p-4">
                   <div className="flex items-center space-x-2">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                    <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                    <AlertCircle className="w-5 h-5 text-warning dark:text-warning" />
+                    <p className="text-sm text-warning dark:text-warning">
                       This invoice is not available for payment
                     </p>
                   </div>

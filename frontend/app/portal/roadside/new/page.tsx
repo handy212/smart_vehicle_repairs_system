@@ -235,7 +235,7 @@ export default function NewRoadsideRequestPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 pb-10">
+    <div className="w-full space-y-5 pb-10">
       <PortalPageHeader
         title="Roadside assistance"
         description="Tell us where you are and what you need. We route your request to the right branch."
@@ -352,7 +352,7 @@ export default function NewRoadsideRequestPage() {
                           "rounded-lg border p-2.5 flex flex-col items-center gap-1.5 text-center transition-colors relative",
                           isSelected
                             ? isPayAsYouGo
-                              ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30"
+                              ? "border-warning bg-warning/10 dark:bg-warning/15"
                               : "border-primary bg-primary/5"
                             : "border-border bg-card hover:border-primary/40"
                         )}

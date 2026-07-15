@@ -116,7 +116,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
         {
             header: "Status",
             accessorKey: "status",
-            cell: () => <Badge variant="outline" className="bg-success/10 text-green-700 border-green-200">Active</Badge>
+            cell: () => <Badge variant="outline" className="bg-success/15 text-success border-success/20">Active</Badge>
         },
         {
             header: "Last Login",

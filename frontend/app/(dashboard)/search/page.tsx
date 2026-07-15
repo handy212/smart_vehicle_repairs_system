@@ -228,7 +228,7 @@ export default function SearchPage() {
                     <Link
                       key={`${result.type}-${result.id}`}
                       href={result.url}
-                      className="block p-4 border border-border rounded-lg hover:bg-muted hover:border-orange-300 transition-colors"
+                      className="block p-4 border border-border rounded-lg hover:bg-muted hover:border-warning/40 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

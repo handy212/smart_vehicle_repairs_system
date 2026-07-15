@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils/cn";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { PayslipDetailDialog } from "./PayslipDetailDialog";
 import { getUserFacingError } from "@/lib/api/errors";
 
@@ -51,10 +51,10 @@ function money(value?: string | number | null) {
 
 function statusConfig(status: string) {
     switch (status) {
-        case "draft": return { color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400", label: "Draft" };
-        case "processing": return { color: "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400", label: "Processing" };
-        case "approved": return { color: "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400", label: "Approved" };
-        case "paid": return { color: "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400", label: "Paid" };
+        case "draft": return { color: "bg-muted text-muted-foreground border-border", label: "Draft" };
+        case "processing": return { color: "bg-info/15 text-info border-info/20", label: "Processing" };
+        case "approved": return { color: "bg-warning/15 text-warning border-warning/20", label: "Approved" };
+        case "paid": return { color: "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success", label: "Paid" };
         case "reversed": return { color: "bg-destructive/10 text-destructive border-destructive/20", label: "Reversed" };
         default: return { color: "", label: status };
     }

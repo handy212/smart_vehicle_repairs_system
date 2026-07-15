@@ -304,7 +304,7 @@ function InventoryPageContent() {
               <span>/</span>
               <span className="text-foreground font-medium">Inventory</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Products & services
             </h1>
           </div>
@@ -409,10 +409,10 @@ function InventoryPageContent() {
             })}
             {/* Bulk Actions Badge if selection active */}
             {bulkSelection.selectedCount > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-primary/10 text-primary border-orange-100 font-normal">
+              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-primary/10 text-primary border-warning/20 font-normal">
                 {bulkSelection.selectedCount} selected
                 <X
-                  className="w-3 h-3 cursor-pointer hover:text-orange-900"
+                  className="w-3 h-3 cursor-pointer hover:text-warning"
                   onClick={bulkSelection.clearSelection}
                 />
               </Badge>
@@ -485,13 +485,13 @@ function InventoryPageContent() {
       </div>
 
       {/* Main Content Card */}
-      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border dark:ring-border">
         <div className="relative">
           {isLoading ? (
             <div className="p-6"><TableSkeleton rows={8} columns={8} /></div>
           ) : parts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Package className="w-12 h-12 text-gray-300 text-muted-foreground mb-4" />
+              <Package className="w-12 h-12 text-muted-foreground text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground">No parts found</h3>
               <p className="text-muted-foreground max-w-sm mt-1 mb-4">
                 {searchQuery || Object.keys(advancedFilters).length > 0
@@ -594,7 +594,7 @@ function InventoryPageContent() {
                         <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${isLowStock(part)
                           ? part.quantity_in_stock === 0
                             ? "bg-destructive/10 text-destructive border-destructive/10"
-                            : "bg-warning/10 text-amber-700 border-amber-100"
+                            : "bg-warning/10 text-warning border-warning/20"
                           : "bg-muted text-foreground border-border"
                           }`}>
                           {part.quantity_in_stock}
@@ -608,7 +608,7 @@ function InventoryPageContent() {
                       </TableCell>
                       <TableCell className="px-4 py-2">
                         <Badge variant="outline" className={`text-[10px] px-2 py-0  ${part.is_active
-                          ? "text-success border-emerald-200 bg-success/10"
+                          ? "text-success border-success/20 bg-success/10"
                           : "text-muted-foreground border-border bg-muted"
                           }`}>
                           {part.is_active ? "Active" : "Inactive"}

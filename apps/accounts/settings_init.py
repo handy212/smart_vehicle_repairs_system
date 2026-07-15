@@ -19,19 +19,36 @@ DEFAULT_SETTINGS = {
         {'key': 'company_registration', 'value': '', 'description': 'Company registration number'},
     ],
     'branding': [
-        {'key': 'site_name', 'value': 'Smart Vehicle Repairs', 'description': 'Site name'},
-        {'key': 'logo_path', 'value': '', 'description': 'Company logo'},
+        {'key': 'site_name', 'value': 'Smart Vehicle Repairs', 'description': 'Site name shown in the app header and browser title'},
+        {
+            'key': 'company_tagline',
+            'value': 'Management System',
+            'description': 'Short tagline under the site name on login and public pages',
+        },
+        {'key': 'logo_path', 'value': '', 'description': 'Company logo (light backgrounds)'},
         {'key': 'logo_dark_path', 'value': '', 'description': 'Company logo for dark backgrounds'},
-        {'key': 'favicon_path', 'value': '', 'description': 'Site favicon'},
+        {'key': 'favicon_path', 'value': '', 'description': 'Site favicon (.ico, .png, or .svg)'},
         {'key': 'login_background', 'value': '', 'description': 'Login page background image'},
-        {'key': 'login_background_overlay', 'value': '0.85', 'description': 'Login background overlay opacity'},
+        {
+            'key': 'login_background_overlay',
+            'value': '0.85',
+            'description': 'Login background overlay opacity (0–1)',
+        },
         {'key': 'primary_color', 'value': '#6366f1', 'description': 'Primary brand color'},
         {'key': 'secondary_color', 'value': '#8b5cf6', 'description': 'Secondary brand color'},
         {'key': 'success_color', 'value': '#10b981', 'description': 'Success color'},
         {'key': 'danger_color', 'value': '#ef4444', 'description': 'Danger/error color'},
-        {'key': 'theme_mode', 'value': 'perfex', 'description': 'Theme mode'},
-        {'key': 'self_registration_enabled', 'value': 'true', 'description': 'Allow customers to create their own account from the login page'},
-        {'key': 'document_watermark_enabled', 'value': 'true', 'description': 'Show watermarks on printed and downloaded documents'},
+        {'key': 'theme_mode', 'value': 'perfex', 'description': 'Default theme mode for new sessions'},
+        {
+            'key': 'self_registration_enabled',
+            'value': 'true',
+            'description': 'Allow customers to create their own account from the login page',
+        },
+        {
+            'key': 'document_watermark_enabled',
+            'value': 'true',
+            'description': 'Show watermarks on printed and downloaded documents',
+        },
     ],
     'email': [
         {'key': 'email_enabled', 'value': 'false', 'description': 'Enable email notifications'},
@@ -237,6 +254,7 @@ DEPRECATED_SETTING_KEYS = {
     'appointment_buffer_minutes',
     'allow_online_booking',
     'require_deposit',
+    'tax_covid_rate',
 }
 
 

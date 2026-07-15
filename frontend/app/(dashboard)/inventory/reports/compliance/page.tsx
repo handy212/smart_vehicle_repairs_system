@@ -313,9 +313,9 @@ export default function InventoryComplianceReportsPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Inventory Compliance Reports</h1>
+        <h1 className="text-xl font-bold">Inventory Compliance Reports</h1>
         <div className="flex items-center gap-3">
           <ReportExportMenu getPayload={buildExportPayload} />
           <BranchReportChip />

@@ -201,7 +201,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     Personal information
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
+                            <CardContent className="pt-4 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="first_name">First name <span className="text-destructive">*</span></Label>
                                     <Input
@@ -274,7 +274,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-4 space-y-6">
-                                <div className="grid sm:grid-cols-2 gap-4">
+                                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div className="space-y-2 sm:col-span-2">
                                         <Label htmlFor="company_name">
                                             {customerType === "fleet" ? "Fleet / company name" : "Company name"}{" "}
@@ -306,7 +306,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     <p className="text-xs text-muted-foreground -mt-2">
                                         Account login and notifications use this person&apos;s details, and this person is saved automatically under Contacts.
                                     </p>
-                                    <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="first_name">Contact first name <span className="text-destructive">*</span></Label>
                                             <Input
@@ -355,7 +355,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
 
                                 <div className="space-y-4">
                                     <p className="text-sm font-medium text-foreground">Company contact</p>
-                                    <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="company_email">Billing / company email</Label>
                                             <Input
@@ -387,7 +387,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 {isBusinessAccount ? "Business / service location" : "Service address"}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
+                        <CardContent className="pt-4 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                             <div className="space-y-2 sm:col-span-2">
                                 <Label htmlFor="service_address">Street address</Label>
                                 <Input id="service_address" placeholder="Street / landmark" {...register("service_address")} />
@@ -423,11 +423,11 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-blue-500">
+                    <Card className="border-l-4 border-l-primary">
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Preferences & Notes</CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="preferred_contact_method">Preferred Contact Method</Label>
                                 <Select
@@ -459,7 +459,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
 
                     {/* Portal Access */}
                     {!hidePortalAccess && (
-                        <Card className="border-l-4 border-l-green-500">
+                        <Card className="border-l-4 border-l-success">
                             <CardHeader className="pb-3 border-b border-border">
                                 <CardTitle className="text-base font-medium">Portal Access</CardTitle>
                             </CardHeader>
@@ -526,7 +526,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                 </div>
 
                 {/* Sidebar Column */}
-                <div className="space-y-6">
+                <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Account Setup</CardTitle>
@@ -599,10 +599,10 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
+                            <Button type="submit" className="w-full shadow-workshop" disabled={isSubmitting}>
                                 {isSubmitting ? (
                                     <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin" />
                                         Saving...
                                     </div>
                                 ) : (

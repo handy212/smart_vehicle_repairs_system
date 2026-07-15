@@ -150,7 +150,7 @@ export default function InspectionsPage() {
                     setStatusFilter("");
                     setResultFilter("");
                   }}
-                  className="h-9 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 dark:hover:bg-red-900/20"
+                  className="h-9 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
                 >
                   <Filter className="w-3.5 h-3.5 mr-2" />
                   Clear
@@ -176,7 +176,7 @@ export default function InspectionsPage() {
         <CardContent className="p-0">
           {inspections.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-300 text-muted-foreground" />
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground text-muted-foreground" />
               <h3 className="mt-2 text-sm font-medium text-foreground">No inspections found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Get started by creating a new inspection or try adjusting your filters.
@@ -251,10 +251,10 @@ export default function InspectionsPage() {
                                 variant="outline"
                                 className={cn(
                                   "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                                  stageTone === 'draft' && "border-slate-200 text-slate-700 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
-                                  stageTone === 'completed' && "border-green-200 text-green-700 bg-success/10",
-                                  stageTone === 'in_progress' && "border-orange-200 text-primary bg-primary/5",
-                                  stageTone === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10/50",
+                                  stageTone === 'draft' && "border-border text-foreground bg-muted dark:border-border dark:bg-card/30 dark:text-muted-foreground",
+                                  stageTone === 'completed' && "border-success/20 text-success bg-success/10",
+                                  stageTone === 'in_progress' && "border-warning/20 text-primary bg-primary/5",
+                                  stageTone === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10",
                                 )}
                               >
                                 {stageLabel}
@@ -264,8 +264,8 @@ export default function InspectionsPage() {
                                   variant="outline"
                                   className={cn(
                                     "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                                    inspection.status === 'approved' && "border-green-200 text-green-700 bg-success/10",
-                                    inspection.status === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10/50",
+                                    inspection.status === 'approved' && "border-success/20 text-success bg-success/10",
+                                    inspection.status === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10",
                                   )}
                                 >
                                   {approvalLabel}
@@ -281,10 +281,10 @@ export default function InspectionsPage() {
                             variant="outline"
                             className={cn(
                               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                              inspection.overall_result === 'pass' && "border-green-200 text-green-700 bg-success/10",
-                              inspection.overall_result === 'pass_with_advisory' && "border-yellow-200 text-yellow-700 bg-warning/10",
-                              inspection.overall_result === 'fail' && "border-destructive/20 text-destructive bg-destructive/10/50",
-                              inspection.overall_result === 'needs_attention' && "border-orange-200 text-primary bg-warning/10/50",
+                              inspection.overall_result === 'pass' && "border-success/20 text-success bg-success/10",
+                              inspection.overall_result === 'pass_with_advisory' && "border-warning/20 text-warning bg-warning/10",
+                              inspection.overall_result === 'fail' && "border-destructive/20 text-destructive bg-destructive/10",
+                              inspection.overall_result === 'needs_attention' && "border-warning/20 text-primary bg-warning/10",
                             )}
                           >
                             {inspection.overall_result_display || inspection.overall_result}
@@ -314,9 +314,9 @@ export default function InspectionsPage() {
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">
                                 <div className="flex gap-0.5">
-                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
                                 </div>
                               </Button>
                             </DropdownMenuTrigger>

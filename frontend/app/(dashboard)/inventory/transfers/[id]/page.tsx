@@ -201,7 +201,7 @@ export default function TransferDetailPage() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 pb-12">
+        <div className="w-full space-y-6 pb-12">
             {/* Submit Dialog */}
             <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
                 <DialogContent className="sm:max-w-[400px] p-0 border-none shadow-2xl overflow-hidden">
@@ -341,7 +341,7 @@ export default function TransferDetailPage() {
                             <span>/</span>
                             <span>{transfer.transfer_number}</span>
                         </div>
-                        <h1 className="text-2xl font-bold flex items-center gap-3">
+                        <h1 className="text-xl font-bold flex items-center gap-3">
                             {transfer.transfer_number}
                             <Badge variant="outline" className={`${getStatusStyles(transfer.status)} capitalize font-medium px-3 py-1`}>
                                 {transfer.status.replace("_", " ")}

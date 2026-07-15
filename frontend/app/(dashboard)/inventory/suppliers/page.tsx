@@ -162,7 +162,7 @@ export default function SuppliersPage() {
               <span>/</span>
               <span className="text-foreground font-medium">Suppliers</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Suppliers
             </h1>
           </div>
@@ -283,7 +283,7 @@ export default function SuppliersPage() {
       </div>
 
       {/* Suppliers Table */}
-      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border dark:ring-border">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6"><TableSkeleton rows={8} columns={7} /></div>
@@ -401,7 +401,7 @@ export default function SuppliersPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Building2 className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
+              <Building2 className="w-12 h-12 text-muted-foreground text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground">No suppliers found</h3>
               <p className="text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
                 Get started by adding a new supplier to your system.

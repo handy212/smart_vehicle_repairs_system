@@ -41,7 +41,7 @@ export default function TechnicianEfficiencyPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Technician Efficiency</h1>
+                    <h1 className="text-xl font-bold tracking-tight">Technician Efficiency</h1>
                     <p className="text-muted-foreground text-sm">Monitor technician performance and labor efficiency.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -148,7 +148,7 @@ export default function TechnicianEfficiencyPage() {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <span className={efficiency >= 100 ? "text-success font-bold" : efficiency < 80 ? "text-yellow-600" : ""}>
+                                                    <span className={efficiency >= 100 ? "text-success font-bold" : efficiency < 80 ? "text-warning" : ""}>
                                                         {efficiency.toFixed(1)}%
                                                     </span>
                                                     {efficiency >= 100 && <TrendingUp className="w-4 h-4 text-success" />}

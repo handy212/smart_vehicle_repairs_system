@@ -212,7 +212,7 @@ export default function RegisterPage() {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
                 {/* Left side: Hero Image & Branding */}
                 <div
-                    className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
+                    className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-foreground group"
                     style={{ backgroundColor: primaryColor }}
                 >
                     {isMounted && (
@@ -325,7 +325,7 @@ export default function RegisterPage() {
                                                             placeholder="John"
                                                             className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
-                                                        {errors.first_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
+                                                        {errors.first_name && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.first_name.message}</p>}
                                                     </div>
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Last Name</label>
@@ -334,7 +334,7 @@ export default function RegisterPage() {
                                                             placeholder="Doe"
                                                             className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
-                                                        {errors.last_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
+                                                        {errors.last_name && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.last_name.message}</p>}
                                                     </div>
                                                 </div>
 
@@ -346,7 +346,7 @@ export default function RegisterPage() {
                                                         placeholder="john@example.com"
                                                         className="h-9 lg:h-10 rounded-lg border-border"
                                                     />
-                                                    {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
+                                                    {errors.email && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.email.message}</p>}
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
@@ -360,7 +360,7 @@ export default function RegisterPage() {
                                                                 className="h-9 lg:h-10 rounded-lg border-border pl-9 lg:pl-10"
                                                             />
                                                         </div>
-                                                        {errors.phone && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.phone.message}</p>}
+                                                        {errors.phone && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.phone.message}</p>}
                                                     </div>
 
                                                     <div className="space-y-1">
@@ -392,7 +392,7 @@ export default function RegisterPage() {
                                                                 className="h-9 lg:h-10 rounded-lg border-border pl-9 lg:pl-10"
                                                             />
                                                         </div>
-                                                        {errors.company_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
+                                                        {errors.company_name && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.company_name.message}</p>}
                                                     </div>
                                                 )}
 
@@ -414,7 +414,7 @@ export default function RegisterPage() {
                                                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                             </button>
                                                         </div>
-                                                        {errors.password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.password.message}</p>}
+                                                        {errors.password && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.password.message}</p>}
                                                     </div>
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Confirm</label>
@@ -424,7 +424,7 @@ export default function RegisterPage() {
                                                             placeholder="••••••••"
                                                             className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
-                                                        {errors.confirm_password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
+                                                        {errors.confirm_password && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.confirm_password.message}</p>}
                                                     </div>
                                                 </div>
 

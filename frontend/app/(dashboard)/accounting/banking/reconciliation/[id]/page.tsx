@@ -368,7 +368,7 @@ export default function ReconciliationDetailPage() {
                             {statement?.bank_account_name} &middot; {format(new Date(statement?.statement_date), 'MMMM yyyy')}
                         </h1>
                         {statement?.reconciled &&
-                            <Badge variant="outline" className="bg-success/10 text-green-700 border-green-200">Reconciled</Badge>
+                            <Badge variant="outline" className="bg-success/15 text-success border-success/20">Reconciled</Badge>
                         }
                     </div>
                 </div>
@@ -384,7 +384,7 @@ export default function ReconciliationDetailPage() {
                                 size="sm"
                                 onClick={handleReconcileComplete}
                                 disabled={isReconciling}
-                                className={Math.abs(difference) < 0.01 ? "bg-success hover:bg-green-700 text-white" : ""}
+                                className={Math.abs(difference) < 0.01 ? "bg-success hover:bg-success text-white" : ""}
                             >
                                 {isReconciling ? "Saving..." : "Finish Reconciliation"}
                             </Button>
@@ -410,7 +410,7 @@ export default function ReconciliationDetailPage() {
                         <div className="text-base font-mono">{formatCurrency(statement?.closing_balance)}</div>
                     </CardContent>
                 </Card>
-                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-card")}>
+                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-success/10 border-success/20" : "bg-card")}>
                     <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Reconciled Balance</CardTitle>
                     </CardHeader>
@@ -419,7 +419,7 @@ export default function ReconciliationDetailPage() {
                         <div className="text-xs text-muted-foreground mt-1">Based on matched lines</div>
                     </CardContent>
                 </Card>
-                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-destructive/10 dark:bg-red-900/10 border-destructive/20")}>
+                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-success/10 border-success/20" : "bg-destructive/10 dark:bg-destructive/10 border-destructive/20")}>
                     <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Difference</CardTitle>
                     </CardHeader>
@@ -463,7 +463,7 @@ export default function ReconciliationDetailPage() {
                                     key={line.id}
                                     className={cn(
                                         "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center group relative",
-                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted hover:bg-muted"
+                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-warning/20 border-l-4 border-primary pl-2" : "hover:bg-muted hover:bg-muted"
                                     )}
                                     onClick={() => setSelectedBankLine(selectedBankLine?.id === line.id ? null : line)}
                                 >
@@ -505,7 +505,7 @@ export default function ReconciliationDetailPage() {
                                             key={tx.id}
                                             className={cn(
                                                 "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center",
-                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted hover:bg-muted"
+                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-warning/20 border-l-4 border-primary pl-2" : "hover:bg-muted hover:bg-muted"
                                             )}
                                             onClick={() => setSelectedSysTx(selectedSysTx?.id === tx.id ? null : tx)}
                                         >

@@ -13,7 +13,7 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -80,7 +80,7 @@ function ApplicantDetailContent() {
                                     <SelectItem value="rejected">Rejected</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {applicant.status === "offered" && <Button onClick={() => hireMutation.mutate()} className="bg-green-600 hover:bg-green-700">Hire Applicant</Button>}
+                            {applicant.status === "offered" && <Button onClick={() => hireMutation.mutate()} className="bg-success hover:bg-success">Hire Applicant</Button>}
                             <Button variant="outline" onClick={() => setShowSchedule(true)}><Calendar className="h-4 w-4 mr-2" />Schedule Interview</Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

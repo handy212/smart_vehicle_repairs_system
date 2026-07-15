@@ -110,17 +110,17 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             {/* Key Details */}
                             <div className="flex-1 p-6 flex flex-col justify-center">
                                 <div className="mb-6">
-                                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                                    <h1 className="text-xl font-bold text-foreground flex items-center gap-3">
                                         {vehicle.year} {vehicle.make} {vehicle.model}
                                         {vinData?.trim && <Badge variant="secondary" className="font-normal text-xs">{vinData.trim}</Badge>}
                                     </h1>
                                     <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="outline" className="text-muted-foreground font-mono text-xs">{vehicle.license_plate || "No Plate"}</Badge>
-                                        <span className="text-gray-300">|</span>
+                                        <span className="text-muted-foreground">|</span>
                                         <span className="text-sm text-muted-foreground font-mono">{vehicle.vin || "No VIN"}</span>
                                         {vehicle.is_high_risk && (
                                             <>
-                                                <span className="text-gray-300">|</span>
+                                                <span className="text-muted-foreground">|</span>
                                                 <Badge variant="danger" className="animate-pulse">HIGH RISK</Badge>
                                             </>
                                         )}
@@ -267,7 +267,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             {vehicle.owner ? (
                                 <Link href={`/customers/${typeof vehicle.owner === 'object' ? vehicle.owner.id : vehicle.owner}`}>
                                     <div className="flex items-center space-x-3 group hover:bg-muted p-2 -m-2 rounded-md transition-colors">
-                                        <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-primary font-semibold text-sm">
+                                        <div className="h-10 w-10 rounded-full bg-warning/15 flex items-center justify-center text-primary font-semibold text-sm">
                                             {vehicle.owner_name?.charAt(0) || <User className="w-5 h-5" />}
                                         </div>
                                         <div className="flex-1 min-w-0">

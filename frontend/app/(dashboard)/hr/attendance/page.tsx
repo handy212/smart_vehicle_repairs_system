@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { useEffect } from "react";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
@@ -96,11 +96,11 @@ function AttendanceContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "present": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-            case "late": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
-            case "absent": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-            case "half_day": return "bg-warning/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800";
-            case "on_leave": return "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
+            case "present": return "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30";
+            case "late": return "bg-warning/15 text-warning border-warning/20 dark:border-warning/30";
+            case "absent": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30";
+            case "half_day": return "bg-warning/10 text-warning border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/30";
+            case "on_leave": return "bg-info/15 text-info border-info/20 dark:border-primary/30";
             default: return "";
         }
     };
@@ -123,7 +123,7 @@ function AttendanceContent() {
                             variant="outline"
                             onClick={() => clockInMutation.mutate()}
                             disabled={clockInMutation.isPending}
-                            className="text-success border-green-200 hover:bg-success/10"
+                            className="text-success border-success/20 hover:bg-success/10"
                         >
                             <LogIn className="h-4 w-4 mr-2" />
                             Clock In

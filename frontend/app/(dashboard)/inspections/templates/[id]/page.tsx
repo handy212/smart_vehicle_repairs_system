@@ -307,14 +307,14 @@ export default function TemplateDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-foreground">{template.name}</h1>
+              <h1 className="text-xl font-bold text-foreground">{template.name}</h1>
               {template.is_default && (
-                <Badge className="bg-orange-100 text-orange-800">Default</Badge>
+                <Badge className="bg-warning/15 text-warning">Default</Badge>
               )}
               <Badge
                 className={
                   template.is_active
-                    ? "bg-green-100 text-green-800"
+                    ? "bg-success/15 text-success"
                     : "bg-muted text-foreground"
                 }
               >
@@ -457,7 +457,7 @@ export default function TemplateDetailPage() {
                           <Edit className="w-4 h-4" />
                         </div>
                         <div
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-red-100 hover:text-red-900 h-8 w-8 p-0 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (confirm(`Delete category "${category.name}"? This will also delete all items in this category.`)) {
@@ -486,7 +486,7 @@ export default function TemplateDetailPage() {
                                   {item.item_type_display || item.item_type}
                                 </Badge>
                                 {item.is_critical && (
-                                  <Badge className="bg-red-100 text-destructive text-xs">
+                                  <Badge className="bg-destructive/10 text-destructive text-xs">
                                     Critical
                                   </Badge>
                                 )}

@@ -242,7 +242,7 @@ export default function NotificationsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Unread
             </CardTitle>
-            <Circle className="h-5 w-5 text-yellow-500" />
+            <Circle className="h-5 w-5 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -256,7 +256,7 @@ export default function NotificationsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Read
             </CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CheckCircle className="h-5 w-5 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -307,7 +307,7 @@ export default function NotificationsPage() {
                 key={notification.id}
                 className={cn(
                   "transition-all hover:shadow-md",
-                  !isRead && "border-l-4 border-l-primary bg-primary/5 dark:bg-orange-900/10"
+                  !isRead && "border-l-4 border-l-primary bg-primary/5 dark:bg-warning/10"
                 )}
               >
                 <CardContent className="p-6">
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
                       className={cn(
                         "p-3 rounded-lg",
                         !isRead
-                          ? "bg-orange-100 dark:bg-orange-900/30"
+                          ? "bg-warning/15"
                           : "bg-border"
                       )}
                     >

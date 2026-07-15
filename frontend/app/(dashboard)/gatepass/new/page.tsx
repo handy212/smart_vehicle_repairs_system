@@ -387,7 +387,7 @@ export default function NewGatePassPage() {
         </Card>
 
         {serverError && (
-          <div className="flex items-start gap-2 rounded border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-start gap-2 rounded border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive dark:border-destructive/30 dark:bg-destructive/20 dark:text-destructive">
             <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Error</p>

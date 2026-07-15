@@ -49,6 +49,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { cn } from "@/lib/utils";
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/table-typography";
 import {
   buildAgingBuckets,
   getAccountingDashboardAudience,
@@ -77,12 +78,19 @@ type RevenueTrendData = {
   revenue_by_period?: Array<{ period: string; revenue: number; invoice_count: number }>;
 };
 
-const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"];
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--info)",
+];
 
-const PERFEX_CARD = "rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] hover:shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]";
-const PERFEX_CARD_INTERACTIVE = `${PERFEX_CARD} transition-colors hover:border-primary/30 hover:bg-muted/20`;
-const COMPACT_CARD_HEADER = "border-b border-border/60 px-3 py-2";
-const COMPACT_CARD_TITLE = "text-sm font-semibold leading-none";
+const WORKSHOP_CARD = WORKSHOP_PANEL_CLASS;
+const WORKSHOP_CARD_INTERACTIVE = `${WORKSHOP_PANEL_CLASS} transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/25`;
+const COMPACT_CARD_HEADER = "border-b border-[color:var(--outline-variant)] px-3 py-2.5";
+const COMPACT_CARD_TITLE = "text-sm font-bold leading-none";
 
 function toStoreBranch(branch: Branch): StoreBranch {
   return branch as unknown as StoreBranch;
@@ -100,7 +108,7 @@ function MetricListCard({
   items: Array<{ label: string; value: string; tone?: "default" | "positive" | "negative" }>;
 }) {
   return (
-    <Card className={cn("h-full", PERFEX_CARD)}>
+    <Card className={cn("h-full", WORKSHOP_CARD)}>
       <CardHeader className={COMPACT_CARD_HEADER}>
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <span className={cn("flex h-7 w-7 items-center justify-center rounded bg-muted", accent)}>
@@ -116,8 +124,8 @@ function MetricListCard({
             <span
               className={cn(
                 "text-xs font-semibold",
-                item.tone === "positive" && "text-emerald-600",
-                item.tone === "negative" && "text-rose-600"
+                item.tone === "positive" && "text-success",
+                item.tone === "negative" && "text-destructive"
               )}
             >
               {item.value}
@@ -152,10 +160,10 @@ function SectionTitle({
 function SeverityBadge({ severity }: { severity: DashboardAlert["severity"] }) {
   const styles =
     severity === "critical"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
+      ? "border-destructive/30 bg-destructive/10 text-destructive"
       : severity === "warning"
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-sky-200 bg-sky-50 text-sky-700";
+        ? "border-warning/20 bg-warning/10 text-warning"
+        : "border-info/20 bg-info/10 text-info";
 
   return <Badge className={cn("border font-medium", styles)}>{severity}</Badge>;
 }
@@ -218,7 +226,7 @@ function RoleCallout({
   }[audience];
 
   return (
-    <div className={cn("rounded-md border border-border bg-card p-3", "shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]")}>
+    <div className={cn(WORKSHOP_CARD, "p-3")}>
       <div className="text-sm font-semibold text-foreground">{content.title}</div>
       <div className="mt-1 text-xs text-muted-foreground">{content.text}</div>
     </div>
@@ -586,7 +594,7 @@ export default function AccountingDashboardPage() {
           <MetricListCard
             title="Financial Position"
             icon={Scale}
-            accent="text-sky-600"
+            accent="text-info"
             items={[
               { label: "Total Assets", value: formatCurrency(assets) },
               { label: "Total Liabilities", value: formatCurrency(liabilities) },
@@ -600,7 +608,7 @@ export default function AccountingDashboardPage() {
           <MetricListCard
             title="Revenue & Expenses"
             icon={BadgeDollarSign}
-            accent="text-emerald-600"
+            accent="text-success"
             items={[
               { label: "Revenue Today", value: formatCurrency(revenueTrend.at(-1)?.revenue ?? 0) },
               { label: "Revenue This Period", value: formatCurrency(revenue) },
@@ -612,7 +620,7 @@ export default function AccountingDashboardPage() {
           <MetricListCard
             title="Cash Position"
             icon={Wallet}
-            accent="text-violet-600"
+            accent="text-info"
             items={[
               { label: "Cash On Hand", value: formatCurrency(cashOnHand) },
               { label: "Bank Balance", value: formatCurrency(bankBalance) },
@@ -624,7 +632,7 @@ export default function AccountingDashboardPage() {
           <MetricListCard
             title="Working Capital"
             icon={HandCoins}
-            accent="text-amber-600"
+            accent="text-warning"
             items={[
               { label: "Accounts Receivable", value: formatCurrency(arOutstanding) },
               { label: "Accounts Payable", value: formatCurrency(apOutstanding) },
@@ -654,7 +662,7 @@ export default function AccountingDashboardPage() {
                         ? "/accounting/tills"
                         : "/accounting/controls"
               }
-              className={cn(PERFEX_CARD_INTERACTIVE, "p-3")}
+              className={cn(WORKSHOP_CARD_INTERACTIVE, "p-3")}
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs font-semibold text-foreground">{item.label}</span>
@@ -682,7 +690,7 @@ export default function AccountingDashboardPage() {
           }
         />
         <div className={cn("grid gap-3", showBranchComparison ? "xl:grid-cols-[1.6fr_1fr]" : "xl:grid-cols-1")}>
-          <Card className={PERFEX_CARD}>
+          <Card className={WORKSHOP_CARD}>
             <CardHeader className={COMPACT_CARD_HEADER}>
               <CardTitle className={COMPACT_CARD_TITLE}>Revenue Trend</CardTitle>
             </CardHeader>
@@ -694,22 +702,22 @@ export default function AccountingDashboardPage() {
                 }))}>
                   <defs>
                     <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.22} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.22} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                   <YAxis tickFormatter={(value) => formatCurrency(value)} hide />
                   <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
-                  <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="url(#revenueFill)" strokeWidth={2.5} />
+                  <Area type="monotone" dataKey="revenue" stroke="var(--primary)" fill="url(#revenueFill)" strokeWidth={2.5} />
                 </AreaChart>
               </ChartContainer>
             </CardContent>
           </Card>
 
           {showBranchComparison ? (
-            <Card className={PERFEX_CARD}>
+            <Card className={WORKSHOP_CARD}>
               <CardHeader className={COMPACT_CARD_HEADER}>
                 <CardTitle className={COMPACT_CARD_TITLE}>Revenue By Branch</CardTitle>
               </CardHeader>
@@ -720,7 +728,7 @@ export default function AccountingDashboardPage() {
                     <XAxis type="number" hide />
                     <YAxis type="category" dataKey="branch_name" width={100} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                     <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
-                    <Bar dataKey="invoiced" fill="#10b981" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="invoiced" fill="var(--success)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>
@@ -729,7 +737,7 @@ export default function AccountingDashboardPage() {
         </div>
 
         <div className="grid gap-3 xl:grid-cols-[1fr_1fr]">
-          <Card className={PERFEX_CARD}>
+          <Card className={WORKSHOP_CARD}>
             <CardHeader className={COMPACT_CARD_HEADER}>
               <CardTitle className={COMPACT_CARD_TITLE}>Revenue By Service Type</CardTitle>
             </CardHeader>
@@ -773,7 +781,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className={PERFEX_CARD}>
+          <Card className={WORKSHOP_CARD}>
             <CardHeader className={COMPACT_CARD_HEADER}>
               <CardTitle className={COMPACT_CARD_TITLE}>Top Customers By Revenue</CardTitle>
             </CardHeader>
@@ -796,7 +804,7 @@ export default function AccountingDashboardPage() {
 
       <section className="grid items-start gap-3 xl:grid-cols-[3fr_1fr]">
         <div className="space-y-3">
-          <Card className={PERFEX_CARD}>
+          <Card className={WORKSHOP_CARD}>
             <CardHeader className={COMPACT_CARD_HEADER}>
               <CardTitle className={COMPACT_CARD_TITLE}>Expense Analytics</CardTitle>
             </CardHeader>
@@ -806,15 +814,15 @@ export default function AccountingDashboardPage() {
                   <AreaChart data={expenseTrend}>
                     <defs>
                       <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        <stop offset="5%" stopColor="var(--destructive)" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="var(--destructive)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                     <YAxis hide />
                     <Tooltip content={<DashboardTooltip formatCurrency={formatCurrency} />} />
-                    <Area type="monotone" dataKey="expense" stroke="#ef4444" fill="url(#expenseFill)" strokeWidth={2.25} />
+                    <Area type="monotone" dataKey="expense" stroke="var(--destructive)" fill="url(#expenseFill)" strokeWidth={2.25} />
                   </AreaChart>
                 </ChartContainer>
               </div>
@@ -851,7 +859,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className={PERFEX_CARD}>
+          <Card className={WORKSHOP_CARD}>
             <CardHeader className={COMPACT_CARD_HEADER}>
               <div className="flex items-center justify-between">
                 <CardTitle className={COMPACT_CARD_TITLE}>Top Debtors</CardTitle>
@@ -885,7 +893,7 @@ export default function AccountingDashboardPage() {
         </div>
 
         <div>
-          <Card className={PERFEX_CARD}>
+          <Card className={WORKSHOP_CARD}>
             <CardHeader className={COMPACT_CARD_HEADER}>
               <CardTitle className={COMPACT_CARD_TITLE}>Accounts Receivable</CardTitle>
             </CardHeader>
@@ -911,7 +919,7 @@ export default function AccountingDashboardPage() {
 
       {showOperationalSections ? (
       <section className="grid gap-3 xl:grid-cols-[1fr_1fr]">
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <div className="flex items-center justify-between gap-3">
               <CardTitle className={COMPACT_CARD_TITLE}>Accounts Payable</CardTitle>
@@ -949,7 +957,7 @@ export default function AccountingDashboardPage() {
             </div>
             <AgingBars buckets={apBuckets} formatCurrency={formatCurrency} />
             {showApprovalsPriority ? (
-              <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+              <div className="rounded border border-warning/20 bg-warning/10 p-2 text-xs text-warning">
                 {snapshot?.payables.pending_approvals ?? 0} supplier bill approvals are pending review.
               </div>
             ) : null}
@@ -988,7 +996,7 @@ export default function AccountingDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Cash & Bank Dashboard</CardTitle>
           </CardHeader>
@@ -1029,7 +1037,7 @@ export default function AccountingDashboardPage() {
                         <div
                           className={cn(
                             "text-xs",
-                            account.variance_status === "Balanced" ? "text-emerald-600" : "text-amber-600"
+                            account.variance_status === "Balanced" ? "text-success" : "text-warning"
                           )}
                         >
                           {account.variance_status ?? "Variance pending"}
@@ -1074,7 +1082,7 @@ export default function AccountingDashboardPage() {
                       <div className="text-xs text-muted-foreground">
                         Reconciled {formatCurrency(account.reconciled_balance)}
                       </div>
-                      <div className={cn("text-xs", toNumber(account.difference) === 0 ? "text-emerald-600" : "text-amber-600")}>
+                      <div className={cn("text-xs", toNumber(account.difference) === 0 ? "text-success" : "text-warning")}>
                         Difference {formatCurrency(toNumber(account.difference))}
                       </div>
                     </div>
@@ -1089,7 +1097,7 @@ export default function AccountingDashboardPage() {
 
       {showOperationalSections ? (
       <section className="grid gap-3 xl:grid-cols-[1fr_0.95fr]">
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Till Management Summary</CardTitle>
           </CardHeader>
@@ -1154,7 +1162,7 @@ export default function AccountingDashboardPage() {
                 </Link>
               </div>
               {pendingSupervisorActions.length === 0 ? (
-                <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
+                <div className="rounded border border-success/20 bg-success/10 p-2 text-xs text-success">
                   No supervisor variance actions pending.
                 </div>
               ) : (
@@ -1169,7 +1177,7 @@ export default function AccountingDashboardPage() {
                         {action.reason ? <div className="mt-1 text-xs text-muted-foreground">{action.reason}</div> : null}
                       </div>
                       <div className="text-right">
-                        <div className={cn("text-xs font-semibold", toNumber(action.variance) < 0 ? "text-rose-600" : "text-emerald-600")}>
+                        <div className={cn("text-xs font-semibold", toNumber(action.variance) < 0 ? "text-destructive" : "text-success")}>
                           {formatCurrency(toNumber(action.variance))}
                         </div>
                         <div className="mt-2 flex justify-end gap-2">
@@ -1178,10 +1186,10 @@ export default function AccountingDashboardPage() {
                           </Link>
                           {hasDashboardPermission("manage_billing") ? (
                             <>
-                              <Link href={action.approve_href ?? `/accounting/tills/${action.id}`} className="text-xs font-medium text-emerald-700 hover:underline">
+                              <Link href={action.approve_href ?? `/accounting/tills/${action.id}`} className="text-xs font-medium text-success hover:underline">
                                 Approve
                               </Link>
-                              <Link href={action.href ?? `/accounting/tills/${action.id}`} className="text-xs font-medium text-rose-700 hover:underline">
+                              <Link href={action.href ?? `/accounting/tills/${action.id}`} className="text-xs font-medium text-destructive hover:underline">
                                 Reject
                               </Link>
                             </>
@@ -1196,7 +1204,7 @@ export default function AccountingDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Tax Dashboard</CardTitle>
           </CardHeader>
@@ -1235,7 +1243,7 @@ export default function AccountingDashboardPage() {
       ) : null}
 
       <section className="grid gap-3 xl:grid-cols-[minmax(0,3.8fr)_minmax(280px,0.9fr)]">
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Financial Statements Snapshot</CardTitle>
           </CardHeader>
@@ -1283,20 +1291,20 @@ export default function AccountingDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className={cn(PERFEX_CARD, "xl:max-w-[360px]")}>
+        <Card className={cn(WORKSHOP_CARD, "xl:max-w-[360px]")}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>{showApprovalsPriority ? "Monitoring Center & Approvals" : "Monitoring Center"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 p-3">
             {showApprovalsPriority ? (
-              <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+              <div className="rounded border border-warning/20 bg-warning/10 p-2 text-xs text-warning">
                 {snapshot?.payables.pending_approvals ?? 0} supplier bill approvals are pending review.
               </div>
             ) : null}
             {monitoringGroups.length > 0 ? (
               <>
                 {highPriorityMonitoringCount === 0 ? (
-                  <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
+                  <div className="rounded border border-success/20 bg-success/10 p-2 text-xs text-success">
                     No high-priority exceptions at the moment.
                   </div>
                 ) : null}
@@ -1305,7 +1313,7 @@ export default function AccountingDashboardPage() {
                 ))}
               </>
             ) : alerts.length === 0 ? (
-              <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
+              <div className="rounded border border-success/20 bg-success/10 p-2 text-xs text-success">
                 No high-priority exceptions at the moment.
               </div>
             ) : (
@@ -1321,7 +1329,7 @@ export default function AccountingDashboardPage() {
 
       {showQuickActions ? (
       <section className="grid gap-3 xl:grid-cols-[1fr_0.95fr]">
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Quick Actions</CardTitle>
           </CardHeader>
@@ -1344,7 +1352,7 @@ export default function AccountingDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Recent Finance Activity</CardTitle>
           </CardHeader>
@@ -1372,7 +1380,7 @@ export default function AccountingDashboardPage() {
       </section>
       ) : (
       <section>
-        <Card className={PERFEX_CARD}>
+        <Card className={WORKSHOP_CARD}>
           <CardHeader className={COMPACT_CARD_HEADER}>
             <CardTitle className={COMPACT_CARD_TITLE}>Recent Finance Activity</CardTitle>
           </CardHeader>
@@ -1488,10 +1496,10 @@ function AgingBars({
 function HealthDot({ status }: { status: "healthy" | "warning" | "critical" }) {
   const className =
     status === "healthy"
-      ? "bg-emerald-500"
+      ? "bg-success"
       : status === "warning"
-        ? "bg-amber-500"
-        : "bg-rose-500";
+        ? "bg-warning"
+        : "bg-destructive";
 
   return <span className={cn("h-2.5 w-2.5 rounded-full", className)} />;
 }
@@ -1501,10 +1509,10 @@ function TrendBadge({ trend }: { trend?: "up" | "down" | "stable" }) {
 
   const className =
     trend === "up"
-      ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+      ? "border-success/40 bg-success/15 text-success"
       : trend === "down"
-        ? "border-rose-400/60 bg-rose-500/15 text-rose-300"
-        : "border-slate-300/60 bg-slate-500/15 text-slate-200";
+        ? "border-destructive/40 bg-destructive/15 text-destructive"
+        : "border-border bg-muted0/15 text-muted-foreground";
 
   return (
     <Badge variant="outline" className={cn("ml-2 h-5 px-1.5 text-[10px] font-semibold capitalize", className)}>

@@ -34,7 +34,7 @@ import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -105,11 +105,11 @@ function StaffContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "active": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-            case "probation": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
-            case "suspended": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-            case "terminated": return "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
-            case "resigned": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
+            case "active": return "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30";
+            case "probation": return "bg-warning/15 text-warning border-warning/20 dark:border-warning/30";
+            case "suspended": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30";
+            case "terminated": return "bg-muted text-muted-foreground border-border dark:border-border";
+            case "resigned": return "bg-muted text-muted-foreground border-border dark:bg-muted dark:text-muted-foreground dark:border-border";
             default: return "";
         }
     };
@@ -335,7 +335,7 @@ function StaffContent() {
                                                 onCheckedChange={() => toggleSelect(emp.id)}
                                                 className="absolute -left-1 -top-1 z-10"
                                             />
-                                            <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-900 shadow-sm ml-4">
+                                            <Avatar className="h-10 w-10 border-2 border-card dark:border-foreground shadow-sm ml-4">
                                                 <AvatarImage src={emp.profile_picture ?? undefined} />
                                                 <AvatarFallback className="text-xs">
                                                     {emp.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2)}
@@ -351,7 +351,7 @@ function StaffContent() {
                                     </div>
                                     <div className="flex gap-1.5 flex-wrap justify-end">
                                         {emp.technician_id && (
-                                            <Badge variant="secondary" className="bg-warning/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
+                                            <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/30 text-[9px] px-1.5 py-0">
                                                 Technician
                                             </Badge>
                                         )}
@@ -379,7 +379,7 @@ function StaffContent() {
                         </Card>
                     )) : (
                         <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-lg bg-muted/50">
-                            <div className="rounded-full bg-blue-100 dark:bg-blue-900/20 p-4 mb-4">
+                            <div className="rounded-full bg-primary/10 dark:bg-primary/20 p-4 mb-4">
                                 <Users className="h-8 w-8 text-primary" />
                             </div>
                             <h3 className="text-lg font-semibold">No staff found</h3>
@@ -486,7 +486,7 @@ function StaffContent() {
                                         <TableCell className="px-4 py-2">
                                             <div className="flex gap-2">
                                                 {emp.technician_id && (
-                                                    <Badge variant="secondary" className="bg-warning/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
+                                                    <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/30 text-[9px] px-1.5 py-0">
                                                         Tech
                                                     </Badge>
                                                 )}

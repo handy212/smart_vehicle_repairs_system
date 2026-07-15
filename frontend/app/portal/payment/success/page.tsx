@@ -25,7 +25,7 @@ export default function PaymentSuccessPage() {
             {isSuccess ? (
               <CheckCircle className="w-6 h-6 text-success" />
             ) : (
-              <XCircle className="w-6 h-6 text-red-600" />
+              <XCircle className="w-6 h-6 text-destructive" />
             )}
             {isSuccess ? "Payment Successful" : "Payment Failed"}
           </CardTitle>

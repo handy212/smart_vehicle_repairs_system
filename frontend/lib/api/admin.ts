@@ -483,7 +483,17 @@ export const adminApi = {
       search?: string;
     }): Promise<SystemSettingsListResponse> => {
       const response = await apiClient.get("/accounts/admin/settings/", { params });
-      return response.data;
+      const data = response.data;
+      // ViewSet has pagination disabled → raw array; keep a stable shape for callers.
+      if (Array.isArray(data)) {
+        return {
+          count: data.length,
+          next: null,
+          previous: null,
+          results: data,
+        };
+      }
+      return data;
     },
 
     get: async (id: number): Promise<SystemSetting> => {

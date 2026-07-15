@@ -354,7 +354,7 @@ export default function AppointmentsPage() {
         <div>
           {/* Premium Header */}
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
               <PremiumIcons.Calendar className="w-8 h-8 text-primary" />
               Appointments
             </h1>
@@ -532,7 +532,7 @@ export default function AppointmentsPage() {
       />
 
       {/* Appointments Table */}
-      <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+      <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-border">
         <CardHeader className="py-4 px-6 border-b border-border/50 bg-card/40 bg-muted/40 backdrop-blur-sm">
           <CardTitle className="text-base font-semibold text-foreground tracking-tight">
             All Appointments ({data?.count || 0})
@@ -715,7 +715,7 @@ export default function AppointmentsPage() {
                             <PermissionGuard permission="delete_appointments">
                               <DropdownMenuItem
                                 onClick={() => handleDelete(appointment)}
-                                className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20"
+                                className="text-destructive dark:text-destructive focus:text-destructive dark:focus:text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20"
                                 disabled={deleteMutation.isPending}
                               >
                                 <PremiumIcons.Trash2 className="mr-2 h-4 w-4" />

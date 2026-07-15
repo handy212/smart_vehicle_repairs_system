@@ -86,8 +86,8 @@ export function SyncStatusBanner() {
             className={cn(
                 "sticky top-0 z-50 border-b transition-colors",
                 isOnline
-                    ? "bg-primary/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
-                    : "bg-warning/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
+                    ? "bg-primary/10 border-warning/20 dark:bg-warning/15 dark:border-warning/30"
+                    : "bg-warning/10 border-warning/20 dark:bg-warning/15 dark:border-warning/30"
             )}
         >
             <div className="px-4 py-2 flex items-center justify-between gap-3">
@@ -96,14 +96,14 @@ export function SyncStatusBanner() {
                     {isOnline ? (
                         <>
                             <Wifi className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
+                            <span className="text-sm font-medium text-warning dark:text-warning">
                                 Online
                             </span>
                         </>
                     ) : (
                         <>
-                            <WifiOff className="h-4 w-4 text-warning dark:text-orange-400 flex-shrink-0" />
-                            <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
+                            <WifiOff className="h-4 w-4 text-warning dark:text-warning flex-shrink-0" />
+                            <span className="text-sm font-medium text-warning dark:text-warning">
                                 Offline
                             </span>
                         </>
@@ -116,8 +116,8 @@ export function SyncStatusBanner() {
                             className={cn(
                                 "ml-2 text-xs",
                                 isOnline
-                                    ? "bg-orange-100 text-orange-700 border-orange-300"
-                                    : "bg-orange-100 text-orange-700 border-orange-300"
+                                    ? "bg-warning/15 text-warning border-warning/40"
+                                    : "bg-warning/15 text-warning border-warning/40"
                             )}
                         >
                             <Upload className="h-3 w-3 mr-1" />
@@ -149,8 +149,8 @@ export function SyncStatusBanner() {
                             className={cn(
                                 "h-7 text-xs",
                                 isOnline
-                                    ? "border-orange-300 hover:bg-orange-100"
-                                    : "border-orange-300 hover:bg-orange-100"
+                                    ? "border-warning/40 hover:bg-warning/15"
+                                    : "border-warning/40 hover:bg-warning/15"
                             )}
                         >
                             <RefreshCw

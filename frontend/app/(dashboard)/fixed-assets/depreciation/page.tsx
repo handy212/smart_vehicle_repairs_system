@@ -55,9 +55,9 @@ export default function DepreciationPage() {
 
   return (
     <PermissionPageGuard permission="view_assets">
-      <div className="space-y-6 p-4 md:p-6 max-w-3xl">
+      <div className="space-y-6 w-full">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Monthly Depreciation</h1>
+          <h1 className="text-xl font-bold tracking-tight">Monthly Depreciation</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Run depreciation for all active assets for a selected month.
           </p>

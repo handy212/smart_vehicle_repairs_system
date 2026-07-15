@@ -138,42 +138,42 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onSelectConversation, 
   }, [conversations, user?.id]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 border-r border-border overflow-hidden relative">
+    <div className="flex flex-col h-full bg-muted dark:bg-card border-r border-border overflow-hidden relative">
       <AnimatePresence>
         {isCreatingGroup && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col p-6 shadow-2xl"
+            className="absolute inset-0 z-50 bg-card dark:bg-card flex flex-col p-6 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
+              <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
                 New Team
               </h2>
-              <button onClick={() => setIsCreatingGroup(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+              <button onClick={() => setIsCreatingGroup(false)} className="p-2 hover:bg-muted dark:hover:bg-muted rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Team Name</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Team Name</label>
                 <input
                   type="text"
                   value={newGroupTitle}
                   onChange={(e) => setNewGroupTitle(e.target.value)}
                   placeholder="e.g. Engine Repair Squad"
-                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-border rounded-2xl outline-none focus:ring-2 ring-primary/20 transition-all font-bold"
+                  className="w-full p-4 bg-muted dark:bg-background border border-border rounded-lg outline-none focus:ring-2 ring-primary/20 transition-all font-medium"
                 />
               </div>
 
               <div className="flex-1 overflow-hidden flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
                   Select Members ({selectedMembers.length} selected)
                 </label>
-                <ScrollArea className="flex-1 border rounded-2xl bg-white dark:bg-slate-950">
+                <ScrollArea className="flex-1 border rounded-lg bg-card dark:bg-background">
                   <div className="p-2">
                     {[...discovery.staff, ...discovery.clients].map((u) => (
                       <div
@@ -187,10 +187,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onSelectConversation, 
                           "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all mb-1",
                           selectedMembers.includes(u.id)
                             ? "bg-primary/5 border border-primary/20"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent"
+                            : "hover:bg-muted dark:hover:bg-muted border border-transparent"
                         )}
                       >
-                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-xs overflow-hidden">
+                        <div className="w-10 h-10 rounded-full bg-muted dark:bg-muted flex items-center justify-center font-bold text-xs overflow-hidden">
                           {u.avatar_url
                             ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
                             : u.full_name?.charAt(0)}
@@ -213,7 +213,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onSelectConversation, 
               <button
                 onClick={handleCreateGroup}
                 disabled={!newGroupTitle.trim() || selectedMembers.length === 0 || isLoading}
-                className="w-full py-4 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                className="w-full py-3 bg-primary text-primary-foreground font-bold uppercase tracking-wider rounded-lg shadow-workshop transition-all active:scale-[0.98] disabled:opacity-30"
               >
                 {isLoading ? "Creating..." : "Create Collective Chat"}
               </button>
@@ -223,19 +223,19 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onSelectConversation, 
       </AnimatePresence>
 
       {/* Top Header Profile */}
-      <div className="p-4 py-5 border-b bg-white dark:bg-slate-800 flex items-center justify-between">
+      <div className="p-4 py-5 border-b bg-card dark:bg-muted flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-500 overflow-hidden border border-border shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-muted dark:bg-muted flex items-center justify-center font-bold text-muted-foreground overflow-hidden border border-border shadow-sm">
             {user?.profile_picture
               ? <img src={user.profile_picture as string} alt="" className="w-full h-full object-cover" />
               : user?.first_name?.charAt(0)}
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-sm tracking-tight truncate max-w-[140px] leading-tight">{user?.first_name} {user?.last_name}</span>
-            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-none mt-0.5">{user?.role}</span>
+            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none mt-0.5">{user?.role}</span>
           </div>
         </div>
-        <button className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 group transition-all active:scale-90">
+        <button className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted dark:hover:bg-muted text-muted-foreground group transition-all active:scale-90">
           <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform" />
         </button>
       </div>
@@ -250,20 +250,20 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onSelectConversation, 
               placeholder={`Search ${activeTab}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-950 border border-border rounded-xl outline-none focus:ring-2 ring-primary/20 transition-all text-sm font-medium"
+              className="w-full pl-9 pr-4 py-2.5 bg-card dark:bg-background border border-border rounded-xl outline-none focus:ring-2 ring-primary/20 transition-all text-sm font-medium"
             />
           </div>
           <button
             onClick={() => setIsCreatingGroup(true)}
             title="New Group Chat"
-            className="w-10 h-10 rounded-xl bg-white dark:bg-slate-950 border border-border text-primary hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center active:scale-90"
+            className="w-10 h-10 rounded-xl bg-card dark:bg-background border border-border text-primary hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center active:scale-90"
           >
             <MessageSquarePlus className="w-4 h-4" />
           </button>
         </div>
 
         {/* 3-Tab Layout */}
-        <div className="flex p-1 bg-white dark:bg-slate-950 rounded-xl border border-border shadow-sm">
+        <div className="flex p-1 bg-card dark:bg-background rounded-xl border border-border shadow-sm">
           <TabButton active={activeTab === 'staff'} onClick={() => setActiveTab('staff')} icon={<Users2 className="w-3.5 h-3.5" />} label="Staff" />
           <TabButton active={activeTab === 'groups'} onClick={() => setActiveTab('groups')} icon={<Users className="w-3.5 h-3.5" />} label="Groups" />
           <TabButton active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} icon={<UserRound className="w-3.5 h-3.5" />} label="Clients" />
@@ -333,8 +333,8 @@ const TabButton = ({ active, onClick, icon, label }: any) => (
   <button
     onClick={onClick}
     className={cn(
-      "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-lg transition-all",
-      active ? "bg-primary shadow-lg shadow-primary/20 text-white" : "text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95"
+      "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-lg transition-all",
+      active ? "bg-primary shadow-lg shadow-primary/20 text-white" : "text-muted-foreground hover:bg-muted dark:hover:bg-muted active:scale-95"
     )}
   >
     {icon}
@@ -358,18 +358,18 @@ const UserItem = ({
     <button
       onClick={onClick}
       className={cn(
-        "w-full p-3 rounded-2xl hover:bg-white dark:hover:bg-slate-800 transition-all flex items-center gap-3 group text-left mb-1 active:scale-[0.98]",
-        isSelected && "bg-white dark:bg-slate-800 shadow-sm border border-border"
+        "w-full p-3 rounded-lg hover:bg-card dark:hover:bg-muted transition-all flex items-center gap-3 group text-left mb-1 active:scale-[0.98]",
+        isSelected && "bg-card dark:bg-muted shadow-sm border border-border"
       )}
     >
       <div className="relative">
-        <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden border border-border group-hover:border-primary/50 transition-colors">
+        <div className="w-11 h-11 rounded-lg bg-muted dark:bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground overflow-hidden border border-border group-hover:border-primary/50 transition-colors">
           {user.avatar_url
             ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
             : user.full_name?.charAt(0)}
         </div>
         {isOnline && (
-          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-white dark:border-slate-900 shadow-sm" />
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card dark:border-card shadow-sm" />
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -378,16 +378,16 @@ const UserItem = ({
             {user.full_name}
           </p>
           {unreadCount > 0 && (
-            <span className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
+            <span className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2">
+        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest flex items-center gap-2">
           {user.role.replace('_', ' ')}
           {!isOnline && user.last_seen && (
             <span className="normal-case font-medium lowercase flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
+              <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
               {formatDistanceToNow(new Date(user.last_seen), { addSuffix: true }).replace('about ', '')}
             </span>
           )}
@@ -411,13 +411,13 @@ const GroupItem = ({
   <button
     onClick={onClick}
     className={cn(
-      "w-full p-3 rounded-2xl transition-all flex items-center gap-3 text-left group mb-1 active:scale-[0.98] relative",
-      active ? "bg-white dark:bg-slate-800 shadow-sm border border-border" : "hover:bg-white dark:hover:bg-slate-800"
+      "w-full p-3 rounded-lg transition-all flex items-center gap-3 text-left group mb-1 active:scale-[0.98] relative",
+      active ? "bg-card dark:bg-muted shadow-sm border border-border" : "hover:bg-card dark:hover:bg-muted"
     )}
   >
     <div className={cn(
-      "w-11 h-11 rounded-2xl flex items-center justify-center transition-all shrink-0",
-      active ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-slate-100 dark:bg-slate-950 text-slate-400 group-hover:text-primary border border-border"
+      "w-11 h-11 rounded-lg flex items-center justify-center transition-all shrink-0",
+      active ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-muted dark:bg-background text-muted-foreground group-hover:text-primary border border-border"
     )}>
       <Hash className="w-5 h-5" />
     </div>
@@ -428,7 +428,7 @@ const GroupItem = ({
         </p>
         <div className="flex items-center gap-1.5 ml-1 shrink-0">
           {group.unread_count > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {group.unread_count > 99 ? '99+' : group.unread_count}
             </span>
           )}
@@ -447,7 +447,7 @@ const GroupItem = ({
     <button
       onClick={onArchive}
       title="Archive"
-      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-muted-foreground hover:text-destructive transition-all"
+      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-muted dark:hover:bg-muted text-muted-foreground hover:text-destructive transition-all"
     >
       <Archive className="w-3.5 h-3.5" />
     </button>
@@ -456,9 +456,9 @@ const GroupItem = ({
 
 const EmptyText = ({ tab }: { tab: string }) => (
   <div className="py-20 flex flex-col items-center justify-center text-center">
-    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-300 mb-4 opacity-50">
+    <div className="w-12 h-12 rounded-full bg-muted dark:bg-muted flex items-center justify-center text-muted-foreground mb-4 opacity-50">
       <Search className="w-6 h-6" />
     </div>
-    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">No {tab} found</p>
+    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">No {tab} found</p>
   </div>
 );

@@ -350,7 +350,7 @@ export default function RoadsideRequestDetailPage() {
               )}
               {req.arrived_at && (
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-green-500 mt-0.5" />
+                  <MapPin className="w-5 h-5 text-success mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-foreground">Arrived on Site</p>
                     <p className="text-xs text-muted-foreground">
@@ -375,10 +375,10 @@ export default function RoadsideRequestDetailPage() {
 
           {/* Customer Feedback */}
           {req.status === 'completed' && (
-            <Card className="border-none shadow-premium bg-gradient-to-br from-orange-50 to-indigo-50 dark:from-orange-900/10 dark:to-indigo-900/10">
+            <Card className="border-none shadow-premium bg-gradient-to-br from-warning/10 to-primary/10 dark:from-warning/10 dark:to-primary/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                  <Star className="h-5 w-5 text-warning fill-warning" />
                   Service Experience
                 </CardTitle>
               </CardHeader>
@@ -389,7 +389,7 @@ export default function RoadsideRequestDetailPage() {
                     {req.rating && (
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} className={`h-4 w-4 ${star <= req.rating! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                          <Star key={star} className={`h-4 w-4 ${star <= req.rating! ? 'text-warning fill-warning' : 'text-muted-foreground'}`} />
                         ))}
                       </div>
                     )}
@@ -407,7 +407,7 @@ export default function RoadsideRequestDetailPage() {
                           onClick={() => setRating(star)}
                           className="focus:outline-none transition-transform hover:scale-110"
                         >
-                          <Star className={`h-8 w-8 ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                          <Star className={`h-8 w-8 ${star <= rating ? 'text-warning fill-warning' : 'text-muted-foreground'}`} />
                         </button>
                       ))}
                     </div>
@@ -452,12 +452,12 @@ export default function RoadsideRequestDetailPage() {
                 </p>
               </div>
               {req.is_covered_by_subscription ? (
-                <div className="p-3 bg-success/10 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                <div className="p-3 bg-success/10 dark:bg-success/20 border border-success/20 dark:border-success/30 rounded-lg">
+                  <p className="text-sm font-medium text-success dark:text-success">
                     Covered by Subscription
                   </p>
                   {req.subscription_number && (
-                    <p className="text-xs text-success dark:text-green-300 mt-1">
+                    <p className="text-xs text-success dark:text-success mt-1">
                       Subscription: {req.subscription_number}
                     </p>
                   )}

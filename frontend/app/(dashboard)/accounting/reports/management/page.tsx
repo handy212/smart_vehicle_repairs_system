@@ -199,9 +199,9 @@ export default function ManagementReportsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="no-print space-y-6 p-4 md:p-6">
+            <div className="no-print space-y-6">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Management Reports</h1>
+                <h1 className="text-xl font-bold tracking-tight">Management Reports</h1>
                 <p className="text-muted-foreground text-sm mt-1">
                     Branch scorecard, consolidated P&L, cash collection, and revenue mix.
                     Board pack PDF includes MoM/YoY (export from{" "}
@@ -252,7 +252,7 @@ export default function ManagementReportsPage() {
                 dateInfo={`${startDate} to ${endDate}`}
             />
 
-            <div className="p-4 md:p-6 print-container">
+            <div className="print-container">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MgmtTab)}>
                 <TabsList className="flex flex-wrap h-auto">
                     <TabsTrigger value="executive">Executive KPIs</TabsTrigger>
@@ -374,7 +374,7 @@ export default function ManagementReportsPage() {
                         <AccountingReportSkeleton compact rows={4} />
       ) : consolidatedTotals ? (
                                 <>
-                                    <div className="grid grid-cols-3 gap-4 max-w-xl">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                         <div>
                                             <p className="text-sm text-muted-foreground">Income</p>
                                             <p className="text-lg font-semibold">
@@ -555,7 +555,7 @@ export default function ManagementReportsPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {unclassifiedOwner && unclassifiedOwner.invoiced > 0 && (
-                                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                <p className="text-sm text-warning bg-warning/10 border border-warning/20 rounded-md px-3 py-2">
                                     {formatCurrency(unclassifiedOwner.invoiced)} invoiced on lines without an income category.
                                     Map task types, categories, and packages under{" "}
                                     <Link href="/accounting/revenue-products" className="underline font-medium">

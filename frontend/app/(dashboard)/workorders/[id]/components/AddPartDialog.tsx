@@ -150,7 +150,7 @@ export default function AddPartDialog({
           </div>
 
           {["approved", "in_progress", "paused"].includes(workOrderStatus || "") && (
-            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-900">
+            <div className="mb-4 rounded-md border border-warning/20 bg-warning/10 p-4 text-warning">
               <p className="text-sm font-medium">This will be treated as additional work.</p>
               <p className="mt-1 text-xs">
                 Because the customer has already approved the job, adding a new part will move the work order to additional work found and require approval before repairs continue.

@@ -23,7 +23,7 @@ export default function CheckInPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">Vehicle Check-in</h1>
+              <h1 className="text-xl font-bold text-foreground">Vehicle Check-in</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Walk-in intake: customer, vehicle, and work order in one flow.
               </p>

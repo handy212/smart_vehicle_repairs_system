@@ -83,7 +83,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           >
             <CornerDownLeft className="w-3.5 h-3.5 text-primary shrink-0" />
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">
                 Replying to {replyTo.sender_name}
               </span>
               <p className="text-xs text-muted-foreground truncate">{replyTo.message}</p>
@@ -100,7 +100,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       <div className="relative">
         <div className={cn(
-          "relative flex items-end gap-2 p-1.5 bg-slate-50 dark:bg-slate-950 border rounded-xl transition-all focus-within:border-primary/50 focus-within:shadow-sm",
+          "relative flex items-end gap-2 p-1.5 bg-muted dark:bg-background border rounded-xl transition-all focus-within:border-primary/50 focus-within:shadow-sm",
           isOverLimit ? "border-destructive" : "border-border"
         )}>
 
@@ -148,7 +148,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               disabled={!message.trim() || disabled || isOverLimit}
               className={cn(
                 "w-9 h-9 rounded-lg flex items-center justify-center transition-all active:scale-95 disabled:opacity-30",
-                message.trim() && !isOverLimit ? "bg-primary text-white shadow-sm" : "bg-slate-100 dark:bg-slate-800 text-muted-foreground"
+                message.trim() && !isOverLimit ? "bg-primary text-white shadow-sm" : "bg-muted dark:bg-muted text-muted-foreground"
               )}
             >
               <SendHorizontal className="w-4 h-4" />
@@ -185,7 +185,7 @@ const InputActionButton = ({
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className="p-2 rounded-lg text-muted-foreground hover:bg-white dark:hover:bg-slate-800 hover:text-primary transition-all active:scale-90 disabled:opacity-40"
+    className="p-2 rounded-lg text-muted-foreground hover:bg-card dark:hover:bg-muted hover:text-primary transition-all active:scale-90 disabled:opacity-40"
   >
     {icon}
   </button>

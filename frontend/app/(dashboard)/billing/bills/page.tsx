@@ -201,8 +201,8 @@ export default function BillsPage() {
                     <CardContent className="p-4 flex flex-col gap-1">
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount Due</span>
                         <div className="flex items-end justify-between">
-                            <span className="text-xl font-bold text-yellow-600">{formatCurrency(totalDue)}</span>
-                            <CreditCard className="w-5 h-5 text-yellow-500/50 mb-0.5" />
+                            <span className="text-xl font-bold text-warning">{formatCurrency(totalDue)}</span>
+                            <CreditCard className="w-5 h-5 text-warning/50 mb-0.5" />
                         </div>
                     </CardContent>
                 </Card>
@@ -409,7 +409,7 @@ export default function BillsPage() {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                             <p className="text-muted-foreground text-sm">No bills found.</p>
                             <PermissionGuard permission="create_bills">
                                 <Link href="/billing/bills/new">

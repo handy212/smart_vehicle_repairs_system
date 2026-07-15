@@ -549,15 +549,15 @@
         }
 
         .header-right {
-            width: 32%;
-            text-align: left;
-            padding-left: 16px !important;
+            width: 38%;
+            text-align: right;
+            padding-left: 12px !important;
             vertical-align: top;
         }
 
-        /* Left-aligned "Label: value" pairs (same starting edge for every row) */
+        /* Values flush right; labels sit just left of values */
         .header-meta {
-            width: auto;
+            width: 100%;
             border-collapse: collapse;
             border-spacing: 0;
             table-layout: auto;
@@ -571,23 +571,28 @@
             border: 0;
             background: transparent;
             vertical-align: baseline;
-        }
-
-        .header-meta td.header-meta-line {
             padding: 2px 0;
-            text-align: left;
-            white-space: nowrap;
-            font-weight: 700;
-            color: #111827;
         }
 
-        .header-meta .header-meta-label {
+        .header-meta td.header-meta-label {
+            width: 100%;
+            padding-right: 8px;
+            white-space: nowrap;
             color: #6b7280;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.02em;
             font-size: 6.5pt;
-            margin-right: 4px;
+            text-align: right;
+        }
+
+        .header-meta td.header-meta-value {
+            width: 1%;
+            white-space: nowrap;
+            color: #111827;
+            font-weight: 700;
+            font-size: 7.5pt;
+            text-align: left;
         }
 
         .header-meta tr.header-meta-branch td {
@@ -600,7 +605,7 @@
             font-size: 7pt;
             color: #9ca3af;
             font-style: italic;
-            text-align: left;
+            text-align: right;
         }
 
         .logo-placeholder {
@@ -1232,21 +1237,25 @@
                 <table class="header-meta" role="presentation">
                     {% if company_tax_id %}
                     <tr>
-                        <td class="header-meta-line"><span class="header-meta-label">Tax ID:</span> {{ company_tax_id }}</td>
+                        <td class="header-meta-label">Tax ID:</td>
+                        <td class="header-meta-value">{{ company_tax_id }}</td>
                     </tr>
                     {% endif %}
                     {% if company_registration %}
                     <tr>
-                        <td class="header-meta-line"><span class="header-meta-label">Reg. No:</span> {{ company_registration }}</td>
+                        <td class="header-meta-label">Reg. No:</td>
+                        <td class="header-meta-value">{{ company_registration }}</td>
                     </tr>
                     {% endif %}
                     {% if branch %}
                     <tr class="header-meta-branch">
-                        <td class="header-meta-line"><span class="header-meta-label">Branch:</span> {{ branch.name|branch_print_name }}</td>
+                        <td class="header-meta-label">Branch:</td>
+                        <td class="header-meta-value">{{ branch.name|branch_print_name }}</td>
                     </tr>
                     {% if branch.phone %}
                     <tr>
-                        <td class="header-meta-line"><span class="header-meta-label">Phone:</span> {{ branch.phone }}</td>
+                        <td class="header-meta-label">Phone:</td>
+                        <td class="header-meta-value">{{ branch.phone }}</td>
                     </tr>
                     {% endif %}
                     {% endif %}

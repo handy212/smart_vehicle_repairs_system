@@ -73,11 +73,11 @@ export default function AppointmentCalendarPage() {
             appointmentDate.setHours(hours, minutes, 0, 0);
 
             const statusColors: Record<string, string> = {
-              pending: "#f59e0b",
-              confirmed: "#3b82f6",
-              in_progress: "#8b5cf6",
-              completed: "#10b981",
-              cancelled: "#ef4444",
+              pending: "var(--warning)",
+              confirmed: "var(--primary)",
+              in_progress: "var(--info)",
+              completed: "var(--success)",
+              cancelled: "var(--destructive)",
               rescheduled: "#f97316",
             };
 
@@ -242,7 +242,7 @@ export default function AppointmentCalendarPage() {
           <div className="flex items-center space-x-6 text-sm">
             <span className="font-medium text-card-foreground">Status:</span>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-warning/100"></div>
+              <div className="w-4 h-4 rounded bg-warning"></div>
               <span className="text-muted-foreground">Pending</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -250,15 +250,15 @@ export default function AppointmentCalendarPage() {
               <span className="text-muted-foreground">Confirmed</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-purple-500"></div>
+              <div className="w-4 h-4 rounded bg-info"></div>
               <span className="text-muted-foreground">In Progress</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-success/100"></div>
+              <div className="w-4 h-4 rounded bg-success"></div>
               <span className="text-muted-foreground">Completed</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-red-500"></div>
+              <div className="w-4 h-4 rounded bg-destructive/50"></div>
               <span className="text-muted-foreground">Cancelled</span>
             </div>
           </div>

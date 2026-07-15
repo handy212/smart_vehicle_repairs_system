@@ -190,7 +190,7 @@ export default function MobileWorkOrdersPage() {
                       {wo.work_order_number || `WO #${wo.id}`}
                     </span>
                     {wo.priority === "high" && (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-destructive/10 text-destructive">
                         HIGH
                       </span>
                     )}

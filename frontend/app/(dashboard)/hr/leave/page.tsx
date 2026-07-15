@@ -29,7 +29,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { useEffect } from "react";
 import Link from "next/link";
@@ -88,10 +88,10 @@ function LeaveContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "pending": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
-            case "approved": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-            case "rejected": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-            case "cancelled": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
+            case "pending": return "bg-warning/15 text-warning border-warning/20 dark:border-warning/30";
+            case "approved": return "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30";
+            case "rejected": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30";
+            case "cancelled": return "bg-muted text-muted-foreground border-border dark:bg-muted dark:text-muted-foreground dark:border-border";
             default: return "";
         }
     };
@@ -254,7 +254,7 @@ function LeaveContent() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-7 px-2 text-success hover:text-green-700 hover:bg-success/10"
+                                                                className="h-7 px-2 text-success hover:text-success hover:bg-success/10"
                                                                 onClick={() => approveMutation.mutate(req.id)}
                                                                 disabled={approveMutation.isPending}
                                                             >

@@ -625,16 +625,32 @@ class DocumentPrinter:
         }
 
         body.is-pdf .header-right {
-            text-align: left !important;
+            width: 38% !important;
+            max-width: none !important;
+            text-align: right !important;
         }
 
         body.is-pdf .header-meta {
-            width: auto !important;
+            width: 100% !important;
+            table-layout: auto !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
         }
 
-        body.is-pdf .header-meta td.header-meta-line {
+        body.is-pdf .header-meta td.header-meta-label {
+            width: 100% !important;
+            text-align: right !important;
+            white-space: nowrap !important;
+        }
+
+        body.is-pdf .header-meta td.header-meta-value {
+            width: 1% !important;
             text-align: left !important;
             white-space: nowrap !important;
+        }
+
+        body.is-pdf .header-tagline {
+            text-align: right !important;
         }
 
         body.is-pdf .doc-number {

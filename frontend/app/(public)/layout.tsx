@@ -13,7 +13,7 @@ export default function PublicLayout({
     return (
         <div className="min-h-screen bg-muted flex flex-col">
             <header className="bg-card border-b border-border sticky top-0 z-50">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {logoSrc ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -25,16 +25,16 @@ export default function PublicLayout({
                         )}
                         <div className="font-bold text-lg text-foreground">{siteName}</div>
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                    <div className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-md">
                         Customer Portal
                     </div>
                 </div>
             </header>
-            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+            <main className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
                 {children}
             </main>
             <footer className="bg-card border-t border-border mt-auto">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-muted-foreground">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-muted-foreground">
                     Copyright American AutoParts @2026. Developed by SafeTrack Systems
                 </div>
             </footer>

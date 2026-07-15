@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { BrandingThemeSync } from "@/components/layout/BrandingThemeSync";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RealtimeNotificationsBridge } from "@/components/notifications/RealtimeNotificationsBridge";
 
 function shouldRetryQuery(failureCount: number, error: unknown): boolean {
   const status = (error as { response?: { status?: number } })?.response?.status;
@@ -33,6 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
         <BrandingThemeSync />
+        <RealtimeNotificationsBridge />
         {children}
       </TooltipProvider>
     </QueryClientProvider>

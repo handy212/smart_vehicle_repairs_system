@@ -12,7 +12,7 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 async function downloadPayslipPdf(id: number, periodName: string) {
     try {
@@ -46,9 +46,9 @@ function MyPayslipsContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "draft": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400";
-            case "approved": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400";
-            case "paid": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400";
+            case "draft": return "bg-muted text-muted-foreground border-border dark:bg-muted dark:text-muted-foreground";
+            case "approved": return "bg-warning/15 text-warning border-warning/20";
+            case "paid": return "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success";
             default: return "";
         }
     };
@@ -80,7 +80,7 @@ function MyPayslipsContent() {
                                     <AccordionTrigger className="px-4 py-3 hover:no-underline">
                                         <div className="flex items-center justify-between w-full pr-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 rounded-lg bg-success/10 dark:bg-green-900/20 flex items-center justify-center">
+                                                <div className="h-9 w-9 rounded-lg bg-success/10 dark:bg-success/20 flex items-center justify-center">
                                                     <Banknote className="h-4.5 w-4.5 text-success" />
                                                 </div>
                                                 <div className="text-left">
@@ -100,8 +100,8 @@ function MyPayslipsContent() {
                                     <AccordionContent className="px-4 pb-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                             <Card className="border shadow-none">
-                                                <CardHeader className="py-2 px-3 bg-success/10/50 dark:bg-green-900/10 border-b">
-                                                    <CardTitle className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">Earnings</CardTitle>
+                                                <CardHeader className="py-2 px-3 bg-success/10 dark:bg-success/10 border-b">
+                                                    <CardTitle className="text-xs font-semibold text-success dark:text-success uppercase">Earnings</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="p-3 space-y-2">
                                                     <div className="flex justify-between text-sm"><span>Basic Salary</span><span className="font-mono">{parseFloat(slip.basic_salary || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
@@ -114,8 +114,8 @@ function MyPayslipsContent() {
                                             </Card>
 
                                             <Card className="border shadow-none">
-                                                <CardHeader className="py-2 px-3 bg-destructive/10/50 dark:bg-red-900/10 border-b">
-                                                    <CardTitle className="text-xs font-semibold text-destructive dark:text-red-400 uppercase">Deductions</CardTitle>
+                                                <CardHeader className="py-2 px-3 bg-destructive/10 dark:bg-destructive/10 border-b">
+                                                    <CardTitle className="text-xs font-semibold text-destructive dark:text-destructive uppercase">Deductions</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="p-3 space-y-2">
                                                     <div className="flex justify-between text-sm"><span>Tax</span><span className="font-mono">{parseFloat(slip.tax_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>

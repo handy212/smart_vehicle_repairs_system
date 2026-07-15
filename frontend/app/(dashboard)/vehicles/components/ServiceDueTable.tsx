@@ -41,7 +41,7 @@ interface ServiceDueTableProps {
   onSort: (field: string) => void;
 }
 
-const headerClass = "text-[10px] font-black uppercase tracking-widest h-10";
+const headerClass = "text-[10px] font-bold uppercase tracking-widest h-10";
 
 const ServiceDueRow = memo(function ServiceDueRow({ 
   vehicle, 
@@ -51,8 +51,8 @@ const ServiceDueRow = memo(function ServiceDueRow({
   router: any;
 }) {
   const avatarColors = [
-    "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400",
-    "bg-orange-100 text-warning dark:bg-orange-900/30 dark:text-orange-400",
+    "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive",
+    "bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning",
   ];
   
   const colorIndex = vehicle.id % avatarColors.length;
@@ -116,7 +116,7 @@ const ServiceDueRow = memo(function ServiceDueRow({
       <TableCell onClick={() => router.push(`/vehicles/${vehicle.id}?view=services`)}>
         <div className="flex items-center gap-2">
             <AlertTriangle className={cn("w-3.5 h-3.5", isOverdue ? "text-destructive" : "text-warning")} />
-            <span className={cn("text-xs font-bold uppercase tracking-tight", isOverdue ? "text-destructive dark:text-red-400" : "text-warning dark:text-amber-400")}>
+            <span className={cn("text-xs font-bold uppercase tracking-tight", isOverdue ? "text-destructive dark:text-destructive" : "text-warning dark:text-warning")}>
                 {vehicle.due_service_name || "General Service"}
             </span>
         </div>
@@ -192,7 +192,7 @@ export function ServiceDueTable({ vehicles, sortConfig, onSort }: ServiceDueTabl
             <SortableHeader field="owner__user__last_name" sortConfig={sortConfig} onSort={onSort} className={headerClass}>
               Owner
             </SortableHeader>
-            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-10">Actions</TableHead>
+            <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest h-10">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

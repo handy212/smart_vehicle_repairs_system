@@ -433,7 +433,7 @@ export default function EstimateDetailPage() {
                 </span>
                 {estimate.work_order && estimate.work_order_number && (
                   <Link href={`/workorders/${typeof estimate.work_order === 'object' ? estimate.work_order.id : estimate.work_order}`}>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 text-primary">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-warning/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-warning/15 transition-colors dark:bg-warning/10 dark:border-warning/30 text-primary">
                       <span className="h-2 w-2 rounded-full bg-primary" />
                       Work Order #{estimate.work_order_number}
                     </span>
@@ -441,8 +441,8 @@ export default function EstimateDetailPage() {
                 )}
                 {latestInvoice?.id && (
                   <Link href={`/billing/invoices/${latestInvoice.id}`}>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success transition-colors hover:bg-success/15">
+                      <span className="h-2 w-2 rounded-full bg-success" />
                       Invoice #{latestInvoice.invoice_number}
                     </span>
                   </Link>
@@ -458,7 +458,7 @@ export default function EstimateDetailPage() {
               <Button
                 onClick={handleConvertToInvoice}
                 disabled={isConverting}
-                className="bg-success hover:bg-green-700 text-white mr-2"
+                className="bg-success hover:bg-success text-white mr-2"
               >
                 {isConverting ? "Converting..." : "Convert to Invoice"}
               </Button>
@@ -487,7 +487,7 @@ export default function EstimateDetailPage() {
                         setShowActionsMenu(false);
                       }}
                       disabled={isOpeningPrint}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Printer className="w-4 h-4" />
                       {isOpeningPrint ? 'Opening...' : 'Print'}
@@ -502,7 +502,7 @@ export default function EstimateDetailPage() {
                         setShowActionsMenu(false);
                       }}
                       disabled={isDownloading}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="w-4 h-4" />
                       {isDownloading ? 'Generating...' : 'Download PDF'}
@@ -514,7 +514,7 @@ export default function EstimateDetailPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={sendEmailMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Mail className="w-4 h-4" />
                         {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
@@ -533,7 +533,7 @@ export default function EstimateDetailPage() {
                       <Link href={`/billing/estimates/${estimateId}/edit`}>
                         <button
                           onClick={() => setShowActionsMenu(false)}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
@@ -547,7 +547,7 @@ export default function EstimateDetailPage() {
                           handleDuplicateEstimate();
                         }}
                         disabled={duplicateEstimateMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Copy className="w-4 h-4" />
                         {duplicateEstimateMutation.isPending ? "Duplicating..." : "Duplicate"}
@@ -560,7 +560,7 @@ export default function EstimateDetailPage() {
                           handleMarkReady();
                         }}
                         disabled={markReadyMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <CheckCircle className="w-4 h-4" />
                         {markReadyMutation.isPending ? "Marking Ready..." : "Mark Quotation Ready"}
@@ -573,7 +573,7 @@ export default function EstimateDetailPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={approveEstimateMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-border mt-1"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-border mt-1"
                       >
                         <CheckCircle className="w-4 h-4" />
                         {approveEstimateMutation.isPending ? "Approving..." : "Approve Estimate"}
@@ -589,7 +589,7 @@ export default function EstimateDetailPage() {
                               setShowActionsMenu(false);
                             }}
                             disabled={isConverting}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FileText className="w-4 h-4" />
                             To Invoice
@@ -602,7 +602,7 @@ export default function EstimateDetailPage() {
                               setShowActionsMenu(false);
                             }}
                             disabled={isConverting}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Wrench className="w-4 h-4" />
                             To Work Order
@@ -639,28 +639,28 @@ export default function EstimateDetailPage() {
           <TabsList className="bg-card p-1 border border-border rounded-lg w-full justify-start h-auto flex-wrap">
             <TabsTrigger
               value="estimate"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-warning/20 dark:data-[state=active]:text-warning px-4 py-2 h-auto gap-2"
             >
               <FileCheck className="w-4 h-4" />
               Estimate Details
             </TabsTrigger>
             <TabsTrigger
               value="activity"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-warning/20 dark:data-[state=active]:text-warning px-4 py-2 h-auto gap-2"
             >
               <Activity className="w-4 h-4" />
               Activity Log
             </TabsTrigger>
             <TabsTrigger
               value="reminders"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-warning/20 dark:data-[state=active]:text-warning px-4 py-2 h-auto gap-2"
             >
               <Clock className="w-4 h-4" />
               Reminders
             </TabsTrigger>
             <TabsTrigger
               value="notes"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-warning/20 dark:data-[state=active]:text-warning px-4 py-2 h-auto gap-2"
             >
               <StickyNote className="w-4 h-4" />
               Notes
@@ -1036,7 +1036,7 @@ export default function EstimateDetailPage() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-warning/15 flex items-center justify-center">
                   <CheckCircle className="w-5 h-5 text-primary" />
                 </div>
                 <DialogTitle className="text-xl">Approve Estimate {estimate?.estimate_number}</DialogTitle>
@@ -1082,7 +1082,7 @@ export default function EstimateDetailPage() {
               >
                 {approveEstimateMutation.isPending ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card mr-2"></div>
                     Approving...
                   </>
                 ) : (

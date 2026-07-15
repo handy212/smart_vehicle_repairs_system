@@ -323,7 +323,7 @@ export default function MobileDashboardPage() {
       <PwaInstallPrompt />
 
       {(usingCachedData || !isOnline) && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        <div className="flex items-center gap-2 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning dark:border-warning/30 dark:bg-warning/15 dark:text-warning">
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
             {isOnline
@@ -360,7 +360,7 @@ export default function MobileDashboardPage() {
       )}
 
       {activeRoadside && (
-        <Card className="border-orange-300/50">
+        <Card className="border-warning/40">
           <CardContent className="p-4 space-y-2">
             <p className="text-xs font-semibold uppercase text-muted-foreground">
               {activeRoadside.my_assignment_status === "pending"

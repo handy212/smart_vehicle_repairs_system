@@ -331,18 +331,18 @@ export function ImportDialog({
                 {result.imported > 0 ? (
                   <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
                 )}
                 <span className="font-medium text-sm">
                   Import Results
                 </span>
               </div>
               <div className="text-sm space-y-1 ml-7">
-                <p className="text-green-700">
+                <p className="text-success">
                   ✓ Imported: {result.imported} record(s)
                 </p>
                 {result.skipped > 0 && (
-                  <p className="text-yellow-700">
+                  <p className="text-warning">
                     ⚠ Skipped: {result.skipped} record(s)
                   </p>
                 )}

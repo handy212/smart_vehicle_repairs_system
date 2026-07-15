@@ -31,7 +31,7 @@ export function ContractsView({ customerId }: ContractsViewProps) {
         <div className="space-y-6">
             <Card className="border-dashed shadow-none bg-muted/50">
                 <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-                    <FileText className="w-12 h-12 mb-4 text-gray-300" />
+                    <FileText className="w-12 h-12 mb-4 text-muted-foreground" />
                     <h4 className="font-medium text-foreground mb-1">No contracts found</h4>
                     <p className="text-sm text-muted-foreground">Contracts and agreements will appear here.</p>
                 </CardContent>

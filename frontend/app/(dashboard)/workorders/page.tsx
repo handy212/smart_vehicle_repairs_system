@@ -365,7 +365,7 @@ export default function WorkOrdersPage() {
 
   if (error) {
     return (
-      <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
+      <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive px-4 py-3 rounded">
         Error loading work orders. Please try again.
       </div>
     );
@@ -399,7 +399,7 @@ export default function WorkOrdersPage() {
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Needs action</span>
-            <span className="text-lg font-bold text-warning dark:text-amber-400">{stats?.pending || 0}</span>
+            <span className="text-lg font-bold text-warning dark:text-warning">{stats?.pending || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
@@ -813,7 +813,7 @@ export default function WorkOrdersPage() {
                             <PermissionGuard permission="delete_workorders">
                               <DropdownMenuItem
                                 onClick={() => handleDelete(workorder)}
-                                className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20 text-xs"
+                                className="text-destructive dark:text-destructive focus:text-destructive dark:focus:text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20 text-xs"
                                 disabled={deleteMutation.isPending}
                               >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" />

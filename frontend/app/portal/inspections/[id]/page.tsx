@@ -144,9 +144,9 @@ export default function InspectionDetailPage() {
       case "pass":
         return <CheckCircle className="w-3.5 h-3.5 text-success" />;
       case "fail":
-        return <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />;
+        return <XCircle className="w-3.5 h-3.5 text-destructive dark:text-destructive" />;
       case "advisory":
-        return <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />;
+        return <AlertTriangle className="w-3.5 h-3.5 text-warning dark:text-warning" />;
       default:
         return null;
     }
@@ -165,7 +165,7 @@ export default function InspectionDetailPage() {
   });
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto pb-8">
+    <div className="space-y-4 w-full pb-8">
       {/* Compact Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -214,7 +214,7 @@ export default function InspectionDetailPage() {
                   size="sm"
                   onClick={() => setShowApproveDialog(true)}
                   disabled={approveMutation.isPending || rejectMutation.isPending}
-                  className="h-8 bg-success hover:bg-green-700 text-white"
+                  className="h-8 bg-success hover:bg-success text-white"
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                   Approve
@@ -247,7 +247,7 @@ export default function InspectionDetailPage() {
         <Card className="border-none shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+              <XCircle className="w-3.5 h-3.5 text-destructive dark:text-destructive" />
               <p className="text-xs text-muted-foreground">Failed</p>
             </div>
             <p className="text-lg font-bold text-foreground">
@@ -258,7 +258,7 @@ export default function InspectionDetailPage() {
         <Card className="border-none shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
+              <AlertTriangle className="w-3.5 h-3.5 text-warning dark:text-warning" />
               <p className="text-xs text-muted-foreground">Advisory</p>
             </div>
             <p className="text-lg font-bold text-foreground">
@@ -519,7 +519,7 @@ export default function InspectionDetailPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 sm:flex-none bg-success hover:bg-green-700 text-white"
+                className="flex-1 sm:flex-none bg-success hover:bg-success text-white"
                 onClick={handleApprove}
                 disabled={(customerSignatureRequired && !customerSignature) || approveMutation.isPending}
               >

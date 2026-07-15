@@ -216,7 +216,7 @@ function AcquisitionDetailContent() {
     const showInvoiceReceiptUpload = canUploadAcquisitionInvoiceReceipt(acq.status);
 
     return (
-        <div className="flex-1 overflow-auto p-4 max-w-3xl mx-auto space-y-4">
+        <div className="flex-1 overflow-auto p-4 w-full space-y-4">
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <Link href="/fixed-assets/acquisitions">
@@ -362,7 +362,7 @@ function AcquisitionDetailContent() {
                                 Upload at least one invoice or receipt linked to this request.
                             </p>
                         ) : (
-                            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                            <p className="text-xs font-medium text-success dark:text-success">
                                 Supporting documents attached.
                             </p>
                         )}

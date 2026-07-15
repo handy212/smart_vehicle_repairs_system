@@ -500,14 +500,14 @@ export default function EditEstimatePage() {
             </Button>
           </Link>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Edit Estimate</h1>
+            <h1 className="text-xl font-bold tracking-tight">Edit Estimate</h1>
             <div className="flex items-center gap-2 text-muted-foreground">
               <p>
                 Estimate <span className="font-mono font-medium">{estimate.estimate_number}</span>
               </p>
               {workOrderId && workOrderNumber && (
                 <Link href={`/workorders/${workOrderId}`}>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-warning/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-warning/15 transition-colors">
                     <span className="h-2 w-2 rounded-full bg-primary" />
                     Work Order #{workOrderNumber}
                   </span>

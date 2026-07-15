@@ -82,7 +82,7 @@ export default function ResetPasswordPage() {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
                 {/* Left side: Hero Image & Branding */}
                 <div
-                    className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
+                    className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-foreground group"
                     style={{ backgroundColor: primaryColor }}
                 >
                     {isMounted && (
@@ -198,7 +198,7 @@ export default function ResetPasswordPage() {
                                 </div>
                             ) : (
                                 <div className="text-center space-y-6 py-4">
-                                    <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                    <div className="mx-auto w-16 h-16 bg-success/15 rounded-full flex items-center justify-center text-success">
                                         <CheckCircle2 className="w-10 h-10" />
                                     </div>
                                     <div>

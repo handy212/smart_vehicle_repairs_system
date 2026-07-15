@@ -164,7 +164,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {documents.map((doc) => (
-                        <Card key={doc.id} className="overflow-hidden border border-border bg-card shadow-sm ring-1 ring-gray-900/5 hover:ring-primary/20 transition-all duration-200">
+                        <Card key={doc.id} className="overflow-hidden border border-border bg-card shadow-sm ring-1 ring-border hover:ring-primary/20 transition-all duration-200">
                             <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-start justify-between space-y-0">
                                 <div className="flex items-center space-x-3">
                                     <div className={`p-2 rounded-lg ${isAudioFile(doc) ? 'bg-primary/10 text-primary' : 'bg-info/10 text-info'}`}>

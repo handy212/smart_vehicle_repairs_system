@@ -130,8 +130,8 @@ function HRDashboardContent() {
             value: loadingStaff ? null : totalStaff,
             sub: loadingStaff ? null : `${activeStaff} active · ${probationStaff} probation`,
             icon: Users,
-            iconBg: "bg-blue-50 dark:bg-blue-950/30",
-            iconColor: "text-blue-600 dark:text-blue-400",
+            iconBg: "bg-primary/5 dark:bg-primary/15",
+            iconColor: "text-primary dark:text-primary",
             href: "/hr/staff",
         },
         {
@@ -139,8 +139,8 @@ function HRDashboardContent() {
             value: loadingLeave ? null : pendingLeaveCount,
             sub: "Awaiting approval",
             icon: Calendar,
-            iconBg: "bg-amber-50 dark:bg-amber-950/30",
-            iconColor: "text-amber-600 dark:text-amber-400",
+            iconBg: "bg-warning/10 dark:bg-warning/15",
+            iconColor: "text-warning dark:text-warning",
             href: "/hr/leave",
         },
         {
@@ -148,8 +148,8 @@ function HRDashboardContent() {
             value: loadingAttendance ? null : `${attendanceRate}%`,
             sub: loadingAttendance ? null : `${presentCount} present · ${lateCount} late`,
             icon: Clock,
-            iconBg: "bg-green-50 dark:bg-green-950/30",
-            iconColor: "text-green-600 dark:text-green-400",
+            iconBg: "bg-success/10 dark:bg-success/15",
+            iconColor: "text-success dark:text-success",
             href: "/hr/attendance",
         },
         {
@@ -157,8 +157,8 @@ function HRDashboardContent() {
             value: loadingCompliance ? null : expiringCount,
             sub: "Within 30 days",
             icon: AlertTriangle,
-            iconBg: expiringCount > 0 ? "bg-red-50 dark:bg-red-950/30" : "bg-muted",
-            iconColor: expiringCount > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
+            iconBg: expiringCount > 0 ? "bg-destructive/5 dark:bg-destructive/15" : "bg-muted",
+            iconColor: expiringCount > 0 ? "text-destructive dark:text-destructive" : "text-muted-foreground",
             href: "/hr/compliance",
         },
     ];
@@ -232,10 +232,10 @@ function HRDashboardContent() {
                         ) : (
                             <>
                                 <div className="space-y-3">
-                                    <StatBar label="Active" value={activeStaff} total={totalStaff} colorClass="bg-green-500" />
-                                    <StatBar label="Probation" value={probationStaff} total={totalStaff} colorClass="bg-amber-500" />
-                                    <StatBar label="Terminated" value={terminatedStaff} total={totalStaff} colorClass="bg-red-400" />
-                                    <StatBar label="Resigned" value={resignedStaff} total={totalStaff} colorClass="bg-slate-400" />
+                                    <StatBar label="Active" value={activeStaff} total={totalStaff} colorClass="bg-success" />
+                                    <StatBar label="Probation" value={probationStaff} total={totalStaff} colorClass="bg-warning" />
+                                    <StatBar label="Terminated" value={terminatedStaff} total={totalStaff} colorClass="bg-destructive" />
+                                    <StatBar label="Resigned" value={resignedStaff} total={totalStaff} colorClass="bg-muted-foreground" />
                                 </div>
 
                                 {staffSummary?.by_department && staffSummary.by_department.length > 0 && (
@@ -294,7 +294,7 @@ function HRDashboardContent() {
                                                 stroke="currentColor" strokeWidth="2.5"
                                                 strokeDasharray={`${attendanceRate} ${100 - attendanceRate}`}
                                                 strokeLinecap="round"
-                                                className="text-green-500"
+                                                className="text-success"
                                             />
                                         </svg>
                                         <span className="absolute text-xs font-bold text-foreground">{attendanceRate}%</span>
@@ -307,10 +307,10 @@ function HRDashboardContent() {
 
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
-                                        { icon: UserCheck, label: "Present", value: presentCount, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-                                        { icon: Timer, label: "Late", value: lateCount, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
-                                        { icon: UserX, label: "Absent", value: absentCount, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-                                        { icon: Coffee, label: "On Leave", value: onLeaveCount, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+                                        { icon: UserCheck, label: "Present", value: presentCount, color: "text-success", bg: "bg-success/10 dark:bg-success/15" },
+                                        { icon: Timer, label: "Late", value: lateCount, color: "text-warning", bg: "bg-warning/10 dark:bg-warning/15" },
+                                        { icon: UserX, label: "Absent", value: absentCount, color: "text-destructive", bg: "bg-destructive/5 dark:bg-destructive/15" },
+                                        { icon: Coffee, label: "On Leave", value: onLeaveCount, color: "text-primary", bg: "bg-primary/5 dark:bg-primary/15" },
                                     ].map((item) => (
                                         <div key={item.label} className={cn("flex items-center gap-2 p-2.5 rounded-lg", item.bg)}>
                                             <item.icon className={cn("h-4 w-4 shrink-0", item.color)} />
@@ -333,7 +333,7 @@ function HRDashboardContent() {
                             <CardTitle className="text-sm font-semibold">
                                 Pending Leave
                                 {pendingLeaveCount > 0 && (
-                                    <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0 bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning">
                                         {pendingLeaveCount}
                                     </Badge>
                                 )}
@@ -356,7 +356,7 @@ function HRDashboardContent() {
                                         href="/hr/leave"
                                         className="flex items-start gap-3 p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors group"
                                     >
-                                        <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                                        <div className="h-8 w-8 rounded-full bg-warning/15 dark:bg-warning/20 flex items-center justify-center shrink-0 text-warning dark:text-warning text-xs font-bold">
                                             {req.staff_name?.charAt(0)?.toUpperCase() ?? "?"}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -378,7 +378,7 @@ function HRDashboardContent() {
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                                <CheckCircle2 className="h-8 w-8 text-success mb-2" />
                                 <p className="text-sm font-medium text-foreground">All clear</p>
                                 <p className="text-xs text-muted-foreground mt-0.5">No pending leave requests</p>
                             </div>
@@ -424,10 +424,10 @@ function HRDashboardContent() {
                                         <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card">
                                             <div className={cn(
                                                 "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                                                isExpired ? "bg-red-100 dark:bg-red-950/30" :
-                                                    isCritical ? "bg-orange-100 dark:bg-orange-950/30" : "bg-amber-50 dark:bg-amber-950/30"
+                                                isExpired ? "bg-destructive/10 dark:bg-destructive/15" :
+                                                    isCritical ? "bg-warning/15 dark:bg-warning/15" : "bg-warning/10 dark:bg-warning/15"
                                             )}>
-                                                <FileCheck className={cn("h-4 w-4", isExpired ? "text-red-600" : isCritical ? "text-orange-600" : "text-amber-600")} />
+                                                <FileCheck className={cn("h-4 w-4", isExpired ? "text-destructive" : isCritical ? "text-warning" : "text-warning")} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-semibold text-foreground truncate">{doc.staff_name}</p>
@@ -435,9 +435,9 @@ function HRDashboardContent() {
                                             </div>
                                             <Badge variant="outline" className={cn(
                                                 "text-[10px] px-1.5 shrink-0",
-                                                isExpired ? "border-red-300 text-red-700 bg-red-50 dark:bg-red-950/30 dark:text-red-400" :
-                                                    isCritical ? "border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400" :
-                                                        "border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400"
+                                                isExpired ? "border-destructive/40 text-destructive bg-destructive/5 dark:bg-destructive/15 dark:text-destructive" :
+                                                    isCritical ? "border-warning/40 text-warning bg-warning/10 dark:bg-warning/15 dark:text-warning" :
+                                                        "border-warning/40 text-warning bg-warning/10 dark:bg-warning/15 dark:text-warning"
                                             )}>
                                                 {isExpired ? "Expired" : daysLeft !== null ? `${daysLeft}d left` : "Expiring"}
                                             </Badge>
@@ -452,7 +452,7 @@ function HRDashboardContent() {
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                                <CheckCircle2 className="h-8 w-8 text-success mb-2" />
                                 <p className="text-sm font-medium text-foreground">All documents valid</p>
                                 <p className="text-xs text-muted-foreground mt-0.5">No documents expiring within 30 days</p>
                             </div>
@@ -467,7 +467,7 @@ function HRDashboardContent() {
                             <div className="flex items-center gap-2">
                                 <CardTitle className="text-sm font-semibold">Open Positions</CardTitle>
                                 {openJobs.length > 0 && (
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
                                         {openJobs.length}
                                     </Badge>
                                 )}
@@ -490,8 +490,8 @@ function HRDashboardContent() {
                                         href={`/hr/recruitment/${job.id}`}
                                         className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors group"
                                     >
-                                        <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0">
-                                            <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        <div className="h-8 w-8 rounded-lg bg-primary/5 dark:bg-primary/15 flex items-center justify-center shrink-0">
+                                            <Briefcase className="h-4 w-4 text-primary dark:text-primary" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">{job.title}</p>
@@ -499,7 +499,7 @@ function HRDashboardContent() {
                                                 {job.department_name} · {job.applicant_count} applicant{job.applicant_count !== 1 ? "s" : ""}
                                             </p>
                                         </div>
-                                        <Badge variant="outline" className="text-[10px] px-1.5 shrink-0 border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30 dark:text-green-400">
+                                        <Badge variant="outline" className="text-[10px] px-1.5 shrink-0 border-success/40 text-success bg-success/10 dark:bg-success/15 dark:text-success">
                                             Open
                                         </Badge>
                                     </Link>

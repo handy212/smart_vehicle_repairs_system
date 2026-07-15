@@ -134,7 +134,7 @@ export function ColumnVisibility({
                         {isVisible ? (
                           <Eye className="w-4 h-4 text-muted-foreground" />
                         ) : (
-                          <EyeOff className="w-4 h-4 text-gray-300" />
+                          <EyeOff className="w-4 h-4 text-muted-foreground" />
                         )}
                         <span className={isVisible ? "text-foreground" : "text-muted-foreground"}>
                           {column.label}

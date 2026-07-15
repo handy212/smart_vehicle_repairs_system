@@ -53,19 +53,19 @@ export default function MyInvoicesPage() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "paid": return { variant: "success" as const, className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" };
+      case "paid": return { variant: "success" as const, className: "bg-success/10 text-success border-success/20" };
       case "pending":
       case "sent":
       case "viewed":
       case "proforma":
-      case "partial": return { variant: "warning" as const, className: "bg-amber-500/10 text-amber-600 border-amber-500/20" };
+      case "partial": return { variant: "warning" as const, className: "bg-warning/15 text-warning border-warning/20" };
       case "overdue": return { variant: "danger" as const, className: "bg-destructive/10 text-destructive border-destructive/20" };
       default: return { variant: "secondary" as const, className: "" };
     }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       <PortalPageHeader
         title="Billing & Invoices"
       />

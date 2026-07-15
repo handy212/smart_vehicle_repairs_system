@@ -377,7 +377,7 @@ export default function AppointmentDetailPage() {
                   {appointment.customer ? (
                     <Link
                       href={`/customers/${typeof appointment.customer === 'object' && appointment.customer !== null ? appointment.customer.id : appointment.customer}`}
-                      className="text-primary hover:text-orange-800 font-medium"
+                      className="text-primary hover:text-warning font-medium"
                     >
                       {appointment.customer_name || "View Customer"}
                     </Link>
@@ -393,7 +393,7 @@ export default function AppointmentDetailPage() {
                   {appointment.vehicle ? (
                     <Link
                       href={`/vehicles/${typeof appointment.vehicle === 'object' && appointment.vehicle !== null ? appointment.vehicle.id : appointment.vehicle}`}
-                      className="text-primary hover:text-orange-800 font-medium"
+                      className="text-primary hover:text-warning font-medium"
                     >
                       {appointment.vehicle_info || "View Vehicle"}
                     </Link>
@@ -521,7 +521,7 @@ export default function AppointmentDetailPage() {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`}
+                        className={`h-4 w-4 ${star <= (appointment.customer_rating || 0) ? "text-warning fill-warning" : "text-muted-foreground"}`}
                       />
                     ))}
                     <span className="text-xs text-muted-foreground ml-1">({appointment.customer_rating}/5)</span>

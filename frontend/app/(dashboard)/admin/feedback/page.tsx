@@ -23,7 +23,7 @@ import {
     Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { QRPrintDialog } from '@/components/feedback/QRPrintDialog';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Printer, Filter, Settings, Save } from 'lucide-react';
@@ -107,9 +107,9 @@ export default function AdminFeedbackPage() {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'new': return <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">New</Badge>;
-            case 'in_progress': return <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100">In Progress</Badge>;
-            case 'resolved': return <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">Resolved</Badge>;
+            case 'new': return <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">New</Badge>;
+            case 'in_progress': return <Badge variant="secondary" className="bg-warning/15 text-warning hover:bg-warning/15">In Progress</Badge>;
+            case 'resolved': return <Badge variant="secondary" className="bg-success/15 text-success hover:bg-success/15">Resolved</Badge>;
             case 'archived': return <Badge variant="outline" className="opacity-60">Archived</Badge>;
             default: return <Badge variant="outline">{status}</Badge>;
         }

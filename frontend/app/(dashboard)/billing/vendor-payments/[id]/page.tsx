@@ -87,7 +87,7 @@ export default function VendorPaymentDetailPage() {
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold">{payment.payment_number}</h1>
+              <h1 className="text-xl font-bold">{payment.payment_number}</h1>
               <Badge variant="secondary" className="capitalize">
                 {payment.payment_method.replace(/_/g, " ")}
               </Badge>

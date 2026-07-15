@@ -263,7 +263,7 @@ export default function RevenueProductsPage() {
 
   return (
     <PermissionGuard permission="view_accounting">
-      <div className="space-y-4 p-4 md:p-0 max-w-6xl">
+      <div className="space-y-4 w-full">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link

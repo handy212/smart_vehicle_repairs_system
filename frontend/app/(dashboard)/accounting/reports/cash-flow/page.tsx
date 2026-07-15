@@ -79,7 +79,7 @@ export default function CashFlowPage() {
         report ? buildCashFlowExportPayload(report, startDate, endDate) : null;
 
     return (
-        <div className="mx-auto max-w-4xl space-y-4">
+        <div className="w-full space-y-4">
             <div className="no-print flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div className="flex items-center gap-3">
                     <Link href="/accounting">
@@ -88,7 +88,7 @@ export default function CashFlowPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Statement of Cash Flows</h1>
+                        <h1 className="text-xl font-bold tracking-tight">Statement of Cash Flows</h1>
                         <p className="text-sm text-muted-foreground">
                             {format(new Date(startDate), "MMM d, yyyy")} - {format(new Date(endDate), "MMM d, yyyy")}
                         </p>

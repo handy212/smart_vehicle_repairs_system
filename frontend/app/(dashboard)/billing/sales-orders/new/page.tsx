@@ -37,40 +37,42 @@ export default function NewSalesOrderPage() {
   });
 
   return (
-    <div className="mx-auto max-w-xl space-y-6 p-4 md:p-6">
+    <div className="w-full space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">New Sales Order</h1>
+        <h1 className="text-xl font-bold tracking-tight">New Sales Order</h1>
         <p className="mt-1 text-sm text-muted-foreground">Create a commercial order for a customer.</p>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Order Details</CardTitle>
+        <CardHeader className="pb-3 border-b border-border">
+          <CardTitle className="text-base font-medium">Order Details</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Customer</Label>
-            <CustomerSelector
-              selectedCustomerId={customerId}
-              onSelect={(customer) => setCustomerId(customer.id)}
-              placeholder="Search and select a customer..."
-            />
+        <CardContent className="space-y-4 pt-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Customer</Label>
+              <CustomerSelector
+                selectedCustomerId={customerId}
+                onSelect={(customer) => setCustomerId(customer.id)}
+                placeholder="Search and select a customer..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reference">Reference Number</Label>
+              <Input
+                id="reference"
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                placeholder="Optional external reference"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="reference">Reference Number</Label>
-            <Input
-              id="reference"
-              value={referenceNumber}
-              onChange={(e) => setReferenceNumber(e.target.value)}
-              placeholder="Optional external reference"
-            />
-          </div>
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => createMutation.mutate()} disabled={!customerId || createMutation.isPending}>
+          <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+            <Button className="shadow-workshop" onClick={() => createMutation.mutate()} disabled={!customerId || createMutation.isPending}>
               Create Sales Order
             </Button>
             <Button variant="outline" onClick={() => router.back()}>

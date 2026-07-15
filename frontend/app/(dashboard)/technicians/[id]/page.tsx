@@ -119,7 +119,7 @@ function TechnicianProfileContent() {
     const canManageTechnician = hasPermission("manage_technicians");
 
     return (
-        <div className="mx-auto max-w-6xl space-y-4">
+        <div className="w-full space-y-4">
             {/* Breadcrumbs */}
             <div className="mb-1 flex items-center space-x-2 text-sm text-muted-foreground">
                 <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>

@@ -26,9 +26,9 @@ export function EmptyState({
     className,
 }: EmptyStateProps) {
     return (
-        <div className={cn("flex flex-col items-center justify-center py-12 px-4 text-center", className)}>
+        <div className={cn("flex flex-col items-center justify-center rounded-lg border border-dashed border-[color:var(--outline-variant)] bg-muted/20 py-12 px-4 text-center", className)}>
             <div className="mb-4 text-muted-foreground/60">
-                {icon ?? <Inbox className="w-12 h-12" />}
+                {icon ?? <Inbox className="w-10 h-10" />}
             </div>
             <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
             {description && (
@@ -38,12 +38,12 @@ export function EmptyState({
                 <div className="mt-4">
                     {action.href ? (
                         <a href={action.href}>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="shadow-workshop">
                                 {action.label}
                             </Button>
                         </a>
                     ) : (
-                        <Button variant="outline" size="sm" onClick={action.onClick}>
+                        <Button variant="outline" size="sm" className="shadow-workshop" onClick={action.onClick}>
                             {action.label}
                         </Button>
                     )}

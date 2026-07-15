@@ -701,6 +701,15 @@ class NotificationService:
             
             logger.info(f"In-app notification created for user {notification.recipient.email}")
 
+            # Realtime fan-out is primarily handled by Notification post_save
+            # (covers all creators). Call again here as a safe fallback after
+            # delivery flags are set — client dedupes by id.
+            try:
+                from .realtime import broadcast_in_app_notification
+                broadcast_in_app_notification(notification)
+            except Exception as push_err:
+                logger.warning(f"Realtime in-app broadcast skipped: {push_err}")
+
             # Mirror to Web Push for PWA / tech app subscribers.
             prefs = getattr(notification.recipient, 'notification_preferences', None)
             if prefs and prefs.push_enabled:

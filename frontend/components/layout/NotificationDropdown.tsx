@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils/cn";
 import { useNotificationSound } from "@/lib/hooks/useNotificationSound";
+import { useNotificationLiveStore } from "@/components/notifications/RealtimeNotificationsBridge";
 
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
@@ -26,6 +27,7 @@ import { ensureApiSession } from "@/lib/auth/session";
 export function NotificationDropdown() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const liveConnected = useNotificationLiveStore((s) => s.connected);
 
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
@@ -42,20 +44,23 @@ export function NotificationDropdown() {
 
     const canFetchNotifications = isAuthenticated && hasUser && !!user;
 
+    // Poll as fallback when socket is down; slow poll when live
+    const pollMs = liveConnected ? 120_000 : 30_000;
+
     // Fetch recent notifications (take first 10 from results)
     const { data: notificationsData } = useQuery({
         queryKey: ["notifications", "recent"],
         queryFn: () => notificationsApi.list({}),
         enabled: canFetchNotifications,
-        refetchInterval: 30_000, // 30s — balances responsiveness and server load
-        refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
+        refetchInterval: pollMs,
+        refetchIntervalInBackground: false,
     });
 
     const { data: unreadCountData } = useQuery({
         queryKey: ["notifications", "unread-count"],
         queryFn: () => notificationsApi.unreadCount(),
         enabled: canFetchNotifications,
-        refetchInterval: 30_000,
+        refetchInterval: pollMs,
         refetchIntervalInBackground: false,
     });
 
@@ -348,7 +353,7 @@ export function NotificationDropdown() {
                         })
                     ) : (
                         <div className="px-4 py-8 text-center">
-                            <PremiumIcons.Bell className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-3" />
+                            <PremiumIcons.Bell className="w-12 h-12 text-muted-foreground text-muted-foreground mx-auto mb-3" />
                             <p className="text-sm text-muted-foreground font-medium">No notifications</p>
                             <p className="text-xs text-muted-foreground mt-1">You&apos;re all caught up!</p>
                         </div>

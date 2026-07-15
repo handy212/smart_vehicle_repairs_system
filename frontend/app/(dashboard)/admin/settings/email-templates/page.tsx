@@ -487,7 +487,7 @@ export default function EmailTemplatesPage() {
                 checked={template.is_active}
                 onCheckedChange={() => handleToggleActive(template)}
                 disabled={toggleActiveMutation.isPending || !canManage}
-                className="scale-75 data-[state=checked]:bg-success/100"
+                className="scale-75 data-[state=checked]:bg-success"
               />
               <span className="text-xs text-muted-foreground">{template.is_active ? "Active" : "Off"}</span>
             </div>
@@ -532,7 +532,7 @@ export default function EmailTemplatesPage() {
           <DialogContent className="max-w-[min(96vw,1280px)] w-full h-[min(96vh,920px)] max-h-[96vh] flex flex-col p-0 gap-0 overflow-hidden">
             <DialogHeader className="px-6 py-3 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-success' : 'bg-orange-100 text-primary'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-success/15 text-success' : 'bg-warning/15 text-primary'}`}>
                   {creatingTemplate ? <Plus className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                 </div>
                 <div>
@@ -548,7 +548,7 @@ export default function EmailTemplatesPage() {
 
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
               {/* Main Editor */}
-              <div className="flex-1 min-h-0 flex flex-col p-4 sm:p-6 gap-4 overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-shrink-0">
                   <div className="space-y-1.5">
                     <Label htmlFor="name" className="text-xs font-semibold">Template Name <span className="text-destructive">*</span></Label>
@@ -696,7 +696,7 @@ export default function EmailTemplatesPage() {
                     ))}
                   </div>
                 </ScrollArea>
-                <div className="p-3 bg-primary/10 border-t border-orange-100 space-y-2 flex-shrink-0">
+                <div className="p-3 bg-primary/10 border-t border-warning/20 space-y-2 flex-shrink-0">
                   <p className="text-[10px] text-primary leading-tight">
                     Use <span className="font-mono">{"{total_display}"}</span> for amounts — do not hardcode <span className="font-mono">$</span> or <span className="font-mono">{"${total}"}</span>.
                   </p>
@@ -794,7 +794,7 @@ export default function EmailTemplatesPage() {
                     </div>
                   </TabsContent>
                   <TabsContent value="html" className="mt-0">
-                    <div className="rounded-md border border-border bg-white overflow-hidden">
+                    <div className="rounded-md border border-border bg-card overflow-hidden">
                       <iframe
                         title="Email HTML preview"
                         sandbox=""
@@ -842,7 +842,7 @@ export default function EmailTemplatesPage() {
                 size="sm"
                 onClick={confirmDelete}
                 disabled={deleteMutation.isPending}
-                className="h-8 text-xs bg-red-600 hover:bg-red-700"
+                className="h-8 text-xs bg-destructive hover:bg-destructive"
               >
                 {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </Button>

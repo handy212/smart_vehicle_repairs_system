@@ -46,7 +46,7 @@ const Sheet = ({ open, onOpenChange, children }: SheetProps) => {
   return createPortal(
     <div className="fixed inset-0 z-[100] overflow-hidden">
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        className="fixed inset-0 bg-foreground/40 dark:bg-black/70 animate-in fade-in duration-200"
         onClick={() => onOpenChange(false)}
         aria-hidden="true"
       />
@@ -62,7 +62,7 @@ const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
       <div
         ref={ref}
         className={cn(
-          "fixed z-[101] flex h-full flex-col border-border bg-card shadow-xl",
+          "fixed z-[101] flex h-full flex-col border-border bg-[var(--panel-bg,var(--card))] shadow-workshop",
           "w-full max-w-md animate-in duration-300",
           side === "right" && "inset-y-0 right-0 border-l slide-in-from-right",
           side === "left" && "inset-y-0 left-0 border-r slide-in-from-left",

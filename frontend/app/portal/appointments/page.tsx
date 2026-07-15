@@ -45,16 +45,16 @@ export default function MyAppointmentsPage() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "confirmed": return { variant: "success" as const, className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" };
-      case "pending": return { variant: "warning" as const, className: "bg-amber-500/10 text-amber-500 border-amber-500/20" };
-      case "completed": return { variant: "default" as const, className: "bg-blue-500/10 text-blue-500 border-blue-500/20" };
+      case "confirmed": return { variant: "success" as const, className: "bg-success/10 text-success border-success/20" };
+      case "pending": return { variant: "warning" as const, className: "bg-warning/10 text-warning border-warning/20" };
+      case "completed": return { variant: "default" as const, className: "bg-primary/10 text-primary border-primary/20" };
       case "cancelled": return { variant: "danger" as const, className: "bg-destructive/10 text-destructive border-destructive/20" };
       default: return { variant: "secondary" as const, className: "bg-muted text-muted-foreground border-transparent" };
     }
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 w-full">
       <PortalPageHeader
         title="Appointments"
         description="View and manage your service bookings. Stay on top of your vehicle's health."

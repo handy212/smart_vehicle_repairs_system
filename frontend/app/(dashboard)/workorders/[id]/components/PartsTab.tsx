@@ -141,7 +141,7 @@ export default function WorkOrderPartsTab({
           ) : (
           <>
           {addingPartRequiresApproval && (
-            <div className="mb-3 flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
+            <div className="mb-3 flex items-start gap-3 rounded-md border border-warning/20 bg-warning/10 p-3 text-warning">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <p className="text-sm">
                 Adding a part now will mark the work order as additional work and require customer approval before repairs continue.
@@ -206,7 +206,7 @@ export default function WorkOrderPartsTab({
                               <div className="mt-0.5 max-w-[260px] truncate text-xs text-muted-foreground">{part.description}</div>
                             )}
                             {part.resolution_notes && (
-                              <div className="mt-1 max-w-[260px] truncate text-xs text-amber-700">
+                              <div className="mt-1 max-w-[260px] truncate text-xs text-warning">
                                 Return note: {part.resolution_notes}
                               </div>
                             )}

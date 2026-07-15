@@ -80,7 +80,7 @@ export default function SubscriptionDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6 w-full">
         <Skeleton className="h-8 w-64" />
         <Card><CardContent className="p-6 space-y-4">
           <Skeleton className="h-5 w-48" />
@@ -93,7 +93,7 @@ export default function SubscriptionDetailPage() {
 
   if (!subscription) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <Card>
           <CardContent className="py-12 text-center">
             <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
@@ -121,7 +121,7 @@ export default function SubscriptionDetailPage() {
     subscription.days_remaining <= 30;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 w-full">
       <PortalPageHeader
         title={`Subscription ${subscription.subscription_number}`}
         description={subscription.package_name || "Subscription details"}
@@ -269,13 +269,13 @@ export default function SubscriptionDetailPage() {
                       isEmpty
                         ? "bg-destructive/5 border-destructive/20"
                         : isLow
-                        ? "bg-amber-500/5 border-amber-500/20"
+                        ? "bg-warning/5 border-warning/20"
                         : "bg-muted border-border"
                     )}
                   >
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
-                      <span className={cn("font-bold", isEmpty ? "text-destructive" : isLow ? "text-amber-500" : "")}>
+                      <span className={cn("font-bold", isEmpty ? "text-destructive" : isLow ? "text-warning" : "")}>
                         {value}
                       </span>
                     </div>

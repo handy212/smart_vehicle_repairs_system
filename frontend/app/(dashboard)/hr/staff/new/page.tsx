@@ -176,10 +176,10 @@ function NewStaffContent() {
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto pb-10">
+        <div className="space-y-6 w-full pb-10">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Add Staff Member</h2>
+                    <h2 className="text-xl font-bold tracking-tight">Add Staff Member</h2>
                     <p className="text-muted-foreground">
                         Create a new user account and staff profile.
                     </p>

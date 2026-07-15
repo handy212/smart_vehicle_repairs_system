@@ -133,16 +133,16 @@ export default function NewJournalEntryPage() {
     if (accountsLoading) return <div>Loading...</div>;
 
     return (
-        <div className="space-y-6 p-6 max-w-5xl mx-auto">
+        <div className="space-y-6 p-6 w-full">
             <div className="flex items-center gap-4">
                 <Link href="/accounting">
-                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground text-muted-foreground ">
+                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground text-muted-foreground">
                         <ArrowLeft className="w-4 h-4 mr-1" />
                         Back
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold">New Journal Entry</h1>
+                    <h1 className="text-xl font-bold">New Journal Entry</h1>
                     <p className="text-sm text-muted-foreground">Create a manual double-entry record</p>
                 </div>
             </div>

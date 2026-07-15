@@ -18,18 +18,16 @@ export type ReportHubSection = (typeof REPORT_HUB_SECTIONS)[number]["slug"];
 
 interface ReportsSubNavProps {
   className?: string;
-  isPerfex?: boolean;
 }
 
-export function ReportsSubNav({ className, isPerfex = false }: ReportsSubNavProps) {
+export function ReportsSubNav({ className }: ReportsSubNavProps) {
   const pathname = usePathname();
   const onDirectory = pathname === "/reports";
 
   return (
     <nav
       className={cn(
-        "flex gap-0 overflow-x-auto border-b border-border",
-        isPerfex ? "bg-card" : "",
+        "flex gap-0 overflow-x-auto border-b border-[color:var(--outline-variant)] bg-[var(--panel-bg)]",
         className
       )}
       aria-label="Report sections"
@@ -37,9 +35,9 @@ export function ReportsSubNav({ className, isPerfex = false }: ReportsSubNavProp
       <Link
         href="/reports"
         className={cn(
-          "shrink-0 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
+          "shrink-0 whitespace-nowrap border-b-2 px-4 py-2.5 text-xs font-medium transition-colors",
           onDirectory
-            ? "border-primary text-foreground font-semibold"
+            ? "border-primary font-semibold text-foreground"
             : "border-transparent text-muted-foreground hover:text-foreground"
         )}
       >
@@ -52,9 +50,9 @@ export function ReportsSubNav({ className, isPerfex = false }: ReportsSubNavProp
             key={section.slug}
             href={section.href}
             className={cn(
-              "shrink-0 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
+              "shrink-0 whitespace-nowrap border-b-2 px-4 py-2.5 text-xs font-medium transition-colors",
               active
-                ? "border-primary text-foreground font-semibold"
+                ? "border-primary font-semibold text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >

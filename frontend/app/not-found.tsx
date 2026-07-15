@@ -9,7 +9,7 @@ export default function NotFound() {
     <div className="min-h-screen bg-muted flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <div className="mb-8">
-          <h1 className="text-9xl font-bold text-gray-300">404</h1>
+          <h1 className="text-9xl font-bold text-muted-foreground">404</h1>
           <h2 className="text-3xl font-bold text-foreground mt-4">Page Not Found</h2>
           <p className="text-muted-foreground mt-2">
             Sorry, we couldn't find the page you're looking for.
@@ -53,7 +53,7 @@ export default function NotFound() {
           <div className="pt-4">
             <Link
               href="/dashboard"
-              className="text-sm text-primary hover:text-orange-800 inline-flex items-center"
+              className="text-sm text-primary hover:text-warning inline-flex items-center"
             >
               <Search className="w-4 h-4 mr-1" />
               Or search for what you need

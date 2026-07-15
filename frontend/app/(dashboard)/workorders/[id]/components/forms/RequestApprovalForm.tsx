@@ -159,7 +159,7 @@ function ChecklistRow({
             </div>
             <span
                 className={`font-medium shrink-0 ${
-                    pending ? "text-muted-foreground" : ok ? "text-success dark:text-green-400" : "text-destructive dark:text-red-400"
+                    pending ? "text-muted-foreground" : ok ? "text-success dark:text-success" : "text-destructive dark:text-destructive"
                 }`}
             >
                 {pending ? "…" : ok ? "✓ Ready" : "✗ Missing"}

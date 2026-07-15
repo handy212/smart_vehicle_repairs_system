@@ -115,7 +115,7 @@ export default function BudgetDetailEditPage() {
                     Back
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{budget.name}</h1>
+                    <h1 className="text-xl font-bold tracking-tight">{budget.name}</h1>
                     <p className="text-muted-foreground">FY{budget.fiscal_year} Allocations</p>
                 </div>
             </div>

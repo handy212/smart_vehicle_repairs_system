@@ -49,7 +49,7 @@ export function AllocationHistory({ paymentId, directInvoiceNumber }: Allocation
 
         return (
             <div className="mt-3 pt-3 border-t border-border">
-                <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 dark:bg-amber-900/20 px-3 py-2 rounded-md">
+                <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 dark:bg-warning/20 px-3 py-2 rounded-md">
                     <Receipt className="w-3.5 h-3.5" />
                     <span className="font-medium">No allocation recorded</span>
                     <span className="text-muted-foreground">- Payment not yet allocated to specific invoices</span>

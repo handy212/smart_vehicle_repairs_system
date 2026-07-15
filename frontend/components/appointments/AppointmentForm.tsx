@@ -261,16 +261,16 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                 </div>
 
                 {/* Actions */}
-                <div className="space-y-6">
+                <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
+                            <Button type="submit" className="w-full shadow-workshop" disabled={isSubmitting}>
                                 {isSubmitting ? (
                                     <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin" />
                                         Saving...
                                     </div>
                                 ) : (

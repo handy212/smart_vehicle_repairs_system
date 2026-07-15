@@ -20,6 +20,7 @@ const BFF_ROUTES = new Set([
     '/api/auth/refresh',
     '/api/auth/session',
     '/api/auth/verify',
+    '/api/auth/ws-ticket',
     '/api/auth/impersonate',
     '/api/auth/impersonate/exit',
     '/api/revalidate-branding',

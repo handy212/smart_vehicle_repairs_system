@@ -287,7 +287,7 @@ export default function NewRoadsideRequestDashboardPage() {
                             <span>/</span>
                             <span className="text-foreground font-medium">New Request</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">
                             New Roadside Request
                         </h1>
                     </div>
@@ -296,7 +296,7 @@ export default function NewRoadsideRequestDashboardPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {serverError && (
-                    <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-200 p-4 rounded-lg flex items-start gap-3">
+                    <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive p-4 rounded-lg flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                         <div className="space-y-3">
                             <p className="text-sm">{serverError}</p>
@@ -357,7 +357,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 disabled={!selectedCustomerId || isLoadingVehicles}
                                                 className={cn(
                                                     "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all disabled:opacity-50",
-                                                    errors.vehicle ? "border-destructive ring-red-500/10" : "border-border focus:ring-primary/10"
+                                                    errors.vehicle ? "border-destructive ring-destructive/10" : "border-border focus:ring-primary/10"
                                                 )}
                                             >
                                                 <option value="">
@@ -384,10 +384,10 @@ export default function NewRoadsideRequestDashboardPage() {
                                 </div>
 
                                 {selectedCustomer && (
-                                    <div className="mt-4 p-4 rounded-xl bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 space-y-3">
+                                    <div className="mt-4 p-4 rounded-xl bg-primary/5 dark:bg-warning/10 border border-warning/20 dark:border-warning/30 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary dark:text-orange-300">
+                                                <div className="h-10 w-10 rounded-full bg-warning/15 flex items-center justify-center text-primary dark:text-warning">
                                                     <UserIcon className="w-5 h-5" />
                                                 </div>
                                                 <div>
@@ -399,7 +399,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         </div>
 
                                         {selectedVehicleId && (
-                                            <div className="pt-3 border-t border-orange-100 dark:border-orange-900/30">
+                                            <div className="pt-3 border-t border-warning/20 dark:border-warning/30">
                                                 {isLoadingSubscription ? (
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" />
@@ -407,27 +407,27 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     </div>
                                                 ) : activeSubscription ? (
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
+                                                        <div className="flex items-center gap-2 text-success dark:text-success font-medium">
                                                             <Check className="w-4 h-4" />
                                                             <span>Subscription Package: {activeSubscription.package_name || "Standard Coverage"}</span>
                                                         </div>
-                                                        <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">Covered</Badge>
+                                                        <Badge variant="success" className="bg-success/15 text-success border-success/20">Covered</Badge>
                                                     </div>
                                                 ) : pendingActivationSubscription ? (
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2 text-warning dark:text-amber-400 font-medium">
+                                                        <div className="flex items-center gap-2 text-warning dark:text-warning font-medium">
                                                             <Info className="w-4 h-4" />
                                                             <span>Membership activates {pendingActivationSubscription.activation_date || "after payment processing"}</span>
                                                         </div>
-                                                        <Badge variant="warning" className="bg-amber-100 text-warning border-warning/20">Not Yet Usable</Badge>
+                                                        <Badge variant="warning" className="bg-warning/15 text-warning border-warning/20">Not Yet Usable</Badge>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2 text-warning dark:text-amber-400 font-medium">
+                                                        <div className="flex items-center gap-2 text-warning dark:text-warning font-medium">
                                                             <Info className="w-4 h-4" />
                                                             <span>No Active Subscription Found</span>
                                                         </div>
-                                                        <Badge variant="warning" className="bg-amber-100 text-warning border-warning/20">Pay-Per-Use</Badge>
+                                                        <Badge variant="warning" className="bg-warning/15 text-warning border-warning/20">Pay-Per-Use</Badge>
                                                     </div>
                                                 )}
                                             </div>
@@ -544,7 +544,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         {...register("service_type")}
                                         className={cn(
                                             "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all",
-                                            errors.service_type ? "border-destructive ring-red-500/10" : "border-border focus:ring-primary/10"
+                                            errors.service_type ? "border-destructive ring-destructive/10" : "border-border focus:ring-primary/10"
                                         )}
                                     >
                                         <option value="">Select Service Type</option>
@@ -582,9 +582,9 @@ export default function NewRoadsideRequestDashboardPage() {
                                 </div>
 
                                 {serviceType === 'towing' && (
-                                    <div className="space-y-4 pt-2 p-4 rounded-xl bg-warning/10/30 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 animate-in zoom-in-95 duration-200">
+                                    <div className="space-y-4 pt-2 p-4 rounded-xl bg-warning/10 dark:bg-warning/10 border border-warning/20 dark:border-warning/30 animate-in zoom-in-95 duration-200">
                                         <div className="space-y-3">
-                                            <Label htmlFor="tow_distance_km" className="font-semibold text-orange-800 dark:text-orange-400">Tow Distance (km) *</Label>
+                                            <Label htmlFor="tow_distance_km" className="font-semibold text-warning dark:text-warning">Tow Distance (km) *</Label>
                                             <div className="relative">
                                                 <Input
                                                     id="tow_distance_km"
@@ -592,7 +592,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     step="0.1"
                                                     {...register("tow_distance_km", { valueAsNumber: true })}
                                                     placeholder="0"
-                                                    className="h-11 border-orange-200 dark:border-orange-800"
+                                                    className="h-11 border-warning/20 dark:border-warning/30"
                                                 />
                                             </div>
                                             {errors.tow_distance_km && (
@@ -602,10 +602,10 @@ export default function NewRoadsideRequestDashboardPage() {
 
                                         {/* Destination — branch picker + custom */}
                                         <div className="space-y-3">
-                                            <Label className="font-semibold text-orange-800 dark:text-orange-400">Destination Location</Label>
+                                            <Label className="font-semibold text-warning dark:text-warning">Destination Location</Label>
 
                                             {/* Toggle */}
-                                            <div className="flex rounded-lg border border-orange-200 dark:border-orange-800 overflow-hidden text-xs">
+                                            <div className="flex rounded-lg border border-warning/20 dark:border-warning/30 overflow-hidden text-xs">
                                                 <button
                                                     type="button"
                                                     onClick={() => setDestinationMode('branch')}
@@ -643,7 +643,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                                 onClick={() => setValue('destination', destinationText, { shouldValidate: true })}
                                                                 className={`w-full text-left p-2.5 rounded-lg border text-xs transition-all ${isSelected
                                                                         ? 'border-primary bg-primary/10 text-primary font-semibold'
-                                                                        : 'border-border bg-card hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10'
+                                                                        : 'border-border bg-card hover:border-warning/40 hover:bg-warning/10 dark:hover:bg-warning/10'
                                                                     }`}
                                                             >
                                                                 <div className="flex items-center justify-between">
@@ -660,7 +660,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     id="destination"
                                                     {...register("destination")}
                                                     placeholder="Repair shop, home address, etc."
-                                                    className="h-11 border-orange-200 dark:border-orange-800"
+                                                    className="h-11 border-warning/20 dark:border-warning/30"
                                                 />
                                             )}
                                         </div>
@@ -707,7 +707,7 @@ export default function NewRoadsideRequestDashboardPage() {
                             >
                                 {isSubmitting ? (
                                     <span className="flex items-center gap-2">
-                                        <div className="h-4 w-4 rounded-full border-2 border-white border-r-transparent animate-spin" />
+                                        <div className="h-4 w-4 rounded-full border-2 border-card border-r-transparent animate-spin" />
                                         Processing...
                                     </span>
                                 ) : (

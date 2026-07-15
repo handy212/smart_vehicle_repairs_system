@@ -135,8 +135,8 @@ export default function PortalPage() {
     if (error || !data) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center max-w-md mx-auto">
-                <div className="bg-red-100 p-4 rounded-full mb-4">
-                    <XCircle className="h-10 w-10 text-red-600" />
+                <div className="bg-destructive/10 p-4 rounded-full mb-4">
+                    <XCircle className="h-10 w-10 text-destructive" />
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
                 <p className="text-muted-foreground">{error || "Work order not found."}</p>
@@ -181,7 +181,7 @@ export default function PortalPage() {
                 </div>
             </div>
 
-            <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+            <div className="rounded-lg border border-warning/20 bg-warning/10 dark:bg-warning/15 dark:border-warning/30 px-4 py-3 text-sm text-warning dark:text-warning">
                 <strong>Important:</strong> approving this estimate authorizes the described work
                 only. Parts, labor, and taxes on your final invoice may change based on what is
                 actually performed.
@@ -196,7 +196,7 @@ export default function PortalPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-amber-500" />
+                                <AlertCircle className="h-5 w-5 text-warning" />
                                 Recommended Services
                             </CardTitle>
                             <CardDescription>
@@ -229,7 +229,7 @@ export default function PortalPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    <CheckCircle2 className="h-5 w-5 text-success" />
                                     Approved Services
                                 </CardTitle>
                             </CardHeader>
@@ -250,7 +250,7 @@ export default function PortalPage() {
                 {/* Right Column: Actions */}
                 <div className="space-y-6">
 
-                    <Card className="sticky top-24 border-orange-100 shadow-md">
+                    <Card className="sticky top-24 border-warning/20 shadow-md">
                         <CardHeader className="bg-primary/5 pb-4">
                             <CardTitle className="text-lg">Action Required</CardTitle>
                             <CardDescription>Please review the estimate above.</CardDescription>
@@ -258,7 +258,7 @@ export default function PortalPage() {
                         <CardContent className="pt-6 space-y-4">
 
                             {isApproved ? (
-                                <div className="bg-success/10 text-green-800 p-4 rounded-lg flex items-start gap-3">
+                                <div className="bg-success/10 text-success p-4 rounded-lg flex items-start gap-3">
                                     <CheckCircle2 className="h-5 w-5 mt-0.5" />
                                     <div>
                                         <p className="font-medium">You have approved this work.</p>
@@ -295,20 +295,20 @@ export default function PortalPage() {
                                     {!showDeclineInput ? (
                                         <Button
                                             variant="ghost"
-                                            className="w-full text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                            className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/5"
                                             onClick={() => setShowDeclineInput(true)}
                                             disabled={processing}
                                         >
                                             Decline Work
                                         </Button>
                                     ) : (
-                                        <div className="bg-red-50 p-4 rounded-lg space-y-3 mt-4 animate-in slide-in-from-top-2">
-                                            <label className="text-sm font-medium text-red-800">Reason for declining</label>
+                                        <div className="bg-destructive/5 p-4 rounded-lg space-y-3 mt-4 animate-in slide-in-from-top-2">
+                                            <label className="text-sm font-medium text-destructive">Reason for declining</label>
                                             <Textarea
                                                 placeholder="Please tell us why..."
                                                 value={declineReason}
                                                 onChange={(e) => setDeclineReason(e.target.value)}
-                                                className="bg-card border-red-200 focus-visible:ring-red-500"
+                                                className="bg-card border-destructive/20 focus-visible:ring-destructive"
                                             />
                                             <div className="flex gap-2">
                                                 <Button

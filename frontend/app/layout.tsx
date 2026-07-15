@@ -78,7 +78,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
-  let themeColor = "#6366f1";
+  let themeColor = "#1e4d6b";
 
   try {
     const settings = await getCachedPublicBranding();
