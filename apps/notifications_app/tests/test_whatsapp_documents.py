@@ -57,6 +57,11 @@ class ShortDocumentLinkTests(TestCase):
             role='admin',
             is_staff=True,
         )
+        self.branch = Branch.objects.create(
+            name='Short Doc Branch',
+            code='SDB',
+            created_by=self.staff,
+        )
         self.customer_user = User.objects.create_user(
             username='short-doc-customer',
             email='short-doc-customer@example.com',
@@ -65,11 +70,6 @@ class ShortDocumentLinkTests(TestCase):
             phone='0244123456',
         )
         self.customer = Customer.objects.create(user=self.customer_user)
-        self.branch = Branch.objects.create(
-            name='Short Doc Branch',
-            code='SDB',
-            created_by=self.staff,
-        )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             year=2021,
@@ -141,6 +141,11 @@ class WhatsAppShareHelpersTests(TestCase):
             role='admin',
             is_staff=True,
         )
+        self.branch = Branch.objects.create(
+            name='WA Share Branch 2',
+            code='WAS2',
+            created_by=self.staff,
+        )
         self.customer_user = User.objects.create_user(
             username='wa-share-customer2',
             email='wa-share-customer2@example.com',
@@ -149,11 +154,6 @@ class WhatsAppShareHelpersTests(TestCase):
             phone='0244123456',
         )
         self.customer = Customer.objects.create(user=self.customer_user)
-        self.branch = Branch.objects.create(
-            name='WA Share Branch 2',
-            code='WAS2',
-            created_by=self.staff,
-        )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             year=2021,
@@ -361,6 +361,11 @@ class WhatsAppSendApiTests(TestCase):
             role='admin',
             is_staff=True,
         )
+        self.branch = Branch.objects.create(
+            name='WA API Branch 2',
+            code='WAA2',
+            created_by=self.staff,
+        )
         self.customer_user = User.objects.create_user(
             username='wa-api-customer2',
             email='wa-api-customer2@example.com',
@@ -369,11 +374,6 @@ class WhatsAppSendApiTests(TestCase):
             phone='0202000000',
         )
         self.customer = Customer.objects.create(user=self.customer_user)
-        self.branch = Branch.objects.create(
-            name='WA API Branch 2',
-            code='WAA2',
-            created_by=self.staff,
-        )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             year=2019,
