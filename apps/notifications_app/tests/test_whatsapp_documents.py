@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.accounts.permission_models import Permission, Role
 from apps.billing.models import Estimate, Invoice
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -56,6 +57,11 @@ class ShortDocumentLinkTests(TestCase):
             role='admin',
             is_staff=True,
         )
+        self.branch = Branch.objects.create(
+            name='Short Doc Branch',
+            code='SDB',
+            created_by=self.staff,
+        )
         self.customer_user = User.objects.create_user(
             username='short-doc-customer',
             email='short-doc-customer@example.com',
@@ -64,11 +70,6 @@ class ShortDocumentLinkTests(TestCase):
             phone='0244123456',
         )
         self.customer = Customer.objects.create(user=self.customer_user)
-        self.branch = Branch.objects.create(
-            name='Short Doc Branch',
-            code='SDB',
-            created_by=self.staff,
-        )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             year=2021,
@@ -140,6 +141,11 @@ class WhatsAppShareHelpersTests(TestCase):
             role='admin',
             is_staff=True,
         )
+        self.branch = Branch.objects.create(
+            name='WA Share Branch 2',
+            code='WAS2',
+            created_by=self.staff,
+        )
         self.customer_user = User.objects.create_user(
             username='wa-share-customer2',
             email='wa-share-customer2@example.com',
@@ -148,11 +154,6 @@ class WhatsAppShareHelpersTests(TestCase):
             phone='0244123456',
         )
         self.customer = Customer.objects.create(user=self.customer_user)
-        self.branch = Branch.objects.create(
-            name='WA Share Branch 2',
-            code='WAS2',
-            created_by=self.staff,
-        )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             year=2021,
@@ -205,15 +206,173 @@ class WhatsAppShareHelpersTests(TestCase):
         self.assertIn('Download PDF:', build_job_card_share(wo)['message'])
 
 
+class TemplateRenderDocumentBranchScopeTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        send_notifications, _ = Permission.objects.update_or_create(
+            code='send_notifications',
+            defaults={
+                'name': 'Send Notifications',
+                'category': 'notifications',
+                'is_active': True,
+            },
+        )
+        manager_role, _ = Role.objects.update_or_create(
+            code='manager',
+            defaults={
+                'name': 'Manager',
+                'is_active': True,
+            },
+        )
+        manager_role.permissions.add(send_notifications)
+
+        self.manager = User.objects.create_user(
+            username='template-render-manager',
+            email='template-render-manager@example.com',
+            password='testpass',
+            role='manager',
+        )
+        self.branch = Branch.objects.create(
+            name='Template Render Branch',
+            code='TRB',
+            created_by=self.manager,
+        )
+        self.other_branch = Branch.objects.create(
+            name='Template Render Other',
+            code='TRO',
+            created_by=self.manager,
+        )
+        self.manager.managed_branches.add(self.branch)
+        self.client.force_authenticate(user=self.manager)
+
+        self.customer = self._create_customer('same', '0244123456')
+        self.other_customer = self._create_customer('other', '0202000000')
+        self.vehicle = self._create_vehicle(self.customer, 'TR-SAME')
+        self.other_vehicle = self._create_vehicle(self.other_customer, 'TR-OTHER')
+        self.url = '/api/notifications/render-template/'
+
+    def _create_customer(self, suffix, phone):
+        user = User.objects.create_user(
+            username=f'template-render-customer-{suffix}',
+            email=f'template-render-customer-{suffix}@example.com',
+            password='testpass',
+            role='customer',
+            phone=phone,
+        )
+        return Customer.objects.create(user=user)
+
+    def _create_vehicle(self, customer, plate):
+        return Vehicle.objects.create(
+            owner=customer,
+            year=2021,
+            make='Toyota',
+            model='Corolla',
+            vin=f'1HGBH41JXMN{customer.id:06d}',
+            license_plate=plate,
+            current_mileage=10000,
+        )
+
+    def _create_invoice(self, branch, customer, vehicle):
+        return Invoice.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=branch,
+            status='draft',
+            total=Decimal('250.00'),
+            amount_due=Decimal('250.00'),
+            due_date=timezone.now().date() + timedelta(days=7),
+            created_by=self.manager,
+        )
+
+    def _create_estimate(self, branch, customer, vehicle):
+        return Estimate.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=branch,
+            status='draft',
+            total=Decimal('180.00'),
+            valid_until=timezone.now().date() + timedelta(days=14),
+            created_by=self.manager,
+        )
+
+    def _create_work_order(self, branch, customer, vehicle):
+        return WorkOrder.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=branch,
+            status='in_progress',
+            odometer_in=10000,
+            customer_concerns='Brake noise',
+        )
+
+    @patch('apps.notifications_app.whatsapp_share.get_site_url', return_value='https://shop.example.com')
+    def test_document_render_allows_same_branch_invoice(self, _mock_url):
+        invoice = self._create_invoice(self.branch, self.customer, self.vehicle)
+
+        response = self.client.post(
+            self.url,
+            {'template_type': 'invoice', 'object_id': invoice.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['phone_number'], '233244123456')
+        self.assertIn('Download PDF:', response.data['message'])
+        self.assertEqual(
+            DocumentShareLink.objects.filter(document_type='invoice', object_id=invoice.id).count(),
+            1,
+        )
+
+    @patch('apps.notifications_app.whatsapp_share.get_site_url', return_value='https://shop.example.com')
+    def test_document_render_denies_other_branch_documents(self, _mock_url):
+        invoice = self._create_invoice(self.other_branch, self.other_customer, self.other_vehicle)
+        estimate = self._create_estimate(self.other_branch, self.other_customer, self.other_vehicle)
+        work_order = self._create_work_order(self.other_branch, self.other_customer, self.other_vehicle)
+
+        cases = [
+            ('invoice', 'invoice', invoice.id),
+            ('estimate', 'estimate', estimate.id),
+            ('job_card', 'job_card', work_order.id),
+        ]
+        for template_type, document_type, object_id in cases:
+            with self.subTest(template_type=template_type):
+                response = self.client.post(
+                    self.url,
+                    {'template_type': template_type, 'object_id': object_id},
+                    format='json',
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                self.assertFalse(
+                    DocumentShareLink.objects.filter(
+                        document_type=document_type,
+                        object_id=object_id,
+                    ).exists()
+                )
+
+
 class WhatsAppSendApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        Permission.objects.update_or_create(
+            code='edit_invoices',
+            defaults={
+                'name': 'Edit Invoices',
+                'category': 'billing',
+                'is_active': True,
+            },
+        )
         self.staff = User.objects.create_user(
             username='wa-api-staff2',
             email='wa-api-staff2@example.com',
             password='testpass',
             role='admin',
             is_staff=True,
+        )
+        self.branch = Branch.objects.create(
+            name='WA API Branch 2',
+            code='WAA2',
+            created_by=self.staff,
         )
         self.customer_user = User.objects.create_user(
             username='wa-api-customer2',
@@ -223,11 +382,6 @@ class WhatsAppSendApiTests(TestCase):
             phone='0202000000',
         )
         self.customer = Customer.objects.create(user=self.customer_user)
-        self.branch = Branch.objects.create(
-            name='WA API Branch 2',
-            code='WAA2',
-            created_by=self.staff,
-        )
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             year=2019,

@@ -5,9 +5,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Q
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
+from apps.branches.utils import filter_queryset_for_user_branches
 from apps.accounts.permissions import (
     HasAnyPermission,
     HasPermission,
@@ -1246,25 +1249,59 @@ class TemplateRenderView(APIView):
                 )
                 if share_key == 'invoice':
                     from apps.billing.models import Invoice
-                    share = build_invoice_share(Invoice.objects.select_related(
-                        'customer', 'customer__user', 'vehicle'
-                    ).get(id=object_id))
+                    queryset = filter_queryset_for_user_branches(
+                        Invoice.objects.select_related(
+                            'customer', 'customer__user', 'vehicle'
+                        ),
+                        request.user,
+                        request=request,
+                        use_active_branch=True,
+                        include_unassigned=True,
+                    )
+                    share = build_invoice_share(get_object_or_404(
+                        queryset,
+                        id=object_id,
+                    ))
                 elif share_key == 'estimate':
                     from apps.billing.models import Estimate
-                    share = build_estimate_share(Estimate.objects.select_related(
-                        'customer', 'customer__user', 'vehicle'
-                    ).get(id=object_id))
+                    queryset = filter_queryset_for_user_branches(
+                        Estimate.objects.select_related(
+                            'customer', 'customer__user', 'vehicle'
+                        ),
+                        request.user,
+                        request=request,
+                        use_active_branch=True,
+                        include_unassigned=True,
+                    )
+                    share = build_estimate_share(get_object_or_404(
+                        queryset,
+                        id=object_id,
+                    ))
                 else:
                     from apps.workorders.models import WorkOrder
-                    share = build_job_card_share(WorkOrder.objects.select_related(
-                        'customer', 'customer__user', 'vehicle'
-                    ).get(id=object_id))
+                    queryset = filter_queryset_for_user_branches(
+                        WorkOrder.objects.select_related(
+                            'customer', 'customer__user', 'vehicle'
+                        ),
+                        request.user,
+                        request=request,
+                        use_active_branch=True,
+                    )
+                    share = build_job_card_share(get_object_or_404(
+                        queryset,
+                        id=object_id,
+                    ))
                 return Response({
                     'message': share['message'],
                     'phone_number': share['phone_number'],
                     'template_used': f'builtin_{share_key}_whatsapp',
                     'portal_url': share.get('portal_url'),
                 })
+            except Http404:
+                return Response(
+                    {'error': 'Document not found'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
             except Exception as e:
                 return Response(
                     {'error': f'Error fetching object: {str(e)}'},
