@@ -63,13 +63,13 @@ import { cn } from "@/lib/utils/cn";
 
 const statusClassNames: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
-    pending_approval: "bg-amber-100 text-amber-700 border-amber-200",
-    rejected: "bg-red-100 text-red-700 border-red-200",
-    open: "bg-blue-100 text-blue-700 border-blue-200",
-    partially_paid: "bg-amber-100 text-amber-700 border-amber-200",
-    paid: "bg-green-100 text-green-700 border-green-200",
-    overdue: "bg-red-100 text-red-700 border-red-200",
-    void: "bg-slate-100 text-slate-600 border-slate-200",
+    pending_approval: "bg-warning/15 text-warning border-warning/20",
+    rejected: "bg-destructive/10 text-destructive border-destructive/20",
+    open: "bg-primary/10 text-primary border-primary/20",
+    partially_paid: "bg-warning/15 text-warning border-warning/20",
+    paid: "bg-success/15 text-success border-success/20",
+    overdue: "bg-destructive/10 text-destructive border-destructive/20",
+    void: "bg-muted text-muted-foreground border-[color:var(--outline-variant)]",
 };
 
 export default function BillDetailPage() {
@@ -499,7 +499,7 @@ export default function BillDetailPage() {
             </div>
 
             {showSubmitApproval && (
-                <Card className="border-amber-500/30 bg-amber-500/5">
+                <Card className="border-warning/30 bg-warning/5">
                     <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p className="font-medium text-foreground">Next step: submit for approval</p>
@@ -516,7 +516,7 @@ export default function BillDetailPage() {
             )}
 
             {bill.status === "pending_approval" && isStandaloneBill && (
-                <Card className="border-blue-500/30 bg-blue-500/5">
+                <Card className="border-primary/30 bg-primary/10">
                     <CardContent className="py-4 text-sm text-muted-foreground">
                         Awaiting approval. An assigned approver can Approve or Reject this bill using the actions
                         in the header.

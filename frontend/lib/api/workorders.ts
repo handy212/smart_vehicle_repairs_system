@@ -134,6 +134,11 @@ export interface WorkOrder {
   quality_check_assigned_to_name?: string | null;
   odometer_in?: number;
   odometer_out?: number;
+  /** Job Card intake condition (may be prefilled from DVI). */
+  fuel_level?: string;
+  battery_condition?: string;
+  valuables_notes?: string;
+  warning_lights_notes?: string;
   is_overdue?: boolean;
   days_in_shop?: number;
   is_approved?: boolean;
@@ -612,6 +617,25 @@ export const workordersApi = {
       `/workorders/work-orders/${id}/recommendations_pdf/`,
       { responseType: 'blob' }
     );
+    return response.data;
+  },
+
+  sendJobCardWhatsApp: async (
+    id: number,
+    opts?: { confirm?: boolean }
+  ): Promise<{
+    mode: "api" | "manual" | "preview";
+    success?: boolean;
+    message?: string;
+    phone_number?: string;
+    phone_display?: string;
+    portal_url?: string;
+    document_pdf_url?: string;
+    error?: string;
+  }> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/send-job-card-whatsapp/`, {
+      confirm: Boolean(opts?.confirm),
+    });
     return response.data;
   },
 

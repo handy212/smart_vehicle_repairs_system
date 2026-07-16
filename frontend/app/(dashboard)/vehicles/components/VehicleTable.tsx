@@ -51,10 +51,10 @@ const VehicleRow = memo(function VehicleRow({
   onDelete?: (vehicle: any) => void;
 }) {
   const avatarColors = [
-    "bg-blue-100 text-primary dark:bg-blue-900/30 dark:text-blue-400",
-    "bg-emerald-100 text-success dark:bg-emerald-900/30 dark:text-emerald-400",
-    "bg-purple-100 text-primary dark:bg-purple-900/30 dark:text-purple-400",
-    "bg-amber-100 text-warning dark:bg-amber-900/30 dark:text-amber-400",
+    "bg-primary/10 text-primary",
+    "bg-success/15 text-success",
+    "bg-info/15 text-info",
+    "bg-warning/15 text-warning",
   ];
   
   const colorIndex = vehicle.id % avatarColors.length;
@@ -124,15 +124,15 @@ const VehicleRow = memo(function VehicleRow({
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-1.5 h-1.5 rounded-full",
-            vehicle.status === "active" ? "bg-success/100" : 
-            vehicle.status === "in_service" ? "bg-warning/100" : "bg-gray-300"
+            vehicle.status === "active" ? "bg-success" : 
+            vehicle.status === "in_service" ? "bg-warning" : "bg-muted-foreground/30"
           )} />
           <Badge 
             variant="outline" 
             className={cn(
-              "text-[9px] font-black uppercase tracking-widest border-none shadow-none p-0",
+              "text-[9px] font-bold uppercase tracking-widest border-none shadow-none p-0",
               vehicle.status === "active" ? "text-success" : 
-              vehicle.status === "in_service" ? "text-warning" : "text-gray-400"
+              vehicle.status === "in_service" ? "text-warning" : "text-muted-foreground"
             )}
           >
             {vehicle.status?.replace(/_/g, " ") || "Active"}
@@ -208,7 +208,7 @@ const VehicleRow = memo(function VehicleRow({
 export function VehicleTable({ vehicles, onDelete, sortConfig, onSort }: VehicleTableProps) {
   const router = useRouter();
   const headerClass =
-    "text-[10px] font-black uppercase tracking-widest h-10 px-4 text-muted-foreground";
+    "text-[10px] font-bold uppercase tracking-widest h-10 px-4 text-muted-foreground";
 
   return (
     <div className="precision-card overflow-hidden">

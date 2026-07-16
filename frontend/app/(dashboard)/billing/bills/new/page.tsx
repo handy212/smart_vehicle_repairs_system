@@ -408,7 +408,7 @@ export default function NewBillPage() {
     };
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-10">
+        <div className="space-y-6 w-full pb-10">
             <div className="flex items-center gap-4">
                 <Link href="/billing/bills">
                     <Button variant="outline" size="icon" className="h-9 w-9">
@@ -416,7 +416,7 @@ export default function NewBillPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Create New Bill</h1>
+                    <h1 className="text-xl font-bold tracking-tight text-foreground">Create New Bill</h1>
                     <p className="text-sm text-muted-foreground">Enter vendor bill details and line items.</p>
                 </div>
             </div>

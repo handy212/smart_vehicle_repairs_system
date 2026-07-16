@@ -22,19 +22,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { getInspectionApprovalLabel, getInspectionStageLabel, getInspectionStageTone, isInspectionStarted } from "@/lib/utils/inspection-status";
 import { getMediaUrl } from "@/lib/api/utils";
+import { workordersApi } from "@/lib/api/workorders";
+import { IntakeConditionCard } from "@/components/workorders/IntakeConditionCard";
 
 const statusColors: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300 border-slate-200 dark:border-slate-700",
-  in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 text-primary border-orange-200 dark:border-orange-800",
-  approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
-  rejected: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 border-destructive/20 dark:border-red-800",
+  draft: "bg-muted text-foreground dark:bg-card/30 dark:text-muted-foreground border-border dark:border-border",
+  in_progress: "bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning border-warning/20 dark:border-warning/40",
+  completed: "bg-warning/15 text-warning dark:bg-warning/20 text-primary border-warning/20 dark:border-warning/30",
+  approved: "bg-success/15 text-success dark:bg-success/20 dark:text-success border-success/20 dark:border-success/30",
+  rejected: "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive border-destructive/20 dark:border-destructive/30",
 };
 
 const itemResultColors: Record<string, string> = {
-  pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200",
-  fail: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200",
-  advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200",
+  pass: "bg-success/15 text-success dark:bg-success/20 dark:text-success hover:bg-success/20",
+  fail: "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive hover:bg-destructive/20",
+  advisory: "bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning hover:bg-warning/20",
   na: "bg-muted text-foreground bg-muted text-muted-foreground hover:bg-muted",
 };
 
@@ -58,6 +60,19 @@ export default function InspectionDetailPage() {
   const { data: inspection, isLoading } = useQuery({
     queryKey: ["inspection", inspectionId],
     queryFn: () => inspectionsApi.get(inspectionId),
+  });
+
+  const linkedWorkOrderId =
+    inspection?.work_order == null
+      ? null
+      : typeof inspection.work_order === "object"
+        ? Number(inspection.work_order.id)
+        : Number(inspection.work_order);
+
+  const { data: linkedWorkOrder } = useQuery({
+    queryKey: ["workorder", linkedWorkOrderId],
+    queryFn: () => workordersApi.get(linkedWorkOrderId!),
+    enabled: !!linkedWorkOrderId,
   });
 
   useMutation({
@@ -219,7 +234,7 @@ export default function InspectionDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-xl font-bold text-foreground">
                 Inspection #{inspection.inspection_number}
               </h1>
               <Badge variant="outline" className={cn(statusColors[inspectionStageTone], "border shadow-none")}>
@@ -230,8 +245,8 @@ export default function InspectionDetailPage() {
                   variant="outline"
                   className={cn(
                     "border shadow-none",
-                    inspection.status === "approved" && "border-green-200 text-green-700 bg-success/10",
-                    inspection.status === "rejected" && "border-destructive/20 text-destructive bg-destructive/10/50",
+                    inspection.status === "approved" && "border-success/20 text-success bg-success/10",
+                    inspection.status === "rejected" && "border-destructive/20 text-destructive bg-destructive/10",
                   )}
                 >
                   {inspectionApprovalLabel}
@@ -287,7 +302,7 @@ export default function InspectionDetailPage() {
               <Button variant="outline" size="sm" onClick={() => rejectMutation.mutate()} disabled={rejectMutation.isPending} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                 Reject
               </Button>
-              <Button size="sm" onClick={handleApproveClick} disabled={approveMutation.isPending} className="bg-success hover:bg-green-700">
+              <Button size="sm" onClick={handleApproveClick} disabled={approveMutation.isPending} className="bg-success hover:bg-success">
                 {needsCustomerSignature ? "Approve on Behalf" : "Approve"}
               </Button>
             </>
@@ -357,7 +372,7 @@ export default function InspectionDetailPage() {
               type="button"
               onClick={handleApproveOnBehalf}
               disabled={approveMutation.isPending || !behalfSignature || !behalfReason.trim()}
-              className="bg-success hover:bg-green-700"
+              className="bg-success hover:bg-success"
             >
               {approveMutation.isPending ? "Approving..." : "Approve"}
             </Button>
@@ -433,6 +448,18 @@ export default function InspectionDetailPage() {
           </CardContent>
         </Card>
       </div>
+      {linkedWorkOrderId && linkedWorkOrder && (
+        <div className="mb-6">
+          <IntakeConditionCard
+            workOrderId={linkedWorkOrderId}
+            workOrder={linkedWorkOrder}
+            title="Job Card intake"
+            description="Captured during DVI and printed on the customer Job Card."
+            canEdit={inspection.status === "in_progress"}
+            queryKey={["inspection", inspectionId]}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (Main) */}
         <div className="lg:col-span-2 space-y-6">
@@ -459,7 +486,7 @@ export default function InspectionDetailPage() {
               {Object.keys(resultsByCategory).length === 0 ? (
                 <Card className="border-dashed">
                   <CardContent className="py-12 flex flex-col items-center justify-center text-center">
-                    <FileText className="w-12 h-12 text-gray-300 mb-2" />
+                    <FileText className="w-12 h-12 text-muted-foreground mb-2" />
                     <h3 className="font-medium text-foreground">No results yet</h3>
                     <p className="text-sm text-muted-foreground">Perform the inspection to see results here.</p>
                     {inspection.status === 'in_progress' && (
@@ -479,15 +506,15 @@ export default function InspectionDetailPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                      <div className="divide-y divide-border dark:divide-border">
                         {results.map((result) => (
                           <div key={result.id} className="p-4 hover:bg-muted hover:bg-muted/30 transition-colors">
                             <div className="flex items-start gap-4">
                               <div className={cn(
                                 "w-2 h-2 rounded-full mt-2 flex-shrink-0",
-                                result.result === 'pass' ? 'bg-success/100' :
-                                  result.result === 'fail' ? 'bg-destructive/100' :
-                                    result.result === 'advisory' ? 'bg-warning/100' : 'bg-gray-300'
+                                result.result === 'pass' ? 'bg-success' :
+                                  result.result === 'fail' ? 'bg-destructive' :
+                                    result.result === 'advisory' ? 'bg-warning' : 'bg-muted-foreground/30'
                               )} />
                               <div className="flex-1 space-y-1">
                                 <div className="flex items-start justify-between">
@@ -614,7 +641,7 @@ export default function InspectionDetailPage() {
                   variant="secondary"
                   onClick={() => generateSummaryMutation.mutate()}
                   disabled={generateSummaryMutation.isPending || (inspection.status !== 'completed' && inspection.status !== 'approved')}
-                  className="bg-primary/10 text-primary hover:bg-indigo-100 hover:text-indigo-800 border border-primary/20"
+                  className="bg-primary/10 text-primary hover:bg-info/15 hover:text-info border border-primary/20"
                 >
                   {generateSummaryMutation.isPending ? "Analyzing..." : "✨ Generate AI Summary"}
                 </Button>
@@ -691,7 +718,7 @@ export default function InspectionDetailPage() {
             <CardContent className="pt-4">
               {inspection.work_order ? (
                 <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
-                  <div className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full">
+                  <div className="bg-warning/15 p-2 rounded-full">
                     <Wrench className="w-4 h-4 text-primary" />
                   </div>
                   <div>
@@ -736,7 +763,7 @@ export default function InspectionDetailPage() {
               {inspection.completed_at && (
                 <div className="flex gap-3">
                   <div className="w-8 flex flex-col items-center">
-                    <div className="w-2 h-2 rounded-full bg-success/100" />
+                    <div className="w-2 h-2 rounded-full bg-success" />
                     {inspection.sent_to_customer_at && <div className="w-0.5 h-full bg-border -mb-2" />}
                   </div>
                   <div className="pb-4">
@@ -748,7 +775,7 @@ export default function InspectionDetailPage() {
               {inspection.sent_to_customer_at && (
                 <div className="flex gap-3">
                   <div className="w-8 flex flex-col items-center">
-                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <div className="w-2 h-2 rounded-full bg-info" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Sent to Customer</p>

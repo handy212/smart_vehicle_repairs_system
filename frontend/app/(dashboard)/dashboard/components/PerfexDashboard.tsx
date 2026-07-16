@@ -21,6 +21,11 @@ import {
   type DashboardRoleConfig,
   dashboardShowsSection,
 } from "@/lib/utils/dashboard-role-config";
+import {
+  PERFEX_TABLE_HEAD_CLASS,
+  WORKSHOP_PANEL_CLASS,
+} from "@/lib/constants/table-typography";
+import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -135,23 +140,28 @@ export interface PerfexDashboardProps {
 ═══════════════════════════════════════════════════════════════════ */
 
 const WO_STATUS_COLORS: Record<string, string> = {
-  intake: "bg-blue-100 text-blue-700", diagnosis: "bg-amber-100 text-amber-700",
-  in_progress: "bg-indigo-100 text-primary", repair: "bg-indigo-100 text-primary",
-  paused: "bg-orange-100 text-orange-700",
-  qc: "bg-teal-100 text-teal-700", ready: "bg-green-100 text-green-700",
-  completed: "bg-gray-100 text-gray-600", cancelled: "bg-red-100 text-destructive",
-  pending: "bg-orange-100 text-orange-700", confirmed: "bg-green-100 text-green-700",
-  scheduled: "bg-sky-100 text-sky-700",
+  intake: "bg-primary/10 text-primary",
+  diagnosis: "bg-warning/15 text-warning",
+  in_progress: "bg-info/15 text-info",
+  repair: "bg-info/15 text-info",
+  paused: "bg-warning/15 text-warning",
+  qc: "bg-success/15 text-success",
+  ready: "bg-success/15 text-success",
+  completed: "bg-muted text-muted-foreground",
+  cancelled: "bg-destructive/10 text-destructive",
+  pending: "bg-warning/15 text-warning",
+  confirmed: "bg-success/15 text-success",
+  scheduled: "bg-info/15 text-info",
 };
 
 const INV_STATUS: Record<string, { label: string; cls: string }> = {
-  draft:           { label: "Draft",    cls: "bg-gray-100 text-gray-600"  },
-  sent:            { label: "Sent",     cls: "bg-blue-100 text-blue-700"  },
-  paid:            { label: "Paid",     cls: "bg-green-100 text-green-700"},
-  partially_paid:  { label: "Partial",  cls: "bg-teal-100 text-teal-700" },
-  overdue:         { label: "Overdue",  cls: "bg-red-100 text-destructive"   },
-  unpaid:          { label: "Unpaid",   cls: "bg-orange-100 text-orange-700"},
-  cancelled:       { label: "Cancelled",cls: "bg-gray-100 text-gray-500" },
+  draft:           { label: "Draft",    cls: "bg-muted text-muted-foreground" },
+  sent:            { label: "Sent",     cls: "bg-primary/10 text-primary" },
+  paid:            { label: "Paid",     cls: "bg-success/15 text-success" },
+  partially_paid:  { label: "Partial",  cls: "bg-info/15 text-info" },
+  overdue:         { label: "Overdue",  cls: "bg-destructive/10 text-destructive" },
+  unpaid:          { label: "Unpaid",   cls: "bg-warning/15 text-warning" },
+  cancelled:       { label: "Cancelled",cls: "bg-muted text-muted-foreground" },
 };
 
 const WO_FILTERS: Record<string, string[]> = {
@@ -176,14 +186,23 @@ type SortCol     = "wo_number" | "customer" | "status" | "created_at";
 type WODateRange = "all" | "today" | "week" | "month";
 type MainTab     = "workorders" | "invoices";
 
+const HERO_KPI_ORDER = [
+  "Revenue Today",
+  "Active Jobs",
+  "Appointments",
+  "Overdue Invoices",
+  "Low Stock",
+  "Month Revenue",
+];
+
 /* ═══════════════════════════════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════════════════════════════ */
 
 function StatusPill({ status, map, label }: { status: string; map: Record<string, string>; label?: string }) {
-  const cls = map[status] ?? "bg-gray-100 text-gray-600";
+  const cls = map[status] ?? "bg-muted text-muted-foreground";
   return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${cls}`}>
       {label || status.replace(/_/g, " ")}
     </span>
   );
@@ -208,8 +227,10 @@ function SortHeader({ col, label, sortCol, sortDir, onSort, className = "" }: {
 }) {
   const active = sortCol === col;
   return (
-    <th className={`cursor-pointer select-none px-4 py-2 text-left text-xs font-semibold text-[#374151] hover:text-primary ${className}`}
-        onClick={() => onSort(col)}>
+    <th
+      className={cn(PERFEX_TABLE_HEAD_CLASS, "cursor-pointer select-none hover:text-primary", className)}
+      onClick={() => onSort(col)}
+    >
       <span className="inline-flex items-center gap-1">
         {label}
         {active
@@ -236,7 +257,7 @@ function DailyRevChart({ data, formatCurrency }: { data: DailyRevenue[]; formatC
         const label  = d.date ? format(new Date(d.date), "EEE") : String(i + 1);
         return (
           <div key={d.date ?? i} className="flex flex-1 flex-col items-center gap-0.5" title={`${label}: ${formatCurrency(v)}`}>
-            <div className={`w-full rounded-t-sm transition-all ${isLast ? "bg-primary" : "bg-primary/30 hover:bg-primary/50"}`}
+            <div className={`w-full rounded-t-sm transition-all ${isLast ? "bg-primary" : "bg-primary/30 hover:bg-primary/10"}`}
                  style={{ height: `${pct}%` }} />
             <span className="text-[8px] text-muted-foreground leading-none">{label}</span>
           </div>
@@ -249,7 +270,7 @@ function DailyRevChart({ data, formatCurrency }: { data: DailyRevenue[]; formatC
 /** Technician completion rate mini bar */
 function RateBar({ rate }: { rate: number }) {
   const pct = Math.min(Math.max(rate, 0), 100);
-  const color = pct >= 80 ? "bg-success/100" : pct >= 60 ? "bg-warning/100" : "bg-red-400";
+  const color = pct >= 80 ? "bg-success" : pct >= 60 ? "bg-warning" : "bg-destructive";
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
@@ -291,25 +312,28 @@ function isUpcomingSoon(timeStr?: string): boolean {
 
 export function PerfexSkeleton() {
   return (
-    <div className="animate-pulse space-y-4 p-4 pb-8 max-w-[1700px] mx-auto">
+    <div className="w-full animate-pulse space-y-5 p-4 pb-8">
       <div className="flex items-center justify-between">
-        <div className="space-y-1.5"><div className="h-4 w-24 rounded bg-muted" /><div className="h-3 w-36 rounded bg-muted" /></div>
-        <div className="flex gap-2"><div className="h-8 w-32 rounded bg-muted" /><div className="h-8 w-32 rounded bg-muted" /></div>
+        <div className="space-y-2">
+          <div className="h-5 w-28 rounded-md bg-muted" />
+          <div className="h-3.5 w-40 rounded-md bg-muted" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-9 w-32 rounded-lg bg-muted" />
+          <div className="h-9 w-32 rounded-lg bg-muted" />
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-md border border-border bg-card p-3 h-[60px]">
-            <div className="h-9 w-9 shrink-0 rounded-md bg-muted" />
-            <div className="space-y-1.5 flex-1"><div className="h-2 w-full rounded bg-muted" /><div className="h-3.5 w-3/4 rounded bg-muted" /></div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className={cn(WORKSHOP_PANEL_CLASS, "flex h-[88px] flex-col justify-between p-4")}>
+            <div className="h-3 w-16 rounded bg-muted" />
+            <div className="h-7 w-24 rounded bg-muted" />
           </div>
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8 rounded-md border border-border bg-card h-72" />
-        <div className="lg:col-span-4 rounded-md border border-border bg-card h-72" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {[1, 2, 3].map((i) => <div key={i} className="rounded-md border border-border bg-card h-44" />)}
+        <div className={cn(WORKSHOP_PANEL_CLASS, "h-80 lg:col-span-8")} />
+        <div className={cn(WORKSHOP_PANEL_CLASS, "h-80 lg:col-span-4")} />
       </div>
     </div>
   );
@@ -479,67 +503,73 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
   /* ── derived ── */
   const weeklyDailyAvg = stats.week_revenue / 7;
 
-  /* ── KPIs ── */
+  /* ── KPIs (hero band prefers 4–6) ── */
   const kpis = useMemo(() => [
     { label: "Revenue Today",     value: formatCurrency(stats.today_revenue),
       trend: <TrendBadge current={stats.today_revenue} baseline={weeklyDailyAvg} />,
       icon: DollarSign, iconColor: "text-success", iconBg: "bg-success/10", href: "/billing", pulse: false },
     { label: "Active Jobs",       value: String(workOrderSummary?.active_count ?? stats.active_work_orders),
-      icon: Wrench,       iconColor: "text-primary",   iconBg: "bg-info/10",   href: "/workorders", pulse: false },
+      icon: Wrench,       iconColor: "text-primary",   iconBg: "bg-primary/10", href: "/workorders", pulse: false },
     { label: "Appointments",      value: String(stats.today_appointments),
-      icon: Calendar,     iconColor: "text-primary", iconBg: "bg-primary/10", href: "/appointments", pulse: false },
+      icon: Calendar,     iconColor: "text-info", iconBg: "bg-info/10", href: "/appointments", pulse: false },
     { label: "Overdue Invoices",  value: String(stats.overdue_invoices),
       sub: stats.overdue_invoices > 0 ? formatCurrency(stats.overdue_amount) : undefined,
       icon: AlertTriangle,
-      iconColor: stats.overdue_invoices > 0 ? "text-destructive"   : "text-gray-300",
-      iconBg:    stats.overdue_invoices > 0 ? "bg-destructive/10"      : "bg-gray-50",
+      iconColor: stats.overdue_invoices > 0 ? "text-destructive" : "text-muted-foreground/40",
+      iconBg:    stats.overdue_invoices > 0 ? "bg-destructive/10" : "bg-muted",
       href: "/billing/invoices", pulse: stats.overdue_invoices > 0 },
     { label: "Low Stock",         value: String(stats.low_stock_items),
       icon: Package,
-      iconColor: stats.low_stock_items > 0 ? "text-warning" : "text-gray-300",
-      iconBg:    stats.low_stock_items > 0 ? "bg-warning/10"    : "bg-gray-50",
+      iconColor: stats.low_stock_items > 0 ? "text-warning" : "text-muted-foreground/40",
+      iconBg:    stats.low_stock_items > 0 ? "bg-warning/10" : "bg-muted",
       href: "/inventory", pulse: stats.low_stock_items > 0 },
     { label: "Pending Estimates", value: String(stats.pending_estimates),
-      icon: FileText,     iconColor: "text-sky-500",    iconBg: "bg-sky-50",    href: "/billing/estimates", pulse: false },
+      icon: FileText,     iconColor: "text-info",    iconBg: "bg-info/10",    href: "/billing/estimates", pulse: false },
     { label: "Customers",         value: String(stats.total_customers),
-      icon: Users,        iconColor: "text-info",   iconBg: "bg-cyan-50",   href: "/customers", pulse: false },
+      icon: Users,        iconColor: "text-primary", iconBg: "bg-primary/10", href: "/customers", pulse: false },
     { label: "Month Revenue",     value: formatCurrency(stats.month_revenue),
       trend: <TrendBadge current={stats.month_revenue} baseline={stats.week_revenue * 4.3} />,
-      icon: TrendingUp,   iconColor: "text-violet-600", iconBg: "bg-violet-50", href: "/reports", pulse: false },
+      icon: TrendingUp,   iconColor: "text-success", iconBg: "bg-success/10", href: "/reports", pulse: false },
   ], [stats, workOrderSummary, weeklyDailyAvg, formatCurrency]);
 
   const visibleKpis = useMemo(() => {
-    if (!roleConfig || roleConfig.kpiLabels === "all") return kpis;
-    const allowed = new Set(roleConfig.kpiLabels);
-    return kpis.filter((k) => allowed.has(k.label));
+    let list = kpis;
+    if (roleConfig && roleConfig.kpiLabels !== "all") {
+      const allowed = new Set(roleConfig.kpiLabels);
+      list = kpis.filter((k) => allowed.has(k.label));
+    } else {
+      const order = new Map(HERO_KPI_ORDER.map((label, i) => [label, i]));
+      list = kpis
+        .filter((k) => order.has(k.label))
+        .sort((a, b) => (order.get(a.label) ?? 99) - (order.get(b.label) ?? 99));
+    }
+    return list.slice(0, 6);
   }, [kpis, roleConfig]);
 
   const kpiGridClass = useMemo(() => {
     const n = visibleKpis.length;
     if (n <= 3) return "grid grid-cols-2 gap-3 sm:grid-cols-3";
     if (n <= 4) return "grid grid-cols-2 gap-3 sm:grid-cols-4";
-    if (n <= 6) return "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6";
-    return "grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8";
+    return "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6";
   }, [visibleKpis.length]);
 
   if (isLoading) return <PerfexSkeleton />;
 
-  /* ═══════════ RENDER ═══════════ */
   return (
-    <div className="space-y-4 p-4 pb-8 max-w-[1700px] mx-auto">
+    <div className="w-full space-y-5 p-4 pb-8">
       <DynamicPageTitle title={roleConfig?.title ?? "Dashboard"} />
 
       {queryErrors.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
           <div className="flex items-start gap-2 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               Some data could not be loaded: {queryErrors.join(", ")}. Metrics may be incomplete.
             </span>
           </div>
           {onRefresh && (
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
               Retry
             </Button>
           )}
@@ -549,86 +579,99 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       {/* ── Page Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 print:mb-4">
         <div>
-          <h1 className="text-base font-semibold text-foreground">{roleConfig?.title ?? "Dashboard"}</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            {roleConfig?.title ?? "Dashboard"}
+          </h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {roleConfig?.subtitle ?? todayLabel}
           </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
           {quickAccessHidden && (
             <Button variant="outline" size="sm" onClick={showQuickAccess} aria-label="Show Quick Access">
-              <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+              <LayoutGrid className="mr-1 h-3.5 w-3.5" />
               Quick Access
             </Button>
           )}
           {onRefresh && (
-            <button onClick={handleRefresh} disabled={isRefreshing}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 mr-1"
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="mr-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
               title="Refresh (R)"
-              aria-label="Refresh dashboard">
+              aria-label="Refresh dashboard"
+            >
               <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">{formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             </button>
           )}
           <Button variant="outline" size="sm" asChild>
             <Link href="/appointments/new" title="New appointment (Ctrl+Shift+A)">
-              <Plus className="h-3.5 w-3.5 mr-1" /> Appointment
+              <Plus className="mr-1 h-3.5 w-3.5" /> Appointment
             </Link>
           </Button>
           {roleConfig?.variant === "accountant" ? (
             <Button size="sm" asChild>
               <Link href="/billing/invoices">
-                <Receipt className="h-3.5 w-3.5 mr-1" /> Invoices
+                <Receipt className="mr-1 h-3.5 w-3.5" /> Invoices
               </Link>
             </Button>
           ) : roleConfig?.variant === "parts_manager" ? (
             <Button size="sm" asChild>
               <Link href="/inventory">
-                <Package className="h-3.5 w-3.5 mr-1" /> Inventory
+                <Package className="mr-1 h-3.5 w-3.5" /> Inventory
               </Link>
             </Button>
           ) : (
             <Button size="sm" asChild>
               <Link href="/check-in" title="Vehicle check-in (Ctrl+N)">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Check-in
+                <Plus className="mr-1 h-3.5 w-3.5" /> Check-in
               </Link>
             </Button>
           )}
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
+      {/* ── KPI band ── */}
       <div className={kpiGridClass}>
         {visibleKpis.map((card) => (
-          <Link key={card.label} href={card.href}
-            className={`relative flex items-center gap-3 rounded-md border bg-card p-3
-                        shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]
-                        transition-colors hover:border-primary/30 hover:bg-muted/30
-                        ${card.pulse ? "border-border/80 ring-1 ring-offset-1 ring-red-200 animate-[pulse_2s_ease-in-out_infinite]" : "border-border"}`}>
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${card.iconBg}`}>
-              <card.icon className={`h-4 w-4 ${card.iconColor}`} />
+          <Link
+            key={card.label}
+            href={card.href}
+            className={cn(
+              WORKSHOP_PANEL_CLASS,
+              "group relative flex flex-col justify-between gap-3 p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/25",
+              card.pulse && "ring-1 ring-destructive/30 ring-offset-1 ring-offset-background"
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {card.label}
+              </p>
+              <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", card.iconBg)}>
+                <card.icon className={cn("h-4 w-4", card.iconColor)} />
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[10px] leading-tight text-muted-foreground">{card.label}</p>
-              <p className="text-sm font-semibold leading-tight text-foreground">{card.value}</p>
-              {"sub" in card && card.sub && <p className="text-[10px] text-destructive leading-tight">{card.sub}</p>}
-              {"trend" in card && card.trend}
+            <div>
+              <p className="text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+                {card.value}
+              </p>
+              {"sub" in card && card.sub && (
+                <p className="mt-1 text-xs font-medium text-destructive">{card.sub}</p>
+              )}
+              {"trend" in card && card.trend && <div className="mt-1">{card.trend}</div>}
             </div>
           </Link>
         ))}
       </div>
 
-      <FinanceAtAGlancePanel />
-
-      <DashboardShortcutBar />
-
       {showSection("wo_status_breakdown") && workOrderByStatus.length > 0 && (
-        <div className="rounded-md border border-border bg-card px-4 py-3 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+        <div className={cn(WORKSHOP_PANEL_CLASS, "px-4 py-3")}>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Work orders by status (30 days)
             </h2>
-            <Link href="/reports/operations" className="text-[11px] text-primary hover:underline">
+            <Link href="/reports/operations" className="text-[11px] font-medium text-primary hover:underline">
               Operations report
             </Link>
           </div>
@@ -637,28 +680,31 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               <Link
                 key={`${row.status}-${"label" in row ? row.label : ""}`}
                 href={`/workorders?status=${encodeURIComponent(row.status)}`}
-                className="inline-flex items-center gap-2 rounded-md border border-border/80 bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/30 hover:bg-muted/60"
+                className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--outline-variant)] bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/30 hover:bg-muted/60"
               >
                 <StatusPill
                   status={row.status}
                   map={WO_STATUS_COLORS}
                   label={"label" in row && typeof row.label === "string" ? row.label : undefined}
                 />
-                <span className="font-semibold tabular-nums text-foreground">{row.count}</span>
+                <span className="font-bold tabular-nums text-foreground">{row.count}</span>
               </Link>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Main Grid: Work Orders/Invoices + Appointments ── */}
+      {/* ── Primary stage + secondary rail ── */}
       {(showSection("main_table") || showSection("appointments")) && (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
 
         {/* Tabbed table: Work Orders | Invoices */}
         {showSection("main_table") && (
-        <div className={`overflow-hidden rounded-md border border-border bg-card
-                        shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] ${showSection("appointments") ? "lg:col-span-8" : "lg:col-span-12"}`}>
+        <div className={cn(
+          WORKSHOP_PANEL_CLASS,
+          "overflow-hidden",
+          showSection("appointments") ? "lg:col-span-8" : "lg:col-span-12"
+        )}>
 
           {/* Top bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
@@ -740,13 +786,13 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
             {mainTab === "workorders" ? (
               <table className="w-full">
                 <thead className="sticky top-0 z-10">
-                  <tr className="border-b border-border bg-[#f1f5f9]">
+                  <tr className="border-b border-[color:var(--outline-variant)]">
                     <SortHeader col="wo_number"  label="WO #"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="whitespace-nowrap" />
                     <SortHeader col="customer"   label="Customer" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Vehicle</th>
+                    <th className={PERFEX_TABLE_HEAD_CLASS}>Vehicle</th>
                     <SortHeader col="status"     label="Status"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                     <SortHeader col="created_at" label="Date"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="whitespace-nowrap" />
-                    <th className="px-4 py-2" />
+                    <th className={PERFEX_TABLE_HEAD_CLASS} />
                   </tr>
                 </thead>
                 <tbody>
@@ -821,14 +867,14 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               /* ── Invoices table ── */
               <table className="w-full">
                 <thead className="sticky top-0 z-10">
-                  <tr className="border-b border-border bg-[#f1f5f9]">
-                    <th className="whitespace-nowrap px-4 py-2 text-left text-xs font-semibold text-[#374151]">Invoice #</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Customer</th>
-                    <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-semibold text-[#374151]">Total</th>
-                    <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-semibold text-[#374151]">Balance Due</th>
-                    <th className="whitespace-nowrap px-4 py-2 text-left text-xs font-semibold text-[#374151]">Due Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Status</th>
-                    <th className="px-4 py-2" />
+                  <tr className="border-b border-[color:var(--outline-variant)]">
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "whitespace-nowrap")}>Invoice #</th>
+                    <th className={PERFEX_TABLE_HEAD_CLASS}>Customer</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "whitespace-nowrap text-right")}>Total</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "whitespace-nowrap text-right")}>Balance Due</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "whitespace-nowrap")}>Due Date</th>
+                    <th className={PERFEX_TABLE_HEAD_CLASS}>Status</th>
+                    <th className={PERFEX_TABLE_HEAD_CLASS} />
                   </tr>
                 </thead>
                 <tbody>
@@ -873,18 +919,17 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
 
         {/* Today's Appointments */}
         {showSection("appointments") && (
-        <div className="overflow-hidden rounded-md border border-border bg-card
-                        shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] lg:col-span-4">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className={cn(WORKSHOP_PANEL_CLASS, "overflow-hidden lg:col-span-4")}>
+          <div className="flex items-center justify-between border-b border-[color:var(--outline-variant)] px-4 py-3.5">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">Appointments</h2>
+              <h2 className="text-sm font-bold text-foreground">Appointments</h2>
               {todayAppointments.length > 0 && (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                   {todayAppointments.length}
                 </span>
               )}
             </div>
-            <Link href="/appointments" className="flex items-center gap-1 text-xs text-primary hover:underline">
+            <Link href="/appointments" className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -905,9 +950,9 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                   className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40">
                   <span className="relative flex h-2 w-2 shrink-0">
                     {upcoming && confirmed && (
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
                     )}
-                    <span className={`relative inline-flex h-2 w-2 rounded-full ${confirmed ? "bg-success/100" : "bg-amber-400"}`} />
+                    <span className={`relative inline-flex h-2 w-2 rounded-full ${confirmed ? "bg-success" : "bg-warning"}`} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-foreground">{appt.customer_name || "Unknown"}</p>
@@ -932,9 +977,13 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       </div>
       )}
 
+      {/* ── Tertiary: finance + shortcuts ── */}
+      <FinanceAtAGlancePanel />
+      <DashboardShortcutBar />
+
       {/* ── Bottom Row: Pipeline + Revenue + Alerts (collapsible) ── */}
       {showSection("bottom_summary") && (
-      <div className="rounded-md border border-border bg-card/50 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.06)]">
+      <div className={cn(WORKSHOP_PANEL_CLASS, "bg-[var(--panel-bg)]/80")}>
         <button onClick={() => setBottom((v) => !v)}
           className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted/30 rounded-t-md print:hidden">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key Metrics</span>
@@ -951,10 +1000,10 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               </div>
               <div className="space-y-2">
                 {[
-                  { label: "Pending",            value: workOrderSummary?.pending_count   ?? 0, dot: "bg-orange-400" },
-                  { label: "Active / In Repair",  value: workOrderSummary?.active_count    ?? stats.active_work_orders, dot: "bg-info/100" },
-                  { label: "Attention Needed",    value: workOrderSummary?.attention_count ?? 0, dot: "bg-destructive/100"    },
-                  { label: "Completed (30 days)", value: workOrderSummary?.completed       ?? 0, dot: "bg-success/100"  },
+                  { label: "Pending",            value: workOrderSummary?.pending_count   ?? 0, dot: "bg-warning" },
+                  { label: "Active / In Repair",  value: workOrderSummary?.active_count    ?? stats.active_work_orders, dot: "bg-info" },
+                  { label: "Attention Needed",    value: workOrderSummary?.attention_count ?? 0, dot: "bg-destructive"    },
+                  { label: "Completed (30 days)", value: workOrderSummary?.completed       ?? 0, dot: "bg-success"  },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1023,13 +1072,13 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                 {[
                   { icon: AlertTriangle, label: "Overdue invoices",  value: stats.overdue_invoices,  sub: stats.overdue_invoices  > 0 ? formatCurrency(stats.overdue_amount) : null, href: "/billing/invoices",  active: "text-destructive"   },
                   { icon: Package,       label: "Low stock items",    value: stats.low_stock_items,   sub: null, href: "/inventory",          active: "text-warning" },
-                  { icon: FileText,      label: "Pending estimates",  value: stats.pending_estimates, sub: null, href: "/billing/estimates",  active: "text-blue-500"  },
-                  { icon: Truck,         label: "Roadside active",    value: stats.active_roadside,   sub: stats.active_roadside > 0 ? `${stats.roadside_completed_today} done today` : null, href: "/roadside", active: "text-teal-500" },
+                  { icon: FileText,      label: "Pending estimates",  value: stats.pending_estimates, sub: null, href: "/billing/estimates",  active: "text-info"  },
+                  { icon: Truck,         label: "Roadside active",    value: stats.active_roadside,   sub: stats.active_roadside > 0 ? `${stats.roadside_completed_today} done today` : null, href: "/roadside", active: "text-primary" },
                 ].map((alert) => (
                   <Link key={alert.label} href={alert.href}
-                    className="flex items-center justify-between rounded px-1.5 py-2 transition-colors hover:bg-muted/60">
+                    className="flex items-center justify-between rounded-lg px-1.5 py-2 transition-colors hover:bg-muted/60">
                     <div className="flex items-center gap-2.5">
-                      <alert.icon className={`h-3.5 w-3.5 shrink-0 ${alert.value > 0 ? alert.active : "text-gray-300"}`} />
+                      <alert.icon className={`h-3.5 w-3.5 shrink-0 ${alert.value > 0 ? alert.active : "text-muted-foreground/40"}`} />
                       <div>
                         <p className="text-xs text-foreground">{alert.label}</p>
                         {alert.sub && <p className="text-[10px] text-muted-foreground">{alert.sub}</p>}
@@ -1049,34 +1098,34 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
 
       {/* ── Technician Performance ── */}
       {showSection("technician_perf") && technicianData.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+        <div className={cn(WORKSHOP_PANEL_CLASS, "overflow-hidden")}>
           <button onClick={() => setTechExpanded((v) => !v)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30 print:hidden">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-muted/30 print:hidden">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
               <UserCheck className="h-4 w-4 text-primary" />
               Top Technician Performance
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                 {technicianData.length}
               </span>
             </h2>
             <div className="flex items-center gap-2">
               <Link href="/reports/efficiency" onClick={(e) => e.stopPropagation()}
-                className="text-xs text-primary hover:underline">Full report</Link>
+                className="text-xs font-medium text-primary hover:underline">Full report</Link>
               {techExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </div>
           </button>
           {techExpanded && (
-            <div className="overflow-x-auto border-t border-border">
+            <div className="overflow-x-auto border-t border-[color:var(--outline-variant)]">
               <table className="w-full">
                 <thead className="sticky top-0 z-10">
-                  <tr className="border-b border-border bg-[#f1f5f9]">
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Technician</th>
-                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">Total Jobs</th>
-                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">Completed</th>
-                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">In Progress</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151] min-w-[140px]">Completion Rate</th>
-                    <th className="px-4 py-2 text-center text-xs font-semibold text-[#374151]">Avg Days</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-[#374151]">Revenue</th>
+                  <tr className="border-b border-[color:var(--outline-variant)]">
+                    <th className={PERFEX_TABLE_HEAD_CLASS}>Technician</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "text-center")}>Total Jobs</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "text-center")}>Completed</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "text-center")}>In Progress</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "min-w-[140px]")}>Completion Rate</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "text-center")}>Avg Days</th>
+                    <th className={cn(PERFEX_TABLE_HEAD_CLASS, "text-right")}>Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1093,7 +1142,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                             <div className="flex flex-col">
                               <span className="text-xs font-medium text-foreground">{name}</span>
                               {tech.role && (
-                                <span className={`text-[10px] font-medium ${tech.role === "service_coordinator" ? "text-blue-500" : "text-muted-foreground"}`}>
+                                <span className={`text-[10px] font-medium ${tech.role === "service_coordinator" ? "text-info" : "text-muted-foreground"}`}>
                                   {tech.role === "service_coordinator" ? "Service Coordinator" : "Technician"}
                                 </span>
                               )}
@@ -1122,34 +1171,34 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
 
       {/* ── Low Stock Table ── */}
       {showSection("low_stock") && lowStockItems.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className={cn(WORKSHOP_PANEL_CLASS, "overflow-hidden")}>
+          <div className="flex items-center justify-between border-b border-[color:var(--outline-variant)] px-4 py-3.5">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
               Low Stock
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">
                 {lowStockItems.length}
               </span>
             </h2>
-            <Link href="/inventory" className="flex items-center gap-1 text-xs text-primary hover:underline">
+            <Link href="/inventory" className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
               Manage <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="sticky top-0 z-10">
-                <tr className="border-b border-border bg-[#f1f5f9]">
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Part Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Part #</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">In Stock</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Reorder At</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-[#374151]">Status</th>
+                <tr className="border-b border-[color:var(--outline-variant)]">
+                  <th className={PERFEX_TABLE_HEAD_CLASS}>Part Name</th>
+                  <th className={PERFEX_TABLE_HEAD_CLASS}>Part #</th>
+                  <th className={PERFEX_TABLE_HEAD_CLASS}>In Stock</th>
+                  <th className={PERFEX_TABLE_HEAD_CLASS}>Reorder At</th>
+                  <th className={PERFEX_TABLE_HEAD_CLASS}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {lowStockItems.slice(0, 8).map((item, idx) => {
                   const critical = item.quantity === 0;
                   return (
-                    <tr key={item.id ?? `stock-${idx}`} className="border-b border-border/50 transition-colors hover:bg-muted/40">
+                    <tr key={item.id ?? `stock-${idx}`} className="border-b border-[color:var(--outline-variant)] transition-colors hover:bg-muted/40">
                       <td className="px-4 py-2.5 text-xs font-medium text-foreground">
                         {item.id ? (
                           <Link href={`/inventory/parts/${item.id}`} className="text-primary hover:underline">
@@ -1163,7 +1212,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                       <td className="px-4 py-2.5 text-xs font-semibold text-foreground">{item.quantity}</td>
                       <td className="px-4 py-2.5 text-xs text-muted-foreground">{item.reorder_point}</td>
                       <td className="px-4 py-2.5">
-                        <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${critical ? "bg-red-100 text-destructive" : "bg-amber-100 text-amber-700"}`}>
+                        <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${critical ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning"}`}>
                           {critical ? "Out of stock" : "Low stock"}
                         </span>
                       </td>
@@ -1178,20 +1227,20 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
 
             {/* ── Service Due — card grid ── */}
       {showSection("service_due") && serviceDueVehicles && serviceDueVehicles.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-warning/20 bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-          <div className="flex items-center justify-between border-b border-warning/20 bg-warning/10/60 px-4 py-2.5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-warning">
+        <div className={cn(WORKSHOP_PANEL_CLASS, "overflow-hidden border-warning/25")}>
+          <div className="flex items-center justify-between border-b border-warning/20 bg-warning/10 px-4 py-2.5">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-warning">
               <AlertCircle className="h-4 w-4" />
               Service Due
-              <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-warning">
+              <span className="rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-bold text-warning">
                 {serviceDueVehicles.length}
               </span>
             </h2>
             <div className="flex items-center gap-3">
-              <p className="hidden text-[11px] text-amber-700 sm:block">
+              <p className="hidden text-[11px] text-warning sm:block">
                 Vehicles flagged based on mileage or time since last recorded service
               </p>
-              <Link href="/vehicles" className="flex items-center gap-1 text-xs text-amber-700 hover:text-warning hover:underline">
+              <Link href="/vehicles" className="flex items-center gap-1 text-xs font-medium text-warning hover:underline">
                 View all <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
@@ -1202,11 +1251,11 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
               const danger = !v.last_service_date || !v.mileage || (days !== null && days > 180);
               return (
                 <Link key={v.id} href={`/vehicles/${v.id}`}
-                  className={`flex flex-col gap-2 rounded-md border p-3 transition-colors hover:shadow-sm
-                    ${danger ? "border-destructive/20 bg-destructive/10/40 hover:border-red-300" : "border-warning/20 bg-warning/10/40 hover:border-amber-300"}`}>
+                  className={`flex flex-col gap-2 rounded-lg border p-3 transition-colors hover:shadow-sm
+                    ${danger ? "border-destructive/20 bg-destructive/5 hover:border-destructive/40" : "border-warning/20 bg-warning/5 hover:border-warning/40"}`}>
                   <div className="flex items-start justify-between gap-1">
-                    <span className={`rounded px-1.5 py-0.5 font-mono text-xs font-bold
-                      ${danger ? "bg-red-100 text-destructive" : "bg-amber-100 text-amber-700"}`}>
+                    <span className={`rounded-md px-1.5 py-0.5 font-mono text-xs font-bold
+                      ${danger ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning"}`}>
                       {v.license_plate}
                     </span>
                     <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${danger ? "text-destructive" : "text-warning"}`} />

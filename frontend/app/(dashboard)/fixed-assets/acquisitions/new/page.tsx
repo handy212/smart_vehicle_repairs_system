@@ -111,7 +111,7 @@ function NewAcquisitionContent() {
     };
 
     return (
-        <div className="flex-1 overflow-auto p-4 max-w-2xl mx-auto space-y-4">
+        <div className="flex-1 overflow-auto w-full space-y-4">
             <div className="flex items-center gap-3">
                 <Link href="/fixed-assets/acquisitions">
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0">
@@ -119,7 +119,7 @@ function NewAcquisitionContent() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-lg font-semibold">New acquisition request</h1>
+                    <h1 className="text-xl font-bold tracking-tight">New acquisition request</h1>
                     <p className="text-xs text-muted-foreground">Creates a draft — submit for approval from the detail page.</p>
                 </div>
             </div>

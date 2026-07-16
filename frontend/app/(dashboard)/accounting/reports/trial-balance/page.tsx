@@ -60,7 +60,7 @@ export default function TrialBalancePage() {
     }
 
     return (
-        <div className="space-y-6 p-4 sm:p-6">
+        <div className="space-y-6">
             <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Link href="/accounting">

@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { portalApi, type PortalActionNeeded } from "@/lib/api/portal";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const ACTION_ICONS: Record<PortalActionNeeded["type"], typeof FileText> = {
   approve_estimate: FileText,

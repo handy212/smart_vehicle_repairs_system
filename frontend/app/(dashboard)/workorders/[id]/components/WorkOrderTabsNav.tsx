@@ -160,60 +160,58 @@ export function WorkOrderTabsNav({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="sticky top-[4.25rem] z-10 -mx-4 border-b border-border bg-background/95 px-4 pb-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6">
-        <TabsList
-          className={cn(
-            "flex h-auto w-full min-h-10 justify-start gap-1 overflow-x-auto rounded-lg bg-muted/60 p-1",
-            "scrollbar-thin"
-          )}
-        >
-          <LockedTabTrigger
-            value="overview"
-            label="Overview"
-            shortLabel="Info"
-            icon={FileText}
-            locked={false}
-            lockMessage={lockMessage}
-          />
-          <TabDivider />
-          {workTabs}
-          <TabDivider />
-          <LockedTabTrigger
-            value="notes"
-            label="Notes"
-            shortLabel="Notes"
-            icon={MessageSquare}
-            count={notesCount}
-            locked={effectiveLocked}
-            lockMessage={lockMessage}
-          />
-          <LockedTabTrigger
-            value="photos"
-            label="Photos"
-            shortLabel="Photos"
-            icon={Image}
-            locked={effectiveLocked}
-            lockMessage={lockMessage}
-          />
-          <LockedTabTrigger
-            value="documents"
-            label="Documents"
-            shortLabel="Docs"
-            icon={FileText}
-            locked={effectiveLocked}
-            lockMessage={lockMessage}
-          />
-          <TabDivider />
-          <LockedTabTrigger
-            value="timeline"
-            label="Timeline"
-            shortLabel="History"
-            icon={Clock}
-            locked={effectiveLocked}
-            lockMessage={lockMessage}
-          />
-        </TabsList>
-      </div>
+      <TabsList
+        className={cn(
+          "flex h-auto w-full min-h-10 justify-start gap-1 overflow-x-auto rounded-lg bg-muted/60 p-1",
+          "scrollbar-thin"
+        )}
+      >
+        <LockedTabTrigger
+          value="overview"
+          label="Overview"
+          shortLabel="Info"
+          icon={FileText}
+          locked={false}
+          lockMessage={lockMessage}
+        />
+        <TabDivider />
+        {workTabs}
+        <TabDivider />
+        <LockedTabTrigger
+          value="notes"
+          label="Notes"
+          shortLabel="Notes"
+          icon={MessageSquare}
+          count={notesCount}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
+        <LockedTabTrigger
+          value="photos"
+          label="Photos"
+          shortLabel="Photos"
+          icon={Image}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
+        <LockedTabTrigger
+          value="documents"
+          label="Documents"
+          shortLabel="Docs"
+          icon={FileText}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
+        <TabDivider />
+        <LockedTabTrigger
+          value="timeline"
+          label="Timeline"
+          shortLabel="History"
+          icon={Clock}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
+      </TabsList>
     </TooltipProvider>
   );
 }

@@ -58,10 +58,9 @@ class SystemSettings(models.Model):
     TAX_SETTING_DEFAULTS = [
         ('tax_enabled', 'true', 'Enable Ghana tax computation for invoices and estimates'),
         ('tax_regime', 'ghana_standard', 'Tax regime identifier (e.g., ghana_standard)'),
-        ('tax_vat_rate', '15.0', 'Value Added Tax percentage applied on taxable supply plus levies'),
+        ('tax_vat_rate', '15.0', 'Value Added Tax percentage applied on taxable supply'),
         ('tax_nhil_rate', '2.5', 'National Health Insurance Levy percentage applied on taxable supply'),
         ('tax_getfund_rate', '2.5', 'GETFund levy percentage applied on taxable supply'),
-        ('tax_covid_rate', '1.0', 'COVID-19 Health Recovery Levy percentage applied on taxable supply'),
     ]
 
     INTEGRATION_SETTING_DEFAULTS = [
@@ -168,6 +167,8 @@ class SystemSettings(models.Model):
                     'is_active': True,
                 }
             )
+        # COVID-19 Health Recovery Levy abolished — keep row inactive if present
+        cls.objects.filter(key='tax_covid_rate').exclude(is_active=False).update(is_active=False)
 
     @classmethod
     def ensure_integration_settings(cls):

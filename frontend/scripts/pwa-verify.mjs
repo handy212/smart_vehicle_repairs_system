@@ -82,7 +82,7 @@ try {
   const caches = await waitForCaches(1);
   record('Workbox/runtime caches present', caches.length > 0, caches.join(', ') || 'none');
 
-  const manifestResponse = await page.request.get(`${baseURL}/manifest.json`);
+  const manifestResponse = await page.request.get(`${baseURL}/manifest.webmanifest`);
   record('Manifest HTTP 200', manifestResponse.ok(), String(manifestResponse.status()));
 
   const swResponse = await page.request.get(`${baseURL}/sw.js`);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { authApi } from "@/lib/api/auth";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -119,7 +119,7 @@ export function TwoFactorSettings() {
             <CardContent>
                 {is2FAEnabled ? (
                     <div className="flex flex-col space-y-4">
-                        <div className="flex items-center gap-3 p-4 bg-success/10 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-3 p-4 bg-success/10 dark:bg-success/20 text-success dark:text-success rounded-lg border border-success/20 dark:border-success/30">
                             <Shield className="h-4 w-4" />
                             <div>
                                 <p className="font-semibold">Two-factor authentication is enabled</p>
@@ -180,7 +180,7 @@ export function TwoFactorSettings() {
                                 </div>
 
                                 <div className="flex flex-col md:flex-row gap-6 items-start">
-                                    <div className="p-4 bg-white rounded-xl shadow-sm border">
+                                    <div className="p-4 bg-card rounded-xl shadow-sm border">
                                         <img src={setupData.qr_code} alt="2FA QR Code" className="w-48 h-48 object-contain" />
                                     </div>
 

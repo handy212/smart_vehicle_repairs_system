@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/store/authStore";
 import { useOfflineStore } from "@/store/offlineStore";
 import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
@@ -184,7 +184,7 @@ export default function TimeTrackingPage() {
   };
 
   return (
-    <MobilePageShell className="space-y-4">
+    <MobilePageShell title="Time Tracking" className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Time Tracking</h2>
         <Button size="sm" variant="outline" onClick={refreshAll} disabled={loading} aria-label="Refresh">

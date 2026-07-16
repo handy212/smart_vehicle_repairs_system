@@ -29,10 +29,10 @@ export default function ReorderReportsPage() {
 
   return (
     <PermissionPageGuard permissions={[...INVENTORY_REPORTS_VIEW_PERMISSIONS]}>
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Reorder Reports</h1>
+            <h1 className="text-xl font-bold tracking-tight">Reorder Reports</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Parts at or below reorder point that need replenishment.
             </p>

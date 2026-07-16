@@ -110,7 +110,7 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
 
-                                <div className="text-xs text-muted-foreground flex items-center gap-2 bg-primary/10 dark:bg-orange-900/10 p-3 rounded-md border border-orange-100 dark:border-orange-900/20 text-primary dark:text-orange-300">
+                                <div className="text-xs text-muted-foreground flex items-center gap-2 bg-primary/10 dark:bg-warning/10 p-3 rounded-md border border-warning/20 dark:border-warning/30 text-primary dark:text-warning">
                                     <span className="font-semibold">Note:</span> To update your personal information, please contact support.
                                 </div>
                             </form>

@@ -54,10 +54,10 @@ export function InspectionItemRow({
     const [isExpanded, setIsExpanded] = useState(false);
 
     const statusOptions = [
-        { value: "pass", label: "Pass", icon: Check, color: "text-success", bg: "bg-success/10", border: "border-green-200", activeBg: "bg-green-600", activeText: "text-white" },
-        { value: "fail", label: "Fail", icon: X, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", activeBg: "bg-red-600", activeText: "text-white" },
-        { value: "advisory", label: "Advisory", icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50", border: "border-yellow-200", activeBg: "bg-yellow-600", activeText: "text-white" },
-        { value: "not_applicable", label: "N/A", icon: Minus, color: "text-muted-foreground", bg: "bg-muted", border: "border-border", activeBg: "bg-gray-600", activeText: "text-white" },
+        { value: "pass", label: "Pass", icon: Check, color: "text-success", bg: "bg-success/10", border: "border-success/20", activeBg: "bg-success", activeText: "text-white" },
+        { value: "fail", label: "Fail", icon: X, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", activeBg: "bg-destructive", activeText: "text-white" },
+        { value: "advisory", label: "Advisory", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10", border: "border-warning/20", activeBg: "bg-warning", activeText: "text-white" },
+        { value: "not_applicable", label: "N/A", icon: Minus, color: "text-muted-foreground", bg: "bg-muted", border: "border-border", activeBg: "bg-muted-foreground", activeText: "text-white" },
     ];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +78,7 @@ export function InspectionItemRow({
     return (
         <div className={cn(
             "border-b border-border transition-colors",
-            isCriticalRemaining && "bg-destructive/10/30 dark:bg-red-950/20 border-l-4 border-l-red-500",
+            isCriticalRemaining && "bg-destructive/10 dark:bg-destructive/15 border-l-4 border-l-destructive",
             !isLast && "border-b",
             isLast && "border-b-0"
         )}>
@@ -94,12 +94,12 @@ export function InspectionItemRow({
                             {item.name}
                         </h4>
                         {item.is_critical && (
-                            <Badge className="bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 text-[9px] font-bold uppercase tracking-wider h-4 px-1.5 py-0">
+                            <Badge className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive text-[9px] font-bold uppercase tracking-wider h-4 px-1.5 py-0">
                                 Critical
                             </Badge>
                         )}
                         {hasResult && (
-                            <Badge variant="outline" className="h-4 px-1.5 text-[9px] border-green-200 text-green-700 dark:border-green-800 dark:text-green-400">
+                            <Badge variant="outline" className="h-4 px-1.5 text-[9px] border-success/20 text-success dark:border-success/30 dark:text-success">
                                 Done
                             </Badge>
                         )}
@@ -184,7 +184,7 @@ export function InspectionItemRow({
                                     "w-7 h-7 text-xs font-semibold rounded border transition-all",
                                     result.rating_value === n
                                         ? "bg-primary text-white border-primary"
-                                        : "bg-card border-border hover:border-orange-400"
+                                        : "bg-card border-border hover:border-warning/50"
                                 )}
                             >
                                 {n}
@@ -215,7 +215,7 @@ export function InspectionItemRow({
                         size="sm"
                         className={cn(
                             "h-7 w-7 p-0",
-                            showNotes || result.notes ? "text-primary bg-primary/10 dark:bg-orange-900/20" : "text-muted-foreground"
+                            showNotes || result.notes ? "text-primary bg-primary/10 dark:bg-warning/20" : "text-muted-foreground"
                         )}
                         onClick={onToggleNotes}
                         title="Notes"
@@ -319,7 +319,7 @@ export function InspectionItemRow({
                                 type="checkbox"
                                 checked={result.needs_immediate_attention || false}
                                 onChange={(e) => onUpdate("needs_immediate_attention", e.target.checked)}
-                                className="w-3.5 h-3.5 rounded border-border text-destructive focus:ring-red-500"
+                                className="w-3.5 h-3.5 rounded border-border text-destructive focus:ring-destructive"
                             />
                             <span className={cn(
                                 "text-[10px] font-bold uppercase tracking-widest",

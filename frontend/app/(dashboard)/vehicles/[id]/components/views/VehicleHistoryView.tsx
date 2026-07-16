@@ -145,7 +145,7 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                                         <Badge variant="warning" className="text-[10px] py-0 h-5">Warranty</Badge>
                                                     )}
                                                     {hasRelated && !isWarrantyRework && (
-                                                        <Badge variant="outline" className="text-[10px] py-0 h-5 border-orange-200 text-primary">Related</Badge>
+                                                        <Badge variant="outline" className="text-[10px] py-0 h-5 border-warning/20 text-primary">Related</Badge>
                                                     )}
                                                     {!isWarrantyRework && !hasRelated && (
                                                         <span className="text-xs text-muted-foreground">Standard</span>

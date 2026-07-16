@@ -74,7 +74,7 @@ function VendorCreditsContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl p-4 sm:p-6 space-y-4">
+      <div className="w-full space-y-4">
         <PageHeader
           title="Vendor Credits"
           breadcrumbs={[

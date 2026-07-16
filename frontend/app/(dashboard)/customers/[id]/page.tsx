@@ -344,8 +344,7 @@ export default function CustomerDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 bg-background">
-      <div className="max-w-[1600px] mx-auto p-4 sm:p-6">
+    <div className="w-full space-y-6">
         <PageHeader
           title={customer.company_name || `${customer.user?.first_name} ${customer.user?.last_name}`}
           actions={
@@ -426,19 +425,18 @@ export default function CustomerDetailPage() {
           }
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-0 border border-border rounded-lg overflow-hidden bg-card shadow-sm min-h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-0 border border-border rounded-lg overflow-hidden bg-card shadow-workshop">
           <CustomerSidebar
             activeView={activeView}
             onViewChange={setActiveView}
             counts={counts}
           />
-          <div className="p-0 overflow-y-auto">
-            <div className="p-6">
+          <div className="min-w-0 overflow-x-auto">
+            <div className="p-4 sm:p-5">
               {renderContent()}
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

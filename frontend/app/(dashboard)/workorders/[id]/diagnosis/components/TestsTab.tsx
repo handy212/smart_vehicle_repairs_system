@@ -178,7 +178,7 @@ export function TestsTab({
                                                             ? "danger"
                                                             : "secondary"
                                                 }
-                                                className={`text-xs capitalize ${test.status === 'pass' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : ''}`}
+                                                className={`text-xs capitalize ${test.status === 'pass' ? 'bg-success/15 text-success hover:bg-success/20 border-success/20' : ''}`}
                                             >
                                                 {test.status_display || test.status}
                                             </Badge>

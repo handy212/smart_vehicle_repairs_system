@@ -539,6 +539,14 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         inspection.status = 'completed'
         inspection.completed_at = timezone.now()
         inspection.save()
+
+        # Prefill Job Card intake fields (battery / warning lights) from DVI findings.
+        if inspection.work_order_id:
+            try:
+                from apps.workorders.intake_condition import apply_dvi_intake_prefill
+                apply_dvi_intake_prefill(inspection.work_order, inspection, overwrite=False)
+            except Exception:
+                pass
         
         return Response({
             'message': 'Inspection completed successfully',
@@ -609,6 +617,12 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         inspection.save()
 
         work_order = inspection.work_order
+        if work_order:
+            try:
+                from apps.workorders.intake_condition import apply_dvi_intake_prefill
+                apply_dvi_intake_prefill(work_order, inspection, overwrite=False)
+            except Exception:
+                pass
         if work_order and work_order.status in ['draft', 'inspection']:
             try:
                 work_order.transition_to('intake', user=request.user)

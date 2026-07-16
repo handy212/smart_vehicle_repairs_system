@@ -350,28 +350,28 @@ export default function UsersManagementPage() {
                           ) : user.branch_name ? (
                             <span>{user.branch_name}</span>
                           ) : (
-                            <span className="text-gray-300 text-muted-foreground">-</span>
+                            <span className="text-muted-foreground text-muted-foreground">-</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         {user.is_active ? (
                           <div className="flex items-center space-x-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-success/100"></span>
-                            <span className="text-xs text-green-700 dark:text-green-400 font-medium">Active</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                            <span className="text-xs text-success dark:text-success font-medium">Active</span>
                           </div>
                         ) : (
                           <div className="flex items-center space-x-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                            <span className="text-xs text-destructive dark:text-red-400">Inactive</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
+                            <span className="text-xs text-destructive dark:text-destructive">Inactive</span>
                           </div>
                         )}
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         {user.two_factor_enabled ? (
                           <div className="flex items-center space-x-1.5" title="2FA is enabled">
-                            <ShieldCheck className="w-3.5 h-3.5 text-success dark:text-green-400" />
-                            <span className="text-xs text-green-700 dark:text-green-400 font-medium">Enabled</span>
+                            <ShieldCheck className="w-3.5 h-3.5 text-success dark:text-success" />
+                            <span className="text-xs text-success dark:text-success font-medium">Enabled</span>
                           </div>
                         ) : (
                           <div className="flex items-center space-x-1.5" title="2FA is disabled">
@@ -389,9 +389,9 @@ export default function UsersManagementPage() {
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">
                                 <div className="flex gap-0.5">
-                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
                                 </div>
                               </Button>
                             </DropdownMenuTrigger>
@@ -435,7 +435,7 @@ export default function UsersManagementPage() {
                                       handleDelete(user);
                                     }
                                   }}
-                                  className="text-destructive dark:text-red-400"
+                                  className="text-destructive dark:text-destructive"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Delete User
@@ -452,7 +452,7 @@ export default function UsersManagementPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">No users found matching your filters.</p>
             </div>
           )}

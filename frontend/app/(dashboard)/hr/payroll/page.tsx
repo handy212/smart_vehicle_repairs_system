@@ -26,7 +26,7 @@ import {
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter,
     DialogHeader, DialogTitle, DialogTrigger,
@@ -129,10 +129,10 @@ function PayrollContent() {
 
     const getStatusConfig = (status: string) => {
         switch (status) {
-            case "draft": return { color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700", label: "Draft" };
-            case "processing": return { color: "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800", label: "Processing" };
-            case "approved": return { color: "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800", label: "Approved" };
-            case "paid": return { color: "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800", label: "Paid" };
+            case "draft": return { color: "bg-muted text-muted-foreground border-border dark:border-border", label: "Draft" };
+            case "processing": return { color: "bg-info/15 text-info border-info/20 dark:border-primary/30", label: "Processing" };
+            case "approved": return { color: "bg-warning/15 text-warning border-warning/20 dark:border-warning/30", label: "Approved" };
+            case "paid": return { color: "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30", label: "Paid" };
             case "reversed": return { color: "bg-destructive/10 text-destructive border-destructive/20", label: "Reversed" };
             default: return { color: "", label: status };
         }

@@ -53,7 +53,7 @@ export function QboSyncBadge({
         <Badge variant="secondary" className="capitalize">
           {showLabel ? "QBO: session expired" : "session expired"}
         </Badge>
-        <p className={cn("text-amber-700 dark:text-amber-400", compact ? "text-[11px] line-clamp-3" : "text-xs")}>
+        <p className={cn("text-warning dark:text-warning", compact ? "text-[11px] line-clamp-3" : "text-xs")}>
           {connectionIssue}
         </p>
       </div>

@@ -9,8 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, MapPin, Truck, ChevronRight, Phone } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { cn } from "@/lib/utils";
 
 type FilterTab = "active" | "recent";
@@ -86,19 +87,18 @@ export default function RoadsideListPage() {
   const displayed = filter === "active" ? activeRequests : recentCompleted;
 
   return (
-    <div className="mx-auto max-w-md space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">My roadside jobs</h2>
-          <p className="text-xs text-muted-foreground">Assignments only · last 14 days when completed</p>
-        </div>
+    <MobilePageShell
+      title="My roadside jobs"
+      description="Assignments only · last 14 days when completed"
+      className="space-y-4"
+      actions={
         <Button size="sm" variant="outline" onClick={loadRequests} disabled={loading} aria-label="Refresh">
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
         </Button>
-      </div>
-
+      }
+    >
       {usingCache && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-xs text-warning dark:text-warning">
           Showing cached jobs{!isOnline ? " (offline)" : ""}.
         </p>
       )}
@@ -144,8 +144,7 @@ export default function RoadsideListPage() {
             <Card
               key={req.id}
               className={cn(
-                "cursor-pointer overflow-hidden border-l-4 transition-all hover:shadow-md",
-                needsResponse ? "border-l-amber-500" : "border-l-orange-500"
+                "cursor-pointer overflow-hidden border-l-4 border-l-warning transition-all hover:shadow-md",
               )}
               onClick={() => router.push(`/mobile/roadside/${req.id}`)}
             >
@@ -192,6 +191,6 @@ export default function RoadsideListPage() {
           );
         })}
       </div>
-    </div>
+    </MobilePageShell>
   );
 }

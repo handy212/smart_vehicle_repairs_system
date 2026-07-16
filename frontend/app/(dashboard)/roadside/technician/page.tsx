@@ -83,7 +83,7 @@ export default function TechnicianRoadsideDashboard() {
             {activeRequests.length === 0 ? (
                 <Card className="border-dashed border-2 bg-muted/50">
                     <CardContent className="py-12 flex flex-col items-center justify-center text-center">
-                        <Truck className="h-12 w-12 text-gray-300 mb-4" />
+                        <Truck className="h-12 w-12 text-muted-foreground mb-4" />
                         <h3 className="text-lg font-bold text-card-foreground">No Active Assignments</h3>
                         <p className="text-sm text-muted-foreground mt-2 max-w-xs">
                             You do not have any active roadside requests assigned to you at the moment.
@@ -105,9 +105,9 @@ export default function TechnicianRoadsideDashboard() {
 
             <div className="bg-primary rounded-2xl p-6 text-white overflow-hidden relative">
                 <div className="relative z-10">
-                    <h3 className="text-lg font-black mb-1">Safety First!</h3>
+                    <h3 className="text-lg font-bold mb-1">Safety First!</h3>
                     <p className="text-white/80 text-sm mb-4">Always wear your high-visibility vest and set up warning triangles immediately upon arrival.</p>
-                    <Button variant="outline" size="sm" className="h-9 bg-card/10 border-white/20 text-white hover:bg-card/20">
+                    <Button variant="outline" size="sm" className="h-9 bg-card/10 border-card/20 text-white hover:bg-card/20">
                         Safety Checklist
                     </Button>
                 </div>
@@ -125,13 +125,13 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
     const getNextAction = () => {
         switch (request.status) {
             case 'dispatched':
-                return { label: 'Go to Breakdown', action: 'en_route', icon: Navigation, color: 'bg-amber-600 hover:bg-amber-700' };
+                return { label: 'Go to Breakdown', action: 'en_route', icon: Navigation, color: 'bg-warning hover:bg-warning' };
             case 'en_route':
-                return { label: 'I Have Arrived', action: 'arrive', icon: MapPin, color: 'bg-indigo-600 hover:bg-indigo-700' };
+                return { label: 'I Have Arrived', action: 'arrive', icon: MapPin, color: 'bg-info hover:bg-info' };
             case 'on_site':
-                return { label: 'Start Service', action: 'in_progress', icon: Wrench, color: 'bg-purple-600 hover:bg-purple-700' };
+                return { label: 'Start Service', action: 'in_progress', icon: Wrench, color: 'bg-primary hover:bg-primary-container' };
             case 'in_progress':
-                return { label: 'Job Completed', action: 'complete', icon: CheckCircle, color: 'bg-success hover:bg-green-700' };
+                return { label: 'Job Completed', action: 'complete', icon: CheckCircle, color: 'bg-success hover:bg-success' };
             default:
                 return null;
         }
@@ -141,19 +141,19 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
 
     return (
         <Card className="overflow-hidden border-none shadow-premium bg-card">
-            <div className="h-1.5 bg-gradient-to-r from-primary to-indigo-500"></div>
+            <div className="h-1.5 bg-gradient-to-r from-primary to-primary-container"></div>
             <CardHeader className="pb-3 flex flex-row items-start justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <Badge variant="info" className="text-[10px] px-2 py-0.5 border shadow-none font-medium">{request.status_display}</Badge>
                         <span className="text-[10px] font-bold text-muted-foreground tracking-tighter uppercase">{request.request_number}</span>
                     </div>
-                    <CardTitle className="text-xl font-black">{request.service_type_display}</CardTitle>
+                    <CardTitle className="text-xl font-bold">{request.service_type_display}</CardTitle>
                     <CardDescription className="flex items-center gap-1 mt-0.5">
                         <Clock className="h-3 w-3" /> {format(new Date(request.requested_at), "h:mm a")} • {request.customer_name}
                     </CardDescription>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/30 flex items-center justify-center text-primary">
+                <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-warning/20 flex items-center justify-center text-primary">
                     <Truck className="h-5 w-5" />
                 </div>
             </CardHeader>
@@ -162,7 +162,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                     <div className="flex items-start gap-2">
                         <MapPin className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                            <div className="text-[10px] font-black uppercase text-muted-foreground leading-none mb-1">Breakdown Location</div>
+                            <div className="text-[10px] font-bold uppercase text-muted-foreground leading-none mb-1">Breakdown Location</div>
                             <div className="text-sm font-bold leading-tight">{request.breakdown_location}</div>
                             {request.latitude && request.longitude && (
                                 <a
@@ -179,7 +179,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
 
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                         <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-success">
+                            <div className="h-8 w-8 rounded-full bg-success/15 flex items-center justify-center text-success">
                                 <Phone className="h-4 w-4" />
                             </div>
                             <div className="text-sm font-bold">{request.customer_phone}</div>
@@ -187,7 +187,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                         <Button
                             variant="secondary"
                             size="sm"
-                            className="h-8 bg-success/100 hover:bg-emerald-600 text-white border-none font-bold text-xs"
+                            className="h-8 bg-success hover:bg-success text-white border-none font-bold text-xs"
                             onClick={() => window.open(`tel:${request.customer_phone}`)}
                         >
                             CALL CUSTOMER
@@ -198,7 +198,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                 {nextAction && (
                     <Button
                         disabled={isUpdating}
-                        className={`w-full h-12 text-lg font-black gap-2 ${nextAction.color} shadow-lg shadow-primary/10`}
+                        className={`w-full h-12 text-lg font-bold gap-2 ${nextAction.color} shadow-lg shadow-primary/10`}
                         onClick={() => onUpdate(nextAction.action)}
                     >
                         <nextAction.icon className="h-5 w-5" />

@@ -317,7 +317,7 @@ export default function ImportHistoryPage() {
                                 </span>
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-right">
-                                <span className={`text-xs font-mono font-medium ${skipped > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-xs font-mono font-medium ${skipped > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
                                   {skipped}
                                 </span>
                               </TableCell>

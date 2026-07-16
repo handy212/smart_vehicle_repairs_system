@@ -39,7 +39,7 @@ export function NotesSection({
                         variant={passed ? "default" : "ghost"}
                         size="sm"
                         className={passed
-                            ? "h-6 rounded-sm bg-green-600 px-3 text-[10px] font-semibold hover:bg-green-700"
+                            ? "h-6 rounded-sm bg-success px-3 text-[10px] font-semibold hover:bg-success"
                             : "h-6 rounded-sm px-3 text-[10px] text-muted-foreground"
                         }
                         onClick={() => setPassed(true)}

@@ -323,6 +323,52 @@ class WorkOrder(models.Model):
         blank=True,
         help_text="Vehicle mileage at completion"
     )
+
+    # Job Card / intake condition (customer handout + optional DVI prefill)
+    FUEL_LEVEL_CHOICES = [
+        ('empty', 'Empty'),
+        ('1/8', '1/8'),
+        ('1/4', '1/4'),
+        ('3/8', '3/8'),
+        ('1/2', '1/2'),
+        ('5/8', '5/8'),
+        ('3/4', '3/4'),
+        ('7/8', '7/8'),
+        ('full', 'Full'),
+        ('unknown', 'Unknown'),
+    ]
+    BATTERY_CONDITION_CHOICES = [
+        ('good', 'Good'),
+        ('weak', 'Weak'),
+        ('dead', 'Dead / Needs Jump'),
+        ('replaced', 'Replaced'),
+        ('unknown', 'Unknown'),
+    ]
+    fuel_level = models.CharField(
+        max_length=20,
+        choices=FUEL_LEVEL_CHOICES,
+        blank=True,
+        default='',
+        help_text='Fuel level noted at check-in / intake (Job Card)',
+    )
+    battery_condition = models.CharField(
+        max_length=20,
+        choices=BATTERY_CONDITION_CHOICES,
+        blank=True,
+        default='',
+        help_text='Battery condition noted at intake; may be prefilled from DVI',
+    )
+    valuables_notes = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Customer valuables left in vehicle (Job Card)',
+    )
+    warning_lights_notes = models.TextField(
+        blank=True,
+        default='',
+        help_text='Dashboard / warning lights observed; may be prefilled from DVI',
+    )
     
     # Quality Control
     quality_check_required = models.BooleanField(default=True)

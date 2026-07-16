@@ -323,13 +323,13 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 max-w-[1700px] mx-auto pb-10">
+    <div className="space-y-6 w-full pb-10">
       <DynamicPageTitle title="Customers" />
 
       {/* Header Section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tighter text-foreground">Customers</h1>
+          <h1 className="text-xl font-bold tracking-tighter text-foreground">Customers</h1>
           <div className="perfex:block hidden">
             <Link href="/customers/contacts" className="text-xs text-primary hover:underline flex items-center gap-1">
               Contacts <span className="text-[10px]">→</span>
@@ -339,7 +339,7 @@ export default function CustomersPage() {
 
         <PermissionGuard permission="create_customers">
           <Link href="/customers/new" className="self-start sm:self-auto">
-            <Button size="sm" className="h-9 shadow-sm hover:scale-[1.02] transition-all duration-300">
+            <Button size="sm" className="h-9 shadow-workshop">
               <Plus className="w-4 h-4 mr-2" />
               Add Customer
             </Button>
@@ -412,7 +412,7 @@ export default function CustomersPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-9 text-[9px] font-black uppercase tracking-widest gap-2">
+              <Button variant="outline" className="h-9 text-[9px] font-bold uppercase tracking-widest gap-2">
                 Actions
                 <ChevronDown className="w-3 h-3" />
               </Button>

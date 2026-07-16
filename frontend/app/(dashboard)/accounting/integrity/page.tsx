@@ -47,7 +47,7 @@ export default function SubledgerIntegrityPage() {
   const prepayments = data?.customer_prepayments;
 
   return (
-    <div className="space-y-4 p-4 md:p-0 max-w-5xl">
+    <div className="space-y-4 w-full">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Subledger Integrity</h1>

@@ -36,7 +36,7 @@ export default function NewAppointmentPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="w-full space-y-8 pb-12">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href="/appointments">
@@ -46,7 +46,7 @@ export default function NewAppointmentPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Schedule Appointment</h1>
+            <h1 className="text-xl font-bold text-foreground">Schedule Appointment</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Create a new service appointment
             </p>
@@ -55,9 +55,9 @@ export default function NewAppointmentPage() {
       </div>
 
       {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-destructive dark:text-red-300">{serverError}</p>
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30">
+          <AlertCircle className="w-5 h-5 text-destructive dark:text-destructive flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive dark:text-destructive">{serverError}</p>
         </div>
       )}
 

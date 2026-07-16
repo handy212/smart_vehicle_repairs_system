@@ -214,7 +214,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
     };
 
     return (
-        <div className="relative w-full max-w-md mx-auto min-h-[300px] bg-black rounded-lg overflow-hidden flex flex-col items-center justify-center border border-white/10 shadow-2xl">
+        <div className="relative w-full max-w-md mx-auto min-h-[300px] bg-black rounded-lg overflow-hidden flex flex-col items-center justify-center border border-card/10 shadow-2xl">
             {/* Scanner container — ALWAYS in DOM so html5-qrcode can attach */}
             <div
                 id={containerId.current}
@@ -234,10 +234,10 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
             {/* Error */}
             {state === 'error' && errorMsg && (
                 <div className="p-6 text-center text-white/90 space-y-4 z-30 relative">
-                    <div className="w-14 h-14 mx-auto rounded-full bg-destructive/100/20 flex items-center justify-center">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-destructive flex items-center justify-center">
                         {errorMsg.includes('denied') || errorMsg.includes('permission')
-                            ? <ShieldAlert className="w-7 h-7 text-red-400" />
-                            : <AlertCircle className="w-7 h-7 text-red-400" />
+                            ? <ShieldAlert className="w-7 h-7 text-destructive" />
+                            : <AlertCircle className="w-7 h-7 text-destructive" />
                         }
                     </div>
                     <div className="space-y-1.5">
@@ -246,7 +246,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
                     </div>
 
                     {(errorMsg.includes('denied') || errorMsg.includes('permission')) && (
-                        <div className="bg-white/5 rounded-lg p-3 text-left text-[11px] text-white/50 space-y-1 border border-white/10">
+                        <div className="bg-card/5 rounded-lg p-3 text-left text-[11px] text-white/50 space-y-1 border border-card/10">
                             <p className="font-semibold text-white/70 mb-1.5">How to enable camera:</p>
                             <p>• <strong>Chrome:</strong> Tap lock icon → Site settings → Camera → Allow</p>
                             <p>• <strong>Safari:</strong> Settings → Safari → Camera → Allow</p>
@@ -259,7 +259,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
                             variant="outline"
                             size="sm"
                             onClick={() => requestPermissionAndStart()}
-                            className="border-white/20 text-white hover:bg-white/10"
+                            className="border-card/20 text-white hover:bg-card/10"
                         >
                             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                             Try Again
@@ -269,7 +269,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
                                 variant="outline"
                                 size="sm"
                                 onClick={handleClose}
-                                className="border-white/20 text-white hover:bg-white/10"
+                                className="border-card/20 text-white hover:bg-card/10"
                             >
                                 Close
                             </Button>
@@ -287,7 +287,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
                                 variant="destructive"
                                 size="sm"
                                 onClick={handleClose}
-                                className="bg-destructive/100/80 hover:bg-destructive/100 backdrop-blur-sm shadow-lg h-8 text-xs"
+                                className="bg-destructive hover:bg-destructive backdrop-blur-sm shadow-lg h-8 text-xs"
                             >
                                 <X className="w-3.5 h-3.5 mr-1" />
                                 Cancel
@@ -305,7 +305,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
                     </div>
 
                     <div className="absolute bottom-5 left-0 right-0 flex justify-center z-10 pointer-events-none px-4">
-                        <div className="bg-black/70 text-white px-3 py-1.5 rounded-full text-xs flex items-center gap-2 backdrop-blur-md border border-white/20">
+                        <div className="bg-black/70 text-white px-3 py-1.5 rounded-full text-xs flex items-center gap-2 backdrop-blur-md border border-card/20">
                             <Camera className="w-3.5 h-3.5 shrink-0 text-primary" />
                             <span className="font-medium">Align barcode within the frame</span>
                         </div>

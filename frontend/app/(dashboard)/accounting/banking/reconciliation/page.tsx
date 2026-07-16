@@ -101,7 +101,7 @@ export default function BankReconciliationPage() {
         <div className="space-y-4">
             <div className="flex justify-between items-center pt-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Bank Reconciliation</h1>
+                    <h1 className="text-xl font-bold tracking-tight text-foreground">Bank Reconciliation</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Verify and match bank transactions
                     </p>
@@ -160,11 +160,11 @@ export default function BankReconciliationPage() {
                                         </TableCell>
                                         <TableCell className="px-4 py-2">
                                             {statement.reconciled ? (
-                                                <Badge variant="outline" className="text-xs bg-success/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                                                <Badge variant="outline" className="text-xs bg-success/15 text-success border-success/20">
                                                     <Check className="w-3 h-3 mr-1" /> Reconciled
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="text-xs bg-warning/10 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+                                                <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/40">
                                                     <AlertCircle className="w-3 h-3 mr-1" /> Pending
                                                 </Badge>
                                             )}

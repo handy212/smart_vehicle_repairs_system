@@ -380,7 +380,7 @@ export default function PurchaseOrderDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              <h1 className="text-xl font-bold text-foreground tracking-tight">
                 PO: {purchaseOrder.po_number}
               </h1>
               <Badge variant={getStatusVariant(purchaseOrder.status) as any} className="text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider">
@@ -549,7 +549,7 @@ export default function PurchaseOrderDetailPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-2 border-l-blue-500 shadow-sm">
+        <Card className="border-l-2 border-l-primary shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -559,12 +559,12 @@ export default function PurchaseOrderDetailPage() {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">Total order amount</p>
               </div>
-              <CircleDollarSign className="h-6 w-6 text-blue-500/30" />
+              <CircleDollarSign className="h-6 w-6 text-primary/30" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-2 border-l-amber-500 shadow-sm">
+        <Card className="border-l-2 border-l-warning shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -580,7 +580,7 @@ export default function PurchaseOrderDetailPage() {
         </Card>
 
         {isQboConnected && (
-          <Card className="border-l-2 border-l-green-500 shadow-sm">
+          <Card className="border-l-2 border-l-success shadow-sm">
             <CardContent className="p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -603,7 +603,7 @@ export default function PurchaseOrderDetailPage() {
           </Card>
         )}
 
-        <Card className="border-l-2 border-l-purple-500 shadow-sm">
+        <Card className="border-l-2 border-l-info shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -613,7 +613,7 @@ export default function PurchaseOrderDetailPage() {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">Creation timeline</p>
               </div>
-              <FileText className="h-6 w-6 text-purple-500/30" />
+              <FileText className="h-6 w-6 text-info/30" />
             </div>
           </CardContent>
         </Card>

@@ -46,7 +46,7 @@ export default function WithholdingTaxPage() {
       <div className="no-print space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4 pt-2">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Withholding Tax</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Withholding Tax</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               WHT liability balances from configured accounts
             </p>
@@ -82,8 +82,8 @@ export default function WithholdingTaxPage() {
           </div>
 
           {report.note && (
-            <Card className="border-amber-200 bg-amber-50/50">
-              <CardContent className="p-4 text-sm text-amber-900">{report.note}</CardContent>
+            <Card className="border-warning/20 bg-warning/10">
+              <CardContent className="p-4 text-sm text-warning">{report.note}</CardContent>
             </Card>
           )}
 

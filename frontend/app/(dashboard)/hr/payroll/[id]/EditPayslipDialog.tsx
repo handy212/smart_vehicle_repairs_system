@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -198,8 +198,8 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                         {/* Allowances */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-base font-semibold text-green-700 dark:text-green-400">Allowances</Label>
-                                <Badge variant="outline" className="bg-success/10 text-green-700 border-green-200">
+                                <Label className="text-base font-semibold text-success dark:text-success">Allowances</Label>
+                                <Badge variant="outline" className="bg-success/15 text-success border-success/20">
                                     Total: {allowances.reduce((s, i) => s + i.amount, 0).toLocaleString()}
                                 </Badge>
                             </div>
@@ -224,7 +224,7 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                         {/* Deductions */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-base font-semibold text-destructive dark:text-red-400">Deductions</Label>
+                                <Label className="text-base font-semibold text-destructive dark:text-destructive">Deductions</Label>
                                 <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
                                     Total: {deductions.reduce((s, i) => s + i.amount, 0).toLocaleString()}
                                 </Badge>

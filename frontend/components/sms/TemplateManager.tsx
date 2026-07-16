@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import { AIAssistDialog } from "./AIAssistDialog";
 import { useToast } from "@/lib/hooks/useToast";
-import { useTheme } from "@/lib/hooks/useTheme";
 import { cn } from "@/lib/utils/cn";
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/table-typography";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
   Dialog,
@@ -54,8 +54,6 @@ function charCount(body: string) {
 export function TemplateManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme.startsWith("perfex");
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Template | null>(null);
@@ -184,44 +182,36 @@ export function TemplateManager() {
     form.sms_body !== (selected?.sms_body ?? "");
 
   // Shared styles
-  const cardCls = isPerfex
-    ? "border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]"
-    : "border border-border rounded-xl bg-card";
-  const headerCls = isPerfex
-    ? "px-4 py-3 border-b border-border flex items-center justify-between"
-    : "px-5 py-4 border-b border-border flex items-center justify-between";
-  const titleCls = isPerfex
-    ? "text-sm font-semibold text-foreground"
-    : "text-sm font-semibold text-foreground";
+  const cardCls = cn(WORKSHOP_PANEL_CLASS, "overflow-hidden");
+  const headerCls =
+    "flex items-center justify-between border-b border-[color:var(--outline-variant)] px-4 py-3.5";
+  const titleCls = "text-sm font-bold text-foreground";
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-220px)] min-h-[500px]">
+      <div className="grid h-[calc(100vh-220px)] min-h-[500px] grid-cols-1 gap-4 lg:grid-cols-3">
         {/* LEFT — template list */}
-        <div className={cn(cardCls, "flex flex-col overflow-hidden")}>
+        <div className={cn(cardCls, "flex flex-col")}>
           <div className={headerCls}>
             <span className={titleCls}>Templates ({templates.length})</span>
             <Button
               size="sm"
               onClick={handleNew}
-              className={cn("h-7 text-xs gap-1", isPerfex && "rounded")}
+              className="h-8 gap-1 rounded-lg text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
               New
             </Button>
           </div>
 
-          <div className="p-3 border-b border-border">
+          <div className="border-b border-[color:var(--outline-variant)] p-3">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search templates…"
-                className={cn(
-                  "pl-8",
-                  isPerfex ? "h-7 text-xs rounded" : "h-8 text-sm"
-                )}
+                className="h-8 rounded-lg pl-8 text-sm"
               />
             </div>
           </div>
@@ -232,19 +222,19 @@ export function TemplateManager() {
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-3" />
+              <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+                <MessageSquare className="mb-3 h-8 w-8 text-muted-foreground/40" />
                 <p className="text-sm font-medium text-muted-foreground">
                   {search ? "No matches" : "No templates yet"}
                 </p>
                 {!search && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Click &quot;New&quot; to create your first template
                   </p>
                 )}
               </div>
             ) : (
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-[color:var(--outline-variant)]">
                 {filtered.map((t) => {
                   const isActive =
                     (selected?.id === t.id && !isNew) ||
@@ -254,31 +244,21 @@ export function TemplateManager() {
                       key={t.id}
                       onClick={() => handleSelect(t)}
                       className={cn(
-                        "w-full text-left px-4 py-3 transition-colors hover:bg-muted/50",
-                        isActive && "bg-muted"
+                        "w-full px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                        isActive && "bg-[var(--nav-active-bg)]"
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span
-                          className={cn(
-                            "font-medium truncate",
-                            isPerfex ? "text-xs" : "text-sm"
-                          )}
-                        >
+                        <span className="truncate text-sm font-medium">
                           {t.name}
                         </span>
                         {!t.is_active && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0">
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
                             Inactive
                           </Badge>
                         )}
                       </div>
-                      <p
-                        className={cn(
-                          "text-muted-foreground truncate mt-0.5",
-                          isPerfex ? "text-[11px]" : "text-xs"
-                        )}
-                      >
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
                         {t.sms_body}
                       </p>
                     </button>
@@ -290,10 +270,10 @@ export function TemplateManager() {
         </div>
 
         {/* RIGHT — form */}
-        <div className={cn(cardCls, "lg:col-span-2 flex flex-col overflow-hidden")}>
+        <div className={cn(cardCls, "flex flex-col lg:col-span-2")}>
           {!selected && !isNew ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-              <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-4" />
+            <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+              <MessageSquare className="mb-4 h-10 w-10 text-muted-foreground/30" />
               <p className="text-sm font-medium text-muted-foreground">
                 Select a template to edit, or create a new one
               </p>
@@ -308,20 +288,20 @@ export function TemplateManager() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-xs text-primary hover:bg-primary/10"
+                    className="h-8 text-xs text-primary hover:bg-primary/10"
                     onClick={() => setIsAIDialogOpen(true)}
                   >
-                    <Sparkles className="h-3.5 w-3.5 mr-1" />
+                    <Sparkles className="mr-1 h-3.5 w-3.5" />
                     AI Assist
                   </Button>
                   {!isNew && selected && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => setDeleteTarget(selected)}
                     >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
                       Delete
                     </Button>
                   )}
@@ -329,24 +309,21 @@ export function TemplateManager() {
                     size="sm"
                     onClick={handleSave}
                     disabled={isSaving || (!isNew && !isDirty)}
-                    className={cn("h-7 text-xs", isPerfex && "rounded")}
+                    className="h-8 rounded-lg text-xs"
                   >
                     {isSaving ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
                     )}
                     {isNew ? "Create" : "Save Changes"}
                   </Button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              <div className="flex-1 space-y-5 overflow-y-auto p-5">
                 <div className="space-y-1.5">
-                  <Label
-                    htmlFor="tpl-name"
-                    className={isPerfex ? "text-xs font-semibold" : "text-sm font-medium"}
-                  >
+                  <Label htmlFor="tpl-name" className="text-xs font-semibold">
                     Template Name
                   </Label>
                   <Input
@@ -354,25 +331,21 @@ export function TemplateManager() {
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="e.g. Appointment Reminder"
-                    className={isPerfex ? "h-8 text-sm rounded" : "h-9 text-sm"}
+                    className="h-9 rounded-lg text-sm"
                     maxLength={200}
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label
-                      htmlFor="tpl-body"
-                      className={isPerfex ? "text-xs font-semibold" : "text-sm font-medium"}
-                    >
+                    <Label htmlFor="tpl-body" className="text-xs font-semibold">
                       Message Body
                     </Label>
                     <span
                       className={cn(
-                        "tabular-nums",
-                        isPerfex ? "text-[10px]" : "text-xs",
+                        "text-xs tabular-nums",
                         len > MAX_CHARS * 0.9
-                          ? "text-warning font-semibold"
+                          ? "font-semibold text-warning"
                           : "text-muted-foreground"
                       )}
                     >
@@ -386,13 +359,10 @@ export function TemplateManager() {
                       setForm((f) => ({ ...f, sms_body: e.target.value }))
                     }
                     placeholder="Type the SMS message content here. Use {customer_name}, {appointment_date}, etc. for variables."
-                    className={cn(
-                      "resize-none",
-                      isPerfex ? "text-sm rounded min-h-[180px]" : "text-sm min-h-[200px]"
-                    )}
+                    className="min-h-[180px] resize-none rounded-lg text-sm"
                     maxLength={MAX_CHARS}
                   />
-                  <div className={cn("text-muted-foreground space-y-1", isPerfex ? "text-[10px]" : "text-xs")}>
+                  <div className="space-y-1 text-xs text-muted-foreground">
                     <p className="font-medium text-foreground">Available variables:</p>
                     <div className="flex flex-wrap gap-1">
                       {[
@@ -408,7 +378,7 @@ export function TemplateManager() {
                       ].map((v) => (
                         <code
                           key={v}
-                          className="bg-muted px-1 py-0.5 rounded text-[10px] cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors"
+                          className="cursor-pointer rounded bg-muted px-1 py-0.5 text-[10px] transition-colors hover:bg-primary/10 hover:text-primary"
                           title="Click to insert"
                           onClick={() => setForm((f) => ({ ...f, sms_body: f.sms_body + v }))}
                         >
@@ -420,7 +390,7 @@ export function TemplateManager() {
                 </div>
 
                 {!isNew && selected && (
-                  <div className={cn("rounded-md p-3 bg-muted/40 border border-border", isPerfex ? "text-[11px]" : "text-xs")}>
+                  <div className="rounded-lg border border-[color:var(--outline-variant)] bg-muted/40 p-3 text-xs">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-muted-foreground">
                       <span>Type: <strong className="text-foreground">Custom SMS</strong></span>
                       <span>Status: <strong className={selected.is_active ? "text-success" : "text-muted-foreground"}>{selected.is_active ? "Active" : "Inactive"}</strong></span>

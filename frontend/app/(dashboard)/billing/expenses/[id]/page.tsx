@@ -97,7 +97,7 @@ export default function VendorExpenseDetailPage() {
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold">{expense.expense_number}</h1>
+              <h1 className="text-xl font-bold">{expense.expense_number}</h1>
               <Badge variant={isVoid ? "destructive" : "secondary"} className="capitalize">
                 {expense.status}
               </Badge>

@@ -223,7 +223,7 @@ export default function ServiceHistoryPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
-                          <Search className="w-5 h-5 text-green-500" />
+                          <Search className="w-5 h-5 text-success" />
                           <h3 className="text-lg font-semibold text-foreground">
                             Inspection #{inspection.inspection_number}
                           </h3>

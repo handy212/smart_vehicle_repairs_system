@@ -165,14 +165,14 @@ export default function EstimateDetailPage() {
 
       {/* Status Alert */}
       {["sent", "viewed"].includes(estimate.status) && isActionableWorkOrder && (
-        <Card className="bg-warning/10 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+        <Card className="bg-warning/10 dark:bg-warning/15 border-warning/20 dark:border-warning/40">
           <CardContent className="p-4 flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <AlertCircle className="w-5 h-5 text-warning dark:text-warning" />
             <div>
-              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+              <p className="text-sm font-medium text-warning dark:text-warning">
                 Action Required
               </p>
-              <p className="text-xs text-yellow-800 dark:text-yellow-200">
+              <p className="text-xs text-warning dark:text-warning">
                 Please review and approve or decline this estimate.
                 {estimate.days_until_expiration !== null && (
                   <> It expires in {estimate.days_until_expiration} days.</>
@@ -304,7 +304,7 @@ export default function EstimateDetailPage() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="divide-y divide-border dark:divide-border">
 
                       {estimate.line_items.map((item: EstimateLineItem, index: number) => (
                         <tr key={index} className="hover:bg-muted hover:bg-muted">

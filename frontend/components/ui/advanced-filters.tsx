@@ -254,7 +254,7 @@ export function AdvancedFilters({
                               setLocalFilters(newFilters);
                               onFiltersChange(newFilters);
                             }}
-                            className="ml-1 text-muted-foreground hover:text-destructive dark:hover:text-red-400 transition-colors"
+                            className="ml-1 text-muted-foreground hover:text-destructive dark:hover:text-destructive transition-colors"
                             type="button"
                           >
                             <X className="w-3 h-3" />

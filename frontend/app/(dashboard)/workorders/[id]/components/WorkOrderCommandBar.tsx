@@ -45,6 +45,8 @@ interface WorkOrderCommandBarProps {
   showRecommendationsAction?: boolean;
   canPrintRecommendations?: boolean;
   onPrintWorkOrder: () => void;
+  onPrintJobCard?: () => void;
+  onSendJobCardWhatsApp?: () => void;
   onDownloadPdf: () => void;
   onDelete?: () => void;
   canDelete?: boolean;
@@ -65,6 +67,8 @@ export function WorkOrderCommandBar({
   showRecommendationsAction,
   canPrintRecommendations,
   onPrintWorkOrder,
+  onPrintJobCard,
+  onSendJobCardWhatsApp,
   onDownloadPdf,
   onDelete,
   canDelete,
@@ -85,23 +89,23 @@ export function WorkOrderCommandBar({
   const canEditWorkOrder = workOrder.status !== "closed";
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-2">
           <Button
             variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={() => router.back()}
-            aria-label="Back"
+            size="sm"
+            className="h-8 shrink-0 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            onClick={() => router.push("/workorders")}
+            aria-label="Back to work orders"
           >
             <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Work Orders</span>
           </Button>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-sm font-bold text-primary">
+              <h1 className="font-mono text-base font-bold tracking-tight text-foreground sm:text-lg">
                 #{workOrder.work_order_number}
-              </span>
+              </h1>
               <Badge variant={getStatusVariant(statusForVariant || workOrder.status) as "default"} className="text-[10px]">
                 {statusLabelOverride || getStatusLabel(workOrder.status)}
               </Badge>
@@ -116,6 +120,17 @@ export function WorkOrderCommandBar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          {canEditWorkOrder && (
+            <PermissionGuard permission="edit_workorders">
+              <Button variant="outline" size="sm" className="h-8" asChild>
+                <Link href={`/workorders/${workOrderId}/edit`}>
+                  <Edit className="mr-1.5 h-3.5 w-3.5" />
+                  Edit
+                </Link>
+              </Button>
+            </PermissionGuard>
+          )}
+
           {showRecommendationsAction && onShowRecommendations && (
             <Button
               variant="outline"
@@ -144,10 +159,22 @@ export function WorkOrderCommandBar({
                 <span className="sr-only">More actions</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-52">
+              {onPrintJobCard && (
+                <DropdownMenuItem onClick={onPrintJobCard}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  {isOpeningPrint ? "Opening…" : "Print Job Card"}
+                </DropdownMenuItem>
+              )}
+              {onSendJobCardWhatsApp && (
+                <DropdownMenuItem onClick={onSendJobCardWhatsApp}>
+                  <PremiumIcons.MessageSquare className="mr-2 h-4 w-4" />
+                  Via WhatsApp
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onPrintWorkOrder}>
                 <Printer className="mr-2 h-4 w-4" />
-                {isOpeningPrint ? "Opening…" : "Print work order"}
+                {isOpeningPrint ? "Opening…" : "Print Workorder"}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDownloadPdf}>
                 <FileText className="mr-2 h-4 w-4" />
@@ -167,16 +194,6 @@ export function WorkOrderCommandBar({
                 <PremiumIcons.MessageSquare className="mr-2 h-4 w-4" />
                 Chat
               </DropdownMenuItem>
-              {canEditWorkOrder && (
-                <PermissionGuard permission="edit_workorders">
-                  <DropdownMenuItem asChild>
-                    <Link href={`/workorders/${workOrderId}/edit`}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit order
-                    </Link>
-                  </DropdownMenuItem>
-                </PermissionGuard>
-              )}
               {canDelete && onDelete && (
                 <>
                   <DropdownMenuSeparator />
@@ -193,7 +210,6 @@ export function WorkOrderCommandBar({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
     </div>
   );
 }

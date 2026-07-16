@@ -90,6 +90,14 @@ class WorkOrderAdmin(admin.ModelAdmin):
         ('Customer & Vehicle', {
             'fields': ('customer', 'vehicle', 'odometer_in', 'odometer_out')
         }),
+        ('Intake Condition (Job Card)', {
+            'fields': (
+                'fuel_level',
+                'battery_condition',
+                'valuables_notes',
+                'warning_lights_notes',
+            ),
+        }),
         ('Technician Assignment', {
             'fields': ('primary_technician',)
         }),

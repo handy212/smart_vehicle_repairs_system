@@ -101,7 +101,7 @@ export default function FinancialRatiosPage() {
       <div className="no-print space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4 pt-2">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Financial Ratios</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Financial Ratios</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Liquidity, leverage, and profitability metrics
             </p>

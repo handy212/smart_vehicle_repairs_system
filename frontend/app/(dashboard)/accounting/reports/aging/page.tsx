@@ -101,7 +101,7 @@ export default function AgingReportPage() {
     };
 
     return (
-        <div className="space-y-4 p-4 sm:p-6">
+        <div className="space-y-4">
             <div className="no-print flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div className="flex items-center gap-3">
                     <Link href="/accounting">
@@ -110,7 +110,7 @@ export default function AgingReportPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Aging Report</h1>
+                        <h1 className="text-xl font-bold tracking-tight">Aging Report</h1>
                         <p className="text-sm text-muted-foreground">
                             For {format(new Date(date), "MMMM d, yyyy")}
                         </p>

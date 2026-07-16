@@ -208,14 +208,14 @@ export default function VehiclesPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="space-y-6 w-full animate-in fade-in duration-500">
       <DynamicPageTitle title="Vehicles" />
 
       {/* Precision Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Fleet Management</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Fleet Management</h1>
             <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-bold bg-muted/50 border-border/50">
               {data?.count || 0} VEHICLES
             </Badge>
@@ -225,7 +225,7 @@ export default function VehiclesPage() {
         <div className="flex items-center gap-2">
           <PermissionGuard permission="create_vehicles">
             <Link href="/vehicles/new">
-              <Button size="sm" className="h-9 shadow-sm hover:scale-[1.02] transition-all duration-300">
+              <Button size="sm" className="h-9 shadow-workshop">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Vehicle
               </Button>
@@ -323,7 +323,7 @@ export default function VehiclesPage() {
           <TableSkeleton rows={8} columns={6} />
         </div>
       ) : error ? (
-        <div className="precision-card p-12 text-center text-destructive border-rose-100 bg-rose-50/50">
+        <div className="precision-card p-12 text-center text-destructive border-destructive/20 bg-destructive/5">
           Error loading vehicle data. Please try again or contact support.
         </div>
       ) : (

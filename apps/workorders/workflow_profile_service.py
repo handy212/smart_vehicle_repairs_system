@@ -41,18 +41,6 @@ def _iter_job_types(work_order):
     if cached:
         return list(cached)
 
-    job_types_manager = None
-    if getattr(work_order, 'pk', None):
-        job_types_manager = getattr(work_order, 'job_types', None)
-    if job_types_manager is not None:
-        try:
-            types = list(job_types_manager.select_related('workflow_profile').all())
-            if types:
-                return types
-        except Exception:
-            # Unsaved instance or M2M not ready
-            pass
-
     job_type = getattr(work_order, 'job_type', None)
     if job_type is not None:
         return [job_type]

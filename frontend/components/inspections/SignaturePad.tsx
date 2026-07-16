@@ -88,7 +88,7 @@ export function SignaturePad({
       <CardContent className="px-3 pb-3 pt-0">
         <div 
           className={cn(
-            "overflow-hidden rounded-md border border-dashed bg-white",
+            "overflow-hidden rounded-md border border-dashed bg-card",
             disabled ? "pointer-events-none opacity-50" : "border-border",
             !disabled && "border-border"
           )}

@@ -241,7 +241,7 @@ export function InspectionForm({
                                     <p className="text-destructive text-xs mt-1">{errors.work_order.message}</p>
                                 )}
                                 {workOrderData && (
-                                    <div className="flex items-center gap-2 mt-1 bg-primary/10 dark:bg-orange-900/20 px-2 py-1 rounded text-xs text-orange-700 dark:text-orange-300">
+                                    <div className="flex items-center gap-2 mt-1 bg-primary/10 dark:bg-warning/20 px-2 py-1 rounded text-xs text-warning dark:text-warning">
                                         <Wrench className="w-3 h-3" />
 
                                         Linked to WO #{workOrderData.work_order_number || workOrderData.wo_number || workOrderData.id}
@@ -298,14 +298,14 @@ export function InspectionForm({
                             )}
                         </div>
 
-                        <div className="flex justify-end space-x-3 pt-4 border-t border-border">
+                        <div className="sticky bottom-0 z-10 -mx-6 mt-2 flex justify-end gap-3 border-t border-border bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isSubmitting}>
+                            <Button type="submit" className="shadow-workshop" disabled={isSubmitting}>
                                 {isSubmitting ? (
                                     <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin" />
                                         Creating...
                                     </div>
                                 ) : (

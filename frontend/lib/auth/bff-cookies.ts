@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 export const ACCESS_COOKIE = 'access_token';
 export const REFRESH_COOKIE = 'svr_refresh_token';
 export const IMPERSONATOR_COOKIE = 'svr_impersonator_refresh';
-const REFRESH_COOKIE_PATH = '/api/auth';
+/** Match Django `JWT_REFRESH_COOKIE_PATH` (trailing slash). */
+const REFRESH_COOKIE_PATH = '/api/auth/';
 
 export function getDjangoApiBase(): string {
   return (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001/api').replace(/\/$/, '');

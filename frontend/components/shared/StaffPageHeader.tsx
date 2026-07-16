@@ -42,7 +42,7 @@ export function StaffPageHeader({
                         ))}
                     </nav>
                 )}
-                <h1 className="text-2xl font-bold tracking-tight text-foreground break-words">{title}</h1>
+                <h1 className="text-xl font-bold tracking-tight text-foreground break-words">{title}</h1>
                 {description && <p className="text-muted-foreground break-words">{description}</p>}
             </div>
             {actions && <div className="flex flex-wrap items-center gap-2 md:justify-end">{actions}</div>}

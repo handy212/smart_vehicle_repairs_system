@@ -111,7 +111,7 @@ export function PartsRequiredTab({
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "pending":
-                return { color: "text-yellow-600 bg-warning/10", icon: Clock };
+                return { color: "text-warning bg-warning/10", icon: Clock };
             case "ordered":
                 return { color: "text-primary bg-primary/10", icon: Package };
             case "received":
@@ -180,7 +180,7 @@ export function PartsRequiredTab({
                                 disabled={isDisabled || isSubmitting}
                             >
                                 {isSubmitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                                    <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin mr-2" />
                                 ) : (
                                     <Send className="w-3.5 h-3.5 mr-1.5" />
                                 )}
@@ -200,7 +200,7 @@ export function PartsRequiredTab({
                         </div>
                     ) : parts.length === 0 ? (
                         <div className="text-center py-16">
-                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
+                            <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground text-muted-foreground" />
                             <h3 className="text-sm font-medium text-foreground mb-1">No parts requested</h3>
                             <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
                                 Add parts needed for this repair.
@@ -531,7 +531,7 @@ function PartFormDialog({
                                             <th className="px-3 py-2 font-medium w-[40px]"></th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    <tbody className="divide-y divide-border dark:divide-border">
                                         {queuedParts.map((item, idx) => (
                                             <tr key={idx} className="group hover:bg-card hover:bg-muted/50">
                                                 <td className="px-3 py-2">

@@ -94,7 +94,7 @@ export default function SupplierDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-xl font-bold text-foreground">
                 {supplier.name} ({supplier.supplier_code})
               </h1>
               <div className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export default function SupplierDetailPage() {
                   {supplier.is_active ? "Active" : "Inactive"}
                 </Badge>
                 {supplier.is_preferred && (
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 bg-warning/100 hover:bg-amber-600 border-none">
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 bg-warning hover:bg-warning border-none">
                     Preferred
                   </Badge>
                 )}
@@ -151,7 +151,7 @@ export default function SupplierDetailPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-2 border-l-blue-500 shadow-sm">
+        <Card className="border-l-2 border-l-primary shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -159,12 +159,12 @@ export default function SupplierDetailPage() {
                 <h3 className="text-xl font-bold text-foreground">Status</h3>
                 <p className="text-[10px] text-muted-foreground">{supplier.is_active ? 'Active Account' : 'Inactive Account'}</p>
               </div>
-              <Building2 className="h-6 w-6 text-blue-500/30" />
+              <Building2 className="h-6 w-6 text-primary/30" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-2 border-l-amber-500 shadow-sm">
+        <Card className="border-l-2 border-l-warning shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -179,7 +179,7 @@ export default function SupplierDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-2 border-l-red-500 shadow-sm">
+        <Card className="border-l-2 border-l-destructive shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -194,7 +194,7 @@ export default function SupplierDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-2 border-l-green-500 shadow-sm">
+        <Card className="border-l-2 border-l-success shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>

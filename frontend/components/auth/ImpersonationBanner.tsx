@@ -54,7 +54,7 @@ export function ImpersonationBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-[60] border-b border-amber-700/40 bg-amber-500 text-amber-950">
+    <div className="sticky top-0 z-[60] border-b border-warning/40 bg-warning text-warning-foreground">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm sm:px-6">
         <p>
           Viewing portal as <strong>{customerName}</strong>
@@ -68,7 +68,7 @@ export function ImpersonationBanner() {
         <Button
           size="sm"
           variant="secondary"
-          className="bg-amber-950 text-amber-50 hover:bg-amber-900"
+          className="bg-warning text-warning-foreground hover:bg-warning"
           onClick={handleExit}
           disabled={exiting}
         >

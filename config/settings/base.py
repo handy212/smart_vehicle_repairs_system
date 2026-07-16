@@ -251,6 +251,9 @@ JWT_REFRESH_COOKIE_SAMESITE = 'Lax'
 JWT_ACCESS_COOKIE_NAME = 'access_token'
 JWT_ACCESS_COOKIE_PATH = '/'
 JWT_ACCESS_COOKIE_SAMESITE = 'Lax'
+# Next.js BFF needs tokens in the Django JSON response so it can set HttpOnly
+# cookies on the frontend origin; BFF strips them before the browser sees them.
+JWT_EMIT_TOKENS_IN_JSON = env.bool('JWT_EMIT_TOKENS_IN_JSON', default=True)
 # When True, omit access token from login JSON (cookie + memory bootstrap only)
 JWT_OMIT_ACCESS_FROM_JSON = env.bool('JWT_OMIT_ACCESS_FROM_JSON', default=False)
 
@@ -295,6 +298,8 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 # Social Account Settings
+GOOGLE_OAUTH_CLIENT_ID = env('GOOGLE_OAUTH_CLIENT_ID', default='')
+GOOGLE_OAUTH_CLIENT_SECRET = env('GOOGLE_OAUTH_CLIENT_SECRET', default='')
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -305,8 +310,8 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'APP': {
-            'client_id': env('GOOGLE_OAUTH_CLIENT_ID', default=''),
-            'secret': env('GOOGLE_OAUTH_CLIENT_SECRET', default=''),
+            'client_id': GOOGLE_OAUTH_CLIENT_ID,
+            'secret': GOOGLE_OAUTH_CLIENT_SECRET,
             'key': ''
         }
     }

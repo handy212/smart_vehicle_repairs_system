@@ -85,7 +85,7 @@ export function BillingSubmitActions({
                 <DropdownMenuTrigger asChild>
                     <Button
                         type="button"
-                        className="rounded-l-none border-l border-orange-700/50 bg-primary hover:bg-primary/90 px-2 focus:z-10"
+                        className="rounded-l-none border-l border-primary/40 bg-primary hover:bg-primary/90 px-2 focus:z-10"
                         disabled={isSubmitting}
                     >
                         <ChevronDown className="h-4 w-4" />

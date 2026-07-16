@@ -122,7 +122,7 @@ export default function NewSupplierPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">New Supplier</h1>
+          <h1 className="text-xl font-bold text-foreground">New Supplier</h1>
           <p className="text-sm text-muted-foreground mt-1">Add a new parts supplier</p>
         </div>
       </div>

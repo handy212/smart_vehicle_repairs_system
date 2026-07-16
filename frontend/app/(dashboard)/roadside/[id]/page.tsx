@@ -352,7 +352,7 @@ export default function RoadsideDetailPage() {
                 : null;
 
     return (
-        <div className="space-y-5 pb-12 max-w-6xl">
+        <div className="space-y-5 pb-12 w-full">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-border pb-4">
                 <div className="min-w-0 space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -596,7 +596,7 @@ export default function RoadsideDetailPage() {
                                             "absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card",
                                             entry.key === 'completed' ? "bg-success" :
                                             entry.key === 'cancelled' ? "bg-destructive" :
-                                            entry.key === 'dispatched' ? "bg-indigo-600" :
+                                            entry.key === 'dispatched' ? "bg-info" :
                                             "bg-primary"
                                         )} />
                                         <div className="flex items-center justify-between gap-2">
@@ -671,7 +671,7 @@ export default function RoadsideDetailPage() {
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    className="w-full text-destructive dark:text-red-400"
+                                    className="w-full text-destructive dark:text-destructive"
                                     onClick={() => {
                                         if (confirm("Are you sure you want to cancel this request?")) {
                                             statusUpdateMutation.mutate('cancel');
@@ -695,7 +695,7 @@ export default function RoadsideDetailPage() {
                                     {/* Requested */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-success/100 text-white'
+                                            ? 'bg-success text-white'
                                             : request.status === 'requested'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-muted-foreground'
@@ -704,12 +704,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Request</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
+                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success' : 'bg-muted'}`} />
 
                                     {/* Dispatched */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-success/100 text-white'
+                                            ? 'bg-success text-white'
                                             : request.status === 'dispatched'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-muted-foreground'
@@ -718,12 +718,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Dispatch</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
+                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success' : 'bg-muted'}`} />
 
                                     {/* En Route */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['on_site', 'in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-success/100 text-white'
+                                            ? 'bg-success text-white'
                                             : request.status === 'en_route'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-muted-foreground'
@@ -732,12 +732,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">En Route</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
+                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success' : 'bg-muted'}`} />
 
                                     {/* On Site */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-success/100 text-white'
+                                            ? 'bg-success text-white'
                                             : ['on_site', 'arrived'].includes(request.status)
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-muted-foreground'
@@ -746,12 +746,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">On Site</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
+                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-success' : 'bg-muted'}`} />
 
                                     {/* In Progress */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
-                                            ? 'bg-success/100 text-white'
+                                            ? 'bg-success text-white'
                                             : request.status === 'in_progress'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-muted-foreground'
@@ -760,7 +760,7 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Working</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-success/100' : 'bg-muted'}`} />
+                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-success' : 'bg-muted'}`} />
 
                                     {/* Completed */}
                                     <div className="flex flex-col items-center">
@@ -840,7 +840,7 @@ export default function RoadsideDetailPage() {
                     {request.is_covered_by_subscription && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                <CardTitle className="text-xs uppercase tracking-wider text-success dark:text-success flex items-center gap-1">
                                     <ShieldCheck className="h-3 w-3" /> AA Coverage
                                 </CardTitle>
                             </CardHeader>
@@ -851,7 +851,7 @@ export default function RoadsideDetailPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Status:</span>
-                                    <span className={`font-medium ${request.subscription_allowance_deducted ? "text-success dark:text-emerald-400" : "text-warning dark:text-amber-400"}`}>
+                                    <span className={`font-medium ${request.subscription_allowance_deducted ? "text-success dark:text-success" : "text-warning dark:text-warning"}`}>
                                         {request.subscription_allowance_deducted ? "Deducted" : "Refunded"}
                                     </span>
                                 </div>
@@ -882,7 +882,7 @@ export default function RoadsideDetailPage() {
                                 {request.rating && (
                                     <div className="flex items-center gap-1">
                                         {[1, 2, 3, 4, 5].map((star) => (
-                                            <span key={star} className={star <= request.rating! ? "text-yellow-500" : "text-muted-foreground"}>
+                                            <span key={star} className={star <= request.rating! ? "text-warning" : "text-muted-foreground"}>
                                                 ★
                                             </span>
                                         ))}

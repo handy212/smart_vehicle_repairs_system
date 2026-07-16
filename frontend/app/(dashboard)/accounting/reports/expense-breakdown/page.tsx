@@ -52,22 +52,22 @@ export default function ExpenseBreakdownPage() {
             label: "Parts & Inventory",
             description: "Cost of parts issued to work orders",
             icon: Package,
-            color: "bg-amber-500",
-            textColor: "text-amber-600 dark:text-amber-400"},
+            color: "bg-warning",
+            textColor: "text-warning dark:text-warning"},
         {
             key: "labor",
             label: "Direct Labor",
             description: "Technician labor costs on work orders",
             icon: Wrench,
-            color: "bg-blue-500",
-            textColor: "text-blue-600 dark:text-blue-400"},
+            color: "bg-primary/10",
+            textColor: "text-primary dark:text-primary"},
         {
             key: "overhead",
             label: "Overhead & Operating",
             description: "Rent, utilities, admin and other indirect costs",
             icon: BarChart3,
-            color: "bg-purple-500",
-            textColor: "text-purple-600 dark:text-purple-400"},
+            color: "bg-info",
+            textColor: "text-info dark:text-info"},
     ];
 
     const getExportPayload = () => {
@@ -90,7 +90,7 @@ export default function ExpenseBreakdownPage() {
         <div className="space-y-4">
             <div className="no-print pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">Expense Breakdown</h1>
+                <h1 className="text-xl font-bold tracking-tight text-foreground">Expense Breakdown</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Business expenses categorized by parts, labor, and overhead
                 </p>

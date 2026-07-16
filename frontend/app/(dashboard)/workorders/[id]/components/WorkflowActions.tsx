@@ -1866,7 +1866,7 @@ export default function WorkflowActions({
                     disabled={action.disabled}
                     title={action.description}
                     size="sm"
-                    className="bg-muted text-foreground "
+                    className="bg-muted text-foreground"
                   >
                     <Icon className="w-4 h-4 mr-1" />
                     {action.label}

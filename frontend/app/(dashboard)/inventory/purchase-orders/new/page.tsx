@@ -105,7 +105,7 @@ function NewPurchaseOrderContent() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">New Purchase Order</h1>
+                    <h1 className="text-xl font-bold text-foreground">New Purchase Order</h1>
                     <p className="text-sm text-muted-foreground mt-1">Create a new purchase order</p>
                 </div>
             </div>

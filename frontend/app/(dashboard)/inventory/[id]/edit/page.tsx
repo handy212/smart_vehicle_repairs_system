@@ -165,7 +165,7 @@ export default function EditPartPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Edit Part</h1>
+            <h1 className="text-xl font-bold text-foreground">Edit Part</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Update part information
             </p>
@@ -178,7 +178,7 @@ export default function EditPartPage() {
           <Button type="submit" form={formId} disabled={updateMutation.isPending}>
             {updateMutation.isPending ? (
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin" />
                 Saving...
               </div>
             ) : (
@@ -192,9 +192,9 @@ export default function EditPartPage() {
       </div>
 
       {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-destructive dark:text-red-300">{serverError}</p>
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30">
+          <AlertCircle className="w-5 h-5 text-destructive dark:text-destructive flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive dark:text-destructive">{serverError}</p>
         </div>
       )}
 

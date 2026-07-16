@@ -93,34 +93,31 @@ function NavLink({
       "flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none",
     variant === "mobile" &&
       cn(
-        "flex items-center gap-2 px-3 py-1.5 text-sm font-medium whitespace-nowrap shrink-0 rounded-full",
+        "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium",
         isActive
-          ? "font-semibold bg-muted text-foreground"
+          ? "bg-[var(--nav-active-bg)] font-semibold text-[color:var(--nav-active-fg)]"
           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
       ),
     variant === "desktop" &&
       cn(
-        "flex w-full items-center rounded-md text-sm",
+        "flex w-full items-center rounded-lg text-sm",
         collapsed
-          ? cn(COLLAPSED_ICON_SLOT_CLASS, isActive && "bg-muted/60")
-          : cn("py-1.5", nested ? "pl-3 pr-2" : "px-2.5 gap-2.5"),
+          ? cn(COLLAPSED_ICON_SLOT_CLASS, isActive && "bg-[var(--nav-active-bg)]")
+          : cn("py-2", nested ? "pl-3 pr-2" : "gap-2.5 px-2.5"),
         !collapsed && isActive
-          ? "font-medium text-foreground bg-muted/80"
+          ? "bg-[var(--nav-active-bg)] font-semibold text-[color:var(--nav-active-fg)]"
           : !collapsed
             ? "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             : ""
       ),
     variant === "sidebar" &&
       cn(
-        "flex items-center rounded-md text-sm",
+        "flex items-center rounded-lg text-sm",
         collapsed
-          ? cn(COLLAPSED_ICON_SLOT_CLASS, isActive && "bg-muted/60")
-          : cn(nested ? "py-1.5 pr-2" : "mx-1.5 gap-2.5 px-2.5 py-2"),
+          ? cn(COLLAPSED_ICON_SLOT_CLASS, isActive && "bg-[var(--nav-active-bg)]")
+          : cn(nested ? "py-2 pr-2" : "mx-1 gap-2.5 px-2.5 py-2.5"),
         !collapsed && isActive
-          ? cn(
-              "font-medium text-foreground",
-              nested ? "bg-muted/70" : "bg-muted/80"
-            )
+          ? "font-semibold text-[color:var(--nav-active-fg)]"
           : !collapsed
             ? "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             : ""
@@ -128,13 +125,8 @@ function NavLink({
   );
 
   const style: React.CSSProperties | undefined =
-    isActive && visiblePrimary
-      ? {
-          ...(nested && !collapsed
-            ? { boxShadow: `inset 2px 0 0 ${visiblePrimary}` }
-            : {}),
-          ...(!nested && !collapsed ? { color: visiblePrimary } : {}),
-        }
+    isActive && visiblePrimary && nested && !collapsed
+      ? { boxShadow: `inset 3px 0 0 ${visiblePrimary}` }
       : undefined;
 
   return (
@@ -146,6 +138,7 @@ function NavLink({
         style={style}
         title={collapsed ? item.name : item.description}
         aria-current={isActive ? "page" : undefined}
+        data-active={isActive ? "true" : undefined}
       >
         {Icon && groupId && !nested && (
           <NavCategoryBadge
@@ -241,18 +234,13 @@ export function GroupedNavPanel({
   onItemClick,
 }: GroupedNavPanelProps) {
   const pathname = usePathname();
-  const { resolvedTheme, theme: activeTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { canViewModuleManagement, isModuleEnabled } = useModules();
   const { primaryColor } = useBranding("authenticated");
 
-  const isPerfexTheme = activeTheme.startsWith("perfex");
   const isDark = resolvedTheme === "dark";
   const visiblePrimary = primaryColor ? ensureVisibleColor(primaryColor, isDark) : undefined;
-  const sidebarLeft = sidebarCollapsed
-    ? "64px"
-    : isPerfexTheme
-      ? "var(--sidebar-width)"
-      : "256px";
+  const sidebarLeft = sidebarCollapsed ? "64px" : "var(--sidebar-width)";
   const isSubnav = layout === "subnav";
 
   const visibleGroups = useMemo(
@@ -523,12 +511,7 @@ export function GroupedNavPanel({
 
   return (
     <>
-      <div
-        className={cn(
-          "fixed top-[var(--header-height)] left-0 right-0 z-20 border-b border-border bg-background shadow-sm lg:hidden",
-          isPerfexTheme && "bg-card shadow-none"
-        )}
-      >
+      <div className="fixed left-0 right-0 top-[var(--header-height)] z-20 border-b border-[color:var(--outline-variant)] bg-[var(--panel-bg)] lg:hidden">
         <nav className="flex items-center gap-1.5 overflow-x-auto px-2 py-2 scrollbar-none">
           {visibleGroups.map(renderMobileGroup)}
         </nav>
@@ -536,24 +519,20 @@ export function GroupedNavPanel({
 
       <aside
         className={cn(
-          "fixed top-[var(--header-height)] bottom-0 z-10 hidden transition-all duration-200 lg:block",
-          isPerfexTheme
-            ? cn("border-r border-border bg-card", isCollapsed ? "w-12" : "w-52")
-            : cn("border-r border-border bg-background shadow-sm", isCollapsed ? "w-12" : "w-52")
+          "fixed bottom-0 top-[var(--header-height)] z-10 hidden border-r border-[color:var(--outline-variant)] bg-[var(--panel-bg)] transition-all duration-200 lg:block",
+          isCollapsed ? "w-12" : "w-52"
         )}
         style={{ left: sidebarLeft }}
       >
         <div
           className={cn(
-            "flex h-full flex-col",
-            isPerfexTheme ? "pt-2" : "p-3",
+            "flex h-full flex-col pt-2",
             isCollapsed && "px-1.5"
           )}
         >
           <div
             className={cn(
-              "flex items-center",
-              isPerfexTheme ? "mb-1 px-2 py-1.5" : "mb-2",
+              "mb-1 flex items-center px-2 py-1.5",
               isCollapsed ? "justify-center" : "justify-between"
             )}
           >

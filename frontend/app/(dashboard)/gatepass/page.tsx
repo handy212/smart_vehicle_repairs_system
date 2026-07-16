@@ -163,7 +163,7 @@ export default function GatePassPage() {
 
   if (error) {
     return (
-      <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
+      <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive px-4 py-3 rounded">
         Error loading gate passes. Please try again.
       </div>
     );
@@ -351,7 +351,7 @@ export default function GatePassPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0  data-[state=open]:bg-muted dark:data-[state=open]:bg-gray-800"
+                              className="h-6 w-6 p-0 data-[state=open]:bg-muted dark:data-[state=open]:bg-muted"
                             >
                               <span className="sr-only">Open menu</span>
                               <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
@@ -373,7 +373,7 @@ export default function GatePassPage() {
                             <PermissionGuard permission="delete_gatepass">
                               <DropdownMenuItem
                                 onClick={() => handleDelete(gatePass)}
-                                className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20 text-xs"
+                                className="text-destructive dark:text-destructive focus:text-destructive dark:focus:text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20 text-xs"
                                 disabled={deleteMutation.isPending}
                               >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" />

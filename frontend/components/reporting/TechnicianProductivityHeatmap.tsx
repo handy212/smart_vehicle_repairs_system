@@ -33,9 +33,9 @@ export function TechnicianProductivityHeatmap({ data }: TechnicianProductivityHe
     // Define metrics we want to visualize in the "heatmap" grid
     const metrics = [
         { key: "completed", label: "Volume", color: "bg-primary" },
-        { key: "revenue", label: "Revenue", color: "bg-success/100" },
-        { key: "average_completion_hours", label: "Efficiency", color: "bg-purple-500", invert: true },
-        { key: "success_rate", label: "Completion %", color: "bg-warning/100" },
+        { key: "revenue", label: "Revenue", color: "bg-success" },
+        { key: "average_completion_hours", label: "Efficiency", color: "bg-info", invert: true },
+        { key: "success_rate", label: "Completion %", color: "bg-warning" },
     ];
 
     // Calculate max values for normalization

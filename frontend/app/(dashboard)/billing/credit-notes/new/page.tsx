@@ -120,7 +120,7 @@ export default function NewCreditNotePage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
             <div className="flex items-center gap-4">
                 <Link href="/billing/credit-notes">
                     <Button variant="ghost" size="icon">
@@ -128,7 +128,7 @@ export default function NewCreditNotePage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">Create Credit Note</h1>
+                    <h1 className="text-xl font-bold text-foreground">Create Credit Note</h1>
                     <p className="text-sm text-muted-foreground">Issue a credit to a customer</p>
                 </div>
             </div>

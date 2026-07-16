@@ -24,6 +24,17 @@ def _get_pdf_footer_logos() -> list[str]:
     ]
 
 
+def _get_browser_footer_logos(base_url: str) -> list[str]:
+    """HTTP logo URLs for browser HTML print previews."""
+    logo_dir = Path(settings.BASE_DIR) / 'static' / 'images' / 'logos'
+    root = base_url.rstrip('/')
+    return [
+        f'{root}/static/images/logos/{filename}'
+        for filename in ('logo-1.jpeg', 'logo-2.jpeg', 'logo-3.jpeg')
+        if (logo_dir / filename).exists()
+    ]
+
+
 def _document_watermark_enabled() -> bool:
     from apps.accounts.settings_utils import get_setting
 
@@ -33,6 +44,7 @@ def _document_watermark_enabled() -> bool:
 
 DOCUMENT_WATERMARKS = {
     'work_order': 'WORK ORDER',
+    'job_card': 'JOB CARD',
     'inspection': 'INSPECTION',
     'purchase_order': 'PURCHASE ORDER',
     'receipt': 'RECEIPT',
@@ -362,6 +374,7 @@ class DocumentPrinter:
         'invoice': 'printing/documents/invoice.html',
         'estimate': 'printing/documents/estimate.html',
         'work_order': 'printing/documents/work_order.html',
+        'job_card': 'printing/documents/job_card.html',
         'inspection': 'printing/documents/inspection.html',
         'purchase_order': 'printing/documents/purchase_order.html',
         'receipt': 'printing/documents/receipt.html',
@@ -442,11 +455,14 @@ class DocumentPrinter:
                 'is_pdf': True,
                 **system_settings, # Flatten settings into context (company_name, logo_path etc)
             })
-            context['watermark'] = _get_document_watermark(
-                self.document_type,
-                context.get('document'),
-                context.get('watermark'),
-            )
+            if context.pop('disable_watermark', False):
+                context['watermark'] = None
+            else:
+                context['watermark'] = _get_document_watermark(
+                    self.document_type,
+                    context.get('document'),
+                    context.get('watermark'),
+                )
             
             # Render HTML
             html_string = render_to_string(self.template, context)
@@ -573,18 +589,89 @@ class DocumentPrinter:
         return buf.getvalue()
     
     def _get_custom_css(self) -> str:
-        """Get custom CSS for PDF generation"""
-        return """
-        @page {
-            size: A4;
-            margin: 6mm;
-        }
+        """
+        Extra WeasyPrint helpers that mirror the HTML print layout.
 
+        Keep @page / shell / footer rules in document_base.html so PDF and print stay aligned.
+        """
+        return """
         html,
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 7.5pt;
             line-height: 1.2;
+            background: #fff !important;
+        }
+
+        body.is-pdf .document-shell {
+            width: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            display: block !important;
+        }
+
+        body.is-pdf .print-footer {
+            position: running(doc-footer) !important;
+            margin-top: 0 !important;
+            width: 100% !important;
+        }
+
+        body.is-pdf .header-container,
+        body.is-pdf .print-footer {
+            table-layout: fixed !important;
+            width: 100% !important;
+        }
+
+        body.is-pdf .header-right {
+            width: 38% !important;
+            max-width: none !important;
+            text-align: right !important;
+        }
+
+        body.is-pdf .header-meta {
+            width: 100% !important;
+            table-layout: auto !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        body.is-pdf .header-meta td.header-meta-label {
+            width: 100% !important;
+            text-align: right !important;
+            white-space: nowrap !important;
+        }
+
+        body.is-pdf .header-meta td.header-meta-value {
+            width: 1% !important;
+            text-align: left !important;
+            white-space: nowrap !important;
+        }
+
+        body.is-pdf .header-tagline {
+            text-align: right !important;
+        }
+
+        body.is-pdf .doc-number {
+            background: #eff6ff !important;
+            border: 1px solid #93c5fd !important;
+            color: #1e3a8a !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+
+        body.is-pdf .doc-type {
+            color: #1d4ed8 !important;
+        }
+
+        body.is-pdf .print-footer-logos {
+            text-align: right !important;
+        }
+
+        body.is-pdf .print-footer-page {
+            display: block !important;
         }
 
         table {
@@ -650,6 +737,55 @@ def generate_work_order_pdf(work_order, branch=None):
         **_build_work_order_print_context(work_order),
     }
     filename = f"work_order_{work_order.work_order_number}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def _build_job_card_print_context(work_order) -> Dict[str, Any]:
+    """Lean context for the customer-facing Job Card (intake / acknowledgement)."""
+    job_type_names = []
+    try:
+        job_type_names = list(
+            work_order.job_types.order_by('name').values_list('name', flat=True)
+        )
+    except Exception:
+        pass
+    if not job_type_names and getattr(work_order, 'job_type', None):
+        job_type_names = [work_order.job_type.name]
+
+    fuel_display = ''
+    battery_display = ''
+    try:
+        fuel_display = work_order.get_fuel_level_display() if work_order.fuel_level else ''
+    except Exception:
+        fuel_display = work_order.fuel_level or ''
+    try:
+        battery_display = (
+            work_order.get_battery_condition_display() if work_order.battery_condition else ''
+        )
+    except Exception:
+        battery_display = work_order.battery_condition or ''
+
+    return {
+        'job_type_names': job_type_names,
+        'intake_fuel_level': fuel_display,
+        'intake_battery_condition': battery_display,
+        'intake_valuables_notes': (work_order.valuables_notes or '').strip(),
+        'intake_warning_lights_notes': (work_order.warning_lights_notes or '').strip(),
+    }
+
+
+def generate_job_card_pdf(work_order, branch=None):
+    """Generate customer-facing Job Card PDF (handed over at intake)."""
+    printer = DocumentPrinter('job_card')
+    context = {
+        'document': work_order,
+        'branch': branch or work_order.branch,
+        # Customer handout — keep clean like the paper job card (no watermark).
+        'disable_watermark': True,
+        'watermark': None,
+        **_build_job_card_print_context(work_order),
+    }
+    filename = f"job_card_{work_order.work_order_number}.pdf"
     return printer.generate_pdf(context, filename)
 
 
@@ -758,6 +894,7 @@ def render_invoice_print_html(invoice, branch=None, request=None):
         'watermark': _get_document_watermark('invoice', invoice, _get_watermark(invoice.status)),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
+        'print_footer_logos': _get_browser_footer_logos(base_url),
         **company_info,
         **branding,
         **document_terms,
@@ -779,6 +916,7 @@ def render_estimate_print_html(estimate, branch=None, request=None):
         'watermark': _get_document_watermark('estimate', estimate, _get_watermark(estimate.status)),
         'show_print_controls': True,
         'base_url': base_url.rstrip('/'),
+        'print_footer_logos': _get_browser_footer_logos(base_url),
         **company_info,
         **branding,
         **document_terms,
@@ -835,6 +973,29 @@ def render_work_order_print_html(work_order, branch=None, request=None):
         **document_terms,
     }
     return render_to_string('printing/documents/work_order.html', context)
+
+
+def render_job_card_print_html(work_order, branch=None, request=None):
+    """Render customer-facing Job Card as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings, get_document_terms
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    document_terms = get_document_terms()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': work_order,
+        'branch': branch or work_order.branch,
+        'watermark': None,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        'print_footer_logos': _get_browser_footer_logos(base_url),
+        **_build_job_card_print_context(work_order),
+        **company_info,
+        **branding,
+        **document_terms,
+    }
+    return render_to_string('printing/documents/job_card.html', context)
 
 
 def render_inspection_print_html(inspection, branch=None, request=None):

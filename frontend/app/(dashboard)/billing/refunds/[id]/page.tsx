@@ -163,7 +163,7 @@ export default function RefundDetailPage() {
                     </Button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold tracking-tight">Refund {refund.refund_number}</h1>
+                            <h1 className="text-xl font-bold tracking-tight">Refund {refund.refund_number}</h1>
                             <Badge variant={getStatusVariant(refund.status)}>
                                 {refund.status.toUpperCase()}
                             </Badge>
@@ -181,7 +181,7 @@ export default function RefundDetailPage() {
                             <Button
                                 onClick={() => approveMutation.mutate()}
                                 disabled={approveMutation.isPending}
-                                className="bg-success hover:bg-green-700"
+                                className="bg-success hover:bg-success"
                             >
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
@@ -325,27 +325,27 @@ export default function RefundDetailPage() {
                             </div>
                         </div>
 
-                        <div className="bg-primary/10 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900">
-                            <h4 className="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2">Audit Trail</h4>
+                        <div className="bg-primary/10 dark:bg-warning/10 p-4 rounded-lg border border-warning/20 dark:border-warning/30">
+                            <h4 className="text-sm font-semibold text-warning dark:text-warning mb-2">Audit Trail</h4>
                             <div className="space-y-2 text-xs">
                                 <div className="flex justify-between">
-                                    <span className="text-primary dark:text-orange-300">Requested</span>
-                                    <span className="text-orange-900 dark:text-orange-100">
+                                    <span className="text-primary dark:text-warning">Requested</span>
+                                    <span className="text-warning dark:text-warning">
                                         {format(new Date(refund.requested_at), 'MMM dd, HH:mm')} by {refund.requested_by_name}
                                     </span>
                                 </div>
                                 {refund.approved_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-primary dark:text-orange-300">Approved</span>
-                                        <span className="text-orange-900 dark:text-orange-100">
+                                        <span className="text-primary dark:text-warning">Approved</span>
+                                        <span className="text-warning dark:text-warning">
                                             {format(new Date(refund.approved_at), 'MMM dd, HH:mm')} by {refund.approved_by_name}
                                         </span>
                                     </div>
                                 )}
                                 {refund.processed_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-primary dark:text-orange-300">Processed</span>
-                                        <span className="text-orange-900 dark:text-orange-100">
+                                        <span className="text-primary dark:text-warning">Processed</span>
+                                        <span className="text-warning dark:text-warning">
                                             {format(new Date(refund.processed_at), 'MMM dd, HH:mm')} by {refund.processed_by_name}
                                         </span>
                                     </div>

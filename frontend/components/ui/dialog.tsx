@@ -50,7 +50,7 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-3 sm:p-6">
       <div
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 bg-foreground/40 dark:bg-black/70"
         onClick={() => onOpenChange(false)}
         aria-hidden="true"
         onWheel={(event) => event.preventDefault()}
@@ -68,7 +68,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div
         ref={ref}
         className={cn(
-          "pointer-events-auto relative bg-card rounded-lg shadow-lg w-full max-w-lg border border-border max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain flex flex-col gap-4 p-4 sm:p-6",
+          "pointer-events-auto relative w-full max-w-lg flex flex-col gap-4 overflow-y-auto overscroll-contain rounded-lg border border-[color:var(--outline-variant)] bg-[var(--panel-bg,var(--card))] p-4 shadow-workshop max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] sm:p-6",
           className
         )}
         {...props}

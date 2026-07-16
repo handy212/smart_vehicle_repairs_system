@@ -73,7 +73,7 @@ export function QboSetupChecklist() {
 
   if (!isApiReady) {
     return (
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-warning/30 bg-warning/5">
         <CardContent className="p-4 text-sm text-muted-foreground">
           QuickBooks is linked but the live API session is unavailable. Reconnect on the Connection tab, then continue setup.
         </CardContent>
@@ -113,7 +113,7 @@ export function QboSetupChecklist() {
             {steps.map((step) => (
               <li key={step.id} className="flex items-start gap-2 text-sm">
                 {step.done ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                 ) : (
                   <Circle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                 )}

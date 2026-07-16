@@ -73,7 +73,7 @@ export default function ContactsPage() {
   );
 
   return (
-    <div className="space-y-6 p-4 max-w-[1700px] mx-auto pb-10">
+    <div className="space-y-6 w-full pb-10">
       <DynamicPageTitle title="Contacts" />
 
       {/* Header */}
@@ -85,7 +85,7 @@ export default function ContactsPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <h1 className="text-2xl font-bold tracking-tighter text-foreground">Contacts</h1>
+          <h1 className="text-xl font-bold tracking-tighter text-foreground">Contacts</h1>
         </div>
         <p className="text-sm text-muted-foreground">
           All contacts across all customers
@@ -224,7 +224,7 @@ export default function ContactsPage() {
                       >
                         <span
                           className={cn(
-                            "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                            "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-card shadow-lg ring-0 transition duration-200 ease-in-out",
                             contact.is_active !== false ? "translate-x-4" : "translate-x-0"
                           )}
                         />

@@ -541,7 +541,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
   return (
     <div className={cn("space-y-6", isMobile && "space-y-4 pb-28")}>
       {isMobile && !isOnline && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning dark:border-warning/30 dark:bg-warning/15 dark:text-warning">
           Offline — viewing cached diagnosis. Edits queue for sync.
         </div>
       )}
@@ -623,7 +623,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   onClick={() => completeDiagnosisMutation.mutate()}
                   disabled={completeDiagnosisMutation.isPending}
                   size="sm"
-                  className="h-9 bg-success hover:bg-green-700 text-white"
+                  className="h-9 bg-success hover:bg-success text-white"
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-2" />
                   {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
@@ -658,7 +658,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   onClick={() => completeDiagnosisMutation.mutate()}
                   disabled={completeDiagnosisMutation.isPending}
                   size="sm"
-                  className="h-9 bg-success hover:bg-green-700 text-white"
+                  className="h-9 bg-success hover:bg-success text-white"
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-2" />
                   {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
@@ -685,7 +685,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   onClick={() => completeDiagnosisMutation.mutate()}
                   disabled={completeDiagnosisMutation.isPending}
                   size="sm"
-                  className="h-9 bg-success hover:bg-green-700 text-white"
+                  className="h-9 bg-success hover:bg-success text-white"
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-2" />
                   {completeDiagnosisMutation.isPending ? "Completing..." : "Complete Diagnosis"}
@@ -712,7 +712,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   {reopenDiagnosisMutation.isPending ? "Reopening..." : "Revise"}
                 </Button>
               )}
-              <Button variant="outline" size="sm" className="h-9 cursor-default bg-success/10 text-green-700 border-green-200 hover:bg-success/10">
+              <Button variant="outline" size="sm" className="h-9 cursor-default bg-success/15 text-success border-success/20 hover:bg-success/10">
                 <CheckCircle2 className="w-3.5 h-3.5 mr-2" />
                 Completed
               </Button>
@@ -722,7 +722,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
       </div>
 
       {blocksTechDiagnosisWork && assignmentBlockMessage ? (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning dark:border-warning/30 dark:bg-warning/15 dark:text-warning">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p className="font-medium">Assignment required</p>
@@ -757,7 +757,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                 className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-primary/20' :
                   diagnosis.status === 'paused' ? 'bg-warning/15 text-warning-foreground border-warning/20' :
                     diagnosis.status === 'awaiting_approval' ? 'bg-warning/15 text-warning-foreground border-warning/20' :
-                    diagnosis.status === 'completed' ? 'bg-success/10 text-green-700 border-green-200' :
+                    diagnosis.status === 'completed' ? 'bg-success/15 text-success border-success/20' :
                       'bg-muted text-foreground border-border'
                   }`}
               >
@@ -1063,11 +1063,11 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                   key={log.id}
                   className={`flex items-center justify-between rounded-md border p-3 ${
                     log.stage === "completed"
-                      ? "border-green-200 bg-green-50"
+                      ? "border-success/20 bg-success/10"
                       : isActiveDuration
-                        ? "border-blue-200 bg-blue-50"
+                        ? "border-primary/20 bg-primary/5"
                         : isOpenPause
-                          ? "border-amber-200 bg-amber-50"
+                          ? "border-warning/20 bg-warning/10"
                           : "bg-muted"
                   }`}
                 >
@@ -1076,11 +1076,11 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                       variant="secondary"
                       className={`text-xs ${
                         log.stage === "completed"
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-success/15 text-success"
                           : isActiveDuration
-                            ? "bg-blue-100 text-blue-700"
+                            ? "bg-primary/10 text-primary"
                             : isOpenPause
-                              ? "bg-amber-100 text-amber-700"
+                              ? "bg-warning/15 text-warning"
                             : ""
                       }`}
                     >
@@ -1109,11 +1109,11 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                         variant="secondary"
                         className={`text-xs ${
                           isActiveDuration
-                            ? "bg-blue-100 text-blue-700"
+                            ? "bg-primary/10 text-primary"
                             : isOpenPause
-                              ? "bg-amber-100 text-amber-700"
+                              ? "bg-warning/15 text-warning"
                             : log.stage === "completed"
-                              ? "bg-green-100 text-green-700"
+                              ? "bg-success/15 text-success"
                               : ""
                         }`}
                       >
@@ -1121,7 +1121,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
                       </Badge>
                     )}
                     {log.stage === "completed" && (
-                      <Badge className="text-xs bg-green-600 hover:bg-green-600">
+                      <Badge className="text-xs bg-success hover:bg-success">
                         Completed
                       </Badge>
                     )}
@@ -2086,7 +2086,7 @@ function RecommendationsTab({
             </div>
           ) : (
             <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
-              <Wrench className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
+              <Wrench className="w-12 h-12 mx-auto mb-3 text-muted-foreground text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground mb-1">No recommendations yet</h3>
               <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">Add the repairs or services the vehicle needs, then attach any parts stores should quote.</p>
               <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="h-8">
@@ -2235,7 +2235,7 @@ function PhotosTab({
             </div>
           ) : photos.length === 0 ? (
             <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
-              <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
+              <Camera className="w-12 h-12 mx-auto mb-3 text-muted-foreground text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground mb-1">No photos yet</h3>
               <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">Upload photos to document vehicle condition, evidence, or parts.</p>
               <Button
@@ -2304,7 +2304,7 @@ function PhotosTab({
                             <Button
                               variant="destructive"
                               size="icon"
-                              className="h-8 w-8 rounded-full shadow-lg bg-red-600 hover:bg-red-700 border-none transition-all duration-200"
+                              className="h-8 w-8 rounded-full shadow-lg bg-destructive hover:bg-destructive border-none transition-all duration-200"
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 const ok = await confirm({
@@ -2779,7 +2779,7 @@ function SummaryTab({
               </p>
             </div>
             <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-success/10 dark:bg-green-900/20 text-success">
+              <div className="p-2 mb-3 rounded-full bg-success/10 dark:bg-success/20 text-success">
                 <DollarSign className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Estimate Total</p>
@@ -2807,7 +2807,7 @@ function SummaryTab({
         </CardHeader>
         <CardContent className="flex-1 pt-4 space-y-4 flex flex-col">
           <Textarea
-            className="flex-1 min-h-[200px] resize-none bg-muted border-border focus:bg-card dark:focus:bg-gray-950 transition-colors"
+            className="flex-1 min-h-[200px] resize-none bg-muted border-border focus:bg-card dark:focus:bg-background transition-colors"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Enter detailed diagnostic notes here..."

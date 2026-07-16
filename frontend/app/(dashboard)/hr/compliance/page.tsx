@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -66,10 +66,10 @@ function ComplianceContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "valid": return "bg-success/10 text-green-700 border-green-200";
-            case "expiring_soon": return "bg-warning/10 text-amber-700 border-warning/20";
+            case "valid": return "bg-success/15 text-success border-success/20";
+            case "expiring_soon": return "bg-warning/10 text-warning border-warning/20";
             case "expired": return "bg-destructive/10 text-destructive border-destructive/20";
-            default: return "bg-gray-100 text-gray-700 border-gray-200";
+            default: return "bg-muted text-muted-foreground border-border";
         }
     };
 

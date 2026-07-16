@@ -15,8 +15,9 @@ import { useBranding } from "@/lib/hooks/useBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Car, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
+import AuthBrandMark from "@/components/auth/AuthBrandMark";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
@@ -74,10 +75,7 @@ export default function LoginPage() {
     getMediaUrl,
   } = useBranding("public");
 
-  const { data: integrations } = useQuery<{
-    recaptcha_site_key?: string;
-    recaptcha_enabled?: string;
-  }>({
+  const { data: integrations } = useQuery({
     queryKey: ["settings", "integrations", "public"],
     queryFn: () => adminApi.settings.publicIntegrations(),
     staleTime: 5 * 60 * 1000,
@@ -88,6 +86,12 @@ export default function LoginPage() {
   const recaptchaRequired =
     integrations?.recaptcha_enabled === "true" &&
     !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
+  const googleClientId =
+    (integrations?.google_oauth_client_id || "").trim() ||
+    (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "").trim() ||
+    "";
+  const googleSignInEnabled = Boolean(googleClientId);
 
   const {
     register,
@@ -212,8 +216,10 @@ export default function LoginPage() {
     ? getMediaUrl(loginBackground) || DEFAULT_HERO_IMAGE
     : DEFAULT_HERO_IMAGE;
 
+  // Prefer the dark-logo asset on the hero (often designed for dark/colored panels).
   const heroLogo = logoDarkPath || logoPath;
   const heroLogoSrc = heroLogo ? getMediaUrl(heroLogo) || null : null;
+  const formLogoSrc = logoPath ? getMediaUrl(logoPath) || null : heroLogoSrc;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -226,62 +232,70 @@ export default function LoginPage() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
         {/* Left side: Hero Image & Branding */}
         <div
-          className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
+          className="hidden lg:flex relative flex-col justify-between p-10 xl:p-12 overflow-hidden bg-foreground group"
           style={{ backgroundColor: primaryColor }}
         >
           {isMounted && (
             <img
               src={heroImage}
-              alt="Service Center"
-              className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay transition-transform duration-700 ease-in-out group-hover:scale-105"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover opacity-45 mix-blend-overlay transition-transform duration-700 ease-in-out group-hover:scale-105"
             />
           )}
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(to top, ${primaryColor} 0%, ${primaryColor}40 40%, transparent 100%)`
+              background: `linear-gradient(to top, ${primaryColor} 0%, ${primaryColor}55 45%, transparent 100%)`,
             }}
           />
 
-          <div className="relative z-10 flex items-center gap-3">
-            {heroLogoSrc ? (
-              <div className="p-3 bg-card rounded-xl shadow-lg">
-                <img
-                  src={heroLogoSrc}
-                  alt={siteName}
-                  className="h-10 w-auto object-contain"
-                />
-              </div>
-            ) : (
-              <div className="p-3 bg-card rounded-xl shadow-lg">
-                <Car className="w-8 h-8" style={{ color: primaryColor }} />
-              </div>
-            )}
+          <div className="relative z-10">
+            <AuthBrandMark
+              logoSrc={heroLogoSrc}
+              siteName={siteName}
+              primaryColor={primaryColor}
+              variant="hero"
+              size="lg"
+            />
           </div>
 
-          <div className="relative z-10 space-y-4">
-            <h1 className="text-5xl font-extrabold text-white leading-tight">
+          <div className="relative z-10 space-y-3 max-w-lg">
+            <h1 className="text-4xl xl:text-5xl font-extrabold text-white tracking-tight leading-[1.15]">
               The Future of <br />
-              <span style={{ color: '#bfdbfe' }}>Automotive Care</span>
+              <span className="text-white/80">Automotive Care</span>
             </h1>
-            <p className="text-xl text-white/90 max-w-md">
-              {tagline}
-            </p>
+            {tagline && (
+              <p className="text-lg text-white/85 leading-relaxed">
+                {tagline}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Right side: Login Form */}
-        <div className="flex items-start justify-center bg-background p-4 pt-10 lg:items-center lg:p-8">
-          <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-500">
-            <div className="text-center lg:text-left">
-              <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{siteName}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Welcome back! Please enter your details.
-              </p>
+        <div className="flex items-start justify-center bg-background p-4 pt-8 sm:pt-10 lg:items-center lg:p-8">
+          <div className="w-full max-w-md space-y-5 lg:space-y-6 animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex flex-col items-center gap-3 text-center lg:items-start lg:text-left">
+              <AuthBrandMark
+                logoSrc={formLogoSrc}
+                siteName={siteName}
+                primaryColor={primaryColor}
+                variant="form"
+                size="md"
+                className="lg:hidden"
+              />
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">
+                  {siteName}
+                </h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Welcome back — sign in to continue.
+                </p>
+              </div>
             </div>
 
-            <Card className="border border-border shadow-sm bg-card rounded-lg overflow-hidden">
-              <CardContent className="p-6 lg:p-8">
+            <Card className="border border-border shadow-sm bg-card rounded-xl overflow-hidden">
+              <CardContent className="p-5 sm:p-6 lg:p-8">
                 {regData ? (
                   <CompleteRegistrationForm
                     userData={regData.user_data}
@@ -297,30 +311,35 @@ export default function LoginPage() {
                       <div
                         role="alert"
                         aria-live="polite"
-                        className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300"
+                        className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm font-medium animate-in shake duration-300"
                       >
                         {error}
                       </div>
                     )}
 
                     <div className="space-y-2 text-center pb-2">
-                      <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: primaryColor }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                      <div
+                        className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
+                        style={{ backgroundColor: `${primaryColor}18` }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: primaryColor }} aria-hidden><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
                       </div>
-                      <h3 className="text-xl font-semibold">Two-Factor Authentication</h3>
+                      <h3 className="text-xl font-semibold text-foreground">Two-Factor Authentication</h3>
                       <p className="text-sm text-muted-foreground">
                         Enter the 6-digit code from your authenticator app.
                       </p>
                     </div>
 
-                    <div className="space-y-1.5 flex flex-col items-center">
+                    <div className="flex flex-col items-center space-y-1.5">
                       <Input
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
                         value={twoFactorCode}
-                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
                         placeholder="000000"
-                        className="h-12 w-48 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all font-bold"
-                        style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
+                        className="h-12 w-48 text-center text-2xl tracking-[0.5em] font-mono rounded-lg border-border bg-background focus:ring-2 focus:ring-offset-0 transition-all font-bold"
+                        style={{ "--tw-ring-color": primaryColor } as React.CSSProperties}
                         disabled={isLoading}
                         autoFocus
                       />
@@ -330,7 +349,7 @@ export default function LoginPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full h-10 lg:h-11 rounded-xl font-medium"
+                        className="w-full h-10 lg:h-11 rounded-lg font-medium"
                         onClick={() => {
                           setTwoFactorData(null);
                           setTwoFactorCode("");
@@ -342,7 +361,7 @@ export default function LoginPage() {
                       </Button>
                       <Button
                         type="submit"
-                        className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90 active:scale-95"
+                        className="w-full h-10 lg:h-11 rounded-lg text-white font-semibold shadow-sm transition-all hover:opacity-90 active:scale-[0.98]"
                         style={{ backgroundColor: primaryColor }}
                         disabled={isLoading || twoFactorCode.length !== 6}
                       >
@@ -356,32 +375,40 @@ export default function LoginPage() {
                       <div
                         role="alert"
                         aria-live="polite"
-                        className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300"
+                        className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm font-medium animate-in shake duration-300"
                       >
                         {error}
                       </div>
                     )}
 
                     <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-foreground ml-1">Email Address</label>
+                      <label htmlFor="login-email" className="text-sm font-medium text-foreground">
+                        Email Address
+                      </label>
                       <Input
+                        id="login-email"
                         type="email"
+                        autoComplete="email"
                         {...register("email")}
                         placeholder="name@company.com"
-                        className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
-                        style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
+                        className="h-10 lg:h-11 rounded-lg border-border bg-background focus:ring-2 focus:ring-offset-0 transition-all"
+                        style={{ "--tw-ring-color": primaryColor } as React.CSSProperties}
                         disabled={isLoading}
                       />
-                      {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>}
+                      {errors.email && (
+                        <p className="text-xs text-destructive">{errors.email.message}</p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
-                      <div className="flex justify-between items-center px-1">
-                        <label className="text-sm font-semibold text-foreground">Password</label>
+                      <div className="flex justify-between items-center">
+                        <label htmlFor="login-password" className="text-sm font-medium text-foreground">
+                          Password
+                        </label>
                         <button
                           type="button"
                           onClick={() => router.push("/login/forgot-password")}
-                          className="text-xs font-semibold hover:underline"
+                          className="text-xs font-semibold hover:underline underline-offset-2"
                           style={{ color: primaryColor }}
                         >
                           Forgot password?
@@ -389,25 +416,30 @@ export default function LoginPage() {
                       </div>
                       <div className="relative">
                         <Input
+                          id="login-password"
                           type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
                           {...register("password")}
                           placeholder="••••••••"
-                          className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
-                          style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
+                          className="h-10 lg:h-11 rounded-lg border-border bg-background focus:ring-2 focus:ring-offset-0 pr-11 transition-all"
+                          style={{ "--tw-ring-color": primaryColor } as React.CSSProperties}
                           disabled={isLoading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           aria-label={showPassword ? "Hide password" : "Show password"}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4 lg:w-5 lg:h-5" /> : <Eye className="w-4 h-4 lg:w-5 lg:h-5" />}
+                          {showPassword ? (
+                            <EyeOff className="w-4 h-4 lg:w-5 lg:h-5" />
+                          ) : (
+                            <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
+                          )}
                         </button>
                       </div>
                     </div>
 
-                    {/* reCAPTCHA */}
                     {recaptchaRequired && (
                       <div className="flex justify-center py-1">
                         <ReCAPTCHAComponent
@@ -422,38 +454,47 @@ export default function LoginPage() {
 
                     <Button
                       type="submit"
-                      className="w-full h-10 lg:h-11 rounded-xl text-white font-bold text-base lg:text-lg shadow-lg transition-all hover:opacity-90 active:scale-95"
+                      className="w-full h-10 lg:h-11 rounded-lg text-white font-semibold text-base shadow-sm transition-all hover:opacity-90 active:scale-[0.98]"
                       style={{ backgroundColor: primaryColor }}
                       disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                     >
                       {isLoading ? "Signing in..." : "Sign in"}
                     </Button>
 
-                    <div className="relative my-6 lg:my-8 text-center text-sm font-medium text-muted-foreground line-through">
-                      <span className="bg-card px-4 relative z-10 no-underline">OR</span>
-                      <hr className="absolute top-1/2 left-0 w-full border-border" />
-                    </div>
+                    {googleSignInEnabled && (
+                      <>
+                        <div className="relative my-2">
+                          <div className="absolute inset-0 flex items-center" aria-hidden>
+                            <div className="w-full border-t border-border" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase tracking-wide">
+                            <span className="bg-card px-3 text-muted-foreground font-medium">or</span>
+                          </div>
+                        </div>
 
-                    <GoogleLoginButton
-                      onSuccess={(data) => {
-                        setUser(data.user);
-                        router.push(getPostLoginPath(data.user.role));
-                      }}
-                      onRegistrationRequired={(data) => setRegData(data)}
-                      onError={(msg) => setError(msg)}
-                    />
+                        <GoogleLoginButton
+                          clientId={googleClientId}
+                          onSuccess={(data) => {
+                            setUser(data.user);
+                            router.push(getPostLoginPath(data.user.role));
+                          }}
+                          onRegistrationRequired={(data) => setRegData(data)}
+                          onError={(msg) => setError(msg)}
+                        />
+                      </>
+                    )}
                   </form>
                 )}
               </CardContent>
             </Card>
 
             {selfRegistrationEnabled && (
-              <p className="text-center text-sm lg:text-base text-muted-foreground">
+              <p className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
                 <button
                   type="button"
                   onClick={() => router.push("/register")}
-                  className="font-bold underline-offset-4 hover:underline"
+                  className="font-semibold underline-offset-4 hover:underline"
                   style={{ color: primaryColor }}
                 >
                   Start for free
@@ -464,12 +505,19 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+      <footer className="overflow-hidden bg-card border-t border-border px-4 py-3.5 sm:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center text-center text-xs sm:text-sm text-muted-foreground">
           <p className="w-full max-w-full px-2 text-balance break-words">
-            Copyright American AutoParts @2026. Developed by{" "}
-            <a href="https://safetracksystems.com/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
+            © 2026 American AutoParts. Developed by{" "}
+            <a
+              href="https://safetracksystems.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold hover:underline"
+              style={{ color: primaryColor }}
+            >
+              SafeTrack Systems
+            </a>
           </p>
         </div>
       </footer>

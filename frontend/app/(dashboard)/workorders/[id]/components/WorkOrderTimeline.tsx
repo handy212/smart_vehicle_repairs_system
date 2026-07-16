@@ -233,7 +233,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                       <TableCell className="align-top">
                         <div className="text-sm font-medium text-foreground">{event.title}</div>
                         {event.detail && (
-                          <p className="mt-1 max-w-3xl whitespace-pre-wrap text-xs text-muted-foreground">
+                          <p className="mt-1 w-full whitespace-pre-wrap text-xs text-muted-foreground">
                             {event.detail}
                           </p>
                         )}

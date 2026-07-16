@@ -37,7 +37,35 @@ def test_impersonate_customer_denied_for_technician():
 
 
 @pytest.mark.django_db
-def test_impersonate_and_exit():
+def test_impersonate_works_without_refresh_cookie():
+    """Access cookie alone is enough; staff refresh is minted for exit restore."""
+    admin = baker.make(
+        User,
+        role='admin',
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+        email='admin-imp-access@example.com',
+    )
+    customer_user = baker.make(
+        User, role='customer', is_active=True, email='cust-access-only@example.com'
+    )
+    customer = baker.make(Customer, user=customer_user, customer_number='CUS-TEST-IMP-000003')
+
+    client = APIClient()
+    access = str(RefreshToken.for_user(admin).access_token)
+    client.cookies['access_token'] = access
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+
+    start = client.post(
+        reverse('impersonate_customer'),
+        {'customer_id': customer.id},
+        format='json',
+    )
+    assert start.status_code == status.HTTP_200_OK
+    assert start.data['impersonating'] is True
+    assert start.data.get('impersonator_refresh')
+
     admin = baker.make(
         User,
         role='admin',

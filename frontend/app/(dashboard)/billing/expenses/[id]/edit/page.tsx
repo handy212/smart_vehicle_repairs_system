@@ -454,7 +454,7 @@ export default function EditVendorExpensePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="w-full space-y-6 p-6">
       <div className="flex items-center gap-3">
         <Link href={`/billing/expenses/${id}`}>
           <Button variant="ghost" size="sm">
@@ -463,7 +463,7 @@ export default function EditVendorExpensePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Edit Vendor Expense</h1>
+          <h1 className="text-xl font-bold">Edit Vendor Expense</h1>
           <p className="text-sm text-muted-foreground">
             Changes reverse and repost the GL entry. Not allowed after QuickBooks sync.
           </p>

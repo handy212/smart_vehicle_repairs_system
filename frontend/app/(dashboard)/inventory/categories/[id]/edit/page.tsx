@@ -128,7 +128,7 @@ export default function EditCategoryPage() {
   if (!category) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Category not found</h1>
+        <h1 className="text-xl font-bold">Category not found</h1>
         <Link href="/inventory/categories">
           <Button variant="secondary">Back</Button>
         </Link>
@@ -146,7 +146,7 @@ export default function EditCategoryPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Edit Category</h1>
+          <h1 className="text-xl font-bold text-foreground">Edit Category</h1>
           <p className="text-sm text-muted-foreground mt-1">{category.full_path || category.name}</p>
         </div>
       </div>

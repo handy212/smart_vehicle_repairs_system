@@ -30,7 +30,7 @@ export default function MyVehiclesPage() {
   const vehicles = (Array.isArray(vehiclesData) ? vehiclesData : vehiclesData?.results || []) as Vehicle[];
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 w-full">
       <PortalPageHeader
         title="My Vehicles"
         description="Manage your registered vehicles and view their maintenance history."

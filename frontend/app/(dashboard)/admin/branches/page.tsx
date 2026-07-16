@@ -281,7 +281,7 @@ export default function BranchesPage() {
         <CardContent className="p-0">
           {filteredBranches.length === 0 ? (
             <div className="text-center py-12">
-              <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">
                 {branches.length === 0
                   ? "No branches found. Create your first branch to get started."
@@ -311,7 +311,7 @@ export default function BranchesPage() {
                     <th className="px-4 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-card divide-y divide-gray-100">
+                <tbody className="bg-card divide-y divide-border">
                   {filteredBranches.map((branch) => (
                     <TableRow key={branch.id} className="hover:bg-muted/80 transition-colors group">
                       <TableCell className="px-4 py-2.5">
@@ -395,12 +395,12 @@ export default function BranchesPage() {
                           )}
                           {branch.is_active ? (
                             <div className="flex items-center space-x-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-success/100"></span>
-                              <span className="text-xs text-green-700 font-medium">Active</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                              <span className="text-xs text-success font-medium">Active</span>
                             </div>
                           ) : (
                             <div className="flex items-center space-x-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
                               <span className="text-xs text-destructive">Inactive</span>
                             </div>
                           )}

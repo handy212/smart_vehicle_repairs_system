@@ -155,15 +155,15 @@ export default function NotificationsPage() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent":
-        return "border-l-red-500";
+        return "border-l-destructive";
       case "high":
-        return "border-l-orange-500";
+        return "border-l-warning";
       case "normal":
         return "border-l-primary";
       case "low":
-        return "border-l-gray-400";
+        return "border-l-muted-foreground/40";
       default:
-        return "border-l-gray-300";
+        return "border-l-border";
     }
   };
 
@@ -334,7 +334,7 @@ export default function NotificationsPage() {
             >
               Unread
               {unreadCount > 0 && (
-                <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-red-600">
+                <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-destructive">
                   {unreadCount}
                 </Badge>
               )}
@@ -373,7 +373,7 @@ export default function NotificationsPage() {
                   "group relative pl-4 pr-3 py-3 rounded-lg border-l-4 transition-all",
                   getPriorityColor(notification.priority),
                   isUnread
-                    ? "bg-primary/5 dark:bg-orange-950/20 border-r border-t border-b border-orange-200/50 dark:border-orange-800/50"
+                    ? "bg-primary/5 dark:bg-warning/10 border-r border-t border-b border-warning/20 dark:border-warning/30"
                     : "bg-card/50 border-r border-t border-b border-border",
                   isClickable && "cursor-pointer hover:shadow-sm hover:scale-[1.01] hover:bg-muted"
                 )}
@@ -381,7 +381,7 @@ export default function NotificationsPage() {
               >
                 {/* Unread Dot */}
                 {isUnread && (
-                  <div className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-primary dark:bg-orange-400" />
+                  <div className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-primary dark:bg-warning" />
                 )}
 
                 <div className="flex items-start gap-3">
@@ -438,7 +438,7 @@ export default function NotificationsPage() {
                           e.stopPropagation();
                           markAsReadMutation.mutate(notification.id);
                         }}
-                        className="h-7 w-7 p-0 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+                        className="h-7 w-7 p-0 hover:bg-warning/15 dark:hover:bg-warning/20"
                         title="Mark as read"
                       >
                         <CheckCircle className="w-4 h-4 text-primary" />

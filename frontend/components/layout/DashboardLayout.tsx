@@ -184,10 +184,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
       <main
-        className="dashboard-content min-h-screen px-2 py-0 pb-2 transition-all duration-300 sm:px-3 sm:pb-3 lg:px-3 lg:pb-4 print:!m-0 print:!p-0"
+        className="dashboard-content min-h-screen px-3 pb-4 pt-0 transition-all duration-300 sm:px-4 sm:pb-5 lg:px-5 lg:pb-6 print:!m-0 print:!p-0"
         style={{
-          marginLeft: isDesktop ? `${totalMargin}px` : '0',
-          paddingTop: !isDesktop && hasSubNav ? `${headerHeight + 56}px` : `${headerHeight + 16}px`
+          marginLeft: isDesktop ? `${totalMargin}px` : "0",
+          paddingTop: !isDesktop && hasSubNav ? `${headerHeight + 56}px` : `${headerHeight + 20}px`,
         }}
       >
         <Suspense fallback={null}>

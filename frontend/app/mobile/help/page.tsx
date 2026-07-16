@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { getGuideById } from "@/lib/help";
 import type { HelpBlock } from "@/lib/help/types";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 
 function renderBlock(block: HelpBlock, index: number) {
   switch (block.type) {
@@ -58,16 +58,12 @@ export default function MobileHelpPage() {
   ].filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-md space-y-4 p-4">
-      <Link href="/mobile/more">
-        <Button variant="ghost" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-      </Link>
-
-      <h2 className="text-xl font-bold">Help</h2>
-
+    <MobilePageShell
+      title="Help"
+      backHref="/mobile/more"
+      backLabel="More"
+      className="space-y-4"
+    >
       {guides.map((guide) =>
         guide ? (
           <Card key={guide.id}>
@@ -106,6 +102,6 @@ export default function MobileHelpPage() {
           </Card>
         ) : null
       )}
-    </div>
+    </MobilePageShell>
   );
 }

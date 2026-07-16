@@ -213,12 +213,12 @@ class ImpersonateCustomerView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Prefer the staff refresh cookie (for exit). If the BFF/session only has a
+        # valid access token (e.g. refresh cookie missing after cookie-path migration),
+        # mint a fresh staff refresh so exit can still restore the admin session.
         admin_refresh = get_refresh_from_request(request)
         if not admin_refresh:
-            return Response(
-                {'detail': 'Refresh token required to start impersonation.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            admin_refresh = _issue_tokens_for_user(request.user)['refresh']
 
         tokens = _issue_tokens_for_user(target, impersonator_id=request.user.id)
         from .serializers import UserSerializer

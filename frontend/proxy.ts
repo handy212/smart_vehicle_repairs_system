@@ -10,24 +10,31 @@ function getBackendBase(): string {
     return getApiBase().replace(/\/api\/?$/, '');
 }
 
-/** Next.js BFF auth routes — must not be rewritten to Django. */
-const BFF_AUTH_ROUTES = new Set([
+/**
+ * Next.js App Router handlers under `app/api/*` — must not be rewritten to Django.
+ * Everything else under `/api/*` is proxied to the Django API.
+ */
+const BFF_ROUTES = new Set([
     '/api/auth/login',
     '/api/auth/logout',
     '/api/auth/refresh',
     '/api/auth/session',
     '/api/auth/verify',
+    '/api/auth/ws-ticket',
+    '/api/auth/impersonate',
+    '/api/auth/impersonate/exit',
+    '/api/revalidate-branding',
 ]);
 
-function isBffAuthRoute(pathname: string): boolean {
-    return BFF_AUTH_ROUTES.has(pathname);
+function isBffRoute(pathname: string): boolean {
+    return BFF_ROUTES.has(pathname);
 }
 
 /** Proxy /api and /media to Django (avoids Next trailing-slash redirects that break POST + cookies). */
 function rewriteBackend(request: NextRequest): NextResponse | null {
     const { pathname, search } = request.nextUrl;
 
-    if (isBffAuthRoute(pathname)) {
+    if (isBffRoute(pathname)) {
         return null;
     }
 
@@ -43,6 +50,14 @@ function rewriteBackend(request: NextRequest): NextResponse | null {
         const subPath = pathname.slice('/media/'.length);
         const destination = `${getBackendBase()}/media/${subPath}${search}`;
         return NextResponse.rewrite(new URL(destination));
+    }
+
+    // Short public document PDF links (WhatsApp) — always anonymous
+    if (pathname.startsWith('/d/')) {
+        const code = pathname.slice('/d/'.length).replace(/\/+$/, '');
+        if (code) {
+            return NextResponse.rewrite(new URL(`${getBackendBase()}/d/${code}/${search}`));
+        }
     }
 
     return null;
@@ -62,9 +77,11 @@ const PUBLIC_PATHS = [
     '/feedback',
     '/api',
     '/media',
+    '/d/',
     '/offline',
     '/favicon.ico',
     '/manifest.json',
+    '/manifest.webmanifest',
     '/sw.js',
     '/workbox-',
     '/worker-',
@@ -154,8 +171,9 @@ export const config = {
     matcher: [
         // Must run before the catch-all: image extensions are excluded there but /media/* are images
         '/media/:path*',
+        '/d/:path*',
         '/api',
         '/api/:path*',
-        '/((?!_next/static|_next/image|favicon.ico|media/|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|media/|api/|d/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
     ],
 };

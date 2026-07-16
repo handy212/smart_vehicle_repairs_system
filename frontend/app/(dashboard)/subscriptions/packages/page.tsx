@@ -364,12 +364,12 @@ export default function PackagesPage() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto space-y-6">
+      <div className="w-full space-y-6">
 
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Subscription Packages</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Subscription Packages</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Manage subscription packages and their features
             </p>
@@ -397,9 +397,9 @@ export default function PackagesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Packages</p>
-                  <p className="text-2xl font-black text-foreground mt-1">{packages.length}</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{packages.length}</p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-950/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-warning/10 flex items-center justify-center">
                   <PackageIcon className="w-5 h-5 text-primary" />
                 </div>
               </div>
@@ -410,9 +410,9 @@ export default function PackagesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
-                  <p className="text-2xl font-black text-success mt-1">{packages.filter((p) => p.is_active).length}</p>
+                  <p className="text-2xl font-bold text-success mt-1">{packages.filter((p) => p.is_active).length}</p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-green-950/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-success/15 flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5 text-success" />
                 </div>
               </div>
@@ -423,7 +423,7 @@ export default function PackagesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Inactive</p>
-                  <p className="text-2xl font-black text-muted-foreground mt-1">{packages.filter((p) => !p.is_active).length}</p>
+                  <p className="text-2xl font-bold text-muted-foreground mt-1">{packages.filter((p) => !p.is_active).length}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-border flex items-center justify-center">
                   <Archive className="w-5 h-5 text-muted-foreground" />

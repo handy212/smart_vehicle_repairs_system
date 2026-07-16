@@ -524,7 +524,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-success/10 bg-muted' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-success bg-success/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'paid' ? null : 'paid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -556,7 +556,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-destructive/10 bg-muted' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-destructive bg-destructive/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'overdue' ? null : 'overdue';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -572,7 +572,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-gray-500 bg-muted' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-border bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'draft' ? null : 'draft';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -906,7 +906,7 @@ export default function InvoicesPage() {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                             <p className="text-muted-foreground text-sm">No invoices found.</p>
                             <PermissionGuard permission="create_invoices">
                                 <Link href="/billing/invoices/new">

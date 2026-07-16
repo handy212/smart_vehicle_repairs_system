@@ -200,7 +200,7 @@ export default function DiagnosisListPage() {
               <span className="text-xl font-bold text-primary">
                 {stats.inProgress}
               </span>
-              <Timer className="w-5 h-5 text-orange-400 mb-0.5" />
+              <Timer className="w-5 h-5 text-warning mb-0.5" />
             </div>
           </CardContent>
         </Card>
@@ -214,7 +214,7 @@ export default function DiagnosisListPage() {
               <span className="text-xl font-bold text-success">
                 {stats.completed}
               </span>
-              <CheckCircle2 className="w-5 h-5 text-green-400 mb-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-success mb-0.5" />
             </div>
           </CardContent>
         </Card>
@@ -225,10 +225,10 @@ export default function DiagnosisListPage() {
               Total Fees
             </span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-primary dark:text-purple-400">
+              <span className="text-xl font-bold text-primary dark:text-info">
                 {formatCurrency(stats.totalFee)}
               </span>
-              <DollarSign className="w-5 h-5 text-purple-400 mb-0.5" />
+              <DollarSign className="w-5 h-5 text-info mb-0.5" />
             </div>
           </CardContent>
         </Card>
@@ -252,7 +252,7 @@ export default function DiagnosisListPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-9 w-32 rounded-md border border-border bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
+                className="h-9 w-32 rounded-md border border-border bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border border-border bg-background dark:focus-visible:ring-border"
               >
                 <option value="all">All Status</option>
                 <option value="in_progress">In Progress</option>
@@ -381,10 +381,10 @@ export default function DiagnosisListPage() {
                           className={cn(
                             "text-[10px] px-2 py-0.5 font-medium border shadow-none",
                             diagnosis.status === "completed"
-                              ? "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                              ? "bg-success/15 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30"
                               : diagnosis.status === "on_hold"
                                 ? "bg-muted text-foreground border-border bg-muted text-muted-foreground border-border"
-                                : "bg-primary/10 text-primary border-orange-200 dark:bg-orange-900/20 text-primary dark:border-orange-800"
+                                : "bg-primary/10 text-primary border-warning/20 dark:bg-warning/20 text-primary dark:border-warning/30"
                           )}
                         >
                           {diagnosis.status_display || diagnosis.status}

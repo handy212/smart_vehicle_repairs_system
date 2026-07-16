@@ -76,10 +76,10 @@ export default function PhysicalCountsPage() {
   const sessions = (data as CountSession[]) ?? [];
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Physical Inventory Counts</h1>
+          <h1 className="text-xl font-bold">Physical Inventory Counts</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Start a count session, enter quantities, and complete to reconcile stock.
           </p>
@@ -104,7 +104,7 @@ export default function PhysicalCountsPage() {
             Start new count
           </Button>
           {!activeBranchId && (
-            <p className="text-sm text-amber-600">Select an active branch to create a session.</p>
+            <p className="text-sm text-warning">Select an active branch to create a session.</p>
           )}
         </CardContent>
       </Card>

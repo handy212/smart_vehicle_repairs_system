@@ -5,11 +5,15 @@ export const TABLE_HEAD_CLASS =
 
 export const TABLE_CELL_CLASS = "px-4 py-2.5 text-xs text-foreground";
 
-/** Perfex-themed table header (light gray bar). */
+/** Workshop table header — uses theme tokens. */
 export const PERFEX_TABLE_HEAD_CLASS =
-  "px-4 py-2 text-left text-xs font-semibold text-[#374151] bg-[#f1f5f9]";
+  "px-4 py-2.5 text-left text-xs font-bold tracking-wide text-[color:var(--table-head-fg)] bg-[var(--table-head-bg)]";
 
-export const PERFEX_TABLE_CELL_CLASS = "px-4 py-2.5 text-xs";
+export const PERFEX_TABLE_CELL_CLASS = "px-4 py-3 text-[13px]";
+
+/** Shared elevated panel surface for dashboard / ops boards. */
+export const WORKSHOP_PANEL_CLASS =
+  "workshop-panel rounded-lg border border-[color:var(--outline-variant)] bg-[var(--panel-bg)] shadow-workshop";
 
 /** Compact table header used in accounting module tables. */
 export const ACCOUNTING_TABLE_HEAD_CLASS =

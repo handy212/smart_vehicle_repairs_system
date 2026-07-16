@@ -123,7 +123,7 @@ function VendorCreditNewContent() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
+    <div className="w-full space-y-4">
       <div className="flex items-center gap-3">
         <Link href="/billing/vendor-credits">
           <Button variant="ghost" size="icon">

@@ -97,6 +97,8 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     ViewSet for managing system settings
     """
     permission_classes = [IsAuthenticated, HasPermission('manage_settings')]
+    # Categories are small; pagination at PAGE_SIZE=20 silently truncated admin tabs.
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['key', 'description']
@@ -377,6 +379,14 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         data = {}
         for setting in settings:
             data[setting.key] = setting.value
+
+        # Google client ID is public by design — ensure env-configured value is available
+        # even when the DB setting row is empty.
+        if not (data.get('google_oauth_client_id') or '').strip():
+            from apps.accounts.settings_utils import get_setting
+            env_client_id = (get_setting('google_oauth_client_id', '') or '').strip()
+            if env_client_id:
+                data['google_oauth_client_id'] = env_client_id
         
         return Response(data)
     
@@ -447,11 +457,25 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Validate file type
-        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']
-        if file_obj.content_type not in allowed_types:
+        # Validate by extension first — browsers often send .ico as application/octet-stream
+        allowed_ext = {'.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp'}
+        allowed_types = {
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/svg+xml',
+            'image/webp',
+            'image/x-icon',
+            'image/vnd.microsoft.icon',
+            'application/octet-stream',
+        }
+        file_extension = Path(file_obj.name).suffix.lower()
+        content_type = (file_obj.content_type or '').lower()
+        if file_extension not in allowed_ext or (
+            content_type and content_type not in allowed_types
+        ):
             return Response(
-                {'error': f'Invalid file type. Allowed types: JPEG, PNG, GIF, SVG, ICO'},
+                {'error': 'Invalid file type. Allowed types: JPEG, PNG, GIF, SVG, ICO, WebP'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -466,14 +490,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         # Create branding directory if it doesn't exist
         branding_dir = Path(settings.MEDIA_ROOT) / 'branding'
         branding_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Generate filename (keep original extension)
-        file_extension = Path(file_obj.name).suffix
-        # Use setting key as base filename for consistency
+
+        # Use setting key as base filename for consistency (extension already validated)
         filename = f"{setting.key}{file_extension}"
         file_path = branding_dir / filename
-        
-        # Save file
+
+        # Save file (overwrite in place — clients cache-bust via updated_at)
         with open(file_path, 'wb+') as destination:
             for chunk in file_obj.chunks():
                 destination.write(chunk)

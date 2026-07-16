@@ -265,17 +265,13 @@ def invoice_create(request):
                     customer_id, vehicle_id, work_order_id
                 )
             
-            # Validate required fields
+            # Validate required fields (vehicle is optional for standalone invoices)
             if not customer_id:
                 messages.error(request, 'Customer is required.')
                 return redirect('billing:invoice_create')
             
-            if not vehicle_id:
-                messages.error(request, 'Vehicle is required.')
-                return redirect('billing:invoice_create')
-            
             customer = get_object_or_404(Customer, id=customer_id)
-            vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+            vehicle = get_object_or_404(Vehicle, id=vehicle_id) if vehicle_id else None
             
             # Determine branch: from work_order, or resolve from request
             branch = None
@@ -290,6 +286,19 @@ def invoice_create(request):
             if not branch:
                 from apps.branches.utils import resolve_branch
                 branch = resolve_branch(request)
+
+            terms_map = {
+                'due_on_receipt': ('Due on Receipt', 0),
+                'net_15': ('Net 15', 15),
+                'net_30': ('Net 30', 30),
+                'net_60': ('Net 60', 60),
+                'prepaid': ('Prepaid', 0),
+            }
+            customer_terms = getattr(customer, 'payment_terms', None) or 'due_on_receipt'
+            terms_label, terms_days = terms_map.get(
+                customer_terms,
+                (customer.get_payment_terms_display() if hasattr(customer, 'get_payment_terms_display') else 'Net 30', 30),
+            )
             
             # Create invoice
             invoice = Invoice.objects.create(
@@ -297,11 +306,11 @@ def invoice_create(request):
                 vehicle=vehicle,
                 work_order_id=work_order_id if work_order_id else None,
                 branch=branch,  # CRITICAL: Set branch for Django Ledger integration
-                due_date=timezone.now().date() + timedelta(days=30),
+                due_date=timezone.now().date() + timedelta(days=terms_days),
                 description=request.POST.get('description', ''),
                 notes=request.POST.get('notes', ''),
                 customer_notes=request.POST.get('customer_notes', ''),
-                terms=request.POST.get('terms', 'Net 30'),
+                terms=request.POST.get('terms', terms_label),
                 created_by=request.user,
             )
             
@@ -408,19 +417,11 @@ def invoice_print(request, invoice_id):
             messages.error(request, f'Error generating PDF: {str(e)}')
             return redirect('billing:invoice_detail', invoice_id=invoice.id)
     
-    # HTML: render printing template with print controls
-    from apps.accounts.settings_utils import get_company_info, get_branding_settings
-    from apps.core.services.print_service import _get_watermark
-    
-    context = {
-        'document': invoice,
-        'branch': branch,
-        'watermark': _get_watermark(invoice.status),
-        'show_print_controls': True,
-        **get_company_info(),
-        **get_branding_settings(),
-    }
-    return render(request, 'printing/documents/invoice.html', context)
+    # HTML: same context as API print (company info, branding, document terms)
+    from apps.core.services.print_service import render_invoice_print_html
+
+    html = render_invoice_print_html(invoice, branch=branch, request=request)
+    return HttpResponse(html)
 
 
 @login_required

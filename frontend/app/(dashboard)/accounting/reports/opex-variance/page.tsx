@@ -69,10 +69,10 @@ export default function OpexVariancePage() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="no-print flex flex-wrap items-start justify-between gap-4">
         <div>
-        <h1 className="text-2xl font-bold">OPEX Variance vs Budget</h1>
+        <h1 className="text-xl font-bold">OPEX Variance vs Budget</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Operating expense accounts (excludes parts and direct labor GL ranges).
         </p>
@@ -120,7 +120,7 @@ export default function OpexVariancePage() {
       ) : (
         <>
           {totals && (
-            <div className="grid grid-cols-3 gap-4 max-w-xl">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Budget</CardTitle></CardHeader>
                 <CardContent className="font-semibold">{formatCurrency(totals.budget)}</CardContent>

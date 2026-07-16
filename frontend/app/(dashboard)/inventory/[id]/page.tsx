@@ -98,14 +98,14 @@ export default function PartDetailPage() {
 
   if (error || !part) {
     return (
-      <div className="space-y-4 max-w-5xl mx-auto">
+      <div className="space-y-4 w-full">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Card className="border-destructive/20 bg-destructive/10 dark:bg-red-900/20">
+        <Card className="border-destructive/20 bg-destructive/10 dark:bg-destructive/20">
           <CardContent className="pt-6">
-            <p className="text-destructive dark:text-red-400">Error loading part. Please try again.</p>
+            <p className="text-destructive dark:text-destructive">Error loading part. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -135,7 +135,7 @@ export default function PartDetailPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{part.name}</h1>
+            <h1 className="text-xl font-bold text-foreground">{part.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-sm font-mono text-muted-foreground bg-border px-2 py-0.5 rounded">
                 {part.part_number}
@@ -248,7 +248,7 @@ export default function PartDetailPage() {
                     </div>
                   ) : (
                     <div className="w-full md:w-48 aspect-square rounded-lg bg-border flex items-center justify-center border border-border">
-                      <Package className="w-12 h-12 text-gray-300 text-muted-foreground" />
+                      <Package className="w-12 h-12 text-muted-foreground text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -385,7 +385,7 @@ export default function PartDetailPage() {
                   <div className="flex flex-wrap gap-2">
                     {part.is_taxable && <Badge variant="outline">Taxable</Badge>}
                     {part.is_core && <Badge variant="outline">Core Part</Badge>}
-                    {part.is_active ? <Badge variant="outline" className="border-green-200 text-green-700">Active</Badge> : <Badge variant="outline" className="border-destructive/20 text-destructive">Inactive</Badge>}
+                    {part.is_active ? <Badge variant="outline" className="border-success/20 text-success">Active</Badge> : <Badge variant="outline" className="border-destructive/20 text-destructive">Inactive</Badge>}
                   </div>
                 </CardContent>
               </Card>
@@ -428,7 +428,7 @@ export default function PartDetailPage() {
                             <th className="px-4 py-2.5">Details</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        <tbody className="divide-y divide-border dark:divide-border">
                           {transactions?.length === 0 ? (
                             <tr>
                               <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground bg-muted/20">
@@ -443,14 +443,14 @@ export default function PartDetailPage() {
                               const isPositive = txn.quantity > 0;
                               const getBadgeColor = (type: string) => {
                                 switch (type.toLowerCase()) {
-                                  case 'adjustment': return 'bg-info/10 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
+                                  case 'adjustment': return 'bg-info/15 text-info border-info/20 dark:bg-primary/20 dark:text-primary dark:border-primary/30';
                                   case 'purchase':
                                   case 'receive':
-                                  case 'return': return 'bg-success/10 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+                                  case 'return': return 'bg-success/10 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30';
                                   case 'sale':
                                   case 'use':
                                   case 'damage':
-                                  case 'adjustment_out': return 'bg-destructive/10 text-destructive border-destructive/10 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+                                  case 'adjustment_out': return 'bg-destructive/10 text-destructive border-destructive/10 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30';
                                   default: return 'bg-muted text-foreground border-border bg-muted text-muted-foreground border-border';
                                 }
                               };
@@ -477,10 +477,10 @@ export default function PartDetailPage() {
                                         </span>
                                       </div>
                                     ) : (
-                                      <span className="text-gray-300 text-muted-foreground">—</span>
+                                      <span className="text-muted-foreground text-muted-foreground">—</span>
                                     )}
                                   </td>
-                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-success' : 'text-destructive dark:text-red-400'}`}>
+                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-success' : 'text-destructive dark:text-destructive'}`}>
                                     <div className="flex flex-col items-end">
                                       <span>{isPositive ? '+' : ''}{txn.quantity}</span>
                                       <span className="text-[9px] font-normal uppercase opacity-60">{part.unit || 'units'}</span>

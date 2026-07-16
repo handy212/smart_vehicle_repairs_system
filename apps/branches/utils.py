@@ -1,6 +1,7 @@
 """Branch helper utilities."""
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from django.conf import settings
@@ -8,6 +9,17 @@ from django.http import HttpRequest
 from django.db.models import QuerySet, Q
 
 from .models import Branch
+
+_BRANCH_SUFFIX_RE = re.compile(r'\s+branch$', re.IGNORECASE)
+
+
+def branch_print_display_name(name: str) -> str:
+    """Strip a trailing 'Branch' word for print/PDF footers only."""
+    text = (name or '').strip()
+    if not text:
+        return text
+    stripped = _BRANCH_SUFFIX_RE.sub('', text).strip()
+    return stripped or text
 
 
 def get_user_accessible_branches(user) -> QuerySet:

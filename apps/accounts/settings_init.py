@@ -19,19 +19,36 @@ DEFAULT_SETTINGS = {
         {'key': 'company_registration', 'value': '', 'description': 'Company registration number'},
     ],
     'branding': [
-        {'key': 'site_name', 'value': 'Smart Vehicle Repairs', 'description': 'Site name'},
-        {'key': 'logo_path', 'value': '', 'description': 'Company logo'},
+        {'key': 'site_name', 'value': 'Smart Vehicle Repairs', 'description': 'Site name shown in the app header and browser title'},
+        {
+            'key': 'company_tagline',
+            'value': 'Management System',
+            'description': 'Short tagline under the site name on login and public pages',
+        },
+        {'key': 'logo_path', 'value': '', 'description': 'Company logo (light backgrounds)'},
         {'key': 'logo_dark_path', 'value': '', 'description': 'Company logo for dark backgrounds'},
-        {'key': 'favicon_path', 'value': '', 'description': 'Site favicon'},
+        {'key': 'favicon_path', 'value': '', 'description': 'Site favicon (.ico, .png, or .svg)'},
         {'key': 'login_background', 'value': '', 'description': 'Login page background image'},
-        {'key': 'login_background_overlay', 'value': '0.85', 'description': 'Login background overlay opacity'},
+        {
+            'key': 'login_background_overlay',
+            'value': '0.85',
+            'description': 'Login background overlay opacity (0–1)',
+        },
         {'key': 'primary_color', 'value': '#6366f1', 'description': 'Primary brand color'},
         {'key': 'secondary_color', 'value': '#8b5cf6', 'description': 'Secondary brand color'},
         {'key': 'success_color', 'value': '#10b981', 'description': 'Success color'},
         {'key': 'danger_color', 'value': '#ef4444', 'description': 'Danger/error color'},
-        {'key': 'theme_mode', 'value': 'perfex', 'description': 'Theme mode'},
-        {'key': 'self_registration_enabled', 'value': 'true', 'description': 'Allow customers to create their own account from the login page'},
-        {'key': 'document_watermark_enabled', 'value': 'true', 'description': 'Show watermarks on printed and downloaded documents'},
+        {'key': 'theme_mode', 'value': 'perfex', 'description': 'Default theme mode for new sessions'},
+        {
+            'key': 'self_registration_enabled',
+            'value': 'true',
+            'description': 'Allow customers to create their own account from the login page',
+        },
+        {
+            'key': 'document_watermark_enabled',
+            'value': 'true',
+            'description': 'Show watermarks on printed and downloaded documents',
+        },
     ],
     'email': [
         {'key': 'email_enabled', 'value': 'false', 'description': 'Enable email notifications'},
@@ -78,6 +95,11 @@ DEFAULT_SETTINGS = {
         {'key': 'notification_email_enabled', 'value': 'true', 'description': 'Enable email notifications'},
         {'key': 'notification_sms_enabled', 'value': 'false', 'description': 'Enable SMS notifications'},
         {'key': 'notification_push_enabled', 'value': 'false', 'description': 'Enable push notifications'},
+        {'key': 'whatsapp_enabled', 'value': 'false', 'description': 'Enable Meta WhatsApp Cloud API sends'},
+        {'key': 'whatsapp_access_token', 'value': '', 'description': 'Meta WhatsApp permanent access token', 'is_secret': True},
+        {'key': 'whatsapp_phone_number_id', 'value': '', 'description': 'Meta WhatsApp phone number ID'},
+        {'key': 'whatsapp_business_account_id', 'value': '', 'description': 'Meta WhatsApp business account ID'},
+        {'key': 'whatsapp_api_version', 'value': 'v22.0', 'description': 'Meta Graph API version for WhatsApp'},
     ],
     'security': [
         {'key': 'password_min_length', 'value': '8', 'description': 'Minimum password length'},
@@ -104,6 +126,15 @@ DEFAULT_SETTINGS = {
         {'key': 'deposit_percentage', 'value': '0', 'description': 'Deposit percentage'},
         {'key': 'cancellation_policy', 'value': '', 'description': 'Cancellation policy'},
         {
+            'key': 'invoice_bank_details',
+            'value': '',
+            'description': (
+                'Bank / payment details printed on invoices and estimates. Separate each bank or MoMo '
+                'account with a blank line (or start each with BANK NAME: / MTN MOMO). '
+                'Leave blank to hide.'
+            ),
+        },
+        {
             'key': 'invoice_terms_and_conditions',
             'value': (
                 '1. Ghs 100.00 per day Vehicle Storage Fee applicable when waiting on customer beyond 48 hours.\n'
@@ -114,6 +145,7 @@ DEFAULT_SETTINGS = {
             ),
             'description': 'Terms & Conditions printed on invoices (PDF and print)',
         },
+
         {
             'key': 'estimate_terms_and_conditions',
             'value': (
@@ -157,6 +189,17 @@ DEFAULT_SETTINGS = {
         {'key': 'recaptcha_enabled', 'value': 'false', 'description': ''},
         {'key': 'recaptcha_site_key', 'value': '', 'description': ''},
         {'key': 'recaptcha_secret_key', 'value': '', 'description': '', 'is_secret': True},
+        {
+            'key': 'google_oauth_client_id',
+            'value': '',
+            'description': 'Google OAuth Web Client ID (public; used by Sign in with Google)',
+        },
+        {
+            'key': 'google_oauth_client_secret',
+            'value': '',
+            'description': 'Google OAuth Client Secret',
+            'is_secret': True,
+        },
         {'key': 'firebase_enabled', 'value': 'false', 'description': ''},
         {'key': 'firebase_api_key', 'value': '', 'description': '', 'is_secret': True},
         {'key': 'firebase_project_id', 'value': '', 'description': ''},
@@ -211,6 +254,7 @@ DEPRECATED_SETTING_KEYS = {
     'appointment_buffer_minutes',
     'allow_online_booking',
     'require_deposit',
+    'tax_covid_rate',
 }
 
 

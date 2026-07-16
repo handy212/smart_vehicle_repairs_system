@@ -668,7 +668,7 @@ export default function RepairsPage() {
               </Badge>
             )}
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="mt-2 text-xl font-bold tracking-tight text-foreground">
             {workOrder.vehicle_info || "Vehicle repair"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -11,7 +11,7 @@ import { PremiumIcons } from "@/components/ui/icons";
 import { PortalPageHeader } from "../components/PortalPageHeader";
 import { PortalList } from "../components/PortalList";
 import { PortalCard } from "../components/PortalCard";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils/cn";
 import { Estimate } from "@/lib/api/portal";
 import { ExternalLink } from "lucide-react";
@@ -88,8 +88,8 @@ export default function MyEstimatesPage() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "approved": return { variant: "success" as const, className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" };
-      case "sent": return { variant: "warning" as const, className: "bg-amber-500/10 text-amber-500 border-amber-500/20" };
+      case "approved": return { variant: "success" as const, className: "bg-success/10 text-success border-success/20" };
+      case "sent": return { variant: "warning" as const, className: "bg-warning/10 text-warning border-warning/20" };
       case "declined": return { variant: "danger" as const, className: "bg-destructive/10 text-destructive border-destructive/20" };
       case "expired": return { variant: "secondary" as const, className: "opacity-50" };
       default: return { variant: "secondary" as const, className: "bg-muted text-muted-foreground" };
@@ -103,7 +103,7 @@ export default function MyEstimatesPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 w-full">
       <PortalPageHeader
         title="Repairs Estimates"
       />
@@ -180,7 +180,7 @@ export default function MyEstimatesPage() {
                     <>
                       <Button
                         size="sm"
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl px-4 font-bold shadow-lg shadow-emerald-500/20"
+                        className="bg-success hover:bg-success text-white rounded-xl px-4 font-bold shadow-lg shadow-success/20"
                         onClick={() => router.push(`/portal/estimates/${est.id}`)}
                       >
                         Review & Approve
@@ -239,7 +239,7 @@ export default function MyEstimatesPage() {
                         <div className="flex gap-2">
                             <Button
                                 size="sm"
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold h-10"
+                                className="bg-success hover:bg-success text-white rounded-xl font-bold h-10"
                                 onClick={(e) => {
                                     e.preventDefault();
                                     router.push(`/portal/estimates/${est.id}`);

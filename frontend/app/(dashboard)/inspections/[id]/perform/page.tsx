@@ -18,6 +18,8 @@ import { InspectionItemRow } from "@/components/inspections/InspectionItemRow";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getUserFacingError } from "@/lib/api/errors";
+import { workordersApi } from "@/lib/api/workorders";
+import { IntakeConditionCard } from "@/components/workorders/IntakeConditionCard";
 
 type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | undefined | null;
 
@@ -59,6 +61,20 @@ export default function PerformInspectionPage() {
 
   const categories = useMemo(() => templateData?.categories || [], [templateData]);
   const allowsPhotos = templateData?.allows_photos !== false;
+
+  const linkedWorkOrderId = useMemo(() => {
+    const wo = inspection?.work_order;
+    if (!wo) return null;
+    if (typeof wo === "object" && wo && "id" in wo) return Number(wo.id);
+    if (typeof wo === "number") return wo;
+    return null;
+  }, [inspection?.work_order]);
+
+  const { data: linkedWorkOrder } = useQuery({
+    queryKey: ["workorder", linkedWorkOrderId],
+    queryFn: () => workordersApi.get(linkedWorkOrderId!),
+    enabled: !!linkedWorkOrderId,
+  });
 
   /* --------------------- Local State -------------------------- */
   const [results, setResults] = useState<Record<
@@ -447,7 +463,7 @@ export default function PerformInspectionPage() {
               <span className="text-foreground">Perform</span>
             </div>
           )}
-          <h1 className="text-2xl font-black text-foreground tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             Perform Inspection
           </h1>
         </div>
@@ -485,6 +501,27 @@ export default function PerformInspectionPage() {
           </div>
         </div>
       </div>
+
+      {linkedWorkOrderId && linkedWorkOrder && (
+        <div className="mb-6">
+          <IntakeConditionCard
+            workOrderId={linkedWorkOrderId}
+            workOrder={linkedWorkOrder}
+            compact
+            title="Job Card intake (during DVI)"
+            description="Record fuel, battery, valuables, and warning lights here while inspecting — they print on the Job Card."
+            defaultEditing={
+              inspection.status === "in_progress" &&
+              !linkedWorkOrder.fuel_level &&
+              !linkedWorkOrder.battery_condition &&
+              !linkedWorkOrder.valuables_notes &&
+              !linkedWorkOrder.warning_lights_notes
+            }
+            queryKey={["inspection", inspectionId]}
+            canEdit={inspection.status === "in_progress"}
+          />
+        </div>
+      )}
 
       {/* Categories & Vehicle Damage - Subnav Style */}
       <div className="flex gap-6">
@@ -572,19 +609,19 @@ export default function PerformInspectionPage() {
 
       {/* Sticky Footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-30 bg-background/80 backdrop-blur-md border-t p-4 shadow-2xl transition-all duration-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="w-full flex items-center justify-between gap-4">
           <div className="hidden sm:flex items-center gap-4">
             {hasUncheckedCritical ? (
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="w-5 h-5 animate-pulse" />
-                <span className="text-[11px] font-black uppercase tracking-tighter italic">
+                <span className="text-[11px] font-bold uppercase tracking-tighter italic">
                   Critical items pending: {uncheckedCriticalItems.length}
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-success">
                 <CheckCircle className="w-5 h-5" />
-                <span className="text-[11px] font-black uppercase tracking-tighter">All critical checks completed</span>
+                <span className="text-[11px] font-bold uppercase tracking-tighter">All critical checks completed</span>
               </div>
             )}
           </div>
@@ -594,7 +631,7 @@ export default function PerformInspectionPage() {
               variant="outline"
               size="lg"
               onClick={save}
-              className="flex-1 sm:flex-none h-12 px-8 text-xs font-black uppercase tracking-widest border-2 hover:bg-muted transition-all active:scale-95"
+              className="flex-1 sm:flex-none h-12 px-8 text-xs font-bold uppercase tracking-widest border-2 hover:bg-muted transition-all active:scale-95"
               disabled={saveMutation.isPending || saveDamageMutation.isPending}
             >
               {saveMutation.isPending || saveDamageMutation.isPending ? (
@@ -608,13 +645,13 @@ export default function PerformInspectionPage() {
               size="lg"
               onClick={saveAndComplete}
               className={cn(
-                "flex-1 sm:flex-none h-12 px-10 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95",
+                "flex-1 sm:flex-none h-12 px-10 text-xs font-bold uppercase tracking-widest shadow-lg transition-all active:scale-95",
                 hasUncheckedCritical ? "bg-muted text-muted-foreground" : ""
               )}
               disabled={completeMutation.isPending}
             >
               {completeMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin mr-2" />
               ) : (
                 <CheckCircle className="w-4 h-4 mr-2" />
               )}

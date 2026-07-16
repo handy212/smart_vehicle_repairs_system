@@ -2,9 +2,33 @@
 # Start Postgres + Redis for local dev (no docker-compose plugin required)
 set -e
 
-DOCKER="docker"
-if ! docker info >/dev/null 2>&1; then
-  DOCKER="sudo docker"
+resolve_docker() {
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    echo "docker"
+    return
+  fi
+  # Docker Desktop on Windows from WSL (integration may not be enabled yet)
+  local win_docker="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
+  if [ -x "$win_docker" ] && "$win_docker" info >/dev/null 2>&1; then
+    echo "$win_docker"
+    return
+  fi
+  if command -v docker.exe >/dev/null 2>&1 && docker.exe info >/dev/null 2>&1; then
+    echo "docker.exe"
+    return
+  fi
+  if sudo docker info >/dev/null 2>&1; then
+    echo "sudo docker"
+    return
+  fi
+  echo "docker"
+}
+
+DOCKER="$(resolve_docker)"
+if ! $DOCKER info >/dev/null 2>&1; then
+  echo "Docker is not running or not accessible."
+  echo "Start Docker Desktop, or enable WSL integration for Ubuntu."
+  exit 1
 fi
 
 $DOCKER start smart_vehicle_postgres_dev 2>/dev/null || \

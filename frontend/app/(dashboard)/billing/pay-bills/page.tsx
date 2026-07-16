@@ -403,11 +403,11 @@ export default function PayBillsPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col pb-24">
+    <div className="mx-auto flex w-full flex-col pb-24">
       {/* Header — QBO-style title + total */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pay Bills</h1>
+          <h1 className="text-xl font-bold tracking-tight">Pay Bills</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Select bills to pay from your payment account.
           </p>
@@ -579,7 +579,7 @@ export default function PayBillsPage() {
                       <span
                         className={cn(
                           "text-sm capitalize",
-                          overdue ? "font-medium text-amber-600" : "text-muted-foreground",
+                          overdue ? "font-medium text-warning" : "text-muted-foreground",
                         )}
                       >
                         {overdue ? "Overdue" : bill.status.replace(/_/g, " ")}
@@ -646,7 +646,7 @@ export default function PayBillsPage() {
 
       {/* Sticky footer */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+        <div className="mx-auto flex w-full items-center justify-between gap-4">
           <Button variant="outline" onClick={() => router.push("/billing/bills")}>
             Cancel
           </Button>

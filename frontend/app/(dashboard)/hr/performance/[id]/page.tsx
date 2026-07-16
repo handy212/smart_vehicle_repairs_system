@@ -12,7 +12,7 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -204,7 +204,7 @@ function ReviewForm({ review, onUpdate, onSubmit, onAcknowledge, isUpdating }: {
 
                     {isSubmitted && (
                         <div className="flex gap-2 pt-2">
-                            <Button onClick={() => onAcknowledge(empComments)} disabled={isUpdating} className="bg-green-600 hover:bg-green-700"><CheckCircle className="h-4 w-4 mr-2" /> Acknowledge Review</Button>
+                            <Button onClick={() => onAcknowledge(empComments)} disabled={isUpdating} className="bg-success hover:bg-success"><CheckCircle className="h-4 w-4 mr-2" /> Acknowledge Review</Button>
                         </div>
                     )}
                 </div>

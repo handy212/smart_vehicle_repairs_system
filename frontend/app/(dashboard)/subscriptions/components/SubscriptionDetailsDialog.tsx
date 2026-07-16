@@ -89,7 +89,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                         <div className="flex items-center gap-3">
                             <div className={cn(
                                 "p-2 rounded-lg",
-                                subscription.status === 'active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
+                                subscription.status === 'active' ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
                             )}>
                                 {getStatusIcon(subscription.status)}
                             </div>
@@ -153,7 +153,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 <div className="flex justify-between items-center px-2 py-1 bg-muted rounded-md">
                                     <span className="text-[12px] font-medium text-muted-foreground">Remaining</span>
                                     <span className={cn(
-                                        "text-sm font-black",
+                                        "text-sm font-bold",
                                         subscription.days_remaining && subscription.days_remaining < 30 ? "text-destructive" : "text-foreground"
                                     )}>
                                         {subscription.days_remaining} Days
@@ -187,7 +187,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-[11px] font-medium text-muted-foreground">Service Fee:</span>
-                            <span className="text-sm font-black text-foreground">{formatCurrency(parseFloat(subscription.purchase_price))}</span>
+                            <span className="text-sm font-bold text-foreground">{formatCurrency(parseFloat(subscription.purchase_price))}</span>
                         </div>
                     </div>
 
@@ -200,7 +200,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                         <div className="p-1 rounded bg-card text-muted-foreground group-hover:text-primary transition-colors border border-border">
                                             {iconMap[key] || iconMap.default}
                                         </div>
-                                        <div className="text-[16px] font-black text-foreground line-clamp-1">{value}</div>
+                                        <div className="text-[16px] font-bold text-foreground line-clamp-1">{value}</div>
                                     </div>
                                     <div className="text-[10px] uppercase font-bold text-muted-foreground truncate leading-tight" title={labelMap[key] || key}>
                                         {labelMap[key] || key.replace(/_/g, " ")}
@@ -237,7 +237,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                     <TableBody>
 
                                         {usageHistory.slice(0, 5).map((usage: SubscriptionUsage) => (
-                                            <TableRow key={usage.id} className="hover:bg-muted/30 h-10 border-slate-50">
+                                            <TableRow key={usage.id} className="hover:bg-muted/30 h-10 border-border">
                                                 <TableCell className="p-2 align-middle">
                                                     <div className="text-[11px] font-medium text-foreground">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
                                                     <div className="text-[9px] text-muted-foreground">{usage.is_refund ? "Refund" : "Service"}</div>

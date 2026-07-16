@@ -298,7 +298,7 @@ export default function InventoryAccountingPage() {
                                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className={`text-2xl font-bold ${data.cogs_analysis.inventory_turnover_ratio >= 4 ? 'text-success' : data.cogs_analysis.inventory_turnover_ratio >= 2 ? 'text-yellow-600' : 'text-destructive'}`}>
+                                <div className={`text-2xl font-bold ${data.cogs_analysis.inventory_turnover_ratio >= 4 ? 'text-success' : data.cogs_analysis.inventory_turnover_ratio >= 2 ? 'text-warning' : 'text-destructive'}`}>
                                     {data.cogs_analysis.inventory_turnover_ratio.toFixed(2)}x
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -313,7 +313,7 @@ export default function InventoryAccountingPage() {
                                 <Clock className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className={`text-2xl font-bold ${data.cogs_analysis.days_inventory_outstanding <= 90 ? 'text-success' : data.cogs_analysis.days_inventory_outstanding <= 180 ? 'text-yellow-600' : 'text-destructive'}`}>
+                                <div className={`text-2xl font-bold ${data.cogs_analysis.days_inventory_outstanding <= 90 ? 'text-success' : data.cogs_analysis.days_inventory_outstanding <= 180 ? 'text-warning' : 'text-destructive'}`}>
                                     {data.cogs_analysis.days_inventory_outstanding.toFixed(0)} days
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -324,12 +324,12 @@ export default function InventoryAccountingPage() {
                     </div>
 
                     {/* Potential Profit Summary */}
-                    <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 border-2 border-emerald-200 dark:border-emerald-800">
+                    <Card className="bg-gradient-to-br from-success/10 to-info/10 dark:from-success/20 dark:to-info/20 border-2 border-success/20 dark:border-success/40">
                         <CardContent className="pt-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <div className="text-sm text-muted-foreground">Potential Selling Value</div>
-                                    <div className="text-2xl font-bold text-success dark:text-emerald-400">
+                                    <div className="text-2xl font-bold text-success dark:text-success">
                                         {formatCurrency(data.inventory_summary.total_selling_value)}
                                     </div>
                                 </div>
@@ -341,7 +341,7 @@ export default function InventoryAccountingPage() {
                                 </div>
                                 <div>
                                     <div className="text-sm text-muted-foreground">Potential Margin</div>
-                                    <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                                    <div className="text-2xl font-bold text-info dark:text-info">
                                         {data.inventory_summary.potential_margin_percent.toFixed(2)}%
                                     </div>
                                 </div>
@@ -384,7 +384,7 @@ export default function InventoryAccountingPage() {
                                                     <TableCell className="text-right font-mono text-success">
                                                         {formatCurrency(category.potential_profit)}
                                                     </TableCell>
-                                                    <TableCell className={`text-right font-bold ${category.margin_percent >= 30 ? 'text-success' : category.margin_percent >= 15 ? 'text-yellow-600' : 'text-destructive'}`}>
+                                                    <TableCell className={`text-right font-bold ${category.margin_percent >= 30 ? 'text-success' : category.margin_percent >= 15 ? 'text-warning' : 'text-destructive'}`}>
                                                         {category.margin_percent.toFixed(2)}%
                                                     </TableCell>
                                                 </TableRow>
@@ -431,10 +431,10 @@ export default function InventoryAccountingPage() {
                                             </div>
                                             <div className="w-full bg-border rounded-full h-2">
                                                 <div
-                                                    className={`h-2 rounded-full ${index === 0 ? 'bg-success/100' :
-                                                        index === 1 ? 'bg-warning/100' :
+                                                    className={`h-2 rounded-full ${index === 0 ? 'bg-success' :
+                                                        index === 1 ? 'bg-warning' :
                                                             index === 2 ? 'bg-primary' :
-                                                                'bg-destructive/100'
+                                                                'bg-destructive'
                                                         }`}
                                                     style={{ width: `${percentage}%` }}
                                                 />
@@ -443,7 +443,7 @@ export default function InventoryAccountingPage() {
                                     );
                                 })}
                             </div>
-                            <div className="mt-6 p-4 bg-primary/10 dark:bg-orange-950 rounded-lg">
+                            <div className="mt-6 p-4 bg-primary/10 dark:bg-warning/15 rounded-lg">
                                 <p className="text-sm text-muted-foreground">
                                     <strong>Stock Aging Guide:</strong> 0-90 days (Fresh stock), 91-180 days (Normal turnover),
                                     181-365 days (Slow-moving - consider promotions), Over 365 days (Dead stock - consider write-off)

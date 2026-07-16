@@ -114,7 +114,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
 
                     return (
                         <Card key={day.toISOString()} className={cn("flex min-h-[160px] flex-col overflow-hidden", isToday && "border-primary ring-1 ring-primary")}>
-                            <div className={cn("p-2 text-center text-sm font-medium border-b bg-muted/50", isToday && "bg-primary/10 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300")}>
+                            <div className={cn("p-2 text-center text-sm font-medium border-b bg-muted/50", isToday && "bg-primary/10 dark:bg-warning/20 text-warning dark:text-warning")}>
                                 {format(day, "EEE, MMM d")}
                             </div>
                             <CardContent className="p-2 flex-1 space-y-2">
@@ -147,7 +147,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                                         <span className="font-semibold">{formatHours(shift.actual_hours)}</span>
                                                     </div>
                                                     {shift.overtime_hours !== null && shift.overtime_hours !== undefined && shift.overtime_hours > 0 && (
-                                                        <div className="flex justify-between text-warning dark:text-orange-400">
+                                                        <div className="flex justify-between text-warning dark:text-warning">
                                                             <span className="opacity-70">Overtime:</span>
                                                             <span className="font-semibold">{formatHours(shift.overtime_hours)}</span>
                                                         </div>

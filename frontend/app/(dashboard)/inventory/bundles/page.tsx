@@ -83,7 +83,7 @@ export default function ServiceBundlesPage() {
                             <span>/</span>
                             <span className="text-foreground font-medium">Service Bundles</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">
                             Service Bundles
                         </h1>
                     </div>
@@ -118,7 +118,7 @@ export default function ServiceBundlesPage() {
             </div>
 
             {/* Bundles Table */}
-            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border dark:ring-border">
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="p-6"><TableSkeleton rows={5} columns={6} /></div>
@@ -158,7 +158,7 @@ export default function ServiceBundlesPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-3">
-                                                <Badge variant="outline" className="bg-info/10 text-blue-700 border-blue-100 font-normal">
+                                                <Badge variant="outline" className="bg-info/15 text-info border-info/20 font-normal">
                                                     <Wrench className="w-3 h-3 mr-1" />
                                                     {bundle.service_type_name || "Unlinked"}
                                                 </Badge>
@@ -210,7 +210,7 @@ export default function ServiceBundlesPage() {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <Package className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
+                            <Package className="w-12 h-12 text-muted-foreground text-muted-foreground mx-auto mb-4" />
                             <h3 className="text-lg font-medium text-foreground">No service bundles found</h3>
                             <p className="text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
                                 Service bundles make it easy to add common parts to work orders in one click.

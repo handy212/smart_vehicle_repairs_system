@@ -1,8 +1,18 @@
-/** Shared max-width for intake/create forms (customer, vehicle, check-in). */
-export const INTAKE_FORM_CLASS = "max-w-5xl mx-auto";
+/**
+ * Dashboard workspace width.
+ * Pages fill the shell content area; the layout already provides horizontal padding.
+ * Do not re-introduce narrow max-w-* columns on module pages.
+ */
+export const WORKSPACE_CLASS = "w-full";
 
-/** Shared max-width for list pages with tables. */
-export const LIST_PAGE_CLASS = "max-w-7xl mx-auto";
+/** Create / edit form pages — same full workspace as lists and details. */
+export const FORM_PAGE_CLASS = "w-full";
+
+/** @deprecated Use FORM_PAGE_CLASS — kept so older imports stay full-width. */
+export const INTAKE_FORM_CLASS = FORM_PAGE_CLASS;
+
+/** List / table pages. */
+export const LIST_PAGE_CLASS = "w-full";
 
 export {
   TABLE_HEAD_CLASS,
@@ -10,4 +20,5 @@ export {
   PERFEX_TABLE_HEAD_CLASS,
   PERFEX_TABLE_CELL_CLASS,
   ACCOUNTING_TABLE_HEAD_CLASS,
+  WORKSHOP_PANEL_CLASS,
 } from "./table-typography";

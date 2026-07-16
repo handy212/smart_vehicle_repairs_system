@@ -12,45 +12,34 @@ import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle, Plus } from "lucide-react";
-import { PremiumIcons } from "@/components/ui/icons";
+import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { format } from "date-fns";
-import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { CustomerForm, CustomerFormData } from "@/components/customers/CustomerForm";
 import { VehicleForm, VehicleFormData } from "@/components/vehicles/VehicleForm";
 import { useToast } from "@/lib/hooks/useToast";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
 import {
-  SERVICE_PACKAGE_LABEL,
-  SERVICE_PACKAGE_PLACEHOLDER,
-} from "@/lib/workorders/job-type-labels";
-import {
   jobTypesApi,
   isFastTrackJobType,
   jobTypeRequiresBundle,
   type JobType,
 } from "@/lib/api/job-types";
-import { JobTypeSelect } from "@/components/workorders/JobTypeSelect";
-import { getCustomerDisplayName } from "@/lib/utils/customer-display";
+import { NewWorkOrderCustomerSection } from "@/components/workorders/NewWorkOrderCustomerSection";
+import { NewWorkOrderDialogs } from "@/components/workorders/NewWorkOrderDialogs";
+import { NewWorkOrderServiceSection } from "@/components/workorders/NewWorkOrderServiceSection";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { getCommonConcernsForCategories } from "@/lib/constants/common-concerns";
+import { mergeConcernSelections } from "@/lib/constants/common-concerns";
+import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
+import { FORM_PAGE_CLASS } from "@/lib/constants/layout";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -88,12 +77,7 @@ export default function NewWorkOrderPage() {
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false);
   const [vehicleFieldErrors, setVehicleFieldErrors] = useState<Record<string, string>>({});
-
-  // Fetch service types (for legacy or fallback)
-  const { data: serviceTypesData } = useQuery({
-    queryKey: ["serviceTypes"],
-    queryFn: () => vehiclesApi.getServiceTypes(),
-  });
+  const [customConcerns, setCustomConcerns] = useState("");
 
   // Fetch inventory bundles for service types
   const { data: bundlesData } = useQuery({
@@ -213,12 +197,12 @@ export default function NewWorkOrderPage() {
 
   // Service progression state
   const [suggestedService, setSuggestedService] = useState<{
-    suggested_service_id: number;
-    suggested_service_name: string;
+    suggested_service_id: number | null;
+    suggested_service_name: string | null;
     suggested_bundle_id?: number | null;
     reason: string;
     last_service_id?: number;
-    last_service_name?: string;
+    last_service_name?: string | null;
     last_service_date?: string;
     smart_suggestions?: Array<{
         id: number;
@@ -233,7 +217,6 @@ export default function NewWorkOrderPage() {
   const [progressionWarning, setProgressionWarning] = useState<string | null>(null);
 
   const {
-    register,
     handleSubmit,
     formState: { errors, isSubmitting },
     watch,
@@ -285,19 +268,43 @@ export default function NewWorkOrderPage() {
     [selectedJobTypes]
   );
 
-  const filteredCommonConcerns = useMemo(
-    () =>
-      getCommonConcernsForCategories(
-        selectedJobTypes.length > 0 ? selectedJobTypes.map((jt) => jt.category) : []
-      ),
-    [selectedJobTypes]
-  );
-
   const bundleRequired = jobTypeRequiresBundle(selectedJobType);
-  const isFastTrack = isFastTrackJobType(selectedJobType);
   const odometerIn = watch("odometer_in");
   const customerConcerns = watch("customer_concerns");
   const broughtByContact = watch("brought_by_contact");
+
+  const concernsMerged = useMemo(
+    () => mergeConcernSelections(selectedConcerns, customConcerns),
+    [selectedConcerns, customConcerns]
+  );
+
+  useEffect(() => {
+    setValue("customer_concerns", concernsMerged, { shouldValidate: false });
+  }, [concernsMerged, setValue]);
+
+  const toggleConcern = (concern: string) => {
+    setSelectedConcerns((prev) =>
+      prev.includes(concern) ? prev.filter((c) => c !== concern) : [...prev, concern]
+    );
+  };
+
+  const applyProgressionWarning = (bundle: ServiceBundle) => {
+    if (!suggestedService) {
+      setProgressionWarning(null);
+      return;
+    }
+    if (suggestedService.last_service_id === bundle.service_type) {
+      setProgressionWarning(
+        `Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`
+      );
+    } else if (suggestedService.suggested_service_id !== bundle.service_type) {
+      setProgressionWarning(
+        `Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`
+      );
+    } else {
+      setProgressionWarning(null);
+    }
+  };
 
   const { data: fetchedCustomer } = useQuery({
     queryKey: ["customer", customer],
@@ -521,15 +528,23 @@ export default function NewWorkOrderPage() {
       // Fetch suggested service for this vehicle
       vehiclesApi.getSuggestedService(vehicle)
         .then(data => {
-          setSuggestedService(data);
+          if (!data?.suggested_service_id) {
+            setSuggestedService(null);
+            return;
+          }
+          setSuggestedService(data as typeof suggestedService);
           // Pre-select suggested bundle when job type requires a service package
           if (bundleRequired && !watch("service_bundle") && data.suggested_bundle_id) {
             setValue("service_bundle", data.suggested_bundle_id);
             setValue("service_type", data.suggested_service_id);
+            const bundle = bundles.find((b: ServiceBundle) => b.id === data.suggested_bundle_id);
+            if (bundle && (!customConcerns.trim() || customConcerns.startsWith("Perform"))) {
+              setSelectedConcerns([]);
+              setCustomConcerns(`Perform ${bundle.name}`);
+            }
           }
         })
-        .catch(err => {
-          console.error("Error fetching suggested service:", err);
+        .catch(() => {
           setSuggestedService(null);
         });
     } else {
@@ -763,1082 +778,273 @@ export default function NewWorkOrderPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1 min-w-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground"
-          >
-            <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
-          <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            <PremiumIcons.PlusCircle className="w-6 h-6 text-primary shrink-0" />
-            <span className="font-semibold text-lg">New Work Order</span>
-          </h1>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2 sm:pt-7">
-          {!appointment && (
+    <div className={`${FORM_PAGE_CLASS} space-y-6 pb-24`}>
+      <StaffPageHeader
+        title="New Job Card"
+        description="Create a work order for a customer visit."
+        breadcrumbs={[
+          { label: "Work Orders", href: "/workorders" },
+          { label: "New" },
+        ]}
+        actions={
+          !appointment ? (
             <Link href="/check-in">
-              <Button type="button" variant="outline" disabled={isSubmitting}>
+              <Button type="button" variant="outline" size="sm" disabled={isSubmitting}>
                 Walk-in Check-in
               </Button>
             </Link>
-          )}
-          <Link href="/workorders">
-            <Button type="button" variant="outline" disabled={isSubmitting}>
-              Cancel
-            </Button>
-          </Link>
-          <Button type="submit" form="new-work-order-form" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create JobCard"}
-          </Button>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       {appointment && (
-        <Card className="border-primary/15 bg-primary/5">
-          <CardContent className="pt-6">
-            <p className="text-sm text-primary">
-              Creating work order from appointment: <strong>{appointment.appointment_number}</strong>
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-primary">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Creating from appointment <strong>{appointment.appointment_number}</strong>
+          </p>
+        </div>
       )}
 
       {serverError && (
-        <Card className="bg-destructive/10 dark:bg-red-900/20 border-destructive/20 dark:border-red-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-destructive dark:text-red-400">
-              <AlertCircle className="w-5 h-5" />
-              <p className="text-sm font-medium">{serverError}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <p className="text-sm font-medium text-destructive">{serverError}</p>
+        </div>
       )}
 
-      <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-destructive dark:text-red-400">
-              <AlertCircle className="w-5 h-5" />
-              <span>Active Work Order Detected</span>
-            </DialogTitle>
-            <DialogDescription className="pt-4">
-              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch || 'another branch'}</strong>.
-              Please close it before creating a new one.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setShowActiveWorkOrderDialog(false)}>
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Repeat Visit Alert Dialog */}
-      <Dialog open={showRepeatVisitDialog} onOpenChange={setShowRepeatVisitDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-primary">
-              <AlertCircle className="w-5 h-5" />
-              <span>Repeat Visit Detected</span>
-            </DialogTitle>
-            <DialogDescription className="pt-4">
-              This vehicle was recently serviced for a similar issue. This may indicate a warranty/rework case.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {repeatVisitMatches.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm text-foreground">
-                  Previous Work Order(s):
-                </h4>
-                {repeatVisitMatches.map((match) => (
-                  <Card key={match.work_order_id} className="border-primary/15">
-                    <CardContent className="pt-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-sm">
-                              Work Order: <strong>{match.work_order_number}</strong>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Completed {match.days_ago} day{match.days_ago !== 1 ? 's' : ''} ago
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-medium text-primary">
-                              {Math.round(match.similarity * 100)}% similar
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <p><strong>Branch:</strong> {match.branch_name}</p>
-                          <p><strong>Technician:</strong> {match.technician}</p>
-                          <p><strong>Previous Concerns:</strong> {match.customer_concerns.substring(0, 150)}{match.customer_concerns.length > 150 ? '...' : ''}</p>
-                        </div>
-                        <div className="pt-2">
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="related_work_order"
-                              checked={selectedRelatedWorkOrder === match.work_order_id}
-                              onChange={() => setSelectedRelatedWorkOrder(match.work_order_id)}
-                              className="w-4 h-4 text-primary"
-                            />
-                            <span className="text-sm text-card-foreground">
-                              Link this work order as related
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-2 border-t border-border">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isWarrantyRework}
-                  onChange={(e) => setIsWarrantyRework(e.target.checked)}
-                  className="w-4 h-4 text-primary rounded"
-                />
-                <span className="text-sm font-medium text-foreground">
-                  Mark as warranty/rework case
-                </span>
-              </label>
-              <p className="text-xs text-muted-foreground mt-1 ml-6">
-                This will flag the work order as a warranty case and link it to the previous work order.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowRepeatVisitDialog(false);
-                setIsWarrantyRework(false);
-                setSelectedRelatedWorkOrder(null);
-              }}
-            >
-              Continue Anyway
-            </Button>
-            <Button onClick={() => setShowRepeatVisitDialog(false)}>
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewWorkOrderDialogs
+        showActiveWorkOrderDialog={showActiveWorkOrderDialog}
+        onActiveWorkOrderDialogChange={setShowActiveWorkOrderDialog}
+        activeWorkOrderBranch={activeWorkOrderBranch}
+        showRepeatVisitDialog={showRepeatVisitDialog}
+        onRepeatVisitDialogChange={setShowRepeatVisitDialog}
+        repeatVisitMatches={repeatVisitMatches}
+        selectedRelatedWorkOrderId={selectedRelatedWorkOrder}
+        onSelectRelatedWorkOrderId={setSelectedRelatedWorkOrder}
+        isWarrantyRework={isWarrantyRework}
+        onWarrantyReworkChange={setIsWarrantyRework}
+        onRepeatVisitContinueAnyway={() => {
+          setShowRepeatVisitDialog(false);
+          setIsWarrantyRework(false);
+          setSelectedRelatedWorkOrder(null);
+        }}
+        showUnapprovedRecommendationsDialog={showUnapprovedRecommendationsDialog}
+        onUnapprovedRecommendationsDialogChange={setShowUnapprovedRecommendationsDialog}
+        unapprovedRecommendationsData={unapprovedRecommendationsData}
+        acknowledgedUnapproved={acknowledgedUnapproved}
+        onAcknowledgedUnapprovedChange={setAcknowledgedUnapproved}
+        onUnapprovedRecommendationsCancel={() => {
+          setShowUnapprovedRecommendationsDialog(false);
+          setAcknowledgedUnapproved(false);
+        }}
+        onUnapprovedRecommendationsProceed={() => {
+          setShowUnapprovedRecommendationsDialog(false);
+        }}
+      />
 
       <form id="new-work-order-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-4 w-full">
-            {/* Customer & Vehicle */}
-            <Card className="border-0 overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <PremiumIcons.Users className="w-5 h-5 text-primary/80" />
-                  Customer / Business & Vehicle
-                </CardTitle>
-                <CardDescription>Select the customer or business account and vehicle</CardDescription>
-              </CardHeader>
+          <NewWorkOrderCustomerSection
+            customerId={customer}
+            customerError={errors.customer}
+            onCustomerSelect={applyCustomerSelection}
+            onAddCustomerClick={() => setShowAddCustomerDialog(true)}
+            selectedCustomerData={selectedCustomerData}
+            selectedCustomerId={selectedCustomer}
+            vehicleId={vehicle}
+            vehicleError={errors.vehicle}
+            onVehicleChange={(vehicleId) => setValue("vehicle", vehicleId)}
+            vehicles={vehiclesData?.results ?? []}
+            selectedVehicle={selectedVehicle}
+            onAddVehicleClick={() => setShowAddVehicleDialog(true)}
+            isBusinessAccount={isBusinessAccount}
+            businessUseManualContact={businessUseManualContact}
+            onBusinessUseManualContactChange={(checked) => {
+              setBusinessUseManualContact(checked);
+              setValue("brought_by_contact", undefined as any);
+              setValue("brought_by_name", "");
+              setValue("brought_by_phone", "");
+              setValue("brought_by_email", "");
+              setValue("brought_by_relationship", "");
+              setValue("brought_by_type", checked ? "third_party" : "saved_contact");
+            }}
+            individualUseThirdParty={individualUseThirdParty}
+            onIndividualUseThirdPartyChange={(checked) => {
+              setIndividualUseThirdParty(checked);
+              setValue("brought_by_type", checked ? "third_party" : "account_holder");
+              setValue("brought_by_contact", undefined as any);
+              if (!checked) {
+                setValue("brought_by_name", "");
+                setValue("brought_by_phone", "");
+                setValue("brought_by_email", "");
+                setValue("brought_by_relationship", "");
+              }
+            }}
+            availableContacts={availableContacts}
+            broughtByContactId={broughtByContact}
+            onBroughtByContactSelect={(selectedId, contact) => {
+              setValue("brought_by_type", "saved_contact");
+              setValue("brought_by_contact", selectedId);
+              setValue("brought_by_name", contact ? `${contact.first_name} ${contact.last_name}`.trim() : "");
+              setValue("brought_by_phone", contact?.phone || "");
+              setValue("brought_by_email", contact?.email || "");
+              setValue("brought_by_relationship", contact?.job_title || "Business Contact");
+            }}
+            selectedBusinessContact={selectedBusinessContact}
+            broughtByContactError={errors.brought_by_contact}
+            broughtByName={watch("brought_by_name") || ""}
+            onBroughtByNameChange={(value) => setValue("brought_by_name", value)}
+            broughtByNameError={errors.brought_by_name}
+            broughtByPhone={watch("brought_by_phone") || ""}
+            onBroughtByPhoneChange={(value) => setValue("brought_by_phone", value)}
+            broughtByEmail={watch("brought_by_email") || ""}
+            onBroughtByEmailChange={(value) => setValue("brought_by_email", value)}
+            broughtByRelationship={watch("brought_by_relationship") || ""}
+            onBroughtByRelationshipChange={(value) => setValue("brought_by_relationship", value)}
+          />
 
-              <CardContent className="space-y-4">
-                {/* Grid layout — 1 column on mobile, 2 columns on md+ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                  {/* Customer */}
-                  <div className="space-y-3">
-                    <div>
-                      <label
-                        htmlFor="customer"
-                        className="block text-sm font-medium text-card-foreground mb-1"
-                      >
-                        Customer / Business *
-                      </label>
-
-                      <div className="flex gap-2">
-                        <div className={`flex-1 min-w-0 ${errors.customer ? "[&_button]:border-destructive" : ""}`}>
-                          <CustomerSelector
-                            selectedCustomerId={customer}
-                            placeholder="Search by company, contact, phone, or customer number..."
-                            onSelect={(cust) => applyCustomerSelection(cust)}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-11 w-11"
-                          title="Add new customer"
-                          onClick={() => setShowAddCustomerDialog(true)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {errors.customer && (
-                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
-                          {errors.customer.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Customer Info Display */}
-                    {selectedCustomerData && (
-                      <div className="text-xs text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-                        <span className="font-medium text-foreground">
-                          {getCustomerDisplayName(selectedCustomerData)}
-                        </span>
-                        {selectedCustomerData.phone && <span>📞 {selectedCustomerData.phone}</span>}
-                        {selectedCustomerData.email && <span className="truncate max-w-[200px]" title={selectedCustomerData.email}>✉️ {selectedCustomerData.email}</span>}
-                        {selectedCustomerData.customer_type && <span className="capitalize">🏷️ {selectedCustomerData.customer_type.replace('_', ' ')}</span>}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Vehicle */}
-                  <div className="space-y-3">
-                    <div>
-                      <label
-                        htmlFor="vehicle"
-                        className="block text-sm font-medium text-card-foreground mb-1"
-                      >
-                        Vehicle *
-                      </label>
-
-                      <div className="flex gap-2">
-                        <div className="flex-1 min-w-0">
-                        <Select
-                          value={vehicle?.toString() || ""}
-                          onValueChange={(val) => setValue("vehicle", parseInt(val))}
-                          disabled={!selectedCustomer}
-                        >
-                          <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-destructive" : ""}`}>
-                            <SelectValue placeholder={
-                              !selectedCustomer
-                                ? "Select a customer or business first"
-                                : !vehiclesData?.results?.length
-                                  ? "No vehicles — add one with +"
-                                  : "Select a vehicle"
-                            } />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehiclesData?.results?.map((v) => (
-                              <SelectItem key={v.id} value={v.id.toString()}>
-                                {v.make} {v.model} {v.year} — {v.vin}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-10 w-10"
-                          title="Add new vehicle"
-                          disabled={!selectedCustomer}
-                          onClick={() => setShowAddVehicleDialog(true)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {errors.vehicle && (
-                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
-                          {errors.vehicle.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Vehicle Info Display */}
-                    {selectedVehicle && (
-                      <div className="text-xs text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-                        <span className="font-medium text-foreground">🚗 {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}</span>
-                        {selectedVehicle.license_plate && <span>#️⃣ {selectedVehicle.license_plate}</span>}
-                        {selectedVehicle.vin && <span>VIN: <span className="font-mono">{selectedVehicle.vin}</span></span>}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-
-                {selectedCustomerData && (
-                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground">Delivered By</h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Record the individual who delivered the vehicle for this work order.
-                      </p>
-                    </div>
-
-                    {isBusinessAccount ? (
-                      <div className="space-y-4">
-                        <label className="flex items-start gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-3">
-                          <input
-                            type="checkbox"
-                            checked={businessUseManualContact}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setBusinessUseManualContact(checked);
-                              setValue("brought_by_contact", undefined as any);
-                              setValue("brought_by_name", "");
-                              setValue("brought_by_phone", "");
-                              setValue("brought_by_email", "");
-                              setValue("brought_by_relationship", "");
-                              setValue("brought_by_type", checked ? "third_party" : "saved_contact");
-                            }}
-                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-foreground">Not in saved business contacts</p>
-                          </div>
-                        </label>
-
-                        {!businessUseManualContact ? (
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-card-foreground">
-                              Business contact *
-                            </label>
-                            <Select
-                              value={broughtByContact?.toString() || ""}
-                              onValueChange={(val) => {
-                                const selectedId = parseInt(val);
-                                const contact = availableContacts.find((item) => item.id === selectedId);
-                                setValue("brought_by_type", "saved_contact");
-                                setValue("brought_by_contact", selectedId);
-                                setValue("brought_by_name", contact ? `${contact.first_name} ${contact.last_name}`.trim() : "");
-                                setValue("brought_by_phone", contact?.phone || "");
-                                setValue("brought_by_email", contact?.email || "");
-                                setValue("brought_by_relationship", contact?.job_title || "Business Contact");
-                              }}
-                            >
-                              <SelectTrigger className={errors.brought_by_contact ? "border-destructive" : ""}>
-                                <SelectValue placeholder={availableContacts.length ? "Select contact person" : "No saved contacts found"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableContacts.map((contact) => (
-                                  <SelectItem key={contact.id} value={contact.id.toString()}>
-                                    {contact.first_name} {contact.last_name}
-                                    {contact.job_title ? ` — ${contact.job_title}` : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {errors.brought_by_contact && (
-                              <p className="text-sm text-destructive">{errors.brought_by_contact.message}</p>
-                            )}
-                            {selectedBusinessContact && (
-                              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                                {selectedBusinessContact.phone && <span>📞 {selectedBusinessContact.phone}</span>}
-                                {selectedBusinessContact.email && <span>✉️ {selectedBusinessContact.email}</span>}
-                                {selectedBusinessContact.job_title && <span>Role: {selectedBusinessContact.job_title}</span>}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Person name *
-                              </label>
-                              <Input {...register("brought_by_name")} placeholder="Enter full name" />
-                              {errors.brought_by_name && <p className="mt-1 text-sm text-destructive">{errors.brought_by_name.message}</p>}
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Relationship / role
-                              </label>
-                              <Input {...register("brought_by_relationship")} placeholder="Driver, staff, representative..." />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Phone
-                              </label>
-                              <Input {...register("brought_by_phone")} placeholder="Phone number" />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Email
-                              </label>
-                              <Input {...register("brought_by_email")} type="email" placeholder="Email address" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <label className="flex items-start gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-3">
-                          <input
-                            type="checkbox"
-                            checked={individualUseThirdParty}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setIndividualUseThirdParty(checked);
-                              setValue("brought_by_type", checked ? "third_party" : "account_holder");
-                              setValue("brought_by_contact", undefined as any);
-                              if (!checked) {
-                                setValue("brought_by_name", "");
-                                setValue("brought_by_phone", "");
-                                setValue("brought_by_email", "");
-                                setValue("brought_by_relationship", "");
-                              }
-                            }}
-                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-foreground">Brought by driver or another person</p>
-                            <p className="text-xs text-muted-foreground">
-                              Turn this on if someone other than the customer/account holder brought the vehicle.
-                            </p>
-                          </div>
-                        </label>
-
-                        {individualUseThirdParty && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Person name *
-                              </label>
-                              <Input {...register("brought_by_name")} placeholder="Enter full name" />
-                              {errors.brought_by_name && <p className="mt-1 text-sm text-destructive">{errors.brought_by_name.message}</p>}
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Relationship
-                              </label>
-                              <Input {...register("brought_by_relationship")} placeholder="Driver, spouse, staff, friend..." />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Phone
-                              </label>
-                              <Input {...register("brought_by_phone")} placeholder="Phone number" />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-card-foreground mb-1">
-                                Email
-                              </label>
-                              <Input {...register("brought_by_email")} type="email" placeholder="Email address" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Smart Preventive Suggestions */}
-            {suggestedService?.smart_suggestions && suggestedService.smart_suggestions.length > 0 && (
-              <Card className="border-warning/20 bg-warning/10 dark:border-amber-900/50 dark:bg-amber-900/20 shadow-sm animate-in fade-in slide-in-from-top-4">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-warning dark:text-amber-300 flex items-center gap-2 text-md">
-                    <HeartPulse className="w-5 h-5 animate-pulse" />
-                    Smart Preventive Suggestions
-                  </CardTitle>
-                  <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-                    Based on the vehicle&apos;s unique usage history, the following services are due or due very soon.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {suggestedService.smart_suggestions.map((service) => (
-                      <li key={service.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background/50 rounded-md border text-sm gap-2 hover:bg-background transition-colors">
-                        <div>
-                          <span className="font-semibold text-foreground flex items-center gap-2">
-                            {service.service_type_name}
-                            {service.is_due ? (
-                              <Badge variant="danger" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none">OVERDUE</Badge>
-                            ) : service.is_due_soon ? (
-                              <Badge variant="warning" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none bg-warning/100 text-amber-950">DUE SOON</Badge>
-                            ) : null}
-                          </span>
-                          <span className="text-muted-foreground font-mono text-xs mt-1 block">
-                            {service.estimated_due_date ? `Estimated Due: ${format(new Date(service.estimated_due_date), "MMM d, yyyy")}` : `Due in ${service.days_until_due} days`}
-                          </span>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          type="button" 
-                          className="shrink-0 bg-background"
-                          onClick={() => {
-                            const currentConcerns = watch("customer_concerns");
-                            const newConcern = `Perform ${service.service_type_name}`;
-                            if (!currentConcerns.includes(newConcern)) {
-                              setValue("customer_concerns", currentConcerns ? `${currentConcerns}\n${newConcern}` : newConcern);
-                            }
-                          }}
-                        >
-                          <PlusCircle className="w-4 h-4 mr-1" />
-                          Add to Request
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Work Order Details */}
-            <Card className="border-0 overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <PremiumIcons.FileText className="w-5 h-5 text-primary/80" />
-                      Work Order Details
-                    </CardTitle>
-                    <CardDescription>Priority and description for this job</CardDescription>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs w-fit"
-                      onClick={() => {
-                        setShowAdvanced((v) => {
-                          const next = !v;
-                          if (next) {
-                            requestAnimationFrame(() => {
-                              advancedOptionsRef.current?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "nearest",
-                              });
-                            });
-                          }
-                          return next;
-                        });
-                      }}
-                    >
-                      {showAdvanced ? "Hide return / rework options" : "Show return / rework options"}
-                    </Button>
-                    <p className="max-w-[16rem] text-right text-[11px] text-muted-foreground">
-                      Optional: link this job to a previous visit for warranty or rework.
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <JobTypeSelect
-                      multiple
-                      value={jobTypeCode || "general_repairs"}
-                      values={jobTypeCodes}
-                      onChange={(code, jobType) => {
-                        setValue("job_type_code", code, { shouldValidate: true });
-                        if (!jobTypeRequiresBundle(jobType)) {
-                          setValue("service_bundle", undefined);
-                          setValue("service_type", undefined);
-                          setProgressionWarning(null);
-                        }
-                      }}
-                      onChangeMultiple={(codes, types) => {
-                        setValue("job_type_codes", codes, { shouldValidate: true });
-                        setValue("job_type_code", codes[0] || "general_repairs", {
-                          shouldValidate: true,
-                        });
-                        const primary = types[0] ?? null;
-                        if (!jobTypeRequiresBundle(primary)) {
-                          setValue("service_bundle", undefined);
-                          setValue("service_type", undefined);
-                          setProgressionWarning(null);
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {bundleRequired && (
-                    <div>
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <label htmlFor="service_bundle" className="block text-sm font-medium text-card-foreground">
-                          {SERVICE_PACKAGE_LABEL} *
-                        </label>
-                        {suggestedService && (
-                          <Badge variant="outline" className="border-info/20 bg-info/10 text-[10px] text-blue-700">
-                            Suggested: {suggestedService.suggested_service_name}
-                          </Badge>
-                        )}
-                      </div>
-                      <Select
-                        value={watch("service_bundle")?.toString()}
-                        onValueChange={(val) => {
-                          const bundleId = parseInt(val);
-                          setValue("service_bundle", bundleId, { shouldValidate: true });
-
-                          const bundle = bundles.find((b: ServiceBundle) => b.id === bundleId);
-                          if (bundle && bundle.service_type) {
-                            setValue("service_type", bundle.service_type);
-
-                            if (suggestedService) {
-                              if (suggestedService.last_service_id === bundle.service_type) {
-                                setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
-                              } else if (suggestedService.suggested_service_id !== bundle.service_type) {
-                                setProgressionWarning(`Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`);
-                              } else {
-                                setProgressionWarning(null);
-                              }
-                            }
-
-                            if (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform")) {
-                              setValue("customer_concerns", `Perform ${bundle.name}`);
-                            }
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="service_bundle">
-                          <SelectValue placeholder={SERVICE_PACKAGE_PLACEHOLDER} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bundles.map((bundle: ServiceBundle) => (
-                            <SelectItem key={bundle.id} value={bundle.id.toString()}>
-                              {bundle.name}
-                              {bundle.service_type_name ? ` · ${bundle.service_type_name}` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.service_bundle && (
-                        <p className="mt-1 text-sm text-destructive">{errors.service_bundle.message}</p>
-                      )}
-                      {progressionWarning && (
-                        <p className="mt-1 flex animate-in fade-in slide-in-from-top-1 items-center text-xs font-medium text-primary">
-                          <AlertTriangle className="mr-1 h-3 w-3" />
-                          {progressionWarning}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-card-foreground mb-1">
-                      Priority
-                    </label>
-                    <Select
-                      defaultValue="normal"
-
-                      onValueChange={(val) => setValue("priority", val as any)}
-                    >
-                      <SelectTrigger id="priority">
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {!bundleRequired && (
-                    <div className="flex items-end">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" type="button" className="text-xs h-9 w-full justify-start text-muted-foreground">
-                            + Quick Select Common Concerns
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0" align="start">
-                          <div className="max-h-60 overflow-y-auto p-2">
-                            {selectedJobTypes.length > 0 ? (
-                              <p className="px-1.5 pb-1.5 text-[10px] text-muted-foreground">
-                                Filtered for{" "}
-                                {selectedJobTypes.map((jt) => jt.name).join(", ")}
-                              </p>
-                            ) : null}
-                            <div className="flex flex-col gap-1">
-                              {filteredCommonConcerns.map((concernText) => (
-                                <label
-                                  key={concernText}
-                                  className="flex items-center space-x-2 cursor-pointer hover:bg-muted p-1.5 rounded"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedConcerns.includes(concernText)}
-                                    onChange={(e) => {
-                                      const isChecked = e.target.checked;
-                                      let updatedConcerns: string[];
-
-                                      if (isChecked) {
-                                        updatedConcerns = selectedConcerns.concat(concernText);
-                                      } else {
-                                        updatedConcerns = selectedConcerns.filter((c) => c !== concernText);
-                                      }
-
-                                      setSelectedConcerns(updatedConcerns);
-
-                                      if (updatedConcerns.length > 0) {
-                                        setValue("customer_concerns", updatedConcerns.join("\n"));
-                                      } else {
-                                        setValue("customer_concerns", "");
-                                      }
-                                    }}
-                                    className="rounded border-border text-primary focus:ring-primary"
-                                  />
-                                  <span className="text-xs text-card-foreground">{concernText}</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-
-                  <div>
-                    <label htmlFor="customer_concerns" className="block text-sm font-medium text-card-foreground mb-1">
-                      Customer Concerns / Description *
-                    </label>
-                    <Textarea
-                      id="customer_concerns"
-                      {...register("customer_concerns")}
-                      rows={6}
-                      placeholder="Describe the issue or service needed... (You can select multiple common concerns above or type your own)"
-                      className={errors.customer_concerns ? "border-destructive" : ""}
-                      onChange={(e) => {
-                        // Update the textarea value
-                        setValue("customer_concerns", e.target.value);
-                        // If user types manually, clear "Other" selection if it was selected
-                        if (selectedConcerns.includes("Other (describe below)") && e.target.value.trim() !== "") {
-                          setSelectedConcerns(prev => prev.filter(c => c !== "Other (describe below)"));
-                        }
-                      }}
-                    />
-                    {errors.customer_concerns && (
-                      <p className="mt-1 text-sm text-destructive dark:text-red-400">{errors.customer_concerns.message}</p>
-                    )}
-                    {repeatVisitMatches.length > 0 && !showRepeatVisitDialog && (
-                      <div className="mt-2 rounded-md border border-primary/15 bg-primary/5 p-3">
-                        <p className="text-sm text-primary">
-                          <AlertCircle className="w-4 h-4 inline mr-1" />
-                          Similar concerns detected from recent work order(s). Check the alert dialog for details.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {showAdvanced && (
-            <div ref={advancedOptionsRef}>
-            <Card className={`border overflow-hidden transition-colors ${isWarrantyRework ? "border-primary/30" : "border-border"}`}>
-              <div className="border-b border-border/60 px-4 py-2 bg-muted/30">
-                <p className="text-xs text-muted-foreground">
-                  Return / rework options — turn on below only when this visit is related to a previous job.
-                </p>
-              </div>
-              <button
-                type="button"
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${isWarrantyRework ? "bg-primary/5" : "hover:bg-muted/40"}`}
-                onClick={() => {
-                  const newState = !isWarrantyRework;
-                  setIsWarrantyRework(newState);
-                  if (!newState) {
-                    setSelectedRelatedWorkOrder(null);
-                    setSelectedRelatedWorkOrderDetail(null);
-                    setWarrantyReason("");
+          <NewWorkOrderServiceSection
+            idPrefix="new-wo"
+            showAdvanced={showAdvanced}
+            onToggleAdvanced={() => {
+              setShowAdvanced((v) => {
+                const next = !v;
+                if (next) {
+                  requestAnimationFrame(() => {
+                    advancedOptionsRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "nearest",
+                    });
+                  });
+                }
+                return next;
+              });
+            }}
+            advancedOptionsRef={advancedOptionsRef}
+            isWarrantyRework={isWarrantyRework}
+            onToggleWarrantyRework={() => {
+              const newState = !isWarrantyRework;
+              setIsWarrantyRework(newState);
+              if (!newState) {
+                setSelectedRelatedWorkOrder(null);
+                setSelectedRelatedWorkOrderDetail(null);
+                setWarrantyReason("");
+              }
+            }}
+            vehicleId={vehicle}
+            isLoadingRecentWorkOrders={isLoadingRecentWorkOrders}
+            recentWorkOrders={recentWorkOrders}
+            selectedRelatedWorkOrderId={selectedRelatedWorkOrder}
+            onSelectRelatedWorkOrder={(wo) => {
+              setSelectedRelatedWorkOrder(wo.id);
+              setSelectedRelatedWorkOrderDetail(wo);
+              setShowWorkOrderSearch(false);
+            }}
+            showWorkOrderSearch={showWorkOrderSearch}
+            onToggleWorkOrderSearch={() => setShowWorkOrderSearch(!showWorkOrderSearch)}
+            workOrderSearchQuery={workOrderSearchQuery}
+            onWorkOrderSearchQueryChange={(value) => {
+              setWorkOrderSearchQuery(value);
+              setShowWorkOrderSearch(value.length > 0);
+            }}
+            onClearWorkOrderSearch={() => {
+              setShowWorkOrderSearch(false);
+              setWorkOrderSearchQuery("");
+            }}
+            warrantyReason={warrantyReason}
+            onWarrantyReasonChange={setWarrantyReason}
+            repeatVisitMatchCount={repeatVisitMatches.length}
+            showRepeatVisitDialog={showRepeatVisitDialog}
+            jobTypeCode={jobTypeCode || "general_repairs"}
+            jobTypeCodes={jobTypeCodes}
+            onJobTypeChange={(code, jobType) => {
+              setValue("job_type_code", code, { shouldValidate: true });
+              if (!jobTypeRequiresBundle(jobType)) {
+                setValue("service_bundle", undefined);
+                setValue("service_type", undefined);
+                setProgressionWarning(null);
+              }
+            }}
+            onJobTypesChange={(codes, types) => {
+              setValue("job_type_codes", codes, { shouldValidate: true });
+              setValue("job_type_code", codes[0] || "general_repairs", {
+                shouldValidate: true,
+              });
+              const primary = types[0] ?? null;
+              if (!jobTypeRequiresBundle(primary)) {
+                setValue("service_bundle", undefined);
+                setValue("service_type", undefined);
+                setProgressionWarning(null);
+              }
+            }}
+            primaryJobType={selectedJobType}
+            selectedJobTypes={selectedJobTypes}
+            bundles={bundles}
+            serviceBundleId={watch("service_bundle")}
+            onServiceBundleChange={(bundleId, bundle) => {
+              setValue("service_bundle", bundleId, { shouldValidate: true });
+              if (bundle.service_type) {
+                setValue("service_type", bundle.service_type);
+              }
+              applyProgressionWarning(bundle);
+              if (!customConcerns.trim() || customConcerns.startsWith("Perform")) {
+                setSelectedConcerns([]);
+                setCustomConcerns(`Perform ${bundle.name}`);
+              }
+            }}
+            suggestedService={
+              suggestedService?.suggested_service_id
+                ? {
+                    ...suggestedService,
+                    suggested_service_id: suggestedService.suggested_service_id,
+                    suggested_service_name: suggestedService.suggested_service_name || "",
                   }
-                }}
-              >
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isWarrantyRework ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  <AlertCircle className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-medium ${isWarrantyRework ? "text-primary" : "text-foreground"}`}>
-                    Return / rework job
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {isWarrantyRework
-                      ? "Link this job to a previous work order"
-                      : "Optional — for warranty or repeat visits"}
-                  </p>
-                </div>
-                <span
-                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors ${isWarrantyRework ? "border-primary bg-primary" : "border-border bg-muted"}`}
-                  aria-hidden
-                >
-                  <span
-                    className={`inline-block h-5 w-5 rounded-full border border-border bg-card shadow-sm transition-transform mt-0.5 ${isWarrantyRework ? "translate-x-5" : "translate-x-0.5"}`}
-                  />
-                </span>
-              </button>
-
-              {isWarrantyRework && (
-                <CardContent className="space-y-4 border-t border-border/60 pt-4 pb-4">
-                  {!vehicle ? (
-                    <p className="text-sm text-muted-foreground rounded-md bg-muted/50 px-3 py-2">
-                      Select a vehicle above to see recent jobs.
-                    </p>
-                  ) : (
-                    <>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <label className="text-sm font-medium text-foreground">Previous job</label>
-                        {selectedRelatedWorkOrder && (
-                          <button
-                            type="button"
-                            onClick={() => setShowWorkOrderSearch(!showWorkOrderSearch)}
-                            className="text-xs font-medium text-primary hover:underline w-fit"
-                          >
-                            Search by ID
-                          </button>
-                        )}
-                      </div>
-
-                      {isLoadingRecentWorkOrders ? (
-                        <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 py-6 text-sm text-muted-foreground">
-                          <PremiumIcons.Spinner className="h-4 w-4 animate-spin" />
-                          Loading history…
-                        </div>
-                      ) : recentWorkOrders.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-52 overflow-y-auto">
-                          {recentWorkOrders.map((wo) => (
-                            <button
-                              key={wo.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedRelatedWorkOrder(wo.id);
-                                setSelectedRelatedWorkOrderDetail(wo);
-                                setShowWorkOrderSearch(false);
-                              }}
-                              className={`rounded-lg border p-3 text-left transition-all hover:shadow-sm ${selectedRelatedWorkOrder === wo.id
-                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                : "border-border bg-card hover:border-primary/30"
-                                }`}
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <span className="font-semibold text-sm text-foreground">{wo.work_order_number}</span>
-                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
-                                  {wo.days_ago !== null ? `${wo.days_ago}d` : "—"}
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground line-clamp-2">
-                                {wo.customer_concerns || "No description"}
-                              </p>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="rounded-lg border border-dashed border-border py-5 text-center">
-                          <p className="text-sm text-muted-foreground">No recent jobs for this vehicle.</p>
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="sm"
-                            className="mt-1 h-auto p-0"
-                            onClick={() => setShowWorkOrderSearch(true)}
-                          >
-                            Search by work order ID
-                          </Button>
-                        </div>
-                      )}
-
-                      {(showWorkOrderSearch || (!recentWorkOrders.length && !isLoadingRecentWorkOrders)) && (
-                        <div className="flex gap-2 max-w-md">
-                          <Input
-                            type="text"
-                            placeholder="Work order number…"
-                            value={workOrderSearchQuery}
-                            onChange={(e) => {
-                              setWorkOrderSearchQuery(e.target.value);
-                              setShowWorkOrderSearch(e.target.value.length > 0);
-                            }}
-                          />
-                          {showWorkOrderSearch && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="shrink-0"
-                              onClick={() => {
-                                setShowWorkOrderSearch(false);
-                                setWorkOrderSearchQuery("");
-                              }}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {selectedRelatedWorkOrder && (
-                        <div className="space-y-1.5 max-w-2xl">
-                          <label htmlFor="warranty_reason" className="text-sm font-medium text-foreground">
-                            Reason for rework <span className="text-destructive">*</span>
-                          </label>
-                          <Textarea
-                            id="warranty_reason"
-                            value={warrantyReason}
-                            onChange={(e) => setWarrantyReason(e.target.value)}
-                            placeholder="e.g. Issue persisted, part failure"
-                            rows={2}
-                            className={`resize-none ${!warrantyReason.trim() ? "border-primary/50 focus-visible:ring-primary/30" : ""}`}
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-            </div>
-            )}
+                : null
+            }
+            progressionWarning={progressionWarning}
+            bundleError={errors.service_bundle?.message}
+            selectedConcerns={selectedConcerns}
+            onToggleConcern={toggleConcern}
+            customConcerns={customConcerns}
+            onCustomConcernsChange={setCustomConcerns}
+            concernsPreview={concernsMerged}
+            concernsError={errors.customer_concerns?.message}
+            odometer={
+              typeof odometerIn === "number" && !Number.isNaN(odometerIn)
+                ? String(odometerIn)
+                : ""
+            }
+            onOdometerChange={(value) => {
+              const parsed = value === "" ? 0 : parseInt(value, 10);
+              setValue("odometer_in", Number.isNaN(parsed) ? 0 : parsed, {
+                shouldValidate: true,
+              });
+            }}
+            odometerError={errors.odometer_in?.message}
+            priority={(watch("priority") as "low" | "normal" | "high" | "urgent") || "normal"}
+            onPriorityChange={(value) => setValue("priority", value)}
+          />
         </div>
       </form>
 
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-3 border-t border-border bg-background/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <Link href="/workorders">
+          <Button type="button" variant="outline" disabled={isSubmitting}>
+            Cancel
+          </Button>
+        </Link>
+        <Button
+          type="submit"
+          form="new-work-order-form"
+          className="shadow-workshop"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Creating..." : "Create Job Card"}
+        </Button>
+      </div>
+
       {/* Open Recommendation Warning Dialog */}
-      <Dialog open={showUnapprovedRecommendationsDialog} onOpenChange={setShowUnapprovedRecommendationsDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="w-5 h-5 text-primary" />
-              Open Vehicle Recommendations Found
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              This vehicle has {unapprovedRecommendationsData?.count || 0} pending or deferred recommendation{unapprovedRecommendationsData?.count !== 1 ? 's' : ''} from previous work orders. Please review and acknowledge before proceeding.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            {unapprovedRecommendationsData && unapprovedRecommendationsData.count > 0 ? (
-              <div className="space-y-4">
-                {/* Group recommendations by work order */}
-                {Object.entries(
-
-                  unapprovedRecommendationsData.recommendations.reduce((acc: any, rec: any) => {
-                    const woId = rec.work_order_id;
-                    if (!acc[woId]) {
-                      acc[woId] = {
-                        work_order_number: rec.work_order_number,
-                        work_order_completed_at: rec.work_order_completed_at,
-                        recommendations: [],
-                      };
-                    }
-                    acc[woId].recommendations.push(rec);
-                    return acc;
-
-                  }, {} as Record<number, any>)
-
-                ).map(([woId, group]: [string, any]) => (
-                  <div key={woId} className="border border-border rounded-lg p-4 bg-muted/50">
-                    <div className="mb-3 pb-2 border-b border-border">
-                      <p className="font-semibold text-sm text-foreground">
-                        Work Order: {group.work_order_number}
-                      </p>
-                      {group.work_order_completed_at && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Completed: {new Date(group.work_order_completed_at).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-3">
-
-                      {group.recommendations.map((rec: any) => (
-                        <div key={rec.id} className="rounded border-l-4 border-l-primary bg-card p-3">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge
-                                variant={
-                                  rec.priority === "critical"
-                                    ? "danger"
-                                    : rec.priority === "necessary"
-                                      ? "default"
-                                      : "secondary"
-                                }
-                                className="text-xs capitalize"
-                              >
-                                {rec.priority_display}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs capitalize">
-                                {rec.recommendation_type_display}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs capitalize">
-                                {rec.approval_status_display}
-                              </Badge>
-                            </div>
-                          </div>
-                          <p className="text-sm text-card-foreground mt-2">
-                            {rec.description}
-                          </p>
-                          {Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              Parts listed: {rec.parts_needed.length}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <CheckCircle className="w-10 h-10 mx-auto text-success mb-2" />
-                <p className="font-medium text-foreground">
-                  No Open Recommendations
-                </p>
-              </div>
-            )}
-          </div>
-
-          {unapprovedRecommendationsData && unapprovedRecommendationsData.count > 0 && (
-            <DialogFooter className="flex-col sm:flex-row gap-3">
-              <label className="flex items-center space-x-2 cursor-pointer text-sm">
-                <input
-                  type="checkbox"
-                  checked={acknowledgedUnapproved}
-                  onChange={(e) => setAcknowledgedUnapproved(e.target.checked)}
-                  className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                />
-                <span className="text-card-foreground">
-                  I acknowledge these open vehicle recommendations and wish to proceed
-                </span>
-              </label>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowUnapprovedRecommendationsDialog(false);
-                    setAcknowledgedUnapproved(false);
-                  }}
-                  className="flex-1 sm:flex-none"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowUnapprovedRecommendationsDialog(false);
-                  }}
-                  disabled={!acknowledgedUnapproved}
-                  className="flex-1 sm:flex-none"
-                >
-                  Proceed
-                </Button>
-              </div>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Add Customer Dialog */}
       <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">

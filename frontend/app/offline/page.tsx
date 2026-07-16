@@ -19,7 +19,7 @@ export default function OfflinePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="text-center max-w-md w-full">
         <div className="mb-6 flex justify-center">
           <div className="bg-border rounded-full p-6">

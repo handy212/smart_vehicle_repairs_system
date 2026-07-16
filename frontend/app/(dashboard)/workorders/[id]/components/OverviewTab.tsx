@@ -24,6 +24,14 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/layout";
 import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
 import { adminApi } from "@/lib/api/admin";
 import { useToast } from "@/lib/hooks/useToast";
@@ -38,6 +46,7 @@ import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderTechnicianAssignees } from "@/lib/workorders/assignees";
 import { getUserFacingError } from "@/lib/api/errors";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
+import { IntakeConditionCard } from "@/components/workorders/IntakeConditionCard";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { LIST_SERVICE_COORDINATORS_PERMISSIONS, BILLING_AREA_PERMISSIONS } from "@/lib/utils/permissions";
@@ -232,7 +241,7 @@ export default function WorkOrderOverviewTab({
   return (
     <div className="space-y-4">
       {/* Summary strip */}
-      <Card className="border-border shadow-sm">
+      <Card className={`${WORKSHOP_PANEL_CLASS} border-border`}>
         <CardContent className="flex flex-wrap gap-4 px-4 py-3">
           <SummaryItem label="Customer / Business">
             {customerId ? (
@@ -318,6 +327,19 @@ export default function WorkOrderOverviewTab({
           )}
         </CardContent>
       </Card>
+
+      <IntakeConditionCard
+        workOrderId={workOrderId!}
+        workOrder={workOrder}
+        title="Job Card intake"
+        description="Usually captured during DVI. You can also edit it here before printing the Job Card."
+        canEdit={
+          workOrder?.status === "draft" ||
+          workOrder?.status === "inspection" ||
+          workOrder?.status === "intake" ||
+          workOrder?.status === "assigned"
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_18rem]">
         <div className="space-y-4">
@@ -454,7 +476,7 @@ export default function WorkOrderOverviewTab({
         {/* Right rail */}
         <div className="space-y-4 lg:w-72">
           {canViewBilling && (invoiceSummary?.id || canCreateInvoice) && (
-            <Card className="border-primary/15 shadow-sm">
+            <Card className={`${WORKSHOP_PANEL_CLASS} border-primary/15`}>
               <CardHeader className="px-4 py-3">
                 <CardTitle className="text-sm font-semibold">Billing</CardTitle>
               </CardHeader>
@@ -509,7 +531,7 @@ export default function WorkOrderOverviewTab({
           )}
 
           {canViewBilling && (
-          <Card>
+          <Card className={WORKSHOP_PANEL_CLASS}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
               <CardTitle className="text-sm font-semibold">Financial</CardTitle>
               {estimateSummary?.id && !invoiceSummary?.id ? (
@@ -628,7 +650,7 @@ export default function WorkOrderOverviewTab({
           </Card>
           )}
 
-          <Card>
+          <Card className={WORKSHOP_PANEL_CLASS}>
             <CardHeader className="px-4 py-3">
               <CardTitle className="text-sm font-semibold">Assignment</CardTitle>
             </CardHeader>
@@ -678,19 +700,25 @@ export default function WorkOrderOverviewTab({
                 </div>
                 {isEditingServiceCoordinator ? (
                   <div className="space-y-2">
-                    <select
-                      value={selectedServiceCoordinator}
-                      onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
-                      className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    <Select
+                      value={selectedServiceCoordinator || "none"}
+                      onValueChange={(val) =>
+                        setSelectedServiceCoordinator(val === "none" ? "" : val)
+                      }
                     >
-                      <option value="">Select coordinator</option>
-                      {serviceCoordinatorsList.map((coord: any) => (
-                        <option key={coord.id} value={String(coord.id)}>
-                          {coord.full_name ||
-                            `${coord.first_name || ""} ${coord.last_name || ""}`.trim()}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-9 w-full text-sm">
+                        <SelectValue placeholder="Select coordinator" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select coordinator</SelectItem>
+                        {serviceCoordinatorsList.map((coord: any) => (
+                          <SelectItem key={coord.id} value={String(coord.id)}>
+                            {coord.full_name ||
+                              `${coord.first_name || ""} ${coord.last_name || ""}`.trim()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <div className="flex gap-2">
                       <Button
                         size="sm"

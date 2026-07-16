@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 
 export default function TrainingPage() {
@@ -248,10 +248,10 @@ function MyTrainingList() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "completed": return "bg-success/10 text-green-700 border-green-200";
-            case "in_progress": return "bg-info/10 text-blue-700 border-info/20";
+            case "completed": return "bg-success/15 text-success border-success/20";
+            case "in_progress": return "bg-info/15 text-info border-info/20";
             case "failed": return "bg-destructive/10 text-destructive border-destructive/20";
-            default: return "bg-gray-100 text-gray-700 border-gray-200"; // enrolled
+            default: return "bg-muted text-muted-foreground border-border"; // enrolled
         }
     };
 
@@ -262,7 +262,7 @@ function MyTrainingList() {
             {records.map(rec => (
                 <Card key={rec.id} className="flex items-center p-4 justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", rec.status === "completed" ? "bg-green-100 text-success" : "bg-blue-100 text-primary")}>
+                        <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", rec.status === "completed" ? "bg-success/15 text-success" : "bg-primary/10 text-primary")}>
                             {rec.status === "completed" ? <Award className="h-6 w-6" /> : <BookOpen className="h-6 w-6" />}
                         </div>
                         <div>

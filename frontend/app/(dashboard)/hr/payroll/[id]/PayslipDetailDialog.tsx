@@ -10,7 +10,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Loader2, Download, Building2, User, CalendarDays, Lock } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useState } from "react";
@@ -86,7 +86,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                         {/* Header Info */}
                         <div className="bg-muted/30 p-3 rounded-md border mb-4 grid grid-cols-2 gap-3">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-primary">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                                     <User className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -95,7 +95,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-primary">
+                                <div className="h-10 w-10 rounded-full bg-info/15 flex items-center justify-center text-primary">
                                     <CalendarDays className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -144,7 +144,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                                     ))}
                                     <div className="border-t pt-3 mt-2 flex justify-between font-bold">
                                         <span>Total Gross Pay</span>
-                                        <span className="font-mono text-green-700">{formatCurrency(payslip.gross_pay)}</span>
+                                        <span className="font-mono text-success">{formatCurrency(payslip.gross_pay)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -179,7 +179,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                                             <span className="font-mono font-medium text-destructive">{formatCurrency(amount)}</span>
                                         </div>
                                     ))}
-                                    <div className="border-t pt-3 mt-2 flex justify-between font-bold text-gray-500">
+                                    <div className="border-t pt-3 mt-2 flex justify-between font-bold text-muted-foreground">
                                         <span>Total Deductions</span>
                                         <span className="font-mono text-destructive">
                                             {formatCurrency(
@@ -192,7 +192,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                         </div>
 
                         {/* Net Pay Highlight */}
-                        <div className="mt-6 bg-gray-900 text-white p-4 rounded-md flex justify-between items-center shadow-sm">
+                        <div className="mt-6 bg-foreground text-white p-4 rounded-md flex justify-between items-center shadow-sm">
                             <div>
                                 <p className="text-xs uppercase tracking-wider opacity-70 font-semibold mb-1">Net Pay</p>
                                 <p className="text-xs opacity-50">{payslip.is_locked ? "Locked payroll record" : "Editable draft payroll record"}</p>

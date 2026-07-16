@@ -660,7 +660,7 @@ export default function EditBillPage() {
     }
 
     return (
-        <div className="mx-auto max-w-5xl space-y-6 pb-10">
+        <div className="w-full space-y-6 pb-10">
             <div className="flex items-center gap-4">
                 <Link href={`/billing/bills/${id}`}>
                     <Button variant="outline" size="icon" className="h-9 w-9">
@@ -668,7 +668,7 @@ export default function EditBillPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Bill</h1>
+                    <h1 className="text-xl font-bold tracking-tight text-foreground">Edit Bill</h1>
                     <p className="text-sm text-muted-foreground">{bill.bill_number}</p>
                 </div>
             </div>

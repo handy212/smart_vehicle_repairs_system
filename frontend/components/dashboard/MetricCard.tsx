@@ -1,13 +1,11 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowDown, ArrowUp, DollarSign, TrendingUp, TrendingDown, Activity, Wallet } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, TrendingUp, Activity, Wallet } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Area, AreaChart, YAxis } from "recharts";
 import { ChartContainer } from "@/components/ui/chart-container";
-import { useTheme } from "@/lib/hooks/useTheme";
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/table-typography";
+import { cn } from "@/lib/utils";
 
 interface MetricCardProps {
     title: string;
@@ -29,8 +27,6 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick, displayValue }: MetricCardProps) {
     const { formatCurrency } = useCurrency();
-    const { theme } = useTheme();
-    const isPerfex = theme.startsWith("perfex");
 
     const getIcon = () => {
         switch (icon) {
@@ -45,96 +41,65 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
     const getColors = () => {
         switch (variant) {
             case "success":
-                return { bg: "bg-success/10", text: "text-success", stroke: "#10b981", fill: "#10b981" };
+                return { bg: "bg-success/10", text: "text-success", stroke: "var(--success)", fill: "var(--success)" };
             case "warning":
-                return { bg: "bg-warning/10", text: "text-warning-foreground", stroke: "#f59e0b", fill: "#f59e0b" };
+                return { bg: "bg-warning/10", text: "text-warning", stroke: "var(--warning)", fill: "var(--warning)" };
             case "danger":
-                return { bg: "bg-destructive/10", text: "text-destructive", stroke: "#f43f5e", fill: "#f43f5e" };
+                return { bg: "bg-destructive/10", text: "text-destructive", stroke: "var(--destructive)", fill: "var(--destructive)" };
             case "info":
-                return { bg: "bg-primary/10", text: "text-primary", stroke: "#3b82f6", fill: "#3b82f6" };
+                return { bg: "bg-primary/10", text: "text-primary", stroke: "var(--primary)", fill: "var(--primary)" };
             default:
-                return { bg: "bg-muted/50", text: "text-muted-foreground", stroke: "#6b7280", fill: "#6b7280" };
-        }
-    };
-
-    const getPerfexIconColors = () => {
-        switch (variant) {
-            case "success": return "bg-success/10 text-success";
-            case "warning": return "bg-warning/10 text-warning";
-            case "danger": return "bg-destructive/10 text-destructive";
-            case "info": return "bg-primary/10 text-primary";
-            default: return "bg-muted text-muted-foreground";
+                return { bg: "bg-muted/50", text: "text-muted-foreground", stroke: "var(--muted-foreground)", fill: "var(--muted-foreground)" };
         }
     };
 
     const colors = getColors();
 
-    if (isPerfex) {
-        return (
-            <div
-                className={`border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] p-3 flex items-center gap-3${onClick ? " cursor-pointer hover:border-primary/20" : ""}`}
-                onClick={onClick}
-            >
-                <div className={`h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0 ${getPerfexIconColors()}`}>
-                    {getIcon()}
-                </div>
-                <div className="min-w-0">
-                    <p className="text-lg font-bold text-foreground leading-tight">{displayValue ?? formatCurrency(value)}</p>
-                    <p className="text-[11px] text-muted-foreground leading-tight">{title}</p>
-                    {trend && (
-                        <p className={`text-[11px] font-medium mt-0.5 ${trend.isPositive ? "text-success" : "text-destructive"}`}>
-                            {trend.isPositive ? "+" : ""}{Math.abs(trend.value)}% {trend.label}
-                        </p>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <Card
-            className={`overflow-hidden border transition-colors ${onClick ? "cursor-pointer hover:border-primary/20 hover:bg-muted/10" : ""}`}
+        <div
+            className={cn(
+                WORKSHOP_PANEL_CLASS,
+                "flex flex-col justify-between gap-3 p-4 transition-all duration-150",
+                onClick && "cursor-pointer hover:-translate-y-0.5 hover:border-primary/25"
+            )}
             onClick={onClick}
         >
-            <CardContent className="p-0 relative">
-                <div className="relative z-10 p-4">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-                        <div className={`rounded-md border p-2 ${colors.bg} ${colors.text}`}>
-                            {getIcon()}
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <h3 className="text-xl font-semibold tracking-tight text-foreground">{displayValue ?? formatCurrency(value)}</h3>
-                        {trend && (
-                            <div className="flex items-center text-xs">
-                                <span className={`flex items-center font-medium ${trend.isPositive ? "text-success" : "text-destructive"}`}>
-                                    {trend.isPositive ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
-                                    {Math.abs(trend.value)}%
-                                </span>
-                                <span className="text-muted-foreground ml-1">{trend.label}</span>
-                            </div>
-                        )}
-                    </div>
+            <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+                <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", colors.bg, colors.text)}>
+                    {getIcon()}
                 </div>
-
-                {/* Sparkline Background */}
-                {data && data.length > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 opacity-[0.08] h-14 min-w-0">
-                        <ChartContainer className="h-full">
-                            <AreaChart data={data}>
-                                <Area
-                                    type="monotone"
-                                    dataKey={dataKey || "value"}
-                                    stroke={colors.stroke}
-                                    fill={colors.fill}
-                                    strokeWidth={2}
-                                />
-                            </AreaChart>
-                        </ChartContainer>
-                    </div>
+            </div>
+            <div>
+                <p className="text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+                    {displayValue ?? formatCurrency(value)}
+                </p>
+                {trend && (
+                    <p className={cn("mt-1.5 flex items-center text-xs font-medium", trend.isPositive ? "text-success" : "text-destructive")}>
+                        {trend.isPositive ? <ArrowUp className="mr-1 h-3 w-3" /> : <ArrowDown className="mr-1 h-3 w-3" />}
+                        {Math.abs(trend.value)}%{" "}
+                        <span className="ml-1 font-normal text-muted-foreground">{trend.label}</span>
+                    </p>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+            {data && dataKey && data.length > 0 && (
+                <div className="h-12 w-full opacity-80">
+                    <ChartContainer className="h-full w-full">
+                        <AreaChart data={data}>
+                            <YAxis hide domain={["dataMin", "dataMax"]} />
+                            <Area
+                                type="monotone"
+                                dataKey={dataKey}
+                                stroke={colors.stroke}
+                                fill={colors.fill}
+                                fillOpacity={0.15}
+                                strokeWidth={1.5}
+                                isAnimationActive={false}
+                            />
+                        </AreaChart>
+                    </ChartContainer>
+                </div>
+            )}
+        </div>
     );
 }

@@ -1,0 +1,430 @@
+{% extends 'printing/base/document_base.html' %}
+{% load settings_tags %}
+
+{% block title %}Job Card {{ document.work_order_number }}{% endblock %}
+
+{% block document_type %}Job Card{% endblock %}
+
+{% block document_number %}{{ document.work_order_number }}{% endblock %}
+
+{% block document_meta %}{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Job Card — compact customer intake form */
+    .job-card {
+        font-size: 8pt;
+        line-height: 1.3;
+        color: #111827;
+    }
+
+    .job-card-meta {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        background: #eceff3;
+        margin: 0 0 10px;
+    }
+
+    .job-card-meta td {
+        padding: 6px 10px;
+        border: 0;
+        background: transparent;
+        font-size: 8pt;
+        vertical-align: middle;
+    }
+
+    .job-card-meta strong {
+        font-weight: 700;
+        margin-right: 4px;
+    }
+
+    .job-card-split {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin: 0 0 10px;
+    }
+
+    .job-card-split > tbody > tr > td {
+        width: 48%;
+        vertical-align: top;
+        border: 0;
+        background: transparent;
+        padding: 0;
+    }
+
+    .job-card-split > tbody > tr > td.gap {
+        width: 4%;
+    }
+
+    .jc-h {
+        font-size: 8.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin: 0 0 5px;
+        color: #111827;
+    }
+
+    .jc-row {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin: 0 0 3px;
+    }
+
+    .jc-row td {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        vertical-align: bottom;
+        font-size: 8pt;
+        line-height: 1.35;
+    }
+
+    .jc-row td.lbl {
+        width: 68px;
+        font-weight: 700;
+        white-space: nowrap;
+        padding-right: 4px;
+        vertical-align: top;
+    }
+
+    .jc-row td.val {
+        border-bottom: 1px solid #9ca3af;
+        padding-bottom: 1px;
+        min-height: 12px;
+    }
+
+    .job-card-block {
+        margin: 0 0 9px;
+    }
+
+    .jc-intake {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-top: 2px;
+    }
+
+    .jc-intake td {
+        border: 0;
+        background: transparent;
+        padding: 0 10px 0 0;
+        font-size: 8pt;
+        vertical-align: bottom;
+        white-space: nowrap;
+    }
+
+    .jc-intake td:last-child {
+        padding-right: 0;
+    }
+
+    .jc-intake .ln {
+        display: inline-block;
+        border-bottom: 1px solid #9ca3af;
+        width: 72%;
+        max-width: 160px;
+        height: 11px;
+        margin-left: 4px;
+        vertical-align: bottom;
+    }
+
+    .jc-ruled {
+        margin-top: 4px;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .jc-ruled td {
+        border: 0;
+        border-bottom: 1px solid #d1d5db;
+        height: 16px;
+        padding: 0;
+        background: transparent;
+    }
+
+    .jc-warning {
+        border: 1.5px solid #111827;
+        height: 56px;
+        margin-top: 3px;
+        background: #fff;
+    }
+
+    .jc-warning-filled {
+        height: auto;
+        min-height: 40px;
+        padding: 6px 8px;
+        font-size: 8pt;
+        line-height: 1.35;
+        color: #111827;
+    }
+
+    .jc-filled {
+        display: inline-block;
+        margin-left: 4px;
+        padding-bottom: 1px;
+        border-bottom: 1px solid #9ca3af;
+        min-width: 48%;
+        max-width: 72%;
+        vertical-align: bottom;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .jc-terms {
+        border: 1px solid #d97706;
+        background: #fff7ed;
+        padding: 7px 9px;
+        margin: 8px 0 7px;
+        font-size: 7pt;
+        line-height: 1.4;
+        color: #374151;
+        page-break-inside: avoid;
+    }
+
+    .jc-terms p {
+        margin: 0 0 3px;
+    }
+
+    .jc-terms p:last-child {
+        margin-bottom: 0;
+    }
+
+    .jc-ack {
+        font-size: 8pt;
+        margin: 0 0 9px;
+    }
+
+    .jc-ack .chk {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 1.5px solid #111827;
+        margin-right: 6px;
+        vertical-align: -2px;
+    }
+
+    .jc-sigs {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-top: 2px;
+        page-break-inside: avoid;
+    }
+
+    .jc-sigs > tbody > tr > td {
+        width: 48%;
+        vertical-align: top;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font-size: 8pt;
+    }
+
+    .jc-sigs > tbody > tr > td.gap {
+        width: 4%;
+    }
+
+    .jc-sig-line {
+        border-bottom: 1.5px solid #111827;
+        height: 32px;
+        margin: 3px 0 8px;
+    }
+
+    .jc-sig-meta {
+        margin: 0 0 4px;
+        white-space: nowrap;
+    }
+
+    .jc-sig-meta .ln {
+        display: inline-block;
+        border-bottom: 1px solid #9ca3af;
+        width: 70%;
+        max-width: 150px;
+        height: 11px;
+        margin-left: 4px;
+        vertical-align: bottom;
+    }
+
+    .job-types-line {
+        margin: 0 0 2px;
+        font-size: 8pt;
+    }
+
+    .job-types-line strong {
+        font-weight: 700;
+        margin-right: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% with customer=document.customer vehicle=document.vehicle %}
+<div class="job-card">
+
+<table class="job-card-meta" role="presentation">
+    <tr>
+        <td><strong>Date:</strong> {{ document.created_at|date:"d/m/Y" }}</td>
+        <td><strong>Status:</strong> {{ document.get_status_display }}</td>
+        <td><strong>ETD:</strong> {% if document.estimated_completion %}{{ document.estimated_completion|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+    </tr>
+</table>
+
+<table class="job-card-split" role="presentation">
+    <tr>
+        <td>
+            <div class="jc-h">Customer Information</div>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Name:</td>
+                <td class="val">{% if customer.company_name %}{{ customer.company_name }}{% else %}{{ customer.full_name }}{% endif %}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Phone:</td>
+                <td class="val">{{ customer.phone|default:"" }}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Email:</td>
+                <td class="val">{{ customer.email|default:"" }}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Address:</td>
+                <td class="val">
+                    {% if customer.service_address %}{{ customer.service_address }}{% endif %}
+                    {% if customer.service_area or customer.service_city or customer.service_region %}
+                    {% if customer.service_address %}, {% endif %}
+                    {% if customer.service_area %}{{ customer.service_area }}{% if customer.service_city or customer.service_region %}, {% endif %}{% endif %}{% if customer.service_city %}{{ customer.service_city }}{% if customer.service_region %}, {% endif %}{% endif %}{% if customer.service_region %}{{ customer.service_region }}{% endif %}
+                    {% endif %}
+                </td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Type:</td>
+                <td class="val">{{ customer.get_customer_type_display|default:customer.customer_type|default:"" }}</td>
+            </tr></table>
+        </td>
+        <td class="gap"></td>
+        <td>
+            <div class="jc-h">Vehicle Information</div>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Vehicle:</td>
+                <td class="val">{% if vehicle %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}{% endif %}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Plate No.:</td>
+                <td class="val">{% if vehicle %}{{ vehicle.license_plate|default:"" }}{% endif %}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">VIN:</td>
+                <td class="val">{% if vehicle %}{{ vehicle.vin|default:"" }}{% endif %}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Colour:</td>
+                <td class="val">{% if vehicle %}{{ vehicle.exterior_color|default:"" }}{% endif %}</td>
+            </tr></table>
+            <table class="jc-row" role="presentation"><tr>
+                <td class="lbl">Mileage:</td>
+                <td class="val">{% if document.odometer_in %}{{ document.odometer_in|floatformat:0 }}{% endif %}</td>
+            </tr></table>
+        </td>
+    </tr>
+</table>
+
+<div class="job-card-block">
+    <div class="jc-h">Intake Condition</div>
+    <table class="jc-intake" role="presentation">
+        <tr>
+            <td>
+                <strong>Fuel Level:</strong>
+                {% if intake_fuel_level %}
+                <span class="jc-filled">{{ intake_fuel_level }}</span>
+                {% else %}
+                <span class="ln"></span>
+                {% endif %}
+            </td>
+            <td>
+                <strong>Battery:</strong>
+                {% if intake_battery_condition %}
+                <span class="jc-filled">{{ intake_battery_condition }}</span>
+                {% else %}
+                <span class="ln"></span>
+                {% endif %}
+            </td>
+            <td>
+                <strong>Valuables:</strong>
+                {% if intake_valuables_notes %}
+                <span class="jc-filled">{{ intake_valuables_notes }}</span>
+                {% else %}
+                <span class="ln"></span>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="job-card-block">
+    <div class="jc-h">Job Description &amp; Details</div>
+    <div class="job-types-line">
+        <strong>Job Types:</strong>
+        {% if job_type_names %}{{ job_type_names|join:", " }}{% elif document.job_type %}{{ document.job_type.name }}{% endif %}
+    </div>
+    {% if document.customer_concerns %}
+    <div style="margin: 2px 0 3px;">{{ document.customer_concerns|linebreaks }}</div>
+    {% endif %}
+    <table class="jc-ruled" role="presentation">
+        <tr><td></td></tr><tr><td></td></tr><tr><td></td></tr>
+        <tr><td></td></tr><tr><td></td></tr>
+    </table>
+</div>
+
+<div class="job-card-block">
+    <div class="jc-h">Notes</div>
+    {% if document.special_instructions %}
+    <div style="margin: 0 0 3px;">{{ document.special_instructions|linebreaks }}</div>
+    {% endif %}
+    <table class="jc-ruled" role="presentation">
+        <tr><td></td></tr><tr><td></td></tr><tr><td></td></tr>
+    </table>
+</div>
+
+<div class="job-card-block">
+    <div class="jc-h">Warning Lights:</div>
+    {% if intake_warning_lights_notes %}
+    <div class="jc-warning jc-warning-filled">{{ intake_warning_lights_notes|linebreaks }}</div>
+    {% else %}
+    <div class="jc-warning"></div>
+    {% endif %}
+</div>
+
+{% if work_order_terms_and_conditions %}
+<div class="jc-terms">
+    {{ work_order_terms_and_conditions|linebreaks }}
+</div>
+{% endif %}
+
+<div class="jc-ack">
+    <span class="chk"></span>All irregularities detected have also been communicated to the customer.
+</div>
+
+<div class="jc-h">Signatures</div>
+<table class="jc-sigs" role="presentation">
+    <tr>
+        <td>
+            <strong>Customer Service Signature:</strong>
+            <div class="jc-sig-line"></div>
+            <div class="jc-sig-meta"><strong>Name:</strong><span class="ln"></span></div>
+            <div class="jc-sig-meta"><strong>Date:</strong><span class="ln"></span></div>
+        </td>
+        <td class="gap"></td>
+        <td>
+            <strong>Customer's Signature:</strong>
+            <div class="jc-sig-line"></div>
+            <div class="jc-sig-meta"><strong>Name:</strong><span class="ln"></span></div>
+            <div class="jc-sig-meta"><strong>Date:</strong><span class="ln"></span></div>
+        </td>
+    </tr>
+</table>
+
+</div>
+{% endwith %}
+{% endblock %}

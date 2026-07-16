@@ -474,68 +474,112 @@ class NotificationService:
                 self._log_action(notification, 'failed', 'No phone number')
                 return False
                 
-            # 3. Determine message type
-            # If template is provided, use it (recommended for business initiated)
-            # If document URL is in data, send document
-            # Otherwise send text
-            
+            # 3. Determine message type (template → signed PDF document → text).
+            # Outside the 24h customer session window, Meta only allows approved templates.
             success = False
             result = None
-            
-            # Check for document
-            if notification.notification_type == 'invoice' and notification.data.get('invoice_pdf_url'):
-                # Send invoice PDF
-                pdf_url = notification.data.get('invoice_pdf_url')
-                filename = notification.data.get('filename', 'invoice.pdf')
-                caption = notification.message
-                
-                success, result = whatsapp_service.send_document(
-                    to=phone_number,
-                    media_url=pdf_url,
-                    caption=caption,
-                    filename=filename
+            last_error = None
+
+            document_pdf_url = (
+                notification.data.get('document_pdf_url')
+                or notification.data.get('invoice_pdf_url')
+                or notification.data.get('estimate_pdf_url')
+                or notification.data.get('job_card_pdf_url')
+            )
+            document_types_with_pdf = {'invoice', 'estimate', 'work_order', 'job_card'}
+            should_send_document = bool(
+                document_pdf_url
+                and (
+                    notification.notification_type in document_types_with_pdf
+                    or notification.data.get('document_type') in document_types_with_pdf
                 )
-            
-            # Check for template (if configured in notification template)
-            elif notification.template and hasattr(notification.template, 'whatsapp_template_name') and notification.template.whatsapp_template_name:
-                template_name = notification.template.whatsapp_template_name
-                template_vars = notification.template.whatsapp_template_variables
-                
-                # Build components
+            )
+
+            template_name = (
+                getattr(notification.template, 'whatsapp_template_name', None)
+                if notification.template
+                else None
+            )
+            has_template = isinstance(template_name, str) and bool(template_name.strip())
+
+            if has_template:
+                template_vars = getattr(notification.template, 'whatsapp_template_variables', None) or []
+                language_code = (
+                    notification.data.get('whatsapp_template_language')
+                    or getattr(notification.template, 'whatsapp_template_language', None)
+                    or 'en'
+                )
+                if not isinstance(language_code, str):
+                    language_code = 'en'
+
                 components = []
+                # Optional document header using signed public PDF URL
+                if should_send_document and document_pdf_url:
+                    components.append({
+                        "type": "header",
+                        "parameters": [{
+                            "type": "document",
+                            "document": {
+                                "link": document_pdf_url,
+                                "filename": notification.data.get('filename') or 'document.pdf',
+                            },
+                        }],
+                    })
+
                 body_params = []
-                
-                if template_vars:
+                if isinstance(template_vars, (list, tuple)):
                     for var_name in template_vars:
-                        # Find value in notification data or common fields
                         val = notification.data.get(var_name, '')
-                        
-                        # Fallback to direct attribute lookup if simple string
                         if not val and hasattr(notification, var_name):
                             val = getattr(notification, var_name)
-                            
-                        # Format if necessary
-                        body_params.append({
-                            "type": "text",
-                            "text": str(val)
-                        })
-                
+                        body_params.append({"type": "text", "text": str(val) if val is not None else ""})
+
                 if body_params:
-                    components.append({
-                        "type": "body",
-                        "parameters": body_params
-                    })
-                    
+                    components.append({"type": "body", "parameters": body_params})
+
                 success, result = whatsapp_service.send_template_message(
                     to=phone_number,
                     template_name=template_name,
-                    components=components
+                    language_code=language_code,
+                    components=components or None,
                 )
-            
-            # Default to text message
-            else:
-                message = notification.message
-                success, result = whatsapp_service.send_message(phone_number, message)
+                if not success:
+                    last_error = result
+                    logger.warning("WhatsApp template send failed (%s); trying document/text", result)
+
+            if not success and should_send_document:
+                filename = notification.data.get('filename') or 'document.pdf'
+                caption = notification.message
+                success, result = whatsapp_service.send_document(
+                    to=phone_number,
+                    media_url=document_pdf_url,
+                    caption=caption,
+                    filename=filename,
+                )
+                if not success:
+                    last_error = result
+                    logger.warning(
+                        "WhatsApp document send failed (%s); falling back to text message",
+                        result,
+                    )
+
+            if not success:
+                success, result = whatsapp_service.send_message(
+                    phone_number,
+                    notification.message,
+                    preview_url=True,
+                )
+                if not success:
+                    last_error = result
+                    # Helpful hint when Meta rejects free-form outside the 24h window
+                    err_text = str(last_error or result or "")
+                    if any(token in err_text.lower() for token in (
+                        '24', 'template', 're-engagement', '131047', '131026'
+                    )):
+                        result = (
+                            f"{err_text}. Configure an approved Meta WhatsApp template on the "
+                            f"notification template (whatsapp_template_name) for business-initiated sends."
+                        )
             
             if success:
                 notification.mark_as_sent()
@@ -656,6 +700,15 @@ class NotificationService:
             self._log_action(notification, 'delivered', 'In-app notification ready')
             
             logger.info(f"In-app notification created for user {notification.recipient.email}")
+
+            # Realtime fan-out is primarily handled by Notification post_save
+            # (covers all creators). Call again here as a safe fallback after
+            # delivery flags are set — client dedupes by id.
+            try:
+                from .realtime import broadcast_in_app_notification
+                broadcast_in_app_notification(notification)
+            except Exception as push_err:
+                logger.warning(f"Realtime in-app broadcast skipped: {push_err}")
 
             # Mirror to Web Push for PWA / tech app subscribers.
             prefs = getattr(notification.recipient, 'notification_preferences', None)

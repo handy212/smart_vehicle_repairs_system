@@ -1,79 +1,73 @@
-<div class="financial-summary">
-    <!-- Subtotal -->
-    <div class="summary-item subtotal">
-        <div class="summary-label">Subtotal</div>
-        <div class="summary-value">{{ currency_symbol }}{{ document.subtotal|floatformat:2|default:"0.00" }}</div>
-    </div>
+<table class="financial-summary" role="presentation">
+    <tr class="summary-item subtotal">
+        <td class="summary-label">Subtotal</td>
+        <td class="summary-value">{{ currency_symbol }}{{ document.subtotal|floatformat:2|default:"0.00" }}</td>
+    </tr>
 
-    <!-- Discount -->
     {% if document.discount_amount and document.discount_amount > 0 %}
-    <div class="summary-item text-danger">
-        <div class="summary-label">
+    <tr class="summary-item text-danger">
+        <td class="summary-label">
             Discount {% if document.discount_percentage %}<span class="text-xs">({{ document.discount_percentage }}%)</span>{% endif %}
-        </div>
-        <div class="summary-value">-{{ currency_symbol }}{{ document.discount_amount|floatformat:2 }}</div>
-    </div>
+        </td>
+        <td class="summary-value">-{{ currency_symbol }}{{ document.discount_amount|floatformat:2 }}</td>
+    </tr>
     {% endif %}
 
-    <!-- Tax Breakdown -->
     {% if document.tax_nhil_amount or document.tax_getfund_amount or document.tax_hrl_amount or document.tax_vat_amount %}
         {% if document.tax_nhil_amount and document.tax_nhil_amount > 0 %}
-        <div class="summary-item text-gray-500">
-            <div class="summary-label">NHIL (2.5%)</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.tax_nhil_amount|floatformat:2 }}</div>
-        </div>
+        <tr class="summary-item text-gray-500">
+            <td class="summary-label">NHIL (2.5%)</td>
+            <td class="summary-value">{{ currency_symbol }}{{ document.tax_nhil_amount|floatformat:2 }}</td>
+        </tr>
         {% endif %}
 
         {% if document.tax_getfund_amount and document.tax_getfund_amount > 0 %}
-        <div class="summary-item text-gray-500">
-            <div class="summary-label">GETFund (2.5%)</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.tax_getfund_amount|floatformat:2 }}</div>
-        </div>
+        <tr class="summary-item text-gray-500">
+            <td class="summary-label">GETFund (2.5%)</td>
+            <td class="summary-value">{{ currency_symbol }}{{ document.tax_getfund_amount|floatformat:2 }}</td>
+        </tr>
         {% endif %}
 
         {% if document.tax_hrl_amount and document.tax_hrl_amount > 0 %}
-        <div class="summary-item text-gray-500">
-            <div class="summary-label">COVID-19 HRL (1%)</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.tax_hrl_amount|floatformat:2 }}</div>
-        </div>
+        <tr class="summary-item text-gray-500">
+            <td class="summary-label">COVID-19 HRL (1%)</td>
+            <td class="summary-value">{{ currency_symbol }}{{ document.tax_hrl_amount|floatformat:2 }}</td>
+        </tr>
         {% endif %}
 
         {% if document.tax_vat_amount and document.tax_vat_amount > 0 %}
-        <div class="summary-item text-gray-500">
-            <div class="summary-label">VAT (15%)</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.tax_vat_amount|floatformat:2 }}</div>
-        </div>
+        <tr class="summary-item text-gray-500">
+            <td class="summary-label">VAT (15%)</td>
+            <td class="summary-value">{{ currency_symbol }}{{ document.tax_vat_amount|floatformat:2 }}</td>
+        </tr>
         {% endif %}
 
-        <div class="summary-item font-semibold text-gray-700 mt-2">
-            <div class="summary-label">Total Tax</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.tax_amount|floatformat:2|default:"0.00" }}</div>
-        </div>
+        <tr class="summary-item font-semibold text-gray-700">
+            <td class="summary-label">Total Tax</td>
+            <td class="summary-value">{{ currency_symbol }}{{ document.tax_amount|floatformat:2|default:"0.00" }}</td>
+        </tr>
     {% elif document.tax_amount and document.tax_amount > 0 %}
-        <div class="summary-item">
-            <div class="summary-label">Tax</div>
-            <div class="summary-value">{{ currency_symbol }}{{ document.tax_amount|floatformat:2 }}</div>
-        </div>
+        <tr class="summary-item">
+            <td class="summary-label">Tax</td>
+            <td class="summary-value">{{ currency_symbol }}{{ document.tax_amount|floatformat:2 }}</td>
+        </tr>
     {% endif %}
 
-    <!-- Total -->
-    <div class="summary-item total">
-        <div class="summary-label">TOTAL</div>
-        <div class="summary-value">{{ currency_symbol }}{{ document.total|floatformat:2|default:"0.00" }}</div>
-    </div>
+    <tr class="summary-item total">
+        <td class="summary-label">TOTAL</td>
+        <td class="summary-value">{{ currency_symbol }}{{ document.total|floatformat:2|default:"0.00" }}</td>
+    </tr>
 
-    <!-- Amount Paid & Balance -->
     {% if document.amount_paid and document.amount_paid > 0 %}
-    <div class="summary-item mt-4 pt-2 border-t">
-        <div class="summary-label">Amount Paid</div>
-        <div class="summary-value text-success font-bold">{{ currency_symbol }}{{ document.amount_paid|floatformat:2 }}</div>
-    </div>
-
-    <div class="summary-item">
-        <div class="summary-label font-bold text-gray-900">Balance Due</div>
-        <div class="summary-value font-bold text-danger">{{ currency_symbol }}{{ document.amount_due|floatformat:2|default:"0.00" }}</div>
-    </div>
+    <tr class="summary-item summary-paid">
+        <td class="summary-label">Amount Paid</td>
+        <td class="summary-value text-success font-bold">{{ currency_symbol }}{{ document.amount_paid|floatformat:2 }}</td>
+    </tr>
+    <tr class="summary-item">
+        <td class="summary-label font-bold text-gray-900">Balance Due</td>
+        <td class="summary-value font-bold text-danger">{{ currency_symbol }}{{ document.amount_due|floatformat:2|default:"0.00" }}</td>
+    </tr>
     {% endif %}
-</div>
+</table>
 
 <div class="clearfix"></div>

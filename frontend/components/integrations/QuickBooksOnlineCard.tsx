@@ -159,21 +159,21 @@ export function QuickBooksOnlineCard() {
             <div
               className={`w-2 h-2 rounded-full ${
                 isLinked && isApiReady
-                  ? "bg-success/100"
+                  ? "bg-success"
                   : isLinked
-                    ? "bg-amber-500"
+                    ? "bg-warning"
                     : "bg-muted-foreground/30"
               }`}
             />
             QuickBooks Online
           </CardTitle>
           {isLinked && isApiReady && (
-            <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded font-bold uppercase">
+            <span className="text-[10px] bg-success/15 text-success px-2 py-0.5 rounded font-bold uppercase">
               Connected
             </span>
           )}
           {isLinked && !isApiReady && (
-            <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded font-bold uppercase">
+            <span className="text-[10px] bg-warning/15 text-warning px-2 py-0.5 rounded font-bold uppercase">
               Reconnect needed
             </span>
           )}
@@ -244,7 +244,7 @@ export function QuickBooksOnlineCard() {
             </p>
 
             {!isApiReady && (
-              <div className="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2 space-y-2">
+              <div className="text-xs text-warning dark:text-warning bg-warning/10 border border-warning/20 rounded-md px-3 py-2 space-y-2">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   <p>
@@ -264,7 +264,7 @@ export function QuickBooksOnlineCard() {
             )}
 
             {isApiReady && refreshExpiryWarning && status?.refresh_token_expires_at && (
-              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+              <p className="text-xs text-warning dark:text-warning bg-warning/10 border border-warning/20 rounded-md px-3 py-2">
                 QuickBooks authorization expires{" "}
                 {formatDistanceToNow(new Date(status.refresh_token_expires_at), { addSuffix: true })}.
                 Reconnect before then to avoid sync interruption.
@@ -326,11 +326,11 @@ export function QuickBooksOnlineCard() {
               </p>
             </div>
             {status?.has_keys && status.oauth_redirect_uri && (
-              <div className="text-left rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30 p-3 space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 dark:text-amber-300">
+              <div className="text-left rounded-md border border-warning/20 bg-warning/10 dark:border-warning/30 dark:bg-warning/15 p-3 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-warning dark:text-warning">
                   Intuit redirect URI (register exactly)
                 </p>
-                <p className="text-[10px] text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                <p className="text-[10px] text-warning/80 dark:text-warning/80 leading-relaxed">
                   In the Intuit Developer Portal, open your app&apos;s <strong>Keys</strong> tab and add this URL under{" "}
                   <strong>Redirect URIs</strong> for{" "}
                   {status.oauth_keys_environment === "production" ? "Production" : "Sandbox"} keys.

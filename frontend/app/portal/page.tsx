@@ -16,15 +16,15 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { cn } from "@/lib/utils/cn";
 
 const appointmentStatusColors: Record<string, string> = {
-  confirmed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  completed: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  confirmed: "bg-success/10 text-success border-success/20",
+  pending: "bg-warning/15 text-warning border-warning/20",
+  completed: "bg-primary/10 text-primary border-primary/20",
   cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const invoiceStatusColors: Record<string, string> = {
-  paid: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  paid: "bg-success/10 text-success border-success/20",
+  pending: "bg-warning/15 text-warning border-warning/20",
   overdue: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
@@ -81,7 +81,7 @@ export default function PortalHomePage() {
   const firstName = user?.first_name || user?.username || "there";
 
   return (
-    <div className="space-y-6 pb-24 lg:pb-8 max-w-3xl mx-auto lg:max-w-none">
+    <div className="space-y-6 pb-24 lg:pb-8 w-full lg:max-w-none">
       {/* Greeting */}
       <div>
         <h1 className="text-xl font-bold text-foreground">Welcome back, {firstName}</h1>

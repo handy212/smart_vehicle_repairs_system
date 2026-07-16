@@ -12,7 +12,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   let name = APP_CONFIG.name;
   let shortName = APP_CONFIG.name;
   let description = APP_CONFIG.description;
-  let themeColor = "#6366f1";
+  let themeColor = "#1e4d6b";
   let backgroundColor = "#ffffff";
   const icons: MetadataRoute.Manifest["icons"] = [
     {

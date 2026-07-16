@@ -207,15 +207,15 @@ export default function BalanceSheetPage() {
             <Card
               className={
                 report.is_balanced
-                  ? "border-green-200 bg-success/10"
-                  : "border-destructive/20 bg-destructive/10/50"
+                  ? "border-success/20 bg-success/10"
+                  : "border-destructive/20 bg-destructive/10"
               }
             >
               <CardContent className="pt-6">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-foreground">Total Liabilities + Equity</span>
                   <span
-                    className={`font-bold ${report.is_balanced ? "text-green-700" : "text-destructive"}`}
+                    className={`font-bold ${report.is_balanced ? "text-success" : "text-destructive"}`}
                   >
                     {formatCurrency(report.totals.liabilities_plus_equity)}
                   </span>

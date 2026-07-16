@@ -109,7 +109,7 @@ function VendorCreditDetailContent() {
   const vendorId = Number(credit.vendor);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+    <div className="w-full space-y-6">
       <ApplyVendorCreditDialog
         open={applyDialogOpen}
         onOpenChange={setApplyDialogOpen}
@@ -153,7 +153,7 @@ function VendorCreditDetailContent() {
             <Button
               onClick={() => issueMutation.mutate()}
               disabled={issueMutation.isPending}
-              className="bg-success hover:bg-green-700"
+              className="bg-success hover:bg-success"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               {issueMutation.isPending ? "Issuing…" : "Issue credit"}

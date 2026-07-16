@@ -593,10 +593,10 @@ export default function StandardInventoryReportsPage() {
     activeTab === "stock_take";
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Inventory Reports</h1>
+          <h1 className="text-xl font-bold text-foreground">Inventory Reports</h1>
           <p className="text-sm text-muted-foreground">
             QuickBooks Online–aligned valuation, open purchase orders, and stocktake worksheet.
           </p>

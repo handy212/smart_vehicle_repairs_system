@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { ChatMessage } from "@/lib/api/chat";
 import { getAccessToken } from "@/lib/utils/token";
+import { fetchWsTicket } from "@/lib/auth/ws-ticket";
 
 const RECONNECT_BASE_DELAY = 1000; // 1s
 const RECONNECT_MAX_DELAY = 30000; // 30s
@@ -43,110 +44,127 @@ export const useChat = (conversationId: string | number | null) => {
   const connect = useCallback(() => {
     if (!conversationId || !user || !isMountedRef.current) return;
 
-    const wsUrl = getWsUrl();
-    const token = getAccessToken();
-    // Prefer cookie auth on same host; fall back to query token for cross-origin dev
-    const finalUrl = token ? `${wsUrl}?token=${encodeURIComponent(token)}` : wsUrl;
+    void (async () => {
+      if (!conversationId || !user || !isMountedRef.current) return;
 
-    const socket = new WebSocket(finalUrl);
-    socketRef.current = socket;
-
-    socket.onopen = () => {
-      if (!isMountedRef.current) return;
-      console.log(`[Chat] WebSocket connected (conv ${conversationId})`);
-      setIsConnected(true);
-      reconnectDelayRef.current = RECONNECT_BASE_DELAY; // reset backoff
-    };
-
-    socket.onmessage = (event) => {
-      let data: Record<string, unknown>;
-      try {
-        data = JSON.parse(event.data);
-      } catch {
-        console.error("[Chat] Received invalid JSON from WebSocket");
+      const wsUrl = getWsUrl();
+      let token = getAccessToken();
+      if (!token) {
+        token = await fetchWsTicket();
+      }
+      if (!token || !isMountedRef.current) {
+        // Without a ticket the Django WS rejects with 403 — retry with backoff
+        const delay = reconnectDelayRef.current;
+        reconnectDelayRef.current = Math.min(delay * 2, RECONNECT_MAX_DELAY);
+        reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), delay);
         return;
       }
 
-      switch (data.type) {
-        case "chat.message":
-          setMessages((prev) => {
-            // Deduplicate by id in case a page refresh and a WS event both add the same message
-            if (prev.some((m) => m.id === (data.id as number))) return prev;
-            return [...prev, data as unknown as ChatMessage];
-          });
-          break;
+      const finalUrl = `${wsUrl}?token=${encodeURIComponent(token)}`;
+      const socket = new WebSocket(finalUrl);
+      socketRef.current = socket;
 
-        case "chat.typing": {
-          const userId = data.user_id as number;
-          const userName = data.user_name as string;
-          if (userId === user.id) break;
+      socket.onopen = () => {
+        if (!isMountedRef.current) return;
+        console.log(`[Chat] WebSocket connected (conv ${conversationId})`);
+        setIsConnected(true);
+        reconnectDelayRef.current = RECONNECT_BASE_DELAY;
+      };
 
-          if (data.is_typing) {
-            setTypingUsers((prev) => {
-              if (prev.some((u) => u.id === userId)) return prev;
-              return [...prev, { id: userId, name: userName }];
-            });
-            // Stale typing guard — remove this user after 5s of silence
-            const existing = typingTimeoutsRef.current.get(userId);
-            if (existing) clearTimeout(existing);
-            const t = setTimeout(() => {
-              setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
-              typingTimeoutsRef.current.delete(userId);
-            }, TYPING_STALE_TIMEOUT);
-            typingTimeoutsRef.current.set(userId, t);
-          } else {
-            const existing = typingTimeoutsRef.current.get(userId);
-            if (existing) { clearTimeout(existing); typingTimeoutsRef.current.delete(userId); }
-            setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
-          }
-          break;
+      socket.onmessage = (event) => {
+        let data: Record<string, unknown>;
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          console.error("[Chat] Received invalid JSON from WebSocket");
+          return;
         }
 
-        case "chat.read_receipt":
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === (data.message_id as number) ? { ...m, is_read: true } : m
-            )
-          );
-          break;
+        switch (data.type) {
+          case "chat.message":
+            setMessages((prev) => {
+              // Deduplicate by id in case a page refresh and a WS event both add the same message
+              if (prev.some((m) => m.id === (data.id as number))) return prev;
+              return [...prev, data as unknown as ChatMessage];
+            });
+            break;
 
-        case "chat.presence":
-          // Presence updates are handled by re-fetching discovery in ChatSidebar;
-          // nothing to do here for now.
-          break;
+          case "chat.typing": {
+            const userId = data.user_id as number;
+            const userName = data.user_name as string;
+            if (userId === user.id) break;
 
-        case "chat.error":
-          console.error("[Chat] Server error:", data.error);
-          break;
-      }
-    };
+            if (data.is_typing) {
+              setTypingUsers((prev) => {
+                if (prev.some((u) => u.id === userId)) return prev;
+                return [...prev, { id: userId, name: userName }];
+              });
+              // Stale typing guard — remove this user after 5s of silence
+              const existing = typingTimeoutsRef.current.get(userId);
+              if (existing) clearTimeout(existing);
+              const t = setTimeout(() => {
+                setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
+                typingTimeoutsRef.current.delete(userId);
+              }, TYPING_STALE_TIMEOUT);
+              typingTimeoutsRef.current.set(userId, t);
+            } else {
+              const existing = typingTimeoutsRef.current.get(userId);
+              if (existing) {
+                clearTimeout(existing);
+                typingTimeoutsRef.current.delete(userId);
+              }
+              setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
+            }
+            break;
+          }
 
-    socket.onerror = () => {
-      // Browser WebSocket onerror events are intentionally opaque (no details exposed).
-      // The real close reason and code will arrive in onclose immediately after this.
-      console.warn(`[Chat] WebSocket connection error (conv ${conversationId}). See onclose for details.`);
-      setIsConnected(false);
-    };
+          case "chat.read_receipt":
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === (data.message_id as number) ? { ...m, is_read: true } : m
+              )
+            );
+            break;
 
-    socket.onclose = (event) => {
-      if (!isMountedRef.current) return;
-      console.log(`[Chat] WebSocket closed (code ${event.code})`);
-      setIsConnected(false);
-      socketRef.current = null;
+          case "chat.presence":
+            // Presence updates are handled by re-fetching discovery in ChatSidebar;
+            // nothing to do here for now.
+            break;
 
-      // Don't reconnect if the server explicitly refused (auth failure)
-      if (event.code === 4001 || event.code === 4003) {
-        console.warn("[Chat] Connection rejected by server — not reconnecting.");
-        return;
-      }
+          case "chat.error":
+            console.error("[Chat] Server error:", data.error);
+            break;
+        }
+      };
 
-      // Exponential backoff reconnect
-      const delay = reconnectDelayRef.current;
-      reconnectDelayRef.current = Math.min(delay * 2, RECONNECT_MAX_DELAY);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connectRef.current();
-      }, delay);
-    };
+      socket.onerror = () => {
+        // Browser WebSocket onerror events are intentionally opaque (no details exposed).
+        // The real close reason and code will arrive in onclose immediately after this.
+        console.warn(
+          `[Chat] WebSocket connection error (conv ${conversationId}). See onclose for details.`
+        );
+        setIsConnected(false);
+      };
+
+      socket.onclose = (event) => {
+        if (!isMountedRef.current) return;
+        console.log(`[Chat] WebSocket closed (code ${event.code})`);
+        setIsConnected(false);
+        socketRef.current = null;
+
+        // Auth rejected — retry with a fresh BFF ticket (cookie may have rotated)
+        if (event.code === 4001 || event.code === 4003) {
+          console.warn("[Chat] Connection rejected by server — retrying with fresh ticket.");
+        }
+
+        // Exponential backoff reconnect
+        const delay = reconnectDelayRef.current;
+        reconnectDelayRef.current = Math.min(delay * 2, RECONNECT_MAX_DELAY);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectRef.current();
+        }, delay);
+      };
+    })();
   }, [conversationId, user, getWsUrl]);
 
   useEffect(() => {

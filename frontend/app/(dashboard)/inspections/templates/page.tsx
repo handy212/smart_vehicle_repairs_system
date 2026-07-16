@@ -122,7 +122,7 @@ export default function InspectionTemplatesPage() {
                       <TableCell className="font-medium text-sm text-foreground py-2.5">
                         {template.name}
                         {template.is_default && (
-                          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-orange-200 text-[10px] px-1.5 py-0">Default</Badge>
+                          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-warning/20 text-[10px] px-1.5 py-0">Default</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs py-2.5 max-w-[200px] truncate">
@@ -133,7 +133,7 @@ export default function InspectionTemplatesPage() {
                         <Badge
                           variant="outline"
                           className={`text-[10px] px-2 py-0.5 font-medium border shadow-none ${template.is_active
-                            ? "bg-success/10 text-green-700 border-green-200"
+                            ? "bg-success/15 text-success border-success/20"
                             : "bg-muted text-muted-foreground border-border"
                             }`}
                         >

@@ -38,7 +38,7 @@ function ChatContent() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] p-0 md:p-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-100px)] p-0 md:p-6 bg-muted dark:bg-background overflow-hidden">
 
       {/* Page Header — hidden on mobile when chat is open */}
       <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 md:px-0 mb-6 ${showChat ? 'hidden md:flex' : 'flex'}`}>
@@ -65,10 +65,10 @@ function ChatContent() {
         <main className={`flex-1 flex flex-col h-full overflow-hidden border-t md:border-none z-10 ${showChat ? 'flex' : 'hidden md:flex'}`}>
           {/* Mobile back button */}
           {showChat && selectedConversation && (
-            <div className="flex items-center gap-3 px-4 py-3 md:hidden border-b bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-3 px-4 py-3 md:hidden border-b bg-card dark:bg-card">
               <button
                 onClick={handleBack}
-                className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground hover:text-primary transition-all"
+                className="p-2 rounded-xl hover:bg-muted dark:hover:bg-muted text-muted-foreground hover:text-primary transition-all"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -85,8 +85,8 @@ function ChatContent() {
               conversation={selectedConversation}
             />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 border border-border rounded-xl text-center shadow-sm">
-              <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 flex items-center justify-center mb-6">
+            <div className="flex-1 flex flex-col items-center justify-center p-12 bg-card dark:bg-card border border-border rounded-xl text-center shadow-sm">
+              <div className="w-20 h-20 rounded-2xl bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground flex items-center justify-center mb-6">
                 <MessageSquare className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-bold text-foreground mb-2">Select a Person or Group</h3>
@@ -104,7 +104,7 @@ function ChatContent() {
 export default function ChatPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950 text-slate-500 font-bold uppercase tracking-widest text-xs">
+      <div className="flex items-center justify-center h-screen bg-card dark:bg-background text-muted-foreground font-bold uppercase tracking-widest text-xs">
         Loading Live Chat...
       </div>
     }>

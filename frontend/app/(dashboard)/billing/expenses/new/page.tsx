@@ -355,7 +355,7 @@ export default function NewVendorExpensePage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-24">
+    <div className="w-full space-y-6 pb-24">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/billing/expenses">
@@ -364,7 +364,7 @@ export default function NewVendorExpensePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Expense</h1>
+            <h1 className="text-xl font-bold tracking-tight">Expense</h1>
             <p className="text-sm text-muted-foreground">
               Record a vendor payment — no bill required.
             </p>
@@ -425,7 +425,7 @@ export default function NewVendorExpensePage() {
                 </SelectContent>
               </Select>
               {paymentMethod === "cash" && openTills.length === 0 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
+                <p className="text-xs text-warning dark:text-warning">
                   No open till for this branch — open one or pick a bank account.
                 </p>
               )}

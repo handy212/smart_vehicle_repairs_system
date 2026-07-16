@@ -262,7 +262,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 {mode === 'edit' && <Badge variant="outline">Editing</Badge>}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
+                        <CardContent className="pt-4 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                             <div className="sm:col-span-2 space-y-2">
                                 <label className="text-sm font-medium">VIN <span className="text-destructive">*</span></label>
                                 <div className="flex gap-2">
@@ -538,14 +538,14 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                         </Card>
                     )}
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="sticky bottom-0 z-10 mt-2 flex justify-end gap-3 border-t border-border bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                         <Button type="button" variant="ghost" onClick={() => onCancel && onCancel()}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting} className="min-w-32">
+                        <Button type="submit" disabled={isSubmitting} className="min-w-32 shadow-workshop">
                             {isSubmitting ? (
                                 <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <div className="w-4 h-4 border-2 border-card/30 border-t-white rounded-full animate-spin" />
                                     Saving...
                                 </div>
                             ) : (

@@ -164,8 +164,8 @@ export default function SystemUpdatesPage() {
                 </div>
 
                 {checkData?.check_error && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                  <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
                     <span>{checkData.check_error}</span>
                   </div>
                 )}
@@ -181,8 +181,8 @@ export default function SystemUpdatesPage() {
                 )}
 
                 {updater?.bare_metal_layout && !updater?.enabled && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                  <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
                     <span>
                       Set <code className="text-xs">SYSTEM_UPDATE_ENABLED=true</code> in production{" "}
                       <code className="text-xs">.env</code> to enable apply from the UI.
@@ -191,8 +191,8 @@ export default function SystemUpdatesPage() {
                 )}
 
                 {updater?.enabled && !updater?.sudo_configured && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                  <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
                     <span>
                       Install <code className="text-xs">deploy/sudoers-svr-system-update</code> on the
                       server so the app can run updates as root.

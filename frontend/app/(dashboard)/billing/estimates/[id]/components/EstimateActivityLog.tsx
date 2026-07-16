@@ -30,9 +30,9 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
 
     const getActionColor = (action: string) => {
         switch (action.toLowerCase()) {
-            case 'create': return 'bg-green-100 text-green-800 border-green-200';
-            case 'update': return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'delete': return 'bg-red-100 text-destructive border-destructive/20';
+            case 'create': return 'bg-success/15 text-success border-success/20';
+            case 'update': return 'bg-warning/15 text-warning border-warning/20';
+            case 'delete': return 'bg-destructive/10 text-destructive border-destructive/20';
             default: return 'bg-muted text-foreground border-border';
         }
     };
@@ -102,7 +102,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
                             {logs.map((log: LogEntry) => (
                                 <div key={log.id} className="relative pl-8">
                                     <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-card border-2 border-border flex items-center justify-center z-10">
-                                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                                        <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
                                     </div>
                                     <div className="flex flex-col gap-1">
                                         <div className="flex flex-wrap items-center gap-2">
@@ -117,7 +117,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
                                         </div>
                                         {formatChanges(log.changes)}
                                         {log.remote_addr && (
-                                            <p className="text-[10px] text-gray-300 mt-0.5">IP: {log.remote_addr}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">IP: {log.remote_addr}</p>
                                         )}
                                     </div>
                                 </div>
@@ -126,7 +126,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
                     </ScrollArea>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                        <History className="w-12 h-12 text-gray-300 mb-3" />
+                        <History className="w-12 h-12 text-muted-foreground mb-3" />
                         <p className="text-lg font-medium text-foreground">No Activity Yet</p>
                         <p className="text-sm max-w-sm mt-1">
                             Actions performed on this estimate will be logged here.

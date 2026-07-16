@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MobileErrorState } from "@/components/mobile/MobileErrorState";
+import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
 import { cn } from "@/lib/utils";
 
@@ -52,14 +53,11 @@ export default function MobileSchedulePage() {
   );
 
   return (
-    <div className="mx-auto max-w-md space-y-4 p-4">
-      <div>
-        <h2 className="text-xl font-bold text-foreground">My Schedule</h2>
-        <p className="text-sm text-muted-foreground">
-          {format(selectedDate, "EEEE, MMMM d, yyyy")}
-        </p>
-      </div>
-
+    <MobilePageShell
+      title="My Schedule"
+      description={format(selectedDate, "EEEE, MMMM d, yyyy")}
+      className="space-y-4"
+    >
       <div className="flex gap-2 overflow-x-auto pb-1">
         {weekDays.map((day) => {
           const active = isSameDay(day, selectedDate);
@@ -123,6 +121,6 @@ export default function MobileSchedulePage() {
           ))}
         </div>
       )}
-    </div>
+    </MobilePageShell>
   );
 }

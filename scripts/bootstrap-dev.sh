@@ -78,6 +78,9 @@ python manage.py migrate --noinput
 echo -e "${GREEN}Initializing permissions...${NC}"
 python manage.py init_permissions
 
+echo -e "${GREEN}Initializing vehicle service types...${NC}"
+python manage.py init_service_types
+
 python manage.py create_all_email_templates >/dev/null 2>&1 || true
 python manage.py setup_invoice_email_templates >/dev/null 2>&1 || true
 

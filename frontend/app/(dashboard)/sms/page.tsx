@@ -310,20 +310,20 @@ export default function SMSConsolePage() {
                         label="SENT TODAY"
                         value={stats?.sent_today || 0}
                         icon={<TrendingUp className="h-5 w-5 text-success" />}
-                        iconBg="bg-green-100"
+                        iconBg="bg-success/10"
                     />
                     <StatCard
                         label="SCHEDULED"
                         value={stats?.scheduled || 0}
                         icon={<Clock className="h-5 w-5 text-primary" />}
-                        iconBg="bg-blue-100"
+                        iconBg="bg-primary/10"
                         variant="primary"
                     />
                     <StatCard
                         label="FAILED TODAY"
                         value={stats?.failed_today || 0}
                         icon={<AlertCircle className="h-5 w-5 text-destructive" />}
-                        iconBg="bg-red-100"
+                        iconBg="bg-destructive/10"
                         variant="danger"
                     />
                 </div>
@@ -622,7 +622,7 @@ export default function SMSConsolePage() {
                                     <tr key={row.id} className="hover:bg-muted/10 transition-colors group">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <Avatar className="h-10 w-10 rounded-full border bg-white shadow-sm ring-2 ring-transparent group-hover:ring-primary/10 transition-all">
+                                                <Avatar className="h-10 w-10 rounded-full border bg-card shadow-sm ring-2 ring-transparent group-hover:ring-primary/10 transition-all">
                                                     <AvatarFallback className="bg-muted/50 text-muted-foreground text-xs font-bold uppercase transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                                                         {row.recipient_initials || 'U'}
                                                     </AvatarFallback>
@@ -818,7 +818,7 @@ function SMSLogsTable({
                     <tr key={row.id} className="hover:bg-muted/10">
                         <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9 rounded-full border bg-white">
+                                <Avatar className="h-9 w-9 rounded-full border bg-card">
                                     <AvatarFallback className="bg-muted/50 text-xs font-bold uppercase text-muted-foreground">
                                         {row.recipient_initials || 'U'}
                                     </AvatarFallback>
@@ -993,16 +993,16 @@ function StatusBadge({ status }: { status: string }) {
     const s = status.toLowerCase();
     let config = { 
         label: status.toUpperCase(), 
-        dot: "bg-gray-400", 
-        bg: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200" 
+        dot: "bg-muted-foreground", 
+        bg: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground border-border" 
     };
 
     if (s === 'sent' || s === 'delivered') {
-        config = { label: "SENT", dot: "bg-success/100", bg: "bg-success/10 shadow-sm text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200/50" };
+        config = { label: "SENT", dot: "bg-success", bg: "bg-success/10 shadow-sm text-success dark:bg-success/20 dark:text-success border-success/20" };
     } else if (s === 'failed') {
-        config = { label: "FAILED", dot: "bg-destructive/100", bg: "bg-destructive/10 shadow-sm text-destructive dark:bg-red-900/20 dark:text-red-400 border-destructive/20/50" };
+        config = { label: "FAILED", dot: "bg-destructive", bg: "bg-destructive/10 shadow-sm text-destructive dark:bg-destructive/20 dark:text-destructive border-destructive/20" };
     } else if (s === 'scheduled' || s === 'pending') {
-        config = { label: "SCHEDULED", dot: "bg-info/100", bg: "bg-info/10 shadow-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-info/20/50" };
+        config = { label: "SCHEDULED", dot: "bg-info", bg: "bg-info/10 shadow-sm text-primary dark:bg-primary/20 dark:text-primary border-info/20" };
     }
 
     return (

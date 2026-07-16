@@ -28,6 +28,7 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { WorkOrderCommandBar } from "./components/WorkOrderCommandBar";
+import { handleWhatsAppSendFlow } from "@/components/shared/DocumentWhatsAppButton";
 import { WorkOrderProgress } from "./components/WorkOrderProgress";
 import { GatePassBanner } from "./components/GatePassBanner";
 import { CheckInInspectionBanner } from "./components/CheckInInspectionBanner";
@@ -297,103 +298,126 @@ export default function WorkOrderDetailPage() {
 
   return (
     <div className="space-y-4">
-      <WorkOrderCommandBar
-        workOrder={workOrder}
-        workOrderId={workOrderId}
-        statusLabelOverride={statusLabelOverride}
-        statusForVariant={stagePresentation.workflowStatus}
-        onStatusChange={refreshData}
-        onStartRepairs={() => handleTabChange("tasks")}
-        onShowRecommendations={() => setShowUnapprovedRecommendationsDialog(true)}
-        showRecommendationsAction={showRecommendationsAction}
-        canPrintRecommendations={canPrintRecommendations}
-        onPrintWorkOrder={() =>
-          openPrintWindow({ documentType: "work_order", documentId: workOrderId })
-        }
-        onDownloadPdf={() =>
-          downloadPDF({
-            documentType: "work_order",
-            documentId: workOrderId,
-            documentNumber: workOrder.work_order_number,
-          })
-        }
-        onDelete={async () => {
-          const ok = await confirm({
-            title: "Delete work order?",
-            description: `Delete "${workOrder.work_order_number}"? This cannot be undone.`,
-            confirmLabel: "Delete",
-            variant: "destructive",
-          });
-          if (ok) deleteMutation.mutate();
-        }}
-        canDelete={canDeleteWorkOrder}
-        isDeleting={deleteMutation.isPending}
-        onPrintRecommendations={handlePrintRecommendations}
-        isOpeningPrint={isOpeningPrint}
-        isDownloading={isDownloading}
-      />
-
-      <WorkOrderProgress
-        status={stagePresentation.workflowStatus}
-        labelOverride={statusLabelOverride}
-        workOrder={workOrder}
-      />
-
-      {(workOrder.customer_rating || workOrder.customer_feedback) && (
-        <Card>
-          <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm font-medium">Customer Experience</div>
-            <div className="flex items-center gap-2">
-              {workOrder.customer_rating && (
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-4 w-4 ${star <= (workOrder.customer_rating || 0) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`}
-                    />
-                  ))}
-                </div>
-              )}
-              {workOrder.customer_feedback && (
-                <span className="text-sm text-muted-foreground italic">"{workOrder.customer_feedback}"</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <RoutineCheckInBanner
-        workOrder={workOrder}
-        workOrderId={workOrderId}
-        partsCount={parts.length}
-        tasksCount={tasks.length}
-      />
-
-      <AssignmentActions
-        workOrder={workOrder}
-        workOrderId={workOrderId}
-        onStatusChange={refreshData}
-      />
-
-      <CheckInInspectionBanner
-        workOrder={workOrder}
-        workOrderId={workOrderId}
-        onStatusChange={refreshData}
-      />
-
-      <ProfileFlowBanner workOrder={workOrder} workOrderId={workOrderId} />
-
-      {workOrder.status === "closed" && <GatePassBanner workOrderId={workOrderId} />}
-
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <WorkOrderTabsNav
-          tasksCount={tasks.length}
-          partsCount={parts.length}
-          notesCount={notes.length}
-          tabsLocked={tabsLocked}
-          isRoutine={isRoutine}
-          hideDiagnosis={isInspectionOnly}
-        />
+        <div className="sticky top-0 z-20 -mx-4 space-y-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6">
+          <WorkOrderCommandBar
+            workOrder={workOrder}
+            workOrderId={workOrderId}
+            statusLabelOverride={statusLabelOverride}
+            statusForVariant={stagePresentation.workflowStatus}
+            onStatusChange={refreshData}
+            onStartRepairs={() => handleTabChange("tasks")}
+            onShowRecommendations={() => setShowUnapprovedRecommendationsDialog(true)}
+            showRecommendationsAction={showRecommendationsAction}
+            canPrintRecommendations={canPrintRecommendations}
+            onPrintWorkOrder={() =>
+              openPrintWindow({ documentType: "work_order", documentId: workOrderId })
+            }
+            onPrintJobCard={() =>
+              openPrintWindow({ documentType: "job_card", documentId: workOrderId })
+            }
+            onSendJobCardWhatsApp={async () => {
+              try {
+                await handleWhatsAppSendFlow(
+                  (opts) => workordersApi.sendJobCardWhatsApp(workOrderId, opts),
+                  toast,
+                  "Job Card WhatsApp"
+                );
+              } catch (error: unknown) {
+                toast({
+                  title: "WhatsApp failed",
+                  description: getUserFacingError(error, "Could not send job card via WhatsApp."),
+                  variant: "destructive",
+                });
+              }
+            }}
+            onDownloadPdf={() =>
+              downloadPDF({
+                documentType: "work_order",
+                documentId: workOrderId,
+                documentNumber: workOrder.work_order_number,
+              })
+            }
+            onDelete={async () => {
+              const ok = await confirm({
+                title: "Delete work order?",
+                description: `Delete "${workOrder.work_order_number}"? This cannot be undone.`,
+                confirmLabel: "Delete",
+                variant: "destructive",
+              });
+              if (ok) deleteMutation.mutate();
+            }}
+            canDelete={canDeleteWorkOrder}
+            isDeleting={deleteMutation.isPending}
+            onPrintRecommendations={handlePrintRecommendations}
+            isOpeningPrint={isOpeningPrint}
+            isDownloading={isDownloading}
+          />
+          <WorkOrderTabsNav
+            tasksCount={tasks.length}
+            partsCount={parts.length}
+            notesCount={notes.length}
+            tabsLocked={tabsLocked}
+            isRoutine={isRoutine}
+            hideDiagnosis={isInspectionOnly}
+          />
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <WorkOrderProgress
+            status={stagePresentation.workflowStatus}
+            labelOverride={statusLabelOverride}
+            workOrder={workOrder}
+          />
+
+          {(workOrder.customer_rating || workOrder.customer_feedback) && (
+            <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm font-medium text-foreground">Customer Experience</div>
+              <div className="flex items-center gap-2">
+                {workOrder.customer_rating && (
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-3.5 w-3.5 ${star <= (workOrder.customer_rating || 0) ? "fill-warning text-warning" : "text-muted-foreground"}`}
+                      />
+                    ))}
+                  </div>
+                )}
+                {workOrder.customer_feedback && (
+                  <span className="text-sm italic text-muted-foreground">
+                    &ldquo;{workOrder.customer_feedback}&rdquo;
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <RoutineCheckInBanner
+              workOrder={workOrder}
+              workOrderId={workOrderId}
+              partsCount={parts.length}
+              tasksCount={tasks.length}
+            />
+
+            <AssignmentActions
+              workOrder={workOrder}
+              workOrderId={workOrderId}
+              onStatusChange={refreshData}
+            />
+
+            <CheckInInspectionBanner
+              workOrder={workOrder}
+              workOrderId={workOrderId}
+              onStatusChange={refreshData}
+            />
+
+            <ProfileFlowBanner workOrder={workOrder} workOrderId={workOrderId} />
+
+            {workOrder.status === "closed" && <GatePassBanner workOrderId={workOrderId} />}
+          </div>
+        </div>
 
         <TabsContent value="overview" className="mt-4">
           <WorkOrderOverviewTab workOrder={workOrder} onStatusChange={refreshData} />

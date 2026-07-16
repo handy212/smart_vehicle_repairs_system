@@ -16,9 +16,12 @@ import { accountingApi } from "@/lib/api/accounting";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { cn } from "@/lib/utils";
+import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/table-typography";
 
-const CARD =
-  "rounded-md border border-border bg-card p-3 shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] transition-colors hover:border-primary/30 hover:bg-muted/20";
+const CARD = cn(
+  WORKSHOP_PANEL_CLASS,
+  "p-3.5 transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/25"
+);
 
 export function FinanceAtAGlancePanel() {
   const { formatCurrency } = useCurrency();
@@ -80,7 +83,7 @@ export function FinanceAtAGlancePanel() {
           sub: overdueCount > 0 ? `${overdueCount} overdue · ${formatCurrency(overdueAmount)}` : "All current",
           href: "/billing/receivables?tab=balances",
           icon: HandCoins,
-          tone: overdueCount > 0 ? "text-destructive" : "text-emerald-600",
+          tone: overdueCount > 0 ? "text-destructive" : "text-success",
         }
       : null,
     canViewBilling
@@ -102,7 +105,7 @@ export function FinanceAtAGlancePanel() {
           sub: "Supplier bills open",
           href: "/billing/payables?tab=balances",
           icon: Receipt,
-          tone: "text-amber-600",
+          tone: "text-warning",
         }
       : null,
     canViewAccounting
@@ -113,7 +116,7 @@ export function FinanceAtAGlancePanel() {
           sub: pendingVariances > 0 ? `${pendingVariances} till variance(s) pending` : "Cash, bank & tills",
           href: "/accounting",
           icon: Wallet,
-          tone: "text-violet-600",
+          tone: "text-info",
         }
       : null,
     canViewAccounting && canViewBank
@@ -124,7 +127,7 @@ export function FinanceAtAGlancePanel() {
           sub: "Match statements to ledger",
           href: "/accounting/banking/reconciliation",
           icon: Landmark,
-          tone: "text-sky-600",
+          tone: "text-info",
         }
       : null,
   ].filter(Boolean) as Array<{
@@ -174,11 +177,11 @@ export function FinanceAtAGlancePanel() {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="mt-2 text-[10px] text-muted-foreground">{tile.label}</p>
-            <p className="text-sm font-semibold text-foreground">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{tile.label}</p>
+            <p className="text-xl font-bold tracking-tight text-foreground tabular-nums">
               {loading ? "—" : tile.value}
             </p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">{tile.sub}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{tile.sub}</p>
           </Link>
         ))}
       </div>

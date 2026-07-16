@@ -89,8 +89,8 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="var(--success)" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="var(--success)" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1} />
@@ -116,7 +116,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     type="monotone"
                                     dataKey="revenue"
                                     name="Revenue"
-                                    stroke="#10b981"
+                                    stroke="var(--success)"
                                     fillOpacity={1}
                                     fill="url(#colorRevenue)"
                                     strokeWidth={2}
@@ -135,8 +135,8 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis
@@ -159,7 +159,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     type="monotone"
                                     dataKey="cash_flow"
                                     name="Net Cash Flow"
-                                    stroke="#3b82f6"
+                                    stroke="var(--primary)"
                                     fillOpacity={1}
                                     fill="url(#colorCash)"
                                     strokeWidth={2}
@@ -169,8 +169,8 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRevOnly" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis
@@ -192,7 +192,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     type="monotone"
                                     dataKey="revenue"
                                     name="Total Revenue"
-                                    stroke="#3b82f6"
+                                    stroke="var(--primary)"
                                     fillOpacity={1}
                                     fill="url(#colorRevOnly)"
                                     strokeWidth={2}

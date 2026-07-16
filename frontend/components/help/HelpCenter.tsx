@@ -145,7 +145,7 @@ function HelpBlockRenderer({ block }: { block: HelpBlock }) {
                     <ul className="space-y-2">
                         {block.items.map((item, index) => (
                             <li key={index} className="flex gap-2.5 text-sm leading-relaxed text-foreground/85">
-                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                                 <span>
                                     <FormattedText text={item} />
                                 </span>
@@ -156,8 +156,8 @@ function HelpBlockRenderer({ block }: { block: HelpBlock }) {
             );
         case "tips":
             return (
-                <div className="space-y-2 rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                <div className="space-y-2 rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 dark:border-warning/30 dark:bg-warning/10">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-warning dark:text-warning">
                         <Lightbulb className="h-3.5 w-3.5" />
                         {block.title ?? "Tips"}
                     </div>
@@ -172,8 +172,8 @@ function HelpBlockRenderer({ block }: { block: HelpBlock }) {
             );
         case "mistakes":
             return (
-                <div className="space-y-2 rounded-lg border border-red-200/60 bg-red-50/50 px-4 py-3 dark:border-red-900/40 dark:bg-red-950/20">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
+                <div className="space-y-2 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 dark:border-destructive/30 dark:bg-destructive/15">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-destructive dark:text-destructive">
                         <XCircle className="h-3.5 w-3.5" />
                         {block.title ?? "Common Mistakes"}
                     </div>
@@ -192,7 +192,7 @@ function HelpBlockRenderer({ block }: { block: HelpBlock }) {
                     {block.items.map((item, index) => (
                         <div key={index} className="rounded-lg border border-border bg-muted/30 p-4">
                             <div className="flex items-start gap-2">
-                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                                 <div className="min-w-0 space-y-1.5">
                                     <p className="text-sm font-semibold text-foreground">{item.problem}</p>
                                     <p className="text-sm leading-relaxed text-muted-foreground">{item.solution}</p>

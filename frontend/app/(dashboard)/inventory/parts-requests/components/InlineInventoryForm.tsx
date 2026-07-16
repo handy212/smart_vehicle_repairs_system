@@ -73,7 +73,7 @@ export function InlineInventoryForm({
     };
 
     return (
-        <Card className="p-4 border-warning/20 bg-warning/10/30 dark:bg-amber-900/10">
+        <Card className="p-4 border-warning/20 bg-warning/10 dark:bg-warning/10">
             <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-warning" />
@@ -186,7 +186,7 @@ export function InlineInventoryForm({
                     <Button
                         type="submit"
                         size="sm"
-                        className="bg-amber-600 hover:bg-amber-700"
+                        className="bg-warning hover:bg-warning"
                         disabled={isSubmitting || !formData.supplier_id}
                     >
                         {isSubmitting ? "Creating..." : "Create & Order"}

@@ -141,43 +141,43 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
   }, [activeBranchId, queryClient, router]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background shadow-sm" style={{ height: 'var(--header-height)' }}>
-      <div className="px-4 sm:px-6 lg:px-8 h-full">
-        <div className="flex justify-between items-center h-full">
-          {/* Left: Menu Toggle + Logo/Brand */}
-          <div className="flex items-center flex-shrink-0 space-x-3">
-            {/* Mobile Menu Toggle */}
+    <nav
+      className="fixed top-0 left-0 right-0 z-50 border-b border-[color:var(--outline-variant)] bg-[var(--panel-bg)] shadow-workshop"
+      style={{ height: "var(--header-height)" }}
+    >
+      <div className="h-full px-4 sm:px-5 lg:px-6">
+        <div className="flex h-full items-center justify-between">
+          <div className="flex flex-shrink-0 items-center gap-2.5">
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary lg:hidden"
               aria-label="Toggle menu"
             >
               {isSidebarOpen ? (
-                <PremiumIcons.X className="w-6 h-6" />
+                <PremiumIcons.X className="h-5 w-5" />
               ) : (
-                <PremiumIcons.Menu className="w-6 h-6" />
+                <PremiumIcons.Menu className="h-5 w-5" />
               )}
             </button>
 
-            {/* Desktop Sidebar Toggle */}
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary lg:block"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
                 {isSidebarCollapsed ? (
-                  <PremiumIcons.PanelLeftOpen className="w-5 h-5 transition-transform duration-200" />
+                  <PremiumIcons.PanelLeftOpen className="h-5 w-5 transition-transform duration-200" />
                 ) : (
-                  <PremiumIcons.PanelLeftClose className="w-5 h-5 transition-transform duration-200" />
+                  <PremiumIcons.PanelLeftClose className="h-5 w-5 transition-transform duration-200" />
                 )}
               </button>
             )}
 
-            <Link href="/dashboard" className="flex items-center space-x-2 group">
+            <Link href="/dashboard" className="group flex items-center gap-2.5">
               {branding.logoSrc && failedLogoSrc !== branding.logoSrc ? (
-                <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-border relative">
+                <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-[color:var(--outline-variant)] bg-card">
                   <img
                     src={branding.logoSrc}
                     alt={branding.siteName}
@@ -186,53 +186,46 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                   />
                 </div>
               ) : (
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/30 transition-all">
-                  <PremiumIcons.Car className="w-5 h-5 text-white" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors group-hover:bg-primary-container">
+                  <PremiumIcons.Car className="h-5 w-5" />
                 </div>
               )}
               <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                <h1 className="text-base font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">
                   {branding.siteName}
                 </h1>
                 {branding.tagline && (
-                  <p className="text-xs text-muted-foreground hidden lg:block">{branding.tagline}</p>
+                  <p className="hidden text-xs text-muted-foreground lg:block">{branding.tagline}</p>
                 )}
               </div>
             </Link>
           </div>
 
-          {/* Global Search Trigger (Centered) */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-4 lg:mx-8 gap-3">
+          <div className="mx-4 hidden max-w-md flex-1 items-center gap-3 lg:mx-8 lg:flex">
             <button
               onClick={() => {
-                const event = new KeyboardEvent('keydown', {
-                  key: 'k',
+                const event = new KeyboardEvent("keydown", {
+                  key: "k",
                   ctrlKey: true,
-                  bubbles: true
+                  bubbles: true,
                 });
                 document.dispatchEvent(event);
               }}
-              className="group flex items-center gap-3 px-3.5 py-2 w-full rounded-xl border border-border bg-card text-muted-foreground text-sm shadow-sm transition-colors hover:border-primary/20 hover:bg-muted/70"
+              className="group flex w-full items-center gap-3 rounded-lg border border-[color:var(--outline-variant)] bg-muted/50 px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted"
               aria-label="Open search (Ctrl+K)"
             >
-              <PremiumIcons.Search className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="flex-1 text-left font-medium opacity-70">Search...</span>
-              <div className="flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-0.5 shadow-none transition-colors group-hover:border-primary/20">
-                <span className="text-[10px] font-bold uppercase tracking-tighter">Ctrl K</span>
-              </div>
+              <PremiumIcons.Search className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+              <span className="flex-1 text-left font-medium opacity-70">Search…</span>
+              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Ctrl K
+              </kbd>
             </button>
             <QuickActionsMenu />
           </div>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Notifications */}
+          <div className="flex flex-shrink-0 items-center gap-0.5">
             <NotificationDropdown />
-
-            {/* Theme Switcher */}
             <ThemeToggle />
-
-            {/* User Menu */}
             <UserMenu />
           </div>
         </div>

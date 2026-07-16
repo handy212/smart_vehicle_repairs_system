@@ -1,4 +1,5 @@
 {% extends 'printing/base/document_base.html' %}
+{% load settings_tags %}
 
 {% block title %}Work Order {{ document.work_order_number }}{% endblock %}
 
@@ -10,11 +11,40 @@
 
 {% block extra_styles %}
 <style>
+    /* Compact internal work-order layout (landscape) */
+    .wo-doc {
+        font-size: 7.5pt;
+        line-height: 1.25;
+        color: #111827;
+    }
+
+    .wo-meta {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        background: #eceff3;
+        margin: 0 0 6px;
+    }
+
+    .wo-meta td {
+        padding: 4px 8px;
+        border: 0;
+        background: transparent;
+        font-size: 7.5pt;
+        vertical-align: middle;
+    }
+
+    .wo-meta strong {
+        font-weight: 700;
+        margin-right: 3px;
+    }
+
     .wo-banner {
-        border: 1px solid #dbe3ef;
-        border-radius: 8px;
-        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 3px;
+        padding: 6px 8px;
         background: #f8fafc;
+        margin-bottom: 6px;
     }
 
     .wo-banner-grid {
@@ -29,23 +59,23 @@
     }
 
     .wo-banner-right {
-        width: 34%;
-        padding-left: 16px;
+        width: 32%;
+        padding-left: 10px;
     }
 
     .wo-flag-row {
-        margin-top: 6px;
-        font-size: 8px;
+        margin-top: 3px;
+        font-size: 7pt;
         color: #4b5563;
     }
 
     .wo-pill {
         display: inline-block;
-        padding: 2px 7px;
-        border-radius: 999px;
-        font-size: 8px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 7pt;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.03em;
         text-transform: uppercase;
         border: 1px solid #d1d5db;
         background: #fff;
@@ -80,34 +110,38 @@
         display: table;
         width: 100%;
         border-collapse: separate;
-        border-spacing: 12px 0;
+        border-spacing: 6px 0;
         table-layout: fixed;
+        margin: 0 0 6px;
     }
 
     .wo-summary-card {
         display: table-cell;
         vertical-align: top;
-        border: 1px solid #dbe3ef;
-        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 3px;
         background: #fff;
-        padding: 10px 12px;
+        padding: 5px 7px;
     }
 
     .wo-card-title {
-        font-size: 8px;
+        font-size: 7.5pt;
         font-weight: 700;
-        color: #6b7280;
+        color: #111827;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-bottom: 8px;
+        letter-spacing: 0.03em;
+        margin-bottom: 4px;
+        padding-bottom: 2px;
+        border-bottom: 1px solid #e5e7eb;
     }
 
     .wo-metric-grid {
         display: table;
         width: 100%;
         border-collapse: separate;
-        border-spacing: 12px 0;
+        border-spacing: 6px 0;
         table-layout: fixed;
+        margin: 0 0 6px;
     }
 
     .wo-metric-main,
@@ -117,38 +151,40 @@
     }
 
     .wo-metric-side {
-        width: 31%;
+        width: 30%;
     }
 
     .wo-panel {
-        border: 1px solid #dbe3ef;
-        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 3px;
         background: #fff;
-        padding: 10px 12px;
+        padding: 5px 7px;
+        margin-bottom: 5px;
     }
 
-    .wo-panel + .wo-panel {
-        margin-top: 10px;
+    .wo-panel:last-child {
+        margin-bottom: 0;
     }
 
     .wo-note-block {
-        border-left: 3px solid #cbd5e1;
+        border-left: 2px solid #94a3b8;
         background: #f8fafc;
-        padding: 8px 10px;
-        margin-bottom: 8px;
+        padding: 4px 7px;
+        margin-bottom: 4px;
     }
 
     .wo-note-meta {
-        font-size: 8px;
+        font-size: 7pt;
         color: #6b7280;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
     }
 
     .wo-timeline {
-        border: 1px solid #dbe3ef;
-        border-radius: 8px;
-        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 3px;
+        padding: 5px 7px;
         background: #fff;
+        margin: 0 0 6px;
     }
 
     .wo-timeline-table {
@@ -160,47 +196,40 @@
     .wo-timeline-table td {
         vertical-align: top;
         text-align: center;
-        padding: 6px 4px 0;
+        padding: 3px 3px 0;
+        border: 0;
+        background: transparent;
     }
 
     .wo-timeline-label {
-        font-size: 8px;
+        font-size: 7pt;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 2px;
+        letter-spacing: 0.03em;
+        margin-bottom: 1px;
     }
 
     .wo-timeline-time {
-        font-size: 8px;
+        font-size: 7pt;
         color: #4b5563;
     }
 
-    .wo-timeline-info {
-        color: #1d4ed8;
-    }
-
-    .wo-timeline-success {
-        color: #15803d;
-    }
-
-    .wo-timeline-warning {
-        color: #b45309;
-    }
-
-    .wo-timeline-neutral {
-        color: #111827;
-    }
+    .wo-timeline-info { color: #1d4ed8; }
+    .wo-timeline-success { color: #15803d; }
+    .wo-timeline-warning { color: #b45309; }
+    .wo-timeline-neutral { color: #111827; }
 
     .wo-money-table {
         width: 100%;
         border-collapse: collapse;
+        table-layout: fixed;
     }
 
     .wo-money-table td {
-        padding: 4px 0;
+        padding: 2px 3px;
         border-bottom: 1px solid #e5e7eb;
-        font-size: 8px;
+        font-size: 7.5pt;
+        background: transparent;
     }
 
     .wo-money-table tr:last-child td {
@@ -209,24 +238,31 @@
 
     .wo-money-label {
         color: #4b5563;
+        text-align: left;
+        width: 58%;
     }
 
     .wo-money-value {
         text-align: right;
         font-weight: 700;
         color: #111827;
+        width: 42%;
+        white-space: nowrap;
     }
 
     .wo-money-total td {
         border-top: 2px solid #111827;
-        padding-top: 6px;
-        font-size: 9px;
+        border-bottom: 2px solid #111827 !important;
+        padding-top: 3px;
+        padding-bottom: 3px;
+        font-size: 8pt;
         font-weight: 700;
+        background: #f3f4f6;
     }
 
     .wo-status-line {
-        margin-top: 6px;
-        font-size: 8px;
+        margin-top: 3px;
+        font-size: 7pt;
         color: #4b5563;
     }
 
@@ -235,43 +271,191 @@
         font-style: italic;
     }
 
-    .wo-signature-box {
+    .wo-section {
+        margin: 0 0 6px;
+    }
+
+    .wo-section-title {
+        font-size: 8pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        border-bottom: 1px solid #111827;
+        padding-bottom: 2px;
+        margin-bottom: 4px;
+        color: #111827;
+    }
+
+    .wo-sigs {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-top: 8px;
+        page-break-inside: avoid;
+    }
+
+    .wo-sigs > tbody > tr > td {
+        width: 48%;
+        vertical-align: top;
         border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 12px 14px;
-        min-height: 92px;
         background: #fff;
+        padding: 6px 8px;
+        font-size: 7.5pt;
+    }
+
+    .wo-sigs > tbody > tr > td.gap {
+        width: 4%;
+        border: 0;
+        background: transparent;
+        padding: 0;
+    }
+
+    .wo-sig-line {
+        border-bottom: 1px solid #111827;
+        height: 28px;
+        margin: 4px 0 6px;
+    }
+
+    .wo-sig-meta {
+        margin: 0 0 3px;
+        color: #4b5563;
+    }
+
+    .wo-sig-meta .ln {
+        display: inline-block;
+        border-bottom: 1px solid #9ca3af;
+        width: 65%;
+        max-width: 140px;
+        height: 10px;
+        margin-left: 4px;
+        vertical-align: bottom;
+    }
+
+    .wo-internal-footer {
+        clear: both;
+        margin-top: 6px;
+        padding-top: 4px;
+        border-top: 1px solid #d1d5db;
+        font-size: 7pt;
+        color: #6b7280;
+        text-align: center;
     }
 
     .wo-stats-row {
-        margin-top: 8px;
+        margin-top: 4px;
     }
 
     .wo-stats-row .wo-pill {
-        margin-right: 6px;
-        margin-bottom: 6px;
+        margin-right: 4px;
+        margin-bottom: 3px;
+    }
+
+    /* Compact nested info rows inside this document */
+    .wo-doc .info-card {
+        background: transparent;
+        border: 0;
+        padding: 0;
+    }
+
+    .wo-doc .info-item {
+        margin-bottom: 2px;
+        font-size: 7.5pt;
+    }
+
+    .wo-doc .info-label {
+        width: auto;
+        font-size: 7pt;
+    }
+
+    .wo-doc .info-value {
+        width: auto;
+        font-size: 7.5pt;
+    }
+
+    .wo-doc .data-table {
+        margin-bottom: 0;
+    }
+
+    .wo-doc .data-table th,
+    .wo-doc .data-table td {
+        padding: 2px 4px;
+        font-size: 7pt;
+    }
+
+    .wo-doc .text-sm,
+    .wo-doc .leading-relaxed {
+        font-size: 7.5pt !important;
+        line-height: 1.3 !important;
+    }
+
+    .wo-doc .text-xs,
+    .wo-doc .row-notes {
+        font-size: 6.5pt !important;
+        line-height: 1.25;
+    }
+
+    .wo-kv {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .wo-kv td {
+        border: 0;
+        background: transparent;
+        padding: 1px 0;
+        vertical-align: top;
+        font-size: 7.5pt;
+        line-height: 1.3;
+    }
+
+    .wo-kv td.lbl {
+        width: 34%;
+        color: #6b7280;
+        font-weight: 700;
+        padding-right: 6px;
+        white-space: nowrap;
+    }
+
+    .wo-kv td.val {
+        width: 66%;
+        color: #111827;
+    }
+
+    .wo-kv tr.wo-kv-head td {
+        padding-bottom: 3px;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 2px;
+    }
+
+    .wo-kv tr.wo-kv-head td.val {
+        font-weight: 700;
+        font-size: 8pt;
     }
 </style>
 {% endblock %}
 
-{% block document_meta %}
-<div><span class="font-semibold">Created:</span> {{ document.created_at|date:"M d, Y H:i" }}</div>
-<div class="mt-1">
-    <span class="font-semibold">Job Status:</span>
-    <span class="wo-pill {% if document.status == 'closed' or document.status == 'completed' or document.status == 'invoiced' %}wo-pill-success{% elif document.status == 'awaiting_approval' or document.status == 'quality_check' or document.status == 'discontinued_pending_bill' %}wo-pill-warning{% elif document.status == 'paused' %}wo-pill-danger{% else %}wo-pill-info{% endif %}">
-        {{ document.get_status_display }}
-    </span>
-</div>
-{% if document.created_by %}
-<div>Opened by {{ document.created_by.get_full_name }}</div>
-{% endif %}
-{% if document.service_coordinator %}
-<div>Coordinator: {{ document.service_coordinator.get_full_name }}</div>
-{% endif %}
-{% endblock %}
+{% block document_meta %}{% endblock %}
 
 {% block content %}
-<div class="wo-banner mb-6 avoid-break"
+<div class="wo-doc">
+
+<table class="wo-meta" role="presentation">
+    <tr>
+        <td><strong>Created:</strong> {{ document.created_at|date:"M d, Y H:i" }}</td>
+        <td>
+            <strong>Status:</strong>
+            <span class="wo-pill {% if document.status == 'closed' or document.status == 'completed' or document.status == 'invoiced' %}wo-pill-success{% elif document.status == 'awaiting_approval' or document.status == 'quality_check' or document.status == 'discontinued_pending_bill' %}wo-pill-warning{% elif document.status == 'paused' %}wo-pill-danger{% else %}wo-pill-info{% endif %}">
+                {{ document.get_status_display }}
+            </span>
+        </td>
+        <td><strong>ETD:</strong> {% if document.estimated_completion %}{{ document.estimated_completion|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
+        <td><strong>Opened by:</strong> {% if document.created_by %}{{ document.created_by.get_full_name }}{% else %}—{% endif %}</td>
+        <td><strong>Coordinator:</strong> {% if document.service_coordinator %}{{ document.service_coordinator.get_full_name }}{% else %}—{% endif %}</td>
+    </tr>
+</table>
+
+<div class="wo-banner avoid-break"
     style="border-left: 4px solid {% if document.priority == 'urgent' %}#dc2626{% elif document.priority == 'high' %}#d97706{% else %}#2563eb{% endif %};">
     <div class="wo-banner-grid">
         <div class="wo-banner-left">
@@ -337,63 +521,68 @@
     </div>
 </div>
 
-<div class="wo-summary-grid mb-6 avoid-break">
+<div class="wo-summary-grid avoid-break">
     <div class="wo-summary-card">
         <div class="wo-card-title">Customer Account</div>
         {% with customer=document.customer %}
-        {% include 'printing/base/components/customer_info.html' %}
+        <table class="wo-kv" role="presentation">
+            <tr class="wo-kv-head">
+                <td class="lbl">Customer</td>
+                <td class="val">{% if customer.company_name %}{{ customer.company_name }}{% else %}{{ customer.full_name }}{% endif %}</td>
+            </tr>
+            {% if customer.phone %}
+            <tr><td class="lbl">Phone</td><td class="val">{{ customer.phone }}</td></tr>
+            {% endif %}
+            {% if customer.email %}
+            <tr><td class="lbl">Email</td><td class="val">{{ customer.email }}</td></tr>
+            {% endif %}
+            {% if customer.service_address or customer.service_city %}
+            <tr>
+                <td class="lbl">Address</td>
+                <td class="val">
+                    {% if customer.service_address %}{{ customer.service_address }}{% endif %}
+                    {% if customer.service_area or customer.service_city or customer.service_region %}
+                    {% if customer.service_address %}<br>{% endif %}
+                    {% if customer.service_area %}{{ customer.service_area }}{% if customer.service_city or customer.service_region %}, {% endif %}{% endif %}{% if customer.service_city %}{{ customer.service_city }}{% if customer.service_region %}, {% endif %}{% endif %}{% if customer.service_region %}{{ customer.service_region }}{% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+        </table>
         {% endwith %}
     </div>
     <div class="wo-summary-card">
         <div class="wo-card-title">Vehicle Details</div>
-        <div class="info-card">
-            <div class="info-item border-b mb-2 pb-2">
-                <div class="info-label">Vehicle</div>
-                <div class="info-value font-bold">{{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Registration</div>
-                <div class="info-value">{{ document.vehicle.license_plate|default:"—" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">VIN</div>
-                <div class="info-value">{{ document.vehicle.vin|default:"—" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Odometer In</div>
-                <div class="info-value font-semibold">{{ document.odometer_in|default:"—" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Odometer Out</div>
-                <div class="info-value font-semibold">{{ document.odometer_out|default:"—" }}</div>
-            </div>
-        </div>
+        <table class="wo-kv" role="presentation">
+            <tr class="wo-kv-head">
+                <td class="lbl">Vehicle</td>
+                <td class="val">{{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}</td>
+            </tr>
+            <tr><td class="lbl">Registration</td><td class="val">{{ document.vehicle.license_plate|default:"—" }}</td></tr>
+            <tr><td class="lbl">VIN</td><td class="val">{{ document.vehicle.vin|default:"—" }}</td></tr>
+            <tr><td class="lbl">Odometer In</td><td class="val">{{ document.odometer_in|default:"—" }}</td></tr>
+            <tr><td class="lbl">Odometer Out</td><td class="val">{{ document.odometer_out|default:"—" }}</td></tr>
+            {% if document.vehicle.exterior_color %}
+            <tr><td class="lbl">Color</td><td class="val">{{ document.vehicle.exterior_color }}</td></tr>
+            {% endif %}
+        </table>
     </div>
     <div class="wo-summary-card">
         <div class="wo-card-title">Vehicle Delivered By</div>
-        <div class="info-card">
-            <div class="info-item border-b mb-2 pb-2">
-                <div class="info-label">Delivered By</div>
-                <div class="info-value font-bold">{{ delivery_contact.name|default:"—" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Role / Relationship</div>
-                <div class="info-value">{{ delivery_contact.role|default:"—" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Phone</div>
-                <div class="info-value">{{ delivery_contact.phone|default:"—" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Email</div>
-                <div class="info-value">{{ delivery_contact.email|default:"—" }}</div>
-            </div>
-        </div>
+        <table class="wo-kv" role="presentation">
+            <tr class="wo-kv-head">
+                <td class="lbl">Delivered By</td>
+                <td class="val">{{ delivery_contact.name|default:"—" }}</td>
+            </tr>
+            <tr><td class="lbl">Relationship</td><td class="val">{{ delivery_contact.role|default:"—" }}</td></tr>
+            <tr><td class="lbl">Phone</td><td class="val">{{ delivery_contact.phone|default:"—" }}</td></tr>
+            <tr><td class="lbl">Email</td><td class="val">{{ delivery_contact.email|default:"—" }}</td></tr>
+        </table>
     </div>
 </div>
 
 {% if work_order_timeline %}
-<div class="wo-timeline mb-6 avoid-break">
+<div class="wo-timeline avoid-break">
     <div class="wo-card-title" style="margin-bottom: 2px;">Service Journey</div>
     <table class="wo-timeline-table">
         <tr>
@@ -408,9 +597,9 @@
 </div>
 {% endif %}
 
-<div class="wo-metric-grid mb-6">
+<div class="wo-metric-grid">
     <div class="wo-metric-main">
-        <div class="wo-panel mb-4">
+        <div class="wo-panel">
             <div class="wo-card-title">Reported Concern</div>
             <div class="text-sm text-gray-700 leading-relaxed">
                 {{ document.customer_concerns|linebreaks|default:"No concern recorded." }}
@@ -418,7 +607,7 @@
         </div>
 
         {% if document.diagnosis_notes %}
-        <div class="wo-panel mb-4">
+        <div class="wo-panel">
             <div class="wo-card-title">Technical Findings</div>
             {% if document.diagnosis_by or document.diagnosis_completed_at %}
             <div class="wo-note-meta">
@@ -434,7 +623,7 @@
         {% endif %}
 
         {% if diagnosis_summary and diagnosis_summary.total %}
-        <div class="wo-panel mb-4">
+        <div class="wo-panel">
             <div class="wo-card-title">Diagnosis Recommendations</div>
             <div class="wo-note-meta">
                 {% if diagnosis_record.technician %}Prepared by {{ diagnosis_record.technician.get_full_name }}{% endif %}
@@ -517,7 +706,7 @@
         {% endif %}
 
         {% if document.special_instructions %}
-        <div class="wo-panel mb-4" style="background:#fff7ed;border-color:#fed7aa;">
+        <div class="wo-panel" style="background:#fff7ed;border-color:#fed7aa;">
             <div class="wo-card-title" style="color:#9a3412;">Handling Instructions</div>
             <div class="text-sm text-gray-700 leading-relaxed">{{ document.special_instructions|linebreaks }}</div>
         </div>
@@ -594,7 +783,7 @@
                 <div class="info-value">{{ document.get_approval_method_display }}</div>
             </div>
             {% endif %}
-            <div class="info-item" style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+            <div class="info-item" style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;">
                 <div class="info-label">Quality Check</div>
                 <div class="info-value">
                     {% if document.quality_check_completed %}
@@ -651,7 +840,7 @@
             </div>
             {% endif %}
             {% endif %}
-            <div class="info-item" style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+            <div class="info-item" style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;">
                 <div class="info-label">Gate Pass</div>
                 <div class="info-value">
                     {% if gate_pass_summary %}
@@ -666,14 +855,14 @@
     </div>
 </div>
 
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Repair Operations</div>
+<div class="wo-section">
+    <div class="wo-section-title">Repair Operations</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 44%;">Task Description</th>
-                <th style="width: 17%;">Technician</th>
-                <th style="width: 13%; text-align: center;">Status</th>
+                <th style="width: 34%;">Task Description</th>
+                <th style="width: 18%;">Technician</th>
+                <th style="width: 12%; text-align: center;">Status</th>
                 <th style="width: 10%; text-align: right;">Est. Hrs</th>
                 <th style="width: 10%; text-align: right;">Actual Hrs</th>
                 <th style="width: 16%; text-align: right;">Completed</th>
@@ -708,13 +897,13 @@
 </div>
 
 {% if work_order_parts %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Parts Allocation & Usage</div>
+<div class="wo-section">
+    <div class="wo-section-title">Parts Allocation & Usage</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 15%;">Part #</th>
                 <th style="width: 35%;">Description</th>
+                <th style="width: 15%;">Part #</th>
                 <th style="width: 10%; text-align: center;">Qty</th>
                 <th style="width: 15%; text-align: center;">Status</th>
                 <th style="width: 13%; text-align: center;">Supplier</th>
@@ -724,13 +913,13 @@
         <tbody>
             {% for part in work_order_parts %}
             <tr>
-                <td>{{ part.part_number|default:"—" }}</td>
                 <td>
                     <div class="font-medium text-gray-900">{{ part.part_name }}</div>
                     {% if part.resolution_notes %}
                     <div class="row-notes">{{ part.resolution_notes }}</div>
                     {% endif %}
                 </td>
+                <td>{{ part.part_number|default:"—" }}</td>
                 <td class="text-center">{{ part.quantity|floatformat:0 }}</td>
                 <td class="text-center">
                     <span class="capitalize {% if part.status == 'installed' %}text-success font-bold{% elif part.status == 'returned' %}text-gray-700 font-bold{% elif part.status == 'ready_for_install' or part.status == 'allocated' %}text-primary font-bold{% else %}text-warning font-bold{% endif %}">
@@ -747,15 +936,15 @@
 {% endif %}
 
 {% if document.quality_check_notes %}
-<div class="wo-panel mb-6">
+<div class="wo-panel" style="margin-bottom: 6px;">
     <div class="wo-card-title">Quality Control Notes</div>
     <div class="text-sm text-gray-700 leading-relaxed">{{ document.quality_check_notes|linebreaks }}</div>
 </div>
 {% endif %}
 
 {% if visible_work_order_notes %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Operational Notes & Exceptions</div>
+<div class="wo-section">
+    <div class="wo-section-title">Operational Notes & Exceptions</div>
     {% for note in visible_work_order_notes %}
     <div class="wo-note-block">
         <div class="wo-note-meta">
@@ -768,8 +957,8 @@
 {% endif %}
 
 {% if workflow_notes and not visible_work_order_notes %}
-<div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Recent Workflow Notes</div>
+<div class="wo-section">
+    <div class="wo-section-title">Recent Workflow Notes</div>
     {% for note in workflow_notes %}
     <div class="wo-note-block">
         <div class="wo-note-meta">
@@ -781,32 +970,35 @@
 </div>
 {% endif %}
 
-<div class="grid-2-col mt-12 pt-8 avoid-break">
-    <div class="col-1-2 pr-4">
-        <div class="wo-signature-box">
-            <div class="font-bold text-sm">Service Advisor / Manager</div>
-            <div class="text-xs text-gray-500 mt-4">Signature: _____________________________</div>
-            <div class="text-xs text-gray-500 mt-2">Date: _________________</div>
-        </div>
-    </div>
-    <div class="col-1-2 pl-4">
-        <div class="wo-signature-box">
-            <div class="font-bold text-sm">Lead Technician Completion</div>
-            <div class="text-xs text-gray-500 mt-4">Signature: _____________________________</div>
-            <div class="text-xs text-gray-500 mt-2">Date: _________________</div>
-        </div>
-    </div>
-</div>
+<table class="wo-sigs avoid-break" role="presentation">
+    <tr>
+        <td>
+            <strong>Service Advisor / Manager</strong>
+            <div class="wo-sig-line"></div>
+            <div class="wo-sig-meta"><strong>Name:</strong><span class="ln"></span></div>
+            <div class="wo-sig-meta"><strong>Date:</strong><span class="ln"></span></div>
+        </td>
+        <td class="gap"></td>
+        <td>
+            <strong>Lead Technician Completion</strong>
+            <div class="wo-sig-line"></div>
+            <div class="wo-sig-meta"><strong>Name:</strong><span class="ln"></span></div>
+            <div class="wo-sig-meta"><strong>Date:</strong><span class="ln"></span></div>
+        </td>
+    </tr>
+</table>
 
 {% if work_order_terms_and_conditions %}
-<div class="clear-both mt-6 notes-box document-terms avoid-break">
+<div class="notes-box document-terms avoid-break" style="margin-top: 6px;">
     <div class="document-terms-title">Please Note</div>
     <div class="document-terms-body">{{ work_order_terms_and_conditions|linebreaks }}</div>
 </div>
 {% endif %}
 
-<div class="clear-both mt-6 text-xs text-gray-500 text-center border-t pt-2 avoid-break">
+<div class="wo-internal-footer avoid-break">
     <strong>INTERNAL WORK ORDER</strong> — Operational record for diagnosis, repairs, quality control, invoicing, and release follow-up.
-    {% if document.branch %}| Branch: {{ document.branch.name }}{% endif %}
+    {% if document.branch %}| Branch: {{ document.branch.name|branch_print_name }}{% endif %}
+</div>
+
 </div>
 {% endblock %}

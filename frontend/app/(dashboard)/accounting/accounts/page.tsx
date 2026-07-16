@@ -415,14 +415,14 @@ export default function ChartOfAccountsPage() {
                                                     <Badge variant="outline" className={account.is_active ? "border-success/20 bg-success/10 text-success" : "border-border bg-muted text-muted-foreground"}>{account.is_active ? "Active" : "Inactive"}</Badge>
                                                     {account.is_till_enabled && <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">Till</Badge>}
                                                     {account.branch_name && (
-                                                        <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                                                        <Badge variant="outline" className="border-info/30 bg-info/10 text-info">
                                                             {account.branch_name}
                                                         </Badge>
                                                     )}
                                                     {hasChildren && <Badge variant="secondary">Parent</Badge>}
                                                     {controlRoles.map((role) => (
                                                         <Link key={role} href="/accounting/controls" title={`Control account: ${role}`}>
-                                                            <Badge variant="outline" className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20">
+                                                            <Badge variant="outline" className="border-info/30 bg-info/10 text-info hover:bg-info/20">
                                                                 {role}
                                                             </Badge>
                                                         </Link>

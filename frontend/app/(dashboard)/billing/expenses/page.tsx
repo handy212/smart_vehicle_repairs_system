@@ -77,7 +77,7 @@ function VendorExpensesContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl space-y-4 p-4 sm:p-6">
+      <div className="w-full space-y-4">
         <PageHeader
           title="Vendor Expenses"
           breadcrumbs={[

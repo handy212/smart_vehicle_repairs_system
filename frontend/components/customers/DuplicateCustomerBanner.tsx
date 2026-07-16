@@ -23,9 +23,9 @@ export function DuplicateCustomerBanner({
   return (
     <div
       role="alert"
-      className="flex flex-col sm:flex-row sm:items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/25"
+      className="flex flex-col sm:flex-row sm:items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/25"
     >
-      <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
+      <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
       <div className="flex-1 min-w-0 space-y-1">
         <p className="text-sm font-medium text-foreground">Customer already exists</p>
         <p className="text-sm text-muted-foreground">

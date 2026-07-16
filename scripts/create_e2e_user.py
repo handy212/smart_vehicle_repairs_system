@@ -101,11 +101,41 @@ E2E_USERS = [
 ]
 
 
+def _get_or_create_admin_seed() -> User:
+    """Branch.created_by is NOT NULL — need any staff/admin user as creator."""
+    admin_seed = (
+        User.objects.filter(role__in=('admin', 'super-admin'), is_active=True).first()
+        or User.objects.filter(is_superuser=True, is_active=True).first()
+    )
+    if admin_seed:
+        return admin_seed
+
+    email = 'admin@example.com'
+    existing = User.objects.filter(email=email).first() or User.objects.filter(username='admin').first()
+    if existing:
+        existing.is_superuser = True
+        existing.is_staff = True
+        existing.is_active = True
+        existing.role = 'super-admin'
+        existing.set_password(PASSWORD)
+        existing.save()
+        return existing
+
+    admin_seed = User.objects.create_superuser(
+        username='admin',
+        email=email,
+        password=PASSWORD,
+    )
+    admin_seed.role = 'super-admin'
+    admin_seed.save(update_fields=['role'])
+    return admin_seed
+
+
 def main() -> int:
     call_command('init_permissions', verbosity=0)
     enable_system_modules()
 
-    admin_seed = User.objects.filter(role='admin').first()
+    admin_seed = _get_or_create_admin_seed()
     branch, _ = Branch.objects.get_or_create(
         code='E2E01',
         defaults={
@@ -123,7 +153,7 @@ def main() -> int:
         },
     )
     for b in (branch, branch_b):
-        if admin_seed and b.created_by_id is None:
+        if b.created_by_id is None:
             b.created_by = admin_seed
             b.save(update_fields=['created_by'])
 

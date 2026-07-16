@@ -251,7 +251,7 @@ export default function BackupsPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
                         <div className="flex flex-col items-center justify-center">
-                          <Database className="w-6 h-6 text-gray-300 mb-2" />
+                          <Database className="w-6 h-6 text-muted-foreground mb-2" />
                           No backups found matching your criteria
                         </div>
                       </TableCell>
@@ -370,7 +370,7 @@ function CreateBackupDialog({
       <DialogContent className="max-w-md p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-warning/20 flex items-center justify-center">
               <Database className="w-5 h-5 text-primary" />
             </div>
             <div>

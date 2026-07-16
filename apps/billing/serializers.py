@@ -996,7 +996,6 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         work_order = data.get('work_order')
         customer = data.get('customer')
-        vehicle = data.get('vehicle')
         line_items = data.get('line_items', [])
         
         # If work_order is provided, validate it
@@ -1032,11 +1031,9 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                     ),
                 })
         else:
-            # For standalone invoices, customer and vehicle are required
+            # Standalone invoices require customer + line items; vehicle is optional
             if not customer:
                 raise serializers.ValidationError({"customer": "Customer is required when creating invoice without work order"})
-            if not vehicle:
-                raise serializers.ValidationError({"vehicle": "Vehicle is required when creating invoice without work order"})
             if not line_items:
                 raise serializers.ValidationError({"line_items": "At least one line item is required when creating invoice without work order"})
         
@@ -1090,18 +1087,29 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                 request = self.context['request']
                 validated_data['branch'] = resolve_branch(request)
         
+        terms_map = {
+            'due_on_receipt': 'Due on Receipt',
+            'net_15': 'Net 15',
+            'net_30': 'Net 30',
+            'net_60': 'Net 60',
+            'prepaid': 'Prepaid',
+        }
+
         # Map payment_terms to terms if provided (frontend sends payment_terms)
         if 'payment_terms' in validated_data:
             payment_terms = validated_data.pop('payment_terms')
             if not validated_data.get('terms'):
-                # Map enum values to readable text
-                terms_map = {
-                    'due_on_receipt': 'Due on Receipt',
-                    'net_15': 'Net 15',
-                    'net_30': 'Net 30',
-                    'net_60': 'Net 60',
-                }
                 validated_data['terms'] = terms_map.get(payment_terms, payment_terms)
+
+        # Default terms from the customer's payment terms when none were supplied
+        if not (validated_data.get('terms') or '').strip():
+            customer = validated_data.get('customer')
+            customer_terms = getattr(customer, 'payment_terms', None) if customer else None
+            if customer_terms:
+                validated_data['terms'] = terms_map.get(
+                    customer_terms,
+                    getattr(customer, 'get_payment_terms_display', lambda: customer_terms)(),
+                )
         
         billable_estimate = None
         if work_order and not line_items_data:

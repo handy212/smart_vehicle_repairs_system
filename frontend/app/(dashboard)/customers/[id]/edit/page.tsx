@@ -183,7 +183,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
   };
 
   return (
-    <div className="space-y-6 bg-background min-h-screen p-4 sm:p-6">
+    <div className="w-full space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href={`/customers/${customerId}`}>
@@ -193,7 +193,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Edit Customer</h1>
+            <h1 className="text-xl font-bold text-foreground">Edit Customer</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {customer.user?.first_name} {customer.user?.last_name} • {customer.customer_number}
             </p>
@@ -215,7 +215,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
 
         <div className="space-y-6">
           {/* Account Status Card copied from original - keeping Actions & Portal Control here */}
-          <Card className="bg-muted border-border border-l-4 border-l-orange-500">
+          <Card className="bg-muted border-border border-l-4 border-l-warning">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 <KeyRound className="w-5 h-5 text-primary" />
@@ -232,7 +232,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
                 </div>
                 <Badge
                   variant={hasPortalAccess ? "default" : "secondary"}
-                  className={hasPortalAccess ? "bg-green-100/10 text-success border-green-500/20" : ""}
+                  className={hasPortalAccess ? "bg-success/15 text-success border-success/20" : ""}
                 >
                   {hasPortalAccess ? "Enabled" : "Disabled"}
                 </Badge>
@@ -282,7 +282,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
                       }
                     }}
                     disabled={revokePortalAccessMutation.isPending}
-                    className="w-full dark:border-destructive dark:text-red-400 dark:hover:bg-red-900/20 text-xs"
+                    className="w-full dark:border-destructive dark:text-destructive dark:hover:bg-destructive/20 text-xs"
                   >
                     <UserX className="w-3 h-3 mr-1.5" />
                     Revoke Access
@@ -348,7 +348,7 @@ export default function EditCustomerPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 bg-background border-t">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-warning/50"></div>
       </div>
     );
   }
@@ -364,7 +364,7 @@ export default function EditCustomerPage() {
         </Link>
         <Card className="bg-muted border-border">
           <CardContent className="pt-6">
-            <p className="text-destructive dark:text-red-400">Customer not found.</p>
+            <p className="text-destructive dark:text-destructive">Customer not found.</p>
           </CardContent>
         </Card>
       </div>

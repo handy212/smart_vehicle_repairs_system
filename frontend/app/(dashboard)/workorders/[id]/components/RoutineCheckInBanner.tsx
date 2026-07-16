@@ -88,9 +88,9 @@ export function RoutineCheckInBanner({
   return (
     <div className="space-y-2">
       {hasInventoryIssues && inventorySummary && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
           <div className="flex min-w-0 items-start gap-3">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" aria-hidden="true" />
+            <AlertTriangle className="h-5 w-5 shrink-0 text-warning mt-0.5" aria-hidden="true" />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Parts not ready for service</p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -118,9 +118,9 @@ export function RoutineCheckInBanner({
         </div>
       )}
     {checkInBannerVisible && (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-success/30 bg-success/5 px-4 py-3">
       <div className="flex min-w-0 items-start gap-3">
-        <Package className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" aria-hidden="true" />
+        <Package className="h-5 w-5 shrink-0 text-success mt-0.5" aria-hidden="true" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             Routine service — {bundleName}

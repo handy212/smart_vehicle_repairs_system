@@ -24,9 +24,9 @@ import type { TableExportPayload } from "@/lib/utils/report-export";
 
 function MarginBadge({ value }: { value: number }) {
     const color =
-        value >= 40 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-        : value >= 20 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+        value >= 40 ? "bg-success/15 text-success dark:bg-success/20 dark:text-success"
+        : value >= 20 ? "bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning"
+        : "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive";
     return (
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
             {value.toFixed(1)}%
@@ -118,7 +118,7 @@ export default function JobProfitabilityPage() {
         <div className="space-y-4">
             <div className="no-print pt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">Job Profitability</h1>
+                <h1 className="text-xl font-bold tracking-tight text-foreground">Job Profitability</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Revenue vs. actual costs per work order — broken down by labor, parts, and other
                 </p>
@@ -206,11 +206,11 @@ export default function JobProfitabilityPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gross Profit</p>
-                                    <p className={`text-lg font-bold mt-1 ${(totals.gross_profit ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                                    <p className={`text-lg font-bold mt-1 ${(totals.gross_profit ?? 0) >= 0 ? "text-success dark:text-success" : "text-destructive"}`}>
                                         {formatCurrency(totals.gross_profit ?? 0)}
                                     </p>
                                 </div>
-                                <TrendingUp className="w-8 h-8 text-emerald-500 opacity-70" />
+                                <TrendingUp className="w-8 h-8 text-success opacity-70" />
                             </div>
                         </CardContent>
                     </Card>
@@ -218,7 +218,7 @@ export default function JobProfitabilityPage() {
                         <CardContent className="p-3">
                             <div>
                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Avg Margin</p>
-                                <p className={`text-lg font-bold mt-1 ${(totals.avg_margin_percent ?? 0) >= 20 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                                <p className={`text-lg font-bold mt-1 ${(totals.avg_margin_percent ?? 0) >= 20 ? "text-success dark:text-success" : "text-destructive"}`}>
                                     {(totals.avg_margin_percent ?? 0).toFixed(1)}%
                                 </p>
                                 <div className="mt-1 grid grid-cols-3 gap-1 text-xs text-muted-foreground">
@@ -233,7 +233,7 @@ export default function JobProfitabilityPage() {
             )}
 
             {/* Table */}
-            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border dark:ring-border">
                 <CardHeader className="pb-3 border-b border-border">
                     <CardTitle className="text-base">Work Orders ({jobs.length})</CardTitle>
                 </CardHeader>
@@ -284,16 +284,16 @@ export default function JobProfitabilityPage() {
                                                 <TableCell className="px-4 py-2 text-xs text-muted-foreground text-right font-mono">
                                                     <span>{formatCurrency(job.labor_cost ?? 0)}</span>
                                                     {job.labor_cost_is_actual && (
-                                                        <span className="ml-1 text-[9px] text-emerald-500">actual</span>
+                                                        <span className="ml-1 text-[9px] text-success">actual</span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2 text-xs text-muted-foreground text-right font-mono">
                                                     <span>{formatCurrency(job.parts_cost ?? 0)}</span>
                                                     {job.parts_cost_is_actual && (
-                                                        <span className="ml-1 text-[9px] text-emerald-500">actual</span>
+                                                        <span className="ml-1 text-[9px] text-success">actual</span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.gross_profit ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                                                <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.gross_profit ?? 0) >= 0 ? "text-success dark:text-success" : "text-destructive"}`}>
                                                     {formatCurrency(job.gross_profit ?? 0)}
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2 text-xs text-right">
@@ -311,7 +311,7 @@ export default function JobProfitabilityPage() {
                                                         <div className="grid grid-cols-3 gap-4 text-xs">
                                                             {/* Labor */}
                                                             <div className="flex items-start gap-2">
-                                                                <Wrench className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                                                                <Wrench className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                                                                 <div>
                                                                     <p className="font-semibold text-foreground">Labor</p>
                                                                     <p className="text-muted-foreground">Revenue: {formatCurrency(job.labor_revenue ?? 0)}</p>
@@ -321,7 +321,7 @@ export default function JobProfitabilityPage() {
                                                             </div>
                                                             {/* Parts */}
                                                             <div className="flex items-start gap-2">
-                                                                <Package className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                                                <Package className="w-4 h-4 text-warning mt-0.5 shrink-0" />
                                                                 <div>
                                                                     <p className="font-semibold text-foreground">Parts</p>
                                                                     <p className="text-muted-foreground">Revenue: {formatCurrency(job.parts_revenue ?? 0)}</p>
@@ -331,7 +331,7 @@ export default function JobProfitabilityPage() {
                                                             </div>
                                                             {/* Other */}
                                                             <div className="flex items-start gap-2">
-                                                                <DollarSign className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                                                                <DollarSign className="w-4 h-4 text-info mt-0.5 shrink-0" />
                                                                 <div>
                                                                     <p className="font-semibold text-foreground">Other / Fees</p>
                                                                     <p className="text-muted-foreground">Revenue: {formatCurrency(job.other_revenue ?? 0)}</p>

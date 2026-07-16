@@ -159,7 +159,7 @@ export default function BookAppointmentPage() {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-10">
+    <div className="space-y-6 w-full pb-10">
       <PortalPageHeader
         title="Schedule Service"
         description="Book an appointment for your vehicle"
@@ -192,13 +192,13 @@ export default function BookAppointmentPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
               <div className="space-y-2">
-                <Label htmlFor="vehicle_id">Select Vehicle <span className="text-red-500">*</span></Label>
+                <Label htmlFor="vehicle_id">Select Vehicle <span className="text-destructive">*</span></Label>
                 <Controller
                   control={control}
                   name="vehicle_id"
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className={cn(errors.vehicle_id && "border-red-500")}>
+                      <SelectTrigger className={cn(errors.vehicle_id && "border-destructive")}>
                         <SelectValue placeholder="-- Choose a Vehicle --" />
                       </SelectTrigger>
                       <SelectContent>
@@ -212,7 +212,7 @@ export default function BookAppointmentPage() {
                     </Select>
                   )}
                 />
-                {errors.vehicle_id && <p className="text-xs text-red-500 font-medium">{errors.vehicle_id.message}</p>}
+                {errors.vehicle_id && <p className="text-xs text-destructive font-medium">{errors.vehicle_id.message}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -241,13 +241,13 @@ export default function BookAppointmentPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="service_type">Service Type <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="service_type">Service Type <span className="text-destructive">*</span></Label>
                   <Controller
                     control={control}
                     name="service_type"
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger className={cn(errors.service_type && "border-red-500")}>
+                        <SelectTrigger className={cn(errors.service_type && "border-destructive")}>
                           <SelectValue placeholder="-- Select Type --" />
                         </SelectTrigger>
                         <SelectContent>
@@ -259,13 +259,13 @@ export default function BookAppointmentPage() {
                       </Select>
                     )}
                   />
-                  {errors.service_type && <p className="text-xs text-red-500 font-medium">{errors.service_type.message}</p>}
+                  {errors.service_type && <p className="text-xs text-destructive font-medium">{errors.service_type.message}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
                 <div className="space-y-2">
-                  <Label htmlFor="appointment_date">Preferred Date <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="appointment_date">Preferred Date <span className="text-destructive">*</span></Label>
                   <div className="relative">
                     <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -273,14 +273,14 @@ export default function BookAppointmentPage() {
                       type="date"
                       min={today}
                       {...register("appointment_date")}
-                      className={cn("pl-10", errors.appointment_date && "border-red-500")}
+                      className={cn("pl-10", errors.appointment_date && "border-destructive")}
                     />
                   </div>
-                  {errors.appointment_date && <p className="text-xs text-red-500 font-medium">{errors.appointment_date.message}</p>}
+                  {errors.appointment_date && <p className="text-xs text-destructive font-medium">{errors.appointment_date.message}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="appointment_time">Available Time Slot <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="appointment_time">Available Time Slot <span className="text-destructive">*</span></Label>
                   <Controller
                     control={control}
                     name="appointment_time"
@@ -290,7 +290,7 @@ export default function BookAppointmentPage() {
                         disabled={!selectedDate || checkingAvailability || availableSlots.length === 0}
                         value={field.value}
                       >
-                        <SelectTrigger className={cn("pl-10 relative", errors.appointment_time && "border-red-500")}>
+                        <SelectTrigger className={cn("pl-10 relative", errors.appointment_time && "border-destructive")}>
                           <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                           <SelectValue placeholder={
                             !selectedDate ? "-- Select Date First --" :
@@ -306,7 +306,7 @@ export default function BookAppointmentPage() {
                       </Select>
                     )}
                   />
-                  {errors.appointment_time && <p className="text-xs text-red-500 font-medium">{errors.appointment_time.message}</p>}
+                  {errors.appointment_time && <p className="text-xs text-destructive font-medium">{errors.appointment_time.message}</p>}
                 </div>
               </div>
 

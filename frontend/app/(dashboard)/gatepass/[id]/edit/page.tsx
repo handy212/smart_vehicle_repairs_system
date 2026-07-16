@@ -147,7 +147,7 @@ export default function EditGatePassPage() {
 
     if (error || !gatePass) {
         return (
-            <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
+            <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive px-4 py-3 rounded">
                 Error loading gate pass. Please try again.
             </div>
         );

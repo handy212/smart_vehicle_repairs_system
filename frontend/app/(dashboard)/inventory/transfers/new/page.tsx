@@ -110,7 +110,7 @@ export default function NewTransferPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">New Stock Transfer</h1>
+                <h1 className="text-xl font-bold">New Stock Transfer</h1>
                 <Link href="/inventory/transfers">
                     <Button variant="ghost">
                         <ArrowLeft className="w-4 h-4 mr-2" />

@@ -52,10 +52,10 @@ export function InspectionItemCard({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const statusOptions = [
-        { value: "pass", label: "Pass", icon: Check, color: "text-success", bg: "bg-success/10", border: "border-green-200", activeBg: "bg-green-600", activeText: "text-white" },
-        { value: "fail", label: "Fail", icon: X, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", activeBg: "bg-red-600", activeText: "text-white" },
-        { value: "advisory", label: "Advisory", icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50", border: "border-yellow-200", activeBg: "bg-yellow-600", activeText: "text-white" },
-        { value: "not_applicable", label: "N/A", icon: Minus, color: "text-muted-foreground", bg: "bg-muted", border: "border-border", activeBg: "bg-gray-600", activeText: "text-white" },
+        { value: "pass", label: "Pass", icon: Check, color: "text-success", bg: "bg-success/10", border: "border-success/20", activeBg: "bg-success", activeText: "text-white" },
+        { value: "fail", label: "Fail", icon: X, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", activeBg: "bg-destructive", activeText: "text-white" },
+        { value: "advisory", label: "Advisory", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10", border: "border-warning/20", activeBg: "bg-warning", activeText: "text-white" },
+        { value: "not_applicable", label: "N/A", icon: Minus, color: "text-muted-foreground", bg: "bg-muted", border: "border-border", activeBg: "bg-muted-foreground", activeText: "text-white" },
     ];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +70,7 @@ export function InspectionItemCard({
     return (
         <Card className={cn(
             "shadow-none border transition-all duration-200",
-            isCriticalRemaining ? "border-destructive ring-1 ring-red-500/20 bg-destructive/10/10" : "border-border hover:border-border dark:hover:border-gray-700"
+            isCriticalRemaining ? "border-destructive ring-1 ring-destructive/20 bg-destructive/10" : "border-border hover:border-border dark:hover:border-border"
         )}>
             <CardContent className="p-4">
                 {/* Header */}
@@ -81,7 +81,7 @@ export function InspectionItemCard({
                                 {item.name}
                             </h4>
                             {item.is_critical && (
-                                <Badge className="bg-red-100 text-destructive text-[10px] font-bold uppercase tracking-wider h-4 px-1">
+                                <Badge className="bg-destructive/10 text-destructive text-[10px] font-bold uppercase tracking-wider h-4 px-1">
                                     Critical
                                 </Badge>
                             )}
@@ -99,7 +99,7 @@ export function InspectionItemCard({
                             size="sm"
                             className={cn(
                                 "h-7 px-2 text-[10px] font-bold uppercase tracking-widest",
-                                showNotes || result.notes ? "bg-primary/10 text-primary border-orange-200" : "text-muted-foreground"
+                                showNotes || result.notes ? "bg-primary/10 text-primary border-warning/20" : "text-muted-foreground"
                             )}
                             onClick={onToggleNotes}
                         >
@@ -210,7 +210,7 @@ export function InspectionItemCard({
                                             "w-8 h-8 text-[11px] font-bold rounded border transition-all duration-200",
                                             result.rating_value === n
                                                 ? "bg-primary text-white border-primary"
-                                                : "bg-card border-border hover:border-orange-400"
+                                                : "bg-card border-border hover:border-warning/50"
                                         )}
                                     >
                                         {n}
@@ -301,7 +301,7 @@ export function InspectionItemCard({
                             type="checkbox"
                             checked={result.needs_immediate_attention || false}
                             onChange={(e) => onUpdate("needs_immediate_attention", e.target.checked)}
-                            className="w-3.5 h-3.5 rounded border-border text-destructive focus:ring-red-500"
+                            className="w-3.5 h-3.5 rounded border-border text-destructive focus:ring-destructive"
                         />
                         <span className={cn(
                             "text-[10px] font-bold uppercase tracking-widest transition-colors",

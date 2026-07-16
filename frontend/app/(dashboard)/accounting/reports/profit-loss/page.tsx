@@ -103,7 +103,7 @@ export default function ProfitLossPage() {
             <div className="no-print space-y-4">
                 <div className="flex justify-between items-center pt-2">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Profit & Loss</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">Profit & Loss</h1>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Income statement for the selected period
                         </p>

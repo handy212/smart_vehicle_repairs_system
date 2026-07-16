@@ -46,10 +46,10 @@ export default function TaxReportPage() {
     };
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4">
+        <div className="w-full space-y-4">
             <div className="no-print flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Tax Report</h1>
+                    <h1 className="text-xl font-bold tracking-tight">Tax Report</h1>
                     <p className="text-sm text-muted-foreground">
                         Sales Tax Collected vs Input Tax Paid
                     </p>

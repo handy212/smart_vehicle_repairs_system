@@ -119,7 +119,7 @@ class TestNotificationServiceWhatsApp(SimpleTestCase):
         result = self.service._send_whatsapp(notification)
         
         self.assertTrue(result)
-        mock_wa_service.send_message.assert_called_with('1234567890', 'Test Message')
+        mock_wa_service.send_message.assert_called_with('1234567890', 'Test Message', preview_url=True)
         notification.mark_as_sent.assert_called()
         
     @patch('apps.notifications_app.services.get_whatsapp_service')
@@ -135,6 +135,7 @@ class TestNotificationServiceWhatsApp(SimpleTestCase):
         notification.channel = 'whatsapp'
         notification.notification_type = 'invoice'
         notification.message = 'Invoice Ready'
+        notification.template = None
         notification.data = {
             'invoice_pdf_url': 'http://test.com/inv.pdf',
             'filename': 'inv.pdf'

@@ -79,9 +79,9 @@ export default function TechnicianWorkOrderPage() {
     // Helper to determine status color
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "in_progress": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
-            case "assigned": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
-            case "paused": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+            case "in_progress": return "bg-success/15 text-success dark:bg-success/20 dark:text-success";
+            case "assigned": return "bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning";
+            case "paused": return "bg-warning/15 text-warning dark:bg-warning/20 dark:text-warning";
             case "completed": return "bg-muted text-foreground bg-background/30 text-foreground";
             default: return "bg-muted text-foreground";
         }
@@ -119,7 +119,7 @@ export default function TechnicianWorkOrderPage() {
                                     {isWorking ? (
                                         <Button
                                             size="lg"
-                                            className="bg-warning/100 hover:bg-yellow-600 text-white w-full md:w-auto h-12 text-lg shadow-yellow-200 dark:shadow-none"
+                                            className="bg-warning hover:bg-warning text-white w-full md:w-auto h-12 text-lg shadow-warning/20 dark:shadow-none"
                                             onClick={() => updateStatusMutation.mutate('pause')}
                                             disabled={updateStatusMutation.isPending}
                                         >
@@ -129,7 +129,7 @@ export default function TechnicianWorkOrderPage() {
                                     ) : (
                                         <Button
                                             size="lg"
-                                            className="bg-success hover:bg-green-700 text-white w-full md:w-auto h-12 text-lg shadow-green-200 dark:shadow-none animate-pulse hover:animate-none"
+                                            className="bg-success hover:bg-success text-white w-full md:w-auto h-12 text-lg shadow-success/20 dark:shadow-none animate-pulse hover:animate-none"
                                             onClick={() => updateStatusMutation.mutate('start')}
                                             disabled={updateStatusMutation.isPending}
                                         >
@@ -143,8 +143,8 @@ export default function TechnicianWorkOrderPage() {
                     </div>
 
                     {workOrder.customer_concerns && (
-                        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg">
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1">Customer Concern</h3>
+                        <div className="mt-4 p-3 bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 dark:border-destructive/20 rounded-lg">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-destructive dark:text-destructive mb-1">Customer Concern</h3>
                             <p className="text-sm text-foreground">{workOrder.customer_concerns}</p>
                         </div>
                     )}
@@ -154,19 +154,19 @@ export default function TechnicianWorkOrderPage() {
             {/* Main Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-4 h-12 bg-border p-1 rounded-xl">
-                    <TabsTrigger value="jobs" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="jobs" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm">
                         <ListTodo className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Tasks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="info" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="info" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm">
                         <FileText className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Details</span>
                     </TabsTrigger>
-                    <TabsTrigger value="photos" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="photos" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm">
                         <Camera className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Photos</span>
                     </TabsTrigger>
-                    <TabsTrigger value="parts" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="parts" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm">
                         <Wrench className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Parts</span>
                     </TabsTrigger>
@@ -196,7 +196,7 @@ export default function TechnicianWorkOrderPage() {
                             ))
                         ) : (
                             <div className="text-center py-12 bg-muted/50 rounded-lg border border-dashed border-border">
-                                <CheckCircle className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                                <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                                 <h3 className="text-lg font-medium text-foreground">All Caught Up</h3>
                                 <p className="text-muted-foreground">No tasks assigned to this work order yet.</p>
                             </div>
@@ -224,13 +224,13 @@ export default function TechnicianWorkOrderPage() {
                 {/* Photos & Parts Placeholder */}
                 <TabsContent value="photos">
                     <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-lg border border-dashed">
-                        <Camera className="h-12 w-12 text-gray-300 mb-3" />
+                        <Camera className="h-12 w-12 text-muted-foreground mb-3" />
                         <p className="text-muted-foreground">Photo upload coming soon.</p>
                     </div>
                 </TabsContent>
                 <TabsContent value="parts">
                     <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-lg border border-dashed">
-                        <Wrench className="h-12 w-12 text-gray-300 mb-3" />
+                        <Wrench className="h-12 w-12 text-muted-foreground mb-3" />
                         <p className="text-muted-foreground">Parts list coming soon.</p>
                     </div>
                 </TabsContent>

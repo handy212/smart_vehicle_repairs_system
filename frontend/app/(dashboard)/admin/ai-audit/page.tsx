@@ -83,7 +83,7 @@ export default function AIAuditPage() {
       deniedTitle="AI audit access required"
       deniedDescription="You need audit log or settings permissions to view AI activity."
     >
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/admin/integrations?category=ai">
@@ -91,7 +91,7 @@ export default function AIAuditPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-xl font-bold flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-primary" />
               AI Audit Log
             </h1>

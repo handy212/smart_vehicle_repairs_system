@@ -1,4 +1,5 @@
 {% extends 'printing/base/document_base.html' %}
+{% load settings_tags %}
 
 {% block title %}Bill {{ document.bill_number }}{% endblock %}
 
@@ -57,7 +58,7 @@
             </div>
             <div class="info-item">
                 <div class="info-label">Branch</div>
-                <div class="info-value">{{ document.branch.name|default:"—" }}</div>
+                <div class="info-value">{% if document.branch %}{{ document.branch.name|branch_print_name }}{% else %}—{% endif %}</div>
             </div>
             <div class="info-item border-t mt-2 pt-2">
                 <div class="info-label">Currency</div>
@@ -78,10 +79,11 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 50%;">Item / Description</th>
-                <th style="width: 15%; text-align: center;">Qty</th>
-                <th style="width: 15%; text-align: right;">Cost Per Unit</th>
-                <th style="width: 20%; text-align: right;">Total Cost</th>
+                <th style="width: 40%;">Item / Description</th>
+                <th style="width: 14%;">Part #</th>
+                <th style="width: 12%; text-align: center;">Qty</th>
+                <th style="width: 16%; text-align: right;">Cost Per Unit</th>
+                <th style="width: 18%; text-align: right;">Total Cost</th>
             </tr>
         </thead>
         <tbody>
@@ -89,17 +91,15 @@
             <tr>
                 <td>
                     <div class="font-medium">{{ item.part.name|default:item.description }}</div>
-                    {% if item.part %}
-                    <div class="row-notes">Part #: {{ item.part.part_number }}</div>
-                    {% endif %}
                 </td>
+                <td class="font-mono text-xs">{% if item.part %}{{ item.part.part_number|default:"—" }}{% else %}—{% endif %}</td>
                 <td class="text-center">{{ item.quantity|floatformat:2 }}</td>
                 <td class="text-right">{{ currency_symbol }}{{ item.unit_cost|floatformat:2 }}</td>
                 <td class="text-right font-bold">{{ currency_symbol }}{{ item.subtotal|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" class="text-center text-gray-400 py-4">No line items recorded.</td>
+                <td colspan="5" class="text-center text-gray-400 py-4">No line items recorded.</td>
             </tr>
             {% endfor %}
         </tbody>

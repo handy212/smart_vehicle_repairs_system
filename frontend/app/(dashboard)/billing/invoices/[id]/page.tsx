@@ -28,6 +28,7 @@ import { InvoiceActivityLog } from "./components/InvoiceActivityLog";
 import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { DocumentWhatsAppButton } from "@/components/shared/DocumentWhatsAppButton";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { Undo2 } from "lucide-react";
@@ -473,11 +474,21 @@ export default function InvoiceDetailPage() {
                             setShowActionsMenu(false);
                           }}
                           disabled={sendEmailMutation.isPending}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Mail className="w-4 h-4" />
                           {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                         </button>
+                      )}
+                      {canSendInvoice && (
+                        <DocumentWhatsAppButton
+                          asMenuItem
+                          label="Send WhatsApp"
+                          successTitle="Invoice WhatsApp"
+                          send={(opts) => billingApi.invoices.sendWhatsApp(invoiceId, opts)}
+                          onComplete={() => setShowActionsMenu(false)}
+                          className="border-t border-border mt-1"
+                        />
                       )}
                       {/* // Only show Convert to Invoice for proforma invoices */}
                       {canConvertProforma && invoice.status === 'proforma' && (
@@ -491,7 +502,7 @@ export default function InvoiceDetailPage() {
                               setShowActionsMenu(false);
                             }}
                             disabled={convertToInvoiceMutation.isPending}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FileCheck className="w-4 h-4" />
                             {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}
@@ -504,7 +515,7 @@ export default function InvoiceDetailPage() {
                           <Link href={`/billing/invoices/${invoiceId}/edit`}>
                             <button
                               onClick={() => setShowActionsMenu(false)}
-                              className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                              className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
                             >
                               <Edit className="w-4 h-4" />
                               Edit
@@ -785,7 +796,7 @@ export default function InvoiceDetailPage() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right align-top py-3">
-                                {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-success ml-auto" /> : <span className="text-gray-300">-</span>}
+                                {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-success ml-auto" /> : <span className="text-muted-foreground">-</span>}
                               </TableCell>
                               <TableCell className="text-right font-medium align-top py-3">
                                 {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
@@ -907,13 +918,13 @@ export default function InvoiceDetailPage() {
             <Card>
               <CardContent className="p-0">
                 {payments && payments.length > 0 ? (
-                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="divide-y divide-border dark:divide-border">
 
                     {payments.map((payment: Payment) => (
                       <div key={payment.id} className="p-6 hover:bg-muted/50 transition-colors">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-success">
+                            <div className="h-12 w-12 rounded-full bg-success/15 flex items-center justify-center text-success">
                               <DollarSign className="w-6 h-6" />
                             </div>
                             <div>

@@ -70,7 +70,7 @@ export default function NewCustomerPage() {
   };
 
   return (
-    <div className={`${INTAKE_FORM_CLASS} p-4 md:p-6 space-y-8 pb-12`}>
+    <div className={`${INTAKE_FORM_CLASS} space-y-8 pb-12`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href="/customers">
@@ -80,7 +80,7 @@ export default function NewCustomerPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Create New Customer</h1>
+            <h1 className="text-xl font-bold text-foreground">Create New Customer</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Add a new customer to the system
             </p>

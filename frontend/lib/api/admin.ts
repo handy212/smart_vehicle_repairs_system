@@ -483,7 +483,17 @@ export const adminApi = {
       search?: string;
     }): Promise<SystemSettingsListResponse> => {
       const response = await apiClient.get("/accounts/admin/settings/", { params });
-      return response.data;
+      const data = response.data;
+      // ViewSet has pagination disabled → raw array; keep a stable shape for callers.
+      if (Array.isArray(data)) {
+        return {
+          count: data.length,
+          next: null,
+          previous: null,
+          results: data,
+        };
+      }
+      return data;
     },
 
     get: async (id: number): Promise<SystemSetting> => {
@@ -535,6 +545,7 @@ export const adminApi = {
       facebook_pixel_id?: string;
       recaptcha_enabled?: string;
       recaptcha_site_key?: string;
+      google_oauth_client_id?: string;
       firebase_api_key?: string;
       firebase_project_id?: string;
       firebase_messaging_sender_id?: string;

@@ -1,4 +1,5 @@
 {% extends 'printing/base/document_base.html' %}
+{% load settings_tags %}
 
 {% block title %}Purchase Order {{ document.po_number }}{% endblock %}
 
@@ -51,7 +52,7 @@
 <div class="col-1-2">
     <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Ship To</div>
     <div class="info-card">
-        <div class="font-bold text-gray-900 mb-1">{{ branch.name }}</div>
+        <div class="font-bold text-gray-900 mb-1">{{ branch.name|branch_print_name }}</div>
         <div class="text-sm text-gray-600">
             {% if branch.address_line1 %}
             <div>{{ branch.address_line1 }}</div>
@@ -77,8 +78,8 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 15%;">Part #</th>
                 <th style="width: 40%;">Description</th>
+                <th style="width: 15%;">Part #</th>
                 <th style="width: 10%; text-align: center;">Qty</th>
                 <th style="width: 15%; text-align: right;">Unit Price</th>
                 <th style="width: 20%; text-align: right;">Total</th>
@@ -87,13 +88,13 @@
         <tbody>
             {% for item in document.items.all %}
             <tr>
-                <td class="font-medium">{{ item.part.part_number }}</td>
                 <td>
                     <div class="font-medium text-gray-900">{{ item.part.name }}</div>
                     {% if item.part.description %}
                     <div class="text-xs text-gray-500 mt-0.5">{{ item.part.description|truncatechars:50 }}</div>
                     {% endif %}
                 </td>
+                <td class="font-medium">{{ item.part.part_number|default:"—" }}</td>
                 <td class="text-center font-bold">{{ item.quantity }}</td>
                 <td class="text-right">{{ currency_symbol }}{{ item.unit_cost|floatformat:2 }}</td>
                 <td class="text-right font-bold">{{ currency_symbol }}{{ item.total|floatformat:2 }}

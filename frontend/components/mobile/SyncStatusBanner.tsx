@@ -11,156 +11,140 @@ import { RefreshCw, Wifi, WifiOff, Upload, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 async function getPendingCount() {
-    const queue = await queueDB.getAll();
-    const [woPhotos, offlinePhotos] = await Promise.all([
-        woPhotosDB.getUnuploaded(),
-        offlinePhotosDB.getUnsynced(),
-    ]);
-    return queue.length + woPhotos.length + offlinePhotos.length;
+  const queue = await queueDB.getAll();
+  const [woPhotos, offlinePhotos] = await Promise.all([
+    woPhotosDB.getUnuploaded(),
+    offlinePhotosDB.getUnsynced(),
+  ]);
+  return queue.length + woPhotos.length + offlinePhotos.length;
 }
 
-export function SyncStatusBanner() {
-    const { isOnline, sync, isSyncing } = useOfflineStore();
-    const [pendingCount, setPendingCount] = useState(0);
-    const [lastSync, setLastSync] = useState<Date | null>(null);
-    const [showBanner, setShowBanner] = useState(false);
+type SyncStatusBannerProps = {
+  /** When true (default), banner sticks at top of viewport. Parent layout may pass false. */
+  sticky?: boolean;
+};
 
-    const isMountedRef = useRef(true);
+export function SyncStatusBanner({ sticky = true }: SyncStatusBannerProps) {
+  const { isOnline, sync, isSyncing } = useOfflineStore();
+  const [pendingCount, setPendingCount] = useState(0);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [showBanner, setShowBanner] = useState(false);
 
-    useEffect(() => {
-        const loadPendingCount = async () => {
-            try {
-                const count = await getPendingCount();
-                if (isMountedRef.current) {
-                    setPendingCount(count);
-                }
-            } catch (error) {
-                console.error("Failed to load pending count:", error);
-            }
-        };
+  const isMountedRef = useRef(true);
 
-        isMountedRef.current = true;
-        loadPendingCount();
-
-        // Update count every 10 seconds
-        const interval = setInterval(loadPendingCount, 10000);
-        return () => {
-            isMountedRef.current = false;
-            clearInterval(interval);
-        };
-    }, []);
-
-    useEffect(() => {
-        // Show banner if offline OR if there are pending changes
-        setShowBanner(!isOnline || pendingCount > 0);
-    }, [isOnline, pendingCount]);
-
+  useEffect(() => {
     const loadPendingCount = async () => {
-        try {
-            const count = await getPendingCount();
-
-            if (isMountedRef.current) {
-                setPendingCount(count);
-            }
-        } catch (error) {
-            console.error("Failed to load pending count:", error);
+      try {
+        const count = await getPendingCount();
+        if (isMountedRef.current) {
+          setPendingCount(count);
         }
+      } catch (error) {
+        console.error("Failed to load pending count:", error);
+      }
     };
 
-    const handleSync = async () => {
-        if (!isOnline || isSyncing) return;
+    isMountedRef.current = true;
+    loadPendingCount();
 
-        try {
-            await sync();
-            setLastSync(new Date());
-            await loadPendingCount();
-        } catch (error) {
-            console.error("Sync failed:", error);
-        }
+    const interval = setInterval(loadPendingCount, 10000);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
     };
+  }, []);
 
-    if (!showBanner) return null;
+  useEffect(() => {
+    setShowBanner(!isOnline || pendingCount > 0);
+  }, [isOnline, pendingCount]);
 
-    return (
-        <div
-            className={cn(
-                "sticky top-0 z-50 border-b transition-colors",
-                isOnline
-                    ? "bg-primary/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
-                    : "bg-warning/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
-            )}
-        >
-            <div className="px-4 py-2 flex items-center justify-between gap-3">
-                {/* Left: Status */}
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {isOnline ? (
-                        <>
-                            <Wifi className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
-                                Online
-                            </span>
-                        </>
-                    ) : (
-                        <>
-                            <WifiOff className="h-4 w-4 text-warning dark:text-orange-400 flex-shrink-0" />
-                            <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
-                                Offline
-                            </span>
-                        </>
-                    )}
+  const loadPendingCount = async () => {
+    try {
+      const count = await getPendingCount();
+      if (isMountedRef.current) {
+        setPendingCount(count);
+      }
+    } catch (error) {
+      console.error("Failed to load pending count:", error);
+    }
+  };
 
-                    {/* Pending Count */}
-                    {pendingCount > 0 && (
-                        <Badge
-                            variant="outline"
-                            className={cn(
-                                "ml-2 text-xs",
-                                isOnline
-                                    ? "bg-orange-100 text-orange-700 border-orange-300"
-                                    : "bg-orange-100 text-orange-700 border-orange-300"
-                            )}
-                        >
-                            <Upload className="h-3 w-3 mr-1" />
-                            {pendingCount} pending
-                        </Badge>
-                    )}
-                </div>
+  const handleSync = async () => {
+    if (!isOnline || isSyncing) return;
 
-                {/* Right: Sync Button & Last Sync */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    {lastSync && (
-                        <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
-                            <Check className="h-3 w-3" />
-                            <span>
-                                {new Date(lastSync).toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
-                            </span>
-                        </div>
-                    )}
+    try {
+      await sync();
+      setLastSync(new Date());
+      await loadPendingCount();
+    } catch (error) {
+      console.error("Sync failed:", error);
+    }
+  };
 
-                    {isOnline && pendingCount > 0 && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleSync}
-                            disabled={isSyncing}
-                            className={cn(
-                                "h-7 text-xs",
-                                isOnline
-                                    ? "border-orange-300 hover:bg-orange-100"
-                                    : "border-orange-300 hover:bg-orange-100"
-                            )}
-                        >
-                            <RefreshCw
-                                className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")}
-                            />
-                            {isSyncing ? "Syncing..." : "Sync Now"}
-                        </Button>
-                    )}
-                </div>
-            </div>
+  if (!showBanner) return null;
+
+  return (
+    <div
+      className={cn(
+        "border-b transition-colors",
+        sticky && "sticky top-0 z-50",
+        isOnline
+          ? "border-warning/20 bg-primary/10 dark:border-warning/30 dark:bg-warning/15"
+          : "border-warning/20 bg-warning/10 dark:border-warning/30 dark:bg-warning/15"
+      )}
+    >
+      <div className="flex items-center justify-between gap-3 px-4 py-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {isOnline ? (
+            <>
+              <Wifi className="h-4 w-4 flex-shrink-0 text-primary" />
+              <span className="text-sm font-medium text-warning">Online</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-4 w-4 flex-shrink-0 text-warning" />
+              <span className="text-sm font-medium text-warning">Offline</span>
+            </>
+          )}
+
+          {pendingCount > 0 && (
+            <Badge
+              variant="outline"
+              className="ml-2 border-warning/40 bg-warning/15 text-xs text-warning"
+            >
+              <Upload className="mr-1 h-3 w-3" />
+              {pendingCount} pending
+            </Badge>
+          )}
         </div>
-    );
+
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {lastSync && (
+            <div className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
+              <Check className="h-3 w-3" />
+              <span>
+                {new Date(lastSync).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
+
+          {isOnline && pendingCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="h-7 border-warning/40 text-xs hover:bg-warning/15"
+            >
+              <RefreshCw className={cn("mr-1 h-3 w-3", isSyncing && "animate-spin")} />
+              {isSyncing ? "Syncing..." : "Sync Now"}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -115,12 +115,12 @@ export function QRPrintDialog({ branch, open, onOpenChange }: QRPrintDialogProps
                     {/* Poster Preview */}
                     <div
                         ref={printRef}
-                        className="bg-white p-8 shadow-inner border border-slate-200 flex flex-col items-center text-center space-y-4 max-w-xs"
+                        className="bg-card p-8 shadow-inner border border-border flex flex-col items-center text-center space-y-4 max-w-xs"
                     >
-                        <h1 className="text-xl font-bold text-slate-900 leading-tight">We Value Your Feedback</h1>
-                        <p className="text-xs font-medium text-slate-500 uppercase">{branch.name}</p>
+                        <h1 className="text-xl font-bold text-foreground leading-tight">We Value Your Feedback</h1>
+                        <p className="text-xs font-medium text-muted-foreground uppercase">{branch.name}</p>
 
-                        <div className="bg-white p-3 border border-slate-200">
+                        <div className="bg-card p-3 border border-border">
                             <img
                                 src={qrCodeUrl}
                                 className="w-44 h-44"
@@ -128,12 +128,12 @@ export function QRPrintDialog({ branch, open, onOpenChange }: QRPrintDialogProps
                             />
                         </div>
 
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-muted-foreground">
                             Scan the QR code to share your suggestions, compliments, or complaints.
                         </p>
 
-                        <div className="pt-3 border-t border-slate-100 w-full">
-                            <p className="text-[10px] text-slate-400">{siteName}</p>
+                        <div className="pt-3 border-t border-border w-full">
+                            <p className="text-[10px] text-muted-foreground">{siteName}</p>
                         </div>
                     </div>
                 </div>

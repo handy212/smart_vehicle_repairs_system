@@ -152,7 +152,7 @@ export function BranchQboCoaMappingsPanel({ branches, embedded = false }: { bran
 
   if (!isApiReady) {
     return (
-      <Card className="mx-4 border shadow-sm border-amber-500/30 bg-amber-500/5">
+      <Card className="mx-4 border shadow-sm border-warning/30 bg-warning/5">
         <CardContent className="p-4 text-sm text-muted-foreground">
           {connectionIssue ||
             "QuickBooks is linked but the live API session is unavailable. Reconnect under Admin → Integrations before configuring branch chart mappings."}

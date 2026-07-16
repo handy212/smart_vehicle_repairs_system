@@ -116,6 +116,9 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         { source: "/media/:path*", destination: `${backendOrigin}/media/:path*` },
+        // Short WhatsApp/document PDF codes → Django (also keep /api/d/ via api proxy)
+        { source: "/d/:code", destination: `${backendOrigin}/d/:code/` },
+        { source: "/d/:code/", destination: `${backendOrigin}/d/:code/` },
       ],
       afterFiles: [
         { source: "/api", destination: apiUrl },
@@ -166,7 +169,11 @@ const withPWA = withPWAInit({
   customWorkerSrc: "worker",
   register: true,
   disable: process.env.NODE_ENV === "development",
-  // Keep default Workbox rules; only override hashed Next assets (see runtimeCaching).
+  fallbacks: {
+    document: "/offline",
+  },
+  // Keep default Workbox rules; override Next assets, media, and cross-origin
+  // (see runtimeCaching). Custom rules are registered first and win on match.
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     skipWaiting: true,
@@ -186,6 +193,25 @@ const withPWA = withPWAInit({
       },
       {
         urlPattern: /\/_next\/data\/.+/i,
+        handler: "NetworkOnly",
+      },
+      // Favicons + proxied Django media: never cache via SW (avoids Workbox
+      // intercept errors on /favicon.ico and /media/branding/*).
+      // Note: urlPattern fn bodies are stringified into sw.js — no TS types.
+      {
+        urlPattern: ({ url }) =>
+          url.pathname === "/favicon.ico" || url.pathname.startsWith("/media/"),
+        handler: "NetworkOnly",
+      },
+      // Image assets by pathname (handles ?v= cache-busters; default RegExp $ did not).
+      {
+        urlPattern: ({ url }) =>
+          /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i.test(url.pathname),
+        handler: "NetworkOnly",
+      },
+      // Cross-origin (e.g. legacy absolute api.* media URLs in cached HTML).
+      {
+        urlPattern: ({ sameOrigin }) => !sameOrigin,
         handler: "NetworkOnly",
       },
     ],

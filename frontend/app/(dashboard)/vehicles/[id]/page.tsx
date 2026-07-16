@@ -216,7 +216,7 @@ export default function VehicleDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-warning/50"></div>
       </div>
     );
   }
@@ -228,7 +228,7 @@ export default function VehicleDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <div className="bg-destructive/10 dark:bg-red-900/20 text-destructive dark:text-red-400 p-4 rounded-md">
+        <div className="bg-destructive/10 dark:bg-destructive/20 text-destructive dark:text-destructive p-4 rounded-md">
           Error loading vehicle. Please try again.
         </div>
       </div>
@@ -291,7 +291,7 @@ export default function VehicleDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-xl font-bold text-foreground">
                 {vehicle.make} {vehicle.model} {vehicle.year}
               </h1>
 

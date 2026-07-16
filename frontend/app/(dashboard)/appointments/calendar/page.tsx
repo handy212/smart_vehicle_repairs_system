@@ -65,18 +65,18 @@ export default function AppointmentCalendarPage() {
         eventDate.setHours(hours, minutes, 0, 0);
 
         // Determine event color based on status
-        let backgroundColor = "#3b82f6"; // default blue
-        let borderColor = "#2563eb";
+        let backgroundColor = "var(--primary)"; // default blue
+        let borderColor = "var(--primary)";
         // eslint-disable-next-line prefer-const
         let textColor = "#ffffff";
 
         switch (appointment.status) {
           case "confirmed":
-            backgroundColor = "#10b981"; // green
+            backgroundColor = "var(--success)"; // green
             borderColor = "#059669";
             break;
           case "pending":
-            backgroundColor = "#f59e0b"; // amber
+            backgroundColor = "var(--warning)"; // amber
             borderColor = "#d97706";
             break;
           case "completed":
@@ -84,7 +84,7 @@ export default function AppointmentCalendarPage() {
             borderColor = "#4b5563";
             break;
           case "cancelled":
-            backgroundColor = "#ef4444"; // red
+            backgroundColor = "var(--destructive)"; // red
             borderColor = "#dc2626";
             break;
           case "no_show":
@@ -98,7 +98,7 @@ export default function AppointmentCalendarPage() {
           backgroundColor = "#dc2626"; // red
           borderColor = "#b91c1c";
         } else if (appointment.priority === "high") {
-          backgroundColor = "#f59e0b"; // amber
+          backgroundColor = "var(--warning)"; // amber
           borderColor = "#d97706";
         }
 
@@ -170,7 +170,7 @@ export default function AppointmentCalendarPage() {
               <span>/</span>
               <span className="text-foreground font-medium">Calendar</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Appointment Calendar
             </h1>
           </div>
@@ -260,19 +260,19 @@ export default function AppointmentCalendarPage() {
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Normal</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-success/100 ring-2 ring-green-500/20"></div>
+            <div className="w-2 h-2 rounded-full bg-success ring-2 ring-success/20"></div>
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Confirmed</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-warning/100 ring-2 ring-amber-500/20"></div>
+            <div className="w-2 h-2 rounded-full bg-warning ring-2 ring-warning/20"></div>
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Pending / High</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-destructive/100 ring-2 ring-red-500/20"></div>
+            <div className="w-2 h-2 rounded-full bg-destructive ring-2 ring-destructive/20"></div>
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Urgent / Cancelled</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-gray-500 ring-2 ring-gray-500/20"></div>
+            <div className="w-2 h-2 rounded-full bg-muted0 ring-2 ring-border/20"></div>
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Completed</span>
           </div>
         </CardContent>

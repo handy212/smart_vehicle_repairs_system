@@ -118,7 +118,7 @@ export default function VatReturnPage() {
       <div className="no-print space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4 pt-2">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">VAT Return</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">VAT Return</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Output tax collected vs input VAT paid
             </p>

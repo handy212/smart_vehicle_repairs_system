@@ -339,7 +339,7 @@ export default function VehicleDetailPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <Calendar className="w-5 h-5 text-green-500" />
+                        <Calendar className="w-5 h-5 text-success" />
                         <h3 className="text-lg font-semibold text-foreground">
                           {format(new Date(apt.appointment_date), "EEEE, MMMM d, yyyy")}
                         </h3>
@@ -378,7 +378,7 @@ export default function VehicleDetailPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <Search className="w-5 h-5 text-purple-500" />
+                        <Search className="w-5 h-5 text-info" />
                         <h3 className="text-lg font-semibold text-foreground">
                           Inspection #{inspection.inspection_number || inspection.id}
                         </h3>

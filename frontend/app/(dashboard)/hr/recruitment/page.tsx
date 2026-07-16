@@ -21,7 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -95,9 +95,9 @@ function JobOpeningsList() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "draft": return "bg-gray-100 text-gray-700 border-gray-200";
-            case "open": return "bg-success/10 text-green-700 border-green-200";
-            case "on_hold": return "bg-warning/10 text-amber-700 border-warning/20";
+            case "draft": return "bg-muted text-muted-foreground border-border";
+            case "open": return "bg-success/15 text-success border-success/20";
+            case "on_hold": return "bg-warning/10 text-warning border-warning/20";
             case "closed": return "bg-destructive/10 text-destructive border-destructive/20";
             default: return "";
         }
@@ -285,11 +285,11 @@ function ApplicantsList() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "new": return "bg-info/10 text-blue-700 border-info/20";
-            case "screening": return "bg-purple-50 text-purple-700 border-purple-200";
-            case "interview": return "bg-warning/10 text-amber-700 border-warning/20";
-            case "offered": return "bg-success/10 text-green-700 border-green-200";
-            case "hired": return "bg-success/10 text-emerald-700 border-emerald-200";
+            case "new": return "bg-info/15 text-info border-info/20";
+            case "screening": return "bg-info/15 text-info border-info/20";
+            case "interview": return "bg-warning/10 text-warning border-warning/20";
+            case "offered": return "bg-success/15 text-success border-success/20";
+            case "hired": return "bg-success/10 text-success border-success/20";
             case "rejected": return "bg-destructive/10 text-destructive border-destructive/20";
             default: return "";
         }

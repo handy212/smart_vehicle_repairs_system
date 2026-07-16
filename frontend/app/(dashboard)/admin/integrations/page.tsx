@@ -185,7 +185,7 @@ export default function IntegrationsPage() {
     <div className="flex flex-col h-full bg-background min-h-screen">
       {/* Header Area */}
       <div className="border-b bg-card px-4 py-3">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8 shrink-0 -ml-2">
@@ -233,7 +233,7 @@ export default function IntegrationsPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-7xl mx-auto w-full p-4">
+      <div className="flex-1 w-full w-full p-4">
         {/* Content Area */}
         <main className="space-y-4">
           {/* Featured/Special Cards */}

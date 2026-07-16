@@ -106,7 +106,7 @@ export default function EditBundlePage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Service Bundle</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">Edit Service Bundle</h1>
                         <p className="text-sm text-muted-foreground mt-0.5">
                             Update bundle details and parts.
                         </p>

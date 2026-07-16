@@ -139,7 +139,7 @@ export default function PaymentHistoryPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Paid
             </CardTitle>
-            <DollarSign className="h-5 w-5 text-green-500" />
+            <DollarSign className="h-5 w-5 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -153,7 +153,7 @@ export default function PaymentHistoryPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Completed
             </CardTitle>
-            <FileText className="h-5 w-5 text-emerald-500" />
+            <FileText className="h-5 w-5 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">

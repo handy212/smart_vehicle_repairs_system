@@ -204,7 +204,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                                     <div className="flex flex-col items-center gap-2">
-                                        <Package className="h-8 w-8 text-gray-300" />
+                                        <Package className="h-8 w-8 text-muted-foreground" />
                                         <p className="text-sm">No items in this order.</p>
                                         <Button variant="link" size="sm" onClick={() => setIsAddDialogOpen(true)} className="text-primary">
                                             Add your first item
@@ -268,7 +268,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                             formatCurrency(parseFloat(item.unit_cost || "0"))
                                         )}
                                     </TableCell>
-                                    <TableCell className="px-4 py-3 text-right text-sm font-bold text-foreground dark:text-gray-50">
+                                    <TableCell className="px-4 py-3 text-right text-sm font-bold text-foreground dark:text-foreground">
                                         {formatCurrency(parseFloat(item.total || "0"))}
                                     </TableCell>
                                     <TableCell className="px-2 py-2 text-right">
@@ -278,7 +278,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-7 w-7 p-0 text-success hover:text-green-700 hover:bg-success/10"
+                                                        className="h-7 w-7 p-0 text-success hover:text-success hover:bg-success/10"
                                                         onClick={() => {
                                                             updateItemMutation.mutate({
                                                                 itemId: item.id,
@@ -378,7 +378,7 @@ function SearchResultItem({
     };
 
     return (
-        <div className={`bg-card border rounded-lg transition-all ${isExpanded ? 'ring-2 ring-primary border-primary shadow-md' : 'hover:border-orange-300'}`}>
+        <div className={`bg-card border rounded-lg transition-all ${isExpanded ? 'ring-2 ring-primary border-primary shadow-md' : 'hover:border-warning/40'}`}>
             <div
                 className="flex justify-between items-center p-3 cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -390,7 +390,7 @@ function SearchResultItem({
                     <div>
                         <div className="flex items-center gap-2">
                             <h4 className="font-medium text-sm text-foreground">{part.name}</h4>
-                            {isAdded && <Badge className="bg-green-100 text-green-700 border-green-200 h-5 text-[10px] shadow-none">Added</Badge>}
+                            {isAdded && <Badge className="bg-success/15 text-success border-success/20 h-5 text-[10px] shadow-none">Added</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground font-mono">{part.part_number}</p>
                     </div>

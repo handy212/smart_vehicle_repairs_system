@@ -109,7 +109,7 @@ export default function EditVehiclePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-warning/50"></div>
       </div>
     );
   }
@@ -124,7 +124,7 @@ export default function EditVehiclePage() {
           </Button>
         </Link>
         <div className="p-6 bg-card rounded-lg shadow-sm border border-border">
-          <p className="text-destructive dark:text-red-400">Vehicle not found.</p>
+          <p className="text-destructive dark:text-destructive">Vehicle not found.</p>
         </div>
       </div>
     );
@@ -151,7 +151,7 @@ export default function EditVehiclePage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="w-full space-y-8 pb-12">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">
@@ -162,7 +162,7 @@ export default function EditVehiclePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Edit Vehicle</h1>
+            <h1 className="text-xl font-bold text-foreground">Edit Vehicle</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {vehicle.make} {vehicle.model} {vehicle.year}
             </p>
@@ -171,9 +171,9 @@ export default function EditVehiclePage() {
       </div>
 
       {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-destructive dark:text-red-300">{serverError}</p>
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30">
+          <AlertCircle className="w-5 h-5 text-destructive dark:text-destructive flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive dark:text-destructive">{serverError}</p>
         </div>
       )}
 

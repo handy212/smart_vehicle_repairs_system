@@ -119,6 +119,88 @@ class BillingCommunicationMixin:
             
         return Response({"message": f"{obj.__class__.__name__} sent successfully", "data": self.get_serializer(obj).data})
 
+    @action(detail=True, methods=['post'], url_path='send-whatsapp')
+    def send_whatsapp(self, request, pk=None):
+        """
+        Preview or send document via WhatsApp.
+        POST without confirm → preview payload.
+        POST {confirm: true} → API send when configured, else manual wa.me payload.
+        """
+        obj = self.get_object()
+        if hasattr(obj, 'status') and obj.status == 'void':
+            return Response({"error": "Cannot send voided document"}, status=status.HTTP_400_BAD_REQUEST)
+
+        linked_error = self._linked_work_order_send_error(obj)
+        if linked_error:
+            return Response({"error": linked_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            from apps.notifications_app.whatsapp_share import build_estimate_share, build_invoice_share
+
+            model_name = obj.__class__.__name__
+            if model_name == 'Invoice':
+                share = build_invoice_share(obj)
+                sender = notification_triggers.send_invoice_whatsapp
+            elif model_name == 'Estimate':
+                share = build_estimate_share(obj)
+                sender = notification_triggers.send_estimate_whatsapp
+            else:
+                return Response(
+                    {"error": f"WhatsApp send is not supported for {model_name}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not share.get('phone_number'):
+                return Response(
+                    {"error": "Customer phone number not available"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            confirmed = bool(request.data.get('confirm'))
+            if not confirmed:
+                return Response({
+                    "mode": "preview",
+                    "success": False,
+                    "message": share.get("message"),
+                    "phone_number": share.get("phone_number"),
+                    "phone_display": share.get("phone_display"),
+                    "portal_url": share.get("portal_url"),
+                    "document_pdf_url": share.get("document_pdf_url"),
+                })
+
+            result = sender(obj)
+
+            if result.get('mode') == 'api' and result.get('success'):
+                if hasattr(obj, 'status') and obj.status == 'draft':
+                    obj.status = 'sent'
+                if hasattr(obj, 'sent_by'):
+                    obj.sent_by = request.user
+                if hasattr(obj, 'sent_at') and not obj.sent_at:
+                    obj.sent_at = timezone.now()
+                obj.save()
+                return Response({
+                    "mode": "api",
+                    "success": True,
+                    "message": f"{model_name} sent via WhatsApp",
+                    "phone_number": result.get("phone_number"),
+                    "phone_display": result.get("phone_display") or share.get("phone_display"),
+                    "document_pdf_url": result.get("document_pdf_url") or share.get("document_pdf_url"),
+                })
+
+            return Response({
+                "mode": "manual",
+                "success": False,
+                "message": result.get("message") or share.get("message"),
+                "phone_number": result.get("phone_number") or share.get("phone_number"),
+                "phone_display": result.get("phone_display") or share.get("phone_display"),
+                "portal_url": result.get("portal_url") or share.get("portal_url"),
+                "document_pdf_url": result.get("document_pdf_url") or share.get("document_pdf_url"),
+            })
+        except Exception as e:
+            logger.error("WhatsApp send failed: %s", e, exc_info=True)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['post'])
     def send_customer_sms(self, request, pk=None):
         """Send custom SMS to customer"""

@@ -132,13 +132,13 @@ export default function StockAdjustmentDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
           <div className="space-y-4">
             {serverError && (
-              <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-200 p-3 rounded text-sm">
+              <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 text-destructive dark:text-destructive p-3 rounded text-sm">
                 {serverError}
               </div>
             )}
 
             {activeBranch && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-info/10 dark:bg-blue-900/20 border border-info/20 dark:border-blue-800 p-2 rounded">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-info/10 dark:bg-primary/20 border border-info/20 dark:border-primary/30 p-2 rounded">
                 <Building2 className="w-4 h-4" />
                 <span>Adjusting stock for: <strong className="text-foreground">{activeBranch.name}</strong></span>
               </div>

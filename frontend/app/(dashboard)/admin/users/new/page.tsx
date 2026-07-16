@@ -295,7 +295,7 @@ export default function NewUserPage() {
   };
 
   return (
-    <div className="space-y-6 bg-background min-h-screen p-4 md:p-6">
+    <div className="space-y-6 bg-background min-h-screen">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
@@ -304,7 +304,7 @@ export default function NewUserPage() {
               Back
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-foreground">Create New User</h1>
+          <h1 className="text-xl font-bold text-foreground">Create New User</h1>
         </div>
         <div className="flex space-x-4">
           <Link href="/admin/users">
@@ -320,7 +320,7 @@ export default function NewUserPage() {
           >
             {isSubmitting || createMutation.isPending ? (
               <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
                 Creating...
               </span>
             ) : (
@@ -338,7 +338,7 @@ export default function NewUserPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {serverError && (
-                <div className="bg-destructive/10 dark:bg-red-900/20 border-l-4 border-destructive text-destructive dark:text-red-400 px-4 py-3 rounded-r flex items-start">
+                <div className="bg-destructive/10 dark:bg-destructive/20 border-l-4 border-destructive text-destructive dark:text-destructive px-4 py-3 rounded-r flex items-start">
                   <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
                   <span className="text-sm">{serverError}</span>
                 </div>
@@ -356,7 +356,7 @@ export default function NewUserPage() {
                     className={errors.email ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                   />
                   {errors.email && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.email.message}
                     </p>
@@ -373,7 +373,7 @@ export default function NewUserPage() {
                     className={errors.username ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                   />
                   {errors.username && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.username.message}
                     </p>
@@ -390,7 +390,7 @@ export default function NewUserPage() {
                     className={errors.first_name ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                   />
                   {errors.first_name && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.first_name.message}
                     </p>
@@ -407,7 +407,7 @@ export default function NewUserPage() {
                     className={errors.last_name ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                   />
                   {errors.last_name && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.last_name.message}
                     </p>
@@ -445,7 +445,7 @@ export default function NewUserPage() {
                     </SelectContent>
                   </Select>
                   {errors.role && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.role.message}
                     </p>
@@ -467,7 +467,7 @@ export default function NewUserPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         title={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -499,7 +499,7 @@ export default function NewUserPage() {
                     )}
                   </div>
                   {errors.password && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.password.message}
                     </p>
@@ -520,14 +520,14 @@ export default function NewUserPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword2(!showPassword2)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       title={showPassword2 ? "Hide password" : "Show password"}
                     >
                       {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {errors.password2 && (
-                    <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                    <p className="text-destructive dark:text-destructive text-xs mt-1.5 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {errors.password2.message}
                     </p>
@@ -563,7 +563,7 @@ export default function NewUserPage() {
                           branches.map((branch) => (
                             <label
                               key={branch.id}
-                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border transition-colors"
+                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-warning/20 p-3 rounded-lg border border-border transition-colors"
                             >
                               <input
                                 type="checkbox"
@@ -600,7 +600,7 @@ export default function NewUserPage() {
                         )}
                       </div>
                       {errors.managed_branches && (
-                        <p className="text-destructive dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                        <p className="text-destructive dark:text-destructive text-xs mt-2 flex items-center gap-1">
                           <AlertCircle className="w-4 h-4" />
                           {errors.managed_branches.message}
                         </p>
@@ -656,14 +656,14 @@ export default function NewUserPage() {
                         </SelectContent>
                       </Select>
                       {errors.branch && (
-                        <p className="text-destructive dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                        <p className="text-destructive dark:text-destructive text-xs mt-2 flex items-center gap-1">
                           <AlertCircle className="w-4 h-4" />
                           {errors.branch.message}
                         </p>
                       )}
                       {branches.length === 0 && (
-                        <div className="mt-3 p-3 bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                          <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
+                        <div className="mt-3 p-3 bg-warning/10 dark:bg-warning/15 border border-warning/20 dark:border-warning/40 rounded-md">
+                          <p className="text-xs text-warning dark:text-warning flex items-center gap-2">
                             <Info className="w-4 h-4" />
                             No active branches available. Create a branch first before assigning users.
                           </p>

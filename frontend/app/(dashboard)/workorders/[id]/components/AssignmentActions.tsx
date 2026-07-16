@@ -155,9 +155,9 @@ export function AssignmentActions({
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
         <div className="flex min-w-0 items-start gap-3">
-          <UserCheck className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" aria-hidden="true" />
+          <UserCheck className="h-5 w-5 shrink-0 text-warning mt-0.5" aria-hidden="true" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-foreground">Technician assignment</p>

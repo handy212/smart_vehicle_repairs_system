@@ -157,7 +157,7 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
             </Badge>
           )}
           {workOrder.days_in_shop !== undefined && workOrder.days_in_shop > 0 && (
-            <Badge variant="secondary" className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-100 border-orange-200">
+            <Badge variant="secondary" className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight bg-warning/15 text-warning hover:bg-warning/20 dark:bg-warning/20 dark:text-warning border-warning/20">
               {workOrder.days_in_shop} Day{workOrder.days_in_shop > 1 ? 's' : ''}
             </Badge>
           )}
@@ -166,7 +166,7 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
 
       {/* Customer Info */}
       <div className="flex items-center mb-2">
-        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[9px] font-black flex items-center justify-center mr-2 border border-primary/20">
+        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center mr-2 border border-primary/20">
           {(customerName || "C")
             .split(" ")
             .filter(Boolean)
@@ -442,7 +442,7 @@ export default function WorkOrderKanbanPage() {
               <span>/</span>
               <span className="text-foreground font-medium">Kanban Board</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Work Order Flow
             </h1>
           </div>
@@ -464,7 +464,7 @@ export default function WorkOrderKanbanPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-border">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex items-center space-x-2 border-r border-border pr-6 mr-2">

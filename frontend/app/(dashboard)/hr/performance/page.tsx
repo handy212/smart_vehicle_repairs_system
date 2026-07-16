@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 
@@ -129,7 +129,7 @@ function PerformanceContent() {
                                                 </div>
                                             ) : "-"}
                                         </TableCell>
-                                        <TableCell><Badge variant="outline" className={cn("capitalize", review.status === "acknowledged" ? "bg-success/10 text-green-700 border-green-200" : review.status === "submitted" ? "bg-info/10 text-blue-700 border-info/20" : "bg-gray-100 text-gray-600 border-gray-200")}>{review.status}</Badge></TableCell>
+                                        <TableCell><Badge variant="outline" className={cn("capitalize", review.status === "acknowledged" ? "bg-success/15 text-success border-success/20" : review.status === "submitted" ? "bg-info/15 text-info border-info/20" : "bg-muted text-muted-foreground border-border")}>{review.status}</Badge></TableCell>
                                         <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                                             <PermissionGuard permission="manage_performance">
                                                 <DropdownMenu>

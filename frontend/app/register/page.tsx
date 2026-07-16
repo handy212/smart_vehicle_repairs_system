@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Eye, EyeOff, MoveLeft, Phone, Building2 } from "lucide-react";
+import { Eye, EyeOff, MoveLeft, Phone, Building2 } from "lucide-react";
+import AuthBrandMark from "@/components/auth/AuthBrandMark";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
@@ -84,10 +85,7 @@ export default function RegisterPage() {
         document.documentElement.classList.remove('dark');
     }, []);
 
-    const { data: integrations } = useQuery<{
-        recaptcha_site_key?: string;
-        recaptcha_enabled?: string;
-    }>({
+    const { data: integrations } = useQuery({
         queryKey: ["settings", "integrations", "public"],
         queryFn: () => adminApi.settings.publicIntegrations(),
         staleTime: 5 * 60 * 1000,
@@ -98,6 +96,12 @@ export default function RegisterPage() {
     const recaptchaRequired =
         integrations?.recaptcha_enabled === "true" &&
         !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
+    const googleClientId =
+        (integrations?.google_oauth_client_id || "").trim() ||
+        (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "").trim() ||
+        "";
+    const googleSignInEnabled = Boolean(googleClientId);
 
     const heroImage = loginBackground
         ? getMediaUrl(loginBackground) || DEFAULT_HERO_IMAGE
@@ -208,7 +212,7 @@ export default function RegisterPage() {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
                 {/* Left side: Hero Image & Branding */}
                 <div
-                    className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
+                    className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-foreground group"
                     style={{ backgroundColor: primaryColor }}
                 >
                     {isMounted && (
@@ -225,20 +229,14 @@ export default function RegisterPage() {
                         }}
                     />
 
-                    <div className="relative z-10 flex items-center gap-3">
-                        {logoSrc ? (
-                            <div className="p-3 bg-card rounded-xl shadow-lg">
-                                <img
-                                    src={logoSrc}
-                                    alt={siteName}
-                                    className="h-10 w-auto object-contain"
-                                />
-                            </div>
-                        ) : (
-                            <div className="p-3 bg-card rounded-xl shadow-lg">
-                                <Car className="w-8 h-8" style={{ color: primaryColor }} />
-                            </div>
-                        )}
+                    <div className="relative z-10">
+                        <AuthBrandMark
+                            logoSrc={logoSrc}
+                            siteName={siteName}
+                            primaryColor={primaryColor}
+                            variant="hero"
+                            size="lg"
+                        />
                     </div>
 
                     <div className="relative z-10 space-y-4">
@@ -327,7 +325,7 @@ export default function RegisterPage() {
                                                             placeholder="John"
                                                             className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
-                                                        {errors.first_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
+                                                        {errors.first_name && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.first_name.message}</p>}
                                                     </div>
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Last Name</label>
@@ -336,7 +334,7 @@ export default function RegisterPage() {
                                                             placeholder="Doe"
                                                             className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
-                                                        {errors.last_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
+                                                        {errors.last_name && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.last_name.message}</p>}
                                                     </div>
                                                 </div>
 
@@ -348,7 +346,7 @@ export default function RegisterPage() {
                                                         placeholder="john@example.com"
                                                         className="h-9 lg:h-10 rounded-lg border-border"
                                                     />
-                                                    {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
+                                                    {errors.email && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.email.message}</p>}
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
@@ -362,7 +360,7 @@ export default function RegisterPage() {
                                                                 className="h-9 lg:h-10 rounded-lg border-border pl-9 lg:pl-10"
                                                             />
                                                         </div>
-                                                        {errors.phone && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.phone.message}</p>}
+                                                        {errors.phone && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.phone.message}</p>}
                                                     </div>
 
                                                     <div className="space-y-1">
@@ -394,7 +392,7 @@ export default function RegisterPage() {
                                                                 className="h-9 lg:h-10 rounded-lg border-border pl-9 lg:pl-10"
                                                             />
                                                         </div>
-                                                        {errors.company_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
+                                                        {errors.company_name && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.company_name.message}</p>}
                                                     </div>
                                                 )}
 
@@ -416,7 +414,7 @@ export default function RegisterPage() {
                                                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                             </button>
                                                         </div>
-                                                        {errors.password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.password.message}</p>}
+                                                        {errors.password && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.password.message}</p>}
                                                     </div>
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Confirm</label>
@@ -426,7 +424,7 @@ export default function RegisterPage() {
                                                             placeholder="••••••••"
                                                             className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
-                                                        {errors.confirm_password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
+                                                        {errors.confirm_password && <p className="text-[10px] lg:text-xs text-destructive ml-1">{errors.confirm_password.message}</p>}
                                                     </div>
                                                 </div>
 
@@ -451,19 +449,24 @@ export default function RegisterPage() {
                                                     {isLoading ? "Checking..." : "Continue"}
                                                 </Button>
 
-                                                <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground">
-                                                    <span className="bg-card px-4 relative z-10">OR</span>
-                                                    <hr className="absolute top-1/2 left-0 w-full border-border" />
-                                                </div>
+                                                {googleSignInEnabled && (
+                                                    <>
+                                                        <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground">
+                                                            <span className="bg-card px-4 relative z-10">OR</span>
+                                                            <hr className="absolute top-1/2 left-0 w-full border-border" />
+                                                        </div>
 
-                                                <GoogleLoginButton
-                                                    onSuccess={(data) => {
-                                                        setUser(data.user);
-                                                        router.push(getPostLoginPath(data.user.role));
-                                                    }}
-                                                    onRegistrationRequired={(data) => setRegData(data)}
-                                                    onError={(msg) => setError(msg)}
-                                                />
+                                                        <GoogleLoginButton
+                                                            clientId={googleClientId}
+                                                            onSuccess={(data) => {
+                                                                setUser(data.user);
+                                                                router.push(getPostLoginPath(data.user.role));
+                                                            }}
+                                                            onRegistrationRequired={(data) => setRegData(data)}
+                                                            onError={(msg) => setError(msg)}
+                                                        />
+                                                    </>
+                                                )}
                                             </form>
                                         ) : (
                                             <form onSubmit={onVerify} className="space-y-6">
