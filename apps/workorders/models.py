@@ -872,8 +872,13 @@ class WorkOrder(models.Model):
             else:
                 if not self.tasks.filter(is_workflow_task=False).exists():
                     return False, "At least one mechanical task must exist before completing"
-                if self.quality_check_required and not self.quality_check_completed:
-                    return False, "Quality check must be completed first"
+                if self.quality_check_required:
+                    if not self.quality_check_completed:
+                        return False, "Quality check must be completed first"
+                    if not self.quality_check_passed:
+                        return False, "Quality check must pass before completing"
+                elif self.status == 'quality_check' and not self.quality_check_passed:
+                    return False, "Quality check must pass before completing"
                 incomplete_tasks = self.get_incomplete_mechanical_tasks()
                 if incomplete_tasks.exists():
                     task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
@@ -1008,6 +1013,11 @@ class WorkOrder(models.Model):
             self.paused_from_status = old_status
         elif old_status == 'paused':
             self.paused_from_status = None
+
+        if new_status == 'quality_check' and old_status != 'quality_check':
+            # A new QC request must not reuse a failed/passed result from a prior attempt.
+            self.quality_check_completed = False
+            self.quality_check_passed = False
         
         # Handle additional_work_found: reset approval and require new approval
         if new_status == 'additional_work_found':

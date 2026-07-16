@@ -41,21 +41,6 @@ def _iter_job_types(work_order):
     if cached:
         return list(cached)
 
-    # M2M descriptors raise before .all() when the instance has no PK yet
-    # (e.g. WorkOrder.save() -> sync_legacy_maintenance_type on create).
-    if getattr(work_order, 'pk', None) is None:
-        job_type = getattr(work_order, 'job_type', None)
-        return [job_type] if job_type is not None else []
-
-    try:
-        job_types_manager = work_order.job_types
-        types = list(job_types_manager.select_related('workflow_profile').all())
-        if types:
-            return types
-    except (ValueError, AttributeError):
-        # Unsaved instance or M2M not ready
-        pass
-
     job_type = getattr(work_order, 'job_type', None)
     if job_type is not None:
         return [job_type]

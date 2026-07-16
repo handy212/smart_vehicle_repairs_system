@@ -1093,6 +1093,12 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'maintenance_type', 'service_type', 'service_bundle',
             'job_type', 'job_type_code', 'job_type_codes',
         ]
+        read_only_fields = [
+            'quality_check_completed',
+            'quality_check_by',
+            'quality_check_notes',
+            'quality_check_passed',
+        ]
 
     def _validate_branch_technician(self, technician, work_order, field_name):
         if technician.role != 'technician':
