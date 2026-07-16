@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.permission_models import Permission, Role
-from apps.appointments.models import Appointment
+from apps.appointments.models import Appointment, AppointmentReminder
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -154,3 +154,58 @@ def test_list_allows_view_own_appointments(technician_user, appointment_for_tech
     ids = [row["id"] for row in response.data["results"]]
     assert appointment_for_technician.id in ids
     assert other_appt.id not in ids
+
+
+def test_reminders_with_view_own_appointments_are_scoped_to_assigned_appointments(
+    technician_user,
+    appointment_for_technician,
+):
+    """Own-schedule users must not see reminders for other technicians' customers."""
+    assigned_reminder = AppointmentReminder.objects.create(
+        appointment=appointment_for_technician,
+        reminder_type="email",
+        scheduled_send_time=timezone.now(),
+    )
+    other_tech = User.objects.create_user(
+        username="other_tech_reminder",
+        email="other_tech_reminder@example.com",
+        password="password123",
+        role="technician",
+        branch=technician_user.branch,
+    )
+    other_appt = Appointment.objects.create(
+        customer=appointment_for_technician.customer,
+        vehicle=appointment_for_technician.vehicle,
+        appointment_date=date.today() + timedelta(days=1),
+        appointment_time=time(11, 0),
+        branch=appointment_for_technician.branch,
+        service_type="maintenance",
+        status="confirmed",
+        estimated_duration=60,
+        customer_concerns="Other tech job",
+    )
+    other_appt.assigned_technicians.add(other_tech)
+    other_reminder = AppointmentReminder.objects.create(
+        appointment=other_appt,
+        reminder_type="sms",
+        scheduled_send_time=timezone.now(),
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=technician_user)
+
+    response = client.get("/api/appointments/reminders/?page=1")
+
+    assert response.status_code == status.HTTP_200_OK
+    rows = response.data["results"]
+    ids = [row["id"] for row in rows]
+    assert assigned_reminder.id in ids
+    assert other_reminder.id not in ids
+
+    filtered_response = client.get(
+        "/api/appointments/reminders/",
+        {"appointment": other_appt.id},
+    )
+
+    assert filtered_response.status_code == status.HTTP_200_OK
+    assert filtered_response.data["count"] == 0

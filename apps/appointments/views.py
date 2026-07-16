@@ -897,6 +897,24 @@ class AppointmentReminderViewSet(viewsets.ReadOnlyModelViewSet):
         ]
     
     def get_queryset(self):
-        return AppointmentReminder.objects.select_related(
+        queryset = AppointmentReminder.objects.select_related(
             'appointment', 'appointment__customer', 'appointment__customer__user'
         ).all()
+
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        queryset = filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            request=self.request,
+            use_active_branch=not show_all,
+            branch_lookup='appointment__branch',
+        )
+
+        user = self.request.user
+        if getattr(user, 'role', None) == 'technician' or (
+            user_has_permission(user, 'view_own_appointments')
+            and not user_has_permission(user, 'view_appointments')
+        ):
+            queryset = queryset.filter(appointment__assigned_technicians=user).distinct()
+
+        return queryset
