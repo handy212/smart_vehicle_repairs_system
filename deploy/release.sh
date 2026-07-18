@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Routine production release (run on every version update).
-# Does NOT run seed/bootstrap commands — use deploy/bootstrap.sh for first install.
+# Seeds/updates RBAC permissions after migrate (idempotent).
+# Full first-install bootstrap (settings, templates, etc.): deploy/bootstrap.sh
 # Usage: bash deploy/release.sh
 set -euo pipefail
 
@@ -20,6 +21,10 @@ echo "==> Pulling/building updated images"
 
 echo "==> Running database migrations"
 "${COMPOSE[@]}" exec -T backend python manage.py migrate --noinput
+
+echo "==> Syncing permissions and role grants"
+# Required so new permission codes (e.g. manage_data_exchange) exist in production.
+"${COMPOSE[@]}" exec -T backend python manage.py init_permissions
 
 echo "==> Collecting static files"
 "${COMPOSE[@]}" exec -T backend python manage.py collectstatic --noinput

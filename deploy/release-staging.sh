@@ -20,6 +20,9 @@ echo "==> Building and starting staging stack"
 echo "==> Migrations"
 "${COMPOSE[@]}" exec -T backend python manage.py migrate --noinput
 
+echo "==> Syncing permissions and role grants"
+"${COMPOSE[@]}" exec -T backend python manage.py init_permissions
+
 echo "==> Collectstatic"
 "${COMPOSE[@]}" exec -T backend python manage.py collectstatic --noinput
 

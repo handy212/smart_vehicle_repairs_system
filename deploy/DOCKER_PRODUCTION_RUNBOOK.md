@@ -268,6 +268,8 @@ docker compose exec backend python manage.py seed_leave_types
 docker compose exec backend python manage.py populate_code_library
 ```
 
+Routine releases (`deploy/release.sh`, `deploy/release-vps.sh`, `deploy/release-staging.sh`) run `migrate` **and** `init_permissions` so new permission codes (for example `manage_data_exchange`) are seeded without a full bootstrap.
+
 Run AA membership packages when the subscription membership module is used and an admin user exists:
 
 ```bash
@@ -447,6 +449,31 @@ docker compose exec backend python manage.py shell -c "from django.contrib.auth 
 ```
 
 Log out, clear browser site data for `https://aap.safetracksystems.com`, and log in again.
+
+### Import / Export Menu Missing or `/admin/import-export` Denies Access
+
+The module code can be deployed while `manage_data_exchange` is missing from the database if `init_permissions` was never run after that permission was added. Migrations alone do not seed RBAC.
+
+```bash
+# VPS / NPM overlay (adjust compose files to match the host)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.vps.yml \
+  exec -T backend python manage.py init_permissions
+```
+
+Verify:
+
+```bash
+docker compose exec backend python manage.py shell -c "
+from apps.accounts.permission_models import Permission
+from django.contrib.auth import get_user_model
+from apps.accounts.permissions import get_user_permissions
+print('perm exists', Permission.objects.filter(code='manage_data_exchange').exists())
+u=get_user_model().objects.get(email='<ADMIN_EMAIL>')
+print('admin has it', 'manage_data_exchange' in get_user_permissions(u))
+"
+```
+
+Log out and log in again so the frontend permission cache refreshes. No import history is expected until the first batch is uploaded.
 
 ### Invoice And Payment Email Template Notice
 

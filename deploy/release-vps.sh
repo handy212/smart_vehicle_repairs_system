@@ -37,6 +37,10 @@ echo "==> Building and starting updated services"
 echo "==> Applying database migrations"
 "${COMPOSE[@]}" exec -T backend python manage.py migrate --noinput
 
+echo "==> Syncing permissions and role grants"
+# Required so new permission codes (e.g. manage_data_exchange) exist in production.
+"${COMPOSE[@]}" exec -T backend python manage.py init_permissions
+
 echo "==> Collecting static files"
 "${COMPOSE[@]}" exec -T backend python manage.py collectstatic --noinput
 
