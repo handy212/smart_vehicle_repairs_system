@@ -1079,11 +1079,17 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         if not messages:
             return Response({'error': 'messages list is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from apps.core.services.ai_audit import is_ai_enabled, get_gemini_model, log_ai_call, summarize_for_audit
+        from apps.core.services.ai_audit import (
+            get_gemini_api_key,
+            get_gemini_model,
+            is_ai_enabled,
+            log_ai_call,
+            summarize_for_audit,
+        )
         if not is_ai_enabled('comms'):
             return Response({'error': 'AI assistant is not configured or disabled'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        api_key = get_gemini_api_key()
         if not api_key:
             return Response({'error': 'AI assistant is not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 

@@ -61,7 +61,10 @@ const SELECT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = 
     { value: "perfex", label: "Light" },
     { value: "perfex-dark", label: "Dark" },
   ],
-  sms_provider: [{ value: "hubtel", label: "Hubtel" }],
+  sms_provider: [
+    { value: "hubtel", label: "Hubtel" },
+    { value: "twilio", label: "Twilio" },
+  ],
   payment_gateway: [{ value: "paystack", label: "Paystack" }],
   late_fee_type: [
     { value: "percentage", label: "Percentage" },

@@ -238,8 +238,8 @@ class BranchCoaMappingTests(TestCase):
         self.assertTrue(is_branch_override_slot(MAPPING_KIND_REVENUE_PRODUCT_CLASS, code))
 
     @patch('apps.quickbooks_online.qbo_setup_status.QuickBooksService.is_connected', return_value=True)
-    @patch('apps.quickbooks_online.qbo_setup_status.QuickBooksService.get_client', return_value=MagicMock())
-    def test_setup_status_reports_override_coverage(self, _mock_client, _mock_connected):
+    @patch('apps.quickbooks_online.qbo_setup_status._resolve_api_ready', return_value=True)
+    def test_setup_status_reports_override_coverage(self, _mock_ready, _mock_connected):
         status = get_qbo_setup_status()
         self.assertIn('override_mapped', status['branches'])
         self.assertIn('override_inherit', status['branches'])

@@ -1,13 +1,25 @@
 "use client";
 
 import React from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
 import { SystemSetting } from "@/lib/api/admin";
-import { fieldPrefixForKey, integrationFieldLabel } from "@/lib/integrations/fieldLabels";
+import {
+  fieldPrefixForKey,
+  integrationFieldHint,
+  integrationFieldLabel,
+  isBooleanIntegrationSetting,
+} from "@/lib/integrations/fieldLabels";
 import { cn } from "@/lib/utils/cn";
 
 interface IntegrationFieldProps {
@@ -26,6 +38,28 @@ interface IntegrationFieldProps {
   prefix?: string;
   showKey?: boolean;
   deferSave?: boolean;
+  /** Denser toggle row (label only, no hint). */
+  compact?: boolean;
+}
+
+const SELECT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
+  sms_provider: [
+    { value: "hubtel", label: "Hubtel" },
+    { value: "twilio", label: "Twilio" },
+  ],
+  ai_gemini_model: [
+    { value: "gemini-flash-lite-latest", label: "Flash-Lite (latest alias)" },
+    { value: "gemini-2.5-flash-lite", label: "2.5 Flash-Lite — fastest / cheapest" },
+    { value: "gemini-2.5-flash", label: "2.5 Flash — balanced" },
+    { value: "gemini-2.5-pro", label: "2.5 Pro — highest quality" },
+    { value: "gemini-3.1-flash-lite", label: "3.1 Flash-Lite" },
+    { value: "gemini-3.5-flash", label: "3.5 Flash" },
+  ],
+};
+
+function isTruthy(val: string) {
+  const str = val.toLowerCase().trim();
+  return str === "true" || str === "1" || str === "yes" || str === "on";
 }
 
 export function IntegrationField({
@@ -35,130 +69,144 @@ export function IntegrationField({
   showSecret,
   onToggleSecret,
   onChange,
-  onSave,
   onDiscard,
-  onToggleActive,
   canManage,
-  isPending,
   error,
   prefix = "",
   showKey = false,
   deferSave = false,
+  compact = false,
 }: IntegrationFieldProps) {
   const pendingChanges = value !== (setting.value ?? "");
   const fieldPrefix = prefix || fieldPrefixForKey(setting.key);
   const label = integrationFieldLabel(setting.key, fieldPrefix);
-  const isEnabledToggle = setting.key.match(/(enabled)$/i);
+  const hint = compact ? "" : integrationFieldHint(setting.key, setting.description);
+  const isToggle = isBooleanIntegrationSetting(setting.key);
+  const baseSelectOptions = SELECT_OPTIONS[setting.key];
+  const selectOptions = baseSelectOptions
+    ? value && !baseSelectOptions.some((option) => option.value === value)
+      ? [{ value, label: `${value} (current)` }, ...baseSelectOptions]
+      : baseSelectOptions
+    : undefined;
+  const controlId = `integration-${setting.id}`;
 
-  const isTruthy = (val: string) => {
-    const str = val.toLowerCase().trim();
-    return str === "true" || str === "1" || str === "yes" || str === "on";
-  };
+  if (isToggle) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-lg bg-muted/25 transition-colors",
+          compact ? "px-3 py-2" : "rounded-xl px-3.5 py-3",
+          pendingChanges && "bg-primary/[0.06] ring-1 ring-primary/25"
+        )}
+      >
+        <div className="min-w-0 pr-2">
+          <Label
+            htmlFor={controlId}
+            className={cn(
+              "font-medium text-foreground",
+              compact ? "text-[13px] leading-snug" : "text-sm"
+            )}
+          >
+            {label}
+          </Label>
+          {hint ? (
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>
+          ) : null}
+          {showKey ? (
+            <p className="mt-1 font-mono text-[10px] text-muted-foreground/60">{setting.key}</p>
+          ) : null}
+        </div>
+        <Switch
+          id={controlId}
+          checked={isTruthy(value)}
+          onCheckedChange={(checked) => onChange(checked ? "true" : "false")}
+          disabled={!canManage}
+          aria-label={label}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="group py-3 first:pt-0 last:pb-0 border-b last:border-0 border-border/50 hover:bg-muted/5 transition-colors">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        {/* Label & Description Column */}
-        <div className="sm:w-[40%] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="font-bold text-[11px] text-foreground uppercase tracking-wider">{label}</div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-[9px] text-muted-foreground font-bold uppercase">Active</span>
-                <Checkbox
-                    checked={setting.is_active}
-                    onCheckedChange={(checked) => onToggleActive(Boolean(checked))}
-                    disabled={isPending || !canManage}
-                    className="h-3 w-3"
-                />
-            </div>
-          </div>
+    <div className="space-y-1.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Label htmlFor={controlId} className="text-sm font-medium text-foreground">
+            {label}
+          </Label>
+          {hint ? (
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>
+          ) : null}
           {showKey ? (
-            <div className="text-[9px] text-muted-foreground/50 font-mono mt-0.5">
-              {setting.key}
-            </div>
+            <p className="mt-1 font-mono text-[10px] text-muted-foreground/60">{setting.key}</p>
           ) : null}
         </div>
-
-        {/* Input & Actions Column */}
-        <div className="flex-1 flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            {isEnabledToggle ? (
-              <Select value={isTruthy(value) ? "true" : "false"} onValueChange={onChange} disabled={!canManage}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Yes</SelectItem>
-                  <SelectItem value="false">No</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="relative group/input">
-                <Input
-                  type={isSecret && !showSecret ? "password" : "text"}
-                  value={value}
-                  onChange={(e) => onChange(e.target.value)}
-                  placeholder={isSecret ? "Enter secret value" : "Enter value"}
-                  className={cn(
-                    "h-8 text-xs bg-muted/20 border-border/50 focus:bg-card transition-all",
-                    isSecret && "pr-8",
-                    pendingChanges && "border-primary/50 ring-1 ring-primary/10"
-                  )}
-                  disabled={!canManage}
-                />
-                {isSecret && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-1/2 right-0.5 -translate-y-1/2 h-7 w-7 hover:bg-transparent"
-                    onClick={onToggleSecret}
-                  >
-                    {showSecret ? (
-                      <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
-                    ) : (
-                      <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                    )}
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {error && (
-              <p className="text-[10px] text-destructive dark:text-destructive mt-1">{error}</p>
-            )}
-          </div>
-
-          {pendingChanges ? (
-            <div className="flex items-center justify-end gap-1.5 shrink-0">
-              <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-200">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onDiscard}
-                  disabled={isPending}
-                  className="h-7 text-[10px] px-2 font-bold uppercase tracking-tight hover:bg-muted"
-                >
-                  Discard
-                </Button>
-                {deferSave ? (
-                  <div className="h-7 px-2 text-[10px] font-bold uppercase tracking-tight text-primary flex items-center">
-                    Edited
-                  </div>
-                ) : (
-                  <Button
-                    size="sm"
-                    disabled={isPending || !!error}
-                    onClick={onSave}
-                    className="bg-primary hover:bg-primary/90 text-white h-7 text-[10px] px-2 font-bold uppercase tracking-tight shadow-sm"
-                  >
-                    Save
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        {pendingChanges ? (
+          <button
+            type="button"
+            onClick={onDiscard}
+            className="shrink-0 text-[11px] font-medium text-primary hover:underline"
+          >
+            Undo
+          </button>
+        ) : null}
       </div>
+
+      {selectOptions ? (
+        <Select value={value || selectOptions[0]?.value} onValueChange={onChange} disabled={!canManage}>
+          <SelectTrigger
+            id={controlId}
+            className={cn("h-10", pendingChanges && "border-primary/40 ring-1 ring-primary/15")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {selectOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <div className="relative">
+          <Input
+            id={controlId}
+            type={isSecret && !showSecret ? "password" : "text"}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={isSecret ? "Enter secret value" : "Enter value"}
+            autoComplete={isSecret ? "new-password" : "off"}
+            className={cn(
+              "h-10",
+              isSecret && "pr-10",
+              pendingChanges && "border-primary/40 ring-1 ring-primary/15"
+            )}
+            disabled={!canManage}
+          />
+          {isSecret ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+              onClick={onToggleSecret}
+              aria-label={showSecret ? "Hide value" : "Show value"}
+            >
+              {showSecret ? (
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          ) : null}
+        </div>
+      )}
+
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {deferSave && pendingChanges ? (
+        <p className="text-[11px] text-muted-foreground">Saved when you click Save above.</p>
+      ) : null}
     </div>
   );
 }

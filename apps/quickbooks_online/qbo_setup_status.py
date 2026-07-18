@@ -22,16 +22,12 @@ def _mapping_is_filled(spec, mapping) -> bool:
     return False
 
 
-def _branch_override_coverage(branch, company_stored):
+def _branch_override_coverage(branch, company_stored, branch_rows):
     """
     Count override slots as mapped (branch row), inherit (company default), or unmapped.
 
     Payment/tax/bank mappings stay company-scoped and are not counted here.
     """
-    branch_rows = {
-        (row.mapping_kind, row.mapping_key): row
-        for row in QBOAccountMapping.objects.filter(branch=branch)
-    }
     mapped = 0
     inherit = 0
     unmapped = 0
@@ -53,10 +49,35 @@ def _branch_override_coverage(branch, company_stored):
     }
 
 
+def _resolve_api_ready(connected: bool) -> bool:
+    """
+    Prefer the short-lived status cache so checklist loads avoid a second Intuit
+    round-trip after /quickbooks/status/ already probed the session.
+    """
+    if not connected:
+        return False
+
+    from django.core.cache import cache
+    from apps.quickbooks_online.status_cache import api_ready_cache_key
+
+    config = QuickBooksService.get_config(active_only=False)
+    if not config:
+        return False
+
+    ready_cache_key = api_ready_cache_key(config.pk)
+    cached_ready = cache.get(ready_cache_key)
+    if cached_ready in ('0', '1'):
+        return cached_ready == '1'
+
+    ready = QuickBooksService.get_client(deactivate_on_auth_failure=False) is not None
+    cache.set(ready_cache_key, '1' if ready else '0', 60)
+    return ready
+
+
 def get_qbo_setup_status():
     """Return connection health and mapping completion counts for the setup UI."""
     connected = QuickBooksService.is_connected()
-    api_ready = connected and QuickBooksService.get_client() is not None
+    api_ready = _resolve_api_ready(connected)
 
     company_rows = list(all_mapping_rows())
     company_stored = {
@@ -74,6 +95,14 @@ def get_qbo_setup_status():
         mapping.object_id: mapping
         for mapping in QBOMapping.objects.filter(content_type=branch_ct).exclude(qbo_id='')
     }
+    branch_override_rows = {}
+    if active_branches:
+        for row in QBOAccountMapping.objects.filter(
+            branch_id__in=[branch.id for branch in active_branches]
+        ):
+            branch_override_rows.setdefault(row.branch_id, {})[
+                (row.mapping_kind, row.mapping_key)
+            ] = row
 
     branches_summary = []
     unmapped_locations = 0
@@ -85,7 +114,11 @@ def get_qbo_setup_status():
         location_mapped = bool(mapping and mapping.qbo_id)
         if not location_mapped:
             unmapped_locations += 1
-        coverage = _branch_override_coverage(branch, company_stored)
+        coverage = _branch_override_coverage(
+            branch,
+            company_stored,
+            branch_override_rows.get(branch.id, {}),
+        )
         total_override_mapped += coverage['override_mapped']
         total_override_inherit += coverage['override_inherit']
         total_override_unmapped += coverage['override_unmapped']

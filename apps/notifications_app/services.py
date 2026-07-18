@@ -169,7 +169,7 @@ class NotificationService:
     
     def _send_sms(self, notification):
         """
-        Send SMS notification via Hubtel (Ghana) or Twilio
+        Send SMS via the configured provider (Hubtel / Twilio), with fallback.
         """
         try:
             notification_data = notification.data or {}
@@ -183,52 +183,71 @@ class NotificationService:
                 notification.mark_as_failed("No recipient configured for SMS notification")
                 self._log_action(notification, 'failed', 'No SMS recipient')
                 return False
-            
+
             # 1. Try to get phone from preferences
             if not phone_number and notification.recipient and hasattr(notification.recipient, 'notification_preferences'):
                 phone_number = notification.recipient.notification_preferences.phone_number
-            
+
             # 2. Fallback to user account phone
             if not phone_number and notification.recipient and hasattr(notification.recipient, 'phone'):
                 phone_number = notification.recipient.phone
-            
+
             # 3. Validation
             if not phone_number:
                 notification.mark_as_failed("No phone number configured for SMS notification")
                 self._log_action(notification, 'failed', 'No phone number')
                 return False
-            
+
             # Use template if available
             if notification.template and notification.template.sms_body:
                 sms_context = enrich_money_context(notification.data or {})
                 message = self._render_template(notification.template.sms_body, sms_context)
             else:
-                message = notification.message[:1000]  # Hubtel supports up to 1000 chars
-            
-            # Try Hubtel SMS (Ghana) first
+                message = notification.message[:1000]
+
+            from apps.accounts.settings_utils import get_sms_settings
             from .hubtel_sms import is_hubtel_available, send_sms as send_hubtel_sms
-            
-            if is_hubtel_available():
+            from .sms_service import TwilioSMSService, is_twilio_available
+
+            sms_settings = get_sms_settings()
+            preferred = str(sms_settings.get('sms_provider') or 'hubtel').lower().strip()
+
+            errors = []
+
+            def try_hubtel():
+                if not is_hubtel_available():
+                    return None
                 success, response = send_hubtel_sms(
                     phone_number=phone_number,
-                    message=message
+                    message=message,
                 )
-                
                 if success:
+                    message_id = (
+                        response.get('message_id')
+                        if isinstance(response, dict)
+                        else response
+                    )
                     notification.mark_as_sent()
                     notification.mark_as_delivered()
-                    self._log_action(notification, 'sent', f'SMS sent via Hubtel to {phone_number}')
-                    logger.info(f"SMS sent via Hubtel to {phone_number}: {response.get('message_id')}")
+                    self._log_action(
+                        notification,
+                        'sent',
+                        f'SMS sent via Hubtel to {phone_number}',
+                    )
+                    logger.info(
+                        "SMS sent via Hubtel to %s: %s",
+                        phone_number,
+                        message_id,
+                    )
                     return True
-                else:
-                    # Hubtel failed, try Twilio fallback
-                    logger.warning(f"Hubtel SMS failed: {response}")
-            
-            # Fallback to Twilio (if configured)
-            from .sms_service import TwilioSMSService
+                errors.append(f"Hubtel: {response}")
+                logger.warning("Hubtel SMS failed for %s: %s", phone_number, response)
+                return False
 
-            twilio = TwilioSMSService()
-            if twilio.client:
+            def try_twilio():
+                if not is_twilio_available():
+                    return None
+                twilio = TwilioSMSService()
                 success, result = twilio.send_sms(phone_number, message)
                 if success:
                     notification.mark_as_sent()
@@ -240,108 +259,123 @@ class NotificationService:
                     )
                     logger.info("SMS sent via Twilio to %s: %s", phone_number, result)
                     return True
+                errors.append(f"Twilio: {result}")
                 logger.warning("Twilio SMS failed for %s: %s", phone_number, result)
-            
-            error_msg = "No SMS provider available or configured"
-            if is_hubtel_available():
+                return False
+
+            if preferred == 'twilio':
+                providers = (try_twilio, try_hubtel)
+            else:
+                # Default / hubtel / unknown → Hubtel first (Ghana primary)
+                providers = (try_hubtel, try_twilio)
+
+            attempted = False
+            for attempt in providers:
+                outcome = attempt()
+                if outcome is None:
+                    continue
+                attempted = True
+                if outcome is True:
+                    return True
+
+            if not attempted:
+                error_msg = "No SMS provider available or configured"
+            elif preferred == 'twilio':
+                error_msg = "Twilio SMS failed and Hubtel fallback unavailable"
+            else:
                 error_msg = "Hubtel SMS failed and Twilio fallback unavailable"
-                
-            logger.error(f"SMS failed to {phone_number}: {error_msg}")
+            if errors:
+                error_msg = f"{error_msg} ({'; '.join(errors)})"
+
+            logger.error("SMS failed to %s: %s", phone_number, error_msg)
             notification.mark_as_failed(error_msg)
             self._log_action(notification, 'failed', error_msg)
             return False
-            
+
         except Exception as e:
-            logger.error(f"Failed to send SMS: {str(e)}")
+            logger.error("Failed to send SMS: %s", e)
             notification.mark_as_failed(str(e))
             self._log_action(notification, 'failed', f'SMS failed: {str(e)}')
             return False
-    
+
     def _make_call(self, notification):
-        """
-        Make a voice call notification via Twilio Voice API or similar telephony service.
-        Note: This requires Twilio Voice API or similar telephony integration.
-        """
+        """Make a voice call notification via Twilio Voice API."""
         try:
             phone_number = None
-            
-            # 1. Try to get phone from preferences
-            if hasattr(notification.recipient, 'notification_preferences'):
+
+            if notification.recipient and hasattr(notification.recipient, 'notification_preferences'):
                 phone_number = notification.recipient.notification_preferences.phone_number
-            
-            # 2. Fallback to user account phone
-            if not phone_number and hasattr(notification.recipient, 'phone'):
+
+            if not phone_number and notification.recipient and hasattr(notification.recipient, 'phone'):
                 phone_number = notification.recipient.phone
-            
-            # 3. Validation
+
             if not phone_number:
                 notification.mark_as_failed("No phone number configured for voice call")
                 self._log_action(notification, 'failed', 'No phone number')
                 return False
-            
-            # Check if Twilio is configured
+
             try:
                 from twilio.rest import Client
-                from django.conf import settings
-                
-                account_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '')
-                auth_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '')
-                twilio_phone = getattr(settings, 'TWILIO_PHONE_NUMBER', '')
-                
-                if not account_sid or not auth_token or not twilio_phone:
+                from twilio.twiml.voice_response import VoiceResponse
+
+                from .sms_service import format_twilio_e164, get_twilio_config, is_twilio_available
+
+                if not is_twilio_available():
                     notification.mark_as_failed("Twilio Voice API not configured")
                     self._log_action(notification, 'failed', 'Twilio not configured')
                     logger.warning("Twilio Voice API not configured - cannot make calls")
                     return False
-                
-                client = Client(account_sid, auth_token)
-                
-                # Format phone number to E.164 format
-                def format_phone(phone):
-                    digits = ''.join(filter(str.isdigit, phone))
-                    if not phone.startswith('+'):
-                        if len(digits) == 10:
-                            return f"+1{digits}"
-                        elif len(digits) == 11 and digits[0] == '1':
-                            return f"+{digits}"
-                    return phone if phone.startswith('+') else f"+{digits}"
-                
-                formatted_phone = format_phone(phone_number)
-                
-                # Create TwiML for the call message
-                # For service reminders, we'll use a simple text-to-speech message
-                message = notification.message[:500]  # Limit message length for TTS
-                
-                # Create TwiML response
-                from twilio.twiml.voice_response import VoiceResponse
+
+                config = get_twilio_config()
+                if not config['phone_number']:
+                    notification.mark_as_failed(
+                        "Twilio voice calls require TWILIO_PHONE_NUMBER (messaging service SID is SMS-only)"
+                    )
+                    self._log_action(notification, 'failed', 'Twilio phone number missing')
+                    return False
+
+                client = Client(config['account_sid'], config['auth_token'])
+                formatted_phone = format_twilio_e164(phone_number)
+                if not formatted_phone:
+                    notification.mark_as_failed(f"Invalid phone number: {phone_number}")
+                    self._log_action(notification, 'failed', 'Invalid phone number')
+                    return False
+
+                from_number = format_twilio_e164(config['phone_number'])
+                message = (notification.message or '')[:500]
+
                 response = VoiceResponse()
                 response.say(message, voice='alice', language='en-US')
-                # Optionally add a pause and repeat
                 response.pause(length=2)
-                response.say("To schedule an appointment, please call us back. Thank you.", voice='alice')
-                
-                # For now, we'll log that a call should be made
-                # In production, you would use Twilio's Call API to initiate the call
-                # Example: call = client.calls.create(to=formatted_phone, from_=twilio_phone, twiml=str(response))
-                
-                # For now, mark as sent (in production, you'd track the call SID)
+                response.say(
+                    "To schedule an appointment, please call us back. Thank you.",
+                    voice='alice',
+                )
+
+                call = client.calls.create(
+                    to=formatted_phone,
+                    from_=from_number,
+                    twiml=str(response),
+                )
+
+                notification.data = notification.data or {}
+                notification.data['call_sid'] = call.sid
+                notification.save(update_fields=['data', 'updated_at'])
+
                 notification.mark_as_sent()
                 notification.mark_as_delivered()
-                self._log_action(notification, 'sent', f'Voice call initiated to {formatted_phone}')
-                logger.info(f"Voice call notification prepared for {formatted_phone} (Twilio integration needed for actual call)")
-                
-                # TODO: Uncomment when Twilio Voice is fully configured
-                # call = client.calls.create(
-                #     to=formatted_phone,
-                #     from_=twilio_phone,
-                #     twiml=str(response)
-                # )
-                # notification.data = notification.data or {}
-                # notification.data['call_sid'] = call.sid
-                # notification.save()
-                
+                self._log_action(
+                    notification,
+                    'sent',
+                    f'Voice call initiated to {formatted_phone}',
+                )
+                logger.info(
+                    "Voice call initiated to %s (SID: %s)",
+                    formatted_phone,
+                    call.sid,
+                )
                 return True
-                
+
             except ImportError:
                 notification.mark_as_failed("Twilio library not installed")
                 self._log_action(notification, 'failed', 'Twilio not installed')
@@ -349,13 +383,13 @@ class NotificationService:
                 return False
             except Exception as e:
                 error_msg = str(e)
-                logger.error(f"Failed to make voice call: {error_msg}")
+                logger.error("Failed to make voice call: %s", error_msg)
                 notification.mark_as_failed(error_msg)
                 self._log_action(notification, 'failed', f'Call failed: {error_msg}')
                 return False
-                
+
         except Exception as e:
-            logger.error(f"Failed to make voice call: {str(e)}")
+            logger.error("Failed to make voice call: %s", e)
             notification.mark_as_failed(str(e))
             self._log_action(notification, 'failed', f'Call failed: {str(e)}')
             return False

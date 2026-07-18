@@ -530,10 +530,13 @@ QUICKBOOKS_SYNC_INLINE = env.bool('QUICKBOOKS_SYNC_INLINE', default=DEBUG)
 # Optional override; default is {FRONTEND_BASE_URL}/api/quickbooks/callback/
 QBO_REDIRECT_URI = env('QBO_REDIRECT_URI', default='')
 
-# Twilio Configuration
+# Twilio Configuration (SMS / Voice)
 TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = env('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = env('TWILIO_PHONE_NUMBER', default='')
+TWILIO_MESSAGING_SERVICE_SID = env('TWILIO_MESSAGING_SERVICE_SID', default='')
+# Fallback when admin sms_provider is unset (hubtel | twilio | mock)
+SMS_SERVICE = env('SMS_SERVICE', default='hubtel')
 
 # WhatsApp Integration
 WHATSAPP_ENABLED = env.bool('WHATSAPP_ENABLED', default=False)

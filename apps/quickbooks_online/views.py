@@ -387,15 +387,29 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
         payload['api_ready'] = False
         payload['connection_issue'] = None
         if payload['is_connected']:
-            from apps.quickbooks_online.bulk_outbound_sync import count_pending_outbound_syncs
+            from django.utils import timezone
+            from datetime import timedelta
             from django.core.cache import cache
+            from apps.quickbooks_online.bulk_outbound_sync import count_pending_outbound_syncs
             from apps.quickbooks_online.status_cache import api_ready_cache_key as build_api_ready_cache_key
 
-            payload['outbound_pending'] = count_pending_outbound_syncs()
             ready_cache_key = build_api_ready_cache_key(config.pk) if config else None
             cached_ready = cache.get(ready_cache_key) if ready_cache_key else None
+            token = getattr(config, 'token', None) if config else None
+
             if cached_ready in ('0', '1'):
                 payload['api_ready'] = cached_ready == '1'
+            elif (
+                token
+                and token.refresh_token_expires_at
+                and token.refresh_token_expires_at > timezone.now()
+                and token.expires_at
+                and token.expires_at > timezone.now() + timedelta(minutes=5)
+            ):
+                # Access token still valid locally — skip Intuit round-trip.
+                payload['api_ready'] = True
+                if ready_cache_key:
+                    cache.set(ready_cache_key, '1', 60)
             elif QuickBooksService.get_client(deactivate_on_auth_failure=False) is not None:
                 payload['api_ready'] = True
                 if ready_cache_key:
@@ -407,6 +421,21 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
                 )
                 if ready_cache_key:
                     cache.set(ready_cache_key, '0', 60)
+
+            if not payload['api_ready'] and not payload['connection_issue']:
+                payload['connection_issue'] = (
+                    'QuickBooks is linked but the live API session is unavailable. '
+                    'Reconnect under Admin → Integrations, or refresh the OAuth token.'
+                )
+
+            # Outbound counts can be expensive; cache briefly so status stays snappy.
+            pending_key = f'qbo:outbound-pending:{config.pk}' if config else None
+            pending = cache.get(pending_key) if pending_key else None
+            if pending is None:
+                pending = count_pending_outbound_syncs()
+                if pending_key:
+                    cache.set(pending_key, pending, 30)
+            payload['outbound_pending'] = pending
         elif has_keys:
             payload['connection_issue'] = 'QuickBooks credentials are saved but the company is not connected.'
 

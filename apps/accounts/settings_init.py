@@ -71,9 +71,10 @@ DEFAULT_SETTINGS = {
         {'key': 'hubtel_client_secret', 'value': '', 'description': '', 'is_secret': True},
         {'key': 'hubtel_sender_id', 'value': '', 'description': ''},
         {'key': 'hubtel_api_url', 'value': 'https://smsc.hubtel.com/v1/messages/send', 'description': ''},
-        {'key': 'twilio_account_sid', 'value': '', 'description': '', 'is_secret': True},
-        {'key': 'twilio_auth_token', 'value': '', 'description': '', 'is_secret': True},
-        {'key': 'twilio_phone_number', 'value': '', 'description': ''},
+        {'key': 'twilio_account_sid', 'value': '', 'description': 'Twilio Account SID', 'is_secret': True},
+        {'key': 'twilio_auth_token', 'value': '', 'description': 'Twilio Auth Token', 'is_secret': True},
+        {'key': 'twilio_phone_number', 'value': '', 'description': 'Twilio sender number (E.164, e.g. +233XXXXXXXXX)'},
+        {'key': 'twilio_messaging_service_sid', 'value': '', 'description': 'Optional Twilio Messaging Service SID (alternative to phone number)'},
         {'key': 'sms_signature', 'value': 'Smart Vehicle Repairs', 'description': ''},
         {'key': 'sms_test_number', 'value': '', 'description': ''},
     ],
@@ -263,9 +264,12 @@ def supported_setting_keys(category=None):
         keys = {setting['key'] for setting in DEFAULT_SETTINGS.get(category, [])}
         if category == 'tax':
             keys.update(key for key, _value, _description in SystemSettings.TAX_SETTING_DEFAULTS)
+        if category == 'integration':
+            keys.update(key for key, _value, _description in SystemSettings.AI_SETTING_DEFAULTS)
         return keys
     keys = {setting['key'] for settings_list in DEFAULT_SETTINGS.values() for setting in settings_list}
     keys.update(key for key, _value, _description in SystemSettings.TAX_SETTING_DEFAULTS)
+    keys.update(key for key, _value, _description in SystemSettings.AI_SETTING_DEFAULTS)
     return keys
 
 

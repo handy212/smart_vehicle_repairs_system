@@ -1,11 +1,11 @@
 import json
 import logging
 import typing_extensions as typing
-from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 
 from apps.core.services.ai_audit import (
+    get_gemini_api_key,
     get_gemini_model,
     is_ai_enabled,
     log_ai_call,
@@ -248,7 +248,7 @@ Return JSON with:
         Analyzes diagnostic data and suggests repair recommendations using Gemini AI.
         Returns an empty list and logs a warning if the API call fails.
         """
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        api_key = get_gemini_api_key()
         if not api_key:
             logger.warning("GEMINI_API_KEY is not set. Skipping AI recommendations.")
             return []
@@ -325,7 +325,7 @@ Only include recommendations genuinely supported by the data above."""
     def _gemini_text(prompt, feature='other', user=None):
         """Sends a plain text prompt to Gemini and returns the response string."""
         from google import genai
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        api_key = get_gemini_api_key()
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not configured.")
         client = genai.Client(api_key=api_key)
@@ -341,7 +341,7 @@ Only include recommendations genuinely supported by the data above."""
     def _gemini_json(prompt, schema, feature='other', user=None):
         """Sends a prompt to Gemini and returns a parsed JSON response."""
         from google import genai
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        api_key = get_gemini_api_key()
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not configured.")
         client = genai.Client(api_key=api_key)
@@ -360,7 +360,7 @@ Only include recommendations genuinely supported by the data above."""
     @staticmethod
     def transcribe_audio(audio_file):
         """Transcribes a technician audio note using Gemini."""
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        api_key = get_gemini_api_key()
         if not api_key:
             logger.warning("GEMINI_API_KEY is not set. Cannot transcribe audio.")
             return ""
@@ -420,7 +420,7 @@ Return:
     @staticmethod
     def analyze_photo_damage(photo_url):
         """Analyzes a vehicle damage photo using Gemini Vision."""
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        api_key = get_gemini_api_key()
         if not api_key:
             logger.warning("GEMINI_API_KEY is not set. Cannot analyze photo.")
             return {'detected_issues': [], 'confidence_score': 0.0, 'summary': '', 'suggested_severity': 'info'}

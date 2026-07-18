@@ -2,14 +2,24 @@
 import json
 import logging
 
-from django.conf import settings
-
 logger = logging.getLogger(__name__)
+
+
+def get_gemini_api_key():
+    """
+    Resolve Gemini API key: Integrations (DB) first, then GEMINI_API_KEY from .env.
+    """
+    try:
+        from apps.accounts.settings_utils import get_setting
+        return (get_setting('ai_gemini_api_key', '', db_first=True) or '').strip()
+    except Exception:
+        from django.conf import settings
+        return (getattr(settings, 'GEMINI_API_KEY', '') or '').strip()
 
 
 def is_ai_enabled(feature=None):
     """Return True when Gemini is configured and AI is enabled (optionally per feature)."""
-    if not getattr(settings, 'GEMINI_API_KEY', ''):
+    if not get_gemini_api_key():
         return False
     try:
         from apps.accounts.admin_models import SystemSettings
@@ -24,12 +34,14 @@ def is_ai_enabled(feature=None):
 
 
 def get_gemini_model():
-    model = getattr(settings, 'GEMINI_MODEL', 'gemini-flash-lite-latest')
     try:
-        from apps.accounts.admin_models import SystemSettings
-        return SystemSettings.get_setting('ai_gemini_model', model) or model
+        from apps.accounts.settings_utils import get_setting
+        from django.conf import settings
+        default = getattr(settings, 'GEMINI_MODEL', 'gemini-flash-lite-latest')
+        return get_setting('ai_gemini_model', default, db_first=True) or default
     except Exception:
-        return model
+        from django.conf import settings
+        return getattr(settings, 'GEMINI_MODEL', 'gemini-flash-lite-latest')
 
 
 def log_ai_call(feature, prompt_summary, output_summary='', user=None, branch_id=None, success=True, error=''):

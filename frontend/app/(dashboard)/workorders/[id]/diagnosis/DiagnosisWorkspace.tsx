@@ -1624,7 +1624,7 @@ function RecommendationsTab({
     mutationFn: () => diagnosisApi.getAiSuggestions(diagnosis.id),
     onSuccess: (suggestions) => {
       if (!suggestions?.length) {
-        toast({ title: "No AI suggestions", description: "Add codes or findings first, or check GEMINI_API_KEY.", variant: "default" });
+        toast({ title: "No AI suggestions", description: "Add codes or findings first, or check the Gemini API key under Integrations.", variant: "default" });
         return;
       }
       setAiSuggestions(suggestions);

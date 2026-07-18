@@ -72,7 +72,8 @@ class SystemSettings(models.Model):
 
     AI_SETTING_DEFAULTS = [
         ('ai_enabled', 'true', 'Master switch for Gemini AI features'),
-        ('ai_gemini_model', 'gemini-flash-lite-latest', 'Google Gemini model name for AI features'),
+        ('ai_gemini_api_key', '', 'Google Gemini API key (Admin → Integrations; .env GEMINI_API_KEY is fallback)'),
+        ('ai_gemini_model', 'gemini-flash-lite-latest', 'Gemini model used for AI features'),
         ('ai_comms_enabled', 'true', 'AI-generated customer communication suggestions'),
         ('ai_inspection_enabled', 'true', 'AI inspection summary generation'),
         ('ai_ops_briefing_enabled', 'true', 'Daily operations briefing'),
@@ -187,18 +188,32 @@ class SystemSettings(models.Model):
 
     @classmethod
     def ensure_ai_settings(cls):
-        """Ensure default AI feature settings exist."""
+        """Ensure default AI feature settings exist and stay active."""
         for key, value, description in cls.AI_SETTING_DEFAULTS:
-            cls.objects.get_or_create(
+            is_secret = key.endswith('_api_key') or key.endswith('_secret')
+            setting, created = cls.objects.get_or_create(
                 key=key,
                 defaults={
                     'category': 'integration',
                     'value': value,
                     'description': description,
-                    'is_secret': False,
+                    'is_secret': is_secret,
                     'is_active': True,
                 }
             )
+            if created:
+                continue
+            updates = {}
+            if not setting.is_active:
+                updates['is_active'] = True
+            if setting.category != 'integration':
+                updates['category'] = 'integration'
+            if setting.is_secret != is_secret:
+                updates['is_secret'] = is_secret
+            if updates:
+                for field, next_value in updates.items():
+                    setattr(setting, field, next_value)
+                setting.save(update_fields=[*updates.keys(), 'updated_at'])
 
 
 class SystemBackup(models.Model):

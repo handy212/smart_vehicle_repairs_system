@@ -47,10 +47,14 @@ def get_setting(key, default='', use_cache=True, db_first=False):
         'twilio_account_sid': 'TWILIO_ACCOUNT_SID',
         'twilio_auth_token': 'TWILIO_AUTH_TOKEN',
         'twilio_phone_number': 'TWILIO_PHONE_NUMBER',
+        'twilio_messaging_service_sid': 'TWILIO_MESSAGING_SERVICE_SID',
+        'sms_provider': 'SMS_SERVICE',
         'sms_enabled': 'HUBTEL_SMS_ENABLED',
         'quickbooks_client_id': 'QUICKBOOKS_CLIENT_ID',
         'quickbooks_client_secret': 'QUICKBOOKS_CLIENT_SECRET',
         'quickbooks_sandbox_enabled': 'QUICKBOOKS_SANDBOX_ENABLED',
+        'ai_gemini_api_key': 'GEMINI_API_KEY',
+        'ai_gemini_model': 'GEMINI_MODEL',
     }
 
     def get_env_value():
@@ -340,6 +344,7 @@ def get_sms_settings():
         'twilio_account_sid',
         'twilio_auth_token',
         'twilio_phone_number',
+        'twilio_messaging_service_sid',
         'sms_signature',
         'sms_test_number',
     ]
@@ -348,6 +353,7 @@ def get_sms_settings():
         'sms_enabled': 'false',
         'sms_provider': 'hubtel',
         'hubtel_api_url': 'https://smsc.hubtel.com/v1/messages/send',
+        'twilio_messaging_service_sid': '',
     }
     
     return get_settings(keys, defaults, db_first=True)
