@@ -143,6 +143,7 @@ export const DIAGNOSTIC_ONLY_STATUS_ORDER: Record<string, number> = {
 };
 
 export type WorkflowWorkOrderContext = {
+  status?: string;
   maintenance_type?: string;
   workflow_profile_code?: string | null;
   job_type_detail?: { workflow_profile?: { code?: string } } | null;

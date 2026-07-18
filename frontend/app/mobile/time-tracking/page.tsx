@@ -33,19 +33,10 @@ import apiClient from "@/lib/api/client";
 import { timeLogsApi, type TimeLog as ApiTimeLog } from "@/lib/api/timeLogs";
 import { getUserFacingError } from "@/lib/api/apiErrors";
 
-interface TimeLog {
+interface TimeLog extends Omit<ApiTimeLog, "id"> {
   id?: number;
   tempId?: number;
-  work_order: number;
-  work_order_number?: string;
-  task?: number | null;
-  task_description?: string | null;
-  clock_in: string;
-  clock_out?: string | null;
-  duration_hours?: number;
-  description?: string;
   synced?: boolean;
-  technician?: number;
 }
 
 export default function TimeTrackingPage() {
@@ -228,8 +219,9 @@ export default function TimeTrackingPage() {
     return diffMs / (1000 * 60 * 60);
   };
 
-  const formatDuration = (hours?: number): string => {
-    if (!hours) return "0h 0m";
+  const formatDuration = (value?: number | string | null): string => {
+    const hours = typeof value === "string" ? Number(value) : value;
+    if (!hours || !Number.isFinite(hours)) return "0h 0m";
     const h = Math.floor(hours);
     const m = Math.floor((hours - h) * 60);
     return `${h}h ${m}m`;

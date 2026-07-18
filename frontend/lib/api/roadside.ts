@@ -196,8 +196,13 @@ export interface RoadsideRequestCreate {
     pay_as_you_go?: boolean;
 }
 
-type RoadsideRequestUpdate = Omit<Partial<RoadsideRequest>, "charge_amount"> & {
+type RoadsideRequestUpdate = Omit<
+    Partial<RoadsideRequest>,
+    "charge_amount" | "latitude" | "longitude"
+> & {
     charge_amount?: number | string;
+    latitude?: number | string;
+    longitude?: number | string;
 };
 
 export const roadsideApi = {

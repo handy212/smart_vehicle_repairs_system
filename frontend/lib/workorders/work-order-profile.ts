@@ -19,8 +19,10 @@ export interface WorkOrderProfileContext {
   allowsSimplifiedCompletion: boolean;
 }
 
+type WorkOrderProfileInput = WorkflowWorkOrderContext | Partial<WorkOrder>;
+
 export function getWorkOrderProfile(
-  workOrder?: (WorkflowWorkOrderContext & Partial<WorkOrder>) | null
+  workOrder?: WorkOrderProfileInput | null
 ): WorkOrderProfileContext {
   const profileCode = getWorkflowProfileCode(workOrder);
   const isRoutine = isRoutineMaintenanceWorkOrder(workOrder);
@@ -39,14 +41,14 @@ export function getWorkOrderProfile(
 }
 
 export function workOrderSkipsRepairs(
-  workOrder?: (WorkflowWorkOrderContext & Partial<WorkOrder>) | null
+  workOrder?: WorkOrderProfileInput | null
 ): boolean {
   const profile = getWorkOrderProfile(workOrder);
   return profile.isInspectionOnly || profile.isDiagnosticOnly;
 }
 
 export function workOrderShowsDiagnosisTab(
-  workOrder?: (WorkflowWorkOrderContext & Partial<WorkOrder>) | null
+  workOrder?: WorkOrderProfileInput | null
 ): boolean {
   if (!workOrder) return false;
   const profile = getWorkOrderProfile(workOrder);

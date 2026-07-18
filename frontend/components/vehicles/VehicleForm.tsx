@@ -49,7 +49,8 @@ export const vehicleSchema = z.object({
     relationship: z.enum(["owner", "driver", "fleet_manager", "other"]),
 });
 
-export type VehicleFormData = z.infer<typeof vehicleSchema>;
+type VehicleFormInput = z.input<typeof vehicleSchema>;
+export type VehicleFormData = z.output<typeof vehicleSchema>;
 
 interface VehicleFormProps {
     initialData?: Partial<VehicleFormData> & { image?: string | null };
@@ -79,7 +80,7 @@ export function VehicleForm({ initialData, vehicleId, customerId, onSubmit, isSu
         setError,
         watch,
         reset,
-    } = useForm<VehicleFormData>({
+    } = useForm<VehicleFormInput, unknown, VehicleFormData>({
         resolver: zodResolver(vehicleSchema),
         defaultValues: {
             status: "active",

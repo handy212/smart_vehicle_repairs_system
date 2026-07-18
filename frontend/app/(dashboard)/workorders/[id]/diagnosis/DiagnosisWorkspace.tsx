@@ -1598,6 +1598,7 @@ function FindingsTab({
 function RecommendationsTab({
   diagnosis,
   workOrderId,
+  workOrder,
   onRefresh,
   isDisabled = false,
   isMobile = false,
