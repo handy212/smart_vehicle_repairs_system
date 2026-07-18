@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.accounts.permission_models import Permission, Role
+from apps.appointments.models import Appointment
 from apps.billing.models import Estimate, Invoice
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -19,7 +20,7 @@ from apps.notifications_app.document_links import (
     resolve_document_ref,
     unsign_document_token,
 )
-from apps.notifications_app.models import DocumentShareLink
+from apps.notifications_app.models import DocumentShareLink, NotificationTemplate
 from apps.notifications_app.phone_utils import format_phone_display, normalize_phone_e164
 from apps.notifications_app.whatsapp_share import (
     build_estimate_share,
@@ -258,6 +259,8 @@ class TemplateRenderDocumentBranchScopeTests(TestCase):
             password='testpass',
             role='customer',
             phone=phone,
+            first_name='Template',
+            last_name=f'{suffix.title()} Customer',
         )
         return Customer.objects.create(user=user)
 
@@ -305,6 +308,29 @@ class TemplateRenderDocumentBranchScopeTests(TestCase):
             customer_concerns='Brake noise',
         )
 
+    def _create_appointment(self, branch, customer, vehicle):
+        return Appointment.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            branch=branch,
+            appointment_date=date.today(),
+            appointment_time=time(9, 0),
+            service_type='maintenance',
+            status='confirmed',
+            estimated_duration=60,
+            customer_concerns='Oil change',
+        )
+
+    def _create_template(self, template_type, body):
+        return NotificationTemplate.objects.create(
+            name=f'Template {template_type}',
+            template_type=template_type,
+            channel='whatsapp_manual',
+            body=body,
+            is_active=True,
+            created_by=self.manager,
+        )
+
     @patch('apps.notifications_app.whatsapp_share.get_site_url', return_value='https://shop.example.com')
     def test_document_render_allows_same_branch_invoice(self, _mock_url):
         invoice = self._create_invoice(self.branch, self.customer, self.vehicle)
@@ -349,6 +375,92 @@ class TemplateRenderDocumentBranchScopeTests(TestCase):
                         object_id=object_id,
                     ).exists()
                 )
+
+    def test_template_render_fallback_allows_same_branch_objects(self):
+        appointment = self._create_appointment(self.branch, self.customer, self.vehicle)
+        work_order = self._create_work_order(self.branch, self.customer, self.vehicle)
+        invoice = self._create_invoice(self.branch, self.customer, self.vehicle)
+
+        cases = [
+            (
+                'appointment_reminder',
+                appointment.id,
+                'Appointment for {customer_name} on {appointment_date}',
+                'Appointment for Template Same Customer',
+                '0244123456',
+            ),
+            (
+                'work_order_completed',
+                work_order.id,
+                'Work order {wo_number} ready for {customer_name}',
+                'Work order',
+                '0244123456',
+            ),
+            (
+                'invoice_due',
+                invoice.id,
+                'Invoice {invoice_number} total {total}',
+                '250.00',
+                '0244123456',
+            ),
+        ]
+        for template_type, object_id, body, expected_message, expected_phone in cases:
+            with self.subTest(template_type=template_type):
+                self._create_template(template_type, body)
+                response = self.client.post(
+                    self.url,
+                    {'template_type': template_type, 'object_id': object_id},
+                    format='json',
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIn(expected_message, response.data['message'])
+                self.assertEqual(response.data['phone_number'], expected_phone)
+
+    def test_template_render_fallback_denies_other_branch_objects(self):
+        appointment = self._create_appointment(
+            self.other_branch,
+            self.other_customer,
+            self.other_vehicle,
+        )
+        work_order = self._create_work_order(
+            self.other_branch,
+            self.other_customer,
+            self.other_vehicle,
+        )
+        invoice = self._create_invoice(
+            self.other_branch,
+            self.other_customer,
+            self.other_vehicle,
+        )
+
+        cases = [
+            (
+                'appointment_reminder',
+                appointment.id,
+                'Appointment for {customer_name} on {appointment_date}',
+            ),
+            (
+                'work_order_completed',
+                work_order.id,
+                'Work order {wo_number} ready for {customer_name}',
+            ),
+            (
+                'invoice_due',
+                invoice.id,
+                'Invoice {invoice_number} total {total}',
+            ),
+        ]
+        for template_type, object_id, body in cases:
+            with self.subTest(template_type=template_type):
+                self._create_template(template_type, body)
+                response = self.client.post(
+                    self.url,
+                    {'template_type': template_type, 'object_id': object_id},
+                    format='json',
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class WhatsAppSendApiTests(TestCase):
