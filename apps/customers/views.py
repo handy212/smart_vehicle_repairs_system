@@ -100,7 +100,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Get queryset with optimizations"""
-        queryset = Customer.objects.select_related('user').prefetch_related('vehicles')
+        # Always annotate vehicles_count: ordering_fields allows vehicle_count /
+        # vehicles_count, and CustomerOrderingFilter maps the public alias to this
+        # annotation. Skipping it (e.g. non-list actions or early returns) causes FieldError.
+        queryset = (
+            Customer.objects.select_related('user')
+            .prefetch_related('vehicles')
+            .annotate(vehicles_count=Count('vehicles', distinct=True))
+        )
         user = self.request.user
         
         # Filter based on permissions - if user can only view own, filter accordingly
@@ -171,12 +178,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 if customers_with_recent_visits:
                     queryset = queryset.exclude(id__in=customers_with_recent_visits)
                 # If no customers have recent visits, the queryset already contains all inactive customers
-
-        if self.action == 'list':
-            # Annotate using a name that won't collide with the model's @property
-            # `vehicle_count` is defined as a property on the model (no setter),
-            # so annotate to `vehicles_count` and let the serializer map it back
-            queryset = queryset.annotate(vehicles_count=Count('vehicles', distinct=True))
         
         return queryset
     
