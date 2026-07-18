@@ -134,7 +134,7 @@ export default function WorkOrderPartsTab({
               <Button size="sm" variant="outline" asChild>
                 <Link href={`/workorders/${workOrderId}/repairs`}>
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Repair workspace
+                  Open repair workspace
                 </Link>
               </Button>
             )}
@@ -154,6 +154,15 @@ export default function WorkOrderPartsTab({
             </div>
           ) : (
           <>
+          {showRepairWorkspaceLink && (
+            <div className="mb-3 rounded-md border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+              Request, allocate, and install parts during active repairs in the{" "}
+              <Link href={`/workorders/${workOrderId}/repairs`} className="font-medium text-primary hover:underline">
+                repair workspace
+              </Link>
+              . This tab remains available for overview and quick adds.
+            </div>
+          )}
           {addingPartRequiresApproval && (
             <div className="mb-3 flex items-start gap-3 rounded-md border border-warning/20 bg-warning/10 p-3 text-warning">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />

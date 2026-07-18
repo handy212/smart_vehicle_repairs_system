@@ -1132,18 +1132,24 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            from apps.billing.gateway_payments import (
+                ensure_payment_settlement_account,
+                record_gateway_payment,
+            )
+
             # Check if payment already exists
             existing_payment = Payment.objects.filter(
                 transaction_id=payment_intent_id
             ).first()
-            
+
             if existing_payment:
+                ensure_payment_settlement_account(existing_payment)
                 return Response({
                     "success": True,
                     "message": "Payment already recorded",
                     "payment": PaymentSerializer(existing_payment).data
                 })
-            
+
             # Determine payment method based on gateway
             payment_method_map = {
                 'paystack': 'paystack',
@@ -1151,42 +1157,42 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 'square': 'credit_card',
             }
             payment_method = payment_method_map.get(gateway_name, 'credit_card')
-            
+
             # Refresh invoice to get latest state
             invoice.refresh_from_db()
-            
+
             # Check if invoice is already fully paid
             if invoice.status == 'paid' or invoice.amount_due <= 0:
                 return Response(
                     {"error": f"Invoice {invoice.invoice_number} is already fully paid. Cannot record additional payments."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            # Get payment amount
-            payment_amount = result.get('amount') or invoice.amount_due
-            
-            # Create payment record
-            payment = Payment.objects.create(
-                invoice=invoice,
-                customer=invoice.customer,
-                amount=payment_amount,
-                payment_method=payment_method,
-                status='completed',
-                transaction_id=payment_intent_id,
-                processed_by=request.user,
-                notes=f"Payment via {gateway_name} gateway" + (f" - {result.get('channel', '')}" if result.get('channel') else ''),
-                payment_date=result.get('paid_at') if result.get('paid_at') else timezone.now()
-            )
-            
-            # Update invoice
-            invoice.recalculate_amount_paid_from_collections()
-            
-            # Send payment notification
+
+            payment_amount = result.get('amount') or result.get('amount_ghs') or invoice.amount_due
+            channel = result.get('channel') or ''
+            notes = f"Payment via {gateway_name} gateway"
+            if channel:
+                notes = f"{notes} - {channel}"
+
             try:
-                notification_triggers.payment_received(payment)
-            except Exception as e:
-                logger.error(f"Failed to send payment notification: {e}")
-            
+                payment, created = record_gateway_payment(
+                    invoice=invoice,
+                    amount=payment_amount,
+                    payment_method=payment_method,
+                    transaction_id=payment_intent_id,
+                    notes=notes,
+                    paid_at=result.get('paid_at'),
+                    processed_by=request.user,
+                )
+            except ValueError as e:
+                return Response({"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+            if created:
+                try:
+                    notification_triggers.payment_received(payment)
+                except Exception as e:
+                    logger.error(f"Failed to send payment notification: {e}")
+
             return Response({
                 "success": True,
                 "message": "Payment confirmed and recorded",

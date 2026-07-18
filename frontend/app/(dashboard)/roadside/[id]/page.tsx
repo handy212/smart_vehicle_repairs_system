@@ -12,7 +12,7 @@ import {
     MapPin, CheckCircle, XCircle,
     Wrench, Navigation,
     ExternalLink, MessageSquare, ShieldCheck,
-    Mail, Sparkles, Building2, Camera
+    Mail, Sparkles, Building2, Camera, CreditCard
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -87,6 +87,11 @@ export default function RoadsideDetailPage() {
     const { toast } = useToast();
     const { currencySymbol } = useCurrency();
     const { hasAnyPermission } = usePermissions();
+    const canCreateWorkOrder = hasAnyPermission([
+        "create_workorders",
+        "manage_workorders",
+        "manage_roadside",
+    ]);
 
     const requestIdStr = params?.id as string;
     const requestId = requestIdStr ? parseInt(requestIdStr) : NaN;
@@ -169,6 +174,29 @@ export default function RoadsideDetailPage() {
         enabled:
             !!request &&
             hasAnyPermission([...LIST_TECHNICIANS_PERMISSIONS, "dispatch_roadside"]),
+    });
+
+    const createWorkOrderMutation = useMutation({
+        mutationFn: () => roadsideApi.createWorkOrder(requestId),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
+            toast({
+                title: "Work order created",
+                description:
+                    data.workflow_message ||
+                    `Linked ${data.work_order_number}. Roadside billing stays on this request.`,
+            });
+            if (data.work_order_id) {
+                router.push(`/workorders/${data.work_order_id}`);
+            }
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Could not create work order",
+                description: getUserFacingError(error, "Unable to create work order."),
+                variant: "destructive",
+            });
+        },
     });
 
     const dispatchMutation = useMutation({
@@ -418,6 +446,27 @@ export default function RoadsideDetailPage() {
                                 <ShieldCheck className="h-3 w-3" /> Covered
                             </Badge>
                         )}
+                        {(request.is_pay_as_you_go || (!request.is_covered_by_subscription && (request.charge_amount || request.invoice))) && (
+                            request.invoice_is_paid ? (
+                                <Badge variant="success" className="text-[10px] gap-1">
+                                    <CheckCircle className="h-3 w-3" /> Invoice Paid
+                                </Badge>
+                            ) : request.invoice ? (
+                                <Badge
+                                    variant={request.invoice_status === "partial" || request.invoice_status === "partially_paid" ? "warning" : "danger"}
+                                    className="text-[10px] gap-1"
+                                >
+                                    <CreditCard className="h-3 w-3" />
+                                    {request.invoice_status === "partial" || request.invoice_status === "partially_paid"
+                                        ? "Partially Paid"
+                                        : "Invoice Unpaid"}
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="text-[10px] gap-1">
+                                    <CreditCard className="h-3 w-3" /> Pay As You Go
+                                </Badge>
+                            )
+                        )}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span>Requested {format(new Date(request.requested_at), "MMM d, yyyy · h:mm a")}</span>
@@ -651,12 +700,26 @@ export default function RoadsideDetailPage() {
                                             <p className="text-xs text-muted-foreground mt-0.5">{entry.meta}</p>
                                         )}
                                         {'invoice_number' in entry && entry.invoice_number && entry.invoice_id && (
-                                            <Link
-                                                href={`/billing/invoices/${entry.invoice_id}`}
-                                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1"
-                                            >
-                                                Invoice {entry.invoice_number} <ExternalLink className="h-3 w-3" />
-                                            </Link>
+                                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                <Link
+                                                    href={`/billing/invoices/${entry.invoice_id}`}
+                                                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                                                >
+                                                    Invoice {entry.invoice_number} <ExternalLink className="h-3 w-3" />
+                                                </Link>
+                                                {'invoice_is_paid' in entry && entry.invoice_is_paid != null && (
+                                                    <Badge
+                                                        variant={entry.invoice_is_paid ? "success" : entry.invoice_status === "partial" || entry.invoice_status === "partially_paid" ? "warning" : "danger"}
+                                                        className="text-[10px]"
+                                                    >
+                                                        {entry.invoice_is_paid
+                                                            ? "Paid"
+                                                            : entry.invoice_status === "partial" || entry.invoice_status === "partially_paid"
+                                                                ? "Partial"
+                                                                : "Unpaid"}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 ))}
@@ -700,6 +763,34 @@ export default function RoadsideDetailPage() {
                             {(request.available_actions?.includes("complete") ?? request.status === "in_progress") && (
                                 <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('complete')}>
                                     <CheckCircle className="h-3 w-3 mr-1.5" /> Complete
+                                </Button>
+                            )}
+
+                            {canCreateWorkOrder &&
+                                (request.available_actions?.includes("create_work_order") ||
+                                    request.can_create_work_order) && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full"
+                                    disabled={createWorkOrderMutation.isPending}
+                                    onClick={() => createWorkOrderMutation.mutate()}
+                                >
+                                    <Wrench className="h-3 w-3 mr-1.5" />
+                                    {createWorkOrderMutation.isPending
+                                        ? "Creating…"
+                                        : "Create work order"}
+                                </Button>
+                            )}
+
+                            {(request.work_order ||
+                                request.available_actions?.includes("view_work_order")) &&
+                                request.work_order && (
+                                <Button size="sm" variant="secondary" className="w-full" asChild>
+                                    <Link href={`/workorders/${request.work_order}`}>
+                                        <ExternalLink className="h-3 w-3 mr-1.5" />
+                                        Open {request.work_order_number || "work order"}
+                                    </Link>
                                 </Button>
                             )}
 
@@ -901,16 +992,70 @@ export default function RoadsideDetailPage() {
                         </Card>
                     )}
 
-                    {/* Charge Amount Card */}
-                    {request.charge_amount && (
+                    {/* Pay As You Go / Charge Card */}
+                    {(request.is_pay_as_you_go || request.charge_amount || request.invoice) && !request.is_covered_by_subscription && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Charge</CardTitle>
+                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                    <CreditCard className="h-3 w-3" /> Pay As You Go
+                                </CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="text-xs space-y-2">
                                 <div className="text-xl font-bold text-foreground">
-                                    {currencySymbol} {request.charge_amount}
+                                    {currencySymbol} {request.invoice_total || request.charge_amount || "0.00"}
                                 </div>
+                                {request.invoice ? (
+                                    <>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-muted-foreground">Payment</span>
+                                            <Badge
+                                                variant={
+                                                    request.invoice_is_paid
+                                                        ? "success"
+                                                        : request.invoice_status === "partial" || request.invoice_status === "partially_paid"
+                                                            ? "warning"
+                                                            : "danger"
+                                                }
+                                                className="text-[10px]"
+                                            >
+                                                {request.invoice_is_paid
+                                                    ? "Paid"
+                                                    : request.invoice_status_display
+                                                        || (request.invoice_status === "partial" || request.invoice_status === "partially_paid"
+                                                            ? "Partially Paid"
+                                                            : "Unpaid")}
+                                            </Badge>
+                                        </div>
+                                        {(request.invoice_amount_paid != null || request.invoice_amount_due != null) && (
+                                            <div className="space-y-1">
+                                                {request.invoice_amount_paid != null && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Paid</span>
+                                                        <span className="font-medium">{currencySymbol} {request.invoice_amount_paid}</span>
+                                                    </div>
+                                                )}
+                                                {request.invoice_amount_due != null && !request.invoice_is_paid && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Due</span>
+                                                        <span className="font-medium text-destructive">{currencySymbol} {request.invoice_amount_due}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {request.invoice_number && (
+                                            <Link
+                                                href={`/billing/invoices/${request.invoice}`}
+                                                className="text-primary hover:underline inline-flex items-center gap-1"
+                                            >
+                                                Invoice {request.invoice_number} <ExternalLink className="h-3 w-3" />
+                                            </Link>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-muted-foreground">
+                                        Invoice will be generated when this request is completed.
+                                    </p>
+                                )}
                             </CardContent>
                         </Card>
                     )}

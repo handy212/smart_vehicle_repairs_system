@@ -313,9 +313,9 @@ export const roleGuides: HelpGuide[] = [
                             "Open **Mobile → Work Orders** to see jobs assigned to you.",
                             "Open the job detail page to see customer complaint, service history, and linked inspection.",
                             "Read notes from intake and the service coordinator before touching the vehicle.",
-                            "Use the **Repairs** tab to manage service tasks and mark individual tasks complete.",
+                            "On the work order detail page, tap tasks to start/complete them and use **Labor Time** when working.",
                             "If you find additional faults, flag **Additional Work Found** — do not silently add repairs.",
-                            "When repair work is done, move the job to **Quality Check**, not directly to **Completed**.",
+                            "When repair work is done, **Request Quality Check** (or perform QC if you are the assigned inspector).",
                         ],
                     },
                 ],
@@ -919,7 +919,7 @@ export const roleGuides: HelpGuide[] = [
                 blocks: [
                     {
                         type: "paragraph",
-                        text: "The mobile app caches recent work orders for offline viewing. Changes made offline queue for sync when connectivity returns.",
+                        text: "The mobile app caches recent work orders — including tasks and parts on each job detail — for offline viewing. Changes made offline queue for sync when connectivity returns.",
                     },
                     {
                         type: "troubleshooting",

@@ -109,6 +109,17 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     can_be_cancelled = serializers.SerializerMethodField()
     subscription_number = serializers.SerializerMethodField()
     invoice_number = serializers.SerializerMethodField()
+    invoice_status = serializers.SerializerMethodField()
+    invoice_status_display = serializers.SerializerMethodField()
+    invoice_total = serializers.SerializerMethodField()
+    invoice_amount_paid = serializers.SerializerMethodField()
+    invoice_amount_due = serializers.SerializerMethodField()
+    invoice_is_paid = serializers.SerializerMethodField()
+    is_pay_as_you_go = serializers.SerializerMethodField()
+    work_order_number = serializers.CharField(
+        source='work_order.work_order_number', read_only=True, default=None,
+    )
+    can_create_work_order = serializers.SerializerMethodField()
     branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
     dispatched_technicians = DispatchedTechnicianSerializer(source='dispatches', many=True, read_only=True)
@@ -174,6 +185,47 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
             return obj.invoice.invoice_number
         return None
 
+    def get_invoice_status(self, obj):
+        return obj.invoice.status if obj.invoice_id else None
+
+    def get_invoice_status_display(self, obj):
+        if not obj.invoice_id:
+            return None
+        return obj.invoice.get_status_display()
+
+    def get_invoice_total(self, obj):
+        if not obj.invoice_id:
+            return None
+        return str(obj.invoice.total)
+
+    def get_invoice_amount_paid(self, obj):
+        if not obj.invoice_id:
+            return None
+        return str(obj.invoice.amount_paid)
+
+    def get_invoice_amount_due(self, obj):
+        if not obj.invoice_id:
+            return None
+        return str(obj.invoice.amount_due)
+
+    def get_invoice_is_paid(self, obj):
+        if not obj.invoice_id:
+            return None
+        return bool(obj.invoice.is_paid or obj.invoice.status == 'paid')
+
+    def get_is_pay_as_you_go(self, obj):
+        """True when this RSA is billed (not subscription-covered)."""
+        if obj.is_covered_by_subscription:
+            return False
+        try:
+            charge = Decimal(str(obj.charge_amount or 0))
+        except Exception:
+            charge = Decimal('0')
+        return charge > 0 or bool(obj.invoice_id)
+
+    def get_can_create_work_order(self, obj):
+        return obj.can_create_work_order()
+
     def get_is_active(self, obj):
         return obj.is_active()
 
@@ -194,8 +246,11 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
             'dispatched_technicians',
             'dispatched_at', 'arrived_at', 'completed_at',
             'subscription_used', 'subscription_number', 'subscription_allowance_deducted',
-            'is_covered_by_subscription', 'charge_amount',
+            'is_covered_by_subscription', 'charge_amount', 'is_pay_as_you_go',
             'invoice', 'invoice_number',
+            'invoice_status', 'invoice_status_display',
+            'invoice_total', 'invoice_amount_paid', 'invoice_amount_due', 'invoice_is_paid',
+            'work_order', 'work_order_number', 'can_create_work_order',
             'notes', 'customer_feedback', 'rating',
             'requested_at', 'created_by', 'updated_at',
             'is_active', 'can_be_cancelled', 'my_assignment_status',
@@ -204,6 +259,10 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
             'request_number', 'dispatched_at', 'arrived_at',
             'my_assignment_status',
             'completed_at', 'subscription_allowance_deducted',
+            'is_pay_as_you_go',
+            'invoice_status', 'invoice_status_display',
+            'invoice_total', 'invoice_amount_paid', 'invoice_amount_due', 'invoice_is_paid',
+            'work_order', 'work_order_number', 'can_create_work_order',
             'requested_at', 'updated_at', 'rating',
         ]
 
@@ -271,6 +330,10 @@ class RoadsideRequestDetailSerializer(RoadsideRequestSerializer):
             if obj.invoice_id:
                 entry['invoice_id'] = obj.invoice_id
                 entry['invoice_number'] = getattr(obj.invoice, 'invoice_number', None)
+                entry['invoice_status'] = getattr(obj.invoice, 'status', None)
+                entry['invoice_is_paid'] = bool(
+                    getattr(obj.invoice, 'is_paid', False) or obj.invoice.status == 'paid'
+                )
             entries.append(entry)
         if obj.status == 'cancelled':
             entries.append({
@@ -302,6 +365,10 @@ class RoadsideRequestDetailSerializer(RoadsideRequestSerializer):
             'in_progress': ['complete'],
         }
         actions.extend(status_actions.get(obj.status, []))
+        if obj.work_order_id:
+            actions.append('view_work_order')
+        elif obj.can_create_work_order():
+            actions.append('create_work_order')
         return actions
 
 

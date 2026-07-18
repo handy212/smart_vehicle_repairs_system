@@ -83,6 +83,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         queryset = RoadsideRequest.objects.select_related(
             'customer', 'customer__user', 'vehicle', 'branch', 'assigned_technician',
             'subscription_used', 'subscription_used__package', 'created_by', 'invoice',
+            'work_order',
         ).prefetch_related(
             'dispatches__technician',
             'site_notes__created_by',
@@ -214,6 +215,11 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         elif action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
              permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
              return [p() for p in permission_classes]
+        elif action == 'create_work_order':
+            permission_classes.append(HasAnyPermission([
+                'create_workorders', 'manage_workorders', 'manage_roadside',
+            ]))
+            return [p() for p in permission_classes]
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             permission_classes.append(HasPermission('view_roadside'))
         else:
@@ -921,6 +927,51 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         roadside_request.save(update_fields=['invoice', 'notes', 'updated_at'])
         return invoice.id
     
+    @action(detail=True, methods=['post'], url_path='create_work_order')
+    def create_work_order(self, request, pk=None):
+        """
+        Create a workshop work order from this roadside request (tow-in / shop handoff).
+        Idempotent: returns the existing linked work order when already converted.
+        """
+        roadside_request = self.get_object()
+
+        odometer_in = request.data.get('odometer_in')
+        job_type_code = request.data.get('job_type_code')
+        priority = request.data.get('priority') or 'high'
+
+        try:
+            work_order = roadside_request.create_work_order(
+                user=request.user,
+                odometer_in=odometer_in,
+                job_type_code=job_type_code,
+                priority=priority,
+            )
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(
+                "Failed to create work order from roadside %s: %s",
+                roadside_request.id,
+                e,
+                exc_info=True,
+            )
+            return Response(
+                {'error': 'Failed to create work order from this roadside request.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        roadside_request.refresh_from_db()
+        serializer = self.get_serializer(roadside_request)
+        return Response({
+            **serializer.data,
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'workflow_message': (
+                f'Work order {work_order.work_order_number} is linked. '
+                'Roadside billing remains on this request.'
+            ),
+        })
+
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancel a roadside request"""

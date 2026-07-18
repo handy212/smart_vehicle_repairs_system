@@ -12,6 +12,7 @@ from rest_framework.test import APITestCase, APIClient
 from model_bakery import baker
 
 from apps.accounting.models import AccountingControl
+from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder, ServiceTask, WorkOrderPart, TechnicianTimeLog
@@ -44,9 +45,14 @@ class WorkOrderModelTest(TestCase):
             last_name='User',
             role='technician'
         )
-        self.customer = Customer.objects.create(
-            user=self.customer_user
+        self.branch = Branch.objects.create(
+            name='WO Core Test Branch',
+            code='WOCORE',
+            created_by=self.technician_user,
         )
+        self.customer = Customer(user=self.customer_user)
+        self.customer._numbering_branch = self.branch
+        self.customer.save()
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             make='Toyota',
@@ -84,9 +90,8 @@ class WorkOrderModelTest(TestCase):
         self.assertEqual(str(workorder), expected)
 
     def test_workorder_status_choices(self):
-        """Test work order status choices."""
-        valid_statuses = ['draft', 'scheduled', 'in_progress', 'waiting_parts', 
-                         'waiting_approval', 'completed', 'cancelled', 'on_hold']
+        """Test work order status choices match the canonical lifecycle."""
+        valid_statuses = [choice[0] for choice in WorkOrder.STATUS_CHOICES]
         for status in valid_statuses:
             workorder = baker.make(
                 WorkOrder,
@@ -98,7 +103,7 @@ class WorkOrderModelTest(TestCase):
 
     def test_workorder_priority_choices(self):
         """Test work order priority choices."""
-        valid_priorities = ['low', 'medium', 'high', 'urgent']
+        valid_priorities = [choice[0] for choice in WorkOrder.PRIORITY_CHOICES]
         for priority in valid_priorities:
             workorder = baker.make(
                 WorkOrder,
@@ -450,14 +455,22 @@ class ServiceTaskModelTest(TestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.customer = baker.make(Customer)
+        self.technician = baker.make(User, role='technician')
+        self.branch = Branch.objects.create(
+            name='Service Task Core Branch',
+            code='STCORE',
+            created_by=self.technician,
+        )
+        self.customer = Customer(user=baker.make(User, role='customer'))
+        self.customer._numbering_branch = self.branch
+        self.customer.save()
         self.vehicle = baker.make(Vehicle, owner=self.customer)
         self.workorder = baker.make(
             WorkOrder,
             customer=self.customer,
-            vehicle=self.vehicle
+            vehicle=self.vehicle,
+            branch=self.branch,
         )
-        self.technician = baker.make(User, role='technician')
 
     def test_create_service_task(self):
         """Test creating a service task."""
@@ -487,7 +500,7 @@ class ServiceTaskModelTest(TestCase):
 
     def test_service_task_status_choices(self):
         """Test service task status choices."""
-        valid_statuses = ['pending', 'in_progress', 'completed', 'cancelled', 'on_hold']
+        valid_statuses = [choice[0] for choice in ServiceTask.STATUS_CHOICES]
         for status in valid_statuses:
             task = baker.make(
                 ServiceTask,
@@ -597,20 +610,21 @@ class TestWorkOrderWorkflow:
     """Test work order workflow and business logic."""
 
     def test_workorder_status_progression(self):
-        """Test work order status progression logic."""
+        """Test work order can store canonical lifecycle statuses."""
         workorder = baker.make(WorkOrder, status='draft')
-        
-        # Draft -> Scheduled
-        workorder.status = 'scheduled'
+
+        workorder.status = 'inspection'
         workorder.save()
-        assert workorder.status == 'scheduled'
-        
-        # Scheduled -> In Progress
+        assert workorder.status == 'inspection'
+
         workorder.status = 'in_progress'
         workorder.save()
         assert workorder.status == 'in_progress'
-        
-        # In Progress -> Completed
+
+        workorder.status = 'quality_check'
+        workorder.save()
+        assert workorder.status == 'quality_check'
+
         workorder.status = 'completed'
         workorder.save()
         assert workorder.status == 'completed'

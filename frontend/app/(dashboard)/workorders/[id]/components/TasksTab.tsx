@@ -522,7 +522,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, isLoa
                 <Button size="sm" variant="outline" asChild>
                   <Link href={`/workorders/${workOrderId}/repairs`}>
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Repair workspace
+                    Open repair workspace
                   </Link>
                 </Button>
               )}

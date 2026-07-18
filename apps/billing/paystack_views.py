@@ -7,25 +7,92 @@ import json
 import time
 import random
 from urllib.parse import urlencode
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+
+from django.shortcuts import redirect
+from django.http import HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.urls import reverse
-from django.utils.dateparse import parse_datetime
-from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from apps.customers.portal_views import customer_login_required
+
 from apps.billing.models import Invoice, Payment
 from apps.billing.paystack_integration import initialize_payment, verify_payment
+from apps.billing.gateway_payments import (
+    ensure_payment_settlement_account,
+    record_gateway_payment,
+)
 from apps.notifications_app.triggers import NotificationTriggers
 
 logger = logging.getLogger(__name__)
+
+
+def _frontend_payment_redirect(**params):
+    frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
+    return redirect(f"{frontend}/portal/payment/success?{urlencode(params)}")
+
+
+def _activate_subscription_if_needed(invoice):
+    if not invoice.description or 'subscription' not in invoice.description.lower():
+        return
+    from apps.subscriptions.services import SubscriptionService
+
+    try:
+        subscriptions = invoice.customer.subscriptions.filter(
+            status__in=['pending'],
+            payment_status='pending',
+        ).order_by('-created_at')
+
+        subscription = None
+        for sub in subscriptions:
+            if sub.package.name.lower() in invoice.description.lower():
+                subscription = sub
+                break
+
+        if not subscription:
+            subscription = subscriptions.first()
+
+        if subscription:
+            SubscriptionService.activate_subscription(subscription, invoice)
+            logger.info(
+                "Activated subscription %s after payment for invoice %s",
+                subscription.subscription_number,
+                invoice.id,
+            )
+        else:
+            logger.warning("Could not find subscription for invoice %s", invoice.id)
+    except Exception as e:
+        logger.error("Failed to activate subscription on payment: %s", e, exc_info=True)
+
+
+def _record_verified_paystack_payment(*, invoice, reference, data):
+    """
+    Record a verified Paystack charge against an invoice.
+    Returns (payment, created).
+    """
+    payment, created = record_gateway_payment(
+        invoice=invoice,
+        amount=data['amount_ghs'],
+        payment_method='paystack',
+        transaction_id=reference,
+        notes=f"Paystack payment via {data.get('channel', 'online')}",
+        paid_at=data.get('paid_at'),
+    )
+
+    if created:
+        _activate_subscription_if_needed(invoice)
+        try:
+            NotificationTriggers().payment_received(payment)
+        except Exception as e:
+            logger.error("Failed to send payment notification: %s", e)
+    else:
+        # Heal payments created before settlement account was required.
+        ensure_payment_settlement_account(payment)
+
+    return payment, created
 
 
 @csrf_exempt
@@ -33,13 +100,9 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 def initiate_paystack_payment(request, invoice_id):
     """Initialize Paystack payment for an invoice"""
-    # Check if this is an API request (always true for this API endpoint)
-    is_api_request = True
-    
-    # Get customer - handle both API and frontend
     if not request.user.is_authenticated:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
-    
+
     # Check if user is a customer
     if hasattr(request.user, 'customer_profile'):
         customer = request.user.customer_profile
@@ -47,90 +110,108 @@ def initiate_paystack_payment(request, invoice_id):
         customer = request.user.customer_profile
     else:
         # Allow admins/managers to initiate payments on behalf of customers
-        # In this case, we need to get the customer from the invoice
         try:
             invoice = Invoice.objects.get(id=invoice_id)
             customer = invoice.customer
         except Invoice.DoesNotExist:
             return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    # Get invoice
+
     try:
-        # For customers, ensure they own the invoice
         if request.user.role == 'customer':
             invoice = Invoice.objects.get(id=invoice_id, customer=customer)
         else:
-            # For admins/managers, allow access to any invoice
             invoice = Invoice.objects.get(id=invoice_id)
-            customer = invoice.customer  # Use invoice's customer
+            customer = invoice.customer
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    # Check if invoice can be paid
+
     if invoice.status in ['draft', 'void', 'paid']:
         return Response({'error': 'This invoice cannot be paid'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    # Fail early if gateway settlement cannot be posted to the ledger.
+    from apps.accounting.settlement_accounts import resolve_default_bank_settlement_account
+
+    if resolve_default_bank_settlement_account() is None:
+        return Response(
+            {
+                'error': (
+                    'Online payments are temporarily unavailable: the default bank/cash-equivalent '
+                    'settlement account is not configured. Contact the shop to complete payment.'
+                )
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
     # Generate unique reference (invoice_number can be blank in some legacy/dev data)
-    # Add timestamp to ensure uniqueness for multiple payment attempts
     invoice_no = (invoice.invoice_number or "").strip() or f"{invoice.id}"
+    # Avoid INV-INV-... when invoice_number already includes the prefix
+    if invoice_no.upper().startswith('INV-'):
+        reference_base = invoice_no
+    else:
+        reference_base = f"INV-{invoice_no}"
     timestamp = int(time.time())
     random_suffix = random.randint(1000, 9999)
-    reference = f"INV-{invoice_no}-{invoice.id}-{timestamp}-{random_suffix}"
-    
-    # Ensure reference is truly unique by checking existing payments
+    reference = f"{reference_base}-{invoice.id}-{timestamp}-{random_suffix}"
+
     while Payment.objects.filter(transaction_id=reference).exists():
         timestamp = int(time.time())
         random_suffix = random.randint(1000, 9999)
-        reference = f"INV-{invoice_no}-{invoice.id}-{timestamp}-{random_suffix}"
-    
-    # Prepare callback URL - use API callback URL for API requests
+        reference = f"{reference_base}-{invoice.id}-{timestamp}-{random_suffix}"
+
     callback_url = request.build_absolute_uri(
         reverse('api_billing:paystack-payment-callback')
     )
-    
-    # Get customer email - ensure it's valid
+
     customer_email = customer.email
     if not customer_email or not customer_email.strip():
-        # Try to get email from user account if customer email is missing
         if hasattr(customer, 'user') and customer.user and customer.user.email:
             customer_email = customer.user.email
         else:
             return Response(
-                {'error': 'Customer email is required for Paystack payments. Please update customer profile with a valid email address.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    'error': (
+                        'Customer email is required for Paystack payments. '
+                        'Please update customer profile with a valid email address.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
-    
+
     customer_email = customer_email.strip()
-    
-    # Prepare metadata
+
     metadata = {
         'invoice_id': invoice.id,
         'invoice_number': invoice.invoice_number,
         'customer_id': customer.id,
         'customer_name': customer.full_name,
-        'vehicle': f"{invoice.vehicle.year} {invoice.vehicle.make} {invoice.vehicle.model}" if invoice.vehicle else None,
+        'vehicle': (
+            f"{invoice.vehicle.year} {invoice.vehicle.make} {invoice.vehicle.model}"
+            if invoice.vehicle
+            else None
+        ),
     }
-    
-    # Initialize payment
+
     success, response = initialize_payment(
         email=customer_email,
         amount=invoice.amount_due,
         reference=reference,
         callback_url=callback_url,
-        metadata=metadata
+        metadata=metadata,
     )
-    
+
     if success:
-        # Return JSON response for API
         return Response({
             'success': True,
             'authorization_url': response['authorization_url'],
             'reference': reference,
             'invoice_id': invoice.id,
-            'amount': float(invoice.amount_due)
+            'amount': float(invoice.amount_due),
         }, status=status.HTTP_200_OK)
-    else:
-        return Response({'error': f'Payment initialization failed: {response}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(
+        {'error': f'Payment initialization failed: {response}'},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 @csrf_exempt
@@ -139,139 +220,149 @@ def initiate_paystack_payment(request, invoice_id):
 @authentication_classes([])
 def paystack_callback(request):
     """Handle Paystack payment callback"""
-    # Check if this is an API request (always true for this API endpoint)
-    is_api_request = True
-    
-    reference = request.GET.get('reference') or (request.data.get('reference') if hasattr(request, 'data') else None)
-    
+    reference = request.GET.get('reference') or (
+        request.data.get('reference') if hasattr(request, 'data') else None
+    )
+
     if not reference:
-        # Browser-friendly redirect
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        return redirect(f"{frontend}/portal/payment/success?status=failed&reason=missing_reference")
-    
-    # Verify payment
+        return _frontend_payment_redirect(status='failed', reason='missing_reference')
+
     success, data = verify_payment(reference)
-    
+
     if not success:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        return redirect(f"{frontend}/portal/payment/success?status=failed&reference={reference}")
-    
-    # Check payment status
+        return _frontend_payment_redirect(status='failed', reference=reference)
+
     if data['status'] != 'success':
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        qs = urlencode({"status": "failed", "reference": reference, "paystack_status": data.get("status")})
-        return redirect(f"{frontend}/portal/payment/success?{qs}")
-    
-    # Extract invoice ID from metadata
-    metadata = data.get('metadata', {})
-    invoice_id = metadata.get('invoice_id')
-    
-    if not invoice_id:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        qs = urlencode({"status": "failed", "reference": reference, "reason": "missing_invoice_id"})
-        return redirect(f"{frontend}/portal/payment/success?{qs}")
-    
-    # Get invoice (callback is public; do NOT require logged-in customer)
-    try:
-        invoice = Invoice.objects.get(id=invoice_id)
-        customer = invoice.customer
-    except Invoice.DoesNotExist:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        qs = urlencode({"status": "failed", "reference": reference, "invoice_id": invoice_id, "reason": "invoice_not_found"})
-        return redirect(f"{frontend}/portal/payment/success?{qs}")
-    
-    # Check if payment already recorded
-    existing_payment = Payment.objects.filter(
-        invoice=invoice,
-        transaction_id=reference
-    ).first()
-    
-    if existing_payment:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
-        return redirect(f"{frontend}/portal/payment/success?{qs}")
-    
-    # Check if invoice is already fully paid
-    invoice.refresh_from_db()
-    if invoice.status == 'paid' or invoice.amount_due <= 0:
-        logger.warning(f"Attempted to record payment for already paid invoice {invoice.id} (reference: {reference})")
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
-        return redirect(f"{frontend}/portal/payment/success?{qs}")
-    
-    # Record payment
-    amount_ghs = data['amount_ghs']
-
-    # Parse paid_at — Paystack returns a string (e.g. "2026-04-12T10:30:45.000Z").
-    # Passing a raw string to a DateTimeField leaves the in-memory instance with a
-    # string value; any subsequent code (signals, accounting service) that calls
-    # .date() on it will raise "'str' object has no attribute 'date'".
-    paid_at_str = data.get('paid_at')
-    payment_date_val = parse_datetime(paid_at_str) if paid_at_str else None
-    if payment_date_val is None:
-        payment_date_val = timezone.now()
-
-    # Get user for processed_by (use customer's user if available)
-    processed_by = None
-    if hasattr(customer, 'user') and customer.user:
-        processed_by = customer.user
-
-    try:
-        payment = Payment.objects.create(
-            invoice=invoice,
-            customer=invoice.customer,
-            amount=amount_ghs,
-            payment_method='paystack',
-            transaction_id=reference,
-            payment_date=payment_date_val,
-            notes=f"Paystack payment via {data.get('channel', 'online')}",
-            processed_by=processed_by,
+        return _frontend_payment_redirect(
+            status='failed',
+            reference=reference,
+            paystack_status=data.get('status'),
         )
 
-        invoice.recalculate_amount_paid_from_collections()
+    metadata = data.get('metadata', {}) or {}
+    invoice_id = metadata.get('invoice_id')
 
-        # Activate subscription if this is a subscription invoice
-        if invoice.description and 'subscription' in invoice.description.lower():
-            from apps.subscriptions.services import SubscriptionService
-            try:
-                subscriptions = invoice.customer.subscriptions.filter(
-                    status__in=['pending'],
-                    payment_status='pending'
-                ).order_by('-created_at')
+    if not invoice_id:
+        return _frontend_payment_redirect(
+            status='failed',
+            reference=reference,
+            reason='missing_invoice_id',
+        )
 
-                subscription = None
-                for sub in subscriptions:
-                    if sub.package.name.lower() in invoice.description.lower():
-                        subscription = sub
-                        break
+    try:
+        invoice = Invoice.objects.select_related('customer', 'customer__user', 'created_by').get(
+            id=invoice_id
+        )
+    except Invoice.DoesNotExist:
+        return _frontend_payment_redirect(
+            status='failed',
+            reference=reference,
+            invoice_id=invoice_id,
+            reason='invoice_not_found',
+        )
 
-                if not subscription:
-                    subscription = subscriptions.first()
+    existing_payment = Payment.objects.filter(
+        invoice=invoice,
+        transaction_id=reference,
+    ).first()
 
-                if subscription:
-                    SubscriptionService.activate_subscription(subscription, invoice)
-                    logger.info(f"Activated subscription {subscription.subscription_number} after payment for invoice {invoice.id}")
-                else:
-                    logger.warning(f"Could not find subscription for invoice {invoice.id}")
-            except Exception as e:
-                logger.error(f"Failed to activate subscription on payment: {e}", exc_info=True)
+    if existing_payment:
+        ensure_payment_settlement_account(existing_payment)
+        return _frontend_payment_redirect(
+            status='success',
+            invoice_id=invoice.id,
+            reference=reference,
+        )
 
-        # Send payment notification
-        try:
-            NotificationTriggers().payment_received(payment)
-        except Exception as e:
-            logger.error(f"Failed to send payment notification: {e}")
+    invoice.refresh_from_db()
+    if invoice.status == 'paid' or invoice.amount_due <= 0:
+        logger.warning(
+            "Attempted to record payment for already paid invoice %s (reference: %s)",
+            invoice.id,
+            reference,
+        )
+        return _frontend_payment_redirect(
+            status='success',
+            invoice_id=invoice.id,
+            reference=reference,
+        )
 
+    try:
+        _record_verified_paystack_payment(invoice=invoice, reference=reference, data=data)
+    except ValueError as e:
+        logger.error(
+            "Paystack payment settlement misconfigured for reference %s: %s",
+            reference,
+            e,
+        )
+        return _frontend_payment_redirect(
+            status='failed',
+            reference=reference,
+            reason='settlement_account_missing',
+        )
     except Exception as e:
-        logger.error(f"Failed to record Paystack payment for reference {reference}: {e}", exc_info=True)
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-        qs = urlencode({"status": "failed", "reference": reference, "reason": "recording_error"})
-        return redirect(f"{frontend}/portal/payment/success?{qs}")
+        logger.error(
+            "Failed to record Paystack payment for reference %s: %s",
+            reference,
+            e,
+            exc_info=True,
+        )
+        return _frontend_payment_redirect(
+            status='failed',
+            reference=reference,
+            reason='recording_error',
+        )
 
-    # Redirect user to frontend success page
-    frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
-    qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
-    return redirect(f"{frontend}/portal/payment/success?{qs}")
+    return _frontend_payment_redirect(
+        status='success',
+        invoice_id=invoice.id,
+        reference=reference,
+    )
+
+
+def _process_paystack_charge_success(event_data):
+    """Record a charge.success webhook event. Returns True when handled."""
+    reference = event_data.get('reference')
+    if not reference:
+        logger.warning("Paystack charge.success missing reference")
+        return False
+
+    # Prefer live verification over trusting webhook payload alone.
+    success, data = verify_payment(reference)
+    if not success or data.get('status') != 'success':
+        logger.warning("Paystack webhook verify failed for %s: %s", reference, data)
+        return False
+
+    metadata = data.get('metadata', {}) or {}
+    invoice_id = metadata.get('invoice_id')
+    if not invoice_id:
+        logger.warning("Paystack webhook missing invoice_id for %s", reference)
+        return False
+
+    try:
+        invoice = Invoice.objects.select_related('customer', 'customer__user', 'created_by').get(
+            id=invoice_id
+        )
+    except Invoice.DoesNotExist:
+        logger.warning("Paystack webhook invoice %s not found for %s", invoice_id, reference)
+        return False
+
+    existing = Payment.objects.filter(transaction_id=reference).first()
+    if existing:
+        ensure_payment_settlement_account(existing)
+        return True
+
+    invoice.refresh_from_db()
+    if invoice.status == 'paid' or invoice.amount_due <= 0:
+        logger.info(
+            "Paystack webhook skipped paid invoice %s (reference: %s)",
+            invoice.id,
+            reference,
+        )
+        return True
+
+    _record_verified_paystack_payment(invoice=invoice, reference=reference, data=data)
+    return True
 
 
 @csrf_exempt
@@ -281,71 +372,66 @@ def paystack_callback(request):
 def paystack_webhook(request):
     """
     Handle Paystack webhooks for payment events
-    
+
     Paystack sends webhooks for events like:
     - charge.success
     - transfer.success
     - transfer.failed
     """
-    # Verify webhook signature
     paystack_signature = request.headers.get('X-Paystack-Signature')
 
     if getattr(settings, 'REQUIRE_WEBHOOK_SIGNATURES', False) and not settings.PAYSTACK_SECRET_KEY:
         logger.warning("Paystack webhook rejected: PAYSTACK_SECRET_KEY not configured")
         return HttpResponse(status=401)
-    
+
     if not paystack_signature:
         logger.warning("Paystack webhook received without signature")
         return HttpResponse(status=400)
-    
-    # Verify signature (important for security)
+
     import hashlib
     import hmac
-    
+
     body = request.body
     if not settings.PAYSTACK_SECRET_KEY:
         logger.warning("Paystack webhook rejected: missing secret key")
         return HttpResponse(status=401)
 
     secret = settings.PAYSTACK_SECRET_KEY.encode('utf-8')
-    
     hash_value = hmac.new(secret, body, hashlib.sha512).hexdigest()
-    
-    if hash_value != paystack_signature:
+
+    if not hmac.compare_digest(hash_value, paystack_signature):
         logger.warning("Invalid Paystack webhook signature")
         return HttpResponse(status=400)
-    
-    # Parse webhook data
+
     try:
         data = json.loads(body)
         event = data.get('event')
-        event_data = data.get('data', {})
-        
-        logger.info(f"Paystack webhook received: {event}")
-        
+        event_data = data.get('data', {}) or {}
+
+        logger.info("Paystack webhook received: %s", event)
+
         if event == 'charge.success':
-            # Payment successful
-            reference = event_data.get('reference')
-            
-            if reference:
-                # Process payment (similar to callback)
-                # This is a backup in case callback fails
-                logger.info(f"Processing successful charge webhook for {reference}")
-                # Implementation can be similar to callback view
-        
+            logger.info(
+                "Processing successful charge webhook for %s",
+                event_data.get('reference'),
+            )
+            try:
+                _process_paystack_charge_success(event_data)
+            except Exception as e:
+                logger.error("Error recording Paystack webhook payment: %s", e, exc_info=True)
+                return HttpResponse(status=500)
+
         elif event == 'transfer.success':
-            # Refund/transfer successful
-            logger.info(f"Transfer successful: {event_data.get('reference')}")
-        
+            logger.info("Transfer successful: %s", event_data.get('reference'))
+
         elif event == 'transfer.failed':
-            # Transfer failed
-            logger.warning(f"Transfer failed: {event_data.get('reference')}")
-        
+            logger.warning("Transfer failed: %s", event_data.get('reference'))
+
         return HttpResponse(status=200)
-        
+
     except json.JSONDecodeError:
         logger.error("Invalid JSON in Paystack webhook")
         return HttpResponse(status=400)
     except Exception as e:
-        logger.error(f"Error processing Paystack webhook: {e}")
+        logger.error("Error processing Paystack webhook: %s", e)
         return HttpResponse(status=500)

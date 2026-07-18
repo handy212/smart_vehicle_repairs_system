@@ -15,6 +15,8 @@ import { getUserFacingError } from "@/lib/api/apiErrors";
 import { timeLogsApi } from "@/lib/api/timeLogs";
 import { filterSelectableLaborTasks } from "@/lib/workorders/laborTasks";
 import { useAuthStore } from "@/store/authStore";
+import { getStatusLabel } from "@/lib/utils/workorder-status";
+import { QualityCheckForm } from "@/app/(dashboard)/workorders/[id]/components/quality-check/QualityCheckForm";
 import {
   Clock,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -56,6 +58,25 @@ import { MobileWorkOrderSections } from "@/components/mobile/workorder/MobileWor
 import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { isDiagnosisPausedWorkOrder } from "@/lib/utils/workorder-inspection-stage";
 
+type OfflineWorkOrderCache = WorkOrder & {
+  _offlineTasks?: ServiceTask[];
+  _offlineParts?: WorkOrderPart[];
+};
+
+async function cacheWorkOrderDetail(
+  wo: WorkOrder,
+  nextTasks: ServiceTask[],
+  nextParts: WorkOrderPart[],
+  synced = true,
+) {
+  const payload: OfflineWorkOrderCache = {
+    ...wo,
+    _offlineTasks: nextTasks,
+    _offlineParts: nextParts,
+  };
+  await workOrdersDB.set(wo.id, payload, synced);
+}
+
 export default function MobileWorkOrderDetailPage() {
   const { formatCurrency } = useCurrency();
   const { hasPermission } = usePermissions();
@@ -79,6 +100,8 @@ export default function MobileWorkOrderDetailPage() {
   const [selectedLaborTaskId, setSelectedLaborTaskId] = useState("");
   const [showPartRequestDialog, setShowPartRequestDialog] = useState(false);
   const [showRequestQcDialog, setShowRequestQcDialog] = useState(false);
+  const [showPerformQcDialog, setShowPerformQcDialog] = useState(false);
+  const [qcSubmitting, setQcSubmitting] = useState(false);
   const [qcInspectorId, setQcInspectorId] = useState("");
   const [qualityInspectors, setQualityInspectors] = useState<
     { id: number; first_name?: string; last_name?: string; username?: string }[]
@@ -88,6 +111,7 @@ export default function MobileWorkOrderDetailPage() {
     quantity: 1,
     description: "",
   });
+  const canManageWorkOrders = hasPermission("manage_workorders");
 
   useEffect(() => {
     loadWorkOrder();
@@ -132,14 +156,14 @@ export default function MobileWorkOrderDetailPage() {
         setWorkOrder(wo);
         setTasks(tasksData);
         setParts(partsData);
-
-        // Cache work order
-        await workOrdersDB.set(wo.id, wo, true);
+        await cacheWorkOrderDetail(wo, tasksData, partsData, true);
       } else {
-        // Load from cache
-        const cached = await workOrdersDB.get(workOrderId);
+        const cached = (await workOrdersDB.get(workOrderId)) as OfflineWorkOrderCache | null;
         if (cached) {
-          setWorkOrder(cached);
+          const { _offlineTasks, _offlineParts, ...wo } = cached;
+          setWorkOrder(wo);
+          setTasks(_offlineTasks ?? []);
+          setParts(_offlineParts ?? []);
         }
       }
     } catch (error) {
@@ -259,8 +283,11 @@ export default function MobileWorkOrderDetailPage() {
         toast({ title: "Success", description: "Part requested successfully" });
       } else {
         await queueRequest("create", "/workorders/parts/", "POST", partData);
-
-        setParts([...parts, { id: Date.now(), ...partData } as any]);
+        const nextParts = [...parts, { id: Date.now(), ...partData } as WorkOrderPart];
+        setParts(nextParts);
+        if (workOrder) {
+          await cacheWorkOrderDetail(workOrder, tasks, nextParts, false);
+        }
         setShowPartRequestDialog(false);
         setNewPart({ part_name: "", quantity: 1, description: "" });
         toast({ title: "Queued", description: "Part request will sync when online" });
@@ -384,7 +411,7 @@ export default function MobileWorkOrderDetailPage() {
         });
       } else {
         const updated = { ...workOrder, status: "additional_work_found" };
-        await workOrdersDB.set(workOrder.id, updated, false);
+        await cacheWorkOrderDetail(updated, tasks, parts, false);
         await queueRequest(
           "create",
           `/workorders/work-orders/${workOrder.id}/flag_additional_work/`,
@@ -430,6 +457,9 @@ export default function MobileWorkOrderDetailPage() {
           t.id === task.id ? { ...t, status: newStatus } : t
         );
         setTasks(updatedTasks);
+        if (workOrder) {
+          await cacheWorkOrderDetail(workOrder, updatedTasks, parts, false);
+        }
         const endpoint =
           newStatus === "in_progress"
             ? `/workorders/tasks/${task.id}/start/`
@@ -482,15 +512,35 @@ export default function MobileWorkOrderDetailPage() {
   const canStart = workOrder.status === "approved";
   const canPause = workOrder.status === "in_progress";
   const canRequestQC = workOrder.status === "in_progress";
+  const qcAssigneeId =
+    typeof workOrder.quality_check_assigned_to === "object"
+      ? workOrder.quality_check_assigned_to?.id
+      : workOrder.quality_check_assigned_to;
+  const canOpenPerformQc =
+    workOrder.status === "quality_check" &&
+    canPerformQualityCheck &&
+    (!qcAssigneeId || qcAssigneeId === user?.id || canManageWorkOrders);
   const canComplete =
     workOrder.status === "quality_check" &&
     canPerformQualityCheck &&
     !workOrder.quality_check_required;
+  const waitingOnQc =
+    workOrder.status === "quality_check" &&
+    !!workOrder.quality_check_required &&
+    !canOpenPerformQc;
   const canResume = workOrder.status === "paused";
   const isDiagnosisPaused = isDiagnosisPausedWorkOrder(workOrder);
   const canOpenDiagnosis =
     workOrder.status === "diagnosis" || isDiagnosisPaused;
   const canFlagAdditionalWork = workOrder.status === "in_progress" && !isDiagnosisPaused;
+  const qcAssigneeName =
+    workOrder.quality_check_assigned_to_name ||
+    (typeof workOrder.quality_check_assigned_to === "object" &&
+    workOrder.quality_check_assigned_to
+      ? [workOrder.quality_check_assigned_to.first_name, workOrder.quality_check_assigned_to.last_name]
+          .filter(Boolean)
+          .join(" ")
+      : "");
 
   const getPartStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -559,7 +609,7 @@ export default function MobileWorkOrderDetailPage() {
               </div>
             </div>
             <Badge className={statusBadgeClass}>
-              {workOrder.status?.replace("_", " ").toUpperCase()}
+              {getStatusLabel(workOrder.status ?? "")}
             </Badge>
           </div>
 
@@ -704,6 +754,31 @@ export default function MobileWorkOrderDetailPage() {
             >
               <CheckCheck className="h-4 w-4 mr-2" />
               Request Quality Check
+            </Button>
+          )}
+
+          {waitingOnQc && (
+            <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-foreground">
+              <p className="font-medium">Waiting on quality check</p>
+              <p className="mt-1 text-muted-foreground">
+                {qcAssigneeName
+                  ? `${qcAssigneeName} is assigned to perform QC.`
+                  : "A quality inspector must perform QC before this job can be completed."}
+                {" "}
+                If you are not the inspector, wait for them to finish on mobile or desktop
+                (Perform Quality Check).
+              </p>
+            </div>
+          )}
+
+          {canOpenPerformQc && (
+            <Button
+              className="w-full"
+              onClick={() => setShowPerformQcDialog(true)}
+              disabled={!isOnline}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Perform Quality Check
             </Button>
           )}
 
@@ -1014,6 +1089,44 @@ export default function MobileWorkOrderDetailPage() {
               Submit Request
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPerformQcDialog} onOpenChange={setShowPerformQcDialog}>
+        <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b border-border px-4 py-3">
+            <DialogTitle>Perform Quality Check</DialogTitle>
+            <DialogDescription>
+              Confirm the vehicle is ready to leave the bay.
+            </DialogDescription>
+          </DialogHeader>
+          <QualityCheckForm
+            workOrderId={workOrderId}
+            isSubmitting={qcSubmitting}
+            onCancel={() => setShowPerformQcDialog(false)}
+            onSubmit={async (data) => {
+              setQcSubmitting(true);
+              try {
+                await workordersApi.qualityCheck(workOrderId, data);
+                setShowPerformQcDialog(false);
+                toast({
+                  title: data.passed ? "Quality check passed" : "Quality check failed",
+                  description: data.passed
+                    ? "Work order moved forward."
+                    : "Job returned to repairs for rework.",
+                });
+                await loadWorkOrder();
+              } catch (error) {
+                toast({
+                  title: "Quality check failed",
+                  description: getUserFacingError(error, "Unable to submit quality check."),
+                  variant: "destructive",
+                });
+              } finally {
+                setQcSubmitting(false);
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
 

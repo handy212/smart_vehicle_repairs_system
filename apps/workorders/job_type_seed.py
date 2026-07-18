@@ -142,16 +142,32 @@ JOB_TYPE_DEFINITIONS = [
 
 
 # Default income category codes for predefined job types (amounts set on RevenueProduct.default_unit_price).
+# These drive QBO Class via RevenueProduct → revenue_product_class mapping when invoicing
+# a job type with no task/part-level product.
 JOB_TYPE_DEFAULT_REVENUE_PRODUCT = {
-    'vehicle_inspection': 'service_vehicle_assessment',
+    'general_repairs': 'labor_mechanical',
+    'routine_maintenance': 'labor_mechanical',
     'diagnostic_inspection': 'service_diagnosis',
-    'electronic_diagnostics': 'service_diagnosis',
-    'paint_work': 'labor_spraying',
-    'body_repair': 'labor_body',
-    'accident_repair': 'labor_body',
-    'wheel_alignment': 'service_wheel_alignment',
-    'air_conditioning_service': 'labor_ac',
+    'brake_service': 'labor_mechanical',
+    'suspension_repair': 'labor_mechanical',
+    'steering_repair': 'labor_mechanical',
+    'engine_repair': 'labor_mechanical',
+    'transmission_repair': 'labor_mechanical',
     'electrical_repair': 'labor_electrical',
+    'electronic_diagnostics': 'service_diagnosis',
+    'air_conditioning_service': 'labor_ac',
+    'tyre_service': 'parts_tires',
+    'wheel_alignment': 'service_wheel_alignment',
+    'cooling_system_repair': 'labor_mechanical',
+    'fuel_system_repair': 'labor_mechanical',
+    'exhaust_system_repair': 'labor_mechanical',
+    'body_repair': 'labor_body',
+    'paint_work': 'labor_spraying',
+    'accident_repair': 'labor_body',
+    'warranty_repair': 'labor_mechanical',
+    'insurance_repair': 'labor_body',
+    'vehicle_inspection': 'service_vehicle_assessment',
+    'accessories_installation': 'parts_accessories',
 }
 
 

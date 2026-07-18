@@ -74,6 +74,27 @@ def bank_account_queryset(*, branch=None, include_shared: bool = True) -> QueryS
     return qs.filter(account_subtype__in={'bank', 'cash_equivalent'})
 
 
+def resolve_default_bank_settlement_account():
+    """
+    Return AccountingControl.default_bank_account when it is a valid
+    bank/cash-equivalent settlement account. Used by gateway payments
+    (Paystack, etc.) that have no cashier-selected account.
+    """
+    from apps.accounting.models import AccountingControl
+
+    account = AccountingControl.get_settings().default_bank_account
+    if account is None:
+        return None
+    if (
+        account.is_active
+        and account.account_type == 'asset'
+        and account.account_subtype in {'bank', 'cash_equivalent'}
+        and account.is_leaf
+    ):
+        return account
+    return None
+
+
 def till_enabled_account_queryset(*, branch=None, include_shared: bool = True) -> QuerySet:
     return settlement_accounts_for_branch(branch, include_shared=include_shared).filter(
         is_till_enabled=True,

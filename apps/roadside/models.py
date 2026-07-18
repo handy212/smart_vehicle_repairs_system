@@ -197,6 +197,16 @@ class RoadsideRequest(models.Model):
         related_name='roadside_requests',
         help_text="Invoice generated for this service"
     )
+
+    # Shop handoff — tow-in / field discovery → workshop work order
+    work_order = models.OneToOneField(
+        'workorders.WorkOrder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roadside_request',
+        help_text="Workshop work order created from this roadside request",
+    )
     
     # Billing
     is_covered_by_subscription = models.BooleanField(
@@ -287,6 +297,123 @@ class RoadsideRequest(models.Model):
     def can_be_cancelled(self):
         """Check if request can be cancelled"""
         return self.status in ['requested', 'dispatched', 'en_route']
+
+    WORK_ORDER_HANDOFF_STATUSES = frozenset({'on_site', 'in_progress', 'completed'})
+    WORK_ORDER_HANDOFF_SERVICE_TYPES = frozenset({
+        'towing',
+        'mechanical_first_aid',
+        'accident_estimate',
+        'pre_purchase_inspection',
+        'other',
+    })
+
+    def can_create_work_order(self):
+        """Whether staff can open a workshop work order from this request."""
+        if self.work_order_id:
+            return False
+        if self.status in ('cancelled', 'failed'):
+            return False
+        if self.status not in self.WORK_ORDER_HANDOFF_STATUSES:
+            return False
+        if not self.branch_id or not self.customer_id or not self.vehicle_id:
+            return False
+        return self.service_type in self.WORK_ORDER_HANDOFF_SERVICE_TYPES
+
+    def _default_job_type_code(self):
+        mapping = {
+            'towing': 'general_repairs',
+            'mechanical_first_aid': 'general_repairs',
+            'accident_estimate': 'diagnostic_inspection',
+            'pre_purchase_inspection': 'diagnostic_inspection',
+            'other': 'general_repairs',
+        }
+        return mapping.get(self.service_type, 'general_repairs')
+
+    def create_work_order(self, user=None, *, odometer_in=None, job_type_code=None, priority='high'):
+        """
+        Create (or return existing) workshop WorkOrder linked to this roadside request.
+        Roadside billing/subscription stays on this RSA — invoices are not copied.
+        """
+        from django.db import transaction
+        from apps.workorders.models import WorkOrder, WorkOrderNote
+        from apps.workorders.job_types import JobType
+
+        if self.work_order_id:
+            return self.work_order
+
+        if self.status in ('cancelled', 'failed'):
+            raise ValueError('Cannot create a work order from a cancelled or failed roadside request.')
+        if self.status not in self.WORK_ORDER_HANDOFF_STATUSES:
+            raise ValueError(
+                'Create a work order when the vehicle is on site, work is in progress, or the tow is completed.'
+            )
+        if not self.branch_id:
+            raise ValueError('Assign a branch before creating a work order.')
+        if not self.customer_id or not self.vehicle_id:
+            raise ValueError('Customer and vehicle are required to create a work order.')
+
+        code = job_type_code or self._default_job_type_code()
+        job_type = JobType.objects.filter(code=code, is_active=True).first()
+        if job_type is None and code:
+            job_type = JobType.objects.filter(code='general_repairs', is_active=True).first()
+
+        mileage = odometer_in
+        if mileage is None:
+            mileage = getattr(self.vehicle, 'current_mileage', None)
+        try:
+            mileage = int(mileage if mileage is not None else 0)
+        except (TypeError, ValueError):
+            mileage = 0
+        if mileage < 0:
+            mileage = 0
+
+        valid_priorities = {choice[0] for choice in WorkOrder.PRIORITY_CHOICES}
+        wo_priority = priority if priority in valid_priorities else 'high'
+
+        concern_lines = [
+            f"Roadside {self.request_number} — {self.get_service_type_display()}",
+        ]
+        if self.description and self.description.strip():
+            concern_lines.append(self.description.strip())
+        if self.breakdown_location:
+            concern_lines.append(f"Breakdown location: {self.breakdown_location}")
+        if self.destination:
+            concern_lines.append(f"Tow destination: {self.destination}")
+        customer_concerns = '\n'.join(concern_lines)
+
+        special_parts = [f"Converted from roadside request {self.request_number}."]
+        if self.notes and self.notes.strip():
+            special_parts.append(f"Roadside notes:\n{self.notes.strip()}")
+        special_instructions = '\n\n'.join(special_parts)
+
+        with transaction.atomic():
+            work_order = WorkOrder.objects.create(
+                customer=self.customer,
+                vehicle=self.vehicle,
+                branch=self.branch,
+                customer_concerns=customer_concerns,
+                special_instructions=special_instructions,
+                status='draft',
+                priority=wo_priority,
+                created_by=user or self.created_by,
+                odometer_in=mileage,
+                job_type=job_type,
+            )
+            if job_type is not None:
+                work_order.job_types.add(job_type)
+
+            self.work_order = work_order
+            self.save(update_fields=['work_order', 'updated_at'])
+
+            WorkOrderNote.objects.create(
+                work_order=work_order,
+                note_type='internal',
+                note=f'Created from roadside request {self.request_number}.',
+                created_by=user if getattr(user, 'is_authenticated', False) else None,
+                is_important=True,
+            )
+
+        return work_order
     
     def mark_dispatched(self, technician=None):
         """Mark request as dispatched"""

@@ -66,6 +66,8 @@ export interface RoadsideTimelineEntry {
     meta?: string;
     invoice_id?: number;
     invoice_number?: string;
+    invoice_status?: string | null;
+    invoice_is_paid?: boolean | null;
 }
 
 export interface RoadsideNote {
@@ -135,6 +137,7 @@ export interface RoadsideRequest {
     vehicle_display?: string;
     can_be_cancelled?: boolean;
     charge_amount?: string;
+    is_pay_as_you_go?: boolean;
     dispatched_at?: string;
     arrived_at?: string;
     completed_at?: string;
@@ -147,6 +150,15 @@ export interface RoadsideRequest {
     invoice?: number;
     invoice_id?: number;
     invoice_number?: string;
+    invoice_status?: string | null;
+    invoice_status_display?: string | null;
+    invoice_total?: string | null;
+    invoice_amount_paid?: string | null;
+    invoice_amount_due?: string | null;
+    invoice_is_paid?: boolean | null;
+    work_order?: number | null;
+    work_order_number?: string | null;
+    can_create_work_order?: boolean;
     subscription_used?: number;
     assigned_technician?: number;
     branch?: number;
@@ -250,6 +262,20 @@ export const roadsideApi = {
 
     complete: async (id: number | string) => {
         const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/complete/`);
+        return response.data;
+    },
+
+    createWorkOrder: async (
+        id: number | string,
+        data?: { odometer_in?: number; job_type_code?: string; priority?: string },
+    ) => {
+        const response = await apiClient.post<
+            RoadsideRequest & {
+                work_order_id: number;
+                work_order_number: string;
+                workflow_message?: string;
+            }
+        >(`/roadside/requests/${id}/create_work_order/`, data ?? {});
         return response.data;
     },
 
