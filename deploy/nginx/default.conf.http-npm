@@ -1,5 +1,5 @@
 # Internal Nginx for Docker when TLS is terminated by Nginx Proxy Manager.
-# Replace FRONTEND_DOMAIN and API_DOMAIN with your production hostnames.
+# Public hosts: app.safetracksystems.com and api.safetracksystems.com.
 
 upstream backend {
     server backend:8000;
@@ -9,10 +9,25 @@ upstream frontend {
     server frontend:3000;
 }
 
-# Frontend application (e.g. app.example.com)
+# Frontend application
 server {
     listen 80;
-    server_name app.example.com;
+    server_name app.safetracksystems.com;
+
+    client_max_body_size 100M;
+
+    # These browser auth routes are implemented by the Next.js BFF.
+    location ~ ^/api/auth/(login|logout|refresh|session|verify)$ {
+        proxy_pass http://frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    }
 
     location / {
         proxy_pass http://frontend;
@@ -32,10 +47,10 @@ server {
     }
 }
 
-# Backend API (e.g. api.example.com)
+# Backend API
 server {
     listen 80;
-    server_name api.example.com;
+    server_name api.safetracksystems.com;
 
     client_max_body_size 100M;
 
@@ -81,6 +96,14 @@ server {
 server {
     listen 80 default_server;
     server_name _;
+
+    location ~ ^/api/auth/(login|logout|refresh|session|verify)$ {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    }
 
     location /api/ {
         proxy_pass http://backend;
