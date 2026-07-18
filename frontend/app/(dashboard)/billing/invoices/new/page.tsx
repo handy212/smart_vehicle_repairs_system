@@ -13,6 +13,7 @@ import { inventoryApi } from "@/lib/api/inventory";
 import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
 import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useTaxConfig } from "@/lib/hooks/useFormLookups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -153,10 +154,7 @@ export default function NewInvoicePage() {
     workOrder ? (typeof workOrder.customer === 'object' ? workOrder.customer.id : workOrder.customer) : null
   );
 
-  const { data: taxConfig } = useQuery({
-    queryKey: ["tax", "config"],
-    queryFn: () => billingApi.taxes.config(),
-  });
+  const { data: taxConfig } = useTaxConfig();
 
   const {
     register,

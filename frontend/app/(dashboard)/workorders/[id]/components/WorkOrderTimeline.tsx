@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { WorkOrder } from "@/lib/api/workorders";
+import { timeLogsApi, type TimeLog } from "@/lib/api/timeLogs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +24,11 @@ interface TimelineProps {
     created_by_name?: string;
     author_name?: string;
   }>;
+}
+
+function normalizeLogs(data: Awaited<ReturnType<typeof timeLogsApi.list>>): TimeLog[] {
+  if (Array.isArray(data)) return data;
+  return data.results ?? [];
 }
 
 type TimelineEvent = {
@@ -50,6 +57,12 @@ const createdByName = (createdBy: WorkOrder["created_by"]) => {
 };
 
 export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
+  const { data: laborLogs = [] } = useQuery({
+    queryKey: ["workorder-timeline-labor", workOrder.id],
+    queryFn: async () => normalizeLogs(await timeLogsApi.list({ work_order: workOrder.id })),
+    enabled: !!workOrder.id,
+  });
+
   const events = useMemo<TimelineEvent[]>(() => {
     const rows: TimelineEvent[] = [];
 
@@ -190,8 +203,37 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
       });
     });
 
+    laborLogs.forEach((log) => {
+      const taskLabel = log.task_description || log.description || "Task";
+      const typeLabel = log.task_type_display || log.task_type;
+      rows.push({
+        id: `labor-start-${log.id}`,
+        timestamp: log.clock_in,
+        category: "Labor",
+        title: "Labor Started",
+        detail: typeLabel ? `${taskLabel} · ${typeLabel}` : taskLabel,
+        actor: log.technician_name,
+        variant: "info",
+      });
+      if (log.clock_out) {
+        const hours =
+          log.duration_hours != null && log.duration_hours !== ""
+            ? `${Number(log.duration_hours).toFixed(2)}h`
+            : undefined;
+        rows.push({
+          id: `labor-end-${log.id}`,
+          timestamp: log.clock_out,
+          category: "Labor",
+          title: "Labor Stopped",
+          detail: [taskLabel, hours].filter(Boolean).join(" · "),
+          actor: log.technician_name,
+          variant: "secondary",
+        });
+      }
+    });
+
     return rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [workOrder, notes]);
+  }, [workOrder, notes, laborLogs]);
 
   return (
     <Card>

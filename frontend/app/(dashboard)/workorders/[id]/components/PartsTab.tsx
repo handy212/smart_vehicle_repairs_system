@@ -28,10 +28,24 @@ interface PartsTabProps {
   workOrderId: number;
   workOrder?: {
     status?: string;
+    vehicle?: number | { id?: number; make?: string; model?: string; year?: number };
   };
   parts: WorkOrderPart[];
   onRefresh: () => void;
   isLoading?: boolean;
+}
+
+function vehicleFromWorkOrder(
+  workOrder?: PartsTabProps["workOrder"]
+): { id?: number; make?: string; model?: string; year?: number } | null {
+  const v = workOrder?.vehicle;
+  if (!v || typeof v !== "object") return v ? { id: typeof v === "number" ? v : undefined } : null;
+  return {
+    id: v.id,
+    make: v.make,
+    model: v.model,
+    year: v.year,
+  };
 }
 
 export default function WorkOrderPartsTab({
@@ -291,6 +305,7 @@ export default function WorkOrderPartsTab({
         <AddPartDialog
           workOrderId={workOrderId}
           workOrderStatus={currentStatus}
+          vehicle={vehicleFromWorkOrder(workOrder)}
           open={showAddDialog}
           onClose={() => setShowAddDialog(false)}
           onSuccess={() => {

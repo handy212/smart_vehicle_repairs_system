@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { portalApi } from "@/lib/api/portal";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -29,10 +29,7 @@ const invoiceStatusColors: Record<string, string> = {
 };
 
 export default function PortalHomePage() {
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
 
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ["portal", "dashboard"],

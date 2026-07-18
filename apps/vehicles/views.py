@@ -62,10 +62,13 @@ class VehicleViewSet(viewsets.ModelViewSet):
         elif self.action in [
             'dashboard_stats', 'ownership_history', 'history', 'mileage_history',
             'documents', 'photos', 'search_vin', 'due_service', 'active',
-            'decode_vin', 'check_license_plate', 'suggested_service',
+            'decode_vin', 'check_license_plate', 'check_vin', 'suggested_service',
         ]:
             return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('view_vehicles')]
-        elif self.action in ['reassign_owner', 'record_mileage', 'upload_document', 'upload_photo']:
+        elif self.action in [
+            'reassign_owner', 'record_mileage', 'upload_document', 'upload_photo',
+            'refresh_vin_decode',
+        ]:
             return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('edit_vehicles')]
         elif self.action in ['import_excel', 'import_csv']:
             return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('import_vehicles')]
@@ -642,32 +645,14 @@ class VehicleViewSet(viewsets.ModelViewSet):
         Decode VIN using NHTSA API and return data for form auto-fill
         
         POST /api/vehicles/decode_vin/
-        Body: { "vin": "1HGBH41JXMN109186" }
-        
-        Returns:
-        {
-            "success": true,
-            "exists": false,
-            "vin": "1HGBH41JXMN109186",
-            "year": 1991,
-            "make": "HONDA",
-            "model": "ACCORD",
-            "trim": "EX",
-            "engine_type": "gasoline",
-            "engine_size": "2.2L I4",
-            "transmission_type": "automatic",
-            "summary": "1991 HONDA ACCORD EX - 2.2L I4 Automatic",
-            "message": "VIN decoded successfully. Form fields will be auto-filled."
+        Body: {
+          "vin": "1HGBH41JXMN109186",
+          "exclude_vehicle_id": 123   # optional — when editing, ignore this vehicle's VIN
         }
         
-        If vehicle exists:
-        {
-            "success": true,
-            "exists": true,
-            "vehicle_id": 123,
-            "vehicle": {...vehicle details...},
-            "message": "Vehicle with this VIN already exists"
-        }
+        Returns decoded fields for form auto-fill. If another vehicle already
+        owns the VIN (and it is not exclude_vehicle_id), returns exists=true
+        without calling NHTSA.
         """
         vin = request.data.get('vin', '').upper().strip()
         
@@ -682,10 +667,18 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 {'success': False, 'error': f'VIN must be exactly 17 characters (got {len(vin)})'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        exclude_raw = request.data.get('exclude_vehicle_id', request.data.get('vehicle_id'))
+        exclude_id = None
+        if exclude_raw not in (None, '', 0, '0'):
+            try:
+                exclude_id = int(exclude_raw)
+            except (TypeError, ValueError):
+                exclude_id = None
         
-        # Check if VIN already exists in database
+        # Duplicate VIN blocks create/decode — but allow the vehicle being edited
         existing_vehicle = Vehicle.objects.filter(vin=vin).first()
-        if existing_vehicle:
+        if existing_vehicle and (exclude_id is None or existing_vehicle.id != exclude_id):
             return Response({
                 'success': True,
                 'exists': True,
@@ -721,8 +714,9 @@ class VehicleViewSet(viewsets.ModelViewSet):
             'body_class': data.get('body_class'),
             'vehicle_type': data.get('vehicle_type'),
             'manufacturer': data.get('manufacturer'),
-            'summary': decoder.get_vehicle_summary(vin),
+            'summary': decoder.get_vehicle_summary(vin, data=data),
             'has_errors': data.get('has_errors', False),
+            'has_useful_fields': data.get('has_useful_fields', False),
             # Expanded "Other Information" (manufacturer-submitted fields)
             'series': data.get('series'),
             'drive_type': data.get('drive_type'),
@@ -756,7 +750,146 @@ class VehicleViewSet(viewsets.ModelViewSet):
         response_data['full_data'] = data
         
         return Response(response_data)
+
+    @action(detail=True, methods=['post'])
+    def refresh_vin_decode(self, request, pk=None):
+        """
+        Decode this vehicle's VIN via NHTSA and persist vin_decoded_data
+        (cylinders, fuel, drive, transmission style, etc.) for the profile UI.
+
+        Body (optional):
+          force: bool — overwrite existing make/model/year/engine fields
+        """
+        from django.conf import settings
+
+        from .vin_decoder import apply_decoded_to_vehicle
+
+        vehicle = self.get_object()
+        vin = (vehicle.vin or '').upper().strip()
+        if not vin or len(vin) != 17:
+            return Response(
+                {'success': False, 'error': 'Vehicle does not have a valid 17-character VIN'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Explicit user refresh: overwrite year/make/model/engine from VPIC
+        # unless force=false is sent.
+        force = bool(request.data.get('force', True))
+        timeout_seconds = float(getattr(settings, 'VIN_DECODE_TIMEOUT_SECONDS', 5))
+        decoder = VehicleVINDecoder()
+        success, data = decoder.decode_vin(vin, timeout_seconds=timeout_seconds)
+        if not success:
+            msg = str(data)
+            http_status = (
+                status.HTTP_503_SERVICE_UNAVAILABLE
+                if 'timed out' in msg.lower() or 'network error' in msg.lower()
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({'success': False, 'error': msg}, status=http_status)
+
+        used_wmi = bool(
+            isinstance(data, dict)
+            and (
+                'wmi_local' in (data.get('decode_sources') or [])
+                or data.get('decode_source') in ('wmi_local', 'nhtsa+wmi_local')
+                or data.get('wmi_fallback_fields')
+            )
+        )
+        has_identity = isinstance(data, dict) and (
+            data.get('has_useful_fields')
+            or data.get('make')
+            or data.get('model')
+            or data.get('engine_cylinders')
+            or data.get('drive_type')
+            or data.get('year')
+        )
+
+        if not has_identity:
+            # Still store payload so UI can show VPIC warnings / partial data
+            if isinstance(data, dict):
+                apply_decoded_to_vehicle(vehicle, data, only_blank=not force, save=True)
+            return Response({
+                'success': True,
+                'partial': True,
+                'message': 'Could not decode this VIN. Enter make/model manually.',
+                'vehicle': VehicleDetailSerializer(vehicle).data,
+                'decoded': data if isinstance(data, dict) else {},
+            })
+
+        updates = apply_decoded_to_vehicle(vehicle, data, only_blank=not force, save=True)
+        wmi_fields = set(data.get('wmi_fallback_fields') or [])
+        wmi_filled_identity = bool(wmi_fields & {'make', 'manufacturer', 'year'})
+        has_model = bool(str(data.get('model') or '').strip())
+
+        if wmi_filled_identity and not has_model:
+            bits = [str(x) for x in (data.get('make'), data.get('year')) if x]
+            detail = f" ({', '.join(bits)})" if bits else ''
+            message = f'Saved make/year from VIN{detail}. Model not available offline.'
+            partial = True
+        elif used_wmi or data.get('has_errors'):
+            # Non-US / WMI metadata only — keep toast short
+            message = 'VIN specs saved.'
+            partial = False
+        else:
+            message = 'VIN specs saved.'
+            partial = False
+
+        return Response({
+            'success': True,
+            'partial': partial,
+            'message': message,
+            'updated_fields': sorted(updates.keys()),
+            'has_errors': bool(data.get('has_errors')),
+            'used_wmi_fallback': used_wmi,
+            'vehicle': VehicleDetailSerializer(vehicle).data,
+            'decoded': data,
+        })
     
+    @action(detail=False, methods=['post'])
+    def check_vin(self, request):
+        """
+        Check VIN uniqueness without calling NHTSA.
+
+        POST /api/vehicles/check_vin/
+        Body: { "vin": "...", "vehicle_id": 123 }  # vehicle_id optional (edit)
+        """
+        vin = request.data.get('vin', '').upper().strip()
+        vehicle_id = request.data.get('vehicle_id')
+
+        if not vin:
+            return Response(
+                {'success': False, 'error': 'VIN is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(vin) != 17:
+            return Response(
+                {'success': False, 'error': f'VIN must be exactly 17 characters (got {len(vin)})'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        query = Vehicle.objects.filter(vin=vin)
+        if vehicle_id not in (None, '', 0, '0'):
+            try:
+                query = query.exclude(id=int(vehicle_id))
+            except (TypeError, ValueError):
+                pass
+
+        existing_vehicle = query.first()
+        if existing_vehicle:
+            return Response({
+                'success': True,
+                'exists': True,
+                'vehicle_id': existing_vehicle.id,
+                'vehicle': VehicleDetailSerializer(existing_vehicle).data,
+                'message': 'Vehicle with this VIN already exists in the system',
+            })
+
+        return Response({
+            'success': True,
+            'exists': False,
+            'message': 'VIN is available',
+        })
+
     @action(detail=False, methods=['post'])
     def check_license_plate(self, request):
         """

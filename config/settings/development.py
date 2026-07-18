@@ -99,6 +99,9 @@ if not _redis_url:
 if not _redis_url:
     SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
+# Open local media for convenience; production uses ProtectedMediaView + nginx branding allowlist.
+SERVE_MEDIA = env.bool('SERVE_MEDIA', default=True)
+
 # Relaxed throttles for local dev (HMR, Strict Mode, multiple layout hooks, E2E suites)
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['public_settings'] = '1000/hour'
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['anon'] = '5000/hour'

@@ -203,7 +203,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
         description:
           useOfflineDiagnosis && !isOnline
             ? "Start action will sync when online."
-            : "Diagnosis workflow has been started.",
+            : "Diagnosis workflow started. Labor Time is running on the diagnosis task.",
         variant: "default"
       });
       refreshWorkOrderViews();
@@ -226,7 +226,7 @@ export default function DiagnosisWorkspace({ isMobile = false }: DiagnosisWorksp
     onSuccess: () => {
       toast({
         title: "Diagnosis paused",
-        description: "Diagnosis has been paused. Time has been logged.",
+        description: "Diagnosis session and Labor Time have been stopped for this phase.",
         variant: "default"
       });
       refreshWorkOrderViews();
@@ -2110,6 +2110,18 @@ function RecommendationsTab({
         }}
         recommendation={editingRecommendation}
         findings={diagnosis.findings || []}
+        vehicle={
+          workOrder?.vehicle && typeof workOrder.vehicle === "object"
+            ? {
+                id: workOrder.vehicle.id,
+                make: workOrder.vehicle.make,
+                model: workOrder.vehicle.model,
+                year: workOrder.vehicle.year,
+              }
+            : workOrder?.vehicle
+              ? { id: Number(workOrder.vehicle) }
+              : null
+        }
         onSave={(data) => {
           if (editingRecommendation) {
             updateMutation.mutate({ id: editingRecommendation.id, data });

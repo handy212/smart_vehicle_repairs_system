@@ -216,6 +216,7 @@ class Admin(AbstractUserRole):
         'view_branches': True,
         'view_branch_data': True,
         'manage_backups': True,
+        'manage_data_exchange': True,
         'view_system_status': True,
         'manage_api_keys': True,
         

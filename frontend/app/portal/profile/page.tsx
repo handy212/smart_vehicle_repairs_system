@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { User, Mail, Phone, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,10 +11,7 @@ import { PortalPageHeader } from "../components/PortalPageHeader";
 import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 
 export default function ProfilePage() {
-    const { data: user, isLoading } = useQuery({
-        queryKey: ["user"],
-        queryFn: () => authApi.getCurrentUser(),
-    });
+    const { data: user, isLoading } = useCurrentUser();
 
     if (isLoading) {
         return (

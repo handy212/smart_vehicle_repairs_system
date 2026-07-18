@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -20,15 +20,12 @@ import { Invoice } from "@/lib/api/billing";
 export default function MyInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { formatCurrency } = useCurrency();
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
+  const customerId = getCustomerId(user);
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["portal", "invoices", statusFilter],
     queryFn: () => {
-      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
       const params: Record<string, string | number | boolean> = {
@@ -40,7 +37,7 @@ export default function MyInvoicesPage() {
       }
       return billingApi.invoices.list(params);
     },
-    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
+    enabled: !!user && !!customerId,
   });
 
   const invoices = (invoicesData?.results || invoicesData || []) as Invoice[];

@@ -45,15 +45,28 @@ import { Label } from "@/components/ui/label";
 import { getUserFacingError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 import { RoadsideBranchSelect } from "@/components/roadside/RoadsideBranchSelect";
+import {
+    captureCurrentPosition,
+    getGeolocationErrorMessage,
+} from "@/lib/utils/geolocation";
+
 function resolveEntityId(value: number | { id: number } | undefined): number | undefined {
     if (typeof value === "number") return value;
     if (value && typeof value === "object" && "id" in value) return value.id;
     return undefined;
 }
 
+const optionalCoord = (message: string) =>
+    z.union([
+        z.number({ error: message }),
+        z.nan().transform(() => undefined),
+    ]).optional();
+
 const editRequestSchema = z.object({
     branch: z.number().min(1).optional(),
     breakdown_location: z.string().min(1, "Location is required"),
+    latitude: optionalCoord("Latitude must be a valid number"),
+    longitude: optionalCoord("Longitude must be a valid number"),
     customer_phone: z.string().min(1, "Phone is required"),
     description: z.string().optional(),
     tow_distance_km: z.number().optional(),
@@ -100,16 +113,22 @@ export default function RoadsideDetailPage() {
         handleSubmit,
         reset,
         control,
+        setValue,
         formState: { errors: editErrors }
     } = useForm<EditRequestFormData>({
         resolver: zodResolver(editRequestSchema),
     });
+    const [capturingLocation, setCapturingLocation] = useState(false);
 
     const handleOpenEdit = () => {
         if (request) {
+            const lat = request.latitude != null ? Number(request.latitude) : undefined;
+            const lng = request.longitude != null ? Number(request.longitude) : undefined;
             reset({
                 branch: request.branch,
                 breakdown_location: request.breakdown_location,
+                latitude: Number.isFinite(lat) ? lat : undefined,
+                longitude: Number.isFinite(lng) ? lng : undefined,
                 customer_phone: request.customer_phone,
                 description: request.description || "",
                 tow_distance_km: typeof request.tow_distance_km === 'string' ? parseFloat(request.tow_distance_km) : request.tow_distance_km,
@@ -118,6 +137,29 @@ export default function RoadsideDetailPage() {
                 charge_amount: request.charge_amount ? parseFloat(String(request.charge_amount)) : 0,
             });
             setIsEditDialogOpen(true);
+        }
+    };
+
+    const handleCaptureEditLocation = async () => {
+        setCapturingLocation(true);
+        try {
+            const { latitude, longitude, label } = await captureCurrentPosition();
+            setValue("latitude", latitude, { shouldDirty: true });
+            setValue("longitude", longitude, { shouldDirty: true });
+            setValue("breakdown_location", label, { shouldValidate: true, shouldDirty: true });
+            toast({ title: "Location captured", description: label });
+        } catch (error) {
+            toast({
+                title: "Location unavailable",
+                description: getGeolocationErrorMessage(
+                    error instanceof GeolocationPositionError || error instanceof Error
+                        ? error
+                        : new Error("Could not get location"),
+                ),
+                variant: "destructive",
+            });
+        } finally {
+            setCapturingLocation(false);
         }
     };
 
@@ -989,6 +1031,41 @@ export default function RoadsideDetailPage() {
                                         <p className="text-xs text-destructive">{editErrors.breakdown_location.message}</p>
                                     )}
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit_latitude">Latitude</Label>
+                                    <Input
+                                        id="edit_latitude"
+                                        type="number"
+                                        step="any"
+                                        {...register("latitude", { valueAsNumber: true })}
+                                    />
+                                    {editErrors.latitude && (
+                                        <p className="text-xs text-destructive">{editErrors.latitude.message}</p>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit_longitude">Longitude</Label>
+                                    <Input
+                                        id="edit_longitude"
+                                        type="number"
+                                        step="any"
+                                        {...register("longitude", { valueAsNumber: true })}
+                                    />
+                                    {editErrors.longitude && (
+                                        <p className="text-xs text-destructive">{editErrors.longitude.message}</p>
+                                    )}
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={handleCaptureEditLocation}
+                                    disabled={capturingLocation}
+                                >
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    {capturingLocation ? "Locating…" : "Use my location"}
+                                </Button>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="customer_phone">Customer phone *</Label>

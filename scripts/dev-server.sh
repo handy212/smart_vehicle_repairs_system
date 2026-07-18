@@ -290,12 +290,6 @@ fi
 # echo -e "${GREEN}✓ System initialization complete${NC}"
 # echo ""
 
-# Optional demo data (not auto-run, use manually if needed)
-# echo -e "${BLUE}💡 Optional: Run demo data seeds manually:${NC}"
-# echo -e "${YELLOW}  python manage.py seed_demo_data${NC} - Create demo users & sample data"
-# echo -e "${YELLOW}  python manage.py seed_dev_data${NC} - Create inventory, customers & vehicles"
-# echo ""
-
 # Create superuser if it doesn't exist (optional)
 echo -e "${BLUE}Backend:${NC} http://$PUBLIC_HOST:$DJANGO_PORT"
 echo -e "${BLUE}Frontend:${NC} http://$PUBLIC_HOST:$NEXTJS_PORT"

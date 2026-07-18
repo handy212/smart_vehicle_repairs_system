@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, MoreHorizontal, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
+import { Plus, Search, Filter, Trash2, Download, X, ChevronDown, FileDown, MoreVertical, MoreHorizontal, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
@@ -30,15 +30,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ImportDialog } from "@/components/ui/import-dialog";
-import { downloadCustomerTemplate } from "@/lib/utils/import-templates";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -61,15 +58,12 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const [customerType, setCustomerType] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const { hasPermission } = usePermissions();
-  const canImportCustomers = hasPermission("create_customers") || hasPermission("manage_customers");
   const canExportCustomers = hasPermission("view_customers") || hasPermission("manage_customers");
   const canEditCustomers = hasPermission("edit_customers") || hasPermission("manage_customers");
   const canDeleteCustomers = hasPermission("delete_customers") || hasPermission("manage_customers");
@@ -155,17 +149,20 @@ export default function CustomersPage() {
   const { data: dashboardOverview } = useQuery({
     queryKey: ["dashboard-overview"],
     queryFn: () => reportingApi.dashboard(),
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch Customer Dashboard Stats
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["customer-stats"],
     queryFn: () => customersApi.dashboardStats(),
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch Paginated Customers
   const { data: customerData, isLoading: customersLoading, error: customersError } = useQuery({
     queryKey: ["customers", page, debouncedSearch, customerType, sortConfig, advancedFilters],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -418,15 +415,8 @@ export default function CustomersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              {canImportCustomers && (
-                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import Excel
-                </DropdownMenuItem>
-              )}
-              {canExportCustomers && (
+              {canExportCustomers ? (
                 <>
-                  {canImportCustomers && <DropdownMenuSeparator />}
                   <DropdownMenuItem onClick={() => handleExport("xlsx")}>
                     <Download className="w-4 h-4 mr-2" />
                     Export Excel
@@ -436,8 +426,7 @@ export default function CustomersPage() {
                     Export PDF
                   </DropdownMenuItem>
                 </>
-              )}
-              {!canImportCustomers && !canExportCustomers && (
+              ) : (
                 <DropdownMenuItem disabled>
                   <Download className="w-4 h-4 mr-2" />
                   No actions available
@@ -459,21 +448,6 @@ export default function CustomersPage() {
         onDelete={canDeleteCustomers ? handleDelete : undefined}
         canEdit={canEditCustomers}
         canDelete={canDeleteCustomers}
-      />
-
-      {/* Import Dialog */}
-      <ImportDialog
-        isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
-        onImport={async (file) => {
-          const result = await customersApi.import(file);
-          queryClient.invalidateQueries({ queryKey: ["customers"] });
-          return result;
-        }}
-        title="Import Customers"
-        description="Upload a customer Excel workbook (.xlsx). Download the template first so the columns match."
-        accept=".xlsx"
-        onDownloadTemplate={downloadCustomerTemplate}
       />
 
       {/* Pagination Footer */}

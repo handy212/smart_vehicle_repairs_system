@@ -34,6 +34,25 @@ import { cn } from "@/lib/utils";
 import { productServiceTypeLabel } from "@/components/inventory/product-service-types";
 import { QboSyncBadge } from "@/components/integrations/QboSyncBadge";
 
+/** Blank ≠ universal; only explicit markers count as universal. */
+function formatCompatibilityDisplay(
+  value: string | null | undefined,
+  kind: "makes" | "models" | "years"
+): string {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return "Not specified";
+  const lower = trimmed.toLowerCase();
+  const tokens = lower.split(/[,;/|]+/).map((t) => t.trim()).filter(Boolean);
+  const isUniversal = tokens.some((t) =>
+    ["*", "universal", "all", "any", "n/a", "na"].includes(t)
+  );
+  if (isUniversal) {
+    if (kind === "years") return "All years";
+    return "Universal";
+  }
+  return trimmed;
+}
+
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
   const { activeBranch } = useBranchStore();
@@ -397,15 +416,21 @@ export default function PartDetailPage() {
                 <CardContent className="p-6 space-y-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Compatible Makes</p>
-                    <p className="text-sm">{part.compatible_makes || "Universal / Not specified"}</p>
+                    <p className="text-sm">
+                      {formatCompatibilityDisplay(part.compatible_makes, "makes")}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Compatible Models</p>
-                    <p className="text-sm">{part.compatible_models || "Not specified"}</p>
+                    <p className="text-sm">
+                      {formatCompatibilityDisplay(part.compatible_models, "models")}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Year Range</p>
-                    <p className="text-sm">{part.compatible_years || "All years"}</p>
+                    <p className="text-sm">
+                      {formatCompatibilityDisplay(part.compatible_years, "years")}
+                    </p>
                   </div>
                 </CardContent>
               </Card>

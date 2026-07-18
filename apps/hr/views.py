@@ -4,7 +4,7 @@ HR Management Views — DRF ViewSets with branch filtering and permission checks
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -35,7 +35,8 @@ from .serializers import (
     AttendancePolicySerializer, AttendanceSerializer,
     SalaryComponentSerializer, EmployeeSalaryComponentSerializer, PayrollPeriodSerializer, PaySlipSerializer,
     PayrollAuditLogSerializer,
-    JobOpeningSerializer, ApplicantSerializer, InterviewSerializer,
+    JobOpeningSerializer, PublicJobOpeningSerializer, ApplicantSerializer,
+    PublicApplicantApplySerializer, InterviewSerializer,
     PerformanceReviewSerializer, TrainingProgramSerializer,
     EmployeeTrainingSerializer, ComplianceDocumentSerializer, TaxRuleSerializer,
 )
@@ -623,7 +624,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
-        if self.action in ['clock_in', 'clock_out', 'my_attendance', 'status']:
+        if self.action in ['clock_in', 'clock_out', 'my_attendance', 'today_summary']:
             pass
         elif self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_attendance'))
@@ -658,16 +659,46 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'branch': 'Could not resolve branch for attendance. Please specify one.'})
 
-    @action(detail=False, methods=['post'])
-    def clock_in(self, request):
-        """Clock in for the current user"""
+    def _get_attendance_profile(self, request):
+        """Resolve employee profile allowed to use HR day attendance (not WO labor)."""
         try:
-            profile = EmployeeProfile.objects.get(user=request.user)
+            profile = EmployeeProfile.objects.select_related('user__branch').get(user=request.user)
         except EmployeeProfile.DoesNotExist:
-            return Response(
-                {'detail': 'Employee profile not found. Personal attendance tracking is only available for accounts linked to an employee record.'},
+            return None, Response(
+                {
+                    'detail': (
+                        'Employee profile not found. HR attendance is only available for '
+                        'accounts linked to a staff record.'
+                    ),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if not profile.time_tracking_enabled:
+            return None, Response(
+                {
+                    'detail': (
+                        'HR attendance time tracking is disabled for your staff profile. '
+                        'Contact HR if you need daily clock-in access. '
+                        'Work-order job labor time is separate and unaffected.'
+                    ),
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not profile.is_active_employee:
+            return None, Response(
+                {
+                    'detail': 'HR attendance clocking is only available for active or probation staff.',
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return profile, None
+
+    @action(detail=False, methods=['post'])
+    def clock_in(self, request):
+        """Clock in for the current user (HR daily attendance — not work-order labor)."""
+        profile, error = self._get_attendance_profile(request)
+        if error:
+            return error
 
         today = timezone.now().date()
         branch = resolve_branch_for_user(request)
@@ -718,14 +749,10 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def clock_out(self, request):
-        """Clock out for the current user"""
-        try:
-            profile = EmployeeProfile.objects.get(user=request.user)
-        except EmployeeProfile.DoesNotExist:
-            return Response(
-                {'detail': 'Employee profile not found. Personal attendance tracking is only available for accounts linked to an employee record.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        """Clock out for the current user (HR daily attendance — not work-order labor)."""
+        profile, error = self._get_attendance_profile(request)
+        if error:
+            return error
 
         today = timezone.now().date()
         try:
@@ -1186,7 +1213,7 @@ class PaySlipViewSet(viewsets.ModelViewSet):
     serializer_class = PaySlipSerializer
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
-        if self.action in ['my_payslips', 'my_summary', 'download_pdf']:
+        if self.action in ['my_payslips', 'download_pdf']:
             pass
         elif self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_payroll'))
@@ -1272,6 +1299,8 @@ class PaySlipViewSet(viewsets.ModelViewSet):
 class JobOpeningViewSet(viewsets.ModelViewSet):
     serializer_class = JobOpeningSerializer
     def get_permissions(self):
+        if self.action in ['public_list', 'public_detail']:
+            return [AllowAny(), IsModuleEnabled('hr')()]
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_recruitment'))
@@ -1298,6 +1327,27 @@ class JobOpeningViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'branch': 'Could not resolve branch for job opening. Please specify one.'})
 
+    def _public_open_jobs(self):
+        today = timezone.now().date()
+        return JobOpening.objects.filter(status='open').filter(
+            Q(closing_date__isnull=True) | Q(closing_date__gte=today),
+        ).select_related('department', 'branch').order_by('-posted_date', '-created_at')
+
+    @action(detail=False, methods=['get'], url_path='public')
+    def public_list(self, request):
+        """List open job openings for the public careers portal."""
+        serializer = PublicJobOpeningSerializer(self._public_open_jobs(), many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='public')
+    def public_detail(self, request, pk=None):
+        """Public job detail for the careers portal."""
+        try:
+            opening = self._public_open_jobs().get(pk=pk)
+        except JobOpening.DoesNotExist:
+            return Response({'detail': 'Job opening not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(PublicJobOpeningSerializer(opening).data)
+
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):
         """Publish a job opening"""
@@ -1321,6 +1371,8 @@ class JobOpeningViewSet(viewsets.ModelViewSet):
 class ApplicantViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicantSerializer
     def get_permissions(self):
+        if self.action == 'public_apply':
+            return [AllowAny(), IsModuleEnabled('hr')()]
         permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_recruitment'))
@@ -1339,6 +1391,21 @@ class ApplicantViewSet(viewsets.ModelViewSet):
         ).prefetch_related('interviews')
         return filter_queryset_for_user_branches(
             qs, self.request.user, branch_field='job_opening__branch',
+        )
+
+    @action(detail=False, methods=['post'], url_path='public_apply')
+    def public_apply(self, request):
+        """Accept a public careers application (website source)."""
+        serializer = PublicApplicantApplySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        applicant = serializer.save(status='new', source='website', notes='')
+        return Response(
+            {
+                'detail': 'Application submitted successfully.',
+                'id': applicant.id,
+                'job_title': applicant.job_opening.title,
+            },
+            status=status.HTTP_201_CREATED,
         )
 
     @action(detail=True, methods=['post'])

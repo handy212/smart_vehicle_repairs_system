@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
 import { adminApi } from "@/lib/api/admin";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,10 +69,7 @@ export default function PurchaseOrderDetailPage() {
     queryFn: () => inventoryApi.getPurchaseOrder(id),
   });
 
-  const { data: currentUser } = useQuery({
-    queryKey: ["currentUser"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: currentUser } = useCurrentUser();
 
   const { activeBranchId } = useBranchStore();
   const isSubmitter = currentUser?.id === purchaseOrder?.created_by;

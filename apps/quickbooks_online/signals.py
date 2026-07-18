@@ -172,12 +172,42 @@ def sync_purchase_order_on_save(sender, instance, created, **kwargs):
     schedule_entity_sync('purchase_order', instance.id, task=task_sync_purchase_order_to_qbo)
 
 
+@receiver(pre_save, sender=Branch)
+def capture_branch_qbo_identity_before_save(sender, instance, **kwargs):
+    """Track name/code changes so we only sync QBO Locations when identity changes."""
+    if not instance.pk:
+        instance._qbo_branch_identity_changed = True
+        return
+    try:
+        previous = Branch.objects.get(pk=instance.pk)
+    except Branch.DoesNotExist:
+        instance._qbo_branch_identity_changed = True
+        return
+    instance._qbo_branch_identity_changed = (
+        previous.name != instance.name or previous.code != instance.code
+    )
+
+
 @receiver(post_save, sender=Branch)
 def sync_branch_on_save(sender, instance, created, **kwargs):
-    """Trigger QBO sync when a Branch is created or updated."""
+    """
+    Sync QBO Location when a branch is created or its name/code changes.
+
+    Phone/hours/address edits do not touch QuickBooks. Explicit map/auto_sync
+    /onboard paths call sync_branch directly.
+    """
     if _skip_signal():
         return
-    logger.info(f"Scheduling QBO sync for Branch {instance.id} ({instance.name})")
+    identity_changed = bool(getattr(instance, '_qbo_branch_identity_changed', False))
+    if not created and not identity_changed:
+        return
+    logger.info(
+        'Scheduling QBO sync for Branch %s (%s) created=%s identity_changed=%s',
+        instance.id,
+        instance.name,
+        created,
+        identity_changed,
+    )
     schedule_entity_sync('branch', instance.id, task=task_sync_branch_to_qbo)
 
 

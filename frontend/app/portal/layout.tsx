@@ -2,15 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { authApi } from "@/lib/api/auth";
-import { useAuthStore } from "@/store/authStore";
-import { ensureApiSession } from "@/lib/auth/session";
 import { ErrorBoundary } from "@/components/error-boundary";
 import dynamic from "next/dynamic";
 import { PortalMobileActionsBar } from "./components/PortalMobileActionsBar";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 // Lazy load sidebar and navbar for better performance
 const PortalNavbar = dynamic(() => import("@/components/layout/PortalNavbar").then(mod => ({ default: mod.PortalNavbar })), {
@@ -31,20 +28,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  const setUser = useAuthStore((s) => s.setUser);
-
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const ok = await ensureApiSession();
-      if (!ok) {
-        throw new Error("Not authenticated");
-      }
-      const currentUser = await authApi.getCurrentUser();
-      setUser(currentUser);
-      return currentUser;
-    },
-    retry: false,
+  const { data: user, isLoading } = useCurrentUser({
+    ensureSession: true,
+    syncStore: true,
   });
 
   // Handle hydration and localStorage

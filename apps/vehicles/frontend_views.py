@@ -352,8 +352,11 @@ def vin_decode_ajax(request):
         # Import VIN decoder
         from .vin_decoder import VehicleVINDecoder
         
+        from django.conf import settings
+
         decoder = VehicleVINDecoder()
-        success, decoded_data = decoder.decode_vin(vin)
+        timeout_seconds = float(getattr(settings, 'VIN_DECODE_TIMEOUT_SECONDS', 5))
+        success, decoded_data = decoder.decode_vin(vin, timeout_seconds=timeout_seconds)
         
         if success:
             return JsonResponse({

@@ -32,6 +32,20 @@ export function useTheme() {
     const root = document.documentElement;
     root.classList.remove('dark', 'classic', 'perfex');
 
+    // Auth pages stay light so form copy remains readable after dark-mode sign-out.
+    // Preference stays in localStorage and reapplies after leaving auth.
+    const path = window.location.pathname || '';
+    const isAuth =
+      path === '/login' ||
+      path.startsWith('/login/') ||
+      path === '/register';
+
+    if (isAuth) {
+      root.classList.add('perfex');
+      setResolvedTheme(resolved === 'perfex-dark' ? 'dark' : 'perfex');
+      return;
+    }
+
     if (resolved === 'perfex-dark') {
       root.classList.add('perfex', 'dark');
       setResolvedTheme('dark');

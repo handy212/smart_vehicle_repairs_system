@@ -1,11 +1,16 @@
 """
 VIN Decoder Integration using NHTSA API
-Decodes Vehicle Identification Numbers to retrieve vehicle specifications
+Decodes Vehicle Identification Numbers to retrieve vehicle specifications.
+
+When NHTSA returns empty make/model (common for non-US VINs) or is unreachable,
+falls back to a local WMI + model-year decode (manufacturer / region / year).
 """
 import logging
 from typing import Any
 
 import requests
+
+from apps.vehicles.wmi_decoder import decode_wmi_local, merge_wmi_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +37,15 @@ class VehicleVINDecoder:
         """
         if not vin or len(vin) != 17:
             return False, "VIN must be exactly 17 characters"
+
+        vin = vin.upper().strip()
         
         # Validate VIN format (exclude I, O, Q)
         invalid_chars = set('IOQ')
-        if any(char in invalid_chars for char in vin.upper()):
+        if any(char in invalid_chars for char in vin):
             return False, "VIN cannot contain letters I, O, or Q"
+
+        local = decode_wmi_local(vin)
         
         try:
             # Decode VIN using NHTSA VPIC API (with an explicit timeout).
@@ -44,20 +53,49 @@ class VehicleVINDecoder:
             # this can hang until the client aborts.
             result = self._fetch_nhtsa_vpic(vin, timeout_seconds=timeout_seconds)
             vehicle_data = self._extract_vehicle_data_from_dict(result)
+            has_make = bool(str(vehicle_data.get('make') or '').strip())
+            has_model = bool(str(vehicle_data.get('model') or '').strip())
+            vehicle_data['has_useful_fields'] = has_make or has_model
+            # VPIC often sets ErrorCode for non-US VINs while still returning Make/Model.
+            # Keep has_errors for UI warnings, but do not treat that as a total failure.
+            if not vehicle_data['has_useful_fields'] and not vehicle_data.get('has_errors'):
+                vehicle_data['has_errors'] = True
+                vehicle_data['error_message'] = (
+                    vehicle_data.get('error_message')
+                    or 'No make/model returned from NHTSA VPIC'
+                )
+            # Fill blank make/year/region from offline WMI when VPIC is empty
+            vehicle_data = merge_wmi_fallback(vehicle_data, local)
             return True, vehicle_data
-            
-        except requests.Timeout:
-            logger.warning("VIN decode timed out for %s (timeout=%ss)", vin, timeout_seconds)
-            return False, f"NHTSA VIN decode timed out after {timeout_seconds}s. VPIC may be slow or blocked from this server."
-        except requests.HTTPError as e:
-            resp = getattr(e, "response", None)
-            if resp is not None and resp.status_code == 503:
-                return False, "NHTSA VPIC returned 503 Service Unavailable. Try again later."
-            return False, f"NHTSA VIN decode failed (HTTP error). {str(e)}"
-        except requests.RequestException as e:
-            logger.error("VIN decode request error for %s: %s", vin, str(e))
-            return False, f"NHTSA VIN decode failed (network error). {str(e)}"
-        except Exception as e:
+
+        except (requests.Timeout, requests.RequestException, ValueError, Exception) as e:
+            # Prefer local WMI over hard failure when NHTSA is down / blocked
+            if local.get('has_useful_fields'):
+                logger.warning(
+                    "NHTSA decode failed for %s (%s); using local WMI fallback",
+                    vin, e,
+                )
+                local = dict(local)
+                local['has_errors'] = True
+                local['wmi_fallback'] = True
+                local['error_message'] = 'NHTSA unavailable; used local WMI decode.'
+                local['decode_sources'] = ['wmi_local']
+                return True, local
+
+            if isinstance(e, requests.Timeout):
+                logger.warning("VIN decode timed out for %s (timeout=%ss)", vin, timeout_seconds)
+                return False, (
+                    f"NHTSA VIN decode timed out after {timeout_seconds}s. "
+                    "VPIC may be slow or blocked from this server."
+                )
+            if isinstance(e, requests.HTTPError):
+                resp = getattr(e, "response", None)
+                if resp is not None and resp.status_code == 503:
+                    return False, "NHTSA VPIC returned 503 Service Unavailable. Try again later."
+                return False, f"NHTSA VIN decode failed (HTTP error). {str(e)}"
+            if isinstance(e, requests.RequestException):
+                logger.error("VIN decode request error for %s: %s", vin, str(e))
+                return False, f"NHTSA VIN decode failed (network error). {str(e)}"
             logger.error(f"VIN decode error for {vin}: {str(e)}")
             return False, f"Decode failed: {str(e)}"
 
@@ -154,6 +192,7 @@ class VehicleVINDecoder:
         data['engine_model'] = self._get_value(vin_obj, 'EngineModel')
         data['engine_manufacturer'] = self._get_value(vin_obj, 'EngineManufacturer')
         data['engine_displacement_l'] = self._get_value(vin_obj, 'DisplacementL')
+        data['engine_configuration'] = self._get_value(vin_obj, 'EngineConfiguration')
         
         # Transmission
         data['transmission_style'] = self._get_value(vin_obj, 'TransmissionStyle')
@@ -249,9 +288,13 @@ class VehicleVINDecoder:
         return engine_str
     
     def _map_fuel_type(self, fuel_type):
-        """Map NHTSA fuel type to our engine type choices"""
+        """Map NHTSA fuel type to our engine type choices.
+
+        Returns '' when VPIC has no fuel type so callers do not overwrite
+        an existing engine_type with a guessed default.
+        """
         if not fuel_type:
-            return 'gasoline'
+            return ''
         
         fuel_type_lower = fuel_type.lower()
         
@@ -272,13 +315,14 @@ class VehicleVINDecoder:
         for key, value in mapping.items():
             if key in fuel_type_lower:
                 return value
-        
-        return 'gasoline'  # Default
+
+        # Unknown fuel string — leave blank so we do not guess
+        return ''
     
     def _map_transmission_type(self, transmission_style):
         """Map NHTSA transmission style to our transmission type choices"""
         if not transmission_style:
-            return 'automatic'
+            return ''
         
         trans_lower = transmission_style.lower()
         
@@ -290,27 +334,33 @@ class VehicleVINDecoder:
             return 'dual_clutch'
         elif 'automatic' in trans_lower or 'at' in trans_lower:
             return 'automatic'
-        
-        return 'automatic'  # Default
+
+        return ''
     
-    def get_vehicle_summary(self, vin):
+    def get_vehicle_summary(
+        self,
+        vin: str,
+        data: dict[str, Any] | None = None,
+        timeout_seconds: float | None = None,
+    ):
         """
-        Get a human-readable summary of the vehicle
-        
-        Args:
-            vin (str): Vehicle VIN
-            
-        Returns:
-            str: Formatted vehicle description
+        Get a human-readable summary of the vehicle.
+
+        Pass ``data`` from an existing decode_vin() result to avoid a second
+        NHTSA round-trip.
         """
-        success, data = self.decode_vin(vin)
-        
-        if not success:
-            return f"Error: {data}"
-        
+        if data is None:
+            success, decoded = self.decode_vin(
+                vin,
+                timeout_seconds=5.0 if timeout_seconds is None else timeout_seconds,
+            )
+            if not success:
+                return f"Error: {decoded}"
+            data = decoded if isinstance(decoded, dict) else {}
+
         # Build summary regardless of errors (warnings are OK)
         parts = []
-        
+
         if data.get('year'):
             parts.append(str(data['year']))
         if data.get('make'):
@@ -319,26 +369,26 @@ class VehicleVINDecoder:
             parts.append(data['model'])
         if data.get('trim'):
             parts.append(data['trim'])
-        
+
         summary = ' '.join(parts)
-        
+
         # Add engine info
         if data.get('engine_size'):
             summary += f" - {data['engine_size']}"
-        
+
         # Add transmission
         if data.get('transmission_type'):
             trans_display = data['transmission_type'].replace('_', ' ').title()
             summary += f" {trans_display}"
-        
+
         # If we have a summary, return it (errors/warnings don't prevent this)
         if summary:
             return summary
-        
+
         # Only if we have no data at all, return the error message
         if data.get('has_errors'):
             return f"Limited data available: {data.get('error_message', 'Unknown error')}"
-        
+
         return "Vehicle information not available"
 
 
@@ -369,24 +419,97 @@ def get_vehicle_specs(vin):
     """
     success, data = decode_vin(vin)
     
-    if not success:
+    if not success or not isinstance(data, dict):
         return None
-    
-    if data.get('has_errors'):
+
+    # Accept partial VPIC results even when ErrorCode/has_errors is set
+    # (common for non-US VINs that still return Make/Model).
+    if not data.get('has_useful_fields') and not (data.get('make') or data.get('model')):
         return None
-    
-    # Return only fields that match our Vehicle model
-    specs = {
-        'year': data.get('year'),
-        'make': data.get('make'),
-        'model': data.get('model'),
-        'trim': data.get('trim'),
-        'engine_type': data.get('engine_type'),
-        'engine_size': data.get('engine_size'),
-        'transmission_type': data.get('transmission_type'),
+
+    return vehicle_model_updates_from_decoded(data, only_blank=False) or None
+
+
+_BLANK_SENTINELS = {'', 'UNKNOWN', 'N/A', 'NA', 'NONE', 'NOT APPLICABLE'}
+
+
+def _is_blank_vehicle_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and value.strip().upper() in _BLANK_SENTINELS:
+        return True
+    return False
+
+
+def vehicle_model_updates_from_decoded(
+    decoded: dict[str, Any],
+    *,
+    current: dict[str, Any] | None = None,
+    only_blank: bool = True,
+) -> dict[str, Any]:
+    """
+    Map a VPIC decode payload onto Vehicle model scalar fields.
+
+    When only_blank=True, existing non-empty values (e.g. from a spreadsheet)
+    are preserved.
+    """
+    current = current or {}
+    candidates = {
+        'year': decoded.get('year'),
+        'make': decoded.get('make'),
+        'model': decoded.get('model'),
+        'trim': decoded.get('trim'),
+        'engine_type': decoded.get('engine_type'),
+        'engine_size': decoded.get('engine_size'),
+        'transmission_type': decoded.get('transmission_type'),
     }
-    
-    # Remove None values
-    specs = {k: v for k, v in specs.items() if v is not None}
-    
-    return specs
+    updates: dict[str, Any] = {}
+    for field, value in candidates.items():
+        if value in (None, ''):
+            continue
+        if only_blank and not _is_blank_vehicle_value(current.get(field)):
+            continue
+        if field in ('make', 'model', 'trim', 'engine_size') and isinstance(value, str):
+            updates[field] = value[:100] if field != 'engine_size' else value[:50]
+        elif field == 'year':
+            try:
+                updates[field] = int(value)
+            except (TypeError, ValueError):
+                continue
+        else:
+            updates[field] = value
+    return updates
+
+
+def apply_decoded_to_vehicle(
+    vehicle,
+    decoded: dict[str, Any],
+    *,
+    only_blank: bool = True,
+    save: bool = True,
+) -> dict[str, Any]:
+    """
+    Persist full VPIC payload on vehicle.vin_decoded_data and optionally fill
+    blank Vehicle scalar fields (make/model/year/engine_size/...).
+    """
+    from django.utils import timezone
+
+    current = {
+        'year': getattr(vehicle, 'year', None),
+        'make': getattr(vehicle, 'make', None),
+        'model': getattr(vehicle, 'model', None),
+        'trim': getattr(vehicle, 'trim', None),
+        'engine_type': getattr(vehicle, 'engine_type', None),
+        'engine_size': getattr(vehicle, 'engine_size', None),
+        'transmission_type': getattr(vehicle, 'transmission_type', None),
+    }
+    updates = vehicle_model_updates_from_decoded(
+        decoded, current=current, only_blank=only_blank
+    )
+    updates['vin_decoded_data'] = decoded
+    updates['vin_decoded_at'] = timezone.now()
+    for field, value in updates.items():
+        setattr(vehicle, field, value)
+    if save:
+        vehicle.save(update_fields=list(updates.keys()))
+    return updates

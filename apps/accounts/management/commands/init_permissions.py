@@ -246,6 +246,11 @@ class Command(BaseCommand):
                     'Manage System Updates',
                     'Check for and apply application updates from the admin UI',
                 ),
+                'manage_data_exchange': (
+                    'system',
+                    'Manage Data Import/Export',
+                    'Upload, preview, commit, and roll back centralized data imports and exports',
+                ),
                 'view_system_status': ('system', 'View System Status', 'View system health and status'),
                 'manage_api_keys': ('system', 'Manage API Keys', 'Manage API keys and integrations'),
                 'view_modules': ('system', 'View Modules', 'View module enablement status'),

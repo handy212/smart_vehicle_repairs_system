@@ -8,8 +8,11 @@ import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fixedAssetsApi, type FixedAsset, type FixedAssetCategory, type FixedAssetUpdateData } from "@/lib/api/fixed-assets";
 import { documentsApi } from "@/lib/api/documents";
-import { branchesApi } from "@/lib/api/branches";
-import { hrApi } from "@/lib/api/hr";
+import {
+    useActiveBranches,
+    useActiveStaff,
+    useAssetCategories,
+} from "@/lib/hooks/useFormLookups";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,21 +111,9 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
         enabled: !isNaN(assetId),
     });
 
-    const { data: categories } = useQuery({
-        queryKey: ["asset-categories"],
-        queryFn: () => fixedAssetsApi.categories.active(),
-    });
-
-    const { data: branchesResponse } = useQuery({
-        queryKey: ["branches"],
-        queryFn: () => branchesApi.list({ is_active: true }),
-    });
-
-    const { data: staffResponse } = useQuery({
-        queryKey: ["staff-list"],
-        queryFn: async () => (await hrApi.staff.list({ employment_status: "active" })).data,
-    });
-
+    const { data: categories } = useAssetCategories();
+    const { data: branchesResponse } = useActiveBranches();
+    const { data: staffResponse } = useActiveStaff();
 
     const branches = branchesResponse ?? [];
 

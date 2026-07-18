@@ -6,20 +6,40 @@ import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/store/authStore";
 import { useOfflineStore } from "@/store/offlineStore";
 import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
+import { workOrderTasksApi, type ServiceTask } from "@/lib/api/workorder-tasks";
 import { timeLogsDB } from "@/lib/offline/db";
-import { queueRequest } from "@/lib/offline/queue";
 import { Clock, Play, Square, RefreshCw } from "lucide-react";
+import { filterSelectableLaborTasks } from "@/lib/workorders/laborTasks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobilePageShell } from "@/components/mobile/MobilePageShell";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import apiClient from "@/lib/api/client";
-import { timeLogsApi } from "@/lib/api/timeLogs";
+import { timeLogsApi, type TimeLog as ApiTimeLog } from "@/lib/api/timeLogs";
 import { getUserFacingError } from "@/lib/api/apiErrors";
 
 interface TimeLog {
   id?: number;
+  tempId?: number;
   work_order: number;
   work_order_number?: string;
+  task?: number | null;
+  task_description?: string | null;
   clock_in: string;
   clock_out?: string | null;
   duration_hours?: number;
@@ -35,11 +55,15 @@ export default function TimeTrackingPage() {
   const [recentLogs, setRecentLogs] = useState<TimeLog[]>([]);
   const [assignedWorkOrders, setAssignedWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pendingWoId, setPendingWoId] = useState<number | null>(null);
+  const [taskOptions, setTaskOptions] = useState<ServiceTask[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
   const checkActiveLog = useCallback(async () => {
     try {
       if (isOnline) {
-        const response = await apiClient.get<TimeLog | null>("/workorders/time-logs/active/");
+        const response = await apiClient.get<ApiTimeLog | null>("/workorders/time-logs/active/");
         setActiveLog(response.data || null);
       } else {
         const logs = await timeLogsDB.getAll();
@@ -57,10 +81,9 @@ export default function TimeTrackingPage() {
     if (!user?.id) return;
     try {
       if (isOnline) {
-        const response = await apiClient.get<TimeLog[]>("/workorders/time-logs/my-recent/");
-        const logs = Array.isArray(response.data) ? response.data : [];
+        const logs = await timeLogsApi.myRecent();
         const completed = logs.filter((log) => log.clock_out);
-        setRecentLogs(completed.slice(0, 15));
+        setRecentLogs(completed.slice(0, 15) as TimeLog[]);
         for (const log of logs) {
           if (log.id) await timeLogsDB.set(log.id, log, true);
         }
@@ -103,33 +126,66 @@ export default function TimeTrackingPage() {
     loadAssignedWorkOrders();
   }, [checkActiveLog, loadRecentLogs, loadAssignedWorkOrders]);
 
-  const handleClockIn = async (workOrderId: number) => {
+  const openTaskPicker = async (workOrderId: number) => {
+    setPendingWoId(workOrderId);
+    setLoadingTasks(true);
+    try {
+      if (!isOnline) {
+        toast.error("Go online briefly to load tasks, then you can start labor offline.");
+        setPendingWoId(null);
+        return;
+      }
+      const tasks = await workOrderTasksApi.list({ work_order: workOrderId });
+      const openTasks = filterSelectableLaborTasks(tasks, {
+        userId: user?.id,
+        canPickAny: true,
+      });
+      setTaskOptions(openTasks);
+      setSelectedTaskId(openTasks[0] ? String(openTasks[0].id) : "");
+    } catch (error) {
+      toast.error(getUserFacingError(error, "Failed to load tasks"));
+      setPendingWoId(null);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const handleClockIn = async () => {
+    if (!pendingWoId || !selectedTaskId || !user?.id) return;
+    const taskId = Number(selectedTaskId);
+    const task = taskOptions.find((t) => t.id === taskId);
+    const wo = assignedWorkOrders.find((w) => w.id === pendingWoId);
     setLoading(true);
     try {
       if (isOnline) {
-        const log = await timeLogsApi.clockIn(workOrderId);
-        setActiveLog(log);
-      } else {
-        const tempId = Date.now();
-        const clockIn = new Date().toISOString();
-        const logWithId: TimeLog = {
-          work_order: workOrderId,
-          clock_in: clockIn,
-          description: "Field work",
-          id: tempId,
-          technician: user?.id,
-        };
-        await timeLogsDB.set(tempId, logWithId, false);
-        await queueRequest("create", "/workorders/time-logs/clock-in/", "POST", {
-          work_order: workOrderId,
-          description: "Field work",
+        const log = await timeLogsApi.clockIn(pendingWoId, {
+          task: taskId,
+          description: task?.description,
         });
-        setActiveLog(logWithId);
+        setActiveLog(log);
+        if (log.id) await timeLogsDB.set(log.id, log, true);
+      } else {
+        const tempId = -Date.now();
+        const clockIn = new Date().toISOString();
+        const localLog: TimeLog = {
+          id: tempId,
+          tempId,
+          work_order: pendingWoId,
+          work_order_number: wo?.work_order_number,
+          task: taskId,
+          task_description: task?.description,
+          clock_in: clockIn,
+          technician: user.id,
+          description: task?.description,
+        };
+        await timeLogsDB.set(tempId, localLog, false);
+        setActiveLog(localLog);
       }
-      toast.success("Clocked in");
+      setPendingWoId(null);
+      toast.success(isOnline ? "Labor timer started" : "Labor timer queued offline");
       await loadRecentLogs();
     } catch (error) {
-      toast.error(getUserFacingError(error, "Failed to clock in"));
+      toast.error(getUserFacingError(error, "Failed to start labor timer"));
     } finally {
       setLoading(false);
     }
@@ -140,26 +196,28 @@ export default function TimeTrackingPage() {
     setLoading(true);
     try {
       const clockOut = new Date().toISOString();
-      if (isOnline && activeLog.id) {
+      const localId = activeLog.id || activeLog.tempId || Date.now();
+      if (isOnline && activeLog.id && activeLog.id > 0) {
         await timeLogsApi.clockOut(activeLog.id, clockOut);
+        await timeLogsDB.set(
+          activeLog.id,
+          { ...activeLog, clock_out: clockOut },
+          true,
+        );
       } else {
         const updated = {
           ...activeLog,
+          id: localId,
           clock_out: clockOut,
           duration_hours: calculateDuration(activeLog.clock_in, clockOut),
         };
-        await timeLogsDB.set(activeLog.id || Date.now(), updated, false);
-        if (activeLog.id) {
-          await queueRequest("update", `/workorders/time-logs/${activeLog.id}/`, "PATCH", {
-            clock_out: clockOut,
-          });
-        }
+        await timeLogsDB.set(localId, updated, false);
       }
       setActiveLog(null);
-      toast.success("Clocked out");
+      toast.success(isOnline ? "Labor timer stopped" : "Stop queued — will sync when online");
       await loadRecentLogs();
     } catch (error) {
-      toast.error(getUserFacingError(error, "Failed to clock out"));
+      toast.error(getUserFacingError(error, "Failed to stop labor timer"));
     } finally {
       setLoading(false);
     }
@@ -184,9 +242,14 @@ export default function TimeTrackingPage() {
   };
 
   return (
-    <MobilePageShell title="Time Tracking" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Time Tracking</h2>
+    <MobilePageShell title="Labor Time" className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Labor Time</h2>
+          <p className="text-sm text-muted-foreground">
+            Track time against a task on your work order.
+          </p>
+        </div>
         <Button size="sm" variant="outline" onClick={refreshAll} disabled={loading} aria-label="Refresh">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
@@ -197,7 +260,7 @@ export default function TimeTrackingPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Clock className="h-5 w-5 text-primary" />
-              Clocked in
+              Timer running
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -221,6 +284,11 @@ export default function TimeTrackingPage() {
                 </p>
               </div>
             </div>
+            {(activeLog.task_description || activeLog.description) && (
+              <p className="text-sm text-muted-foreground">
+                {activeLog.task_description || activeLog.description}
+              </p>
+            )}
             <p className="text-center font-mono text-2xl font-bold text-primary">
               {formatDuration(
                 calculateDuration(activeLog.clock_in, new Date().toISOString())
@@ -232,7 +300,7 @@ export default function TimeTrackingPage() {
               className="h-11 w-full bg-destructive hover:bg-destructive/90"
             >
               <Square className="mr-2 h-4 w-4" />
-              Clock out
+              Stop
             </Button>
           </CardContent>
         </Card>
@@ -241,7 +309,7 @@ export default function TimeTrackingPage() {
       {!activeLog && assignedWorkOrders.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Clock in to a job
+            Start on a work order
           </h3>
           <div className="space-y-2">
             {assignedWorkOrders.map((wo) => (
@@ -255,8 +323,8 @@ export default function TimeTrackingPage() {
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => handleClockIn(wo.id)}
-                    disabled={loading}
+                    onClick={() => openTaskPicker(wo.id)}
+                    disabled={loading || loadingTasks}
                     className="shrink-0"
                   >
                     <Play className="mr-1 h-4 w-4" />
@@ -276,7 +344,7 @@ export default function TimeTrackingPage() {
         {recentLogs.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              No completed time entries yet. Clock in from an assigned work order above.
+              No completed labor entries yet.
             </CardContent>
           </Card>
         ) : (
@@ -287,6 +355,9 @@ export default function TimeTrackingPage() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
                       {log.work_order_number || `WO #${log.work_order}`}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {log.task_description || log.description || "Labor"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(log.clock_in).toLocaleDateString()} ·{" "}
@@ -315,6 +386,63 @@ export default function TimeTrackingPage() {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={pendingWoId != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingWoId(null);
+            setTaskOptions([]);
+            setSelectedTaskId("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select task</DialogTitle>
+            <DialogDescription>
+              Labor time is tracked against a specific task on the work order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Task</Label>
+            <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingTasks ? "Loading…" : "Select a task"} />
+              </SelectTrigger>
+              <SelectContent>
+                {taskOptions.length === 0 ? (
+                  <SelectItem value="__none" disabled>
+                    {loadingTasks ? "Loading tasks…" : "No open tasks"}
+                  </SelectItem>
+                ) : (
+                  taskOptions.map((task) => (
+                    <SelectItem key={task.id} value={String(task.id)}>
+                      {task.description}
+                      {task.task_type ? ` · ${task.task_type}` : ""}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingWoId(null)}>Cancel</Button>
+            <Button
+              onClick={handleClockIn}
+              disabled={
+                loading ||
+                loadingTasks ||
+                !selectedTaskId ||
+                selectedTaskId === "__none" ||
+                taskOptions.length === 0
+              }
+            >
+              Start timer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MobilePageShell>
   );
 }

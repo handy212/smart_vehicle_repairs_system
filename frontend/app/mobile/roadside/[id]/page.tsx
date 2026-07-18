@@ -43,6 +43,7 @@ import {
   isAssignmentAccepted,
 } from "@/lib/mobile/roadside-assignment";
 import { CheckCircle2 } from "lucide-react";
+import { useTechnicianLocationReporter } from "@/hooks/useTechnicianLocationReporter";
 
 export default function RoadsideDetailPage() {
   const { isOnline } = useOfflineStore();
@@ -63,6 +64,14 @@ export default function RoadsideDetailPage() {
   useEffect(() => {
     if (id) loadRequest();
   }, [id, isOnline]);
+
+  const shouldReportLocation = Boolean(
+    isOnline &&
+      request &&
+      !["completed", "cancelled"].includes(request.status) &&
+      isAssignmentAccepted(request, user?.id),
+  );
+  useTechnicianLocationReporter(shouldReportLocation);
 
   const loadRequest = async () => {
     try {

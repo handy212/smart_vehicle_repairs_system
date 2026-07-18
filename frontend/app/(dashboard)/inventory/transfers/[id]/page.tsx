@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
 import { adminApi, type User } from "@/lib/api/admin";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useBranchStore } from "@/store/branchStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,10 +46,7 @@ export default function TransferDetailPage() {
         enabled: !isNaN(id),
     });
 
-    const { data: currentUser } = useQuery({
-        queryKey: ["currentUser"],
-        queryFn: () => authApi.getCurrentUser(),
-    });
+    const { data: currentUser } = useCurrentUser();
 
     const { activeBranchId } = useBranchStore();
     const isSubmitter = currentUser?.id === transfer?.created_by;

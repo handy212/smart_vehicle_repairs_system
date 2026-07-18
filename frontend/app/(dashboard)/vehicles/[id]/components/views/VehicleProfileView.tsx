@@ -10,12 +10,14 @@ import { Vehicle, vehiclesApi } from "@/lib/api/vehicles";
 import Image from "next/image";
 import Link from "next/link";
 import { getMediaUrl } from "@/lib/api/utils";
-import { Calendar, FileText, ArrowUpRight, Car, User, History, ArrowRight, HeartPulse, DollarSign, Gauge, Cog, Fuel, Activity } from "lucide-react";
+import { Calendar, FileText, ArrowUpRight, Car, User, History, ArrowRight, HeartPulse, DollarSign, Gauge, Cog, Fuel, Activity, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/lib/hooks/useToast";
+import { getUserFacingError } from "@/lib/api/errors";
 
 function DataField({
     label,
@@ -49,6 +51,8 @@ interface VehicleProfileViewProps {
 
 export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleAppointments = [] }: VehicleProfileViewProps) {
     const { formatCurrency } = useCurrency();
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
     const [showImageModal, setShowImageModal] = useState(false);
     const [showOwnershipHistory, setShowOwnershipHistory] = useState(false);
 
@@ -57,6 +61,27 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
         queryFn: () => vehiclesApi.getOwnershipHistory(vehicle.id),
         enabled: showOwnershipHistory,
     });
+
+    const decodeSpecsMutation = useMutation({
+        mutationFn: () => vehiclesApi.refreshVinDecode(vehicle.id, { force: true }),
+        onSuccess: (result) => {
+            queryClient.invalidateQueries({ queryKey: ["vehicle", vehicle.id] });
+            toast({
+                title: result.partial ? "Partial VIN decode" : "VIN specs saved",
+                description: result.message || "Vehicle specs updated.",
+                variant: result.partial ? "warning" : "default",
+            });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "VIN decode failed",
+                description: getUserFacingError(error, "Could not decode VIN specs"),
+                variant: "destructive",
+            });
+        },
+    });
+
+    const canDecodeVin = Boolean(vehicle.vin && String(vehicle.vin).trim().length === 17);
 
     // Calculate stats
     const totalServices = vehicleWorkOrders.length;
@@ -112,7 +137,11 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                 <div className="mb-6">
                                     <h1 className="text-xl font-bold text-foreground flex items-center gap-3">
                                         {vehicle.year} {vehicle.make} {vehicle.model}
-                                        {vinData?.trim && <Badge variant="secondary" className="font-normal text-xs">{vinData.trim}</Badge>}
+                                        {(vehicle.trim || vinData?.trim) && (
+                                            <Badge variant="secondary" className="font-normal text-xs">
+                                                {vehicle.trim || vinData?.trim}
+                                            </Badge>
+                                        )}
                                     </h1>
                                     <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="outline" className="text-muted-foreground font-mono text-xs">{vehicle.license_plate || "No Plate"}</Badge>
@@ -167,21 +196,40 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                     <DataField
                                         label="Mileage"
                                         value={
-
-                                            (vehicle as any).current_mileage ? `${((vehicle as any).current_mileage).toLocaleString()} mi` : "-"
+                                            vehicle.current_mileage != null
+                                                ? `${Number(vehicle.current_mileage).toLocaleString()} ${vehicle.mileage_unit === "km" ? "km" : "mi"}`
+                                                : "-"
                                         }
                                         icon={Gauge}
                                     />
                                     <DataField
                                         label="Engine"
                                         value={
-
-                                            vinData?.engine_model || ((vehicle as any).engine_type || "").replace(/_/g, " ")
+                                            vehicle.engine_size ||
+                                            vinData?.engine_model ||
+                                            (vehicle.engine_type || "").replace(/_/g, " ") ||
+                                            "-"
                                         }
                                         icon={Cog}
                                     />
-                                    <DataField label="Fuel Type" value={vinData?.fuel_type_primary} icon={Fuel} />
-                                    <DataField label="Drive" value={vinData?.drive_type} icon={Activity} />
+                                    <DataField
+                                        label="Fuel Type"
+                                        value={
+                                            vinData?.fuel_type_primary ||
+                                            (vehicle.engine_type || "").replace(/_/g, " ") ||
+                                            "-"
+                                        }
+                                        icon={Fuel}
+                                    />
+                                    <DataField
+                                        label="Transmission"
+                                        value={
+                                            (vehicle.transmission_type || "").replace(/_/g, " ") ||
+                                            vinData?.transmission_style ||
+                                            "-"
+                                        }
+                                        icon={Activity}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -189,8 +237,26 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
                     {/* Detailed Specs Tabs */}
                     <Card>
-                        <CardHeader className="py-3 px-6 border-b bg-muted/30">
-                            <CardTitle className="text-sm font-semibold">Technical Specifications</CardTitle>
+                        <CardHeader className="py-3 px-6 border-b bg-muted/30 flex flex-row items-center justify-between gap-3 space-y-0">
+                            <div>
+                                <CardTitle className="text-sm font-semibold">Technical Specifications</CardTitle>
+                                <CardDescription className="text-xs mt-0.5">
+                                    {vinData
+                                        ? "Saved vehicle fields plus VIN-decoded details."
+                                        : ""}
+                                </CardDescription>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 shrink-0 text-xs"
+                                disabled={!canDecodeVin || decodeSpecsMutation.isPending}
+                                onClick={() => decodeSpecsMutation.mutate()}
+                                title={canDecodeVin ? "Fetch specs from NHTSA and save" : "Needs a valid 17-character VIN"}
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${decodeSpecsMutation.isPending ? "animate-spin" : ""}`} />
+                                {decodeSpecsMutation.isPending ? "Decoding…" : vinData ? "Refresh VIN specs" : "Decode VIN specs"}
+                            </Button>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Tabs defaultValue="overview" className="w-full">
@@ -202,20 +268,51 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                 <div className="p-6">
                                     <TabsContent value="overview" className="mt-0 space-y-6">
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8">
+                                            <DataField label="Trim" value={vehicle.trim || vinData?.trim} />
                                             <DataField label="Series" value={vinData?.series} />
-                                            <DataField label="Body Class" value={vinData?.body_class} />
+                                            <DataField label="Body Class" value={vinData?.body_class || vehicle.vehicle_type} />
+                                            <DataField label="Interior Color" value={vehicle.interior_color} />
+                                            <DataField label="Tire Size" value={vehicle.tire_size} />
+                                            <DataField
+                                                label="Fuel Tank"
+                                                value={
+                                                    vehicle.fuel_tank_capacity != null && vehicle.fuel_tank_capacity !== ""
+                                                        ? String(vehicle.fuel_tank_capacity)
+                                                        : null
+                                                }
+                                            />
                                             <DataField label="GVWR" value={vinData?.gvwr} />
                                             <DataField label="Doors" value={vinData?.doors} />
                                             <DataField label="Manufacturer" value={vinData?.manufacturer} />
-                                            <DataField label="Plant" value={`${vinData?.plant_city || ""} ${vinData?.plant_country || ""}`} />
+                                            <DataField label="Plant" value={`${vinData?.plant_city || ""} ${vinData?.plant_country || ""}`.trim()} />
+                                            <DataField label="Drive" value={vinData?.drive_type} />
                                         </div>
                                     </TabsContent>
                                     <TabsContent value="engine" className="mt-0 space-y-6">
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8">
+                                            <DataField
+                                                label="Engine Type"
+                                                value={(vehicle.engine_type || "").replace(/_/g, " ")}
+                                            />
+                                            <DataField
+                                                label="Engine Size"
+                                                value={
+                                                    vehicle.engine_size ||
+                                                    (vinData?.engine_displacement_l
+                                                        ? `${vinData.engine_displacement_l}L`
+                                                        : vinData?.DisplacementL)
+                                                }
+                                            />
                                             <DataField label="Cylinders" value={vinData?.engine_cylinders} />
-                                            <DataField label="Displacement" value={vinData?.engine_displacement_l ? `${vinData.engine_displacement_l}L` : vinData?.DisplacementL} />
                                             <DataField label="Horsepower" value={vinData?.engine_hp} />
                                             <DataField label="Configuration" value={vinData?.engine_configuration} />
+                                            <DataField
+                                                label="Transmission"
+                                                value={
+                                                    (vehicle.transmission_type || "").replace(/_/g, " ") ||
+                                                    vinData?.transmission_style
+                                                }
+                                            />
                                             <DataField label="Transmission Style" value={vinData?.transmission_style} />
                                             <DataField label="Trans Speeds" value={vinData?.transmission_speeds} />
                                         </div>

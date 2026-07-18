@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
-from apps.accounts.permissions import filter_workorders_for_user
+from apps.accounts.permissions import filter_workorders_for_user, user_has_permission
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from .models import (
@@ -1673,21 +1673,32 @@ class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
 # ============= Technician Time Log Serializers =============
 
 class TechnicianTimeLogSerializer(serializers.ModelSerializer):
-    """Time log with technician info"""
+    """Time log with technician and task info"""
     technician_name = serializers.SerializerMethodField()
     work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
-    
+    task_description = serializers.CharField(source='task.description', read_only=True, default=None)
+    task_type = serializers.CharField(source='task.task_type', read_only=True, default=None)
+    task_type_display = serializers.SerializerMethodField()
+
     class Meta:
         model = TechnicianTimeLog
         fields = '__all__'
-    
+
     @extend_schema_field(OpenApiTypes.STR)
     def get_technician_name(self, obj):
         return f"{obj.technician.first_name} {obj.technician.last_name}"
 
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_task_type_display(self, obj):
+        if not obj.task_id:
+            return None
+        choices = dict(ServiceTask.TASK_TYPE_CHOICES)
+        code = obj.task.task_type or ''
+        return choices.get(code, code.replace('_', ' ').title() if code else None)
+
 
 class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
-    """Create time log (clock in)"""
+    """Create time log (clock in against a specific service task)."""
     technician = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         required=False
@@ -1698,20 +1709,36 @@ class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
         required=False
     )
     clock_in = serializers.DateTimeField(required=False)
-    
+    task = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceTask.objects.all(),
+        required=True,
+    )
+
     class Meta:
         model = TechnicianTimeLog
         fields = [
             'id', 'work_order', 'task', 'technician',
             'clock_in', 'description', 'hourly_rate', 'is_billable'
         ]
-    
+
     def validate(self, data):
         request = self.context.get('request')
         user = getattr(request, 'user', None)
         work_order = data.get('work_order')
+        task = data.get('task')
         if work_order is None:
             raise serializers.ValidationError({'work_order': 'Work order is required.'})
+        if task is None:
+            raise serializers.ValidationError({'task': 'Select a task to track time against.'})
+
+        if task.work_order_id != work_order.id:
+            raise serializers.ValidationError({
+                'task': 'Task must belong to this work order.',
+            })
+        if task.status in ('completed', 'skipped'):
+            raise serializers.ValidationError({
+                'task': 'Cannot track time on a completed or skipped task.',
+            })
 
         if user and user.is_authenticated:
             accessible = filter_workorders_for_user(
@@ -1722,6 +1749,12 @@ class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
                     'work_order': 'You do not have access to this work order.',
                 })
 
+            can_override_assignment = user_has_permission(user, 'edit_workorders')
+            if task.assigned_to_id and task.assigned_to_id != user.id and not can_override_assignment:
+                raise serializers.ValidationError({
+                    'task': 'This task is assigned to someone else.',
+                })
+
             active = TechnicianTimeLog.objects.filter(
                 technician=user,
                 clock_out__isnull=True,
@@ -1729,7 +1762,7 @@ class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
             if active:
                 raise serializers.ValidationError({
                     'detail': (
-                        'You are already clocked in. Clock out before starting another job.'
+                        'You are already clocked in. Clock out before starting another task.'
                     ),
                     'active_log_id': active.id,
                     'active_work_order': active.work_order_id,
@@ -1757,7 +1790,7 @@ class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
 
         description = (data.get('description') or '').strip()
         if not description:
-            data['description'] = 'Field work'
+            data['description'] = task.description or 'Shop labor'
 
         return data
 

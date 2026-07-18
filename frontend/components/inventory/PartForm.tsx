@@ -445,12 +445,39 @@ export function PartForm({ initialData, onSubmit, formId, mode = "edit", product
                                             <Input id="dimensions" {...register("dimensions")} placeholder="10x5x3" />
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Compatibility</Label>
-                                        <div className="space-y-2">
-                                            <Input {...register("compatible_makes")} placeholder="Makes (e.g. Toyota, Honda)" />
-                                            <Input {...register("compatible_models")} placeholder="Models (e.g. Camry, Accord)" />
-                                            <Input {...register("compatible_years")} placeholder="Years (e.g. 2015-2023)" />
+                                    <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+                                        <div>
+                                            <Label className="text-sm font-medium">Vehicle Compatibility</Label>
+                                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                                Leave blank if unknown. Use commas for multiple values.
+                                                Enter &quot;universal&quot; only when the part truly fits all vehicles.
+                                            </p>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="compatible_makes" className="text-xs text-muted-foreground">Makes</Label>
+                                                <Input
+                                                    id="compatible_makes"
+                                                    {...register("compatible_makes")}
+                                                    placeholder="Toyota, Honda"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="compatible_models" className="text-xs text-muted-foreground">Models</Label>
+                                                <Input
+                                                    id="compatible_models"
+                                                    {...register("compatible_models")}
+                                                    placeholder="Camry, Corolla"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="compatible_years" className="text-xs text-muted-foreground">Years</Label>
+                                                <Input
+                                                    id="compatible_years"
+                                                    {...register("compatible_years")}
+                                                    placeholder="2015-2023"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="space-y-2">

@@ -71,8 +71,13 @@ def firebase_messaging_sw(request):
 
 def test_fcm_view(request):
     """
-    Test page for Firebase Cloud Messaging token generation
+    Test page for Firebase Cloud Messaging token generation.
+
+    Only available when DEBUG is enabled — never expose in production.
     """
+    if not settings.DEBUG:
+        from django.http import Http404
+        raise Http404()
     return render(request, 'test_fcm.html')
 
 
@@ -80,36 +85,56 @@ def test_fcm_view(request):
 @permission_classes([AllowAny])
 def api_root(request):
     """
-    API root endpoint - provides links to all available endpoints
+    Minimal public API map. Full module enumeration is authenticated-only
+    to reduce unauthenticated reconnaissance.
     """
-    return Response({
-        'message': 'Welcome to Smart Vehicle Repairs API',
+    payload = {
+        'message': 'Smart Vehicle Repairs API',
         'version': '1.0.0',
+        'status': 'operational',
         'endpoints': {
-            'admin': '/admin/',
-            'api_documentation': '/api/docs/',
-            'api_schema': '/api/schema/',
+            'health': '/api/health/',
             'authentication': {
                 'login': '/api/auth/token/',
                 'refresh_token': '/api/auth/token/refresh/',
-                'verify_token': '/api/auth/token/verify/',
-                'users': '/api/auth/users/',
-                'my_profile': '/api/auth/users/me/',
             },
-            'modules': {
-                'customers': '/api/customers/',
-                'vehicles': '/api/vehicles/',
-                'appointments': '/api/appointments/',
-                'work_orders': '/api/workorders/',
-                'inventory': '/api/inventory/',
-                'billing': '/api/billing/',
-                'inspections': '/api/inspections/',
-                'reports': '/api/reporting/',
-                'notifications': '/api/notifications/',
-            }
         },
-        'status': 'operational'
-    })
+    }
+    if request.user and request.user.is_authenticated:
+        payload['documentation'] = {
+            'swagger': '/api/docs/',
+            'redoc': '/api/redoc/',
+            'openapi_schema': '/api/schema/',
+        }
+        payload['endpoints']['authentication'].update({
+            'verify_token': '/api/auth/token/verify/',
+            'users': '/api/auth/users/',
+            'my_profile': '/api/auth/users/me/',
+        })
+        payload['endpoints']['modules'] = {
+            'customers': '/api/customers/',
+            'vehicles': '/api/vehicles/',
+            'appointments': '/api/appointments/',
+            'work_orders': '/api/workorders/',
+            'gatepass': '/api/gatepass/',
+            'inventory': '/api/inventory/',
+            'billing': '/api/billing/',
+            'accounting': '/api/accounting/',
+            'inspections': '/api/inspections/',
+            'diagnosis': '/api/diagnosis/',
+            'reports': '/api/reporting/',
+            'notifications': '/api/notifications/',
+            'documents': '/api/documents/',
+            'chat': '/api/chat/',
+            'hr': '/api/hr/',
+            'technicians': '/api/technicians/',
+            'roadside': '/api/roadside/',
+            'fixed_assets': '/api/fixed-assets/',
+            'subscriptions': '/api/subscriptions/',
+            'portal': '/api/portal/',
+            'feedback': '/api/feedback/',
+        }
+    return Response(payload)
 
 
 def _check_database():
@@ -160,7 +185,11 @@ def health_ready(request):
 
     payload = {'status': 'ok' if not errors else 'degraded', 'checks': checks}
     if errors:
-        payload['errors'] = errors
+        # Avoid leaking infrastructure exception text to anonymous callers in prod.
+        if settings.DEBUG:
+            payload['errors'] = errors
+        else:
+            payload['errors'] = ['One or more dependencies unavailable']
         return Response(payload, status=503)
     return Response(payload)
 
@@ -182,8 +211,8 @@ class HomePageView(TemplateView):
     """
 
     def get(self, request, *args, **kwargs):
-        # Keep it simple and always return the API root payload location.
-        return redirect('api-root')
+        # Never land anonymous browsers on Swagger — keep the minimal API map.
+        return redirect('api-welcome')
 
 
 @login_required

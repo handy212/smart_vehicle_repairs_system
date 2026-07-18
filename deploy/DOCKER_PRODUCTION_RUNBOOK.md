@@ -255,7 +255,7 @@ After changing permissions or roles, log out of the UI, clear site data for `htt
 
 ## 8. Required Production Bootstrap Commands
 
-Run these after first deployment. These are required production setup data, not demo data:
+Run these after first deployment. These are required production setup data:
 
 ```bash
 docker compose exec backend python manage.py init_settings
@@ -272,17 +272,6 @@ Run AA membership packages when the subscription membership module is used and a
 
 ```bash
 docker compose exec backend python manage.py seed_aa_membership
-```
-
-Do not run demo or test seed commands in production:
-
-```bash
-# Do not run in production
-docker compose exec backend python manage.py seed_demo_data
-docker compose exec backend python manage.py seed_hr_demo
-docker compose exec backend python manage.py seed_dev_data
-docker compose exec backend python manage.py populate_diagnosis_test_data
-docker compose exec backend python manage.py populate_inventory
 ```
 
 ## 9. Health Checks

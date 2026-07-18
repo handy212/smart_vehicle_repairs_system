@@ -1,31 +1,27 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useForm, Control } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
-import { customersApi } from "@/lib/api/customers";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AlertCircle, X, Image as ImageIcon, CheckCircle2, ScanBarcode } from "lucide-react";
+import { X, Image as ImageIcon, CheckCircle2, ScanBarcode } from "lucide-react";
 import { useState, useEffect } from "react";
 import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 import { VINDecoderButton } from "@/components/ui/vin-decoder-button";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useRouter } from "next/navigation";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { usePermissions } from "@/lib/hooks/usePermissions";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
+
+const optionalNumber = z.preprocess(
+    (val) => (val === "" || val === null || val === undefined || Number.isNaN(val) ? undefined : val),
+    z.number().min(0).optional()
+);
 
 export const vehicleSchema = z.object({
     vin: z.string()
@@ -35,10 +31,18 @@ export const vehicleSchema = z.object({
     make: z.string().min(1, "Make is required"),
     model: z.string().min(1, "Model is required"),
     year: z.number().min(1900).max(new Date().getFullYear() + 1),
+    trim: z.string().optional(),
     license_plate: z.string().optional(),
+    license_plate_state: z.string().optional(),
     exterior_color: z.string().optional(),
-    current_mileage: z.number().min(0).optional(),
+    interior_color: z.string().optional(),
+    current_mileage: optionalNumber,
+    mileage_unit: z.enum(["miles", "km"]).optional(),
     engine_type: z.enum(["gasoline", "diesel", "electric", "hybrid", "plug_in_hybrid"]).optional(),
+    engine_size: z.string().optional(),
+    transmission_type: z.enum(["automatic", "manual", "cvt", "dual_clutch"]).optional(),
+    fuel_tank_capacity: optionalNumber,
+    tire_size: z.string().optional(),
     owner: z.number().min(1, "Owner is required"),
     status: z.enum(["active", "in_service", "sold", "totaled", "inactive"]),
     vehicle_type: z.enum(["saloon", "suv", "pickup", "minivan", "motorcycle", "truck", "other"]),
@@ -49,6 +53,8 @@ export type VehicleFormData = z.infer<typeof vehicleSchema>;
 
 interface VehicleFormProps {
     initialData?: Partial<VehicleFormData> & { image?: string | null };
+    /** Current vehicle id when editing — excludes it from VIN duplicate checks / decode. */
+    vehicleId?: number;
     customerId?: string | null;
     onSubmit: (data: VehicleFormData, imageFile: File | null) => Promise<void>;
     isSubmitting: boolean;
@@ -57,21 +63,13 @@ interface VehicleFormProps {
     serverFieldErrors?: Record<string, string>;
 }
 
-export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, mode, onCancel, serverFieldErrors }: VehicleFormProps) {
+export function VehicleForm({ initialData, vehicleId, customerId, onSubmit, isSubmitting, mode, onCancel, serverFieldErrors }: VehicleFormProps) {
     const { toast } = useToast();
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
 
     const [showScanner, setShowScanner] = useState(false);
-    const [vinOtherInfo, setVinOtherInfo] = useState<any | null>(null);
-    const { hasPermission } = usePermissions();
-    const canListCustomers = hasPermission("view_customers");
-
-    const { data: customersData } = useQuery({
-        queryKey: ["customers", "list"],
-        queryFn: () => customersApi.list({ page: 1 }),
-        enabled: canListCustomers,
-    });
+    const [vinOtherInfo, setVinOtherInfo] = useState<Record<string, unknown> | null>(null);
 
     const {
         register,
@@ -80,14 +78,14 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
         setValue,
         setError,
         watch,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        control,
         reset,
     } = useForm<VehicleFormData>({
         resolver: zodResolver(vehicleSchema),
         defaultValues: {
             status: "active",
             engine_type: "gasoline",
+            transmission_type: "automatic",
+            mileage_unit: "miles",
             owner: customerId ? parseInt(customerId) : undefined,
             current_mileage: 0,
             year: new Date().getFullYear(),
@@ -103,6 +101,8 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
             reset({
                 status: "active",
                 engine_type: "gasoline",
+                transmission_type: "automatic",
+                mileage_unit: "miles",
                 vehicle_type: "saloon",
                 current_mileage: 0,
                 year: new Date().getFullYear(),
@@ -129,35 +129,71 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
     }, [serverFieldErrors, setError]);
 
     const vinValue = watch("vin");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const yearValue = watch("year");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const makeValue = watch("make");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const modelValue = watch("model");
 
     const handleVinDecode = (decodedData: {
         year?: number;
         make?: string;
         model?: string;
+        trim?: string;
         engine_type?: string;
-
-        vin_other_information?: any;
+        engine_size?: string;
+        transmission_type?: string;
+        body_class?: string;
+        vin_other_information?: Record<string, unknown>;
     }) => {
-        if (decodedData.year) setValue("year", decodedData.year);
-        if (decodedData.make) setValue("make", decodedData.make);
-        if (decodedData.model) setValue("model", decodedData.model);
-
-        if (decodedData.engine_type) setValue("engine_type", decodedData.engine_type as any);
+        const opts = { shouldDirty: true, shouldValidate: true } as const;
+        if (decodedData.year) setValue("year", decodedData.year, opts);
+        if (decodedData.make) setValue("make", decodedData.make, opts);
+        if (decodedData.model) setValue("model", decodedData.model, opts);
+        if (decodedData.trim) setValue("trim", decodedData.trim, opts);
+        if (decodedData.engine_type) {
+            setValue("engine_type", decodedData.engine_type as VehicleFormData["engine_type"], opts);
+        }
+        if (decodedData.engine_size) setValue("engine_size", decodedData.engine_size, opts);
+        if (decodedData.transmission_type) {
+            const allowed = ["automatic", "manual", "cvt", "dual_clutch"] as const;
+            if (allowed.includes(decodedData.transmission_type as (typeof allowed)[number])) {
+                setValue(
+                    "transmission_type",
+                    decodedData.transmission_type as VehicleFormData["transmission_type"],
+                    opts
+                );
+            }
+        }
         if (decodedData.vin_other_information) {
             setVinOtherInfo(decodedData.vin_other_information);
+            const other = decodedData.vin_other_information;
+            if (!decodedData.trim && typeof other.trim === "string" && other.trim) {
+                setValue("trim", other.trim, opts);
+            }
+            if (
+                !decodedData.engine_size &&
+                typeof other.engine_displacement_l === "string" &&
+                other.engine_displacement_l
+            ) {
+                setValue("engine_size", `${other.engine_displacement_l}L`, opts);
+            }
+        }
 
-            // Attempt to map VIN body type to vehicle_type
-            const bodyClass = decodedData.vin_other_information.body_class?.toLowerCase() || "";
-            if (bodyClass.includes("sedan") || bodyClass.includes("saloon") || bodyClass.includes("coupe")) setValue("vehicle_type", "saloon");
-            else if (bodyClass.includes("sport utility") || bodyClass.includes("suv")) setValue("vehicle_type", "suv");
-            else if (bodyClass.includes("pickup")) setValue("vehicle_type", "pickup");
-            else if (bodyClass.includes("van") || bodyClass.includes("minivan")) setValue("vehicle_type", "minivan");
+        const bodyClass = (
+            decodedData.body_class ||
+            (typeof decodedData.vin_other_information?.body_class === "string"
+                ? decodedData.vin_other_information.body_class
+                : "") ||
+            ""
+        ).toLowerCase();
+        if (bodyClass.includes("sedan") || bodyClass.includes("saloon") || bodyClass.includes("coupe")) {
+            setValue("vehicle_type", "saloon", opts);
+        } else if (bodyClass.includes("sport utility") || bodyClass.includes("suv")) {
+            setValue("vehicle_type", "suv", opts);
+        } else if (bodyClass.includes("pickup")) {
+            setValue("vehicle_type", "pickup", opts);
+        } else if (bodyClass.includes("van") || bodyClass.includes("minivan")) {
+            setValue("vehicle_type", "minivan", opts);
+        } else if (bodyClass.includes("truck")) {
+            setValue("vehicle_type", "truck", opts);
+        } else if (bodyClass.includes("motorcycle")) {
+            setValue("vehicle_type", "motorcycle", opts);
         }
     };
 
@@ -179,30 +215,44 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
     };
 
     const handleFormSubmit = async (data: VehicleFormData) => {
-        // Perform standard uniqueness checks before submitting
+        // Uniqueness only — do not call NHTSA decode on every save
         if (data.vin && data.vin.length === 17) {
-            // Only run check if VIN changed or we are creating new
             if (mode === "create" || (initialData?.vin && initialData.vin !== data.vin)) {
                 try {
-                    const vinCheck = await vehiclesApi.decodeVin(data.vin.toUpperCase());
-                    if (vinCheck.success && vinCheck.exists && vinCheck.vehicle) {
-                        // If checking for edit, ensure it's not the same vehicle
-
-                        if (mode === "create" || (vinCheck.vehicle_id && vinCheck.vehicle_id !== (initialData as any)?.id)) {
-                            setError("vin", { type: "manual", message: "This VIN is already registered." });
-                            toast({
-                                title: "Duplicate VIN",
-                                description: "A vehicle with this VIN already exists.",
-                                variant: "destructive"
-                            });
-                            return;
-                        }
+                    const vinCheck = await vehiclesApi.checkVin(
+                        data.vin.toUpperCase(),
+                        mode === "edit" ? vehicleId : undefined
+                    );
+                    if (vinCheck.success && vinCheck.exists) {
+                        setError("vin", { type: "manual", message: "This VIN is already registered." });
+                        toast({
+                            title: "Duplicate VIN",
+                            description: "A vehicle with this VIN already exists.",
+                            variant: "destructive",
+                        });
+                        return;
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error(e);
+                }
             }
         }
 
-        await onSubmit(data, imageFile);
+        const cleaned: VehicleFormData = { ...data };
+        if (
+            cleaned.fuel_tank_capacity === undefined ||
+            Number.isNaN(cleaned.fuel_tank_capacity as number)
+        ) {
+            delete (cleaned as { fuel_tank_capacity?: number }).fuel_tank_capacity;
+        }
+        if (
+            cleaned.current_mileage === undefined ||
+            Number.isNaN(cleaned.current_mileage as number)
+        ) {
+            cleaned.current_mileage = 0;
+        }
+
+        await onSubmit(cleaned, imageFile);
     };
 
     return (
@@ -285,6 +335,8 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                     </Button>
                                     <VINDecoderButton
                                         vin={vinValue || ""}
+                                        excludeVehicleId={mode === "edit" ? vehicleId : undefined}
+                                        persistVehicleId={mode === "edit" ? vehicleId : undefined}
                                         onDecode={handleVinDecode}
                                         disabled={isSubmitting}
                                     />
@@ -399,11 +451,18 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                             </div>
 
                             <div className="space-y-2">
+                                <label className="text-sm font-medium">Trim</label>
+                                <Input
+                                    {...register("trim")}
+                                    placeholder="e.g. SE, XLE, Sport"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
                                 <label className="text-sm font-medium">Body Style <span className="text-destructive">*</span></label>
                                 <Select
                                     value={watch("vehicle_type")}
-
-                                    onValueChange={(val) => setValue("vehicle_type", val as any)}
+                                    onValueChange={(val) => setValue("vehicle_type", val as VehicleFormData["vehicle_type"])}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select body style" />
@@ -421,11 +480,77 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                             </div>
 
                             <div className="space-y-2">
+                                <label className="text-sm font-medium">Exterior Color</label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="color"
+                                        className="w-12 h-10 p-1 cursor-pointer"
+                                        value={
+                                            watch("exterior_color")?.startsWith("#")
+                                                ? watch("exterior_color")
+                                                : "#c0c0c0"
+                                        }
+                                        onChange={(e) => setValue("exterior_color", e.target.value)}
+                                    />
+                                    <Input
+                                        {...register("exterior_color")}
+                                        placeholder="e.g. Silver or #C0C0C0"
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Current Mileage</label>
+                                <Input
+                                    type="number"
+                                    {...register("current_mileage", { valueAsNumber: true })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Mileage Unit</label>
+                                <Select
+                                    value={watch("mileage_unit") || "miles"}
+                                    onValueChange={(val) =>
+                                        setValue("mileage_unit", val as VehicleFormData["mileage_unit"])
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="miles">Miles</SelectItem>
+                                        <SelectItem value="km">Kilometers</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Registration State / Region</label>
+                                <Input
+                                    {...register("license_plate_state")}
+                                    placeholder="e.g. CA, Nairobi"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-3 border-b border-border">
+                            <CardTitle className="text-base font-medium">Technical Specifications</CardTitle>
+                            <CardDescription className="text-xs">
+                                Enter any details VIN decode did not fill. You can edit these anytime.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-4 grid sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
                                 <label className="text-sm font-medium">Engine Type</label>
                                 <Select
                                     value={watch("engine_type")}
-
-                                    onValueChange={(val) => setValue("engine_type", val as any)}
+                                    onValueChange={(val) =>
+                                        setValue("engine_type", val as VehicleFormData["engine_type"])
+                                    }
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select engine type" />
@@ -441,28 +566,61 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Current Mileage</label>
+                                <label className="text-sm font-medium">Engine Size</label>
                                 <Input
-                                    type="number"
-                                    {...register("current_mileage", { valueAsNumber: true })}
+                                    {...register("engine_size")}
+                                    placeholder="e.g. 2.0L, 3.5L V6"
                                 />
                             </div>
+
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Color</label>
-                                <div className="flex gap-2">
-                                    <div className="relative">
-                                        <Input
-                                            type="color"
-                                            className="w-12 h-10 p-1 cursor-pointer"
-                                            onChange={(e) => setValue("exterior_color", e.target.value)}
-                                        />
-                                    </div>
-                                    <Input
-                                        {...register("exterior_color")}
-                                        placeholder="e.g. Silver or #C0C0C0"
-                                        className="flex-1"
-                                    />
-                                </div>
+                                <label className="text-sm font-medium">Transmission</label>
+                                <Select
+                                    value={watch("transmission_type") || "automatic"}
+                                    onValueChange={(val) =>
+                                        setValue(
+                                            "transmission_type",
+                                            val as VehicleFormData["transmission_type"]
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select transmission" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="automatic">Automatic</SelectItem>
+                                        <SelectItem value="manual">Manual</SelectItem>
+                                        <SelectItem value="cvt">CVT</SelectItem>
+                                        <SelectItem value="dual_clutch">Dual Clutch</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Fuel Tank Capacity</label>
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    min={0}
+                                    {...register("fuel_tank_capacity", { valueAsNumber: true })}
+                                    placeholder="e.g. 55"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Tire Size</label>
+                                <Input
+                                    {...register("tire_size")}
+                                    placeholder="e.g. 225/45R17"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Interior Color</label>
+                                <Input
+                                    {...register("interior_color")}
+                                    placeholder="e.g. Black, Beige"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -474,26 +632,16 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                         <CardContent className="pt-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Owner <span className="text-destructive">*</span></label>
-                                <Select
-                                    value={watch("owner")?.toString()}
-                                    onValueChange={(val) => setValue("owner", parseInt(val))}
-                                >
-                                    <SelectTrigger className={errors.owner ? "border-destructive w-full" : "w-full"}>
-                                        <SelectValue placeholder="Select Customer" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {customersData?.results?.map((customer) => {
-                                            const displayName = customer.full_name ||
-                                                customer.company_name ||
-                                                (customer.user?.first_name ? `${customer.user.first_name} ${customer.user.last_name || ''}` : customer.customer_number);
-                                            return (
-                                                <SelectItem key={customer.id} value={customer.id.toString()}>
-                                                    {displayName}
-                                                </SelectItem>
-                                            );
-                                        })}
-                                    </SelectContent>
-                                </Select>
+                                <CustomerSelector
+                                    selectedCustomerId={watch("owner")}
+                                    onSelect={(customer) =>
+                                        setValue("owner", customer.id, {
+                                            shouldDirty: true,
+                                            shouldValidate: true,
+                                        })
+                                    }
+                                    placeholder="Search and select a customer..."
+                                />
                                 {errors.owner && <p className="text-xs text-destructive">{errors.owner.message}</p>}
                             </div>
 
@@ -501,7 +649,9 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <label className="text-sm font-medium">Relationship</label>
                                 <Select
                                     value={watch("relationship")}
-                                    onValueChange={(val) => setValue("relationship", val as any)}
+                                    onValueChange={(val) =>
+                                        setValue("relationship", val as VehicleFormData["relationship"])
+                                    }
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select relationship" />
@@ -517,19 +667,22 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                         </CardContent>
                     </Card>
 
-                    {/* VIN Decoded Information Block */}
+                    {/* Read-only NHTSA extras from VIN decode */}
                     {vinOtherInfo && (
                         <Card className="border-primary/15 bg-primary/5">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-sm font-medium text-primary">
                                     Additional VIN Details
                                 </CardTitle>
+                                <CardDescription className="text-xs">
+                                    Informational fields from NHTSA. Editable specs are in Technical Specifications above.
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                                {Object.entries(vinOtherInfo).slice(0, 8).map(([key, val]) => (
-                                    val && typeof val === 'string' ? (
+                                {Object.entries(vinOtherInfo).slice(0, 12).map(([key, val]) => (
+                                    val && typeof val === "string" ? (
                                         <div key={key}>
-                                            <span className="block text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                                            <span className="block text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
                                             <span className="font-medium text-foreground">{val}</span>
                                         </div>
                                     ) : null

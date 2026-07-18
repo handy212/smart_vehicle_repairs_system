@@ -136,17 +136,29 @@ export default function EditVehiclePage() {
     make: vehicle.make || "",
     model: vehicle.model || "",
     year: vehicle.year || new Date().getFullYear(),
+    trim: vehicle.trim || "",
     license_plate: vehicle.license_plate || "",
+    license_plate_state: vehicle.license_plate_state || "",
     exterior_color: vehicle.exterior_color || "",
+    interior_color: vehicle.interior_color || "",
     current_mileage: vehicle.current_mileage || 0,
-
-    engine_type: (vehicle.engine_type as any) || "gasoline",
-    owner: typeof vehicle.owner === 'object' && vehicle.owner !== null ? vehicle.owner.id : (vehicle.owner || 0),
-
-    status: (vehicle.status as any) || "active",
-
-    vehicle_type: (vehicle.vehicle_type as any) || "saloon",
-    relationship: (vehicle.relationship as any) || "owner",
+    mileage_unit: (vehicle.mileage_unit as VehicleFormData["mileage_unit"]) || "miles",
+    engine_type: (vehicle.engine_type as VehicleFormData["engine_type"]) || "gasoline",
+    engine_size: vehicle.engine_size || "",
+    transmission_type:
+      (vehicle.transmission_type as VehicleFormData["transmission_type"]) || "automatic",
+    fuel_tank_capacity:
+      vehicle.fuel_tank_capacity !== null && vehicle.fuel_tank_capacity !== undefined
+        ? Number(vehicle.fuel_tank_capacity)
+        : undefined,
+    tire_size: vehicle.tire_size || "",
+    owner:
+      typeof vehicle.owner === "object" && vehicle.owner !== null
+        ? vehicle.owner.id
+        : vehicle.owner || 0,
+    status: (vehicle.status as VehicleFormData["status"]) || "active",
+    vehicle_type: (vehicle.vehicle_type as VehicleFormData["vehicle_type"]) || "saloon",
+    relationship: (vehicle.relationship as VehicleFormData["relationship"]) || "owner",
     image: vehicle.image,
   };
 
@@ -179,6 +191,7 @@ export default function EditVehiclePage() {
 
       <VehicleForm
         initialData={initialData}
+        vehicleId={vehicleId}
         onSubmit={handleSubmit}
         isSubmitting={updateMutation.isPending}
         mode="edit"

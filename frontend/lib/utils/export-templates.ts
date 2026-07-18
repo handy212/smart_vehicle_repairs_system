@@ -120,6 +120,9 @@ export async function exportPartsForImport(parts: any[]) {
     { key: "is_core" as const, label: "is_core" },
     { key: "core_charge" as const, label: "core_charge" },
     { key: "unit_of_measure" as const, label: "unit_of_measure" },
+    { key: "compatible_makes" as const, label: "compatible_makes" },
+    { key: "compatible_models" as const, label: "compatible_models" },
+    { key: "compatible_years" as const, label: "compatible_years" },
     { key: "is_active" as const, label: "is_active" },
   ];
 
@@ -143,7 +146,10 @@ export async function exportPartsForImport(parts: any[]) {
       is_taxable: part.is_taxable ? "true" : "false",
       is_core: part.is_core ? "true" : "false",
       core_charge: part.core_charge?.toString() || "0.00",
-      unit_of_measure: part.unit_of_measure || "each",
+      unit_of_measure: part.unit || part.unit_of_measure || "piece",
+      compatible_makes: part.compatible_makes || "",
+      compatible_models: part.compatible_models || "",
+      compatible_years: part.compatible_years || "",
       is_active: part.is_active !== false ? "true" : "false",
     };
   });

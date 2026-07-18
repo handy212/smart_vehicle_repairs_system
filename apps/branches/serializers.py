@@ -194,8 +194,19 @@ class BranchCreateUpdateSerializer(serializers.ModelSerializer):
         return data
 
 class PublicBranchSerializer(serializers.ModelSerializer):
-    """Serializer for branches exposed to unauthenticated users and customer portal pickers."""
+    """Minimal branch fields for unauthenticated callers (booking pickers)."""
 
     class Meta:
         model = Branch
-        fields = ['id', 'name', 'code', 'address', 'city', 'region', 'area', 'phone', 'is_headquarters']
+        fields = ['id', 'name', 'code', 'city', 'region', 'area', 'is_headquarters']
+
+
+class CustomerBranchSerializer(serializers.ModelSerializer):
+    """Branch fields for authenticated customers (contact info for their branch)."""
+
+    class Meta:
+        model = Branch
+        fields = [
+            'id', 'name', 'code', 'address', 'city', 'region', 'area',
+            'phone', 'is_headquarters',
+        ]

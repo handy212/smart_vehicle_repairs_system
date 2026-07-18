@@ -20,6 +20,19 @@ SVR runs its own general ledger (GL) internally via the `accounting` app. The QB
 2. Set redirect URI to your SVR backend callback (e.g. `https://your-domain/api/quickbooks/callback/`).
 3. In SVR: **Admin → Integrations → QuickBooks** — enter Client ID and Client Secret, then **Connect**.
 4. After OAuth, `realm_id` and tokens are stored in `QBOConfig` / `QBOToken`.
+5. OAuth requests the **Accounting** scope only (company name is read from QBO `CompanyInfo`).
+
+#### Credential source of truth
+
+| Value | Preferred source | Also used |
+|-------|------------------|-----------|
+| Client ID / Client Secret / sandbox flag | **SystemSettings** (`quickbooks_client_id`, `quickbooks_client_secret`, `quickbooks_sandbox_enabled`) via Admin → Integrations | Env vars `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, `QUICKBOOKS_SANDBOX_ENABLED` seed/sync into SystemSettings |
+| Active OAuth tokens | **`QBOToken`** (written only by the OAuth callback / refresh) | Not set via env |
+| Realm / company | **`QBOConfig`** after Connect | — |
+| Redirect URI | `QBO_REDIRECT_URI` or `{site}/api/quickbooks/callback/` | — |
+| Webhook verifier | SystemSettings `quickbooks_webhook_token` | — |
+
+`QuickBooksService.get_config()` copies SystemSettings client id/secret/sandbox into `QBOConfig` on read. Prefer editing credentials under **Admin → Integrations**, not Django admin. OAuth tokens are masked in Django admin.
 
 ### Webhooks (optional, recommended)
 
@@ -66,8 +79,8 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 
 | SVR entity | QBO object | Sync when status is |
 |------------|------------|------------------------|
-| Customer | Customer | Has `customer_number` |
-| Estimate | Estimate | `sent`, `viewed`, `approved` |
+| Customer | Customer | Has `customer_number` (outbound only — no inbound customer create/pull) |
+| Estimate | Estimate | `sent`, `viewed`, `approved`, `converted` |
 | Invoice | Invoice | `sent`, `viewed`, `partial`, `paid`, `overdue`, `open` |
 | Payment | Payment | `completed` |
 | Credit note | Credit Memo | `issued`, `applied` (and `refunded` in policy) |
@@ -87,7 +100,7 @@ If duplicates already exist in QBO, delete or merge them in QuickBooks, then cle
 
 **PO / Bill mapping rule:** Each entity keeps its own `QBOMapping`. The PO row stores the QBO **PurchaseOrder** Id; the vendor bill row stores the QBO **Bill** Id. They are never merged. If a PO mapping was previously overwritten with a Bill Id (legacy), re-sync the PO from SVR to restore the correct PurchaseOrder Id.
 
-**Scheduled inbound (Celery Beat, every 30 min):** vendors, invoices, bills, bill payments, estimates, credit memos, vendor credits, items, plus retry-failed-outbound. Webhooks also queue targeted pulls (including customer **Payment** events → invoice balance refresh).
+**Scheduled inbound (Celery Beat, every 30 min):** vendors, invoices, bills, bill payments, estimates, credit memos, vendor credits, items, plus retry-failed-outbound. Webhooks also queue targeted pulls (including customer **Payment** events → **invoice** balance refresh — Payment entities themselves are not pulled). Customers are not created from QBO; Departments/Locations are SVR-driven (no department webhook pull).
 
 ### Other
 
@@ -181,7 +194,7 @@ Triggered by:
 
 ### Outbound `entity_type` values
 
-`customer`, `invoice`, `payment`, `supplier`, `purchase_order`, `vendor_bill`, `bill_payment`, `vendor_expense`, `vendor_credit`, `branch`, `estimate`, `credit_note`, `part`
+`customer`, `invoice`, `payment`, `supplier`, `purchase_order`, `vendor_bill`, `bill_payment`, `vendor_expense`, `vendor_credit`, `branch`, `estimate`, `credit_note`, `part`, `inventory_adjustment`
 
 ## Frontend UI
 

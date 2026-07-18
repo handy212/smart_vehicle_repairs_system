@@ -34,7 +34,9 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'is_active', 'branch']
     search_fields = ['email', 'first_name', 'last_name', 'username']
-    ordering_fields = ['created_at', 'email', 'first_name', 'last_name', 'role', 'is_active']
+    ordering_fields = [
+        'created_at', 'email', 'first_name', 'last_name', 'role', 'is_active', 'last_login',
+    ]
     ordering = ['-created_at']
     
     def get_queryset(self):

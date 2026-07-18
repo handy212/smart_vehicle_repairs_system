@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Wrench } from "lucide-react";
 import { useBranding } from "@/lib/hooks/useBranding";
 
@@ -9,12 +11,15 @@ export default function PublicLayout({
     children: React.ReactNode;
 }) {
     const { siteName, logoSrc } = useBranding("public");
+    const pathname = usePathname();
+    const isCareers = pathname?.startsWith("/careers");
+    const badgeLabel = isCareers ? "Careers" : "Customer Portal";
 
     return (
         <div className="min-h-screen bg-muted flex flex-col">
             <header className="bg-card border-b border-border sticky top-0 z-50">
                 <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <Link href={isCareers ? "/careers" : "/"} className="flex items-center gap-2">
                         {logoSrc ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={logoSrc} alt={siteName} className="h-8 w-auto" />
@@ -24,9 +29,9 @@ export default function PublicLayout({
                             </div>
                         )}
                         <div className="font-bold text-lg text-foreground">{siteName}</div>
-                    </div>
+                    </Link>
                     <div className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-md">
-                        Customer Portal
+                        {badgeLabel}
                     </div>
                 </div>
             </header>

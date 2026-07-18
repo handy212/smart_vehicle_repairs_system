@@ -3,7 +3,6 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
-import { authApi } from "@/lib/api/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, DollarSign, FileText, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,12 +29,6 @@ export default function PaymentPage() {
     queryKey: ["portal", "invoice", invoiceId],
     queryFn: () => billingApi.invoices.get(invoiceId),
     enabled: !!invoiceId,
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
   });
 
   const initiatePaymentMutation = useMutation({

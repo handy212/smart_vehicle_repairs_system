@@ -299,7 +299,7 @@ export default function NewUserPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
-            <Button variant="secondary" className="border-border text-foreground">
+            <Button variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -308,7 +308,7 @@ export default function NewUserPage() {
         </div>
         <div className="flex space-x-4">
           <Link href="/admin/users">
-            <Button type="button" variant="secondary" className="border-border text-foreground">
+            <Button type="button" variant="outline">
               Cancel
             </Button>
           </Link>
@@ -475,7 +475,7 @@ export default function NewUserPage() {
                     </div>
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="outline"
                       onClick={handleGeneratePassword}
                       className="border-border text-foreground"
                       title="Generate secure password"
@@ -485,7 +485,7 @@ export default function NewUserPage() {
                     {passwordValue && (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         onClick={handleCopyPassword}
                         className="border-border text-foreground"
                         title="Copy password"

@@ -361,7 +361,7 @@ export default function UserDetailPage() {
     return (
       <div className="space-y-4 bg-background min-h-screen p-6">
         <Link href="/admin/users">
-          <Button variant="secondary" className="border-border text-foreground">
+          <Button variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -380,7 +380,7 @@ export default function UserDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
-            <Button variant="secondary" className="border-border text-foreground">
+            <Button variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -395,7 +395,7 @@ export default function UserDetailPage() {
                 {getRoleLabel(user.role)}
               </Badge>
               {user.is_active ? (
-                <Badge variant="default" className="bg-success/15 text-success dark:bg-success dark:text-success">
+                <Badge variant="success">
                   Active
                 </Badge>
               ) : (
@@ -410,13 +410,12 @@ export default function UserDetailPage() {
             <>
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 onClick={() => {
                   setIsEditing(false);
                   reset();
                   setServerError(null);
                 }}
-                className="border-border text-foreground"
               >
                 <X className="w-4 h-4 mr-2" />
                 Cancel
@@ -742,7 +741,7 @@ export default function UserDetailPage() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="outline"
                       onClick={() => setShowPasswordReset(true)}
                       className="border-border text-foreground flex-1"
                     >
@@ -751,7 +750,7 @@ export default function UserDetailPage() {
                     </Button>
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="outline"
                       onClick={() => sendResetLinkMutation.mutate()}
                       disabled={sendResetLinkMutation.isPending}
                       className="border-border text-foreground flex-1"
@@ -795,7 +794,7 @@ export default function UserDetailPage() {
                         </div>
                         <Button
                           type="button"
-                          variant="secondary"
+                          variant="outline"
                           onClick={handleGeneratePassword}
                           className="border-border text-foreground"
                           title="Generate secure password"
@@ -805,7 +804,7 @@ export default function UserDetailPage() {
                         {newPassword && (
                           <Button
                             type="button"
-                            variant="secondary"
+                            variant="outline"
                             onClick={handleCopyPassword}
                             className="border-border text-foreground"
                             title="Copy password"
@@ -832,7 +831,7 @@ export default function UserDetailPage() {
                     <div className="flex gap-3">
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         onClick={() => {
                           setShowPasswordReset(false);
                           setNewPassword("");
@@ -891,6 +890,14 @@ export default function UserDetailPage() {
                   <p className="text-foreground mt-1">{user.username}</p>
                 </div>
                 <div>
+                  <p className="text-sm font-medium text-muted-foreground">Last Login</p>
+                  <p className="text-foreground mt-1">
+                    {user.last_login
+                      ? format(new Date(user.last_login), "MMM dd, yyyy HH:mm")
+                      : "Never"}
+                  </p>
+                </div>
+                <div>
                   <p className="text-sm font-medium text-muted-foreground">Created At</p>
                   <p className="text-foreground mt-1">
                     {format(new Date(user.created_at), "MMM dd, yyyy HH:mm")}
@@ -917,7 +924,7 @@ export default function UserDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
                     {user.is_active ? (
-                      <Badge variant="default" className="mt-2 bg-success/15 text-success dark:bg-success dark:text-success">
+                      <Badge variant="success" className="mt-2">
                         Active
                       </Badge>
                     ) : (
@@ -1014,6 +1021,14 @@ export default function UserDetailPage() {
               <CardContent>
                 <dl className="space-y-4">
                   <div>
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Last Login</dt>
+                    <dd className="text-sm text-foreground">
+                      {user.last_login
+                        ? format(new Date(user.last_login), "MMM dd, yyyy HH:mm")
+                        : "Never"}
+                    </dd>
+                  </div>
+                  <div>
                     <dt className="text-sm font-medium text-muted-foreground mb-1">Member Since</dt>
                     <dd className="text-sm text-foreground">
                       {format(new Date(user.created_at), "MMM dd, yyyy")}
@@ -1030,13 +1045,13 @@ export default function UserDetailPage() {
                     <dd className="space-y-2">
                       <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">Email</span>
-                        <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-success/15 text-success dark:bg-success dark:text-success text-xs" : "text-xs"}>
+                        <Badge variant={user.email_notifications ? "success" : "secondary"} className="text-xs">
                           {user.email_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">SMS</span>
-                        <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-success/15 text-success dark:bg-success dark:text-success text-xs" : "text-xs"}>
+                        <Badge variant={user.sms_notifications ? "success" : "secondary"} className="text-xs">
                           {user.sms_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
@@ -1129,7 +1144,7 @@ export default function UserDetailPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   onClick={() => setShowPasswordReset(true)}
                   className="border-border text-foreground"
                 >
@@ -1138,7 +1153,7 @@ export default function UserDetailPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   onClick={() => sendResetLinkMutation.mutate()}
                   disabled={sendResetLinkMutation.isPending}
                   className="border-border text-foreground"
@@ -1182,7 +1197,7 @@ export default function UserDetailPage() {
                       </div>
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         onClick={handleGeneratePassword}
                         className="border-border text-foreground"
                         title="Generate secure password"
@@ -1192,7 +1207,7 @@ export default function UserDetailPage() {
                       {newPassword && (
                         <Button
                           type="button"
-                          variant="secondary"
+                          variant="outline"
                           onClick={handleCopyPassword}
                           className="border-border text-foreground"
                           title="Copy password"
@@ -1219,7 +1234,7 @@ export default function UserDetailPage() {
                   <div className="flex gap-3">
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="outline"
                       onClick={() => {
                         setShowPasswordReset(false);
                         setNewPassword("");

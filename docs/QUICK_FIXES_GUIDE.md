@@ -145,14 +145,13 @@ except Exception as e:
 1. `apps/inspections/frontend_views.py:194`
 2. `apps/accounts/settings_utils.py:31`
 3. `apps/accounts/settings_utils.py:68`
-4. `apps/inventory/management/commands/populate_inventory.py:24`
-5. `apps/customers/auth_views.py:96`
-6. `apps/vehicles/templatetags/vehicle_filters.py:20`
-7. `apps/vehicles/templatetags/vehicle_filters.py:37`
-8. `apps/vehicles/forms.py:291`
-9. `apps/vehicles/vin_decoder.py:143`
-10. `apps/vehicles/vin_decoder.py:153`
-11. `apps/vehicles/vin_decoder.py:173`
+4. `apps/customers/auth_views.py:96`
+5. `apps/vehicles/templatetags/vehicle_filters.py:20`
+6. `apps/vehicles/templatetags/vehicle_filters.py:37`
+7. `apps/vehicles/forms.py:291`
+8. `apps/vehicles/vin_decoder.py:143`
+9. `apps/vehicles/vin_decoder.py:153`
+10. `apps/vehicles/vin_decoder.py:173`
 
 ### Verification
 ```bash

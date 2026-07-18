@@ -76,25 +76,56 @@ export async function syncAll(): Promise<SyncResult> {
       }
     }
 
-    // Sync time logs
+    // Sync time logs (shop labor — requires task on clock-in)
     const unsyncedTimeLogs = await timeLogsDB.getUnsynced();
     for (const timeLog of unsyncedTimeLogs) {
       try {
-        if (timeLog.id && timeLog.id > 0) {
+        const localId = timeLog.id || timeLog.tempId;
+        if (timeLog.clock_out && timeLog.id && timeLog.id > 0 && !timeLog.tempId) {
           await apiClient.post(`/workorders/time-logs/${timeLog.id}/clock_out/`, {
             clock_out: timeLog.clock_out ?? new Date().toISOString(),
           });
-        } else {
-          await apiClient.post("/workorders/time-logs/clock-in/", {
+          await timeLogsDB.markSynced(localId);
+          synced.timeLogs++;
+          continue;
+        }
+
+        if (!timeLog.task) {
+          errors.push(`Time Log ${localId}: missing task — cannot sync clock-in`);
+          continue;
+        }
+
+        if (timeLog.tempId || !timeLog.id || timeLog.id < 0) {
+          const created = await apiClient.post("/workorders/time-logs/clock-in/", {
             work_order: timeLog.work_order,
-            description: timeLog.description || "Field work",
+            task: timeLog.task,
+            description: timeLog.description || undefined,
+          });
+          const serverId = created.data?.id;
+          if (serverId && timeLog.clock_out) {
+            await apiClient.post(`/workorders/time-logs/${serverId}/clock_out/`, {
+              clock_out: timeLog.clock_out,
+            });
+          }
+          if (localId) {
+            await timeLogsDB.delete(localId);
+          }
+          if (serverId) {
+            await timeLogsDB.set(serverId, { ...timeLog, id: serverId, tempId: undefined }, true);
+          }
+          synced.timeLogs++;
+          continue;
+        }
+
+        if (timeLog.clock_out) {
+          await apiClient.post(`/workorders/time-logs/${timeLog.id}/clock_out/`, {
+            clock_out: timeLog.clock_out,
           });
         }
-        await timeLogsDB.markSynced(timeLog.id || timeLog.tempId);
+        await timeLogsDB.markSynced(localId);
         synced.timeLogs++;
-
       } catch (error: any) {
-        errors.push(`Time Log ${timeLog.id}: ${error.message}`);
+        errors.push(`Time Log ${timeLog.id || timeLog.tempId}: ${error.message}`);
       }
     }
 

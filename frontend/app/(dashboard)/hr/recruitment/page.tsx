@@ -53,6 +53,9 @@ function RecruitmentContent() {
                 breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "HR", href: "/hr" }, { label: "Recruitment" }]}
                 actions={
                     <div className="flex gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href="/careers" target="_blank">Public Careers</Link>
+                        </Button>
                         <PermissionGuard permission="manage_recruitment">
                             <Button asChild>
                                 <Link href="/hr/recruitment/new"><Plus className="h-4 w-4 mr-2" />Post Job</Link>

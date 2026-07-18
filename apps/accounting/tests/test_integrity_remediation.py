@@ -467,63 +467,6 @@ class IntegrityRemediationCommandTests(TestCase):
         self.assertTrue(after['accounts_receivable']['in_balance'])
 
 
-class ResetDemoAccountingCommandTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='reset_demo_admin',
-            email='resetdemo@example.com',
-            password='password',
-            role='admin',
-        )
-        self.branch = Branch.objects.create(
-            name='Reset Demo Branch',
-            code='RDB',
-            phone='555-9100',
-            address='10 Reset St',
-            city='Reset',
-            region='RD',
-            zip_code='91010',
-            created_by=self.user,
-        )
-
-    def test_reset_demo_accounting_purges_cdinv_journal_entries(self):
-        from apps.accounting.models import JournalEntry
-
-        call_command('wire_accounting_controls', settings='config.settings.testing')
-        ar = AccountingControl.get_settings().accounts_receivable_account
-        revenue = AccountingControl.get_settings().sales_revenue_account
-
-        je = JournalEntry.objects.create(
-            date=timezone.now().date(),
-            description='Demo invoice posting',
-            reference='CDINV00999',
-            created_by=self.user,
-            branch=self.branch,
-            posted=True,
-        )
-        Transaction.objects.create(
-            journal_entry=je,
-            account=ar,
-            transaction_type='debit',
-            amount=Decimal('100.00'),
-        )
-        Transaction.objects.create(
-            journal_entry=je,
-            account=revenue,
-            transaction_type='credit',
-            amount=Decimal('100.00'),
-        )
-
-        call_command('reset_demo_accounting', confirm=True, skip_billing=True, settings='config.settings.testing')
-        self.assertFalse(JournalEntry.objects.filter(reference='CDINV00999').exists())
-
-    def test_reset_demo_accounting_requires_confirm(self):
-        from django.core.management.base import CommandError
-
-        with self.assertRaises(CommandError):
-            call_command('reset_demo_accounting', settings='config.settings.testing')
-
-
 class WireAccountingControlsApiTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(

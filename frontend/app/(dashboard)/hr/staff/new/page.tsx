@@ -13,6 +13,7 @@ import {
     Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -24,8 +25,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useToastStore } from "@/store/useToastStore";
 import { hrApi, Department, Position } from "@/lib/api/hr";
-import { branchesApi } from "@/lib/api/branches";
-import { useQuery } from "@tanstack/react-query";
+import {
+    useActiveBranches,
+    useHrDepartments,
+    useHrPositions,
+} from "@/lib/hooks/useFormLookups";
 import { cn } from "@/lib/utils";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard";
@@ -46,6 +50,7 @@ const staffSchema = z.object({
     position: z.string().optional(),
     employment_type: z.enum(["full_time", "part_time", "contract", "intern"]),
     employment_status: z.enum(["active", "probation", "suspended", "terminated", "resigned"]),
+    time_tracking_enabled: z.boolean(),
     start_date: z.date().optional(),
 
     // Salary
@@ -85,27 +90,9 @@ function NewStaffContent() {
     const { addToast } = useToastStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Fetch Departments
-    const { data: departmentsData } = useQuery({
-        queryKey: ["hr", "departments"],
-        queryFn: () => hrApi.departments.list({ is_active: true }).then(res => res.data),
-    });
-
-    // Fetch Positions (dependent on department if selected, but for now fetch all)
-    const { data: positionsData } = useQuery({
-        queryKey: ["hr", "positions"],
-        queryFn: () => hrApi.positions.list({ is_active: true }).then(res => res.data),
-    });
-
-    // Fetch Branches
-    const { data: branchesData } = useQuery({
-        queryKey: ["branches"],
-        queryFn: () => branchesApi.list({ is_active: true }).then(res => {
-
-            const data = res as any;
-            return Array.isArray(data) ? data : data.results || [];
-        }),
-    });
+    const { data: departmentsData } = useHrDepartments();
+    const { data: positionsData } = useHrPositions();
+    const { data: branchesData } = useActiveBranches();
 
     const form = useForm<StaffFormValues>({
         resolver: zodResolver(staffSchema),
@@ -120,6 +107,7 @@ function NewStaffContent() {
             profile_picture: undefined,
             employment_type: "full_time",
             employment_status: "probation",
+            time_tracking_enabled: true,
             salary_type: "monthly",
             base_salary: "0",
             bank_name: "",
@@ -149,6 +137,8 @@ function NewStaffContent() {
                     }
                 } else if (key === "start_date" && value) {
                     formData.append(key, format(value, "yyyy-MM-dd"));
+                } else if (typeof value === "boolean") {
+                    formData.append(key, value ? "true" : "false");
                 } else if (value !== undefined && value !== null) {
                     formData.append(key, value.toString());
                 }
@@ -452,6 +442,23 @@ function NewStaffContent() {
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="time_tracking_enabled"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 md:col-span-2">
+                                        <div className="space-y-0.5 pr-4">
+                                            <FormLabel>HR attendance time tracking</FormLabel>
+                                            <FormDescription>
+                                                Allow daily HR attendance clock-in/out. Separate from work-order job labor time.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
                                     </FormItem>
                                 )}
                             />

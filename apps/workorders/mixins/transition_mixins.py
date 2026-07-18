@@ -871,12 +871,12 @@ class WorkOrderStateTransitionMixin:
             else:
                 work_order.approve_pending_recommendations(
                     user=request.user,
-                    method='supervisor_instruction',
+                    method='in_person',
                     notes='Approval not required for this work order.',
                 )
                 work_order.approved_by_customer = True
                 work_order.approved_at = timezone.now()
-                work_order.approval_method = 'supervisor_instruction'
+                work_order.approval_method = 'in_person'
                 work_order.save(
                     update_fields=[
                         'approved_by_customer',
@@ -888,7 +888,7 @@ class WorkOrderStateTransitionMixin:
                 work_order.transition_to('awaiting_approval', user=request.user)
                 work_order.approve_customer_work(
                     user=request.user,
-                    method='supervisor_instruction',
+                    method='in_person',
                     notes='Auto-approved after diagnosis completion.',
                 )
 

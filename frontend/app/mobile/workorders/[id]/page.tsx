@@ -7,12 +7,14 @@ import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
 import { workOrderPartsApi, WorkOrderPart } from "@/lib/api/workorder-parts";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { useOfflineStore } from "@/store/offlineStore";
-import { workOrdersDB } from "@/lib/offline/db";
+import { timeLogsDB, workOrdersDB } from "@/lib/offline/db";
 import { queueRequest } from "@/lib/offline/queue";
 import { useToast } from "@/lib/hooks/useToast";
 import apiClient from "@/lib/api/client";
 import { getUserFacingError } from "@/lib/api/apiErrors";
 import { timeLogsApi } from "@/lib/api/timeLogs";
+import { filterSelectableLaborTasks } from "@/lib/workorders/laborTasks";
+import { useAuthStore } from "@/store/authStore";
 import {
   Clock,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -63,6 +65,7 @@ export default function MobileWorkOrderDetailPage() {
   const router = useRouter();
   const workOrderId = parseInt(params.id as string);
   const { isOnline } = useOfflineStore();
+  const user = useAuthStore((s) => s.user);
   const { toast } = useToast();
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [tasks, setTasks] = useState<ServiceTask[]>([]);
@@ -72,6 +75,8 @@ export default function MobileWorkOrderDetailPage() {
   const [additionalWorkNotes, setAdditionalWorkNotes] = useState("");
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [activeLog, setActiveLog] = useState<any | null>(null);
+  const [showLaborTaskDialog, setShowLaborTaskDialog] = useState(false);
+  const [selectedLaborTaskId, setSelectedLaborTaskId] = useState("");
   const [showPartRequestDialog, setShowPartRequestDialog] = useState(false);
   const [showRequestQcDialog, setShowRequestQcDialog] = useState(false);
   const [qcInspectorId, setQcInspectorId] = useState("");
@@ -104,7 +109,11 @@ export default function MobileWorkOrderDetailPage() {
       if (isOnline) {
         const response = await apiClient.get("/workorders/time-logs/active/");
         setActiveLog(response.data);
+        return;
       }
+      const cached = await timeLogsDB.getAll();
+      const active = cached.find((log) => log.clock_in && !log.clock_out);
+      setActiveLog(active || null);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       setActiveLog(null);
@@ -264,23 +273,64 @@ export default function MobileWorkOrderDetailPage() {
     }
   };
 
-  const handleClockIn = async () => {
-    if (!workOrder) return;
+  const openLaborTasks = filterSelectableLaborTasks(tasks, {
+    userId: user?.id,
+    canPickAny: true,
+  });
+
+  const openLaborDialog = () => {
+    const preferred = openLaborTasks[0];
+    setSelectedLaborTaskId(preferred ? String(preferred.id) : "");
+    setShowLaborTaskDialog(true);
+  };
+
+  const handleClockIn = async (taskId?: number) => {
+    if (!workOrder || !user?.id) return;
+    const resolvedTaskId = taskId ?? Number(selectedLaborTaskId);
+    if (!resolvedTaskId) {
+      toast({
+        title: "Select a task",
+        description: "Choose which task you are working on before starting the timer.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const task = tasks.find((t) => t.id === resolvedTaskId);
     setLoading(true);
     try {
       if (isOnline) {
-        const log = await timeLogsApi.clockIn(
-          workOrder.id,
-          "Started work via Mobile detail"
-        );
+        const log = await timeLogsApi.clockIn(workOrder.id, {
+          task: resolvedTaskId,
+          description: task?.description,
+        });
         setActiveLog(log);
-        toast({ title: "Clocked In", description: `Started time for WO #${workOrder.work_order_number}` });
+        if (log.id) await timeLogsDB.set(log.id, log, true);
+      } else {
+        const tempId = -Date.now();
+        const localLog = {
+          id: tempId,
+          tempId,
+          work_order: workOrder.id,
+          work_order_number: workOrder.work_order_number,
+          task: resolvedTaskId,
+          task_description: task?.description,
+          clock_in: new Date().toISOString(),
+          technician: user.id,
+          description: task?.description,
+        };
+        await timeLogsDB.set(tempId, localLog, false);
+        setActiveLog(localLog);
       }
+      setShowLaborTaskDialog(false);
+      toast({
+        title: isOnline ? "Labor timer started" : "Labor timer queued offline",
+        description: task?.description || `WO #${workOrder.work_order_number}`,
+      });
     } catch (error) {
       console.error("Failed to clock in:", error);
       toast({
         title: "Error",
-        description: getUserFacingError(error, "Failed to clock in"),
+        description: getUserFacingError(error, "Failed to start labor timer"),
         variant: "destructive",
       });
     } finally {
@@ -293,11 +343,22 @@ export default function MobileWorkOrderDetailPage() {
     setLoading(true);
     try {
       const clockOut = new Date().toISOString();
-      if (isOnline && activeLog.id) {
+      const localId = activeLog.id || activeLog.tempId || Date.now();
+      if (isOnline && activeLog.id && activeLog.id > 0) {
         await timeLogsApi.clockOut(activeLog.id, clockOut);
+        await timeLogsDB.set(activeLog.id, { ...activeLog, clock_out: clockOut }, true);
+      } else {
+        await timeLogsDB.set(
+          localId,
+          { ...activeLog, id: localId, clock_out: clockOut },
+          false,
+        );
       }
       setActiveLog(null);
-      toast({ title: "Clocked Out", description: "Time log saved" });
+      toast({
+        title: isOnline ? "Clocked Out" : "Stop queued",
+        description: isOnline ? "Time log saved" : "Will sync when online",
+      });
     } catch (error) {
       console.error("Failed to clock out:", error);
       toast({ title: "Error", description: "Failed to clock out", variant: "destructive" });
@@ -576,7 +637,7 @@ export default function MobileWorkOrderDetailPage() {
               className="w-full border-primary text-primary"
               onClick={async () => {
                 await handleClockOut();
-                await handleClockIn();
+                openLaborDialog();
               }}
               disabled={loading}
             >
@@ -586,11 +647,11 @@ export default function MobileWorkOrderDetailPage() {
           ) : (
             <Button
               className="w-full bg-primary"
-              onClick={handleClockIn}
-              disabled={loading}
+              onClick={openLaborDialog}
+              disabled={loading || openLaborTasks.length === 0}
             >
               <Clock className="h-4 w-4 mr-2" />
-              Clock In
+              Start Labor Time
             </Button>
           )}
 
@@ -951,6 +1012,55 @@ export default function MobileWorkOrderDetailPage() {
             </Button>
             <Button onClick={handlePartRequest} disabled={!newPart.part_name}>
               Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showLaborTaskDialog} onOpenChange={setShowLaborTaskDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start labor time</DialogTitle>
+            <DialogDescription>
+              Select the task you are working on.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Task</Label>
+            <Select value={selectedLaborTaskId} onValueChange={setSelectedLaborTaskId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a task" />
+              </SelectTrigger>
+              <SelectContent>
+                {openLaborTasks.length === 0 ? (
+                  <SelectItem value="__none" disabled>
+                    No open tasks on this work order
+                  </SelectItem>
+                ) : (
+                  openLaborTasks.map((task) => (
+                    <SelectItem key={task.id} value={String(task.id)}>
+                      {task.description}
+                      {task.task_type ? ` · ${task.task_type}` : ""}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLaborTaskDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleClockIn()}
+              disabled={
+                loading ||
+                !selectedLaborTaskId ||
+                selectedLaborTaskId === "__none" ||
+                openLaborTasks.length === 0
+              }
+            >
+              Start timer
             </Button>
           </DialogFooter>
         </DialogContent>

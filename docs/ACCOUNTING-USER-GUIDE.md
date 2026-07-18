@@ -332,35 +332,14 @@ These should match within **GHS 0.01**.
 |---------|--------------|------------|
 | “Missing control account” alert | Controls not wired | Controls → Wire from standard chart |
 | Payment fails — no till | Cash payment without open till | Open till or use bank method |
-| AR aging ≠ GL AR balance | Old misrouted payments or demo data | Run integrity repair (admin) |
+| AR aging ≠ GL AR balance | Old misrouted payments or incomplete GL posting | Run integrity repair (admin) |
 | Cannot edit old journal entry | Period lock active | Clear lock (admin) or post reversal |
 | Open till warning | Till not closed | Banking → Till Management → Close |
 | Duplicate GL entries | Re-posted after failed retry | Admin runs duplicate repair |
 
 ---
 
-## 15. Demo data and clean resets
-
-**Admin → Demo Data** seeds sample customers, invoices, and GL entries for training. Demo records use markers like `CDINV*` and `CDPAY*`.
-
-**To reset demo accounting only (staging/training servers):**
-
-```bash
-# Preview
-python manage.py reset_demo_accounting --dry-run
-
-# Purge demo GL + billing, re-wire controls
-python manage.py reset_demo_accounting --confirm
-
-# Full purge and re-seed demo billing + accounting
-python manage.py reset_demo_accounting --confirm --reseed
-```
-
-**Never run permanent data purge on a production server** unless you intend to delete all real invoices and journal entries.
-
----
-
-## 16. Administrator maintenance commands
+## 15. Administrator maintenance commands
 
 These are for system administrators with server access. Run after backups.
 
@@ -370,7 +349,6 @@ These are for system administrators with server access. Run after backups.
 | `validate_accounting_integrity --summary` | Health check — lists all issues |
 | `diagnose_subledger_drift` | Detailed AR/AP drift breakdown |
 | `repair_misrouted_settlement_gl` | Payments posted without crediting AR 1200 / debiting AP 2000 |
-| `reset_demo_accounting --confirm` | Clean demo GL and billing on training servers |
 | `backfill_missing_gl_postings` | Documents exist but have no GL |
 
 Typical recovery sequence after upgrading:
@@ -384,7 +362,7 @@ python manage.py validate_accounting_integrity --summary --no-fail
 
 ---
 
-## 17. Roles and permissions
+## 16. Roles and permissions
 
 | Task | Typical permission |
 |------|-------------------|
@@ -399,7 +377,7 @@ python manage.py validate_accounting_integrity --summary --no-fail
 
 ---
 
-## 18. Golden rules
+## 17. Golden rules
 
 1. **Finalize invoices** only when amounts are correct — GL posts on finalize.
 2. **Always select the correct settlement account** (till for cash, bank for electronic).
@@ -411,7 +389,7 @@ python manage.py validate_accounting_integrity --summary --no-fail
 
 ---
 
-## 19. ERP feature map
+## 18. ERP feature map
 
 | Capability | Path |
 |------------|------|

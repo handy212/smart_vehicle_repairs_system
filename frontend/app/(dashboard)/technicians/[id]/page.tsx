@@ -30,6 +30,7 @@ import { ShiftSchedule } from "@/components/technicians/ShiftSchedule";
 import { JobHistory } from "@/components/technicians/JobHistory";
 import { Certifications } from "@/components/technicians/Certifications";
 import { PerformanceMetrics } from "@/components/technicians/PerformanceMetrics";
+import { TechnicianTimeOverview } from "@/components/technicians/TechnicianTimeOverview";
 import { PermissionPageGuard } from "@/components/auth/PermissionPageGuard"
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useToast } from "@/lib/hooks/useToast";
@@ -327,6 +328,11 @@ function TechnicianProfileContent() {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            <TechnicianTimeOverview
+                                userId={technician.user}
+                                staffId={technician.staff_id}
+                            />
 
                             {/* Bio */}
                             {technician.bio && (

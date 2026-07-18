@@ -11,11 +11,11 @@ Pages fill the shell content area. Surfaces are tonal panels with light borders 
 
 | Role | Light |
 |------|--------|
-| Canvas | `#f3f2ef` |
+| Canvas | `#eef2f6` (cool slate) |
 | Ink | `#1c2430` |
 | Panel | `#ffffff` (`--panel-bg`) |
 | Primary | `#1e4d6b` (branding can override) |
-| Border / outline | `#e2ddd4` / `--outline-variant` |
+| Border / outline | `#d5dde6` / `--outline-variant` |
 | Radius | `0.5rem` (8px) |
 | Elevation | `--elevated-shadow` / `shadow-workshop` |
 

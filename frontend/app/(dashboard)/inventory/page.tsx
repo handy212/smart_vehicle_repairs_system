@@ -8,10 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Package, Trash2, Download, Upload, MoreVertical, Eye, Edit, Search, X, ChevronDown, QrCode, Tags } from "lucide-react";
-import { ImportDialog } from "@/components/ui/import-dialog";
-import { downloadPartTemplate } from "@/lib/utils/import-templates";
-import { exportPartsForImport } from "@/lib/utils/export-templates";
+import { Plus, Package, Trash2, Download, MoreVertical, Eye, Edit, Search, X, ChevronDown, QrCode, Tags } from "lucide-react";
 import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
@@ -103,7 +100,6 @@ function InventoryPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -130,6 +126,7 @@ function InventoryPageContent() {
   // Fetch Lists
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery<PartListResponse>({
     queryKey: ["inventory", searchQuery, advancedFilters, sortConfig],
+    staleTime: 2 * 60 * 1000,
     queryFn: ({ pageParam = 1 }) =>
       inventoryApi.list({
         page: pageParam as number,
@@ -165,12 +162,14 @@ function InventoryPageContent() {
     queryKey: ["inventory-stats"],
     queryFn: () => inventoryApi.partsDashboardStats(),
     enabled: canViewInventoryStats,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch Branches for filter
   const { data: branchesData } = useQuery<Branch[]>({
-    queryKey: ["branches-active"],
+    queryKey: ["branches", "active"],
     queryFn: () => branchesApi.list({ is_active: true }),
+    staleTime: 5 * 60 * 1000,
   });
 
   const branches = branchesData ?? [];
@@ -448,12 +447,6 @@ function InventoryPageContent() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <PermissionGuard permission="import_inventory">
-                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import Excel
-                </DropdownMenuItem>
-              </PermissionGuard>
               <PermissionGuard permission="export_inventory">
                 <DropdownMenuItem onClick={() => handleExport()} disabled={!parts || parts.length === 0}>
                   <Download className="w-4 h-4 mr-2" />
@@ -462,10 +455,6 @@ function InventoryPageContent() {
                 <DropdownMenuItem onClick={() => handleExport("pdf")} disabled={!parts || parts.length === 0}>
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { if (parts) exportPartsForImport(parts); }} disabled={!parts || parts.length === 0}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export for Import
                 </DropdownMenuItem>
               </PermissionGuard>
             </DropdownMenuContent>
@@ -529,6 +518,9 @@ function InventoryPageContent() {
                     <SortableHeader field="category__name" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">
                       Category
                     </SortableHeader>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 hidden xl:table-cell">
+                      Fits
+                    </TableHead>
                     <SortableHeader field="quantity_in_stock" sortConfig={sortConfig} onSort={handleSort} className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">
                       Stock
                     </SortableHeader>
@@ -589,6 +581,15 @@ function InventoryPageContent() {
                       </TableCell>
                       <TableCell className="px-4 py-2 text-xs text-muted-foreground capitalize">
                         {typeof part.category === 'object' && part.category !== null ? part.category.name : part.category || "-"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-xs text-muted-foreground hidden xl:table-cell max-w-[140px]">
+                        {part.compatible_makes ? (
+                          <span className="truncate block" title={[part.compatible_makes, part.compatible_models, part.compatible_years].filter(Boolean).join(" · ")}>
+                            {part.compatible_makes}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-center">
                         <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${isLowStock(part)
@@ -674,20 +675,6 @@ function InventoryPageContent() {
           </div>
         )}
       </Card>
-
-      <ImportDialog
-        isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
-        onImport={async (file: File) => {
-          const result = await inventoryApi.import(file);
-          queryClient.invalidateQueries({ queryKey: ["inventory"] });
-          return result;
-        }}
-        title="Import Parts"
-        description="Upload an Excel file with part data. Required columns: part_number, name, category."
-        accept=".xlsx"
-        onDownloadTemplate={downloadPartTemplate}
-      />
 
       <Dialog open={showScanner} onOpenChange={setShowScanner}>
         <DialogContent className="sm:max-w-md">

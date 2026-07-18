@@ -13,7 +13,8 @@ export type QboOutboundEntityType =
   | "vendor_credit"
   | "bill_payment"
   | "vendor_expense"
-  | "part";
+  | "part"
+  | "inventory_adjustment";
 
 export interface QBOOutboundPendingCounts {
   failed_mappings: number;

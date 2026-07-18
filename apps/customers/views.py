@@ -25,6 +25,26 @@ from .serializers import (
 )
 
 
+class CustomerOrderingFilter(filters.OrderingFilter):
+    """Map API ordering aliases to annotated queryset fields."""
+
+    FIELD_MAP = {
+        'vehicle_count': 'vehicles_count',
+    }
+
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        if not ordering:
+            return ordering
+        mapped = []
+        for field in ordering:
+            descending = field.startswith('-')
+            name = field[1:] if descending else field
+            name = self.FIELD_MAP.get(name, name)
+            mapped.append(f'-{name}' if descending else name)
+        return mapped
+
+
 class CustomerViewSet(viewsets.ModelViewSet):
     """
     ViewSet for customer operations
@@ -65,7 +85,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
             return base + [HasPermission('edit_customers')]
         # Deny-by-default for unlisted custom actions
         return base + [HasPermission('view_customers')]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, CustomerOrderingFilter]
     filterset_fields = ['status', 'customer_type', 'payment_terms', 'loyalty_tier']
     search_fields = [
         'customer_number', 'company_name', 'user__first_name',
@@ -929,7 +949,10 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
         return base + [HasPermission('view_customers')]
 
     def get_queryset(self):
-        return CustomerContact.objects.filter(customer__user__is_active=True).select_related('customer')
+        return (
+            CustomerContact.objects.filter(customer__user__is_active=True)
+            .select_related('customer', 'customer__user')
+        )
 
 
 class CustomerReminderViewSet(viewsets.ModelViewSet):

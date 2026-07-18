@@ -19,7 +19,8 @@ import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/layout";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { href: "/mobile/time-tracking", label: "Time Tracking", icon: Clock, description: "Clock in and out" },
+  { href: "/mobile/attendance", label: "HR Attendance", icon: User, description: "Day clock for payroll (if enabled)" },
+  { href: "/mobile/time-tracking", label: "Labor Time", icon: Clock, description: "Time on work-order tasks" },
   { href: "/mobile/schedule", label: "My Schedule", icon: Calendar, description: "Today's appointments" },
   { href: "/mobile/notifications", label: "Notifications", icon: Bell, description: "Alerts and updates" },
   { href: "/mobile/help", label: "Help", icon: BookOpen, description: "Mobile technician guide" },

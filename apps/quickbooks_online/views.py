@@ -109,19 +109,12 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
         logger.info("QBO OAuth redirect_uri=%s (redirect_base=%s)", redirect_uri, redirect_base)
         auth_client = QuickBooksService.get_auth_client(config, redirect_uri=redirect_uri)
         
-        # Scopes: Accounting is the main one we need
-        # The intuit-oauth library uses enum Scopes
+        # Accounting scope only — company name comes from CompanyInfo (Accounting API),
+        # not OpenID profile scopes.
         from intuitlib.enums import Scopes
-        
-        scopes = [
-            Scopes.ACCOUNTING, 
-            Scopes.OPENID, 
-            Scopes.PROFILE, 
-            Scopes.EMAIL, 
-            Scopes.PHONE, 
-            Scopes.ADDRESS
-        ]
-        
+
+        scopes = [Scopes.ACCOUNTING]
+
         # Get authorization URL
         auth_url = auth_client.get_authorization_url(scopes)
         

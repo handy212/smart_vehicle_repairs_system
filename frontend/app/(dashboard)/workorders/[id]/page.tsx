@@ -22,6 +22,7 @@ const PhotosTab = dynamic(() => import("./components/PhotosTab"));
 const DocumentsTab = dynamic(() => import("./components/DocumentsTab"));
 const DiagnosisTab = dynamic(() => import("./components/DiagnosisTab"));
 const WorkOrderTimeline = dynamic(() => import("./components/WorkOrderTimeline"));
+const LaborTimeTab = dynamic(() => import("./components/LaborTimeTab"));
 import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
 import { usePrint } from "@/lib/hooks/usePrint";
@@ -52,6 +53,7 @@ const VALID_TABS = new Set([
   "photos",
   "documents",
   "diagnosis",
+  "labor",
   "timeline",
 ]);
 
@@ -460,6 +462,10 @@ export default function WorkOrderDetailPage() {
             <DiagnosisTab workOrderId={workOrderId} workOrderStatus={workOrder.status} />
           </TabsContent>
         )}
+
+        <TabsContent value="labor" className="mt-4">
+          <LaborTimeTab workOrderId={workOrderId} />
+        </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
           <WorkOrderTimeline workOrder={workOrder} notes={notes} />

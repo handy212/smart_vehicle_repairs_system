@@ -312,7 +312,7 @@ function isUpcomingSoon(timeStr?: string): boolean {
 
 export function PerfexSkeleton() {
   return (
-    <div className="w-full animate-pulse space-y-5 p-4 pb-8">
+    <div className="w-full animate-pulse space-y-3 pb-5">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <div className="h-5 w-28 rounded-md bg-muted" />
@@ -323,7 +323,7 @@ export function PerfexSkeleton() {
           <div className="h-9 w-32 rounded-lg bg-muted" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className={cn(WORKSHOP_PANEL_CLASS, "flex h-[88px] flex-col justify-between p-4")}>
             <div className="h-3 w-16 rounded bg-muted" />
@@ -331,7 +331,7 @@ export function PerfexSkeleton() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <div className={cn(WORKSHOP_PANEL_CLASS, "h-80 lg:col-span-8")} />
         <div className={cn(WORKSHOP_PANEL_CLASS, "h-80 lg:col-span-4")} />
       </div>
@@ -548,15 +548,15 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
 
   const kpiGridClass = useMemo(() => {
     const n = visibleKpis.length;
-    if (n <= 3) return "grid grid-cols-2 gap-3 sm:grid-cols-3";
-    if (n <= 4) return "grid grid-cols-2 gap-3 sm:grid-cols-4";
-    return "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6";
+    if (n <= 3) return "grid grid-cols-2 gap-2.5 sm:grid-cols-3";
+    if (n <= 4) return "grid grid-cols-2 gap-2.5 sm:grid-cols-4";
+    return "grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6";
   }, [visibleKpis.length]);
 
   if (isLoading) return <PerfexSkeleton />;
 
   return (
-    <div className="w-full space-y-5 p-4 pb-8">
+    <div className="w-full space-y-3 pb-5">
       <DynamicPageTitle title={roleConfig?.title ?? "Dashboard"} />
 
       {queryErrors.length > 0 && (
@@ -666,16 +666,16 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
       </div>
 
       {showSection("wo_status_breakdown") && workOrderByStatus.length > 0 && (
-        <div className={cn(WORKSHOP_PANEL_CLASS, "px-4 py-3")}>
-          <div className="mb-2 flex items-center justify-between">
+        <div className={cn(WORKSHOP_PANEL_CLASS, "px-3 py-2.5")}>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Work orders by status (30 days)
             </h2>
-            <Link href="/reports/operations" className="text-[11px] font-medium text-primary hover:underline">
+            <Link href="/reports/operations" className="shrink-0 text-[11px] font-medium text-primary hover:underline">
               Operations report
             </Link>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {workOrderByStatus.map((row) => (
               <Link
                 key={`${row.status}-${"label" in row ? row.label : ""}`}
@@ -696,7 +696,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
 
       {/* ── Primary stage + secondary rail ── */}
       {(showSection("main_table") || showSection("appointments")) && (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
 
         {/* Tabbed table: Work Orders | Invoices */}
         {showSection("main_table") && (

@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/useToast";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PortalPageHeader } from "../components/PortalPageHeader";
 import { cn } from "@/lib/utils/cn";
@@ -30,10 +30,7 @@ export default function MySubscriptionsPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [viewMode, setViewMode] = useState<"my-subscriptions" | "available-packages">("my-subscriptions");
 
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
 
   const { data: mySubscriptions, isLoading: isLoadingSubscriptions } = useQuery({
     queryKey: ["my-subscriptions"],

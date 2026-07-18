@@ -307,6 +307,97 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.data['blocking_tasks'][0]['id'], task.id)
         self.assertIn('Tasks tab', response.data['next_step'])
 
+    def test_check_auto_complete_stays_in_progress_without_qc_inspector(self):
+        """Auto QC advance must not move jobs into quality_check with no inspector."""
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake vibration',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            primary_technician=self.technician,
+            status='in_progress',
+            requires_approval=True,
+            approved_by_customer=True,
+            quality_check_required=True,
+        )
+        ServiceTask.objects.create(
+            work_order=work_order,
+            task_type='repair',
+            description='Replace front brake pads',
+            status='completed',
+            is_workflow_task=False,
+            assigned_to=self.technician,
+        )
+
+        work_order.check_auto_complete()
+        work_order.refresh_from_db()
+        self.assertEqual(work_order.status, 'in_progress')
+        self.assertIsNone(work_order.quality_check_assigned_to_id)
+
+        can, error = work_order.can_transition_to('quality_check')
+        self.assertFalse(can)
+        self.assertIn('inspector', error.lower())
+
+    def test_check_auto_complete_advances_when_inspector_assigned(self):
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake vibration',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            primary_technician=self.technician,
+            status='in_progress',
+            requires_approval=True,
+            approved_by_customer=True,
+            quality_check_required=True,
+            quality_check_assigned_to=self.manager,
+        )
+        ServiceTask.objects.create(
+            work_order=work_order,
+            task_type='repair',
+            description='Replace front brake pads',
+            status='completed',
+            is_workflow_task=False,
+            assigned_to=self.technician,
+        )
+
+        work_order.check_auto_complete()
+        work_order.refresh_from_db()
+        self.assertEqual(work_order.status, 'quality_check')
+
+    def test_inventory_hook_failure_rolls_back_status_change(self):
+        from unittest.mock import patch
+        from django.core.exceptions import ValidationError
+
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake vibration',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            primary_technician=self.technician,
+            status='approved',
+            requires_approval=True,
+            approved_by_customer=True,
+        )
+
+        with patch(
+            'apps.inventory.services.InventoryService.reserve_parts_for_work_order',
+            side_effect=RuntimeError('stock service down'),
+        ):
+            with self.assertRaises(ValidationError):
+                work_order.transition_to('in_progress', user=self.manager)
+
+        work_order.refresh_from_db()
+        self.assertEqual(work_order.status, 'approved')
+
     def test_start_diagnosis_creates_diagnosis_record_when_missing(self):
         """Starting diagnosis should create the linked diagnosis record the UI expects."""
         work_order = WorkOrder.objects.create(

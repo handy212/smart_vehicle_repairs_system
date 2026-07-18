@@ -162,6 +162,7 @@ export default function ContactsPage() {
               contacts.map((contact: any) => {
                 const customerName =
                   contact.customer_name ||
+                  contact.company_name ||
                   contact.customer?.company_name ||
                   contact.customer?.full_name ||
                   null;

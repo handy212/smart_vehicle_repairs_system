@@ -7,10 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Car, Trash2, Download, Upload, X, ChevronDown, MoreVertical, MoreHorizontal, Eye, Edit, History, Wrench, Calendar } from "lucide-react";
-import { ImportDialog } from "@/components/ui/import-dialog";
-import { downloadVehicleTemplate } from "@/lib/utils/import-templates";
-import { exportVehiclesForImport } from "@/lib/utils/export-templates";
+import { Plus, Search, Car, Trash2, Download, X, ChevronDown, MoreVertical, MoreHorizontal, Eye, Edit, History, Wrench, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -50,7 +47,6 @@ export default function VehiclesPage() {
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
   const [vehicleStatus, setVehicleStatus] = useState("all");
-  const [showImportDialog, setShowImportDialog] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -299,10 +295,6 @@ export default function VehiclesPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import Excel
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport()}>
                   <Download className="w-4 h-4 mr-2" />
                   Export Excel
@@ -400,20 +392,6 @@ export default function VehiclesPage() {
         </div>
       )}
 
-      {/* Import Dialog */}
-      <ImportDialog
-        isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
-        onImport={async (file) => {
-          const result = await vehiclesApi.import(file);
-          queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-          return result;
-        }}
-        title="Import Fleet"
-        description="Upload an Excel file with vehicle data. Required columns: vin, make, model, year, and owner CID."
-        accept=".xlsx"
-        onDownloadTemplate={downloadVehicleTemplate}
-      />
     </div>
   );
 }

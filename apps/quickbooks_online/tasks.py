@@ -236,8 +236,8 @@ def task_pull_invoices_from_qbo(triggered_by_id=None):
 @shared_task
 def task_pull_bills_from_qbo(triggered_by_id=None):
     """
-    Pull Bills from QBO → update status on existing local Purchase Orders.
-    Does NOT create new POs from QBO.
+    Pull Bills from QBO → update mapped Purchase Orders and/or vendor bills.
+    Does NOT create new POs or vendor bills from QBO.
     """
     try:
         from .services import QuickBooksService

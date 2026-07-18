@@ -93,14 +93,23 @@ class TechnicianViewSet(viewsets.ModelViewSet):
             )
         lat = request.data.get('latitude')
         lng = request.data.get('longitude')
-        
-        if lat and lng:
-            technician.last_latitude = lat
-            technician.last_longitude = lng
-            technician.last_location_update = timezone.now()
-            technician.save()
-            return Response({'status': 'Location updated'})
-        return Response({'error': 'Invalid location data'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            lat_f = float(lat)
+            lng_f = float(lng)
+        except (TypeError, ValueError):
+            return Response({'error': 'Invalid location data'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not (-90.0 <= lat_f <= 90.0 and -180.0 <= lng_f <= 180.0):
+            return Response({'error': 'Invalid location data'}, status=status.HTTP_400_BAD_REQUEST)
+
+        technician.last_latitude = lat_f
+        technician.last_longitude = lng_f
+        technician.last_location_update = timezone.now()
+        technician.save(
+            update_fields=['last_latitude', 'last_longitude', 'last_location_update']
+        )
+        return Response({'status': 'Location updated'})
 
     @action(detail=False, methods=['get'], url_path='me')
     def my_profile(self, request):

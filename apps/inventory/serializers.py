@@ -120,6 +120,7 @@ class PartListSerializer(serializers.ModelSerializer):
     is_out_of_stock = serializers.SerializerMethodField()
     needs_reorder = serializers.SerializerMethodField()
     profit_margin = serializers.ReadOnlyField()
+    fitment = serializers.SerializerMethodField()
 
     class Meta:
         model = Part
@@ -130,9 +131,15 @@ class PartListSerializer(serializers.ModelSerializer):
             'markup_percentage', 'profit_margin', 'bin_location', 'preferred_supplier',
             'preferred_supplier_name', 'is_low_stock', 'is_out_of_stock', 'needs_reorder',
             'revenue_product',
+            'compatible_makes', 'compatible_models', 'compatible_years', 'fitment',
             'image', 'is_active', 'created_at'
         ]
 
+    def _effective_reorder_point(self, obj):
+        branch_rp = getattr(obj, 'branch_reorder_point', None)
+        if branch_rp is not None:
+            return branch_rp
+        return obj.reorder_point or 0
 
     def get_available_quantity(self, obj):
         # Use annotated values if available, otherwise fallback (which likely returns model defaults)
@@ -154,7 +161,7 @@ class PartListSerializer(serializers.ModelSerializer):
 
     def get_is_low_stock(self, obj):
         stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
-        return stock <= obj.reorder_point
+        return stock <= self._effective_reorder_point(obj)
 
     def get_is_out_of_stock(self, obj):
         stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
@@ -162,7 +169,21 @@ class PartListSerializer(serializers.ModelSerializer):
 
     def get_needs_reorder(self, obj):
         stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
-        return stock <= obj.reorder_point
+        return stock <= self._effective_reorder_point(obj)
+
+    def get_fitment(self, obj):
+        vehicle = self.context.get('fitment_vehicle')
+        if not vehicle:
+            return None
+        from .fitment import match_part_to_vehicle
+        return match_part_to_vehicle(
+            compatible_makes=obj.compatible_makes,
+            compatible_models=obj.compatible_models,
+            compatible_years=obj.compatible_years,
+            make=vehicle.get('make'),
+            model=vehicle.get('model'),
+            year=vehicle.get('year'),
+        )
 
 
 class PartDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
@@ -196,9 +217,15 @@ class PartDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
         reserved = getattr(obj, 'current_reserved', obj.quantity_reserved) or 0
         return max(0, stock - reserved)
         
+    def _effective_reorder_point(self, obj):
+        branch_rp = getattr(obj, 'branch_reorder_point', None)
+        if branch_rp is not None:
+            return branch_rp
+        return obj.reorder_point or 0
+
     def get_is_low_stock(self, obj):
         stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
-        return stock <= obj.reorder_point
+        return stock <= self._effective_reorder_point(obj)
 
     def get_is_out_of_stock(self, obj):
         stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
@@ -206,9 +233,7 @@ class PartDetailSerializer(QBOSyncFieldsMixin, serializers.ModelSerializer):
 
     def get_needs_reorder(self, obj):
         stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
-        # Basic logic: stock <= reorder_point. 
-        # Ideally should check quantity_on_order too, but that needs annotation as well.
-        return stock <= obj.reorder_point
+        return stock <= self._effective_reorder_point(obj)
 
     def get_stock_items(self, obj):
         items = obj.stock_items.select_related('branch').all()
@@ -353,6 +378,41 @@ class PartUpdateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializ
                         ),
                     })
         return attrs
+
+    def update(self, instance, validated_data):
+        """Keep active-branch StockItem reorder/bin settings in sync with catalog edits."""
+        instance = super().update(instance, validated_data)
+        stock_fields = {
+            'reorder_point', 'reorder_quantity', 'minimum_stock', 'maximum_stock',
+            'bin_location', 'shelf',
+        }
+        if not stock_fields.intersection(validated_data.keys()):
+            return instance
+
+        request = self.context.get('request')
+        if not request:
+            return instance
+
+        from apps.branches.utils import resolve_branch
+        from apps.inventory.models import StockItem
+
+        branch = resolve_branch(request)
+        if not branch:
+            return instance
+
+        stock_item = StockItem.objects.filter(part=instance, branch=branch).first()
+        if not stock_item:
+            return instance
+
+        update_fields = []
+        for field in stock_fields:
+            if field in validated_data and hasattr(stock_item, field):
+                setattr(stock_item, field, validated_data[field])
+                update_fields.append(field)
+        if update_fields:
+            update_fields.append('updated_at')
+            stock_item.save(update_fields=update_fields)
+        return instance
 
 
 class PartStockAdjustmentSerializer(serializers.Serializer):

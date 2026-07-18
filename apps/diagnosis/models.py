@@ -118,6 +118,74 @@ class Diagnosis(models.Model):
     def __str__(self):
         return f"Diagnosis for {self.work_order.work_order_number}"
     
+    def _diagnosis_service_task(self):
+        """Workflow / diagnostic ServiceTask used for shop labor on this diagnosis."""
+        ServiceTask = self._meta.apps.get_model('workorders', 'ServiceTask')
+        work_order = self.work_order
+        if not work_order:
+            return None
+        task = (
+            ServiceTask.objects.filter(
+                work_order=work_order,
+                is_workflow_task=True,
+                workflow_phase='diagnosis',
+            )
+            .exclude(status__in=['completed', 'skipped'])
+            .order_by('sequence_order', 'id')
+            .first()
+        )
+        if task:
+            return task
+        return (
+            ServiceTask.objects.filter(
+                work_order=work_order,
+                task_type='diagnostic',
+            )
+            .exclude(status__in=['completed', 'skipped'])
+            .order_by('sequence_order', 'id')
+            .first()
+        )
+
+    def _start_shop_labor(self, user):
+        """Mirror diagnosis start onto WO TechnicianTimeLog (Labor Time)."""
+        if not user or getattr(user, 'role', None) not in ('technician', 'manager'):
+            return
+        TechnicianTimeLog = self._meta.apps.get_model('workorders', 'TechnicianTimeLog')
+        task = self._diagnosis_service_task()
+        if not task:
+            return
+        if TechnicianTimeLog.objects.filter(technician=user, clock_out__isnull=True).exists():
+            return
+        now = timezone.now()
+        TechnicianTimeLog.objects.create(
+            work_order=task.work_order,
+            task=task,
+            technician=user,
+            clock_in=now,
+            is_billable=True,
+            description=f"Diagnosis labor: {task.description}",
+        )
+        if task.status == 'pending':
+            task.status = 'in_progress'
+            task.started_at = now
+            if not task.assigned_to_id:
+                task.assigned_to = user
+            task.save(update_fields=['status', 'started_at', 'assigned_to'])
+
+    def _stop_shop_labor(self, user=None):
+        """Clock out open shop labor on the diagnosis ServiceTask."""
+        TechnicianTimeLog = self._meta.apps.get_model('workorders', 'TechnicianTimeLog')
+        task = self._diagnosis_service_task()
+        if not task:
+            return
+        qs = TechnicianTimeLog.objects.filter(task=task, clock_out__isnull=True)
+        if user is not None:
+            qs = qs.filter(technician=user)
+        now = timezone.now()
+        for log in qs:
+            log.clock_out = now
+            log.save(update_fields=['clock_out'])
+
     def start(self, user=None):
         """Start the diagnosis"""
         from django.db import transaction
@@ -139,6 +207,7 @@ class Diagnosis(models.Model):
                     started_at=self.started_at,
                     technician=user or self.technician
                 )
+                self._start_shop_labor(user or self.technician)
                 return True
         return False
     
@@ -183,6 +252,7 @@ class Diagnosis(models.Model):
                     technician=user or self.technician,
                     notes=reason
                 )
+                self._stop_shop_labor(user or self.technician)
                 return True
         return False
     
@@ -219,6 +289,7 @@ class Diagnosis(models.Model):
                     started_at=self.resumed_at,
                     technician=user or self.technician
                 )
+                self._start_shop_labor(user or self.technician)
                 return True
         return False
 
@@ -259,6 +330,8 @@ class Diagnosis(models.Model):
                 if last_log and not last_log.ended_at:
                     last_log.ended_at = now
                     last_log.save(update_fields=['ended_at'])
+
+            self._stop_shop_labor(user or self.technician)
 
             self.status = 'awaiting_approval'
             self.paused_at = now
@@ -407,40 +480,7 @@ class Diagnosis(models.Model):
                         # Recalculate estimated_total
                         work_order.estimated_total = work_order.estimated_labor_cost + work_order.estimated_parts_cost
                     
-                    # Determine next status based on approval requirement
-                    # Only update status if currently in 'diagnosis' status
-                    if work_order.status == 'diagnosis':
-                        if self.requires_approval:
-                            # Transition to awaiting_approval
-                            can_transition, error_msg = work_order.can_transition_to('awaiting_approval')
-                            if can_transition:
-                                work_order.transition_to('awaiting_approval', user=self.technician)
-                            else:
-                                # If can't transition (e.g., missing estimate), keep in diagnosis but mark completed
-                                import logging
-                                logger = logging.getLogger(__name__)
-                                logger.warning(f"Cannot transition work order {work_order.id} to awaiting_approval: {error_msg}")
-                        else:
-                            # No approval needed - can transition directly to in_progress or approved
-                            # Check prerequisites for in_progress first
-                            can_transition, error_msg = work_order.can_transition_to('in_progress')
-                            if can_transition:
-                                work_order.status = 'in_progress'
-                            else:
-                                # If can't go to in_progress (e.g., no technician assigned), 
-                                # try approved status (which bypasses approval requirement)
-                                # Since requires_approval is False, we can skip the approval check
-                                # Just ensure we have basic prerequisites
-                                if work_order.primary_technician or work_order.assigned_technicians.exists():
-                                    # Technicians assigned, can go to approved
-                                    work_order.status = 'approved'
-                                else:
-                                    # Keep in diagnosis status - technician assignment needed
-                                    import logging
-                                    logger = logging.getLogger(__name__)
-                                    logger.warning(f"Cannot transition work order {work_order.id} from diagnosis: {error_msg}")
-                    
-                    # Save work order updates
+                    # Persist diagnosis fields before status transitions (transition_to saves the WO).
                     work_order.save(update_fields=[
                         'diagnosis_completed_at',
                         'diagnosis_by',
@@ -450,8 +490,56 @@ class Diagnosis(models.Model):
                         'estimated_labor_cost',
                         'estimated_labor_hours',
                         'estimated_total',
-                        'status'
                     ])
+
+                    self._stop_shop_labor(self.technician)
+
+                    # Always use the WO transition graph — never assign status directly.
+                    if work_order.status == 'diagnosis':
+                        import logging
+                        from django.core.exceptions import ValidationError
+
+                        logger = logging.getLogger(__name__)
+                        actor = self.technician
+                        if self.requires_approval:
+                            try:
+                                work_order.transition_to('awaiting_approval', user=actor)
+                            except ValidationError as exc:
+                                logger.warning(
+                                    "Cannot transition work order %s to awaiting_approval: %s",
+                                    work_order.id,
+                                    exc,
+                                )
+                        else:
+                            # Legal path (same as WorkOrderViewSet.complete_diagnosis):
+                            # diagnosis → awaiting_approval → approved
+                            try:
+                                work_order.approve_pending_recommendations(
+                                    user=actor,
+                                    method='in_person',
+                                    notes='Approval not required for this work order.',
+                                )
+                                work_order.approved_by_customer = True
+                                work_order.approved_at = timezone.now()
+                                work_order.approval_method = 'in_person'
+                                work_order.save(update_fields=[
+                                    'approved_by_customer',
+                                    'approved_at',
+                                    'approval_method',
+                                    'updated_at',
+                                ])
+                                work_order.transition_to('awaiting_approval', user=actor)
+                                work_order.approve_customer_work(
+                                    user=actor,
+                                    method='in_person',
+                                    notes='Auto-approved after diagnosis completion.',
+                                )
+                            except ValidationError as exc:
+                                logger.warning(
+                                    "Cannot auto-approve work order %s after diagnosis completion: %s",
+                                    work_order.id,
+                                    exc,
+                                )
 
     def reopen_for_revision(self, user=None, reason=''):
         """
@@ -500,16 +588,22 @@ class Diagnosis(models.Model):
                 'technician',
             ])
 
-            work_order.status = 'diagnosis'
             work_order.diagnosis_completed_at = None
             work_order.approved_by_customer = False
             work_order.approved_at = None
+            work_order.approval_method = ''
             work_order.save(update_fields=[
-                'status',
                 'diagnosis_completed_at',
                 'approved_by_customer',
                 'approved_at',
+                'approval_method',
             ])
+            if work_order.status == 'awaiting_approval':
+                work_order.transition_to('diagnosis', user=user)
+            elif work_order.status != 'diagnosis':
+                raise ValueError(
+                    f'Cannot reopen diagnosis while work order is in {work_order.get_status_display()}.'
+                )
 
             DiagnosisTimeLog.objects.create(
                 diagnosis=self,

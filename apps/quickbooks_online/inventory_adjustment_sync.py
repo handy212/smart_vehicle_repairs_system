@@ -24,7 +24,13 @@ except ModuleNotFoundError:
 
 
 class QBInventoryAdjustment(QuickbooksManagedObject):
-    """Minimal QBO InventoryAdjustment entity (not shipped in python-quickbooks 0.9.x)."""
+    """
+    Minimal QBO InventoryAdjustment entity (not shipped in python-quickbooks 0.9.x).
+
+    Expected create/update payload shape (covered by tests/test_inventory_adjustment_sync.py):
+    TxnDate, PrivateNote, optional DepartmentRef, and Line[] with ItemBasedExpenseLineDetail
+    (ItemRef + QtyDiff). Id/SyncToken required on update.
+    """
 
     class Meta:
         pass

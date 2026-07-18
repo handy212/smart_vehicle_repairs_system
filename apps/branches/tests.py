@@ -207,6 +207,40 @@ class BranchApiPermissionTest(TestCase):
         self.assertEqual(len(response.data['departments']), 1)
 
     @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
+    @patch('apps.quickbooks_online.services.QuickBooksService.list_departments')
+    def test_branch_list_includes_qbo_department_name(self, mock_list_departments, _mock_connected):
+        from django.contrib.contenttypes.models import ContentType
+        from django.core.cache import cache
+
+        from apps.branches.views import QBO_DEPARTMENT_NAMES_CACHE_KEY
+        from apps.quickbooks_online.models import QBOMapping
+
+        cache.delete(QBO_DEPARTMENT_NAMES_CACHE_KEY)
+        QBOMapping.objects.create(
+            content_type=ContentType.objects.get_for_model(Branch),
+            object_id=self.branch.id,
+            qbo_id='10',
+            status='synced',
+        )
+        mock_list_departments.return_value = (
+            [{
+                'id': '10',
+                'name': 'Main (APIMAIN)',
+                'active': True,
+                'mapped_branch': None,
+                'sync_status': 'synced',
+            }],
+            None,
+        )
+
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.get(f'/api/branches/{self.branch.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('qbo_department_id'), '10')
+        self.assertEqual(response.data.get('qbo_department_name'), 'Main (APIMAIN)')
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', return_value=True)
     @patch('apps.quickbooks_online.services.QuickBooksService.map_branch_to_department')
     def test_qbo_mapping_links_department(self, mock_map_branch, _mock_connected):
         mock_map_branch.return_value = (True, None)
@@ -649,6 +683,20 @@ class BranchListApiTest(TestCase):
         self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]['id'], self.branch.id)
         self.assertEqual(results[0]['name'], 'Portal Branch')
+        # Authenticated customers still receive contact fields
+        self.assertEqual(results[0].get('phone'), '555-0199')
+        self.assertEqual(results[0].get('address'), '1 Portal Rd')
+
+    def test_anonymous_list_omits_contact_fields(self):
+        response = self.client.get('/api/branches/', {'is_active': True})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        self.assertGreaterEqual(len(results), 1)
+        row = next(r for r in results if r['id'] == self.branch.id)
+        self.assertEqual(row['name'], 'Portal Branch')
+        self.assertNotIn('phone', row)
+        self.assertNotIn('address', row)
+        self.assertIn('city', row)
 
     @patch('apps.quickbooks_online.services.QuickBooksService.is_connected', side_effect=RuntimeError('QBO unavailable'))
     def test_staff_list_survives_qbo_failure(self, _mock_connected):

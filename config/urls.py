@@ -14,6 +14,7 @@ from .views import (
     dashboard_view, health_check, health_live, health_ready, logout_view,
     search_view, staff_register_view, profile_view,
 )
+from apps.core.media_views import ProtectedMediaView
 from apps.mobile_views import mobile_search_api
 # Import customer auth views
 from apps.customers import auth_views as customer_auth_views
@@ -34,11 +35,8 @@ urlpatterns = [
     # Firebase Service Worker (must be served from root)
     path('firebase-messaging-sw.js', firebase_messaging_sw, name='firebase-messaging-sw'),
     
-    # Firebase Push Notification Test
-    path('test-fcm/', test_fcm_view, name='test-fcm'),
-    
-    # API Root
-    path('api/', api_root, name='api-root'),
+    # API Root (unique name — DefaultRouter also registers "api-root")
+    path('api/', api_root, name='api-welcome'),
     path('api/health/', health_check, name='api-health'),
     path('api/health/live/', health_live, name='api-health-live'),
     path('api/health/ready/', health_ready, name='api-health-ready'),
@@ -116,6 +114,7 @@ urlpatterns = [
     path('api/portal/', include(('apps.portal.urls', 'api_portal'))),  # Customer API Portal
     path('api/feedback/', include(('apps.feedback.urls', 'api_feedback'))),  # Feedback API
     path('api/chat/', include('apps.chat.urls')),  # Chat API
+    path('api/data-exchange/', include(('apps.data_exchange.urls', 'api_data_exchange'))),
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),
@@ -167,19 +166,32 @@ if getattr(settings, 'ENABLE_WORKFLOW_APP', False):
         path('api/workflows/', include(('apps.workflows.urls', 'api_workflows'))),  # Workflow Builder API
     ]
 
-# Serve static/media files
-# - Static in production is handled by WhiteNoise or a reverse proxy.
-# - Media in production should be served by a reverse proxy; but when running behind
-#   Nginx Proxy Manager with /media proxied to Django, enable SERVE_MEDIA=True to serve it here.
-if getattr(settings, 'SERVE_MEDIA', False):
+# Media: branding is public; all other uploads require authentication.
+# Prefer nginx alias for /media/branding/ in production; private paths must
+# proxy to this view (see deploy/nginx/*.conf). SERVE_MEDIA keeps legacy
+# full public serve for local setups that still need it.
+if getattr(settings, 'SERVE_MEDIA', False) and settings.DEBUG:
     urlpatterns += [
         re_path(r'^media/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
     ]
+else:
+    urlpatterns += [
+        re_path(
+            r'^media/(?P<path>.*)$',
+            ProtectedMediaView.as_view(),
+            name='protected-media',
+        ),
+    ]
+
+# Debug-only FCM test page (never register in production).
+if settings.DEBUG:
+    urlpatterns += [
+        path('test-fcm/', test_fcm_view, name='test-fcm'),
+    ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
+
     # Debug Toolbar
     import debug_toolbar
     urlpatterns += [

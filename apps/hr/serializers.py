@@ -95,6 +95,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     reporting_to_name = serializers.SerializerMethodField()
     full_name = serializers.CharField(read_only=True)
     is_active_employee = serializers.BooleanField(read_only=True)
+    can_use_hr_attendance = serializers.BooleanField(read_only=True)
     technician_id = serializers.SerializerMethodField()
 
     email = serializers.EmailField(write_only=True, required=False)
@@ -118,6 +119,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             'department', 'department_name', 'position', 'position_title',
             'branch_name', 'technician_id',
             'employment_type', 'employment_status', 'is_active_employee',
+            'time_tracking_enabled', 'can_use_hr_attendance',
             'start_date', 'end_date',
             'reporting_to', 'reporting_to_name',
             'salary_type', 'base_salary',
@@ -129,7 +131,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             'email', 'first_name', 'last_name', 'password', 'phone', 'role',
             'profile_picture', 'branch',
         ]
-        read_only_fields = ['user', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'can_use_hr_attendance', 'created_at', 'updated_at']
 
     def validate(self, attrs):
         request = self.context.get('request')
@@ -275,7 +277,7 @@ class EmployeeProfileListSerializer(serializers.ModelSerializer):
             'id', 'user', 'full_name', 'email', 'phone', 'profile_picture',
             'role', 'is_account_active',
             'department_name', 'position_title', 'branch_name', 'technician_id',
-            'employment_type', 'employment_status', 'start_date',
+            'employment_type', 'employment_status', 'time_tracking_enabled', 'start_date',
         ]
 
     def get_branch_name(self, obj):
@@ -660,6 +662,55 @@ class JobOpeningSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'branch': {'required': False},
         }
+
+
+class PublicJobOpeningSerializer(serializers.ModelSerializer):
+    """Public-safe job listing (no internal counts or creator details)."""
+
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+    employment_type_display = serializers.CharField(
+        source='get_employment_type_display', read_only=True,
+    )
+
+    class Meta:
+        model = JobOpening
+        fields = [
+            'id', 'title', 'department_name', 'description', 'requirements',
+            'employment_type', 'employment_type_display',
+            'branch_name', 'posted_date', 'closing_date', 'vacancies',
+        ]
+
+
+class PublicApplicantApplySerializer(serializers.ModelSerializer):
+    """Accept public career applications; status/source forced server-side."""
+
+    class Meta:
+        model = Applicant
+        fields = [
+            'job_opening', 'first_name', 'last_name', 'email', 'phone',
+            'resume', 'cover_letter',
+        ]
+
+    def validate_job_opening(self, job_opening):
+        from django.utils import timezone
+        if job_opening.status != 'open':
+            raise serializers.ValidationError('This job opening is not accepting applications.')
+        if job_opening.closing_date and job_opening.closing_date < timezone.now().date():
+            raise serializers.ValidationError('The application deadline for this job has passed.')
+        return job_opening
+
+    def validate(self, attrs):
+        job_opening = attrs.get('job_opening')
+        email = attrs.get('email')
+        if job_opening and email:
+            if Applicant.objects.filter(
+                job_opening=job_opening, email__iexact=email,
+            ).exclude(status='rejected').exists():
+                raise serializers.ValidationError({
+                    'email': 'You have already applied for this position.',
+                })
+        return attrs
 
 
 # =============================================================================

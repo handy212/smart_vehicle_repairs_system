@@ -13,12 +13,18 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
         className={cn(
           "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold transition-colors",
           {
-            "bg-primary/10 text-primary border border-primary/15": variant === "default",
-            "bg-success/15 text-success border border-success/20": variant === "success",
-            "bg-warning/15 text-warning border border-warning/20": variant === "warning",
-            "bg-destructive/10 text-destructive border border-destructive/20":
+            // Soft tokens (not bg-*/15) keep status text readable when opacity
+            // modifiers fall back to the solid brand color.
+            "bg-[var(--primary-soft)] text-primary border border-[var(--primary-soft-border)]":
+              variant === "default",
+            "bg-[var(--success-soft)] text-success border border-[var(--success-soft-border)]":
+              variant === "success",
+            "bg-[var(--warning-soft)] text-warning border border-[var(--warning-soft-border)]":
+              variant === "warning",
+            "bg-[var(--destructive-soft)] text-destructive border border-[var(--destructive-soft-border)]":
               variant === "danger" || variant === "destructive",
-            "bg-info/10 text-info border border-info/20": variant === "info",
+            "bg-[var(--info-soft)] text-info border border-[var(--info-soft-border)]":
+              variant === "info",
             "bg-muted text-foreground": variant === "secondary",
             "border border-border text-foreground": variant === "outline",
           },

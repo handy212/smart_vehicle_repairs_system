@@ -92,6 +92,9 @@ def test_public_health_endpoints():
     for path in ('/api/health/', '/api/health/live/', '/api/health/ready/', '/api/'):
         response = client.get(path)
         assert response.status_code == 200, f'{path} returned {response.status_code}'
+    # Anonymous /api/ must not enumerate private modules
+    root = client.get('/api/').json()
+    assert 'modules' not in root.get('endpoints', {})
 
 
 @pytest.mark.django_db

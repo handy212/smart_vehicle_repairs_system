@@ -4,10 +4,13 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { fixedAssetsApi, type FixedAssetCategory, type FixedAssetCreateData } from "@/lib/api/fixed-assets";
-import { branchesApi } from "@/lib/api/branches";
-import { hrApi } from "@/lib/api/hr";
+import {
+    useActiveBranches,
+    useActiveStaff,
+    useAssetCategories,
+} from "@/lib/hooks/useFormLookups";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,20 +96,9 @@ function NewFixedAssetContent() {
         },
     });
 
-    const { data: categories } = useQuery({
-        queryKey: ["asset-categories"],
-        queryFn: () => fixedAssetsApi.categories.active(),
-    });
-
-    const { data: branchesResponse } = useQuery({
-        queryKey: ["branches"],
-        queryFn: () => branchesApi.list({ is_active: true }),
-    });
-
-    const { data: staffResponse } = useQuery({
-        queryKey: ["staff-list"],
-        queryFn: async () => (await hrApi.staff.list({ employment_status: "active" })).data,
-    });
+    const { data: categories } = useAssetCategories();
+    const { data: branchesResponse } = useActiveBranches();
+    const { data: staffResponse } = useActiveStaff();
 
     const branches = branchesResponse ?? [];
 

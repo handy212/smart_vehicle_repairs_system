@@ -165,10 +165,12 @@ export default function WorkOrdersPage() {
   const { data: stats } = useQuery({
     queryKey: ["workorder-stats"],
     queryFn: () => workordersApi.dashboardStats(),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig, groupedStatusFilter, activeStatusGroup],
+    staleTime: 2 * 60 * 1000,
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`

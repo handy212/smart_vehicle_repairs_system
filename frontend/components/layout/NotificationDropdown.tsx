@@ -20,9 +20,8 @@ import { cn } from "@/lib/utils/cn";
 import { useNotificationSound } from "@/lib/hooks/useNotificationSound";
 import { useNotificationLiveStore } from "@/components/notifications/RealtimeNotificationsBridge";
 
-import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
-import { ensureApiSession } from "@/lib/auth/session";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 export function NotificationDropdown() {
     const router = useRouter();
@@ -31,15 +30,9 @@ export function NotificationDropdown() {
 
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-    const { data: user, isSuccess: hasUser } = useQuery({
-        queryKey: ["user"],
-        queryFn: async () => {
-            await ensureApiSession();
-            return authApi.getCurrentUser();
-        },
-        staleTime: 1000 * 60 * 5,
+    const { data: user, isSuccess: hasUser } = useCurrentUser({
+        ensureSession: true,
         enabled: isAuthenticated,
-        retry: false,
     });
 
     const canFetchNotifications = isAuthenticated && hasUser && !!user;

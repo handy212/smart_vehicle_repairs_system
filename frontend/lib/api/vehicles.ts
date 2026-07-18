@@ -6,13 +6,21 @@ export interface Vehicle {
   make: string;
   model: string;
   year: number;
-
+  trim?: string;
   vin_decoded_data?: any;
   vin_decoded_at?: string | null;
   license_plate?: string;
+  license_plate_state?: string;
   exterior_color?: string;
+  interior_color?: string;
   current_mileage?: number;
+  mileage_unit?: "miles" | "km" | string;
   engine_type?: string;
+  engine_size?: string;
+  transmission_type?: "automatic" | "manual" | "cvt" | "dual_clutch" | string;
+  fuel_tank_capacity?: number | string | null;
+  tire_size?: string;
+  condition_rating?: number | null;
   owner: number | { id: number };
   owner_name?: string;
   status: "active" | "in_service" | "sold" | "totaled" | "inactive" | string;
@@ -153,7 +161,10 @@ export const vehiclesApi = {
     return response.data;
   },
 
-  decodeVin: async (vin: string): Promise<{
+  decodeVin: async (
+    vin: string,
+    options?: { excludeVehicleId?: number }
+  ): Promise<{
     success: boolean;
     exists?: boolean;
     vehicle_id?: number;
@@ -197,7 +208,56 @@ export const vehiclesApi = {
     error?: string;
   }> => {
     // VIN decode can involve an external API (NHTSA). Allow a bit more time before aborting.
-    const response = await apiClient.post("/vehicles/vehicles/decode_vin/", { vin }, { timeout: 20000 });
+    const response = await apiClient.post(
+      "/vehicles/vehicles/decode_vin/",
+      {
+        vin,
+        ...(options?.excludeVehicleId
+          ? { exclude_vehicle_id: options.excludeVehicleId }
+          : {}),
+      },
+      { timeout: 20000 }
+    );
+    return response.data;
+  },
+
+  checkVin: async (
+    vin: string,
+    vehicleId?: number
+  ): Promise<{
+    success: boolean;
+    exists?: boolean;
+    vehicle_id?: number;
+    vehicle?: Vehicle;
+    message?: string;
+    error?: string;
+  }> => {
+    const response = await apiClient.post("/vehicles/vehicles/check_vin/", {
+      vin,
+      vehicle_id: vehicleId,
+    });
+    return response.data;
+  },
+
+  /** Decode VIN via NHTSA and persist vin_decoded_data on this vehicle (profile specs). */
+  refreshVinDecode: async (
+    id: number,
+    options?: { force?: boolean }
+  ): Promise<{
+    success: boolean;
+    partial?: boolean;
+    message?: string;
+    updated_fields?: string[];
+    has_errors?: boolean;
+    vehicle?: Vehicle;
+    decoded?: Record<string, unknown>;
+    error?: string;
+  }> => {
+    const response = await apiClient.post(
+      `/vehicles/vehicles/${id}/refresh_vin_decode/`,
+      { force: Boolean(options?.force) },
+      { timeout: 20000 }
+    );
     return response.data;
   },
 

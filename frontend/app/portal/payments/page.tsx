@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { CreditCard, Calendar, DollarSign, FileText, Filter, Download } from "lucide-react";
@@ -19,16 +19,12 @@ export default function PaymentHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
   const { formatCurrency } = useCurrency();
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
+  const customerId = getCustomerId(user);
 
   const { data: paymentsData, isLoading } = useQuery({
     queryKey: ["portal", "payments", statusFilter, methodFilter],
     queryFn: () => {
-
-      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
       if (!customerId) return Promise.resolve([]);
 
       const params: any = {
@@ -44,7 +40,7 @@ export default function PaymentHistoryPage() {
       return billingApi.payments.list(params);
     },
 
-    enabled: !!user && !!(user?.customer_profile?.id || (user as any)?.customer?.id),
+    enabled: !!user && !!customerId,
   });
 
 

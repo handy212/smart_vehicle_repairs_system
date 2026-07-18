@@ -116,6 +116,7 @@ export default function EstimatesPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["estimates", page, search, advancedFilters, sortConfig],
+    staleTime: 2 * 60 * 1000,
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -134,6 +135,7 @@ export default function EstimatesPage() {
   const { data: stats } = useQuery({
     queryKey: ["estimate-stats"],
     queryFn: () => billingApi.estimates.stats(),
+    staleTime: 5 * 60 * 1000,
   });
 
   const estimates = data?.results || [];

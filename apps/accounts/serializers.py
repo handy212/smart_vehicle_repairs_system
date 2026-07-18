@@ -77,13 +77,13 @@ class UserSerializer(serializers.ModelSerializer):
             'phone', 'role', 'profile_picture', 'gender', 'date_of_birth',
             'address', 'city', 'region', 'area', 'zip_code', 'country',
             'email_notifications', 'sms_notifications',
-            'is_active', 'created_at', 'updated_at', 'customer_profile',
+            'is_active', 'last_login', 'created_at', 'updated_at', 'customer_profile',
             'branch', 'managed_branches', 'branch_name', 'managed_branches_names',
             'employee_id', 'hire_date', 'hourly_rate', 'permissions',
             'enabled_modules', 'two_factor_enabled',
             'impersonating', 'impersonator',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'two_factor_enabled']
+        read_only_fields = ['id', 'last_login', 'created_at', 'updated_at', 'two_factor_enabled']
         extra_kwargs = {
             'password': {'write_only': True}
         }

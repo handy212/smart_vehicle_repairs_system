@@ -204,9 +204,15 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'refresh': os.getenv('DRF_THROTTLE_REFRESH', '30/minute'),
     'public_settings': os.getenv('DRF_THROTTLE_PUBLIC_SETTINGS', '120/minute'),
 }
+# JSON only in production — no browsable HTML API (reduces attack surface / info leak)
+REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
+    'rest_framework.renderers.JSONRenderer',
+]
 
 REQUIRE_WEBHOOK_SIGNATURES = True
 JWT_REFRESH_COOKIE_SECURE = True
+# Prefer HttpOnly cookies / BFF — do not put refresh/access tokens in JSON bodies.
+JWT_EMIT_TOKENS_IN_JSON = env.bool('JWT_EMIT_TOKENS_IN_JSON', default=False)
 
 # Disable debug toolbar and extensions in production
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in ['debug_toolbar', 'django_extensions']]

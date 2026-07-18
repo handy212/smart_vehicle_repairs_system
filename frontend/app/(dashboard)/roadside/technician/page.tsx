@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi, RoadsideRequest } from "@/lib/api/roadside";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +20,7 @@ export default function TechnicianRoadsideDashboard() {
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    const { data: user } = useQuery({
-        queryKey: ["user", "current"],
-        queryFn: () => authApi.getCurrentUser(),
-    });
+    const { data: user } = useCurrentUser();
 
     const { data: myRequests, isLoading } = useQuery({
         queryKey: ["roadside", "technician", user?.id],

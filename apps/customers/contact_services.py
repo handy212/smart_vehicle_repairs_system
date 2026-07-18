@@ -22,8 +22,19 @@ def _primary_contact_payload(customer: Customer) -> dict | None:
     user = customer.user
     first_name = (user.first_name or "").strip()
     last_name = (user.last_name or "").strip()
+    company_name = (customer.company_name or "").strip()
+    contact_person = (customer.contact_person_name or "").strip()
+
+    # Legacy import stub — replace with company / contact person identity
+    if first_name == "Fleet" and last_name == "Account":
+        source = contact_person if contact_person and contact_person != "Fleet Account" else company_name
+        if source:
+            parts = source.split(None, 1)
+            first_name = parts[0]
+            last_name = parts[1] if len(parts) > 1 else ""
+
     if not first_name and not last_name:
-        display_name = (customer.contact_person_name or "").strip()
+        display_name = contact_person or company_name
         if not display_name:
             return None
         parts = display_name.split(None, 1)
@@ -31,7 +42,7 @@ def _primary_contact_payload(customer: Customer) -> dict | None:
         last_name = parts[1] if len(parts) > 1 else ""
 
     return {
-        "first_name": first_name or customer.contact_person_name or customer.company_name,
+        "first_name": first_name or contact_person or company_name,
         "last_name": last_name,
         "email": (user.email or customer.company_email or "").strip(),
         "phone": (user.phone or customer.company_phone or customer.alternative_phone or "").strip(),

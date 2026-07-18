@@ -235,19 +235,27 @@ BRANCH_OVERRIDE_CONTROL_GROUPS = {
     'sales_revenue_account': 'Revenue (item fallback)',
 }
 
-BRANCH_OVERRIDE_SLOTS = frozenset(
-    {(MAPPING_KIND_CONTROL, field_name) for field_name in BRANCH_OVERRIDE_CONTROL_FIELDS}
-    | {(MAPPING_KIND_INVOICE_LINE, key) for key in INVOICE_LINE_TYPE_LABELS}
-    | {
-        (MAPPING_KIND_REVENUE_PRODUCT_CLASS, product.code)
-        for product in RevenueProduct.objects.filter(is_active=True, branch__isnull=True)
-    }
-)
+def branch_override_slots():
+    """
+    Slots that may be stored as per-branch QBOAccountMapping overrides.
+
+    Evaluated at call time so newly created RevenueProduct rows are eligible
+    without a process restart. Payment methods, tax codes, expense classes, and
+    bank/till controls remain company-scoped only.
+    """
+    return frozenset(
+        {(MAPPING_KIND_CONTROL, field_name) for field_name in BRANCH_OVERRIDE_CONTROL_FIELDS}
+        | {(MAPPING_KIND_INVOICE_LINE, key) for key in INVOICE_LINE_TYPE_LABELS}
+        | {
+            (MAPPING_KIND_REVENUE_PRODUCT_CLASS, product.code)
+            for product in RevenueProduct.objects.filter(is_active=True, branch__isnull=True)
+        }
+    )
 
 
 def is_branch_override_slot(mapping_kind, mapping_key):
     """Return True when mapping_kind/key may be stored as a branch override row."""
-    return (mapping_kind, mapping_key) in BRANCH_OVERRIDE_SLOTS
+    return (mapping_kind, mapping_key) in branch_override_slots()
 
 
 def branch_mapping_rows(branch):

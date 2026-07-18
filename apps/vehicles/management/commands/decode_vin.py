@@ -100,7 +100,7 @@ class Command(BaseCommand):
         # Vehicle summary
         self.stdout.write(f'\n{self.style.SUCCESS("VEHICLE SUMMARY")}')
         self.stdout.write('-' * 70)
-        summary = decoder.get_vehicle_summary(vin)
+        summary = decoder.get_vehicle_summary(vin, data=data)
         self.stdout.write(summary)
         
         self.stdout.write('\n' + '=' * 70)

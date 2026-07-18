@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi, RoadsideRequestCreate } from "@/lib/api/roadside";
 import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { vehiclesApi } from "@/lib/api/vehicles";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,12 +107,8 @@ export default function NewRoadsideRequestPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
-
-  const customerId = user?.customer_profile?.id || (user as { customer?: { id: number } })?.customer?.id;
+  const { data: user } = useCurrentUser();
+  const customerId = getCustomerId(user);
 
   const { data: vehicles } = useQuery({
     queryKey: ["portal", "vehicles", customerId],

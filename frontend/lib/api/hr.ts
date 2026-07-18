@@ -60,6 +60,8 @@ export interface StaffProfile {
     employment_type: "full_time" | "part_time" | "contract" | "intern";
     employment_status: "active" | "probation" | "suspended" | "terminated" | "resigned";
     is_active_staff: boolean;
+    time_tracking_enabled: boolean;
+    can_use_hr_attendance: boolean;
     start_date: string | null;
     end_date: string | null;
     reporting_to: number | null;
@@ -96,6 +98,7 @@ export interface StaffListItem {
     branch_name: string | null;
     employment_type: string;
     employment_status: string;
+    time_tracking_enabled?: boolean;
     start_date: string | null;
     technician_id?: number | null;
 }
@@ -310,6 +313,20 @@ export interface JobOpening {
     created_by_name: string | null;
     created_at: string;
     updated_at: string;
+}
+
+export interface PublicJobOpening {
+    id: number;
+    title: string;
+    department_name: string;
+    description: string;
+    requirements: string;
+    employment_type: string;
+    employment_type_display: string;
+    branch_name: string;
+    posted_date: string | null;
+    closing_date: string | null;
+    vacancies: number;
 }
 
 export interface Applicant {
@@ -547,8 +564,16 @@ export const hrApi = {
 
     // ------- Leave Balances -------
     leaveBalances: {
-        list: (params?: { staff?: number; year?: number }) =>
+        list: (params?: { staff?: number; year?: number; leave_type?: number; page?: number }) =>
             apiClient.get<PaginatedResponse<LeaveBalance>>(`${BASE}/leave-balances/`, { params }),
+        get: (id: number) =>
+            apiClient.get<LeaveBalance>(`${BASE}/leave-balances/${id}/`),
+        create: (data: Partial<LeaveBalance>) =>
+            apiClient.post<LeaveBalance>(`${BASE}/leave-balances/`, data),
+        update: (id: number, data: Partial<LeaveBalance>) =>
+            apiClient.patch<LeaveBalance>(`${BASE}/leave-balances/${id}/`, data),
+        delete: (id: number) =>
+            apiClient.delete(`${BASE}/leave-balances/${id}/`),
         myBalances: (year?: number) =>
             apiClient.get<LeaveBalance[]>(`${BASE}/leave-balances/my_balances/`, { params: { year } }),
     },
@@ -731,6 +756,16 @@ export const hrApi = {
             apiClient.post<JobOpening>(`${BASE}/job-openings/${id}/publish/`),
         close: (id: number) =>
             apiClient.post<JobOpening>(`${BASE}/job-openings/${id}/close/`),
+        publicList: () =>
+            apiClient.get<PublicJobOpening[]>(`${BASE}/job-openings/public/`, {
+                skipAuth: true,
+                skipAuthRefresh: true,
+            }),
+        publicGet: (id: number) =>
+            apiClient.get<PublicJobOpening>(`${BASE}/job-openings/${id}/public/`, {
+                skipAuth: true,
+                skipAuthRefresh: true,
+            }),
     },
 
     applicants: {
@@ -747,8 +782,26 @@ export const hrApi = {
             apiClient.patch<Applicant>(`${BASE}/applicants/${id}/`, data),
         moveToStage: (id: number, status: string) =>
             apiClient.post<Applicant>(`${BASE}/applicants/${id}/move_to_stage/`, { status }),
-        hire: (id: number) =>
-            apiClient.post(`${BASE}/applicants/${id}/hire/`),
+        hire: (id: number, data: {
+            password: string;
+            role?: string;
+            employment_type?: string;
+            salary_type?: string;
+            base_salary?: string;
+            start_date?: string;
+            employment_status?: string;
+        }) =>
+            apiClient.post(`${BASE}/applicants/${id}/hire/`, data),
+        publicApply: (data: FormData) =>
+            apiClient.post<{ detail: string; id: number; job_title: string }>(
+                `${BASE}/applicants/public_apply/`,
+                data,
+                {
+                    skipAuth: true,
+                    skipAuthRefresh: true,
+                    headers: { "Content-Type": "multipart/form-data" },
+                },
+            ),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/applicants/${id}/`),
     },

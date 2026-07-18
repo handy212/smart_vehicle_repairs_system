@@ -647,9 +647,25 @@ class QuickBooksService:
             )
             return None
 
-    def sync_branch(self, local_branch):
+    @staticmethod
+    def branch_department_auto_name(local_branch) -> str:
+        """Canonical QBO Location name used when SVR creates/manages the department."""
+        return f'{local_branch.name} ({local_branch.code})'
+
+    @staticmethod
+    def is_svr_managed_department_name(qbo_name: str | None, branch_code: str) -> bool:
+        """True when the QBO name looks like an SVR auto-synced location (`… (CODE)`)."""
+        if not qbo_name or not branch_code:
+            return False
+        return str(qbo_name).rstrip().endswith(f' ({branch_code})')
+
+    def sync_branch(self, local_branch, *, update_name: bool = True):
         """
         Sync a local Branch to QBO Department (Location).
+
+        When the branch is already mapped to an owner-named location (e.g. "Kumasi"),
+        the QBO Name is left unchanged unless it already follows the SVR auto pattern
+        `"{name} ({code})"` and ``update_name`` is True.
         """
         client = self.get_client()
         if not client:
@@ -662,9 +678,9 @@ class QuickBooksService:
                 }
             )
             return None
-            
-        dept_name = f"{local_branch.name} ({local_branch.code})"
-        qb_dept, _is_new, load_error = self._load_qbo_entity(
+
+        dept_name = self.branch_department_auto_name(local_branch)
+        qb_dept, is_new, load_error = self._load_qbo_entity(
             QBDepartment,
             local_branch,
             name=dept_name,
@@ -672,10 +688,14 @@ class QuickBooksService:
         if load_error:
             self._fail_qbo_mapping(local_branch, load_error)
             return None
-                
-        # Map Fields
-        qb_dept.Name = dept_name
-        
+
+        existing_name = getattr(qb_dept, 'Name', None) or ''
+        if is_new:
+            qb_dept.Name = dept_name
+        elif update_name and self.is_svr_managed_department_name(existing_name, local_branch.code):
+            qb_dept.Name = dept_name
+        # else: keep owner-mapped / manually linked Location name
+
         # Save
         try:
             self._save_qb(qb_dept, client)
@@ -948,13 +968,35 @@ class QuickBooksService:
             line_items=line_items,
         )
 
-    def _apply_department_ref(self, qb_txn, branch):
+    def get_branch_department_qbo_id(self, branch) -> str | None:
+        """Return the stored QBO Department Id for a branch, if mapped."""
         if not branch:
+            return None
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(branch),
+            object_id=branch.id,
+        ).exclude(qbo_id='').first()
+        return mapping.qbo_id if mapping else None
+
+    def _apply_department_ref(self, qb_txn, branch):
+        """
+        Set DepartmentRef from the stored branch→location mapping only.
+
+        Does not create or rename QBO Locations; that happens via explicit
+        auto_sync / onboard / branch sync — not on every document push.
+        """
+        if not branch or Ref is None:
             return
-        qb_dept = self.sync_branch(branch)
-        if qb_dept and Ref is not None:
-            qb_txn.DepartmentRef = Ref()
-            qb_txn.DepartmentRef.value = qb_dept.Id
+        department_id = self.get_branch_department_qbo_id(branch)
+        if not department_id:
+            logger.info(
+                'Skipping DepartmentRef for branch %s (%s): no QBO location mapping.',
+                getattr(branch, 'id', None),
+                getattr(branch, 'code', ''),
+            )
+            return
+        qb_txn.DepartmentRef = Ref()
+        qb_txn.DepartmentRef.value = department_id
 
     def _apply_ar_account_ref(self, qb_txn, branch):
         """Apply branch-specific AR account when configured in QBO mappings."""

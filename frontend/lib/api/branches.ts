@@ -6,9 +6,11 @@ export interface Branch {
   name: string;
   code: string;
   description?: string;
-  phone: string;
+  /** Present for staff/customer; omitted on anonymous public branch list. */
+  phone?: string;
   email?: string;
-  address: string;
+  /** Present for staff/customer; omitted on anonymous public branch list. */
+  address?: string;
   city: string;
   region: string;
   area?: string;

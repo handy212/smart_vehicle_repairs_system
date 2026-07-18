@@ -10,7 +10,7 @@ from apps.accounting.services import AccountingService
 class Command(BaseCommand):
     help = (
         'Reverse duplicate posted journal entries that share the same reference, '
-        'keeping the oldest entry as canonical. Use --reference-prefix to scope demo data.'
+        'keeping the oldest entry as canonical. Use --reference-prefix to scope by reference.'
     )
 
     def add_arguments(self, parser):
@@ -22,7 +22,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--reference-prefix',
             default='',
-            help='Only process references starting with this prefix (e.g. CDINV or CDPAY-REF-).',
+            help='Only process references starting with this prefix (e.g. INV- or PAY-).',
         )
         parser.add_argument(
             '--username',

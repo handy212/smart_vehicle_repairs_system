@@ -172,19 +172,30 @@ function SelfServiceContent() {
                 </Card>
 
                 <Card className="md:col-span-2">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-base">Today&apos;s Attendance</CardTitle>
-                        <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => clockInMutation.mutate()} disabled={clockInMutation.isPending || !!todayRecord?.clock_in}>
-                                <LogIn className="h-4 w-4 mr-1" />Clock In
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => clockOutMutation.mutate()} disabled={clockOutMutation.isPending || !todayRecord?.clock_in || !!todayRecord?.clock_out}>
-                                <LogOut className="h-4 w-4 mr-1" />Clock Out
-                            </Button>
+                    <CardHeader className="flex flex-row items-center justify-between gap-3">
+                        <div>
+                            <CardTitle className="text-base">HR Attendance (day clock)</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Daily presence for payroll/leave — not work-order job labor time.
+                            </p>
                         </div>
+                        {profile.can_use_hr_attendance ? (
+                            <div className="flex gap-2 shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => clockInMutation.mutate()} disabled={clockInMutation.isPending || !!todayRecord?.clock_in}>
+                                    <LogIn className="h-4 w-4 mr-1" />Clock In
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => clockOutMutation.mutate()} disabled={clockOutMutation.isPending || !todayRecord?.clock_in || !!todayRecord?.clock_out}>
+                                    <LogOut className="h-4 w-4 mr-1" />Clock Out
+                                </Button>
+                            </div>
+                        ) : null}
                     </CardHeader>
                     <CardContent>
-                        {todayRecord ? (
+                        {!profile.can_use_hr_attendance ? (
+                            <p className="text-sm text-muted-foreground">
+                                HR attendance time tracking is disabled on your staff profile. Ask HR to enable it if you need daily clock-in.
+                            </p>
+                        ) : todayRecord ? (
                             <div className="flex gap-6 text-sm">
                                 <span>In: {todayRecord.clock_in ? new Date(todayRecord.clock_in).toLocaleTimeString() : "—"}</span>
                                 <span>Out: {todayRecord.clock_out ? new Date(todayRecord.clock_out).toLocaleTimeString() : "—"}</span>

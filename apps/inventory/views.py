@@ -274,7 +274,8 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
     ]
     search_fields = [
         'part_number', 'barcode', 'name', 'description', 'manufacturer',
-        'manufacturer_part_number', 'bin_location', 'compatible_makes'
+        'manufacturer_part_number', 'bin_location',
+        'compatible_makes', 'compatible_models', 'compatible_years',
     ]
     ordering_fields = [
         'part_number', 'name', 'quantity_in_stock', 'cost_price',
@@ -282,7 +283,38 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
     ]
     ordering = ['part_number']
 
+    def _resolve_fitment_vehicle(self):
+        """Resolve vehicle make/model/year from query params for soft fitment."""
+        params = self.request.query_params
+        make = (params.get('make') or '').strip() or None
+        model = (params.get('model') or '').strip() or None
+        year_raw = params.get('year')
+        year = None
+        if year_raw not in (None, ''):
+            try:
+                year = int(year_raw)
+            except (TypeError, ValueError):
+                year = None
+
+        vehicle_id = params.get('vehicle_id')
+        if vehicle_id:
+            try:
+                from apps.vehicles.models import Vehicle
+                vehicle = Vehicle.objects.only('make', 'model', 'year').get(pk=int(vehicle_id))
+                make = make or (vehicle.make or '').strip() or None
+                model = model or (vehicle.model or '').strip() or None
+                year = year if year is not None else vehicle.year
+            except (ValueError, TypeError, Exception):
+                pass
+
+        if not make and not model and year is None:
+            return None
+        return {'make': make, 'model': model, 'year': year}
+
     def get_queryset(self):
+        from django.db.models import Q, Value, IntegerField
+        from django.db.models.functions import Coalesce as DjCoalesce
+
         queryset = super().get_queryset()
         
         # Use centralized branch resolution
@@ -291,18 +323,85 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
         
         # Use InventoryService for stock annotation
         queryset = InventoryService.get_stock_queryset(queryset, branch)
+
+        # Prefer branch StockItem.reorder_point for low-stock filters
+        effective_reorder = DjCoalesce('branch_reorder_point', 'reorder_point', Value(0), output_field=IntegerField())
         
         # Custom filters
         if self.request.query_params.get('low_stock') == 'true':
-            queryset = queryset.filter(current_stock__lte=F('reorder_point'))
+            queryset = queryset.annotate(_eff_reorder=effective_reorder).filter(
+                current_stock__lte=F('_eff_reorder')
+            )
         
         if self.request.query_params.get('out_of_stock') == 'true':
             queryset = queryset.filter(current_stock=0)
         
         if self.request.query_params.get('needs_reorder') == 'true':
-            queryset = queryset.filter(current_stock__lte=F('reorder_point'), current_stock__gt=0)
+            queryset = queryset.annotate(_eff_reorder=effective_reorder).filter(
+                current_stock__lte=F('_eff_reorder'), current_stock__gt=0
+            )
+
+        # Soft vehicle fitment: optional strict mode excludes clear mismatches
+        vehicle = self._resolve_fitment_vehicle()
+        if vehicle and self.request.query_params.get('fitment') == 'likely':
+            make = vehicle.get('make')
+            model = vehicle.get('model')
+            # Keep unknowns + likely matches; drop obvious make/model mismatches at DB level
+            q = Q()
+            if make:
+                q &= (
+                    Q(compatible_makes__isnull=True)
+                    | Q(compatible_makes='')
+                    | Q(compatible_makes__icontains=make)
+                    | Q(compatible_makes__icontains='universal')
+                    | Q(compatible_makes__icontains='all')
+                )
+            if model:
+                q &= (
+                    Q(compatible_models__isnull=True)
+                    | Q(compatible_models='')
+                    | Q(compatible_models__icontains=model)
+                    | Q(compatible_models__icontains='universal')
+                    | Q(compatible_models__icontains='all')
+                )
+            if q:
+                queryset = queryset.filter(q)
             
         return queryset
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['fitment_vehicle'] = self._resolve_fitment_vehicle()
+        return context
+
+    def list(self, request, *args, **kwargs):
+        """Sort page results by soft fitment when vehicle context is present."""
+        from .fitment import fitment_rank, match_part_to_vehicle
+
+        response = super().list(request, *args, **kwargs)
+        vehicle = self._resolve_fitment_vehicle()
+        if not vehicle or not isinstance(response.data, dict):
+            return response
+        results = response.data.get('results')
+        if not isinstance(results, list) or len(results) < 2:
+            return response
+
+        def rank_item(item):
+            status = item.get('fitment')
+            if not status:
+                status = match_part_to_vehicle(
+                    compatible_makes=item.get('compatible_makes'),
+                    compatible_models=item.get('compatible_models'),
+                    compatible_years=item.get('compatible_years'),
+                    make=vehicle.get('make'),
+                    model=vehicle.get('model'),
+                    year=vehicle.get('year'),
+                )
+                item['fitment'] = status
+            return fitment_rank(status)
+
+        response.data['results'] = sorted(results, key=rank_item)
+        return response
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -445,6 +544,11 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                         skipped_count += 1
                         continue
                     
+                    # Normalize unit (templates historically used "each")
+                    raw_unit = (row.get('unit') or row.get('unit_of_measure') or 'piece').strip().lower()
+                    if raw_unit in ('each', 'ea', 'unit'):
+                        raw_unit = 'piece'
+
                     # Create or update part (don't set deprecated quantity_in_stock)
                     with transaction.atomic():
                         part, created = Part.objects.update_or_create(
@@ -464,7 +568,10 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                                 'is_taxable': is_taxable,
                                 'is_core': is_core,
                                 'core_charge': core_charge,
-                                'unit': row.get('unit', row.get('unit_of_measure', 'piece')).strip() or 'piece',  # Support both field names
+                                'unit': raw_unit or 'piece',
+                                'compatible_makes': (row.get('compatible_makes') or '').strip(),
+                                'compatible_models': (row.get('compatible_models') or '').strip(),
+                                'compatible_years': (row.get('compatible_years') or '').strip(),
                                 'is_active': is_active,
                                 'created_by': request.user if created else None,
                             }

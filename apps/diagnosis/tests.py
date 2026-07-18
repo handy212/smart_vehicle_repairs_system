@@ -55,7 +55,14 @@ class DiagnosisModelTest(TestCase):
             last_name='Doe',
             role='customer'
         )
-        self.customer = Customer.objects.create(user=self.customer_user)
+        self.branch = Branch.objects.create(
+            name='Diagnosis Test Branch',
+            code='DXTEST',
+            created_by=self.technician_user,
+        )
+        self.customer = Customer(user=self.customer_user)
+        self.customer._numbering_branch = self.branch
+        self.customer.save()
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             make='Toyota',
@@ -70,9 +77,11 @@ class DiagnosisModelTest(TestCase):
         self.work_order = WorkOrder.objects.create(
             customer=self.customer,
             vehicle=self.vehicle,
+            branch=self.branch,
             customer_concerns='Car won\'t start',
             odometer_in=50000,
-            status='diagnosis'
+            status='diagnosis',
+            primary_technician=self.technician_user,
         )
 
     def test_create_diagnosis(self):
@@ -102,6 +111,10 @@ class DiagnosisModelTest(TestCase):
         self.assertTrue(diagnosis.is_completed)
         self.assertEqual(diagnosis.status, 'completed')
         self.assertIsNotNone(diagnosis.completed_at)
+        self.work_order.refresh_from_db()
+        # No-approval completion must use the legal graph (not a direct status write).
+        self.assertEqual(self.work_order.status, 'approved')
+        self.assertTrue(self.work_order.approved_by_customer)
 
     def test_reopen_completed_diagnosis_for_revision_before_approval(self):
         """Completed diagnoses can be revised while customer approval is still pending."""

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { portalApi } from "@/lib/api/portal";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -26,15 +26,12 @@ export default function MyEstimatesPage() {
   const { formatCurrency } = useCurrency();
   const router = useRouter();
 
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
+  const customerId = getCustomerId(user);
 
   const { data: estimatesData, isLoading } = useQuery({
     queryKey: ["portal", "estimates", statusFilter],
     queryFn: () => {
-      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
       const params: Record<string, string | number | boolean> = {
@@ -46,7 +43,7 @@ export default function MyEstimatesPage() {
       }
       return portalApi.listEstimates(params);
     },
-    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
+    enabled: !!user && !!customerId,
   });
 
   const estimates = (Array.isArray(estimatesData) ? estimatesData : estimatesData?.results || []) as Estimate[];

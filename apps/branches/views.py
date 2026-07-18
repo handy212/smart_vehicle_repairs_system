@@ -11,10 +11,11 @@ from django.utils import timezone
 
 from .models import Branch
 from .serializers import (
-    BranchSerializer, 
-    BranchListSerializer, 
+    BranchSerializer,
+    BranchListSerializer,
     BranchCreateUpdateSerializer,
-    PublicBranchSerializer
+    PublicBranchSerializer,
+    CustomerBranchSerializer,
 )
 from apps.accounts.models import User
 from apps.accounts.permissions import HasPermission, user_has_permission
@@ -22,6 +23,15 @@ from apps.accounts.permissions import HasPermission, user_has_permission
 
 
 logger = logging.getLogger(__name__)
+
+QBO_DEPARTMENT_NAMES_CACHE_KEY = 'qbo_department_names_v1'
+
+
+def invalidate_qbo_department_names_cache():
+    """Drop cached QBO location names after mapping changes."""
+    from django.core.cache import cache
+
+    cache.delete(QBO_DEPARTMENT_NAMES_CACHE_KEY)
 
 
 class BranchViewSet(viewsets.ModelViewSet):
@@ -62,8 +72,10 @@ class BranchViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             user = self.request.user
-            if user.is_anonymous or getattr(user, 'role', None) == 'customer':
+            if user.is_anonymous:
                 return PublicBranchSerializer
+            if getattr(user, 'role', None) == 'customer':
+                return CustomerBranchSerializer
             return BranchListSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return BranchCreateUpdateSerializer
@@ -92,8 +104,10 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        if self.action in ('list', 'accessible'):
+        if self.action in ('list', 'accessible', 'retrieve'):
             try:
+                from django.core.cache import cache
+
                 from apps.quickbooks_online.services import QuickBooksService
                 from apps.quickbooks_online.models import QBOMapping
 
@@ -102,7 +116,31 @@ class BranchViewSet(viewsets.ModelViewSet):
                     mappings = list(
                         QBOMapping.objects.filter(content_type=branch_ct)
                     )
-                    context['qbo_branch_mappings'] = {mapping.object_id: mapping for mapping in mappings}
+                    context['qbo_branch_mappings'] = {
+                        mapping.object_id: mapping for mapping in mappings
+                    }
+
+                    department_names = cache.get(QBO_DEPARTMENT_NAMES_CACHE_KEY)
+                    if department_names is None:
+                        department_names = {}
+                        departments, list_error = QuickBooksService().list_departments()
+                        if list_error:
+                            logger.warning(
+                                'Unable to preload QBO department names: %s',
+                                list_error,
+                            )
+                        elif departments:
+                            department_names = {
+                                str(item['id']): item.get('name') or ''
+                                for item in departments
+                                if item.get('id')
+                            }
+                            cache.set(
+                                QBO_DEPARTMENT_NAMES_CACHE_KEY,
+                                department_names,
+                                timeout=120,
+                            )
+                    context['qbo_department_names'] = department_names
             except Exception:
                 logger.exception('Unable to preload QuickBooks branch mappings')
         return context
@@ -707,6 +745,7 @@ class BranchViewSet(viewsets.ModelViewSet):
 
         if action_name == 'clear':
             service.clear_branch_qbo_mapping(branch)
+            invalidate_qbo_department_names_cache()
             return Response({'detail': 'QuickBooks mapping cleared.', 'branch_id': branch.id})
 
         if action_name == 'auto_sync':
@@ -717,6 +756,7 @@ class BranchViewSet(viewsets.ModelViewSet):
                 mapping = QBOMapping.objects.filter(content_type=branch_ct, object_id=branch.id).first()
                 error_message = mapping.error_message if mapping else 'Failed to sync branch to QuickBooks.'
                 return Response({'detail': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            invalidate_qbo_department_names_cache()
             return Response({
                 'detail': 'Branch synced to QuickBooks.',
                 'branch_id': branch.id,
@@ -736,6 +776,7 @@ class BranchViewSet(viewsets.ModelViewSet):
                     (item['name'] for item in departments if item['id'] == str(department_id)),
                     None,
                 )
+            invalidate_qbo_department_names_cache()
             return Response({
                 'detail': 'Branch mapped to QuickBooks location.',
                 'branch_id': branch.id,

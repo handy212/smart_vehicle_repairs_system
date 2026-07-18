@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { portalApi } from "@/lib/api/portal";
-import { authApi } from "@/lib/api/auth";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -20,13 +19,6 @@ export default function ServiceHistoryPage() {
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("workorders");
   const { formatCurrency } = useCurrency();
-
-  // 1. Fetch User (to ensure auth state, though portalApi handles requests with auth headers)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
 
   // 2. Fetch Vehicles
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({

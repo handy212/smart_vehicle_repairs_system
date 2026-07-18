@@ -14,6 +14,10 @@ interface BrandingResult {
     tagline: string;
     primaryColor: string;
     secondaryColor: string | null;
+    successColor: string | null;
+    dangerColor: string | null;
+    warningColor: string | null;
+    infoColor: string | null;
     logoPath: string | null;
     logoDarkPath: string | null;
     loginBackground: string | null;
@@ -103,6 +107,10 @@ export function useBranding(
         const tagline = getSetting("company_tagline") || "Management System";
         const primaryColor = getSetting("primary_color") || "#ff8040";
         const secondaryColor = getSetting("secondary_color");
+        const successColor = getSetting("success_color");
+        const dangerColor = getSetting("danger_color");
+        const warningColor = getSetting("warning_color");
+        const infoColor = getSetting("info_color");
         const logoPath = getSetting("logo_path");
         const logoDarkPath = getSetting("logo_dark_path");
         const loginBackground = getSetting("login_background");
@@ -133,6 +141,10 @@ export function useBranding(
             tagline,
             primaryColor,
             secondaryColor,
+            successColor,
+            dangerColor,
+            warningColor,
+            infoColor,
             logoPath,
             logoDarkPath,
             loginBackground,

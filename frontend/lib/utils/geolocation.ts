@@ -4,6 +4,8 @@ export type GeolocationCaptureResult = {
   label: string;
 };
 
+const NOMINATIM_USER_AGENT = "SmartVehicleRepairs/1.0 (roadside; https://github.com/local/svr)";
+
 function formatCoordinates(latitude: number, longitude: number): string {
   return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 }
@@ -34,9 +36,14 @@ async function reverseGeocodeLabel(latitude: number, longitude: number): Promise
     url.searchParams.set("lat", String(latitude));
     url.searchParams.set("lon", String(longitude));
     url.searchParams.set("zoom", "16");
+    // Nominatim usage policy: identify the application (browsers may strip User-Agent).
+    url.searchParams.set("email", "ops@smartvehiclerepairs.local");
 
     const response = await fetch(url.toString(), {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "User-Agent": NOMINATIM_USER_AGENT,
+      },
     });
     if (!response.ok) {
       return null;

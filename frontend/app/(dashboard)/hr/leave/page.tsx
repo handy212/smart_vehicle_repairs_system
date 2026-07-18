@@ -113,6 +113,9 @@ function LeaveContent() {
                 actions={
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" asChild>
+                            <Link href="/hr/leave/balances">Balances</Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
                             <Link href="/hr/leave/leave-types"><Settings className="h-4 w-4 mr-2" />Leave Types</Link>
                         </Button>
                         <PermissionGuard permission="manage_leave">

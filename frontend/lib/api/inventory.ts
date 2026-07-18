@@ -175,6 +175,8 @@ export interface Part {
   compatible_makes?: string;
   compatible_models?: string;
   compatible_years?: string;
+  /** Soft fitment vs vehicle query params: likely | unlikely | unknown */
+  fitment?: "likely" | "unlikely" | "unknown" | null;
   warranty_months?: number;
   warranty_notes?: string;
   image?: string | null;
@@ -394,6 +396,13 @@ export const inventoryApi = {
     branch?: number;
     item_type?: string;
     ordering?: string;
+    /** Soft vehicle fitment context */
+    vehicle_id?: number;
+    make?: string;
+    model?: string;
+    year?: number;
+    /** When "likely", exclude clear make/model mismatches */
+    fitment?: "likely";
   }): Promise<PartListResponse> => {
     const response = await apiClient.get("/inventory/parts/", { params });
     return response.data;

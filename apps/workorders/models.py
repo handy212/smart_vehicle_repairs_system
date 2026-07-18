@@ -707,6 +707,19 @@ class WorkOrder(models.Model):
                     for task in incomplete_tasks.order_by('sequence_order', 'id')[:10]
                 ]
 
+            if (
+                new_status == 'quality_check'
+                and not skip_mechanical_checks
+                and not self.quality_check_assigned_to_id
+            ):
+                blockers['errors'].append(
+                    'Assign an authorized quality inspector before requesting quality check.'
+                )
+                blockers['next_step'] = (
+                    blockers['next_step']
+                    or 'Choose a QC inspector, then request quality check.'
+                )
+
         if new_status == 'completed':
             from .workflow_profile_service import allows_simplified_completion
 
@@ -784,7 +797,12 @@ class WorkOrder(models.Model):
                 return False, 'Invalid discontinuation reason.'
         
         # Validate Service Coordinator is assigned before diagnosis
-        if new_status == 'diagnosis' and self.status != 'paused' and not self.service_coordinator:
+        # (resume from paused / revise from awaiting_approval already passed this gate)
+        if (
+            new_status == 'diagnosis'
+            and self.status not in ('paused', 'awaiting_approval')
+            and not self.service_coordinator
+        ):
             return (False, 'A Service Coordinator must be assigned before diagnosis can be carried out.')
         
         # Validate Service Coordinator is assigned when transitioning to assigned status
@@ -842,6 +860,8 @@ class WorkOrder(models.Model):
                 task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
                 suffix = f": {task_names}" if task_names else ""
                 return False, f"Complete or skip all mechanical tasks before requesting quality check{suffix}"
+            if not self.quality_check_assigned_to_id:
+                return False, "Assign an authorized quality inspector before requesting quality check."
 
         # Skip full repair-completion rules when invoicing after customer discontinuation
         if self.status == 'discontinued_pending_bill' and new_status == 'invoiced':
@@ -985,6 +1005,7 @@ class WorkOrder(models.Model):
             notify: Whether to send notifications (default: True)
         """
         from django.core.exceptions import ValidationError
+        from django.db import transaction
         
         # Validate transition
         can_transition, error = self.can_transition_to(new_status)
@@ -1002,48 +1023,70 @@ class WorkOrder(models.Model):
             raise ValidationError('; '.join(field_errors))
         
         old_status = self.status
-        self.status = new_status
 
-        if new_status == 'paused':
-            self.paused_from_status = old_status
-        elif old_status == 'paused':
-            self.paused_from_status = None
-        
-        # Handle additional_work_found: reset approval and require new approval
-        if new_status == 'additional_work_found':
-            self.requires_approval = True
-            self.approved_by_customer = False
-            self.approved_at = None
-            # Add note about additional work
-            if user:
-                WorkOrderNote.objects.create(
-                    work_order=self,
-                    note_type='internal',
-                    note='Additional work discovered during repair - customer approval required',
-                    created_by=user,
-                    is_important=True
+        # Persist status + inventory hooks atomically so a failed inventory
+        # side-effect cannot leave the work order in the new status.
+        with transaction.atomic():
+            self.status = new_status
+
+            if new_status == 'paused':
+                self.paused_from_status = old_status
+            elif old_status == 'paused':
+                self.paused_from_status = None
+            
+            # Handle additional_work_found: reset approval and require new approval
+            if new_status == 'additional_work_found':
+                self.requires_approval = True
+                self.approved_by_customer = False
+                self.approved_at = None
+                # Add note about additional work
+                if user:
+                    WorkOrderNote.objects.create(
+                        work_order=self,
+                        note_type='internal',
+                        note='Additional work discovered during repair - customer approval required',
+                        created_by=user,
+                        is_important=True
+                    )
+            
+            # Update timestamps
+            now = timezone.now()
+            if new_status == 'in_progress' and not self.started_at:
+                self.started_at = now
+            elif new_status == 'completed' and not self.completed_at:
+                self.completed_at = now
+            
+            self.save()
+
+            try:
+                from apps.inventory.services import InventoryService
+                if new_status == 'in_progress':
+                    InventoryService.reserve_parts_for_work_order(self, user)
+                elif new_status == 'completed':
+                    InventoryService.consume_parts_for_work_order(self, user)
+            except ValidationError:
+                raise
+            except Exception as e:
+                logger.error(
+                    "Inventory integration failed for WO %s: %s",
+                    self.work_order_number,
+                    e,
+                    exc_info=True,
                 )
-        
-        # Update timestamps
-        now = timezone.now()
-        if new_status == 'in_progress' and not self.started_at:
-            self.started_at = now
-        elif new_status == 'completed' and not self.completed_at:
-            self.completed_at = now
-        
-        self.save()
+                raise ValidationError(
+                    f"Inventory update failed; status was not changed. {e}"
+                ) from e
 
-        # Inventory Integration (Phase 4)
-        try:
-            from apps.inventory.services import InventoryService
-            if new_status == 'in_progress':
-                InventoryService.reserve_parts_for_work_order(self, user)
-            elif new_status == 'completed':
-                InventoryService.consume_parts_for_work_order(self, user)
-        except Exception as e:
-            # Log error but preserve transaction status (don't rollback whole WO transition)
-            # In strict mode, we might want to raise here.
-            logger.error(f"Inventory integration failed for WO {self.work_order_number}: {e}")
+            # Convert repair recommendations to tasks when starting work
+            if new_status == 'in_progress' and old_status != 'in_progress':
+                # This will be called from start_work endpoint, but also handle here as backup
+                # Only convert if no tasks exist yet (to avoid duplicates)
+                if not self.tasks.filter(is_workflow_task=False).exists():
+                    self.convert_recommendations_to_tasks(user=user)
+            
+            # Handle workflow task creation and completion
+            from .services import handle_workflow_tasks
+            handle_workflow_tasks(self, old_status, new_status, user)
         
         # Update service schedules when work order is completed
         if new_status == 'completed' and old_status != 'completed':
@@ -1052,17 +1095,6 @@ class WorkOrder(models.Model):
             except Exception as e:
                 # Log error but don't fail the transition
                 logger.error(f"Failed to update service schedules for WO {self.work_order_number}: {e}", exc_info=True)
-        
-        # Convert repair recommendations to tasks when starting work
-        if new_status == 'in_progress' and old_status != 'in_progress':
-            # This will be called from start_work endpoint, but also handle here as backup
-            # Only convert if no tasks exist yet (to avoid duplicates)
-            if not self.tasks.filter(is_workflow_task=False).exists():
-                self.convert_recommendations_to_tasks(user=user)
-        
-        # Handle workflow task creation and completion
-        from .services import handle_workflow_tasks
-        handle_workflow_tasks(self, old_status, new_status, user)
         
         # Auto-create gate pass if closed
         if new_status == 'closed' and old_status != 'closed':
@@ -2212,15 +2244,22 @@ class WorkOrder(models.Model):
         Check if work order should auto-advance based on conditions.
         Called after task completion or parts status changes.
         """
-        # Auto-advance to quality_check when all tasks completed
+        # Auto-advance to quality_check when all tasks completed AND an inspector is assigned.
+        # Without an inspector, stay in_progress so staff must use request_quality_check.
         if self.status == 'in_progress':
             mechanical_tasks = self.tasks.filter(is_workflow_task=False)
             if mechanical_tasks.exists():
                 all_tasks_completed = mechanical_tasks.exclude(status__in=['completed', 'skipped']).count() == 0
                 if all_tasks_completed and not self.quality_check_completed:
                     try:
-                        # Only auto-advance if quality check is required
                         if self.quality_check_required:
+                            if not self.quality_check_assigned_to_id:
+                                logger.info(
+                                    "WO %s is ready for QC but no inspector is assigned; "
+                                    "staying in_progress until request_quality_check.",
+                                    self.work_order_number,
+                                )
+                                return
                             self.transition_to('quality_check', user=None, notify=True)
                     except Exception as e:
                         # Don't fail if auto-transition fails

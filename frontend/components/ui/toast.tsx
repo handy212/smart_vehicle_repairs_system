@@ -25,19 +25,19 @@ const ICONS = {
 } as const;
 
 const ACCENT = {
-  default: "border-l-primary text-primary",
-  success: "border-l-success text-success",
-  error: "border-l-destructive text-destructive",
-  warning: "border-l-warning text-warning",
-  info: "border-l-info text-info",
+  default: "border-l-primary",
+  success: "border-l-success",
+  error: "border-l-destructive",
+  warning: "border-l-warning",
+  info: "border-l-info",
 } as const;
 
 const ICON_BG = {
-  default: "bg-primary/10",
-  success: "bg-success/10",
-  error: "bg-destructive/10",
-  warning: "bg-warning/10",
-  info: "bg-info/10",
+  default: "bg-[var(--primary-soft)] text-primary",
+  success: "bg-[var(--success-soft)] text-success",
+  error: "bg-[var(--destructive-soft)] text-destructive",
+  warning: "bg-[var(--warning-soft)] text-warning",
+  info: "bg-[var(--info-soft)] text-info",
 } as const;
 
 const PROGRESS = {
@@ -141,7 +141,7 @@ export function ToastContainer({
 
   return (
     <div
-      className="pointer-events-none fixed bottom-4 right-4 z-[200] flex w-[min(100vw-1.5rem,22rem)] flex-col-reverse gap-2 sm:bottom-6 sm:right-6"
+      className="pointer-events-none fixed right-3 top-3 z-[200] flex w-[min(100vw-1.5rem,22rem)] flex-col gap-2 sm:right-4 sm:top-4"
       aria-label="Notifications"
     >
       {toasts.map((toast) => (

@@ -62,6 +62,7 @@ interface RecommendationDialogProps {
   recommendation?: RecommendationDialogRecommendation;
   findings?: DiagnosisFinding[];
   isLoading: boolean;
+  vehicle?: { id?: number; make?: string; model?: string; year?: number } | null;
 }
 
 function RecommendationDialogForm({
@@ -71,6 +72,7 @@ function RecommendationDialogForm({
   recommendation,
   findings = [],
   isLoading,
+  vehicle,
 }: RecommendationDialogProps) {
   const [formData, setFormData] = useState<FormData>(() => buildFormData(recommendation));
   const recommendationTypes: Array<FormData["recommendation_type"]> = ["repair", "replace", "service", "adjust", "clean", "inspect"];
@@ -330,7 +332,10 @@ function RecommendationDialogForm({
                       </div>
                     </div>
 
-                    <InventoryPartSearch onSelect={(inventoryPart) => applyInventoryPart(index, inventoryPart)} />
+                    <InventoryPartSearch
+                      vehicle={vehicle}
+                      onSelect={(inventoryPart) => applyInventoryPart(index, inventoryPart)}
+                    />
 
                     <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/40 px-3 py-2">
                       {part.part_id ? (
@@ -452,6 +457,7 @@ export function RecommendationDialog({
   recommendation,
   findings = [],
   isLoading,
+  vehicle,
 }: RecommendationDialogProps) {
   return (
     <RecommendationDialogForm
@@ -462,6 +468,7 @@ export function RecommendationDialog({
       recommendation={recommendation}
       findings={findings}
       isLoading={isLoading}
+      vehicle={vehicle}
     />
   );
 }

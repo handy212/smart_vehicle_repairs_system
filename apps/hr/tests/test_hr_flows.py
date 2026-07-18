@@ -24,6 +24,7 @@ from apps.hr.models import (
     LeaveType,
     PayrollPeriod,
     PaySlip,
+    PayslipNumberSequence,
     PayrollAuditLog,
     Position,
     SalaryComponent,
@@ -575,3 +576,126 @@ def test_process_payroll_permission_allows_period_process(api_client, admin_user
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data["payslips_created"] == 1
+
+
+@pytest.mark.django_db
+def test_payslip_numbers_use_atomic_sequence(employee, branch):
+    period = PayrollPeriod.objects.create(
+        name="Aug 2026",
+        start_date=date(2026, 8, 1),
+        end_date=date(2026, 8, 31),
+        branch=branch,
+        created_by=employee.user,
+    )
+    employee_b_user = User.objects.create_user(
+        username="tech2",
+        email="tech2@example.com",
+        password="password",
+        role="technician",
+        first_name="Tech",
+        last_name="Two",
+        branch=branch,
+    )
+    employee_b = employee_b_user.employee_profile
+
+    slip_a = PaySlip.objects.create(
+        payroll_period=period, employee=employee, basic_salary=Decimal("1000.00"),
+    )
+    slip_b = PaySlip.objects.create(
+        payroll_period=period, employee=employee_b, basic_salary=Decimal("1100.00"),
+    )
+
+    assert slip_a.payslip_number == "PS2026000001"
+    assert slip_b.payslip_number == "PS2026000002"
+    assert PayslipNumberSequence.objects.get(year=2026).last_sequence == 2
+
+
+@pytest.mark.django_db
+def test_hr_attendance_requires_time_tracking_enabled(api_client, employee, branch):
+    employee.time_tracking_enabled = False
+    employee.save(update_fields=["time_tracking_enabled", "updated_at"])
+    api_client.force_authenticate(user=employee.user)
+
+    response = api_client.post(reverse("api_hr:attendance-clock-in"))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "disabled" in response.data["detail"].lower()
+
+
+@pytest.mark.django_db
+def test_hr_attendance_clock_in_when_time_tracking_enabled(api_client, employee, branch):
+    employee.time_tracking_enabled = True
+    employee.employment_status = "active"
+    employee.save(update_fields=["time_tracking_enabled", "employment_status", "updated_at"])
+    api_client.force_authenticate(user=employee.user)
+
+    response = api_client.post(reverse("api_hr:attendance-clock-in"))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert Attendance.objects.filter(employee=employee, date=timezone.now().date()).exists()
+
+
+@pytest.mark.django_db
+def test_public_careers_list_and_apply(api_client, admin_user, branch):
+    department = Department.objects.create(name="Workshop", branch=branch)
+    open_job = JobOpening.objects.create(
+        title="Service Advisor",
+        department=department,
+        branch=branch,
+        description="Customer-facing role",
+        requirements="Experience preferred",
+        created_by=admin_user,
+        status="open",
+        posted_date=date(2026, 7, 1),
+    )
+    JobOpening.objects.create(
+        title="Draft Role",
+        department=department,
+        branch=branch,
+        description="Hidden",
+        created_by=admin_user,
+        status="draft",
+    )
+
+    list_response = api_client.get(reverse("api_hr:job-opening-public-list"))
+    assert list_response.status_code == status.HTTP_200_OK
+    assert len(list_response.data) == 1
+    assert list_response.data[0]["title"] == "Service Advisor"
+    assert "created_by" not in list_response.data[0]
+    assert "applicant_count" not in list_response.data[0]
+
+    detail_response = api_client.get(
+        reverse("api_hr:job-opening-public-detail", args=[open_job.id]),
+    )
+    assert detail_response.status_code == status.HTTP_200_OK
+    assert detail_response.data["title"] == "Service Advisor"
+
+    apply_response = api_client.post(
+        reverse("api_hr:applicant-public-apply"),
+        {
+            "job_opening": open_job.id,
+            "first_name": "Ama",
+            "last_name": "Mensah",
+            "email": "ama@example.com",
+            "phone": "0244000000",
+            "cover_letter": "I would love to join.",
+        },
+        format="json",
+    )
+    assert apply_response.status_code == status.HTTP_201_CREATED
+    applicant = Applicant.objects.get(email="ama@example.com")
+    assert applicant.source == "website"
+    assert applicant.status == "new"
+    assert applicant.job_opening_id == open_job.id
+
+    duplicate = api_client.post(
+        reverse("api_hr:applicant-public-apply"),
+        {
+            "job_opening": open_job.id,
+            "first_name": "Ama",
+            "last_name": "Mensah",
+            "email": "ama@example.com",
+        },
+        format="json",
+    )
+    assert duplicate.status_code == status.HTTP_400_BAD_REQUEST

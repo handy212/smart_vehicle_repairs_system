@@ -10,9 +10,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
 import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
-import { adminApi } from "@/lib/api/admin";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { diagnosisApi } from "@/lib/api/diagnosis";
+import { useStaffUsers, useTaxConfig } from "@/lib/hooks/useFormLookups";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,10 +174,7 @@ export default function EditEstimatePage() {
 
   const workOrderNumber = estimate?.work_order_number || null;
 
-  const { data: salesAgents } = useQuery({
-    queryKey: ["users", "staff"],
-    queryFn: () => adminApi.users.staffList(),
-  });
+  const { data: salesAgents } = useStaffUsers();
 
   const { data: partsData } = useQuery({
     queryKey: ["parts", "search", partSearchTerm],
@@ -185,10 +182,7 @@ export default function EditEstimatePage() {
     enabled: partSearchTerm.length > 0,
   });
 
-  const { data: taxConfig } = useQuery({
-    queryKey: ["tax", "config"],
-    queryFn: () => billingApi.taxes.config(),
-  });
+  const { data: taxConfig } = useTaxConfig();
 
   const {
     register,

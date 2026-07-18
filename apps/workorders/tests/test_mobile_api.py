@@ -178,12 +178,13 @@ class MobileAPITestCase(TestCase):
     def test_time_tracking_flow(self, mock_filter):
         """Test the full time tracking flow for a technician"""
         
-        # 1. Clock In (mobile clock-in action; server sets clock_in)
+        # 1. Clock In against a specific task (server sets clock_in)
         clock_in_data = {
             'work_order': self.work_order.id,
+            'task': self.task.id,
             'description': 'Starting work',
         }
-        
+
         response = self.client.post(
             '/api/workorders/time-logs/clock-in/', clock_in_data, format='json'
         )
@@ -198,6 +199,8 @@ class MobileAPITestCase(TestCase):
         self.assertEqual(dup.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('already clocked in', str(dup.data).lower())
         self.assertEqual(response.data['technician'], self.technician.id)
+        self.assertEqual(response.data['task'], self.task.id)
+        self.assertEqual(response.data['task_description'], 'Change Oil')
         self.assertEqual(float(response.data['hourly_rate']), 50.00)
         
         time_log_id = response.data['id']

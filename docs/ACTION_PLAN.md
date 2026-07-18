@@ -222,7 +222,6 @@ This action plan addresses the findings from the code review and provides a clea
   - [ ] `apps/inspections/frontend_views.py:194`
   - [ ] `apps/accounts/settings_utils.py:31`
   - [ ] `apps/accounts/settings_utils.py:68`
-  - [ ] `apps/inventory/management/commands/populate_inventory.py:24`
   - [ ] `apps/customers/auth_views.py:96`
   - [ ] `apps/vehicles/templatetags/vehicle_filters.py:20,37`
   - [ ] `apps/vehicles/forms.py:291`

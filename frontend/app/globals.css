@@ -8,15 +8,15 @@
 @custom-variant perfex (&:where(.perfex, .perfex *));
 
 :root {
-  /* Tonal Architecture from DESIGN.md */
-  --surface: #eef3f8;
-  --surface-container-low: #f6f8fb;
-  --surface-container-lowest: #fbfdff;
-  --surface-bright: #f4f7fb;
+  /* Cool slate canvas — pairs with steel/blue brand */
+  --surface: #eef2f6;
+  --surface-container-low: #e6edf3;
+  --surface-container-lowest: #ffffff;
+  --surface-bright: #f5f8fb;
   
   --on-surface: #191c1e;
   --on-surface-variant: #44474c;
-  --outline-variant: rgba(196, 198, 205, 0.15);
+  --outline-variant: rgba(28, 36, 48, 0.08);
 
   --background: var(--surface);
   --foreground: var(--on-surface);
@@ -26,8 +26,8 @@
   --popover-foreground: var(--on-surface);
 
   /* Borders & Inputs */
-  --border: #d9e2ec;
-  --input: #edf2f7;
+  --border: #d5dde6;
+  --input: #e4eaf1;
   --ring: #0230a1;
 
   /* Brand Colors */
@@ -36,6 +36,9 @@
   --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
+  /* Brand accent from settings — not the UI secondary surface token */
+  --brand-secondary: var(--primary);
+  --brand-secondary-foreground: #ffffff;
 
   /* Muted & Accent */
   --muted: oklch(0.97 0 0);
@@ -56,6 +59,18 @@
   --info: oklch(0.607 0.186 246.055);
   /* Blue */
   --info-foreground: #ffffff;
+
+  /* Soft tints for badges/status chips (avoids solid fallback on opacity utilities). */
+  --success-soft: color-mix(in oklab, var(--success) 14%, var(--card));
+  --success-soft-border: color-mix(in oklab, var(--success) 28%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 16%, var(--card));
+  --warning-soft-border: color-mix(in oklab, var(--warning) 30%, transparent);
+  --info-soft: color-mix(in oklab, var(--info) 14%, var(--card));
+  --info-soft-border: color-mix(in oklab, var(--info) 28%, transparent);
+  --destructive-soft: color-mix(in oklab, var(--destructive) 12%, var(--card));
+  --destructive-soft-border: color-mix(in oklab, var(--destructive) 28%, transparent);
+  --primary-soft: color-mix(in oklab, var(--primary) 12%, var(--card));
+  --primary-soft-border: color-mix(in oklab, var(--primary) 28%, transparent);
 
   /* Radius */
   --radius: 0.625rem;
@@ -78,7 +93,7 @@
   --sidebar-ring: var(--ring);
 
   /* Premium Glassmorphism (Light Mode) */
-  --dashboard-bg: #e8eef6;
+  --dashboard-bg: #eef2f6;
   --glass-bg: rgba(251, 253, 255, 0.78);
   --glass-border: rgba(15, 23, 42, 0.07);
   --glass-accent: rgba(2, 48, 161, 0.05);
@@ -403,6 +418,30 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/*
+ * Auth form panels always stay light — even when html still has .dark
+ * after signing out from dark mode (theme script / useTheme race).
+ */
+.auth-panel {
+  --background: #fbfdff;
+  --foreground: #191c1e;
+  --card: #ffffff;
+  --card-foreground: #191c1e;
+  --popover: #ffffff;
+  --popover-foreground: #191c1e;
+  --muted: #f1f5f9;
+  --muted-foreground: #5c6370;
+  --border: #d9e2ec;
+  --input: #edf2f7;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #191c1e;
+  --accent: #f1f5f9;
+  --accent-foreground: #191c1e;
+  --ring: #0230a1;
+  color: #191c1e;
+  background-color: #ffffff;
+}
+
 /* Custom scrollbar for sidebar */
 aside::-webkit-scrollbar {
   width: 6px;
@@ -528,7 +567,7 @@ html.classic table td {
 
 /* ================================================================
    PERFEX / WORKSHOP THEME — CSS variables
-   Warm paper canvas, steel primary, Manrope 14px, chunky 8px radius
+   Cool slate canvas, steel primary, Manrope 14px, chunky 8px radius
    ================================================================ */
 
 html.perfex {
@@ -546,26 +585,26 @@ html.perfex body {
 .perfex {
   --sidebar-width: 228px;
   --header-height: 56px;
-  --background: #f3f2ef;
+  --background: #eef2f6;
   --foreground: #1c2430;
   --card: #ffffff;
   --card-foreground: #1c2430;
   --popover: #ffffff;
   --popover-foreground: #1c2430;
 
-  --border: #e2ddd4;
-  --input: #e8e4dc;
+  --border: #d5dde6;
+  --input: #e4eaf1;
   --ring: #1e4d6b;
 
   --primary: #1e4d6b;
   --primary-container: #163a52;
   --primary-foreground: #ffffff;
-  --secondary: #ebe7e0;
+  --secondary: #e6edf3;
   --secondary-foreground: #1c2430;
 
-  --muted: #ebe8e2;
+  --muted: #e6edf3;
   --muted-foreground: #5c6570;
-  --accent: #e4eef3;
+  --accent: #dceaf2;
   --accent-foreground: #163a52;
 
   --destructive: #c23b3b;
@@ -579,28 +618,28 @@ html.perfex body {
 
   --radius: 0.5rem;
 
-  --sidebar: #faf9f7;
+  --sidebar: #f5f8fb;
   --sidebar-foreground: #3d4654;
   --sidebar-primary: #1e4d6b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e4eef3;
+  --sidebar-accent: #dceaf2;
   --sidebar-accent-foreground: #163a52;
-  --sidebar-border: #e2ddd4;
+  --sidebar-border: #d5dde6;
   --sidebar-ring: #1e4d6b;
 
-  --surface: #f3f2ef;
-  --surface-container-low: #ebe8e2;
+  --surface: #eef2f6;
+  --surface-container-low: #e6edf3;
   --surface-container-lowest: #ffffff;
-  --surface-bright: #faf9f7;
+  --surface-bright: #f5f8fb;
   --on-surface: #1c2430;
   --on-surface-variant: #5c6570;
   --outline-variant: rgba(28, 36, 48, 0.08);
 
   --panel-bg: var(--surface-container-lowest);
   --elevated-shadow: 0 2px 10px rgba(28, 36, 48, 0.06);
-  --nav-active-bg: #e4eef3;
+  --nav-active-bg: #dceaf2;
   --nav-active-fg: #163a52;
-  --table-head-bg: #ebe8e2;
+  --table-head-bg: #e6edf3;
   --table-head-fg: #3d4654;
 
   --chart-1: #1e4d6b;
@@ -616,7 +655,7 @@ html.perfex body {
   --glass-border: rgba(28, 36, 48, 0.08);
   --glass-accent: rgba(30, 77, 107, 0.06);
   --glass-reflection: none;
-  --dashboard-bg: #f3f2ef;
+  --dashboard-bg: #eef2f6;
 }
 
 .perfex.dark {
@@ -772,6 +811,7 @@ html.perfex.dark .text-foreground {
 }
 
 html.perfex .dashboard-shell {
+  /* Solid cool slate — photo wallpaper fights dense ops UI (readability + noise). */
   background: var(--dashboard-bg);
 }
 
@@ -950,5 +990,67 @@ nextjs-portal {
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Soft semantic tints for status chips when opacity utilities fall back to solid. */
+@layer utilities {
+  .bg-success\/10,
+  .bg-success\/15,
+  .bg-success\/20 {
+    background-color: var(--success-soft) !important;
+  }
+
+  .border-success\/20,
+  .border-success\/25,
+  .border-success\/30,
+  .border-success\/40 {
+    border-color: var(--success-soft-border) !important;
+  }
+
+  .bg-warning\/10,
+  .bg-warning\/15,
+  .bg-warning\/20 {
+    background-color: var(--warning-soft) !important;
+  }
+
+  .border-warning\/20,
+  .border-warning\/25,
+  .border-warning\/30 {
+    border-color: var(--warning-soft-border) !important;
+  }
+
+  .bg-info\/10,
+  .bg-info\/15,
+  .bg-info\/20 {
+    background-color: var(--info-soft) !important;
+  }
+
+  .border-info\/20,
+  .border-info\/25,
+  .border-info\/30 {
+    border-color: var(--info-soft-border) !important;
+  }
+
+  .bg-destructive\/10,
+  .bg-destructive\/15,
+  .bg-destructive\/20 {
+    background-color: var(--destructive-soft) !important;
+  }
+
+  .border-destructive\/20,
+  .border-destructive\/25,
+  .border-destructive\/30 {
+    border-color: var(--destructive-soft-border) !important;
+  }
+
+  .bg-primary\/10,
+  .bg-primary\/15 {
+    background-color: var(--primary-soft) !important;
+  }
+
+  .border-primary\/15,
+  .border-primary\/20 {
+    border-color: var(--primary-soft-border) !important;
   }
 }

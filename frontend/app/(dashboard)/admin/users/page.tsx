@@ -313,6 +313,9 @@ export default function UsersManagementPage() {
                       Status
                     </SortableHeader>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">2FA</TableHead>
+                    <SortableHeader field="last_login" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      Last Login
+                    </SortableHeader>
                     <SortableHeader field="created_at" sortConfig={sortConfig} onSort={handleSort} className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                       Created
                     </SortableHeader>
@@ -381,18 +384,24 @@ export default function UsersManagementPage() {
                         )}
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">
+                        {user.last_login
+                          ? format(new Date(user.last_login), "MMM dd, yyyy HH:mm")
+                          : "Never"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">
                         {format(new Date(user.created_at), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap text-right">
                         <div className="flex justify-end transition-opacity">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">
-                                <div className="flex gap-0.5">
-                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
-                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
-                                  <div className="h-0.5 w-0.5 rounded-full bg-muted0" />
-                                </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                aria-label={`Actions for ${user.full_name || user.email}`}
+                              >
+                                <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">

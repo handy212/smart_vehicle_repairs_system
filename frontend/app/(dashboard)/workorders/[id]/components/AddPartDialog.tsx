@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { getUserFacingError } from "@/lib/api/errors";
-import InventoryPartSearch from "./InventoryPartSearch";
+import InventoryPartSearch, { FitmentVehicle } from "./InventoryPartSearch";
 import { Part } from "@/lib/api/inventory";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -31,13 +31,27 @@ type PartFormData = z.infer<typeof partSchema>;
 interface AddPartDialogProps {
   workOrderId: number;
   workOrderStatus?: string;
+  /** Soft fitment context for inventory search */
+  vehicle?: FitmentVehicle | null;
+  /**
+   * When true (default), create as pending for Stores immediately.
+   * Diagnosis Parts Required uses draft + explicit submit instead.
+   */
+  createAsPending?: boolean;
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 export default function AddPartDialog({
-    workOrderId, workOrderStatus, open, onClose, onSuccess }: AddPartDialogProps) {
+    workOrderId,
+    workOrderStatus,
+    vehicle,
+    createAsPending = true,
+    open,
+    onClose,
+    onSuccess,
+}: AddPartDialogProps) {
     const { formatCurrency } = useCurrency();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -70,7 +84,8 @@ export default function AddPartDialog({
         work_order: workOrderId,
         unit_cost: data.unit_cost.toString(),
         total_cost: totalCost.toFixed(2),
-        status: "pending",
+        // WO Parts tab: pending (Stores queue). Diagnosis flow uses draft + submit.
+        status: createAsPending ? "pending" : "draft",
       }),
     onSuccess: () => {
       reset();
@@ -143,9 +158,12 @@ export default function AddPartDialog({
         <div className="px-6 pb-2">
           <div className="mb-4 rounded-md border border-primary/15 bg-primary/5 p-4">
             <label className="mb-2 block text-sm font-medium text-primary">Search Inventory</label>
-            <InventoryPartSearch onSelect={handleInventorySelect} />
+            <InventoryPartSearch onSelect={handleInventorySelect} vehicle={vehicle} />
             <p className="text-xs text-primary mt-2">
               Searching inventory will auto-fill the part details below. You can still edit them manually.
+              {vehicle?.make || vehicle?.model
+                ? " Fitment badges use this work order's vehicle."
+                : ""}
             </p>
           </div>
 

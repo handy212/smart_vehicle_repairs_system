@@ -45,10 +45,23 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    location /media/ {
-        alias /var/www/media/;
+    # Public branding only; private uploads go through Django auth.
+    location /media/branding/ {
+        alias /var/www/media/branding/;
         expires 7d;
-        add_header Cache-Control "public";
+        add_header Cache-Control "public, max-age=604800";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    location /media/ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header Authorization $http_authorization;
+        proxy_redirect off;
     }
 
     location / {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { appointmentsApi } from "@/lib/api/appointments";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -18,15 +18,12 @@ import { Appointment } from "@/lib/api/appointments";
 
 export default function MyAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
+  const customerId = getCustomerId(user);
 
   const { data: appointmentsData, isLoading } = useQuery({
     queryKey: ["portal", "appointments", statusFilter],
     queryFn: () => {
-      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
       const params: Record<string, string | number | boolean> = {
@@ -38,7 +35,7 @@ export default function MyAppointmentsPage() {
       }
       return appointmentsApi.list(params);
     },
-    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
+    enabled: !!user && !!customerId,
   });
 
   const appointments = (appointmentsData?.results || appointmentsData || []) as Appointment[];

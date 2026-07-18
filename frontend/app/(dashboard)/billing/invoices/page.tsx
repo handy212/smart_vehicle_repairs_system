@@ -145,6 +145,7 @@ export default function InvoicesPage() {
 
     const { data, isLoading, error } = useQuery({
         queryKey: ["invoices", page, search, advancedFilters, sortConfig],
+        staleTime: 2 * 60 * 1000,
         queryFn: () => {
             const ordering = sortConfig
                 ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -165,6 +166,7 @@ export default function InvoicesPage() {
     const { data: stats } = useQuery({
         queryKey: ["invoice-stats"],
         queryFn: () => billingApi.invoices.stats(),
+        staleTime: 5 * 60 * 1000,
     });
 
     const invoices = data?.results || [];

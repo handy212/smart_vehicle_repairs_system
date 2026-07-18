@@ -5,9 +5,15 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from apps.accounting.models import RevenueProduct
 from apps.branches.models import Branch
 from apps.quickbooks_online.mapping_services import QBOAccountMappingService
+from apps.quickbooks_online.mapping_specs import (
+    MAPPING_KIND_REVENUE_PRODUCT_CLASS,
+    is_branch_override_slot,
+)
 from apps.quickbooks_online.models import QBOAccountMapping
+from apps.quickbooks_online.qbo_setup_status import get_qbo_setup_status
 
 User = get_user_model()
 
@@ -217,3 +223,32 @@ class BranchCoaMappingTests(TestCase):
             status='synced',
         )
         self.assertTrue(service.has_branch_override('invoice_line_type', 'labor', self.branch_a))
+
+    def test_branch_override_slots_include_new_revenue_products(self):
+        code = 'lazy_slot_test_product'
+        self.assertFalse(is_branch_override_slot(MAPPING_KIND_REVENUE_PRODUCT_CLASS, code))
+        RevenueProduct.objects.create(
+            code=code,
+            name='Lazy Slot Test',
+            revenue_class='service',
+            default_billing_line_type='other',
+            is_active=True,
+            branch=None,
+        )
+        self.assertTrue(is_branch_override_slot(MAPPING_KIND_REVENUE_PRODUCT_CLASS, code))
+
+    @patch('apps.quickbooks_online.qbo_setup_status.QuickBooksService.is_connected', return_value=True)
+    @patch('apps.quickbooks_online.qbo_setup_status.QuickBooksService.get_client', return_value=MagicMock())
+    def test_setup_status_reports_override_coverage(self, _mock_client, _mock_connected):
+        status = get_qbo_setup_status()
+        self.assertIn('override_mapped', status['branches'])
+        self.assertIn('override_inherit', status['branches'])
+        self.assertIn('override_unmapped', status['branches'])
+        self.assertTrue(status['branches']['note'])
+        self.assertGreaterEqual(len(status['branches']['items']), 2)
+        item_ids = {item['id'] for item in status['branches']['items']}
+        self.assertIn(self.branch_a.id, item_ids)
+        self.assertIn(self.branch_b.id, item_ids)
+        self.assertIn('override_unmapped', status['branches']['items'][0])
+        step_ids = {step['id'] for step in status['next_steps']}
+        self.assertIn('branch_overrides', step_ids)

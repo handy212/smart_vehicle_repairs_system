@@ -33,6 +33,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WORKSHOP_PANEL_CLASS } from "@/lib/constants/layout";
+import { useTechnicianLocationReporter } from "@/hooks/useTechnicianLocationReporter";
+import { isAssignmentAccepted } from "@/lib/mobile/roadside-assignment";
 
 type DashboardStats = {
   total: number;
@@ -105,6 +107,15 @@ export default function MobileDashboardPage() {
   const [activeLog, setActiveLog] = useState<ActiveTimeLog | null>(null);
   const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
   const [activeRoadside, setActiveRoadside] = useState<RoadsideRequest | null>(null);
+
+  useTechnicianLocationReporter(
+    Boolean(
+      isOnline &&
+        activeRoadside &&
+        !["completed", "cancelled", "failed"].includes(activeRoadside.status) &&
+        isAssignmentAccepted(activeRoadside, user?.id),
+    ),
+  );
 
   const quickActions = useMemo(
     () => [

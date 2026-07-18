@@ -374,10 +374,31 @@ class CustomerStatsSerializer(serializers.Serializer):
     vehicles_serviced = serializers.IntegerField()
 
 class CustomerContactSerializer(serializers.ModelSerializer):
+    """Include linked customer identity so Contacts UI can show Company."""
+    customer_name = serializers.SerializerMethodField()
+    company_name = serializers.CharField(source='customer.company_name', read_only=True)
+    customer_number = serializers.CharField(source='customer.customer_number', read_only=True)
+
     class Meta:
         model = CustomerContact
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = [
+            'created_at', 'updated_at', 'customer_name', 'company_name', 'customer_number',
+        ]
+
+    def get_customer_name(self, obj):
+        customer = getattr(obj, 'customer', None)
+        if customer is None:
+            return ''
+        company = (customer.company_name or '').strip()
+        if company:
+            return company
+        user = getattr(customer, 'user', None)
+        if user is not None:
+            full = f'{user.first_name or ""} {user.last_name or ""}'.strip()
+            if full:
+                return full
+        return customer.customer_number or ''
 
 class CustomerReminderSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)

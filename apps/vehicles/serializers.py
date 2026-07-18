@@ -248,31 +248,25 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
             # If auto_decode is enabled and VIN is provided
             if auto_decode and vin:
                 try:
-                    # Use decoder with a short timeout to prevent hanging
+                    from django.conf import settings
+
+                    from .vin_decoder import vehicle_model_updates_from_decoded
+
                     decoder = VehicleVINDecoder()
-                    success, data = decoder.decode_vin(vin, timeout_seconds=3.0)
+                    timeout_seconds = float(getattr(settings, 'VIN_DECODE_TIMEOUT_SECONDS', 5))
+                    success, data = decoder.decode_vin(vin, timeout_seconds=timeout_seconds)
                     if success and isinstance(data, dict):
-                        # Persist full decoded payload for later display (even if incomplete)
+                        # Always persist full payload for profile technical specs UI.
                         validated_data['vin_decoded_data'] = data
                         validated_data['vin_decoded_at'] = timezone.now()
 
-                        # If decoder reports errors, don't auto-fill required fields
-                        if not data.get('has_errors'):
-                            specs = {
-                                'year': data.get('year'),
-                                'make': data.get('make'),
-                                'model': data.get('model'),
-                                'trim': data.get('trim'),
-                                'engine_type': data.get('engine_type'),
-                                'engine_size': data.get('engine_size'),
-                                'transmission_type': data.get('transmission_type'),
-                            }
-                            specs = {k: v for k, v in specs.items() if v is not None}
-
-                            # Auto-fill fields that weren't explicitly provided
-                            for field, value in specs.items():
-                                if field not in validated_data or validated_data.get(field) is None:
-                                    validated_data[field] = value
+                        if data.get('has_useful_fields') or data.get('make') or data.get('model'):
+                            specs = vehicle_model_updates_from_decoded(
+                                data,
+                                current=validated_data,
+                                only_blank=True,
+                            )
+                            validated_data.update(specs)
                 except Exception as e:
                     # If VIN decode fails, log but don't prevent vehicle creation
                     logger.warning(f"VIN decode failed for {vin}: {str(e)}", exc_info=True)
@@ -370,12 +364,49 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'owner', 'vin', 'year', 'make', 'model', 'trim', 'vehicle_type',
             'exterior_color', 'interior_color', 'license_plate', 'license_plate_state',
-            'current_mileage', 'engine_type', 'engine_size', 'transmission_type',
+            'current_mileage', 'mileage_unit', 'engine_type', 'engine_size', 'transmission_type',
             'fuel_tank_capacity', 'tire_size', 'condition_rating',
             'warranty_expiry_date', 'warranty_type', 'warranty_coverage',
             'last_service_date', 'next_service_due_date', 'next_service_due_mileage',
             'status', 'relationship', 'notes', 'tags', 'image'
         ]
+
+    def to_internal_value(self, data):
+        """Coerce FormData string numbers before validation (image uploads)."""
+        numeric_fields = ['year', 'current_mileage', 'owner', 'condition_rating',
+                          'next_service_due_mileage']
+        decimal_fields = ['fuel_tank_capacity']
+
+        if hasattr(data, 'get'):
+            if hasattr(data, '_mutable') and not data._mutable:
+                data = data.copy()
+
+            for field in numeric_fields:
+                if field in data:
+                    value = data[field]
+                    if isinstance(value, list):
+                        value = value[0] if value else ''
+                    if isinstance(value, str) and value.strip():
+                        try:
+                            data[field] = int(value)
+                        except (ValueError, TypeError):
+                            pass
+
+            for field in decimal_fields:
+                if field in data:
+                    value = data[field]
+                    if isinstance(value, list):
+                        value = value[0] if value else ''
+                    if isinstance(value, str):
+                        if value.strip():
+                            try:
+                                data[field] = float(value)
+                            except (ValueError, TypeError):
+                                pass
+                        else:
+                            data[field] = None
+
+        return super().to_internal_value(data)
 
     def validate_vin(self, value):
         """Validate VIN format and uniqueness when editing."""

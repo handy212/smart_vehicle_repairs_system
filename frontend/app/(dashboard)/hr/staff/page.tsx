@@ -65,11 +65,13 @@ function StaffContent() {
     const { data: branchesData } = useQuery({
         queryKey: ["branches", "active"],
         queryFn: () => branchesApi.list({ is_active: true }),
+        staleTime: 5 * 60 * 1000,
     });
     const branches = branchesData ?? [];
 
     const { data, isLoading } = useQuery({
         queryKey: ["hr", "staff", searchQuery, statusFilter, branchFilter, sortConfig],
+        staleTime: 2 * 60 * 1000,
         queryFn: async () => {
             const res = await hrApi.staff.list({
                 search: searchQuery,

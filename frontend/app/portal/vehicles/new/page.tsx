@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vehiclesApi } from "@/lib/api/vehicles";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,10 +49,7 @@ export default function AddVehiclePage() {
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [vinOtherInfo, setVinOtherInfo] = useState<any | null>(null);
 
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
 
   const {
     register,
@@ -96,7 +93,7 @@ export default function AddVehiclePage() {
   const createMutation = useMutation({
     mutationFn: (data: VehicleFormData) => {
 
-      const customerId = (user as any)?.customer_profile?.id || (user as any)?.customer?.id;
+      const customerId = getCustomerId(user);
       if (!customerId) {
         throw new Error("Customer profile not found");
       }

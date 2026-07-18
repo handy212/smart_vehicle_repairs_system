@@ -9,8 +9,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
 import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
-import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useStaffUsers, useTaxConfig } from "@/lib/hooks/useFormLookups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -105,10 +105,7 @@ export default function EditInvoicePage() {
     enabled: isValidId,
   });
 
-  const { data: salesAgents } = useQuery({
-    queryKey: ["users", "staff"],
-    queryFn: () => adminApi.users.staffList(),
-  });
+  const { data: salesAgents } = useStaffUsers();
 
   const { data: partsData } = useQuery({
     queryKey: ["parts", "search", partSearchTerm],
@@ -116,10 +113,7 @@ export default function EditInvoicePage() {
     enabled: partSearchTerm.length > 0,
   });
 
-  const { data: taxConfig } = useQuery({
-    queryKey: ["tax", "config"],
-    queryFn: () => billingApi.taxes.config(),
-  });
+  const { data: taxConfig } = useTaxConfig();
 
   const {
     register,

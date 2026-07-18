@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { WorkOrder, workordersApi } from "@/lib/api/workorders";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipboardList, Filter, Calendar, Car, DollarSign, FileText, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,16 +17,12 @@ import { getWorkOrderListBillingDisplay } from "@/lib/workorders/workOrderBillin
 export default function MyWorkOrdersPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const { formatCurrency } = useCurrency();
-    const { data: user } = useQuery({
-        queryKey: ["user"],
-        queryFn: () => authApi.getCurrentUser(),
-    });
+    const { data: user } = useCurrentUser();
+    const customerId = getCustomerId(user);
 
     const { data: workOrdersData, isLoading } = useQuery({
         queryKey: ["portal", "workorders", statusFilter],
         queryFn: () => {
-
-            const customerId = user?.customer_profile?.id || user?.customer?.id;
             if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
             const params: Parameters<typeof workordersApi.list>[0] = {
@@ -38,7 +34,7 @@ export default function MyWorkOrdersPage() {
             return workordersApi.list(params);
         },
 
-        enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
+        enabled: !!user && !!customerId,
     });
 
 

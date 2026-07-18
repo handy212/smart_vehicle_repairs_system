@@ -16,6 +16,7 @@ import {
   Image,
   Search,
   Clock,
+  Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -203,6 +204,14 @@ export function WorkOrderTabsNav({
           lockMessage={lockMessage}
         />
         <TabDivider />
+        <LockedTabTrigger
+          value="labor"
+          label="Labor Time"
+          shortLabel="Labor"
+          icon={Timer}
+          locked={effectiveLocked}
+          lockMessage={lockMessage}
+        />
         <LockedTabTrigger
           value="timeline"
           label="Timeline"

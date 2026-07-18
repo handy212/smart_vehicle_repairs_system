@@ -57,10 +57,17 @@ class InventoryService:
                 part=OuterRef('pk'),
                 branch=branch
             ).values('quantity_reserved')[:1]
+
+            reorder_subquery = StockItem.objects.filter(
+                part=OuterRef('pk'),
+                branch=branch
+            ).values('reorder_point')[:1]
             
             queryset = queryset.annotate(
                 current_stock=Coalesce(Subquery(stock_subquery), 0),
-                current_reserved=Coalesce(Subquery(reserved_subquery), 0)
+                current_reserved=Coalesce(Subquery(reserved_subquery), 0),
+                # Branch StockItem reorder; fall back to catalog Part.reorder_point in consumers
+                branch_reorder_point=Subquery(reorder_subquery),
             )
         else:
             # Aggregate global stock from all branches
@@ -69,7 +76,8 @@ class InventoryService:
                 total_reserved=Coalesce(Sum('stock_items__quantity_reserved'), 0)
             ).annotate(
                 current_stock=F('total_stock'),
-                current_reserved=F('total_reserved')
+                current_reserved=F('total_reserved'),
+                branch_reorder_point=F('reorder_point'),
             )
         
         return queryset

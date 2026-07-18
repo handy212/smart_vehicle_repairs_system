@@ -176,6 +176,9 @@ export function getPartImportTemplate() {
     "is_core",
     "core_charge",
     "unit_of_measure",
+    "compatible_makes",
+    "compatible_models",
+    "compatible_years",
     "is_active",
   ];
 
@@ -197,7 +200,10 @@ export function getPartImportTemplate() {
       "true",
       "false",
       "0.00",
-      "each",
+      "piece",
+      "Toyota, Honda",
+      "Camry, Accord",
+      "2015-2023",
       "true",
     ],
     [
@@ -218,6 +224,9 @@ export function getPartImportTemplate() {
       "true",
       "15.00",
       "set",
+      "Toyota",
+      "Camry",
+      "2018-2024",
       "true",
     ],
   ];

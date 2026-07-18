@@ -322,6 +322,18 @@ export function PartsRequiredTab({
                 open={showAddDialog}
                 onOpenChange={setShowAddDialog}
                 workOrderId={workOrder?.id}
+                vehicle={
+                    workOrder?.vehicle && typeof workOrder.vehicle === "object"
+                        ? {
+                              id: workOrder.vehicle.id,
+                              make: workOrder.vehicle.make,
+                              model: workOrder.vehicle.model,
+                              year: workOrder.vehicle.year,
+                          }
+                        : workOrder?.vehicle
+                          ? { id: workOrder.vehicle }
+                          : null
+                }
                 initialData={editPart}
                 onSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: ["workorder-parts", workOrder?.id] });
@@ -337,16 +349,19 @@ function PartFormDialog({
     open,
     onOpenChange,
     workOrderId,
+    vehicle,
     initialData,
     onSuccess,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     workOrderId: number;
+    vehicle?: { id?: number; make?: string; model?: string; year?: number } | null;
     initialData: WorkOrderPart | null;
     onSuccess: () => void;
 }) {
     const { toast } = useToast();
+    const { confirm, ConfirmDialog: FitConfirmDialog } = useConfirmDialog();
     const queryClient = useQueryClient();
     const [formData, setFormData] = useState({
         part_name: "",
@@ -365,7 +380,7 @@ function PartFormDialog({
     const [foundParts, setFoundParts] = useState<Part[]>([]);
     const [isSearching, setIsSearching] = useState(false);
 
-    // Search inventory effect
+    // Search inventory effect (vehicle-aware soft fitment)
     React.useEffect(() => {
         const searchInventory = async () => {
             if (!debouncedSearch || debouncedSearch.length < 2) {
@@ -374,7 +389,14 @@ function PartFormDialog({
             }
             setIsSearching(true);
             try {
-                const response = await inventoryApi.list({ search: debouncedSearch });
+                const response = await inventoryApi.list({
+                    search: debouncedSearch,
+                    is_active: true,
+                    vehicle_id: vehicle?.id,
+                    make: vehicle?.make,
+                    model: vehicle?.model,
+                    year: vehicle?.year,
+                });
                 setFoundParts(response.results);
             } catch (error) {
                 console.error("Failed to search inventory", error);
@@ -383,7 +405,7 @@ function PartFormDialog({
             }
         };
         searchInventory();
-    }, [debouncedSearch]);
+    }, [debouncedSearch, vehicle?.id, vehicle?.make, vehicle?.model, vehicle?.year]);
 
     React.useEffect(() => {
         if (initialData) {
@@ -485,7 +507,20 @@ function PartFormDialog({
         mutation.mutate(formData);
     };
 
-    const handleSelectPart = (part: Part) => {
+    const handleSelectPart = async (part: Part) => {
+        if (vehicle && part.fitment === "unlikely") {
+            const vehicleLabel = [vehicle.year, vehicle.make, vehicle.model]
+                .filter(Boolean)
+                .join(" ");
+            const ok = await confirm({
+                title: "Part may not fit this vehicle",
+                description: `${part.part_number} — ${part.name} looks incompatible with ${vehicleLabel || "this vehicle"}. Add it anyway?`,
+                confirmLabel: "Add anyway",
+                cancelLabel: "Cancel",
+                variant: "destructive",
+            });
+            if (!ok) return;
+        }
         setFormData({
             ...formData,
             part_name: part.name,
@@ -494,7 +529,7 @@ function PartFormDialog({
             inventory_part: part.id,
         });
         setOpenCombobox(false);
-        setSearchTerm(""); // Clear search to avoid confusion, or keep it?
+        setSearchTerm("");
     };
 
     return (
@@ -503,9 +538,12 @@ function PartFormDialog({
                 <DialogHeader className="pb-2 border-b">
                     <DialogTitle className="text-lg">{initialData ? "Edit Part Request" : "Request Part"}</DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground">
-                        {initialData ? "Update details for this part request." : "Select from inventory or enter details manually."}
+                        {initialData
+                            ? "Update details for this part request."
+                            : "Select from inventory or enter details manually. Requests stay in draft until you submit to Stores."}
                     </DialogDescription>
                 </DialogHeader>
+                <FitConfirmDialog />
 
                 <div className="py-4 space-y-4">
                     {/* Items Queue List (Only for new requests) */}
@@ -605,10 +643,21 @@ function PartFormDialog({
                                                             className="flex flex-col cursor-pointer rounded-sm px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground"
                                                             onClick={() => handleSelectPart(part)}
                                                         >
-                                                            <div className="font-medium truncate">{part.name}</div>
+                                                            <div className="flex items-center gap-1.5 font-medium truncate">
+                                                                <span className="truncate">{part.name}</span>
+                                                                {vehicle && part.fitment === "likely" && (
+                                                                    <Badge variant="success" className="text-[9px] h-4 px-1 font-normal shrink-0">Fit</Badge>
+                                                                )}
+                                                                {vehicle && part.fitment === "unlikely" && (
+                                                                    <Badge variant="danger" className="text-[9px] h-4 px-1 font-normal shrink-0">May not fit</Badge>
+                                                                )}
+                                                                {vehicle && part.fitment === "unknown" && (
+                                                                    <Badge variant="outline" className="text-[9px] h-4 px-1 font-normal shrink-0">?</Badge>
+                                                                )}
+                                                            </div>
                                                             <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
                                                                 <span>#{part.part_number}</span>
-                                                                <span>Qty: {part.quantity_in_stock}</span>
+                                                                <span>Qty: {part.available_quantity ?? part.quantity_in_stock}</span>
                                                             </div>
                                                         </div>
                                                     ))}

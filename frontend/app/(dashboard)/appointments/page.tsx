@@ -148,6 +148,7 @@ export default function AppointmentsPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["appointments", page, debouncedSearch, advancedFilters, sortConfig],
+    staleTime: 2 * 60 * 1000,
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`

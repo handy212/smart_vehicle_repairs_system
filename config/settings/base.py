@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     'apps.quickbooks_online',
     'apps.feedback',
     'apps.chat',
+    'apps.data_exchange',
 ]
 
 # Keep the workflow builder code in the repo, but do not activate it yet.

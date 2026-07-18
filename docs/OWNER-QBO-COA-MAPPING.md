@@ -103,6 +103,8 @@ Part catalog lines use linked Part QBO Items when synced.
 
 Branches link by city/name (Kumasi, Takoradi, Tamale, Accra). Configure in **Branches → QBO mapping** or run `apply_owner_qbo_mappings`.
 
+**Branch chart overrides** (optional) may differ per site for AR, COGS, sales revenue, invoice line Items, and revenue-product Classes. **Payment methods, tax codes, expense classes, and bank/till accounts stay company-scoped** — they inherit company defaults and are not stored as per-branch overrides.
+
 ## Validation checklist
 
 After mapping:

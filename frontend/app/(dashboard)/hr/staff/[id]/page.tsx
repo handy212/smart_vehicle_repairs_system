@@ -181,9 +181,14 @@ function StaffDetailContent() {
                             <h2 className="text-xl font-bold">{staff.full_name}</h2>
                             <p className="text-muted-foreground mb-2">{staff.position_title || "No Position"}</p>
 
-                            <Badge variant={getStatusVariant(staff.employment_status) as any}>
-                                {staff.employment_status}
-                            </Badge>
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                <Badge variant={getStatusVariant(staff.employment_status) as any}>
+                                    {staff.employment_status}
+                                </Badge>
+                                <Badge variant={staff.time_tracking_enabled ? "secondary" : "outline"}>
+                                    {staff.time_tracking_enabled ? "HR attendance on" : "HR attendance off"}
+                                </Badge>
+                            </div>
 
                             <div className="mt-6 flex flex-col space-y-3 text-sm text-left">
                                 <div className="flex items-center text-muted-foreground">

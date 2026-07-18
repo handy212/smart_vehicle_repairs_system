@@ -221,7 +221,12 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       items: [
         { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
         { name: "Updates", href: "/admin/updates", permission: "manage_system_updates", icon: Download },
-        { name: "Demo Data", href: "/admin/demo-data", permission: "manage_settings", icon: Database },
+        {
+          name: "Import / Export",
+          href: "/admin/import-export",
+          permission: "manage_data_exchange",
+          icon: ArrowLeftRight,
+        },
         { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_logs", icon: History },
         { name: "Import History", href: "/admin/import-history", permission: "view_audit_logs", icon: Inbox },
         { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
@@ -255,7 +260,8 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: Clock,
       items: [
         { name: "Leave", href: "/hr/leave", permission: "view_leave", icon: Calendar },
-        { name: "Attendance", href: "/hr/attendance", permission: "view_attendance", icon: Clock },
+        { name: "Leave Balances", href: "/hr/leave/balances", permission: "view_leave", icon: Calendar },
+        { name: "HR Attendance", href: "/hr/attendance", permission: "view_attendance", icon: Clock },
         { name: "Payroll", href: "/hr/payroll", permission: "view_payroll", icon: Banknote },
         { name: "Statutory Filing", href: "/hr/payroll/statutory-filing", permission: "view_payroll", icon: FileCheck },
       ],

@@ -114,7 +114,7 @@ class TechnicianTimeLogViewSet(WorkOrderChildQuerysetMixin, WorkOrderRelatedPerm
             data={
                 'work_order': request.data.get('work_order'),
                 'task': request.data.get('task'),
-                'description': request.data.get('description', 'Field work'),
+                'description': request.data.get('description') or '',
             },
             context={'request': request},
         )

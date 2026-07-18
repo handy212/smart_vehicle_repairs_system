@@ -3,7 +3,7 @@ HR Management Models for Smart Vehicle Repairs System
 Covers: Employee Profiles, Departments, Positions, Leave Management,
         Attendance & Time Tracking, Payroll, Recruitment, Performance, Compliance
 """
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -193,6 +193,14 @@ class EmployeeProfile(models.Model):
 
     # Internal
     notes = models.TextField(_('HR notes'), blank=True)
+    time_tracking_enabled = models.BooleanField(
+        _('HR attendance time tracking'),
+        default=True,
+        help_text=_(
+            'When enabled, this staff member can clock in/out for daily HR attendance. '
+            'This is separate from work-order job labor time.'
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -203,6 +211,7 @@ class EmployeeProfile(models.Model):
         indexes = [
             models.Index(fields=['employment_status']),
             models.Index(fields=['employment_type']),
+            models.Index(fields=['time_tracking_enabled']),
         ]
 
     def __str__(self):
@@ -220,6 +229,11 @@ class EmployeeProfile(models.Model):
     @property
     def is_active_employee(self):
         return self.employment_status in ('active', 'probation')
+
+    @property
+    def can_use_hr_attendance(self):
+        """Daily HR attendance clock — not work-order labor time."""
+        return self.time_tracking_enabled and self.is_active_employee
 
 
 # =============================================================================
@@ -879,10 +893,47 @@ class PaySlip(models.Model):
                 raise ValidationError(_('Paid or approved payslips are locked. Reverse or reopen payroll before editing.'))
         if not self.payslip_number:
             year = self.payroll_period.end_date.year if self.payroll_period_id else timezone.now().year
-            next_number = (PaySlip.objects.filter(payslip_number__startswith=f"PS{year}").count() or 0) + 1
-            self.payslip_number = f"PS{year}{next_number:06d}"
+            self.payslip_number = PayslipNumberSequence.allocate(year)
         self.calculate_pay()
         super().save(*args, **kwargs)
+
+
+class PayslipNumberSequence(models.Model):
+    """Atomic yearly sequence for payslip numbers (PS{YYYY}{######})."""
+
+    year = models.PositiveIntegerField(_('year'), unique=True)
+    last_sequence = models.PositiveIntegerField(_('last sequence'), default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _('payslip number sequence')
+        verbose_name_plural = _('payslip number sequences')
+
+    def __str__(self):
+        return f"PS{self.year} → {self.last_sequence}"
+
+    @classmethod
+    def allocate(cls, year: int) -> str:
+        with transaction.atomic():
+            seq, _created = cls.objects.select_for_update().get_or_create(
+                year=year,
+                defaults={'last_sequence': 0},
+            )
+            prefix = f"PS{year}"
+            last_existing = (
+                PaySlip.objects.filter(payslip_number__startswith=prefix)
+                .order_by('-payslip_number')
+                .values_list('payslip_number', flat=True)
+                .first()
+            )
+            if last_existing:
+                try:
+                    seq.last_sequence = max(seq.last_sequence, int(str(last_existing)[len(prefix):]))
+                except (TypeError, ValueError):
+                    pass
+            seq.last_sequence += 1
+            seq.save(update_fields=['last_sequence', 'updated_at'])
+            return f"PS{year}{seq.last_sequence:06d}"
 
 
 class PayrollAuditLog(models.Model):

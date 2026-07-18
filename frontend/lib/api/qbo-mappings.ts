@@ -163,11 +163,19 @@ export interface QboSetupStatus {
     active_count: number;
     unmapped_locations: number;
     override_slots_per_branch: number;
+    override_mapped?: number;
+    override_inherit?: number;
+    override_unmapped?: number;
+    note?: string;
     items: Array<{
       id: number;
       name: string;
       code: string;
       location_mapped: boolean;
+      override_slots?: number;
+      override_mapped?: number;
+      override_inherit?: number;
+      override_unmapped?: number;
       override_count: number;
     }>;
   };

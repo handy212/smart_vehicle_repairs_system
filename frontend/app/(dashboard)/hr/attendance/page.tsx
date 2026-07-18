@@ -37,7 +37,7 @@ import { sortOrderingParam, toggleSortConfig } from "@/lib/utils/table-sort";
 export default function AttendancePage() {
     return (
         <PermissionPageGuard permission="view_attendance">
-            <DynamicPageTitle title="Attendance" />
+            <DynamicPageTitle title="HR Attendance" />
             <AttendanceContent />
         </PermissionPageGuard>
     );
@@ -55,6 +55,12 @@ function AttendanceContent() {
     const handleSort = (field: string) => {
         setSortConfig((current) => toggleSortConfig(current, field));
     };
+
+    const { data: myProfile } = useQuery({
+        queryKey: ["hr", "my-profile"],
+        queryFn: async () => (await hrApi.staff.myProfile()).data,
+        retry: false,
+    });
 
     const { data: summary, isLoading: loadingSummary } = useQuery({
         queryKey: ["hr", "attendance-today-summary"],
@@ -75,6 +81,8 @@ function AttendanceContent() {
             return res.data;
         },
     });
+
+    const canSelfClock = !!myProfile?.can_use_hr_attendance;
 
     const clockInMutation = useMutation({
         mutationFn: () => hrApi.attendance.clockIn(),
@@ -110,34 +118,38 @@ function AttendanceContent() {
     return (
         <div className="space-y-4">
             <StaffPageHeader
-                title="Attendance"
+                title="HR Attendance"
                 breadcrumbs={[
                     { label: "Dashboard", href: "/dashboard" },
                     { label: "HR", href: "/hr" },
-                    { label: "Attendance" },
+                    { label: "HR Attendance" },
                 ]}
                 actions={
                     <div className="flex gap-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => clockInMutation.mutate()}
-                            disabled={clockInMutation.isPending}
-                            className="text-success border-success/20 hover:bg-success/10"
-                        >
-                            <LogIn className="h-4 w-4 mr-2" />
-                            Clock In
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => clockOutMutation.mutate()}
-                            disabled={clockOutMutation.isPending}
-                            className="text-destructive border-destructive/20 hover:bg-destructive/10"
-                        >
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Clock Out
-                        </Button>
+                        {canSelfClock ? (
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => clockInMutation.mutate()}
+                                    disabled={clockInMutation.isPending}
+                                    className="text-success border-success/20 hover:bg-success/10"
+                                >
+                                    <LogIn className="h-4 w-4 mr-2" />
+                                    Clock In
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => clockOutMutation.mutate()}
+                                    disabled={clockOutMutation.isPending}
+                                    className="text-destructive border-destructive/20 hover:bg-destructive/10"
+                                >
+                                    <LogOut className="h-4 w-4 mr-2" />
+                                    Clock Out
+                                </Button>
+                            </>
+                        ) : null}
                         <PermissionGuard permission="manage_attendance">
                             <Button size="sm" variant="outline" asChild>
                                 <Link href="/hr/attendance/policies">Policies</Link>

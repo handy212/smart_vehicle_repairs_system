@@ -7,7 +7,7 @@ from .models import (
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
     SalaryComponent, EmployeeSalaryComponent, TaxRule,
-    PayrollPeriod, PaySlip, PayrollAuditLog,
+    PayrollPeriod, PaySlip, PayslipNumberSequence, PayrollAuditLog,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
 )
@@ -31,9 +31,9 @@ class PositionAdmin(admin.ModelAdmin):
 class EmployeeProfileAdmin(admin.ModelAdmin):
     list_display = [
         'user', 'department', 'position', 'employment_type',
-        'employment_status', 'start_date',
+        'employment_status', 'time_tracking_enabled', 'start_date',
     ]
-    list_filter = ['employment_type', 'employment_status', 'department']
+    list_filter = ['employment_type', 'employment_status', 'time_tracking_enabled', 'department']
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     raw_id_fields = ['user', 'reporting_to']
 
@@ -117,6 +117,13 @@ class PaySlipAdmin(admin.ModelAdmin):
     ]
     list_filter = ['status', 'is_locked', 'payroll_period']
     raw_id_fields = ['employee']
+
+
+@admin.register(PayslipNumberSequence)
+class PayslipNumberSequenceAdmin(admin.ModelAdmin):
+    list_display = ['year', 'last_sequence', 'updated_at']
+    ordering = ['-year']
+    readonly_fields = ['updated_at']
 
 
 @admin.register(PayrollAuditLog)

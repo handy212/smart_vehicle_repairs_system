@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { vehiclesApi } from "@/lib/api/vehicles";
-import { authApi } from "@/lib/api/auth";
+import { useCurrentUser, getCustomerId } from "@/lib/hooks/useCurrentUser";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PortalPageHeader } from "../components/PortalPageHeader";
@@ -12,19 +12,16 @@ import { PremiumIcons } from "@/components/ui/icons";
 import { Vehicle } from "@/lib/api/vehicles";
 
 export default function MyVehiclesPage() {
-  const { data: user } = useQuery({
-    queryKey: ["user"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
+  const { data: user } = useCurrentUser();
+  const customerId = getCustomerId(user);
 
   const { data: vehiclesData, isLoading } = useQuery({
     queryKey: ["portal", "vehicles"],
     queryFn: () => {
-      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
       return vehiclesApi.list({ owner: customerId });
     },
-    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
+    enabled: !!user && !!customerId,
   });
 
   const vehicles = (Array.isArray(vehiclesData) ? vehiclesData : vehiclesData?.results || []) as Vehicle[];

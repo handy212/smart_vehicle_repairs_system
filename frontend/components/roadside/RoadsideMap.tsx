@@ -5,11 +5,10 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix for leaflet markers not showing up in Next.js
 const icon = L.icon({
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconUrl: "/leaflet/marker-icon.png",
+    iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+    shadowUrl: "/leaflet/marker-shadow.png",
     iconSize: [25, 41],
     iconAnchor: [12, 41],
 });
@@ -22,7 +21,9 @@ interface RoadsideMapProps {
 
 function ChangeView({ center }: { center: [number, number] }) {
     const map = useMap();
-    map.setView(center, map.getZoom());
+    useEffect(() => {
+        map.setView(center, map.getZoom());
+    }, [map, center[0], center[1]]);
     return null;
 }
 
@@ -33,7 +34,13 @@ export default function RoadsideMap({ latitude, longitude, address }: RoadsideMa
         setIsMounted(true);
     }, []);
 
-    if (!isMounted) return <div className="h-[300px] w-full bg-muted rounded-xl animate-pulse flex items-center justify-center text-muted-foreground">Loading Map...</div>;
+    if (!isMounted) {
+        return (
+            <div className="h-[300px] w-full bg-muted rounded-xl animate-pulse flex items-center justify-center text-muted-foreground">
+                Loading Map...
+            </div>
+        );
+    }
 
     const position: [number, number] = [latitude, longitude];
 

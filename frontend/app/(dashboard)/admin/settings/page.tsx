@@ -3,8 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,7 +15,6 @@ import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Building2,
-  Database,
   Eye,
   EyeOff,
   Image as ImageIcon,
@@ -30,7 +28,6 @@ import {
   Receipt,
   Wrench,
   CreditCard,
-  Trash2,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
@@ -56,28 +53,7 @@ const CATEGORIES: CategoryDef[] = [
   { value: "security", label: "Security", description: "Passwords, sessions, and access", icon: Shield },
   { value: "business", label: "Business", description: "Hours, booking, and document terms", icon: Briefcase },
   { value: "tax", label: "Tax", description: "Ghana VAT and levy rates", icon: Receipt },
-  { value: "maintenance", label: "Maintenance", description: "System mode and data cleanup", icon: Wrench },
-];
-
-const CLEANUP_MODULES = [
-  "customers",
-  "vehicles",
-  "technicians",
-  "appointments",
-  "workorders",
-  "inspections",
-  "diagnosis",
-  "gatepass",
-  "inventory",
-  "billing",
-  "accounting",
-  "hr",
-  "fixed_assets",
-  "roadside",
-  "subscriptions",
-  "documents",
-  "feedback",
-  "chat",
+  { value: "maintenance", label: "Maintenance", description: "System mode and logging", icon: Wrench },
 ];
 
 const SELECT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
@@ -358,10 +334,6 @@ function imagePreviewSrc(value: string, updatedAt?: string) {
   return withCacheBuster(url, version);
 }
 
-function cleanupLabel(moduleName: string) {
-  return moduleName.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 function groupSettings(category: string, settings: SystemSetting[]) {
   const groups = SECTION_GROUPS[category] || [];
   const used = new Set<string>();
@@ -395,9 +367,6 @@ export default function SystemSettingsPage() {
   const selectedCategory = requestedCategory === "sms" ? "company" : requestedCategory;
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [visibleSecrets, setVisibleSecrets] = useState<Record<number, boolean>>({});
-  const [cleanupModules, setCleanupModules] = useState<string[]>(CLEANUP_MODULES);
-  const [demoConfirm, setDemoConfirm] = useState("");
-  const [permanentConfirm, setPermanentConfirm] = useState("");
 
   useEffect(() => {
     if (requestedCategory === "sms") {
@@ -408,12 +377,6 @@ export default function SystemSettingsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin", "settings", selectedCategory],
     queryFn: () => adminApi.settings.list({ category: selectedCategory }),
-  });
-
-  const demoStatusQuery = useQuery({
-    queryKey: ["admin", "demo-data", "status", selectedCategory],
-    queryFn: () => adminApi.demoData.status(),
-    enabled: selectedCategory === "maintenance",
   });
 
   const settings = useMemo(
@@ -467,52 +430,6 @@ export default function SystemSettingsPage() {
     },
   });
 
-  const cleanupScopeLabel =
-    cleanupModules.length === CLEANUP_MODULES.length
-      ? "all modules"
-      : `${cleanupModules.length} selected module${cleanupModules.length === 1 ? "" : "s"}`;
-
-  const refreshCleanupStatus = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin", "demo-data"] });
-  };
-
-  const demoPurgeMutation = useMutation({
-    mutationFn: () => adminApi.demoData.purge({ modules: cleanupModules }),
-    onSuccess: (result) => {
-      setDemoConfirm("");
-      refreshCleanupStatus();
-      toast({ title: "Demo data purged", description: `${result.modules.length} module(s) processed` });
-    },
-    onError: (err: unknown) => {
-      toast({
-        title: "Purge failed",
-        description: getUserFacingError(err, "Failed to purge demo data"),
-        variant: "destructive",
-      });
-    },
-  });
-
-  const permanentPurgeMutation = useMutation({
-    mutationFn: () =>
-      adminApi.demoData.purge({
-        modules: cleanupModules,
-        permanent: true,
-        confirmation: "DELETE PERMANENT DATA",
-      }),
-    onSuccess: (result) => {
-      setPermanentConfirm("");
-      refreshCleanupStatus();
-      toast({ title: "Permanent data cleanup complete", description: `${result.modules.length} module(s) processed` });
-    },
-    onError: (err: unknown) => {
-      toast({
-        title: "Cleanup failed",
-        description: getUserFacingError(err, "Failed to clean permanent data"),
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleCategorySelect = (category: string) => {
     if (category === selectedCategory) return;
     if (dirtyCount > 0) {
@@ -551,10 +468,6 @@ export default function SystemSettingsPage() {
       ...draft,
     }));
     bulkUpdateMutation.mutate(payload);
-  };
-
-  const toggleCleanupModule = (moduleName: string, checked: boolean) => {
-    setCleanupModules((current) => (checked ? [...current, moduleName] : current.filter((item) => item !== moduleName)));
   };
 
   const renderControl = (setting: SystemSetting) => {
@@ -764,121 +677,6 @@ export default function SystemSettingsPage() {
     );
   };
 
-  const renderMaintenanceCleanup = () => {
-    if (selectedCategory !== "maintenance") return null;
-
-    const demoTotal = (demoStatusQuery.data?.modules || []).reduce((total, moduleSummary) => total + moduleSummary.existing, 0);
-    const busy = demoPurgeMutation.isPending || permanentPurgeMutation.isPending;
-    const canPurgeDemo = demoConfirm.trim().toUpperCase() === "PURGE DEMO DATA";
-    const canPurgePermanent = permanentConfirm.trim().toUpperCase() === "DELETE PERMANENT DATA";
-    const hasCleanupSelection = cleanupModules.length > 0;
-
-    return (
-      <Card className="border-border/80 shadow-none">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Data cleanup</CardTitle>
-          <CardDescription>
-            Purge demo records or permanently clean module data. SMS data is not seeded by the demo loader.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-muted/40 px-4 py-3">
-                <div className="text-xs text-muted-foreground">Demo records</div>
-                <div className="text-2xl font-semibold tracking-tight">{demoStatusQuery.isLoading ? "…" : demoTotal}</div>
-              </div>
-              <div className="rounded-lg bg-muted/40 px-4 py-3">
-                <div className="text-xs text-muted-foreground">Cleanup scope</div>
-                <div className="text-2xl font-semibold tracking-tight">{cleanupScopeLabel}</div>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={refreshCleanupStatus} disabled={busy}>
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-              Refresh
-            </Button>
-          </div>
-
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium">Modules</span>
-              <Button variant="ghost" size="sm" onClick={() => setCleanupModules(CLEANUP_MODULES)} className="h-8 text-xs">
-                Select all
-              </Button>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {CLEANUP_MODULES.map((moduleName) => (
-                <label
-                  key={moduleName}
-                  className="flex cursor-pointer items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-sm hover:bg-muted/40"
-                >
-                  <Checkbox
-                    checked={cleanupModules.includes(moduleName)}
-                    onCheckedChange={(checked) => toggleCleanupModule(moduleName, checked === true)}
-                    disabled={busy}
-                  />
-                  {cleanupLabel(moduleName)}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-3 rounded-xl border border-border p-4">
-              <div className="flex items-center gap-2 font-medium">
-                <Database className="h-4 w-4 text-muted-foreground" />
-                Demo cleanup
-              </div>
-              <p className="text-xs text-muted-foreground">Only removes records tagged as client demo data.</p>
-              <Input
-                value={demoConfirm}
-                onChange={(event) => setDemoConfirm(event.target.value)}
-                placeholder="Type PURGE DEMO DATA"
-                className="h-10"
-                disabled={busy}
-              />
-              <Button
-                variant="destructive"
-                className="w-full sm:w-auto"
-                disabled={!canManage || !canPurgeDemo || busy || !hasCleanupSelection}
-                onClick={() => demoPurgeMutation.mutate()}
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                Purge demo
-              </Button>
-            </div>
-
-            <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-              <div className="flex items-center gap-2 font-medium text-destructive">
-                <Trash2 className="h-4 w-4" />
-                Permanent cleanup
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Deletes real module data. Settings, roles, and permissions are preserved.
-              </p>
-              <Input
-                value={permanentConfirm}
-                onChange={(event) => setPermanentConfirm(event.target.value)}
-                placeholder="Type DELETE PERMANENT DATA"
-                className="h-10"
-                disabled={busy}
-              />
-              <Button
-                variant="destructive"
-                className="w-full sm:w-auto"
-                disabled={!canManage || !canPurgePermanent || busy || !hasCleanupSelection}
-                onClick={() => permanentPurgeMutation.mutate()}
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                Clean data
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
   if (isLoading && !data) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -998,8 +796,6 @@ export default function SystemSettingsPage() {
               </Card>
             ))
           )}
-
-          {renderMaintenanceCleanup()}
         </main>
       </div>
 

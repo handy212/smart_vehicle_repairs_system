@@ -166,15 +166,20 @@ class InventoryReportMixin:
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Get inventory dashboard statistics"""
-        from django.db.models import F
+        from django.db.models import F, Value, IntegerField
+        from django.db.models.functions import Coalesce
         from apps.branches.utils import resolve_branch
         branch = resolve_branch(request)
         queryset = InventoryService.get_stock_queryset(self.get_queryset(), branch)
-        
+        effective_reorder = Coalesce(
+            'branch_reorder_point', 'reorder_point', Value(0), output_field=IntegerField()
+        )
+        qs = queryset.annotate(_eff_reorder=effective_reorder)
+
         stats = {
-            'total_parts': queryset.count(),
-            'low_stock': queryset.filter(current_stock__lte=F('reorder_point')).count(),
-            'out_of_stock': queryset.filter(current_stock=0).count(),
+            'total_parts': qs.count(),
+            'low_stock': qs.filter(current_stock__lte=F('_eff_reorder')).count(),
+            'out_of_stock': qs.filter(current_stock=0).count(),
             'total_value': InventoryService.get_stock_valuation(self.get_queryset(), branch)
         }
         return Response(stats)
@@ -182,11 +187,17 @@ class InventoryReportMixin:
     @action(detail=False, methods=['get'])
     def low_stock(self, request):
         """Get list of parts with low stock"""
-        from django.db.models import F
+        from django.db.models import F, Value, IntegerField
+        from django.db.models.functions import Coalesce
         from apps.branches.utils import resolve_branch
         branch = resolve_branch(request)
         queryset = InventoryService.get_stock_queryset(self.get_queryset(), branch)
-        low_stock_parts = queryset.filter(current_stock__lte=F('reorder_point'))
+        effective_reorder = Coalesce(
+            'branch_reorder_point', 'reorder_point', Value(0), output_field=IntegerField()
+        )
+        low_stock_parts = queryset.annotate(_eff_reorder=effective_reorder).filter(
+            current_stock__lte=F('_eff_reorder')
+        )
         
         page = self.paginate_queryset(low_stock_parts)
         if page is not None:

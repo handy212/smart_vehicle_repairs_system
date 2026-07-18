@@ -333,7 +333,20 @@ export default function RepairsPage() {
 
   const startTaskMutation = useMutation({
     mutationFn: (taskId: number) => workOrderTasksApi.start(taskId),
-    onSuccess: refreshRepairs,
+    onSuccess: () => {
+      refreshRepairs();
+      toast({
+        title: "Task started",
+        description: "Labor Time started automatically for this repair task.",
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not start task",
+        description: getUserFacingError(error, "Unable to start task."),
+        variant: "destructive",
+      });
+    },
   });
 
   const skipTaskMutation = useMutation({
@@ -1059,6 +1072,18 @@ export default function RepairsPage() {
         <AddPartDialog
           workOrderId={workOrderId}
           workOrderStatus={workOrder.status}
+          vehicle={
+            workOrder.vehicle && typeof workOrder.vehicle === "object"
+              ? {
+                  id: workOrder.vehicle.id,
+                  make: workOrder.vehicle.make,
+                  model: workOrder.vehicle.model,
+                  year: workOrder.vehicle.year,
+                }
+              : workOrder.vehicle
+                ? { id: Number(workOrder.vehicle) }
+                : null
+          }
           open={showAddPartDialog}
           onClose={() => setShowAddPartDialog(false)}
           onSuccess={() => {

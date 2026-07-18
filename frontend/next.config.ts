@@ -27,6 +27,8 @@ const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Do not advertise the Next.js stack in responses.
+  poweredByHeader: false,
   // Dispose idle route bundles in dev to reduce memory pressure and dev-server crashes.
   onDemandEntries: isDev
     ? {
@@ -89,19 +91,26 @@ const nextConfig: NextConfig = {
 
   // Security headers — mitigate clickjacking, MIME sniffing, XSS
   async headers() {
+    const securityHeaders = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'X-XSS-Protection', value: '1; mode=block' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=(self)',
+      },
+    ];
+    if (!isDev) {
+      securityHeaders.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains; preload',
+      });
+    }
     return [
       {
         source: '/(.*)',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-XSS-Protection', value: '1; mode=block' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(self)',
-          },
-        ],
+        headers: securityHeaders,
       },
     ];
   },

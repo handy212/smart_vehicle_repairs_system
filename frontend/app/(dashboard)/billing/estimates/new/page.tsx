@@ -10,8 +10,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { inventoryApi } from "@/lib/api/inventory";
 import { billingLineTypeForPart, formatPartPickerMeta } from "@/lib/inventory/part-catalog";
-import { adminApi } from "@/lib/api/admin";
 import { workordersApi } from "@/lib/api/workorders";
+import { useStaffUsers, useTaxConfig } from "@/lib/hooks/useFormLookups";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,10 +162,7 @@ export default function NewEstimatePage() {
   });
 
   // Fetch Sales Agents (Staff)
-  const { data: salesAgents } = useQuery({
-    queryKey: ["users", "staff"],
-    queryFn: () => adminApi.users.staffList(),
-  });
+  const { data: salesAgents } = useStaffUsers();
 
   // Fetch parts for search
   const { data: partsData } = useQuery({
@@ -176,10 +173,7 @@ export default function NewEstimatePage() {
 
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
 
-  const { data: taxConfig } = useQuery({
-    queryKey: ["tax", "config"],
-    queryFn: () => billingApi.taxes.config(),
-  });
+  const { data: taxConfig } = useTaxConfig();
 
   const {
     register,

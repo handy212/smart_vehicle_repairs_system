@@ -73,11 +73,13 @@ function TechniciansContent() {
     const { data: branchesData } = useQuery({
         queryKey: ["branches", "active"],
         queryFn: () => branchesApi.list({ is_active: true }),
+        staleTime: 5 * 60 * 1000,
     });
     const branches = branchesData ?? [];
 
     const { data, isLoading } = useQuery({
         queryKey: ["technicians", searchQuery, statusFilter, branchFilter, sortConfig],
+        staleTime: 2 * 60 * 1000,
         queryFn: () => techniciansApi.list({
             search: searchQuery,
             status: statusFilter,

@@ -41,6 +41,9 @@ function ApplicantDetailContent() {
     const [showSchedule, setShowSchedule] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
     const [showDelete, setShowDelete] = useState(false);
+    const [showHire, setShowHire] = useState(false);
+    const [hirePassword, setHirePassword] = useState("");
+    const [hireStartDate, setHireStartDate] = useState("");
 
     const { data: applicant, isLoading } = useQuery({
         queryKey: ["hr", "applicant", id],
@@ -53,8 +56,16 @@ function ApplicantDetailContent() {
     });
 
     const hireMutation = useMutation({
-        mutationFn: () => hrApi.applicants.hire(id),
-        onSuccess: () => { toast.success("Applicant hired!"); queryClient.invalidateQueries({ queryKey: ["hr", "applicant", id] }); },
+        mutationFn: () => hrApi.applicants.hire(id, {
+            password: hirePassword,
+            ...(hireStartDate ? { start_date: hireStartDate } : {}),
+        }),
+        onSuccess: () => {
+            toast.success("Applicant hired!");
+            setShowHire(false);
+            setHirePassword("");
+            queryClient.invalidateQueries({ queryKey: ["hr", "applicant", id] });
+        },
         onError: () => toast.error("Failed to hire applicant"),
     });
 
@@ -80,7 +91,11 @@ function ApplicantDetailContent() {
                                     <SelectItem value="rejected">Rejected</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {applicant.status === "offered" && <Button onClick={() => hireMutation.mutate()} className="bg-success hover:bg-success">Hire Applicant</Button>}
+                            {applicant.status === "offered" && (
+                                <Button onClick={() => setShowHire(true)} className="bg-success hover:bg-success">
+                                    Hire Applicant
+                                </Button>
+                            )}
                             <Button variant="outline" onClick={() => setShowSchedule(true)}><Calendar className="h-4 w-4 mr-2" />Schedule Interview</Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -155,6 +170,48 @@ function ApplicantDetailContent() {
                 id={applicant.id}
                 onDeleted={() => { router.push("/hr/recruitment?tab=applicants"); }}
             />
+
+            <Dialog open={showHire} onOpenChange={setShowHire}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Hire {applicant.full_name}</DialogTitle>
+                        <DialogDescription>
+                            Create a staff login for this applicant. A temporary password is required.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="hire-password">Temporary password *</Label>
+                            <Input
+                                id="hire-password"
+                                type="password"
+                                value={hirePassword}
+                                onChange={(e) => setHirePassword(e.target.value)}
+                                placeholder="Set a temporary password"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="hire-start">Start date</Label>
+                            <Input
+                                id="hire-start"
+                                type="date"
+                                value={hireStartDate}
+                                onChange={(e) => setHireStartDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowHire(false)}>Cancel</Button>
+                        <Button
+                            onClick={() => hireMutation.mutate()}
+                            disabled={!hirePassword.trim() || hireMutation.isPending}
+                            className="bg-success hover:bg-success"
+                        >
+                            Confirm Hire
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
