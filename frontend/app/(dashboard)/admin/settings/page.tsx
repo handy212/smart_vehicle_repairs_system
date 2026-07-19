@@ -64,6 +64,7 @@ const SELECT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = 
   sms_provider: [
     { value: "hubtel", label: "Hubtel" },
     { value: "twilio", label: "Twilio" },
+    { value: "infobip", label: "Infobip" },
   ],
   payment_gateway: [{ value: "paystack", label: "Paystack" }],
   late_fee_type: [

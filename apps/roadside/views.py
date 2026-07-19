@@ -1149,34 +1149,39 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Import SMS utilities
-        try:
-            from apps.notifications_app.hubtel_sms import send_sms, is_hubtel_available
-        except ImportError:
-            return Response(
-                {'error': 'SMS service is not configured'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        
-        # Check if Hubtel SMS is available
-        if not is_hubtel_available():
-            return Response(
-                {'error': 'SMS service is not available. Please check configuration.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        
-        # Send SMS
-        success, response = send_sms(roadside_request.customer_phone, message)
+        from apps.notifications_app.models import Notification
+        from apps.notifications_app.services import NotificationService
+
+        notification = Notification.objects.create(
+            recipient=None,
+            notification_type='roadside',
+            channel='sms',
+            priority='high',
+            title=f'Roadside Request {roadside_request.request_number}',
+            message=message,
+            data={
+                'phone_number': roadside_request.customer_phone,
+                'direct_send': True,
+                'request_id': roadside_request.id,
+                'request_number': roadside_request.request_number,
+            },
+            related_object_type='roadside',
+            related_object_id=roadside_request.id,
+        )
+        success = NotificationService().send_notification(
+            notification,
+            force_sync=True,
+        )
         
         if success:
             return Response({
                 'success': True,
                 'message': 'SMS sent successfully',
-                'details': response
+                'notification_id': notification.id,
             })
         else:
             return Response(
-                {'error': f'Failed to send SMS: {response}'},
+                {'error': f'Failed to send SMS: {notification.error_message}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

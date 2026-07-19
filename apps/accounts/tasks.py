@@ -1,7 +1,6 @@
 import io
 import json
 import os
-import subprocess
 import zipfile
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from django.core.management import call_command
 from django.utils import timezone
 from django.utils.text import slugify
 
-from .admin_models import SystemBackup, SystemSettings, SystemUpdateRun
+from .admin_models import SystemBackup, SystemSettings
 
 
 def _backup_archive_root() -> Path:
@@ -105,51 +104,3 @@ def create_system_backup(backup_id: int) -> str:
 def cleanup_expired_system_backups() -> str:
     deleted = cleanup_expired_backups()
     return f'Deleted {deleted} expired backups'
-
-
-@shared_task
-def run_system_update(run_id: int) -> str:
-    run = SystemUpdateRun.objects.get(id=run_id)
-    run.status = 'in_progress'
-    run.error_message = ''
-    run.save(update_fields=['status', 'error_message'])
-
-    script = Path(getattr(settings, 'SYSTEM_UPDATE_RUN_SCRIPT', ''))
-    log_dir = Path(getattr(settings, 'SYSTEM_UPDATE_TARGET_DIR', '/var/www/svr')) / 'logs' / 'updates'
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f'update_{run_id}.log'
-
-    try:
-        with open(log_path, 'w', encoding='utf-8') as log_file:
-            process = subprocess.Popen(
-                ['sudo', '-n', str(script), '--ref', run.git_ref],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-            assert process.stdout is not None
-            for line in process.stdout:
-                log_file.write(line)
-            return_code = process.wait(timeout=3600)
-
-        log_text = log_path.read_text(encoding='utf-8', errors='replace')
-        run.log_output = log_text[-50000:]
-        run.status = 'completed' if return_code == 0 else 'failed'
-        if return_code != 0:
-            run.error_message = f'Update script exited with code {return_code}'
-        run.completed_at = timezone.now()
-        run.save(update_fields=['log_output', 'status', 'error_message', 'completed_at'])
-
-        from .system_updater import check_for_updates, deployed_commit
-
-        run.to_commit = check_for_updates(ref=run.git_ref).remote_commit or deployed_commit() or run.to_commit
-        run.save(update_fields=['to_commit'])
-        return f'Update run {run_id} {run.status}'
-    except Exception as exc:
-        run.status = 'failed'
-        run.error_message = str(exc)
-        run.completed_at = timezone.now()
-        if log_path.is_file():
-            run.log_output = log_path.read_text(encoding='utf-8', errors='replace')[-50000:]
-        run.save(update_fields=['status', 'error_message', 'completed_at', 'log_output'])
-        raise

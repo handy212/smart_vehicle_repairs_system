@@ -196,7 +196,6 @@ export const PERMISSIONS = {
   MANAGE_PERMISSIONS: "manage_permissions",
   VIEW_AUDIT_LOGS: "view_audit_logs",
   MANAGE_BACKUPS: "manage_backups",
-  MANAGE_SYSTEM_UPDATES: "manage_system_updates",
 
   // Gate pass
   VIEW_GATEPASS: "view_gatepass",
@@ -231,7 +230,6 @@ export const ADMIN_SECTION_PERMISSIONS = [
   PERMISSIONS.MANAGE_PERMISSIONS,
   PERMISSIONS.VIEW_AUDIT_LOGS,
   PERMISSIONS.MANAGE_BACKUPS,
-  PERMISSIONS.MANAGE_SYSTEM_UPDATES,
 ] as const;
 
 /** Permissions that grant access to the mobile technician shell. */

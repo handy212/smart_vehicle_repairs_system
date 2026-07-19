@@ -337,6 +337,7 @@ export default function IntegrationsPage() {
                   if (group.id === "control") return false;
                   if (group.id === "hubtel") return preferredProvider === "hubtel";
                   if (group.id === "twilio") return preferredProvider === "twilio";
+                  if (group.id === "infobip") return preferredProvider === "infobip";
                   return true;
                 }
                 return true;
@@ -392,6 +393,7 @@ export default function IntegrationsPage() {
                               <SelectContent>
                                 <SelectItem value="hubtel">Hubtel</SelectItem>
                                 <SelectItem value="twilio">Twilio</SelectItem>
+                                <SelectItem value="infobip">Infobip</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -448,10 +450,7 @@ export default function IntegrationsPage() {
                     const groupKeys = group.keys.filter((key) => settingsByKey[key]);
                     if (!groupKeys.length) return null;
 
-                    const title =
-                      product.id === "sms" && (group.id === "hubtel" || group.id === "twilio")
-                        ? `${group.id === "hubtel" ? "Hubtel" : "Twilio"} credentials`
-                        : group.title;
+                    const title = group.title;
 
                     return (
                       <Card key={`${product.id}-${group.id}`} className="border-border/80 shadow-none">

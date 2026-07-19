@@ -37,7 +37,6 @@ from .template_variables import (
     get_variable_hints as get_template_variable_hints,
     find_unresolved_placeholders,
 )
-from .hubtel_sms import send_sms, send_bulk_sms, is_hubtel_available
 
 
 class LargePageSizePagination(PageNumberPagination):
@@ -770,6 +769,10 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             'status': notification.status,
             'scheduled_for': notification.scheduled_for,
             'error_message': notification.error_message,
+            'provider': notification.provider,
+            'provider_message_id': notification.provider_message_id,
+            'provider_status': notification.provider_status,
+            'provider_status_updated_at': notification.provider_status_updated_at,
             'title': notification.title,
             'priority': notification.priority,
             'recipient_id': notification.recipient_id,
@@ -857,7 +860,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         
-        # Case 2: Send to Raw Phone - Direct Hubtel Call
+        # Case 2: Send to a raw phone through the configured provider chain.
         if phone:
             rendered_message = NotificationService()._render_template(message, _build_sms_context(None))
 
@@ -879,32 +882,32 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                     'notification_id': notification.id,
                 })
 
-            success, response = send_sms(phone, rendered_message)
-
-            # Log the direct phone SMS so it appears in history
-            log_status = 'sent' if success else 'failed'
-            Notification.objects.create(
+            notification = Notification.objects.create(
                 recipient=None,
                 notification_type='custom',
                 channel='sms',
                 priority='normal',
                 title='Direct SMS',
                 message=rendered_message,
-                status=log_status,
+                status='pending',
                 scheduled_for=scheduled_for,
                 data={'phone_number': phone, 'direct_send': True},
-                error_message=str(response) if not success else ''
+            )
+            success = NotificationService().send_notification(
+                notification,
+                force_sync=True,
             )
 
             if success:
                 return Response({
                     'status': 'success',
                     'message': 'SMS sent successfully',
-                    'details': response
+                    'notification_id': notification.id,
                 })
             else:
                 return Response({
-                    'error': response
+                    'error': notification.error_message or 'SMS failed to send',
+                    'notification_id': notification.id,
                 }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
@@ -997,7 +1000,6 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             if not phone:
                 return Response({'error': 'Original phone number is missing'}, status=status.HTTP_400_BAD_REQUEST)
 
-            success, response = send_sms(phone, notification.message)
             resent = Notification.objects.create(
                 recipient=None,
                 notification_type='custom',
@@ -1005,13 +1007,11 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                 priority=notification.priority,
                 title='Resent Direct SMS',
                 message=notification.message,
-                status='sent' if success else 'failed',
+                status='pending',
                 data={'phone_number': phone, 'direct_send': True, 'resent_from': notification.id},
-                error_message=str(response) if not success else '',
             )
+            success = NotificationService().send_notification(resent, force_sync=True)
             if success:
-                resent.sent_at = timezone.now()
-                resent.save(update_fields=['sent_at', 'updated_at'])
                 return Response({
                     'status': 'success',
                     'message': 'SMS resent successfully',
@@ -1019,7 +1019,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                 })
             return Response({
                 'status': 'failed',
-                'error': str(response),
+                'error': resent.error_message or 'SMS failed to resend',
                 'notification_id': resent.id,
             }, status=status.HTTP_400_BAD_REQUEST)
 

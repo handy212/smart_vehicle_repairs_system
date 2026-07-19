@@ -48,12 +48,15 @@ class NotificationSerializer(serializers.ModelSerializer):
             'notification_type', 'channel', 'priority', 'title', 'message',
             'data', 'status', 'is_read', 'read_at', 'sent_at', 'delivered_at',
             'failed_at', 'error_message', 'related_object_type', 'related_object_id',
+            'provider', 'provider_message_id', 'provider_status',
+            'provider_status_updated_at',
             'template', 'template_name', 'scheduled_for', 'expires_at',
             'is_expired', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'status', 'is_read', 'read_at', 'sent_at', 'delivered_at',
-            'failed_at', 'created_at', 'updated_at'
+            'failed_at', 'provider', 'provider_message_id', 'provider_status',
+            'provider_status_updated_at', 'created_at', 'updated_at'
         ]
     
     def get_recipient_name(self, obj):
@@ -78,6 +81,8 @@ class NotificationListSerializer(serializers.ModelSerializer):
             'id', 'recipient', 'recipient_name', 'notification_type',
             'channel', 'priority', 'title', 'message', 'data',
             'status', 'is_read', 'related_object_type', 'related_object_id',
+            'provider', 'provider_message_id', 'provider_status',
+            'provider_status_updated_at',
             'is_expired', 'created_at'
         ]
     

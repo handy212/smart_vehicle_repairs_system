@@ -17,6 +17,9 @@ class SMSSettingsPrecedenceTests(TestCase):
         TWILIO_ACCOUNT_SID='env-twilio-sid',
         TWILIO_AUTH_TOKEN='env-twilio-token',
         TWILIO_PHONE_NUMBER='+15550000000',
+        INFOBIP_BASE_URL='https://env.api.infobip.com',
+        INFOBIP_API_KEY='env-infobip-key',
+        INFOBIP_SENDER_ID='EnvSender',
     )
     def test_sms_settings_use_database_values_before_environment(self):
         SystemSettings.objects.create(
@@ -58,6 +61,17 @@ class SMSSettingsPrecedenceTests(TestCase):
             key='twilio_phone_number',
             value='+15551112222',
         )
+        SystemSettings.objects.create(
+            category='sms',
+            key='infobip_base_url',
+            value='https://admin.api.infobip.com',
+        )
+        SystemSettings.objects.create(
+            category='sms',
+            key='infobip_api_key',
+            value='admin-infobip-key',
+            is_secret=True,
+        )
 
         sms_settings = get_sms_settings()
 
@@ -68,6 +82,11 @@ class SMSSettingsPrecedenceTests(TestCase):
         self.assertEqual(sms_settings['twilio_account_sid'], 'admin-twilio-sid')
         self.assertEqual(sms_settings['twilio_auth_token'], 'admin-twilio-token')
         self.assertEqual(sms_settings['twilio_phone_number'], '+15551112222')
+        self.assertEqual(
+            sms_settings['infobip_base_url'],
+            'https://admin.api.infobip.com',
+        )
+        self.assertEqual(sms_settings['infobip_api_key'], 'admin-infobip-key')
 
     @override_settings(
         HUBTEL_CLIENT_ID='env-client-id',

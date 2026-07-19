@@ -1,7 +1,4 @@
-"""
-SMS Service Integration
-Supports Twilio, Hubtel, and mock providers.
-"""
+"""SMS service integrations and provider selection."""
 from __future__ import annotations
 
 import logging
@@ -78,6 +75,9 @@ class SMSService:
 
     def __init__(self):
         self.name = "Base SMS Service"
+        self.provider_key = "base"
+        self.supports_delivery_reports = False
+        self.last_response: dict = {}
 
     def send_sms(
         self,
@@ -113,6 +113,7 @@ class TwilioSMSService(SMSService):
     def __init__(self):
         super().__init__()
         self.name = "Twilio"
+        self.provider_key = "twilio"
         self.client = None
         self.from_number = ''
         self.messaging_service_sid = ''
@@ -195,6 +196,7 @@ class TwilioSMSService(SMSService):
                 to_e164,
                 message_obj.sid,
             )
+            self.last_response = {'message_id': message_obj.sid}
             return True, message_obj.sid
         except Exception as e:
             error_msg = str(e)
@@ -208,6 +210,7 @@ class HubtelSMSService(SMSService):
     def __init__(self):
         super().__init__()
         self.name = "Hubtel"
+        self.provider_key = "hubtel"
         try:
             from apps.notifications_app.hubtel_sms import send_sms
 
@@ -229,9 +232,41 @@ class HubtelSMSService(SMSService):
 
         if success:
             if isinstance(result, dict):
+                self.last_response = result
                 return True, result.get('message_id', 'sent')
+            self.last_response = {'message_id': str(result)}
             return True, str(result)
         return False, str(result)
+
+
+class InfobipSMSService(SMSService):
+    """Infobip SMS API v3 integration."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "Infobip"
+        self.provider_key = "infobip"
+        self.supports_delivery_reports = True
+        self.callback_data = ''
+
+    def send_sms(
+        self,
+        to: str,
+        message: str,
+        from_number: Optional[str] = None,
+    ) -> tuple[bool, str]:
+        from apps.notifications_app.infobip_sms import send_sms
+
+        success, result = send_sms(
+            to,
+            message,
+            from_number,
+            callback_data=self.callback_data,
+        )
+        if success and isinstance(result, dict):
+            self.last_response = result
+            return True, str(result.get('message_id') or 'sent')
+        return success, str(result)
 
 
 class MockSMSService(SMSService):
@@ -240,6 +275,7 @@ class MockSMSService(SMSService):
     def __init__(self):
         super().__init__()
         self.name = "Mock SMS"
+        self.provider_key = "mock"
         self.sent_messages = []
 
     def send_sms(
@@ -254,7 +290,9 @@ class MockSMSService(SMSService):
             'message': message,
             'from': from_number,
         })
-        return True, f"mock_{len(self.sent_messages)}"
+        message_id = f"mock_{len(self.sent_messages)}"
+        self.last_response = {'message_id': message_id}
+        return True, message_id
 
 
 def get_sms_service(service_name: str = None) -> SMSService:
@@ -262,7 +300,7 @@ def get_sms_service(service_name: str = None) -> SMSService:
     Get SMS service instance.
 
     Args:
-        service_name: 'twilio', 'hubtel', or 'mock'.
+        service_name: 'twilio', 'hubtel', 'infobip', or 'mock'.
                       If None, uses admin sms_provider / SMS_SERVICE setting.
     """
     if not service_name:
@@ -277,7 +315,55 @@ def get_sms_service(service_name: str = None) -> SMSService:
         return TwilioSMSService()
     if service_name == 'hubtel':
         return HubtelSMSService()
+    if service_name == 'infobip':
+        return InfobipSMSService()
     return MockSMSService()
+
+
+def is_sms_provider_available(provider_name: str) -> bool:
+    """Return whether a provider has usable credentials."""
+    provider_name = str(provider_name or '').lower().strip()
+    if provider_name == 'hubtel':
+        from apps.notifications_app.hubtel_sms import is_hubtel_available
+
+        return is_hubtel_available()
+    if provider_name == 'twilio':
+        return is_twilio_available()
+    if provider_name == 'infobip':
+        from apps.notifications_app.infobip_sms import is_infobip_available
+
+        return is_infobip_available()
+    if provider_name == 'mock':
+        return True
+    return False
+
+
+def get_ordered_sms_services(preferred: str | None = None) -> list[SMSService]:
+    """Build configured services with the preferred provider first."""
+    if not preferred:
+        from apps.accounts.settings_utils import get_sms_settings as load_sms_settings
+
+        sms_settings = load_sms_settings()
+        preferred = sms_settings.get('sms_provider') or getattr(
+            settings, 'SMS_SERVICE', 'hubtel'
+        )
+    preferred = str(preferred).lower().strip()
+    real_providers = ['hubtel', 'twilio', 'infobip']
+    ordered = [preferred, *real_providers]
+    unique = []
+    for provider in ordered:
+        if provider not in unique and provider in {*real_providers, 'mock'}:
+            unique.append(provider)
+    services = []
+    for provider in unique:
+        if not is_sms_provider_available(provider):
+            continue
+        service = get_sms_service(provider)
+        # Keep normalized metadata reliable even when a provider adapter is mocked.
+        service.provider_key = provider
+        service.supports_delivery_reports = provider == 'infobip'
+        services.append(service)
+    return services
 
 
 def send_notification_sms(

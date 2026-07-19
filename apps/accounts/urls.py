@@ -15,7 +15,7 @@ from .jwt_views import (
 )
 from .two_factor_views import TwoFactorViewSet
 from .admin_api_views import (
-    SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet, SystemUpdateViewSet,
+    SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet,
     EmailTemplateViewSet, SMSTemplateViewSet, admin_dashboard_stats,
     RoleViewSet, PermissionViewSet, SystemModuleViewSet
 )
@@ -31,7 +31,6 @@ admin_router = DefaultRouter()
 admin_router.register(r'settings', SystemSettingsViewSet, basename='system-settings')
 admin_router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
 admin_router.register(r'backups', SystemBackupViewSet, basename='backup')
-admin_router.register(r'updates', SystemUpdateViewSet, basename='system-update')
 admin_router.register(r'email-templates', EmailTemplateViewSet, basename='email-template')
 admin_router.register(r'sms-templates', SMSTemplateViewSet, basename='sms-template')
 admin_router.register(r'roles', RoleViewSet, basename='role')

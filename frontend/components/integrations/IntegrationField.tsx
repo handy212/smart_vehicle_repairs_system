@@ -46,6 +46,7 @@ const SELECT_OPTIONS: Record<string, Array<{ value: string; label: string }>> = 
   sms_provider: [
     { value: "hubtel", label: "Hubtel" },
     { value: "twilio", label: "Twilio" },
+    { value: "infobip", label: "Infobip" },
   ],
   ai_gemini_model: [
     { value: "gemini-flash-lite-latest", label: "Flash-Lite (latest alias)" },

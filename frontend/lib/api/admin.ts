@@ -135,50 +135,6 @@ export interface SystemBackup {
   completed_at?: string;
 }
 
-export interface SystemUpdateRun {
-  id: number;
-  status: string;
-  git_ref: string;
-  from_commit?: string;
-  to_commit?: string;
-  created_by?: number;
-  created_by_name?: string;
-  log_output?: string;
-  error_message?: string;
-  started_at: string;
-  completed_at?: string;
-}
-
-export interface SystemUpdateCheck {
-  available: boolean;
-  deployed_commit?: string | null;
-  deployed_short?: string | null;
-  deployed_message?: string | null;
-  remote_commit?: string | null;
-  remote_short?: string | null;
-  remote_message?: string | null;
-  git_ref: string;
-  commits_behind?: number | null;
-  check_error?: string | null;
-  updater: {
-    enabled: boolean;
-    bare_metal_layout: boolean;
-    sudo_configured: boolean;
-    source_dir: string;
-    target_dir: string;
-    git_ref: string;
-    can_check: boolean;
-    can_apply: boolean;
-  };
-}
-
-export interface SystemUpdateListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: SystemUpdateRun[];
-}
-
 export interface AdminDashboardStats {
   total_users: number;
   active_users: number;
@@ -667,30 +623,6 @@ export const adminApi = {
 
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/accounts/admin/backups/${id}/`);
-    },
-  },
-
-  updates: {
-    list: async (params?: { page?: number }): Promise<SystemUpdateListResponse> => {
-      const response = await apiClient.get("/accounts/admin/updates/", { params });
-      return response.data;
-    },
-
-    check: async (ref?: string): Promise<SystemUpdateCheck> => {
-      const response = await apiClient.get("/accounts/admin/updates/check/", {
-        params: ref ? { ref } : undefined,
-      });
-      return response.data;
-    },
-
-    apply: async (data?: { git_ref?: string }): Promise<SystemUpdateRun> => {
-      const response = await apiClient.post("/accounts/admin/updates/apply/", data ?? {});
-      return response.data;
-    },
-
-    get: async (id: number): Promise<SystemUpdateRun> => {
-      const response = await apiClient.get(`/accounts/admin/updates/${id}/`);
-      return response.data;
     },
   },
 

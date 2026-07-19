@@ -13,6 +13,11 @@ const FIELD_LABELS: Record<string, string> = {
   twilio_auth_token: "Auth token",
   twilio_phone_number: "Phone number",
   twilio_messaging_service_sid: "Messaging service SID",
+  infobip_base_url: "Base URL",
+  infobip_api_key: "API key",
+  infobip_sender_id: "Sender ID",
+  infobip_webhook_username: "Webhook username",
+  infobip_webhook_password: "Webhook password",
   firebase_enabled: "Push enabled",
   firebase_api_key: "API key",
   firebase_project_id: "Project ID",
@@ -43,7 +48,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const FIELD_HINTS: Record<string, string> = {
   sms_enabled: "Master switch for outbound SMS. Provider credentials below must also be set.",
-  sms_provider: "Tried first when sending SMS. The other provider is used as fallback if configured.",
+  sms_provider: "Tried first when sending SMS. Other configured providers are used as fallbacks.",
   sms_signature: "Optional text appended to outbound SMS where supported.",
   sms_test_number: "Default Ghana mobile used by SMS test tools (e.g. 0244123456).",
   hubtel_client_id: "Hubtel SMSC client ID from your Hubtel dashboard.",
@@ -54,6 +59,11 @@ const FIELD_HINTS: Record<string, string> = {
   twilio_auth_token: "Twilio Auth Token from the Twilio console.",
   twilio_phone_number: "E.164 sender number, e.g. +233XXXXXXXXX. Required for voice calls.",
   twilio_messaging_service_sid: "Optional MG… SID. Can replace the phone number for SMS only.",
+  infobip_base_url: "Your account-specific Infobip URL, including https://.",
+  infobip_api_key: "API key from Infobip Developer Tools.",
+  infobip_sender_id: "Approved sender name or number shown to recipients.",
+  infobip_webhook_username: "HTTP Basic username configured on the Infobip delivery subscription.",
+  infobip_webhook_password: "HTTP Basic password configured on the Infobip delivery subscription.",
   firebase_enabled: "Enable Firebase Cloud Messaging for mobile/web push.",
   firebase_credentials_path: "Server path to the Firebase service-account JSON file.",
   recaptcha_enabled: "Protect public forms (login, feedback) with Google reCAPTCHA.",
@@ -70,7 +80,7 @@ function humanizeKey(key: string): string {
 }
 
 export function fieldPrefixForKey(key: string): string {
-  const prefixes = ["hubtel_", "twilio_", "sms_", "firebase_", "recaptcha_", "quickbooks_", "ai_"];
+  const prefixes = ["hubtel_", "twilio_", "infobip_", "sms_", "firebase_", "recaptcha_", "quickbooks_", "ai_"];
   return prefixes.find((p) => key.startsWith(p)) ?? "";
 }
 
@@ -106,6 +116,7 @@ export function isHubtelSmsSetting(setting: { key: string; category?: string }):
     setting.category === "sms" ||
     setting.key.startsWith("hubtel_") ||
     setting.key.startsWith("twilio_") ||
+    setting.key.startsWith("infobip_") ||
     setting.key.startsWith("sms_")
   );
 }
@@ -155,6 +166,11 @@ const SMS_SETTING_ORDER = [
   "twilio_auth_token",
   "twilio_phone_number",
   "twilio_messaging_service_sid",
+  "infobip_base_url",
+  "infobip_api_key",
+  "infobip_sender_id",
+  "infobip_webhook_username",
+  "infobip_webhook_password",
   "sms_signature",
   "sms_test_number",
 ];
@@ -198,6 +214,12 @@ export const SMS_SUBGROUPS: IntegrationSubgroup[] = [
     title: "Twilio",
     description: "Fallback SMS and voice. Leave blank if unused.",
     match: (key) => key.startsWith("twilio_"),
+  },
+  {
+    id: "infobip",
+    title: "Infobip",
+    description: "Infobip SMS API and delivery-report credentials.",
+    match: (key) => key.startsWith("infobip_"),
   },
 ];
 

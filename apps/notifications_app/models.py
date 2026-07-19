@@ -172,6 +172,14 @@ class Notification(models.Model):
     delivered_at = models.DateTimeField(null=True, blank=True)
     failed_at = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(blank=True)
+    provider = models.CharField(max_length=32, blank=True)
+    provider_message_id = models.CharField(
+        max_length=255,
+        blank=True,
+        db_index=True,
+    )
+    provider_status = models.CharField(max_length=100, blank=True)
+    provider_status_updated_at = models.DateTimeField(null=True, blank=True)
     
     # Related objects (generic foreign key alternative)
     related_object_type = models.CharField(max_length=50, blank=True)
@@ -199,6 +207,7 @@ class Notification(models.Model):
             models.Index(fields=['recipient', 'is_read']),
             models.Index(fields=['status', 'scheduled_for']),
             models.Index(fields=['notification_type', 'created_at']),
+            models.Index(fields=['provider', 'provider_message_id']),
         ]
     
     def __str__(self):

@@ -100,6 +100,7 @@ export const INTEGRATION_PRODUCTS: IntegrationProduct[] = [
     credentialKeyGroups: [
       ["hubtel_client_id", "hubtel_client_secret"],
       ["twilio_account_sid", "twilio_auth_token"],
+      ["infobip_base_url", "infobip_api_key", "infobip_sender_id"],
     ],
     docsHint: "Turn SMS on, pick a preferred provider, then fill that provider’s credentials.",
     fieldGroups: [
@@ -121,6 +122,17 @@ export const INTEGRATION_PRODUCTS: IntegrationProduct[] = [
           "twilio_auth_token",
           "twilio_phone_number",
           "twilio_messaging_service_sid",
+        ],
+      },
+      {
+        id: "infobip",
+        title: "Infobip credentials",
+        keys: [
+          "infobip_base_url",
+          "infobip_api_key",
+          "infobip_sender_id",
+          "infobip_webhook_username",
+          "infobip_webhook_password",
         ],
       },
     ],
@@ -336,6 +348,12 @@ export function shouldExpandFieldGroup(
     if (group.id === "twilio") {
       return (
         preferred === "twilio" ||
+        group.keys.some((key) => !isPlaceholderCredential(values[key]))
+      );
+    }
+    if (group.id === "infobip") {
+      return (
+        preferred === "infobip" ||
         group.keys.some((key) => !isPlaceholderCredential(values[key]))
       );
     }

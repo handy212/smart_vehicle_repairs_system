@@ -241,11 +241,6 @@ class Command(BaseCommand):
                 'view_branches': ('system', 'View Branches', 'View branch information'),
                 'view_branch_data': ('system', 'View Branch Data', 'View data from assigned branches'),
                 'manage_backups': ('system', 'Manage Backups', 'Create and restore system backups'),
-                'manage_system_updates': (
-                    'system',
-                    'Manage System Updates',
-                    'Check for and apply application updates from the admin UI',
-                ),
                 'manage_data_exchange': (
                     'system',
                     'Manage Data Import/Export',

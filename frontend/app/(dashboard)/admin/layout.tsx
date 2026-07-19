@@ -14,7 +14,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         "manage_permissions",
         "view_audit_logs",
         "manage_backups",
-        "manage_system_updates",
         "manage_branches",
         "view_branches",
         "manage_modules",

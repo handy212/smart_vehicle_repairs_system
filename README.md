@@ -180,6 +180,24 @@ Copy [`.env.example`](.env.example) to `.env`. Key variables:
 
 Environment-specific settings live under [`config/settings/`](config/settings/) (`development`, `production`, `staging`, `testing`).
 
+### Infobip SMS
+
+Set `INFOBIP_BASE_URL`, `INFOBIP_API_KEY`, and `INFOBIP_SENDER_ID`, or enter the
+same values under Admin → Integrations → Communication. Select `infobip` as the
+preferred SMS provider.
+
+Delivery reports are accepted at:
+
+```text
+https://YOUR_API_HOST/api/notifications/webhooks/infobip/delivery-report/
+```
+
+In the Infobip portal, create an SMS delivery subscription/notification profile
+for this URL and configure HTTP Basic authentication. Store the same credentials
+as `INFOBIP_WEBHOOK_USERNAME` and `INFOBIP_WEBHOOK_PASSWORD` (or in the admin
+integration fields). The endpoint rejects callbacks when either credential is
+missing or invalid.
+
 ## User roles
 
 Dynamic RBAC with roles such as Admin, Manager, Service Coordinator, Receptionist, Parts Manager, Accountant, Technician, and Customer. Permissions are seeded via `python manage.py init_permissions`.

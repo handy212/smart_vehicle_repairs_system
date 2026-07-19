@@ -48,8 +48,13 @@ def get_setting(key, default='', use_cache=True, db_first=False):
         'twilio_auth_token': 'TWILIO_AUTH_TOKEN',
         'twilio_phone_number': 'TWILIO_PHONE_NUMBER',
         'twilio_messaging_service_sid': 'TWILIO_MESSAGING_SERVICE_SID',
+        'infobip_base_url': 'INFOBIP_BASE_URL',
+        'infobip_api_key': 'INFOBIP_API_KEY',
+        'infobip_sender_id': 'INFOBIP_SENDER_ID',
+        'infobip_webhook_username': 'INFOBIP_WEBHOOK_USERNAME',
+        'infobip_webhook_password': 'INFOBIP_WEBHOOK_PASSWORD',
         'sms_provider': 'SMS_SERVICE',
-        'sms_enabled': 'HUBTEL_SMS_ENABLED',
+        'sms_enabled': 'SMS_ENABLED',
         'quickbooks_client_id': 'QUICKBOOKS_CLIENT_ID',
         'quickbooks_client_secret': 'QUICKBOOKS_CLIENT_SECRET',
         'quickbooks_sandbox_enabled': 'QUICKBOOKS_SANDBOX_ENABLED',
@@ -60,6 +65,13 @@ def get_setting(key, default='', use_cache=True, db_first=False):
     def get_env_value():
         if key in env_mapping:
             env_val = getattr(settings, env_mapping[key], None)
+            if (
+                key == 'sms_enabled'
+                and not env_val
+                and getattr(settings, 'HUBTEL_SMS_ENABLED', False)
+            ):
+                # Backward-compatible fallback for existing deployments.
+                env_val = True
             if env_val is not None:
                 # Handle boolean strings from settings if necessary
                 if isinstance(env_val, bool):
@@ -345,6 +357,11 @@ def get_sms_settings():
         'twilio_auth_token',
         'twilio_phone_number',
         'twilio_messaging_service_sid',
+        'infobip_base_url',
+        'infobip_api_key',
+        'infobip_sender_id',
+        'infobip_webhook_username',
+        'infobip_webhook_password',
         'sms_signature',
         'sms_test_number',
     ]
@@ -354,6 +371,7 @@ def get_sms_settings():
         'sms_provider': 'hubtel',
         'hubtel_api_url': 'https://smsc.hubtel.com/v1/messages/send',
         'twilio_messaging_service_sid': '',
+        'infobip_base_url': '',
     }
     
     return get_settings(keys, defaults, db_first=True)

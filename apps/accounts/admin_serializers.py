@@ -4,7 +4,7 @@ Serializers for Admin Features
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from auditlog.models import LogEntry
-from .admin_models import SystemSettings, SystemBackup, SystemUpdateRun, EmailTemplate, SMSTemplate, SystemModule
+from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate, SystemModule
 from .permission_models import Role, Permission
 import json
 
@@ -223,46 +223,6 @@ class SystemBackupSerializer(serializers.ModelSerializer):
             data['created_by'] = None
             data['created_by_name'] = 'System'
         return data
-
-
-class SystemUpdateRunSerializer(serializers.ModelSerializer):
-    created_by_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SystemUpdateRun
-        fields = [
-            'id', 'status', 'git_ref', 'from_commit', 'to_commit',
-            'created_by', 'created_by_name', 'log_output', 'error_message',
-            'started_at', 'completed_at',
-        ]
-        read_only_fields = [
-            'id', 'status', 'from_commit', 'to_commit', 'created_by',
-            'created_by_name', 'log_output', 'error_message',
-            'started_at', 'completed_at',
-        ]
-
-    def get_created_by_name(self, obj):
-        if obj.created_by:
-            return obj.created_by.get_full_name() or obj.created_by.email
-        return None
-
-
-class SystemUpdateCheckSerializer(serializers.Serializer):
-    available = serializers.BooleanField()
-    deployed_commit = serializers.CharField(allow_null=True)
-    deployed_short = serializers.CharField(allow_null=True)
-    deployed_message = serializers.CharField(allow_null=True)
-    remote_commit = serializers.CharField(allow_null=True)
-    remote_short = serializers.CharField(allow_null=True)
-    remote_message = serializers.CharField(allow_null=True)
-    git_ref = serializers.CharField()
-    commits_behind = serializers.IntegerField(allow_null=True)
-    check_error = serializers.CharField(allow_null=True, required=False)
-    updater = serializers.DictField()
-
-
-class SystemUpdateTriggerSerializer(serializers.Serializer):
-    git_ref = serializers.CharField(required=False, default='main', max_length=120)
 
 
 class EmailTemplateSerializer(serializers.ModelSerializer):

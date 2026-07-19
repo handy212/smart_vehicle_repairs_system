@@ -19,7 +19,7 @@ import json
 from datetime import datetime, time as dt_time
 
 from auditlog.models import LogEntry
-from .admin_models import SystemSettings, SystemBackup, SystemUpdateRun, EmailTemplate, SMSTemplate, SystemModule
+from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate, SystemModule
 from .permission_models import Role, Permission
 from .models import User
 from .serializers import UserSerializer
@@ -1126,88 +1126,3 @@ class SystemModuleViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated(), IsSuperAdmin()]
 
 
-class SystemUpdateViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Check for application updates and trigger bare-metal production deploys.
-    """
-    permission_classes = [IsAuthenticated, HasPermission('manage_system_updates')]
-    ordering = ['-started_at']
-
-    def get_queryset(self):
-        return SystemUpdateRun.objects.all()
-
-    def get_serializer_class(self):
-        from .admin_serializers import (
-            SystemUpdateRunSerializer,
-            SystemUpdateCheckSerializer,
-            SystemUpdateTriggerSerializer,
-        )
-        if self.action == 'check':
-            return SystemUpdateCheckSerializer
-        if self.action == 'apply':
-            return SystemUpdateTriggerSerializer
-        return SystemUpdateRunSerializer
-
-    @action(detail=False, methods=['get'])
-    def check(self, request):
-        from .system_updater import check_for_updates, updater_status
-
-        ref = request.query_params.get('ref') or None
-        availability = check_for_updates(ref=ref)
-        payload = availability.as_dict()
-        payload['updater'] = updater_status()
-        serializer = self.get_serializer(payload)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['post'])
-    def apply(self, request):
-        from .system_updater import (
-            check_for_updates,
-            deployed_commit,
-            updater_status,
-        )
-
-        status_info = updater_status()
-        if not status_info['can_apply']:
-            return Response(
-                {
-                    'detail': (
-                        'System updates are not available on this server. '
-                        'Install deploy/sudoers-svr-system-update and set SYSTEM_UPDATE_ENABLED=true.'
-                    ),
-                    'updater': status_info,
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        if SystemUpdateRun.objects.filter(status__in=['pending', 'in_progress']).exists():
-            return Response(
-                {'detail': 'Another update is already running.'},
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        trigger = self.get_serializer(data=request.data)
-        trigger.is_valid(raise_exception=True)
-        git_ref = trigger.validated_data.get('git_ref') or 'main'
-
-        availability = check_for_updates(ref=git_ref)
-        run = SystemUpdateRun.objects.create(
-            status='pending',
-            git_ref=git_ref,
-            from_commit=availability.deployed_commit or deployed_commit() or '',
-            to_commit=availability.remote_commit or '',
-            created_by=request.user,
-        )
-
-        from .tasks import run_system_update
-        async_enabled = str(
-            getattr(settings, 'SYSTEM_UPDATE_ASYNC', os.environ.get('SYSTEM_UPDATE_ASYNC', 'true'))
-        ).lower() in ('1', 'true', 'yes', 'on')
-        if async_enabled:
-            run_system_update.delay(run.id)
-        else:
-            run_system_update(run.id)
-            run.refresh_from_db()
-
-        output = SystemUpdateRunSerializer(run, context={'request': request})
-        return Response(output.data, status=status.HTTP_202_ACCEPTED)

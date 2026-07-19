@@ -9,7 +9,6 @@ import logging
 
 from .models import Notification, NotificationLog, WebPushSubscription
 from .firebase import send_push_notification, is_firebase_available
-from .hubtel_sms import is_hubtel_available
 from .whatsapp_service import get_whatsapp_service
 from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings, get_whatsapp_settings, get_site_url
 from .currency import enrich_money_context, format_money
@@ -169,7 +168,7 @@ class NotificationService:
     
     def _send_sms(self, notification):
         """
-        Send SMS via the configured provider (Hubtel / Twilio), with fallback.
+        Send SMS through the preferred configured provider, with fallback.
         """
         try:
             notification_data = notification.data or {}
@@ -205,85 +204,81 @@ class NotificationService:
             else:
                 message = notification.message[:1000]
 
-            from apps.accounts.settings_utils import get_sms_settings
-            from .hubtel_sms import is_hubtel_available, send_sms as send_hubtel_sms
-            from .sms_service import TwilioSMSService, is_twilio_available
+            from .sms_service import get_ordered_sms_services
 
-            sms_settings = get_sms_settings()
-            preferred = str(sms_settings.get('sms_provider') or 'hubtel').lower().strip()
+            services = get_ordered_sms_services()
+            if not services:
+                error_msg = "No SMS provider available or configured"
+                notification.mark_as_failed(error_msg)
+                self._log_action(notification, 'failed', error_msg)
+                return False
 
             errors = []
-
-            def try_hubtel():
-                if not is_hubtel_available():
-                    return None
-                success, response = send_hubtel_sms(
-                    phone_number=phone_number,
-                    message=message,
-                )
-                if success:
-                    message_id = (
-                        response.get('message_id')
-                        if isinstance(response, dict)
-                        else response
-                    )
-                    notification.mark_as_sent()
-                    notification.mark_as_delivered()
-                    self._log_action(
-                        notification,
-                        'sent',
-                        f'SMS sent via Hubtel to {phone_number}',
-                    )
-                    logger.info(
-                        "SMS sent via Hubtel to %s: %s",
+            for sms_service in services:
+                if sms_service.provider_key == 'infobip':
+                    sms_service.callback_data = f'notification_id:{notification.id}'
+                success, result = sms_service.send_sms(phone_number, message)
+                if not success:
+                    errors.append(f"{sms_service.name}: {result}")
+                    logger.warning(
+                        "%s SMS failed for %s: %s",
+                        sms_service.name,
                         phone_number,
-                        message_id,
+                        result,
                     )
-                    return True
-                errors.append(f"Hubtel: {response}")
-                logger.warning("Hubtel SMS failed for %s: %s", phone_number, response)
-                return False
-
-            def try_twilio():
-                if not is_twilio_available():
-                    return None
-                twilio = TwilioSMSService()
-                success, result = twilio.send_sms(phone_number, message)
-                if success:
-                    notification.mark_as_sent()
-                    notification.mark_as_delivered()
-                    self._log_action(
-                        notification,
-                        'sent',
-                        f'SMS sent via Twilio to {phone_number}',
-                    )
-                    logger.info("SMS sent via Twilio to %s: %s", phone_number, result)
-                    return True
-                errors.append(f"Twilio: {result}")
-                logger.warning("Twilio SMS failed for %s: %s", phone_number, result)
-                return False
-
-            if preferred == 'twilio':
-                providers = (try_twilio, try_hubtel)
-            else:
-                # Default / hubtel / unknown → Hubtel first (Ghana primary)
-                providers = (try_hubtel, try_twilio)
-
-            attempted = False
-            for attempt in providers:
-                outcome = attempt()
-                if outcome is None:
                     continue
-                attempted = True
-                if outcome is True:
-                    return True
 
-            if not attempted:
-                error_msg = "No SMS provider available or configured"
-            elif preferred == 'twilio':
-                error_msg = "Twilio SMS failed and Hubtel fallback unavailable"
-            else:
-                error_msg = "Hubtel SMS failed and Twilio fallback unavailable"
+                raw_provider_response = getattr(sms_service, 'last_response', {})
+                provider_response = (
+                    raw_provider_response
+                    if isinstance(raw_provider_response, dict)
+                    else {}
+                )
+                service_name = getattr(sms_service, 'name', '')
+                if not isinstance(service_name, str) or not service_name:
+                    service_name = sms_service.provider_key.title()
+                message_id = str(
+                    provider_response.get('message_id') or result or ''
+                )
+                provider_status = str(
+                    provider_response.get('status_name')
+                    or provider_response.get('status_group')
+                    or 'accepted'
+                )
+                notification.provider = sms_service.provider_key
+                notification.provider_message_id = message_id
+                notification.provider_status = provider_status
+                notification.provider_status_updated_at = timezone.now()
+                notification.save(update_fields=[
+                    'provider',
+                    'provider_message_id',
+                    'provider_status',
+                    'provider_status_updated_at',
+                    'updated_at',
+                ])
+                notification.mark_as_sent()
+                if not sms_service.supports_delivery_reports:
+                    notification.mark_as_delivered()
+
+                self._log_action(
+                    notification,
+                    'sent',
+                    f'SMS sent via {service_name} to {phone_number}',
+                    metadata={
+                        'provider': sms_service.provider_key,
+                        'message_id': message_id,
+                        'provider_response': provider_response,
+                    },
+                )
+                logger.info(
+                    "SMS sent via %s to %s: %s",
+                    service_name,
+                    phone_number,
+                    message_id,
+                )
+                return True
+
+            error_msg = "All configured SMS providers failed"
             if errors:
                 error_msg = f"{error_msg} ({'; '.join(errors)})"
 
@@ -842,7 +837,7 @@ class NotificationService:
 
         return f'{base}/notifications' if base else '/notifications'
     
-    def _log_action(self, notification, action, details):
+    def _log_action(self, notification, action, details, metadata=None):
         """
         Log notification action
         """
@@ -850,7 +845,8 @@ class NotificationService:
             NotificationLog.objects.create(
                 notification=notification,
                 action=action,
-                details=details
+                details=details,
+                metadata=metadata or {},
             )
         except Exception as e:
             logger.error(f"Failed to log notification action: {str(e)}")

@@ -186,11 +186,9 @@ def send_bulk_sms_async(recipients, message, scheduled_for=None):
     """
     from apps.notifications_app.models import Notification
     from apps.notifications_app.services import NotificationService
-    from apps.notifications_app.hubtel_sms import send_bulk_sms
     
     logger.info(f"Starting async bulk SMS to {len(recipients)} recipients")
-    
-    raw_phones = []
+    service = NotificationService()
     
     for recipient in recipients:
         if recipient.get('type') == 'user':
@@ -205,7 +203,6 @@ def send_bulk_sms_async(recipients, message, scheduled_for=None):
                     message=message,
                     scheduled_for=scheduled_for
                 )
-                service = NotificationService()
                 service.send_notification(notification, force_sync=True)
             except Exception as e:
                 logger.error(f"Async bulk SMS failed for user {recipient.get('value')}: {e}")
@@ -224,9 +221,16 @@ def send_bulk_sms_async(recipients, message, scheduled_for=None):
                     data={'phone_number': phone_number, 'direct_send': True},
                 )
             else:
-                raw_phones.append(phone_number)
-            
-    if raw_phones and not scheduled_for:
-        send_bulk_sms(raw_phones, message)
+                notification = Notification.objects.create(
+                    recipient=None,
+                    notification_type='custom',
+                    channel='sms',
+                    priority='normal',
+                    title='Direct Bulk SMS',
+                    message=message,
+                    status='pending',
+                    data={'phone_number': phone_number, 'direct_send': True},
+                )
+                service.send_notification(notification, force_sync=True)
     
     return f"Completed async bulk SMS to {len(recipients)} recipients"

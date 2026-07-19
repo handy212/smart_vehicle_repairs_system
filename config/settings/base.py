@@ -364,21 +364,6 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 SYSTEM_BACKUP_ASYNC = env.bool('SYSTEM_BACKUP_ASYNC', default=False)
 
-# Bare-metal UI updater (/opt -> /var/www/svr). Requires deploy/sudoers-svr-system-update.
-SYSTEM_UPDATE_SOURCE_DIR = env('SYSTEM_UPDATE_SOURCE_DIR', default='/opt/smart_vehicle_repairs_system')
-SYSTEM_UPDATE_TARGET_DIR = env('SYSTEM_UPDATE_TARGET_DIR', default='/var/www/svr')
-SYSTEM_UPDATE_GIT_REF = env('SYSTEM_UPDATE_GIT_REF', default='main')
-SYSTEM_UPDATE_GIT_URL = env(
-    'SYSTEM_UPDATE_GIT_URL',
-    default='https://github.com/handy212/smart_vehicle_repairs_system.git',
-)
-SYSTEM_UPDATE_RUN_SCRIPT = env(
-    'SYSTEM_UPDATE_RUN_SCRIPT',
-    default=str(Path(SYSTEM_UPDATE_SOURCE_DIR) / 'deploy' / 'run-system-update.sh'),
-)
-SYSTEM_UPDATE_ENABLED = env.bool('SYSTEM_UPDATE_ENABLED', default=False)
-SYSTEM_UPDATE_ASYNC = env.bool('SYSTEM_UPDATE_ASYNC', default=True)
-
 # QBO outbound failed-sync retry (used by Celery Beat below)
 QUICKBOOKS_RETRY_FAILED_OUTBOUND_ENABLED = env.bool(
     'QUICKBOOKS_RETRY_FAILED_OUTBOUND_ENABLED', default=True,
@@ -535,8 +520,17 @@ TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = env('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = env('TWILIO_PHONE_NUMBER', default='')
 TWILIO_MESSAGING_SERVICE_SID = env('TWILIO_MESSAGING_SERVICE_SID', default='')
-# Fallback when admin sms_provider is unset (hubtel | twilio | mock)
+
+# Infobip Configuration (SMS)
+INFOBIP_BASE_URL = env('INFOBIP_BASE_URL', default='')
+INFOBIP_API_KEY = env('INFOBIP_API_KEY', default='')
+INFOBIP_SENDER_ID = env('INFOBIP_SENDER_ID', default='')
+INFOBIP_WEBHOOK_USERNAME = env('INFOBIP_WEBHOOK_USERNAME', default='')
+INFOBIP_WEBHOOK_PASSWORD = env('INFOBIP_WEBHOOK_PASSWORD', default='')
+
+# Fallback when admin sms_provider is unset (hubtel | twilio | infobip | mock)
 SMS_SERVICE = env('SMS_SERVICE', default='hubtel')
+SMS_ENABLED = env.bool('SMS_ENABLED', default=False)
 
 # WhatsApp Integration
 WHATSAPP_ENABLED = env.bool('WHATSAPP_ENABLED', default=False)

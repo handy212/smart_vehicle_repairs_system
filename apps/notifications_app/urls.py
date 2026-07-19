@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from .webhooks import InfobipDeliveryReportWebhook
 
 # app_name = 'notifications_app'  # Commented out to avoid conflict with frontend namespace
 
@@ -14,6 +15,11 @@ router.register('push-subscriptions', views.WebPushSubscriptionViewSet, basename
 
 urlpatterns = [
     path('', include(router.urls)),
+    path(
+        'webhooks/infobip/delivery-report/',
+        InfobipDeliveryReportWebhook.as_view(),
+        name='infobip-delivery-report',
+    ),
     path('render-template/', views.TemplateRenderView.as_view(), name='render-template'),
     path(
         'public/documents/<path:token>/',

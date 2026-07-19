@@ -23,7 +23,6 @@ import {
   Clock,
   CreditCard,
   Database,
-  Download,
   FileCheck,
   FileText,
   GraduationCap,
@@ -220,7 +219,6 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: Database,
       items: [
         { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
-        { name: "Updates", href: "/admin/updates", permission: "manage_system_updates", icon: Download },
         {
           name: "Import / Export",
           href: "/admin/import-export",

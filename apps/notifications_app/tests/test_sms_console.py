@@ -50,9 +50,9 @@ class SMSConsoleViewSetTest(TestCase):
             phone='233244123456'
         )
 
-    @patch('apps.notifications_app.views.send_sms')
-    def test_send_single_manual(self, mock_send_sms):
-        mock_send_sms.return_value = (True, {'message_id': '123'})
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_send_single_manual(self, mock_send_notification):
+        mock_send_notification.return_value = True
         
         data = {
             'phone': '0244123456',
@@ -61,8 +61,7 @@ class SMSConsoleViewSetTest(TestCase):
         
         response = self.client.post(self.url_single, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Assuming formatted phone is passed to mock
-        mock_send_sms.assert_called() 
+        mock_send_notification.assert_called_once()
         self.assertEqual(response.data['status'], 'success')
 
     def test_send_single_user(self):
@@ -187,10 +186,10 @@ class SMSConsoleViewSetTest(TestCase):
         self.assertEqual(response.data['message'], 'Detail message')
         self.assertEqual(response.data['recipient_phone'], self.recipient.phone)
 
-    @patch('apps.notifications_app.views.send_sms')
-    def test_resend_direct_sms_log(self, mock_send_sms):
+    @patch('apps.notifications_app.services.NotificationService.send_notification')
+    def test_resend_direct_sms_log(self, mock_send_notification):
         from apps.notifications_app.models import Notification
-        mock_send_sms.return_value = (True, {'message_id': 'resent-123'})
+        mock_send_notification.return_value = True
         notification = Notification.objects.create(
             recipient=None,
             notification_type='custom',
@@ -205,7 +204,7 @@ class SMSConsoleViewSetTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'success')
-        mock_send_sms.assert_called_once_with('0244123456', 'Please call us')
+        mock_send_notification.assert_called_once()
         self.assertNotEqual(response.data['notification_id'], notification.id)
 
     def test_delete_sms_log(self):
