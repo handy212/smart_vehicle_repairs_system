@@ -821,31 +821,17 @@ class CustomersVehiclesImporter(BaseImporter):
                     if normalize_name(c.company_name) == name_norm
                     or normalize_name(f'{c.user.first_name} {c.user.last_name}') == name_norm
                 ]
-                chosen = exact[0] if exact else (candidates[0] if len(candidates) == 1 else None)
+                chosen = exact[0] if exact else None
                 if chosen:
-                    if not exact and len(candidates) > 1:
-                        issues.append(RowIssue(
-                            row_number=row_number,
-                            level='warning',
-                            entity_type='customer',
-                            action='match',
-                            identifier=phone_norm,
-                            message=(
-                                f'Phone {phone_norm} matches multiple customers; '
-                                f'using #{chosen.customer_number}'
-                            ),
-                            payload={'customer_id': chosen.id},
-                        ))
-                    else:
-                        issues.append(RowIssue(
-                            row_number=row_number,
-                            level='info',
-                            entity_type='customer',
-                            action='match',
-                            identifier=phone_norm,
-                            message=f'Matched existing customer by phone (#{chosen.customer_number})',
-                            payload={'customer_id': chosen.id},
-                        ))
+                    issues.append(RowIssue(
+                        row_number=row_number,
+                        level='info',
+                        entity_type='customer',
+                        action='match',
+                        identifier=phone_norm,
+                        message=f'Matched existing customer by phone (#{chosen.customer_number})',
+                        payload={'customer_id': chosen.id},
+                    ))
                     return {
                         'action': 'match',
                         'customer': chosen,
@@ -853,6 +839,18 @@ class CustomersVehiclesImporter(BaseImporter):
                         'email': chosen.user.email,
                         'row_number': row_number,
                     }
+                issues.append(RowIssue(
+                    row_number=row_number,
+                    level='warning',
+                    entity_type='customer',
+                    action='create',
+                    code='shared_phone_different_name',
+                    identifier=phone_norm,
+                    message=(
+                        f'Phone {phone_norm} belongs to an existing customer, but the import name '
+                        f'"{name}" does not match; creating a separate customer'
+                    ),
+                ))
 
         # Create new customer plan
         business = bool(mapped.get('company_name')) or (

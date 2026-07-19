@@ -94,6 +94,41 @@ class CustomersVehiclesImporterTests(TestCase):
         vehicle = Vehicle.objects.get(license_plate='GT-55-B')
         self.assertEqual(vehicle.owner_id, customer.id)
 
+    def test_commit_does_not_match_existing_customer_by_phone_when_name_differs(self):
+        user = User.objects.create_user(
+            username='existing-shared-phone@example.com',
+            email='existing-shared-phone@example.com',
+            first_name='Jane',
+            last_name='Doe',
+            phone='0244999999',
+            role='customer',
+            password='pass12345',
+        )
+        existing_customer = Customer.objects.create(
+            user=user,
+            customer_number='CUS-TEST-0002',
+            customer_type='individual',
+            status='active',
+        )
+
+        buffer = _xlsx_from_rows(
+            ['REG NO', 'CUST_NAME', 'MAKE', 'MODEL', 'MFG  BNYEAR', 'ENGVIN', 'TEL_FAXNO'],
+            [
+                ['GT-56-B', 'ACME LOGISTICS LIMITED', 'TOYOTA', 'HILUX', 2018, '1HGBH41JXMN109198', '0244999999'],
+            ],
+        )
+        result = self.importer.commit(buffer, {
+            'generate_placeholder_vin': False,
+            'match_existing_customers': True,
+        })
+        self.assertEqual(result.summary['customers_created'], 1)
+        self.assertEqual(result.summary['customers_matched'], 0)
+        self.assertEqual(result.summary['vehicles_created'], 1)
+        self.assertTrue(any(issue.code == 'shared_phone_different_name' for issue in result.issues))
+        vehicle = Vehicle.objects.get(license_plate='GT-56-B')
+        self.assertNotEqual(vehicle.owner_id, existing_customer.id)
+        self.assertEqual(vehicle.owner.company_name, 'ACME LOGISTICS LIMITED')
+
     def test_invalid_vin_without_placeholder_is_skipped(self):
         buffer = _xlsx_from_rows(
             ['REG NO', 'CUST_NAME', 'MAKE', 'MODEL', 'MFG  BNYEAR', 'ENGVIN', 'TEL_FAXNO'],
