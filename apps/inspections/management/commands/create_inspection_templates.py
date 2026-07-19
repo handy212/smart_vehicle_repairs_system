@@ -20,17 +20,26 @@ class Command(BaseCommand):
             self._do_create()
 
     def _do_create(self):
-        # Get or create a system user for templates
+        # Get or create a system user for templates.
+        # Must NOT use role=customer (User default) — customer wipe would try to
+        # delete this user and fail on InspectionTemplate.created_by PROTECT.
         system_user, created = User.objects.get_or_create(
             username='system',
             defaults={
                 'email': 'system@example.com',
                 'first_name': 'System',
                 'last_name': 'Admin',
+                'role': 'admin',
                 'is_active': False,  # System user should not be able to log in
+                'is_staff': False,
             }
         )
-        
+        if system_user.role == 'customer' or system_user.is_active:
+            system_user.role = 'admin'
+            system_user.is_active = False
+            system_user.save(update_fields=['role', 'is_active'])
+            self.stdout.write(self.style.WARNING('  Normalized system user role away from customer'))
+
         if created:
             self.stdout.write(self.style.SUCCESS('  Created system user for templates'))
         

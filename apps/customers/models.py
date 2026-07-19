@@ -73,7 +73,7 @@ class Customer(models.Model):
     customer_number = models.CharField(
         max_length=32,
         unique=True,
-        help_text="Unique customer identification number (e.g. CUS-2026-KSI-000001)"
+        help_text="Unique customer identification number (e.g. C1, C2, C4711)"
     )
     
     # Business information (for business/fleet customers)
@@ -312,15 +312,11 @@ class Customer(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.customer_number:
-            from apps.accounting.document_numbering import DocumentNumberService, resolve_numbering_branch
+            from apps.accounting.document_numbering import DocumentNumberService
 
-            branch = resolve_numbering_branch(getattr(self, '_numbering_branch', None))
-            if branch is None:
-                raise ValidationError(
-                    "Cannot assign a customer number without an active branch. "
-                    "Create a branch first."
-                )
-            self.customer_number = DocumentNumberService.allocate('customer', branch)
+            self.customer_number = DocumentNumberService.allocate_customer_number(
+                getattr(self, '_numbering_branch', None)
+            )
         super().save(*args, **kwargs)
     
     @property

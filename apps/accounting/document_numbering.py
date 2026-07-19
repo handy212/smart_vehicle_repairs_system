@@ -1,4 +1,6 @@
 """Atomic fiscal-year document numbering for accounting documents."""
+import re
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -7,6 +9,10 @@ from apps.accounting.models import AccountingControl, DocumentNumberSequence
 
 # {PREFIX}-{YYYY}-{branch_code up to 10}-{seq:06} → 27 chars max (BILL prefix)
 DOCUMENT_NUMBER_MAX_LENGTH = 32
+
+# Customers use a global short id (C1, C2, …) — fiscal_year=0 is the sentinel row.
+_CUSTOMER_GLOBAL_YEAR = 0
+_CUSTOMER_NUMBER_RE = re.compile(r'^C(\d+)$')
 
 
 class DocumentNumberService:
@@ -17,7 +23,7 @@ class DocumentNumberService:
         'bill': 'BILL',
         'vendor_credit': 'VC',
         'sales_order': 'SO',
-        'customer': 'CUS',
+        'customer': 'C',
     }
 
     # Customer numbers are identifiers, not GL documents — never block on period lock.
@@ -33,13 +39,60 @@ class DocumentNumberService:
             )
 
     @classmethod
+    def _max_existing_customer_seq(cls) -> int:
+        """Highest numeric suffix among existing short customer numbers (C123)."""
+        from apps.customers.models import Customer
+
+        max_n = 0
+        for raw in Customer.objects.filter(customer_number__startswith='C').values_list(
+            'customer_number', flat=True
+        ):
+            match = _CUSTOMER_NUMBER_RE.match(raw or '')
+            if match:
+                max_n = max(max_n, int(match.group(1)))
+        return max_n
+
+    @classmethod
+    def allocate_customer_number(cls, branch=None) -> str:
+        """
+        Allocate the next customer number: C1, C2, C3, …
+
+        Global sequence (not per year / branch). Branch is only used to satisfy
+        DocumentNumberSequence's FK; HQ (or first active) is preferred.
+        """
+        branch = resolve_numbering_branch(branch)
+        if branch is None:
+            raise ValidationError(
+                "Cannot assign a customer number without an active branch. "
+                "Create a branch first."
+            )
+
+        with transaction.atomic():
+            sequence, _created = DocumentNumberSequence.objects.select_for_update().get_or_create(
+                document_type='customer',
+                branch=branch,
+                fiscal_year=_CUSTOMER_GLOBAL_YEAR,
+                defaults={'last_sequence': 0},
+            )
+            floor = cls._max_existing_customer_seq()
+            if sequence.last_sequence < floor:
+                sequence.last_sequence = floor
+            sequence.last_sequence += 1
+            sequence.save(update_fields=['last_sequence', 'updated_at'])
+            return f"C{sequence.last_sequence}"
+
+    @classmethod
     def allocate(cls, document_type, branch, document_date=None):
         """
         Allocate the next document number atomically.
 
-        Format: {PREFIX}-{YYYY}-{branch_code}-{seq:06}
+        Customers: C{n} (global short sequence).
+        Other types: {PREFIX}-{YYYY}-{branch_code}-{seq:06}
         Example: INV-2026-HQ-000042
         """
+        if document_type == 'customer':
+            return cls.allocate_customer_number(branch)
+
         if document_type not in cls.PREFIXES:
             raise ValidationError(f"Unsupported document type: {document_type}")
         if branch is None:

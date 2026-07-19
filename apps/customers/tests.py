@@ -224,7 +224,7 @@ class CustomerNumberingTest(TestCase):
             created_by=self.admin,
         )
 
-    def test_auto_customer_number_uses_branch_fiscal_format(self):
+    def test_auto_customer_number_uses_short_global_sequence(self):
         user = User.objects.create_user(
             username='cust001',
             email='cust001@example.com',
@@ -235,11 +235,9 @@ class CustomerNumberingTest(TestCase):
         customer._numbering_branch = self.branch
         customer.save()
 
-        self.assertRegex(customer.customer_number, r'^CUS-\d{4}-KSI-\d{6}$')
+        self.assertRegex(customer.customer_number, r'^C\d+$')
 
-    def test_create_serializer_assigns_structured_customer_number(self):
-        from django.utils import timezone
-
+    def test_create_serializer_assigns_short_customer_number(self):
         serializer = CustomerCreateSerializer(
             data={
                 'email': 'newcust@example.com',
@@ -253,5 +251,15 @@ class CustomerNumberingTest(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         customer = serializer.save()
-        year = timezone.now().year
-        self.assertEqual(customer.customer_number, f'CUS-{year}-KSI-000001')
+        self.assertEqual(customer.customer_number, 'C1')
+
+        user2 = User.objects.create_user(
+            username='cust002',
+            email='cust002@example.com',
+            password='password123',
+            role='customer',
+        )
+        second = Customer(user=user2, status='active')
+        second._numbering_branch = self.branch
+        second.save()
+        self.assertEqual(second.customer_number, 'C2')

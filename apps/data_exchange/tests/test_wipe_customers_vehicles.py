@@ -122,9 +122,46 @@ class WipeCustomersVehiclesTests(TestCase):
         self.assertEqual(Invoice.objects.count(), 0)
         self.assertEqual(Payment.objects.count(), 0)
         self.assertEqual(ImportBatch.objects.count(), 0)
-        self.assertFalse(User.objects.filter(role='customer').exists())
+        self.assertFalse(
+            User.objects.filter(role='customer', customer_profile__isnull=False).exists()
+        )
+        self.assertFalse(User.objects.filter(id=self.customer_user.id).exists())
         self.assertTrue(User.objects.filter(id=self.admin.id).exists())
         self.assertTrue(Branch.objects.filter(id=self.branch.id).exists())
+
+    def test_wipe_keeps_system_user_that_owns_inspection_templates(self):
+        from apps.inspections.models import InspectionTemplate
+
+        system_user, _ = User.objects.get_or_create(
+            username='system',
+            defaults={
+                'email': 'system@example.com',
+                'role': 'customer',  # historical bug: seed used User default role
+                'is_active': False,
+            },
+        )
+        if system_user.role != 'customer':
+            system_user.role = 'customer'
+            system_user.save(update_fields=['role'])
+        InspectionTemplate.objects.get_or_create(
+            name='Basic Safety Inspection',
+            defaults={
+                'description': 'seed',
+                'is_active': True,
+                'created_by': system_user,
+            },
+        )
+        # Ensure template references system user even if it already existed
+        InspectionTemplate.objects.filter(name='Basic Safety Inspection').update(
+            created_by=system_user
+        )
+
+        result = run_customer_vehicle_wipe(confirm=CONFIRM_PHRASE, user=self.admin)
+        self.assertTrue(result['ok'])
+        self.assertTrue(User.objects.filter(username='system').exists())
+        self.assertTrue(
+            InspectionTemplate.objects.filter(name='Basic Safety Inspection').exists()
+        )
 
 
 class WipeCustomersVehiclesAPITests(TestCase):

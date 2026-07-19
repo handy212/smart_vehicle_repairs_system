@@ -43,6 +43,43 @@ def _delete_in_batches(model, *, batch_size: int = DELETE_BATCH_SIZE) -> int:
     return total
 
 
+def _delete_customer_login_users(user_ids: list[int], *, batch_size: int = DELETE_BATCH_SIZE) -> int:
+    """
+    Delete only login users that belonged to wiped Customer rows.
+
+    Skips staff/superusers and the inactive seed user ``system`` (often
+    role=customer by default) that owns InspectionTemplate.created_by PROTECT FKs.
+    """
+    if not user_ids:
+        return 0
+
+    protected = {'system'}
+    total = 0
+    remaining = list(dict.fromkeys(user_ids))  # unique, preserve order
+    while remaining:
+        chunk = remaining[:batch_size]
+        remaining = remaining[batch_size:]
+        qs = (
+            User.objects.filter(pk__in=chunk)
+            .exclude(username__in=protected)
+            .exclude(is_staff=True)
+            .exclude(is_superuser=True)
+        )
+        # Skip anyone still protecting seed/catalog rows
+        template_model = _import_model('inspections.InspectionTemplate')
+        if template_model is not None:
+            still_protected = set(
+                template_model.objects.filter(created_by_id__in=chunk)
+                .values_list('created_by_id', flat=True)
+            )
+            if still_protected:
+                qs = qs.exclude(pk__in=still_protected)
+        with transaction.atomic():
+            n, _ = qs.delete()
+        total += n
+    return total
+
+
 def _import_model(path: str):
     """Import 'app.Model' and return the class, or None if unavailable."""
     try:
@@ -79,7 +116,12 @@ def collect_wipe_counts() -> dict[str, int]:
         model = _import_model(path)
         counts[key] = _count(model) if model is not None else 0
 
-    customer_users = User.objects.filter(role='customer').count()
+    # Only count portal logins tied to a Customer — not the inactive "system"
+    # user (default role=customer) that owns inspection templates, etc.
+    customer_users = User.objects.filter(
+        role='customer',
+        customer_profile__isnull=False,
+    ).count()
     counts['customer_users'] = customer_users
     counts['total_records'] = sum(counts.values())
     return counts
@@ -93,9 +135,11 @@ def preview_customer_vehicle_wipe() -> dict[str, Any]:
         'counts': counts,
         'keeps': [
             'staff users',
+            'system user (inspection templates / seed data)',
             'branches',
             'roles and permissions',
             'inventory parts/catalog',
+            'inspection templates',
             'system settings',
             'QBO configuration',
         ],
@@ -106,9 +150,9 @@ def preview_customer_vehicle_wipe() -> dict[str, Any]:
             'invoices / payments / refunds / estimates / credit notes / sales orders',
             'subscriptions',
             'appointments',
-            'inspections',
+            'inspections (vehicle inspection records, not templates)',
             'vehicles',
-            'customers and customer login users',
+            'customers and their login users',
             'import batch history',
         ],
         'active_job': get_wipe_job(),
@@ -282,6 +326,17 @@ def run_customer_vehicle_wipe(
         from contextlib import nullcontext as suppress_outbound_qbo_signals
 
     with suppress_outbound_qbo_signals():
+        # Capture customer login user IDs before Customer rows are removed.
+        # Do NOT delete every role=customer user — the seeded username "system"
+        # defaults to role=customer and is PROTECT-referenced by InspectionTemplate.
+        customer_model = _import_model('customers.Customer')
+        customer_user_ids = []
+        if customer_model is not None:
+            customer_user_ids = list(
+                customer_model.objects.exclude(user_id=None)
+                .values_list('user_id', flat=True)
+            )
+
         for key, path in delete_order:
             model = _import_model(path)
             if model is None:
@@ -291,15 +346,7 @@ def run_customer_vehicle_wipe(
             deleted[key] = _delete_in_batches(model)
 
         _touch('deleting:customer_users')
-        user_qs = User.objects.filter(role='customer')
-        deleted['customer_users'] = 0
-        while True:
-            ids = list(user_qs.values_list('pk', flat=True)[:DELETE_BATCH_SIZE])
-            if not ids:
-                break
-            with transaction.atomic():
-                n, _ = User.objects.filter(pk__in=ids, role='customer').delete()
-            deleted['customer_users'] += n
+        deleted['customer_users'] = _delete_customer_login_users(customer_user_ids)
 
         if clear_import_batches:
             batch_model = _import_model('data_exchange.ImportBatch')
