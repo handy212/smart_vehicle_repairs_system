@@ -10,6 +10,9 @@ class SafePageNumberPagination(PageNumberPagination):
     broken UX when clients hold a stale page number after data shrinks.
     """
 
+    page_size_query_param = "page_size"
+    max_page_size = 500
+
     def paginate_queryset(self, queryset, request, view=None):
         try:
             return super().paginate_queryset(queryset, request, view)

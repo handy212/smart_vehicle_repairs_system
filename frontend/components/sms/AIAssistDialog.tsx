@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, X, Copy, Check, Loader2, RefreshCw } from 'lucide-react';
+import { Sparkles, Send, Copy, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -247,10 +247,6 @@ export function AIAssistDialog({
                         <div className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-1.5">
                             <span className="font-semibold text-foreground/70">Current draft:</span>
                             <span className="truncate italic">{currentDraft}</span>
-                            <X
-                                className="h-3 w-3 ml-auto flex-shrink-0 cursor-pointer hover:text-foreground"
-                                onClick={() => onUseSuggestion('')}
-                            />
                         </div>
                     )}
                     <div className="flex items-end gap-2">

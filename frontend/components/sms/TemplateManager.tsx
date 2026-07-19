@@ -189,7 +189,7 @@ export function TemplateManager() {
 
   return (
     <>
-      <div className="grid h-[calc(100vh-220px)] min-h-[500px] grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid min-h-[420px] grid-cols-1 gap-4 lg:h-[calc(100vh-240px)] lg:min-h-[500px] lg:grid-cols-3">
         {/* LEFT — template list */}
         <div className={cn(cardCls, "flex flex-col")}>
           <div className={headerCls}>
@@ -236,9 +236,7 @@ export function TemplateManager() {
             ) : (
               <div className="divide-y divide-[color:var(--outline-variant)]">
                 {filtered.map((t) => {
-                  const isActive =
-                    (selected?.id === t.id && !isNew) ||
-                    (!selected && !isNew && false);
+                  const isActive = selected?.id === t.id && !isNew;
                   return (
                     <button
                       key={t.id}

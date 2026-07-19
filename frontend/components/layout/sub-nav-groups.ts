@@ -40,7 +40,6 @@ import {
   Puzzle,
   Receipt,
   Settings,
-  Settings2,
   ShieldCheck,
   Star,
   Tags,
@@ -275,17 +274,6 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       ],
     },
   ],
-  sms: [
-    {
-      id: "messages",
-      label: "Messages",
-      icon: MessageSquare,
-      items: [
-        { name: "SMS", href: "/sms", permission: "send_notifications", icon: MessageSquare },
-        { name: "Templates", href: "/sms/templates", permission: "send_notifications", icon: Settings2 },
-      ],
-    },
-  ],
   technicians: [
     {
       id: "workforce",
@@ -341,7 +329,6 @@ export const SUB_NAV_TITLES: Record<string, string> = {
   accounting: "Accounting",
   admin: "Admin",
   hr: "HR",
-  sms: "Messages",
   technicians: "Technicians",
   fixedAssets: "Fixed Assets",
   reports: "Reports",
@@ -353,7 +340,6 @@ export const SUB_NAV_MODULES: Record<string, string> = {
   accounting: "accounting",
   admin: "admin",
   hr: "hr",
-  sms: "sms",
   technicians: "technicians",
   fixedAssets: "fixed-assets",
   reports: "reports",
@@ -366,7 +352,6 @@ export function getSubNavGroupKey(pathname: string | null): string | null {
   if (pathname.startsWith("/accounting")) return "accounting";
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/hr")) return "hr";
-  if (pathname.startsWith("/sms")) return "sms";
   if (pathname.startsWith("/technicians")) return "technicians";
   if (pathname.startsWith("/fixed-assets")) return "fixedAssets";
   if (pathname.startsWith("/reports")) return "reports";
