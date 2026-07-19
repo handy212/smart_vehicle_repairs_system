@@ -69,13 +69,13 @@ const ACCOUNTING_LINKS = [
 
 const INVENTORY_LINKS = [
   { name: "Compliance Reports", href: "/inventory/reports/compliance", icon: ClipboardList },
-  { name: "Inventory GL Report", href: "/inventory/reports/accounting", icon: Package },
+  { name: "Stock Accounting", href: "/inventory/reports/accounting", icon: Package },
 ];
 
 const OPS_LINKS = [
-  { name: "Operations Intelligence", href: "/reports/operations", icon: Settings2 },
+  { name: "Operations", href: "/reports/operations", icon: Settings2 },
   { name: "Technician Efficiency", href: "/reports/efficiency", icon: Wrench },
-  { name: "Service Bundles", href: "/reports/bundles", icon: Package },
+  { name: "Bundle Performance", href: "/reports/bundles", icon: Package },
 ];
 
 type FilterKey = "all" | "hub" | "financial" | "operations" | "inventory" | "accounting";

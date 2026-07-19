@@ -57,6 +57,21 @@ services:
     healthcheck:
       disable: true
 
+  celery-heavy:
+    container_name: svr_staging_celery_heavy
+    environment:
+      DJANGO_ENVIRONMENT: staging
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DATABASE_URL: postgresql://${DB_USER:-svr_staging_user}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-svr_staging_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+    volumes:
+      - ./media-staging:/app/media
+      - ./logs-staging:/app/logs
+    healthcheck:
+      disable: true
+
   celerybeat:
     container_name: svr_staging_celerybeat
     environment:

@@ -10,6 +10,8 @@ from django.core.management import call_command
 from django.utils import timezone
 from django.utils.text import slugify
 
+from config.celery_queues import HEAVY_CELERY_QUEUE
+
 from .admin_models import SystemBackup, SystemSettings
 
 
@@ -43,7 +45,7 @@ def cleanup_expired_backups() -> int:
     return deleted
 
 
-@shared_task
+@shared_task(queue=HEAVY_CELERY_QUEUE)
 def create_system_backup(backup_id: int) -> str:
     backup = SystemBackup.objects.get(id=backup_id)
     backup.status = 'in_progress'

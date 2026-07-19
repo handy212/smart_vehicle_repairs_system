@@ -29,8 +29,17 @@ def get_user_accessible_branches(user) -> QuerySet:
     return user.get_accessible_branches()
 
 
-def resolve_branch(request: HttpRequest, branch_id: Optional[int] = None) -> Optional[Branch]:
-    """Resolve the branch to use for the current request."""
+def resolve_branch(
+    request: HttpRequest,
+    branch_id: Optional[int] = None,
+    *,
+    persist_session: bool = True,
+) -> Optional[Branch]:
+    """Resolve the branch to use for the current request.
+
+    ``persist_session=False`` is intended for read-only list filters where an
+    explicit query/header branch must not change the user's active branch.
+    """
     user = getattr(request, "user", None)
     if not user or not getattr(user, "is_authenticated", False):
         return None
@@ -63,7 +72,7 @@ def resolve_branch(request: HttpRequest, branch_id: Optional[int] = None) -> Opt
             continue
         branch = branches.filter(id=candidate_id).first()
         if branch:
-            if session:
+            if session and persist_session:
                 session["active_branch_id"] = branch.id
             return branch
 

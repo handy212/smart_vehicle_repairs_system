@@ -76,7 +76,7 @@ export const overviewGuide: HelpGuide = {
                         "**Technician** → Quick Start, Technician Guide, Mobile App Guide, Repair Lifecycle",
                         "**Service Coordinator** → Service Coordinator Guide, Repair Lifecycle, Work Order Best Practices",
                         "**Accountant** → Accountant Guide, Payment to Release Workflow, Troubleshooting (billing)",
-                        "**Parts Manager** → Inventory Guide, Parts Request Workflow",
+                        "**Parts Manager** → Parts & Stock Guide, Parts Request Workflow",
                         "**Manager** → Manager Guide, Reports, Best Practices",
                         "**Administrator** → Administrator Guide, Security Best Practices",
                         "**Customer** → Customer Portal Guide (share portal URL separately)",

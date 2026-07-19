@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
 import {
   Tooltip,
   TooltipContent,
@@ -98,29 +99,33 @@ export default function AppointmentsPage() {
     },
   ];
 
+  const today = new Date();
+  const currentWeekStart = new Date(today);
+  currentWeekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+
   const quickFilters: QuickFilter[] = [
     {
       label: "Today",
       value: "today",
       filters: {
-        appointment_date_from: new Date().toISOString().split("T")[0],
-        appointment_date_to: new Date().toISOString().split("T")[0],
+        appointment_date_from: toLocalCalendarDate(today),
+        appointment_date_to: toLocalCalendarDate(today),
       },
     },
     {
       label: "This Week",
       value: "this_week",
       filters: {
-        appointment_date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        appointment_date_to: new Date().toISOString().split("T")[0],
+        appointment_date_from: toLocalCalendarDate(currentWeekStart),
+        appointment_date_to: toLocalCalendarDate(today),
       },
     },
     {
       label: "This Month",
       value: "this_month",
       filters: {
-        appointment_date_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
-        appointment_date_to: new Date().toISOString().split("T")[0],
+        appointment_date_from: toLocalCalendarDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+        appointment_date_to: toLocalCalendarDate(today),
       },
     },
     {
@@ -415,7 +420,7 @@ export default function AppointmentsPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <div className="relative w-full flex-1 min-w-0 sm:min-w-[200px] sm:max-w-xs">
             <PremiumIcons.Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
             <Input
               type="text"
@@ -425,7 +430,7 @@ export default function AppointmentsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-8 h-9 text-sm w-80 transition-all focus:w-full focus:max-w-md bg-card border-border"
+              className="pl-8 h-9 w-full text-sm transition-all bg-card border-border"
             />
           </div>
 
@@ -443,6 +448,7 @@ export default function AppointmentsPage() {
               setStatusFilter("");
               setStartDate("");
               setEndDate("");
+              setPage(1);
             }}
             title="Advanced Appointment Filters"
           />
@@ -480,6 +486,8 @@ export default function AppointmentsPage() {
                     setPage(1);
                   }}
                   className="hover:text-destructive"
+                  type="button"
+                  aria-label="Remove search filter"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -513,6 +521,8 @@ export default function AppointmentsPage() {
                       setPage(1);
                     }}
                     className="hover:text-destructive"
+                    type="button"
+                    aria-label={`Remove ${displayLabel} filter`}
                   >
                     <PremiumIcons.X className="w-3 h-3" />
                   </button>

@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
+from apps.accounts.admin_models import SystemModule
+from apps.accounts.permission_models import Permission, Role
 from apps.inventory.models import Part, PartCategory, StockItem, Transfer, TransferApproval, InventoryTransaction
 from apps.branches.models import Branch
 from apps.inventory.services import InventoryService
@@ -11,8 +13,32 @@ User = get_user_model()
 
 class TransferServiceTests(TestCase):
     def setUp(self):
+        SystemModule.objects.update_or_create(
+            slug='inventory',
+            defaults={'name': 'Inventory', 'is_enabled': True},
+        )
         # Create User
-        self.user = User.objects.create_user(username='testuser', email='testuser@example.com', password='password', role='admin')
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password',
+            role='admin',
+            is_staff=True,
+            is_superuser=True,
+        )
+        transfer_permission, _ = Permission.objects.update_or_create(
+            code='transfer_inventory',
+            defaults={
+                'name': 'Transfer Inventory',
+                'category': 'inventory',
+                'is_active': True,
+            },
+        )
+        manager_role, _ = Role.objects.update_or_create(
+            code='manager',
+            defaults={'name': 'Manager', 'is_active': True},
+        )
+        manager_role.permissions.add(transfer_permission)
         self.approver = User.objects.create_user(username='approver', email='approver@example.com', password='password', role='manager')
         self.second_approver = User.objects.create_user(username='approver2', email='approver2@example.com', password='password', role='manager')
         
@@ -145,9 +171,14 @@ class TransferServiceTests(TestCase):
         with self.assertRaisesMessage(ValueError, "Transfers must be approved by someone other than the submitter"):
             InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.user)
 
-        self.user.role = 'technician'
+        technician = User.objects.create_user(
+            username='technician',
+            email='technician@example.com',
+            password='password',
+            role='technician',
+        )
         with self.assertRaisesMessage(ValueError, "Selected approver must be a manager, admin, or parts manager"):
-            InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.approver)
+            InventoryService.submit_transfer_for_approval(transfer, approver=technician, user=self.approver)
 
     def test_transfer_requires_all_selected_approvers_before_reserving_stock(self):
         transfer = InventoryService.initiate_transfer(
@@ -221,3 +252,51 @@ class TransferServiceTests(TestCase):
         response = self.client.delete(reverse('api_inventory:transfer-detail', kwargs={'pk': transfer.id}))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(Transfer.objects.filter(id=transfer.id).exists())
+
+    def test_transfer_list_searches_number_notes_branches_and_parts(self):
+        transfer = InventoryService.initiate_transfer(
+            source_branch=self.branch_a,
+            destination_branch=self.branch_b,
+            items=[{'part_id': self.part.id, 'quantity': 3}],
+            user=self.user,
+            notes='Urgent brake replenishment',
+        )
+
+        for search in (
+            transfer.transfer_number,
+            'brake replenishment',
+            self.branch_b.code.lower(),
+            self.part.part_number.lower(),
+        ):
+            with self.subTest(search=search):
+                response = self.client.get(
+                    reverse('api_inventory:transfer-list'),
+                    {'search': search},
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIn(
+                    transfer.id,
+                    {row['id'] for row in response.data['results']},
+                )
+
+    def test_part_list_branch_filter_does_not_change_active_branch_session(self):
+        session = self.client.session
+        session['active_branch_id'] = self.branch_a.id
+        session.save()
+        StockItem.objects.create(
+            part=self.part,
+            branch=self.branch_b,
+            quantity_in_stock=4,
+        )
+
+        response = self.client.get(
+            reverse('api_inventory:part-list'),
+            {'branch': self.branch_b.id},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        listed_part = next(
+            row for row in response.data['results'] if row['id'] == self.part.id
+        )
+        self.assertEqual(listed_part['quantity_in_stock'], 4)
+        self.assertEqual(self.client.session['active_branch_id'], self.branch_a.id)

@@ -17,17 +17,43 @@ export const NAV_CATEGORY_STYLES: Record<string, NavCategoryStyle> = {
     icon: "text-info",
     ring: "ring-info/25",
   },
+  "parts-stock": {
+    bg: "bg-warning/15",
+    icon: "text-warning",
+    ring: "ring-warning/25",
+  },
+  people: {
+    bg: "bg-warning/15",
+    icon: "text-warning",
+    ring: "ring-warning/25",
+  },
   finance: {
     bg: "bg-success/15",
     icon: "text-success",
     ring: "ring-success/25",
   },
+  reports: {
+    bg: "bg-warning/15",
+    icon: "text-warning",
+    ring: "ring-warning/25",
+  },
+  admin: {
+    bg: "bg-muted",
+    icon: "text-muted-foreground",
+    ring: "ring-border",
+  },
+  // Legacy ids kept so older cached clients / tests don't flash unstyled
   "tools-reports": {
     bg: "bg-warning/15",
     icon: "text-warning",
     ring: "ring-warning/25",
   },
   communications: {
+    bg: "bg-info/15",
+    icon: "text-info",
+    ring: "ring-info/25",
+  },
+  messages: {
     bg: "bg-info/15",
     icon: "text-info",
     ring: "ring-info/25",
@@ -77,11 +103,6 @@ export const NAV_CATEGORY_STYLES: Record<string, NavCategoryStyle> = {
     icon: "text-primary",
     ring: "ring-primary/25",
   },
-  people: {
-    bg: "bg-warning/15",
-    icon: "text-warning",
-    ring: "ring-warning/25",
-  },
   workforce: {
     bg: "bg-info/15",
     icon: "text-info",
@@ -118,11 +139,6 @@ export const NAV_CATEGORY_STYLES: Record<string, NavCategoryStyle> = {
     ring: "ring-info/25",
   },
   planning: {
-    bg: "bg-warning/15",
-    icon: "text-warning",
-    ring: "ring-warning/25",
-  },
-  reports: {
     bg: "bg-warning/15",
     icon: "text-warning",
     ring: "ring-warning/25",

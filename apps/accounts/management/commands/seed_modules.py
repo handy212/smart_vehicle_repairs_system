@@ -20,7 +20,7 @@ class Command(BaseCommand):
             {'name': 'Roadside', 'slug': 'roadside', 'is_enabled': True, 'icon': 'Truck', 'description': 'Roadside assistance'},
             {'name': 'Technicians', 'slug': 'technicians', 'is_enabled': True, 'icon': 'UserCog', 'description': 'Technician management'},
             {'name': 'HR', 'slug': 'hr', 'is_enabled': True, 'icon': 'Building2', 'description': 'Human Resources management'},
-            {'name': 'Inventory', 'slug': 'inventory', 'is_enabled': True, 'icon': 'Package', 'description': 'Inventory management'},
+            {'name': 'Parts & Stock', 'slug': 'inventory', 'is_enabled': True, 'icon': 'Package', 'description': 'Parts catalog and stock management'},
             {'name': 'Billing', 'slug': 'billing', 'is_enabled': True, 'icon': 'Receipt', 'description': 'Billing and invoicing'},
             {'name': 'Accounting', 'slug': 'accounting', 'is_enabled': True, 'icon': 'Calculator', 'description': 'Accounting and financial reports'},
             {'name': 'Fixed Assets', 'slug': 'fixed-assets', 'is_enabled': True, 'icon': 'Landmark', 'description': 'Fixed asset tracking'},
@@ -28,7 +28,7 @@ class Command(BaseCommand):
             {'name': 'Inspections', 'slug': 'inspections', 'is_enabled': True, 'icon': 'FileText', 'description': 'Vehicle inspections'},
             {'name': 'Diagnosis', 'slug': 'diagnosis', 'is_enabled': True, 'icon': 'Stethoscope', 'description': 'Vehicle diagnosis'},
             {'name': 'Reports', 'slug': 'reports', 'is_enabled': True, 'icon': 'BarChart', 'description': 'System-wide reports'},
-            {'name': 'SMS Console', 'slug': 'sms', 'is_enabled': True, 'icon': 'MessageSquare', 'description': 'SMS communication console'},
+            {'name': 'Messages', 'slug': 'sms', 'is_enabled': True, 'icon': 'MessageSquare', 'description': 'SMS and customer messaging'},
             {'name': 'Live Chat', 'slug': 'chat', 'is_enabled': True, 'icon': 'MessageSquare', 'description': 'Real-time communication between staff, technicians, and clients'},
         ]
 
@@ -40,6 +40,16 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(self.style.SUCCESS(f"Created module: {module.name}"))
             else:
-                self.stdout.write(self.style.WARNING(f"Module already exists: {module.name}"))
+                # Sync display fields without re-enabling a disabled module
+                changed_fields = []
+                for field in ("name", "description", "icon"):
+                    if getattr(module, field) != module_data[field]:
+                        setattr(module, field, module_data[field])
+                        changed_fields.append(field)
+                if changed_fields:
+                    module.save(update_fields=changed_fields)
+                    self.stdout.write(self.style.SUCCESS(f"Updated module: {module.name}"))
+                else:
+                    self.stdout.write(self.style.WARNING(f"Module already exists: {module.name}"))
 
         self.stdout.write(self.style.SUCCESS('Successfully seeded system modules'))

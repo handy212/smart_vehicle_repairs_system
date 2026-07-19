@@ -260,11 +260,11 @@ export default function QuotationRequestsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
+            <Link href="/inventory" className="hover:text-primary transition-colors">Parts & Stock</Link>
             <span>/</span>
-            <span className="text-foreground font-medium">Stores Workbench</span>
+            <span className="text-foreground font-medium">Parts Requests</span>
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">Stores Workbench</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Parts Requests</h1>
           <p className="text-xs text-muted-foreground">
             Quotes: price diagnosis recommendations. Fulfillment: order, receive, and allocate parts.
           </p>

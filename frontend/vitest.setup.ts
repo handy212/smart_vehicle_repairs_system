@@ -23,6 +23,26 @@ Object.defineProperty(window, 'matchMedia', {
     })),
 });
 
+// jsdom does not implement pointer-capture APIs used by Radix Select.
+Object.defineProperties(Element.prototype, {
+    hasPointerCapture: {
+        configurable: true,
+        value: vi.fn(() => false),
+    },
+    setPointerCapture: {
+        configurable: true,
+        value: vi.fn(),
+    },
+    releasePointerCapture: {
+        configurable: true,
+        value: vi.fn(),
+    },
+    scrollIntoView: {
+        configurable: true,
+        value: vi.fn(),
+    },
+});
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
     useRouter: () => ({

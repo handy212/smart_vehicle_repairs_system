@@ -176,7 +176,7 @@ export default function OperationsReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-bold">Operations Intelligence</h1>
+        <h1 className="text-xl font-bold">Operations</h1>
         <ReportExportMenu getPayload={buildExportPayload} />
       </div>
       <div className="flex gap-4">

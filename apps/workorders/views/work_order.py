@@ -135,7 +135,6 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         'get_recent_work_orders', 'active', 'overdue', 'awaiting_approval',
         'customer_waiting', 'by_technician', 'status_summary', 'technician_workload',
         'workflow_metrics', 'workflow_ai_analysis', 'predict_service', 'suggest_observations', 'suggest_qc_notes',
-        'rate_service',
     })
 
     def get_permissions(self):
@@ -244,9 +243,9 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             date_from = self.request.query_params.get('created_at__gte') or self.request.query_params.get('date_from')
             date_to = self.request.query_params.get('created_at__lte') or self.request.query_params.get('date_to')
             if date_from:
-                queryset = queryset.filter(created_at__gte=date_from)
+                queryset = queryset.filter(created_at__date__gte=date_from)
             if date_to:
-                queryset = queryset.filter(created_at__lte=date_to)
+                queryset = queryset.filter(created_at__date__lte=date_to)
         
         return queryset
 

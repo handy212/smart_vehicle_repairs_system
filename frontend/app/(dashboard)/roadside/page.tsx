@@ -319,7 +319,7 @@ export default function RoadsidePage() {
                     )}
 
                     {/* Active Filter Badges */}
-                    <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
+                    <div className="flex w-full flex-wrap items-center gap-1.5 md:ml-2 md:w-auto">
                         {Object.entries(advancedFilters).map(([key, value]) => {
                             if (!value || (typeof value === 'string' && value === '')) return null;
                             const filter = filterOptions.find((f) => f.key === key);
@@ -327,15 +327,19 @@ export default function RoadsidePage() {
                             return (
                                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                                     {filter.label}: {String(value)}
-                                    <X
-                                        className="w-3 h-3 cursor-pointer hover:text-destructive"
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove ${filter.label} filter`}
+                                        className="hover:text-destructive"
                                         onClick={() => {
                                             const newFilters = { ...advancedFilters };
                                             delete newFilters[key];
                                             setAdvancedFilters(newFilters);
                                             setPage(1);
                                         }}
-                                    />
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
                                 </Badge>
                             );
                         })}

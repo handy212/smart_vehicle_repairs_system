@@ -58,6 +58,7 @@ import { getWorkOrderCustomerDisplayName } from "@/lib/utils/customer-display";
 import { getWorkOrderStagePresentation } from "@/lib/utils/workorder-inspection-stage";
 import { getUserFacingError } from "@/lib/api/errors";
 import { getJobTypeLabel } from "@/lib/workorders/job-type-labels";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
 
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
@@ -84,6 +85,13 @@ export default function WorkOrdersPage() {
   const statusGroupFilter = activeStatusGroup
     ? getStatusGroupFilterValue(activeStatusGroup)
     : undefined;
+  const clearDashboardGroup = () => {
+    if (!dashboardGroup) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("group");
+    const query = params.toString();
+    router.replace(query ? `/workorders?${query}` : "/workorders", { scroll: false });
+  };
 
   const statusFilterOptions = getGroupedStatusFilterOptions();
 
@@ -117,16 +125,16 @@ export default function WorkOrdersPage() {
       label: "Last 7 Days",
       value: "last_7_days",
       filters: {
-        created_at_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        created_at_to: new Date().toISOString().split("T")[0],
+        created_at_from: toLocalCalendarDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+        created_at_to: toLocalCalendarDate(new Date()),
       },
     },
     {
       label: "This Month",
       value: "this_month",
       filters: {
-        created_at_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
-        created_at_to: new Date().toISOString().split("T")[0],
+        created_at_from: toLocalCalendarDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+        created_at_to: toLocalCalendarDate(new Date()),
       },
     },
     {
@@ -427,6 +435,7 @@ export default function WorkOrdersPage() {
             size="sm"
             className="h-7 text-xs"
             onClick={() => {
+              clearDashboardGroup();
               setActiveStatusGroup((current) => (current === group.id ? null : group.id));
               setAdvancedFilters((prev) => {
                 const next = { ...prev };
@@ -466,11 +475,17 @@ export default function WorkOrdersPage() {
               quickFilters={quickFilters}
               activeFilters={advancedFilters}
               onFiltersChange={(filters) => {
+                if (filters.status) {
+                  setActiveStatusGroup(null);
+                  clearDashboardGroup();
+                }
                 setAdvancedFilters(filters);
                 setPage(1);
               }}
               onClear={() => {
                 setAdvancedFilters({});
+                setActiveStatusGroup(null);
+                clearDashboardGroup();
                 setPage(1);
               }}
               title="Filter"
@@ -478,7 +493,7 @@ export default function WorkOrdersPage() {
           </div>
 
           {/* Clear Filters (Icon only) */}
-          {(search || Object.keys(advancedFilters).length > 0 || activeStatusGroup) && (
+          {(search || Object.keys(advancedFilters).length > 0 || activeStatusGroup || dashboardGroup) && (
             <Button
               variant="ghost"
               size="sm"
@@ -486,6 +501,7 @@ export default function WorkOrdersPage() {
                 setSearch("");
                 setAdvancedFilters({});
                 setActiveStatusGroup(null);
+                clearDashboardGroup();
                 setPage(1);
               }}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
@@ -501,13 +517,17 @@ export default function WorkOrdersPage() {
             {activeStatusGroup && (
               <Badge variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-border text-muted-foreground font-normal border border-border">
                 Group: {getStatusGroupLabel(activeStatusGroup)}
-                <X
-                  className="w-3 h-3 cursor-pointer hover:text-destructive"
+                <button
+                  type="button"
+                  aria-label="Remove status group filter"
+                  className="hover:text-destructive"
                   onClick={() => {
                     setActiveStatusGroup(null);
                     setPage(1);
                   }}
-                />
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </Badge>
             )}
             {Object.entries(advancedFilters).map(([key, value]) => {
@@ -524,8 +544,10 @@ export default function WorkOrdersPage() {
               return (
                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-border text-muted-foreground font-normal border border-border">
                   {displayLabel}: {displayValue}
-                  <X
-                    className="w-3 h-3 cursor-pointer hover:text-destructive"
+                  <button
+                    type="button"
+                    aria-label={`Remove ${displayLabel} filter`}
+                    className="hover:text-destructive"
                     onClick={() => {
                       const newFilters = { ...advancedFilters };
                       if (key.includes("_from")) {
@@ -537,7 +559,9 @@ export default function WorkOrdersPage() {
                       setAdvancedFilters(newFilters);
                       setPage(1);
                     }}
-                  />
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </Badge>
               );
             })}

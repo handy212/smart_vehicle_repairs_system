@@ -147,7 +147,7 @@ export const quickStartGuides: HelpGuide[] = [
                         items: [
                             "Review **Dashboard → What needs action**",
                             "Check jobs stuck in **Awaiting Approval** over 48 hours",
-                            "Review low stock alerts in **Inventory**",
+                            "Review low stock alerts in **Parts & Stock**",
                             "Scan **Reports → Operational** for technician workload",
                             "Approve pending POs and refunds",
                         ],

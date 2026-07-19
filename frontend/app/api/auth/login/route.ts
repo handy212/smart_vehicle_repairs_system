@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   applyAuthCookies,
+  clearAuthCookies,
   getDjangoApiBase,
   stripTokensFromBody,
 } from '@/lib/auth/bff-cookies';
@@ -14,16 +15,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ detail: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const upstream = await fetch(`${getDjangoApiBase()}/auth/token/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${getDjangoApiBase()}/auth/token/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    return NextResponse.json({ detail: 'Login unavailable' }, { status: 503 });
+  }
 
   const data = (await upstream.json().catch(() => ({}))) as Record<string, unknown>;
 
   if (!upstream.ok) {
-    return NextResponse.json(data, { status: upstream.status });
+    const response = NextResponse.json(data, { status: upstream.status });
+    if (upstream.status === 401) clearAuthCookies(response);
+    return response;
   }
 
   if (data.requires_2fa) {
@@ -31,6 +39,6 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json(stripTokensFromBody(data));
-  applyAuthCookies(response, data as { access?: string; refresh?: string });
+  applyAuthCookies(response, data as { access?: string; refresh?: string }, upstream.headers);
   return response;
 }

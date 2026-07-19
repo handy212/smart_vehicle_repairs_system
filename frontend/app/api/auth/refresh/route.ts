@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   applyAuthCookies,
+  clearAuthCookies,
   getDjangoApiBase,
   REFRESH_COOKIE,
   refreshCookieHeader,
@@ -12,7 +13,12 @@ export async function POST(request: NextRequest) {
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
 
   if (!refresh) {
-    return NextResponse.json({ detail: 'Refresh token was not provided.' }, { status: 401 });
+    const response = NextResponse.json(
+      { detail: 'Refresh token was not provided.' },
+      { status: 401 },
+    );
+    clearAuthCookies(response);
+    return response;
   }
 
   let upstream: Response;
@@ -34,13 +40,17 @@ export async function POST(request: NextRequest) {
   if (!upstream.ok) {
     const response = NextResponse.json(data, { status: upstream.status });
     if (upstream.status === 401) {
-      const { clearAuthCookies } = await import('@/lib/auth/bff-cookies');
       clearAuthCookies(response);
     }
     return response;
   }
 
   const response = NextResponse.json(stripTokensFromBody(data));
-  applyAuthCookies(response, data as { access?: string; refresh?: string });
+  applyAuthCookies(
+    response,
+    data as { access?: string; refresh?: string },
+    upstream.headers,
+    refresh,
+  );
   return response;
 }

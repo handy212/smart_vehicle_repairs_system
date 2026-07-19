@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAccessTokenUsable } from '@/lib/auth/jwt';
+import { SESSION_PRESENCE_COOKIE } from '@/lib/auth/bff-cookies';
 
 function getApiBase(): string {
     return (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001/api').replace(/\/$/, '');
@@ -153,9 +154,13 @@ export function proxy(request: NextRequest) {
         request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
 
     if (!isAccessTokenUsable(token)) {
-        // Expired access cookie is still refreshable via /api/auth/refresh (HttpOnly
-        // refresh cookie). Only redirect when there is no session cookie at all.
-        if (token) {
+        // Let the client shell restore a refreshable session. The refresh token is
+        // intentionally scoped to /api/auth/, so middleware uses its non-secret
+        // HttpOnly presence marker instead of widening the token cookie's path.
+        const hasRefreshableSession = Boolean(
+            request.cookies.get(SESSION_PRESENCE_COOKIE)?.value,
+        );
+        if (token || hasRefreshableSession) {
             return NextResponse.next();
         }
 

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/DataTable";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { format } from "date-fns";
@@ -45,6 +45,11 @@ export default function SubscriptionsPage() {
   const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [requestedSubscriptionId] = useState<string | null>(() =>
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("subscription")
+  );
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
@@ -209,6 +214,31 @@ export default function SubscriptionsPage() {
       });
     }
   };
+
+  useEffect(() => {
+    const id = Number(requestedSubscriptionId);
+    if (!Number.isInteger(id) || id <= 0 || selectedSubscription?.id === id) return;
+
+    let cancelled = false;
+    subscriptionsApi.get(id)
+      .then((subscription) => {
+        if (cancelled) return;
+        setSelectedSubscription(subscription);
+        setIsDetailsDialogOpen(true);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        toast({
+          title: "Error",
+          description: getUserFacingError(error, "Failed to load subscription details"),
+          variant: "destructive",
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedSubscriptionId, selectedSubscription?.id, toast]);
 
   // Statistics
   const totalSubscriptions = subscriptions.length;

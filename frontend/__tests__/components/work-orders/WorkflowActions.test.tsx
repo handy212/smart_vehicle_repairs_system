@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowActions from '@/app/(dashboard)/workorders/[id]/components/WorkflowActions';
-import { workordersApi } from '@/lib/api/workorders';
+import { workordersApi, type WorkOrder } from '@/lib/api/workorders';
 
 // Mock the API
 vi.mock('@/lib/api/workorders', () => ({
@@ -93,7 +93,8 @@ describe('WorkflowActions Component', () => {
     });
 
 
-    const renderComponent = (props: any) => {
+    const renderComponent = (props: React.ComponentProps<typeof WorkflowActions>) => {
+        vi.mocked(workordersApi.get).mockResolvedValue(props.workOrder);
         return render(
             <QueryClientProvider client={queryClient}>
                 <WorkflowActions {...props} />
@@ -178,7 +179,7 @@ describe('WorkflowActions Component', () => {
                 status: 'in_progress',
                 work_order_number: 'WO-001',
 
-            } as any);
+            } as WorkOrder);
 
             vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
                 can_start: true,
@@ -233,7 +234,7 @@ describe('WorkflowActions Component', () => {
                 status: 'quality_check',
                 work_order_number: 'WO-001',
 
-            } as any);
+            } as WorkOrder);
 
             const workOrder = {
                 id: 1,
@@ -252,9 +253,11 @@ describe('WorkflowActions Component', () => {
 
             await user.click(qcButton);
 
-            const inspectorTrigger = await screen.findByText(/Select authorized inspector/i);
+            const inspectorTrigger = await screen.findByRole('combobox', {
+                name: /Quality inspector/i,
+            });
             await user.click(inspectorTrigger);
-            await user.click(await screen.findByText(/QC Inspector/i));
+            await user.click(await screen.findByRole('option', { name: /QC Inspector/i }));
             await user.click(screen.getByRole('button', { name: /^Request QC$/i }));
 
             await waitFor(() => {
@@ -276,7 +279,7 @@ describe('WorkflowActions Component', () => {
                     total: '350.00',
                 },
                 invoice_summary: null,
-            } as any);
+            } as WorkOrder);
 
             renderComponent({
                 workOrderId: 1,
@@ -313,7 +316,7 @@ describe('WorkflowActions Component', () => {
                     amount_paid: '0.00',
                     is_paid: false,
                 },
-            } as any);
+            } as WorkOrder);
 
             renderComponent({
                 workOrderId: 1,
@@ -352,7 +355,7 @@ describe('WorkflowActions Component', () => {
                     amount_paid: '0.00',
                     is_paid: false,
                 },
-            } as any);
+            } as WorkOrder);
 
             renderComponent({
                 workOrderId: 1,
@@ -415,7 +418,7 @@ describe('WorkflowActions Component', () => {
                 status: 'in_progress',
                 work_order_number: 'WO-001',
 
-            } as any);
+            } as WorkOrder);
 
             vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
                 can_start: true,

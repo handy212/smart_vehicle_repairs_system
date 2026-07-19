@@ -198,7 +198,7 @@ export default function NotificationsPage() {
         case "inventory":
           return `/inventory/${id}`;
         case "subscription":
-          return `/billing/subscriptions/${id}`;
+          return `/subscriptions?subscription=${id}`;
         case "roadside":
         case "roadside_request":
         case "roadsideassistancerequest":

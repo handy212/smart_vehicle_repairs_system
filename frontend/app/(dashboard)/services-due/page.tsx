@@ -82,7 +82,10 @@ export default function ServicesDuePage() {
     queryFn: () => servicesApi.listServiceTypes({ is_active: true }),
   });
 
-  const servicesDue = servicesDueData?.results || [];
+  const servicesDue = useMemo(
+    () => servicesDueData?.results ?? [],
+    [servicesDueData?.results],
+  );
 
   // Filter by search
   const filteredServices = useMemo(() => {
@@ -118,9 +121,9 @@ export default function ServicesDuePage() {
       }
     },
 
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["services-due"] });
-      if (data.sent !== undefined) {
+      if ("sent" in data) {
         // Bulk response
         toast({
           title: "Reminders Sent",
@@ -134,7 +137,7 @@ export default function ServicesDuePage() {
       setSelectedSchedules([]);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
         description: getUserFacingError(error, "Failed to send reminder"),
@@ -376,7 +379,7 @@ export default function ServicesDuePage() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Link
-                            href={`/vehicles/${typeof schedule.vehicle === 'object' ? schedule.vehicle.id : schedule.vehicle}/services`}
+                            href={`/vehicles/${typeof schedule.vehicle === "object" ? schedule.vehicle.id : schedule.vehicle}?view=services`}
                           >
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -412,7 +415,12 @@ export default function ServicesDuePage() {
             <div className="space-y-2">
               <Label>Notification Channel</Label>
 
-              <Select value={reminderChannel} onValueChange={(v: any) => setReminderChannel(v)}>
+              <Select
+                value={reminderChannel}
+                onValueChange={(value) =>
+                  setReminderChannel(value as "email" | "sms" | "call")
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

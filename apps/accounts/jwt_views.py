@@ -78,7 +78,13 @@ class CookieTokenObtainPairView(RecaptchaTokenObtainPairView):
 
 
 class CookieTokenRefreshSerializer(TokenRefreshSerializer):
-    pass
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist as exc:
+            # Stale refresh cookies after DB resets/user deletes must expire the
+            # session with 401, not crash the refresh endpoint as a 500.
+            raise InvalidToken('No active account found for the given token') from exc
 
 
 class CookieTokenRefreshView(TokenRefreshView):
@@ -98,6 +104,8 @@ class CookieTokenRefreshView(TokenRefreshView):
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
             raise InvalidToken(e.args[0]) from e
+        except User.DoesNotExist as e:
+            raise InvalidToken('No active account found for the given token') from e
 
         data = dict(serializer.validated_data)
         # Preserve impersonation claims across refresh rotation.

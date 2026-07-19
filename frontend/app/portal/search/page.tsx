@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { useSearchParams, useRouter } from "next/navigation";
+import { getPortalSearchResultHref } from "@/lib/utils/navigation-safety";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -114,7 +115,7 @@ export default function SearchPage() {
               <div className="space-y-3">
 
                 {groupedResults.vehicles.map((result: any) => (
-                  <Link key={result.id} href={result.url?.replace("/dashboard", "/portal") || `/portal/vehicles/${result.id}`}>
+                  <Link key={result.id} href={getPortalSearchResultHref(result)!}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -147,7 +148,7 @@ export default function SearchPage() {
               <div className="space-y-3">
 
                 {groupedResults.appointments.map((result: any) => (
-                  <Link key={result.id} href={result.url?.replace("/dashboard", "/portal") || `/portal/appointments/${result.id}`}>
+                  <Link key={result.id} href={getPortalSearchResultHref(result)!}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -187,7 +188,7 @@ export default function SearchPage() {
               <div className="space-y-3">
 
                 {groupedResults.invoices.map((result: any) => (
-                  <Link key={result.id} href={result.url?.replace("/dashboard", "/portal") || `/portal/invoices/${result.id}`}>
+                  <Link key={result.id} href={getPortalSearchResultHref(result)!}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -235,7 +236,7 @@ export default function SearchPage() {
               <div className="space-y-3">
 
                 {groupedResults.estimates.map((result: any) => (
-                  <Link key={result.id} href={result.url?.replace("/dashboard", "/portal") || `/portal/estimates/${result.id}`}>
+                  <Link key={result.id} href={getPortalSearchResultHref(result)!}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -283,7 +284,7 @@ export default function SearchPage() {
               <div className="space-y-3">
 
                 {groupedResults.payments.map((result: any) => (
-                  <Link key={result.id} href={result.url?.replace("/dashboard", "/portal") || `/portal/payments`}>
+                  <Link key={result.id} href={getPortalSearchResultHref(result)!}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">

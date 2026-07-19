@@ -226,16 +226,16 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Use **SMS Console** for appointment reminders, ready-for-pickup messages, or estimate follow-ups.",
+                            "Use **Messages** (SMS) for appointment reminders, ready-for-pickup messages, or estimate follow-ups.",
                             "Direct customers to the **Customer Portal** to approve estimates and pay invoices online.",
                             "When a job is awaiting approval, explain that work cannot proceed until the customer approves the estimate.",
                             "Check **Notifications** for system alerts about overdue approvals or failed payments.",
-                            "For complaints, log feedback via **Admin → Customer Feedback** if your branch uses QR feedback posters.",
+                            "For complaints, log feedback via **Admin → Feedback** if your branch uses QR feedback posters.",
                         ],
                     },
                 ],
                 actionLink: "/sms",
-                actionLabel: "SMS Console",
+                actionLabel: "Messages",
             },
             {
                 title: "Payment collection basics",
@@ -339,13 +339,13 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "tips",
                         items: [
-                            "On mobile, use **Mobile → Inspections → Perform** for a touch-friendly checklist.",
+                            "On mobile, open **Inspections** and select **Perform** for a touch-friendly checklist.",
                             "Photos of brake pad thickness, tire wear, and leaks help customers approve estimates faster.",
                         ],
                     },
                 ],
-                actionLink: "/mobile/inspections",
-                actionLabel: "Mobile Inspections",
+                actionLink: "/inspections",
+                actionLabel: "Open Inspections",
             },
             {
                 title: "Diagnosis",
@@ -410,7 +410,7 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Request parts from **Inventory → Parts Requests** linked to the work order.",
+                            "Request parts from **Parts & Stock → Parts Requests** linked to the work order.",
                             "Wait for allocation or pickup confirmation before removing stock yourself.",
                             "After repairs, perform your own QC walk-around before sending to official **Quality Check**.",
                             "Verify torque specs, fluid levels, warning lights cleared, and road-test if required.",
@@ -613,7 +613,7 @@ export const roleGuides: HelpGuide[] = [
     },
     {
         id: "parts-manager",
-        title: "Inventory / Parts Guide",
+        title: "Parts & Stock Guide",
         description:
             "Stock control: parts catalog, purchase orders, transfers, allocations, counts, and low-stock alerts.",
         icon: Package,
@@ -634,7 +634,7 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Open **Inventory** to search parts by name, SKU, or barcode.",
+                            "Open **Parts & Stock** to search parts by name, SKU, or barcode.",
                             "Use **Scan Barcode** for fast lookup at the parts counter.",
                             "Review stock quantity, reorder level, and bin location columns.",
                             "Add new parts with correct category, supplier, cost, and sell price.",
@@ -643,7 +643,7 @@ export const roleGuides: HelpGuide[] = [
                     },
                 ],
                 actionLink: "/inventory",
-                actionLabel: "Inventory",
+                actionLabel: "Parts & Stock",
             },
             {
                 title: "Purchase orders and receiving",
@@ -651,7 +651,7 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Create POs from **Inventory → Purchase Orders → New**.",
+                            "Create POs from **Parts & Stock → Purchase Orders → New**.",
                             "Submit for approval if your branch requires manager sign-off.",
                             "When goods arrive, receive against the PO — partial receives are supported.",
                             "Verify quantities and costs match the supplier invoice before marking **Received**.",
@@ -856,7 +856,7 @@ export const roleGuides: HelpGuide[] = [
                     {
                         type: "steps",
                         items: [
-                            "Create full backups from **Admin → System Backups** before major updates.",
+                            "Create full backups from **Admin → Backups** before major updates.",
                             "Download backup files to off-site storage weekly.",
                             "Set accounting lock dates to prevent retroactive edits after month-end close.",
                             "Configure reCAPTCHA on login if exposed to the public internet.",

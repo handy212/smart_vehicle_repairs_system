@@ -362,6 +362,15 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_TASK_DEFAULT_QUEUE = 'celery'
+# Catch-all routes for modules that still declare bare @shared_task.
+# Explicit queue= on individual tasks still wins.
+CELERY_TASK_ROUTES = {
+    'apps.quickbooks_online.tasks.*': {'queue': 'qbo'},
+    'apps.data_exchange.tasks.*': {'queue': 'heavy'},
+    'apps.accounts.tasks.create_system_backup': {'queue': 'heavy'},
+    'apps.reporting.tasks.generate_weekly_reports': {'queue': 'heavy'},
+}
 SYSTEM_BACKUP_ASYNC = env.bool('SYSTEM_BACKUP_ASYNC', default=False)
 
 # QBO outbound failed-sync retry (used by Celery Beat below)

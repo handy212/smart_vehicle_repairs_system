@@ -248,10 +248,10 @@ function InventoryPageContent() {
 
   // Filter Options
   const quickFilters: QuickFilter[] = [
-    { label: "All Parts", value: "all", filters: { stock_status: null } },
-    { label: "Low Stock", value: "low_stock", filters: { stock_status: "low_stock" } },
+    { label: "All Parts", value: "all", filters: {} },
+    { label: "Low or Out of Stock", value: "low_stock", filters: { stock_status: "low_stock" } },
     { label: "Out of Stock", value: "out_of_stock", filters: { stock_status: "out_of_stock" } },
-    { label: "Needs Reorder", value: "needs_reorder", filters: { stock_status: "needs_reorder" } },
+    { label: "Low Stock (Available)", value: "needs_reorder", filters: { stock_status: "needs_reorder" } },
   ];
 
   const filterOptions: FilterOption[] = [
@@ -370,7 +370,7 @@ function InventoryPageContent() {
           )}
 
           {/* Active Filter Badges */}
-          <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
+          <div className="flex w-full flex-wrap items-center gap-1.5 md:ml-2 md:w-auto">
             {Object.entries(advancedFilters).map(([key, value]) => {
               if (!value || (typeof value === 'string' && value === '') || value === null) return null;
               // Filter out internal filter keys like stock_status if they shouldn't be badges?
@@ -395,14 +395,18 @@ function InventoryPageContent() {
               return (
                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
-                  <X
-                    className="w-3 h-3 cursor-pointer hover:text-destructive"
+                  <button
+                    type="button"
+                    aria-label={`Remove ${displayLabel} filter`}
+                    className="hover:text-destructive"
                     onClick={() => {
                       const newFilters = { ...advancedFilters };
                       delete newFilters[key];
                       setAdvancedFilters(newFilters);
                     }}
-                  />
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </Badge>
               );
             })}

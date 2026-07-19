@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog";
 import { Input } from "./input";
@@ -9,6 +9,11 @@ import { DateRangePicker } from "./date-range-picker";
 import { X, Filter, Calendar, CheckCircle } from "lucide-react";
 import { Badge } from "./badge";
 import { cn } from "@/lib/utils/cn";
+import {
+  areFilterStatesEqual,
+  normalizeFilterState,
+  type FilterState,
+} from "@/lib/utils/filter-state";
 
 export interface FilterOption {
   key: string;
@@ -16,24 +21,46 @@ export interface FilterOption {
   type: "text" | "select" | "date" | "daterange" | "number";
   options?: { value: string; label: string }[];
   placeholder?: string;
+  min?: number;
+  max?: number;
 }
 
 export interface QuickFilter {
   label: string;
   value: string;
-
-  filters: Record<string, any>;
+  /** Presets replace the complete committed filter state; they are not merged. */
+  filters: FilterState;
 }
 
 export interface AdvancedFiltersProps {
   filters: FilterOption[];
   quickFilters?: QuickFilter[];
 
-  activeFilters: Record<string, any>;
-
-  onFiltersChange: (filters: Record<string, any>) => void;
+  activeFilters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
   onClear: () => void;
   title?: string;
+}
+
+export function countActiveFilters(activeFilters: FilterState, filters: FilterOption[]): number {
+  const normalized = normalizeFilterState(activeFilters);
+  const consumedKeys = new Set<string>();
+  let count = 0;
+
+  for (const filter of filters) {
+    if (filter.type === "daterange") {
+      const fromKey = `${filter.key}_from`;
+      const toKey = `${filter.key}_to`;
+      consumedKeys.add(fromKey);
+      consumedKeys.add(toKey);
+      if (normalized[fromKey] !== undefined || normalized[toKey] !== undefined) count += 1;
+    } else {
+      consumedKeys.add(filter.key);
+      if (normalized[filter.key] !== undefined) count += 1;
+    }
+  }
+
+  return count + Object.keys(normalized).filter((key) => !consumedKeys.has(key)).length;
 }
 
 export function AdvancedFilters({
@@ -45,22 +72,18 @@ export function AdvancedFilters({
   title = "Advanced Filters",
 }: AdvancedFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [localFilters, setLocalFilters] = useState<FilterState>(() =>
+    normalizeFilterState(activeFilters)
+  );
+  const committedFilters = normalizeFilterState(activeFilters);
+  const activeFilterCount = countActiveFilters(committedFilters, filters);
 
-  const [localFilters, setLocalFilters] = useState<Record<string, any>>(activeFilters);
+  const handleOpenChange = (open: boolean) => {
+    if (open) setLocalFilters(normalizeFilterState(activeFilters));
+    setIsOpen(open);
+  };
 
-  // Sync local filters when activeFilters change
-  useEffect(() => {
-    if (isOpen) {
-      setLocalFilters(activeFilters);
-    }
-  }, [activeFilters, isOpen]);
-
-  const activeFilterCount = Object.keys(activeFilters).filter(
-    (key) => activeFilters[key] !== "" && activeFilters[key] !== null && activeFilters[key] !== undefined
-  ).length;
-
-
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: string | number) => {
     setLocalFilters((prev) => ({
       ...prev,
       [key]: value,
@@ -68,13 +91,14 @@ export function AdvancedFilters({
   };
 
   const handleApply = () => {
-    onFiltersChange(localFilters);
+    onFiltersChange(normalizeFilterState(localFilters));
     setIsOpen(false);
   };
 
   const handleQuickFilter = (quickFilter: QuickFilter) => {
-    setLocalFilters(quickFilter.filters);
-    onFiltersChange(quickFilter.filters);
+    const replacementFilters = normalizeFilterState(quickFilter.filters);
+    setLocalFilters(replacementFilters);
+    onFiltersChange(replacementFilters);
     setIsOpen(false);
   };
 
@@ -85,14 +109,31 @@ export function AdvancedFilters({
   };
 
   const handleReset = () => {
-    setLocalFilters({});
+    setLocalFilters(normalizeFilterState(activeFilters));
+  };
+
+  const handleRemoveFilter = (filter: FilterOption) => {
+    const keys =
+      filter.type === "daterange"
+        ? [`${filter.key}_from`, `${filter.key}_to`]
+        : [filter.key];
+    const withoutFilter = { ...committedFilters };
+    keys.forEach((key) => delete withoutFilter[key]);
+
+    // Remove the same fields from the draft, but never commit its unrelated edits.
+    setLocalFilters((draft) => {
+      const nextDraft = { ...draft };
+      keys.forEach((key) => delete nextDraft[key]);
+      return nextDraft;
+    });
+    onFiltersChange(normalizeFilterState(withoutFilter));
   };
 
   return (
     <>
       <Button
         variant="outline"
-        onClick={() => setIsOpen(true)}
+        onClick={() => handleOpenChange(true)}
         className="relative h-9 border-dashed shadow-sm"
       >
         <Filter className="w-3.5 h-3.5 mr-2" />
@@ -107,7 +148,7 @@ export function AdvancedFilters({
         )}
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl max-h-[calc(100vh-1.5rem)] sm:max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="border-b px-4 py-4 sm:px-6 bg-muted/50 bg-muted/50">
             <div className="flex items-center justify-between gap-3">
@@ -122,19 +163,30 @@ export function AdvancedFilters({
               {quickFilters.length > 0 && (
                 <div className="space-y-3">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Filters</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Choosing a preset replaces all current filters.
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    {quickFilters.map((quickFilter) => (
-                      <Button
-                        key={quickFilter.value}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuickFilter(quickFilter)}
-                        className="text-xs h-7 font-normal bg-transparent hover:bg-muted hover:bg-muted"
-                      >
-                        <Calendar className="w-3 h-3 mr-1.5 opacity-70" />
-                        {quickFilter.label}
-                      </Button>
-                    ))}
+                    {quickFilters.map((quickFilter) => {
+                      const isSelected = areFilterStatesEqual(
+                        committedFilters,
+                        quickFilter.filters
+                      );
+
+                      return (
+                        <Button
+                          key={quickFilter.value}
+                          variant={isSelected ? "secondary" : "outline"}
+                          size="sm"
+                          aria-pressed={isSelected}
+                          onClick={() => handleQuickFilter(quickFilter)}
+                          className="text-xs h-7 font-normal bg-transparent hover:bg-muted"
+                        >
+                          <Calendar className="w-3 h-3 mr-1.5 opacity-70" />
+                          {quickFilter.label}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -151,7 +203,10 @@ export function AdvancedFilters({
                         (filter.type === "daterange" || filter.type === "text") && "md:col-span-2"
                       )}
                     >
-                      <Label htmlFor={filter.key} className="text-sm font-medium text-foreground">
+                      <Label
+                        htmlFor={filter.type === "daterange" ? undefined : filter.key}
+                        className="text-sm font-medium text-foreground"
+                      >
                         {filter.label}
                       </Label>
                       {filter.type === "text" && (
@@ -196,6 +251,7 @@ export function AdvancedFilters({
                             onStartDateChange={(date) => handleFilterChange(`${filter.key}_from`, date)}
                             onEndDateChange={(date) => handleFilterChange(`${filter.key}_to`, date)}
                             label=""
+                            idPrefix={`${filter.key}-range`}
                             className="w-full"
                           />
                         </div>
@@ -204,6 +260,8 @@ export function AdvancedFilters({
                         <Input
                           id={filter.key}
                           type="number"
+                          min={filter.min}
+                          max={filter.max}
                           placeholder={filter.placeholder || `Enter ${filter.label.toLowerCase()}`}
                           value={localFilters[filter.key] || ""}
                           onChange={(e) => handleFilterChange(filter.key, e.target.value)}
@@ -220,44 +278,47 @@ export function AdvancedFilters({
                 <div className="space-y-3 pt-4 border-t border-dashed">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Filters</Label>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(activeFilters).map(([key, value]) => {
-                      if (!value || value === "") return null;
-                      const filter = filters.find((f) => f.key === key || f.key === `${key.replace("_from", "").replace("_to", "")}`);
-                      if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+                    {filters.map((filter) => {
+                      let displayValue: string | null = null;
 
-                      // Skip _to entries as they're shown with _from
-                      if (key.includes("_to")) return null;
+                      if (filter.type === "daterange") {
+                        const from = committedFilters[`${filter.key}_from`];
+                        const to = committedFilters[`${filter.key}_to`];
+                        if (from !== undefined && to !== undefined) {
+                          displayValue = `${from} - ${to}`;
+                        } else if (from !== undefined) {
+                          displayValue = `From ${from}`;
+                        } else if (to !== undefined) {
+                          displayValue = `Until ${to}`;
+                        }
+                      } else {
+                        const value = committedFilters[filter.key];
+                        if (value !== undefined) {
+                          displayValue =
+                            filter.type === "select"
+                              ? filter.options?.find((option) => option.value === String(value))
+                                  ?.label || String(value)
+                              : String(value);
+                        }
+                      }
 
-                      const displayValue = key.includes("_from") && activeFilters[key.replace("_from", "_to")]
-                        ? `${value} - ${activeFilters[key.replace("_from", "_to")]}`
-                        : String(value);
-
-                      const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+                      if (displayValue === null) return null;
 
                       return (
                         <Badge
-                          key={key}
+                          key={filter.key}
                           variant="outline"
                           className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal border-dashed"
                         >
-                          <span className="font-medium text-muted-foreground">{displayLabel}:</span>
+                          <span className="font-medium text-muted-foreground">{filter.label}:</span>
                           <span>{displayValue}</span>
                           <button
-                            onClick={() => {
-                              const newFilters = { ...localFilters };
-                              if (key.includes("_from")) {
-                                delete newFilters[key];
-                                delete newFilters[key.replace("_from", "_to")];
-                              } else {
-                                delete newFilters[key];
-                              }
-                              setLocalFilters(newFilters);
-                              onFiltersChange(newFilters);
-                            }}
+                            onClick={() => handleRemoveFilter(filter)}
+                            aria-label={`Remove ${filter.label} filter`}
                             className="ml-1 text-muted-foreground hover:text-destructive dark:hover:text-destructive transition-colors"
                             type="button"
                           >
-                            <X className="w-3 h-3" />
+                            <X aria-hidden="true" className="w-3 h-3" />
                           </button>
                         </Badge>
                       );

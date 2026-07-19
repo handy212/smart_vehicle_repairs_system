@@ -199,7 +199,7 @@ def send_bulk_sms_async(recipients, message, scheduled_for=None):
                     notification_type='custom',
                     channel='sms',
                     priority='normal',
-                    title='SMS Console Message',
+                    title='SMS Message',
                     message=message,
                     scheduled_for=scheduled_for
                 )

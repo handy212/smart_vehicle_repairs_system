@@ -67,6 +67,7 @@ jobs:
             curl -sf http://127.0.0.1:8000/api/health/ && break
             sleep 2
           done
+          curl -sf http://127.0.0.1:8000/api/health/
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -81,6 +82,14 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.[jt]s', 'frontend/**/*.[jt]sx') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
+
       - name: Build and start Next.js
         working-directory: frontend
         run: |
@@ -90,6 +99,7 @@ jobs:
             curl -sf http://127.0.0.1:3000/login && break
             sleep 2
           done
+          curl -sf http://127.0.0.1:3000/login
 
       - name: Run Playwright
         working-directory: frontend

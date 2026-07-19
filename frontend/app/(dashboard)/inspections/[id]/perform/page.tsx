@@ -1,12 +1,12 @@
 "use client";
 
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inspectionsApi, InspectionResult } from "@/lib/api/inspections";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Save, AlertCircle, X, ArrowLeft } from "lucide-react";
+import { CheckCircle, Save, AlertCircle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
@@ -26,17 +26,13 @@ type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | un
 export default function PerformInspectionPage() {
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const inspectionId = Number(params.id);
-  const isMobileApp = pathname.startsWith("/mobile/");
-  const inspectionsListPath = isMobileApp ? "/mobile/inspections" : "/inspections";
-  const inspectionDetailPath = isMobileApp
-    ? `/mobile/inspections/${inspectionId}`
-    : `/inspections/${inspectionId}`;
-  const dashboardPath = isMobileApp ? "/mobile/dashboard" : "/dashboard";
+  const inspectionsListPath = "/inspections";
+  const inspectionDetailPath = `/inspections/${inspectionId}`;
+  const dashboardPath = "/dashboard";
 
   /* --------------------- Data Queries ------------------------- */
   const { data: inspection } = useQuery({
@@ -444,25 +440,15 @@ export default function PerformInspectionPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          {isMobileApp ? (
-            <Link
-              href={inspectionDetailPath}
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-2"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Back to inspection
-            </Link>
-          ) : (
-            <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-              <Link href={dashboardPath} className="hover:text-primary transition-colors">Dashboard</Link>
-              <span className="text-muted-foreground">/</span>
-              <Link href={inspectionsListPath} className="hover:text-primary transition-colors">Inspections</Link>
-              <span className="text-muted-foreground">/</span>
-              <Link href={inspectionDetailPath} className="hover:text-primary transition-colors">#{inspection.inspection_number}</Link>
-              <span className="text-muted-foreground">/</span>
-              <span className="text-foreground">Perform</span>
-            </div>
-          )}
+          <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+            <Link href={dashboardPath} className="hover:text-primary transition-colors">Dashboard</Link>
+            <span className="text-muted-foreground">/</span>
+            <Link href={inspectionsListPath} className="hover:text-primary transition-colors">Inspections</Link>
+            <span className="text-muted-foreground">/</span>
+            <Link href={inspectionDetailPath} className="hover:text-primary transition-colors">#{inspection.inspection_number}</Link>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-foreground">Perform</span>
+          </div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">
             Perform Inspection
           </h1>

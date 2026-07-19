@@ -691,7 +691,13 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
         return context
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
+    filterset_fields = {
+        'customer': ['exact'],
+        'vehicle': ['exact'],
+        'work_order': ['exact'],
+        'invoice_date': ['exact', 'gte', 'lte'],
+        'due_date': ['exact', 'gte', 'lte'],
+    }
     search_fields = [
         'invoice_number', 'description',
         'customer__customer_number', 'customer__company_name',
@@ -738,7 +744,9 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
         status = self.request.query_params.get('status')
         if status:
             if status == 'unpaid':
-                queryset = queryset.filter(status__in=['sent', 'viewed', 'proforma', 'partial'])
+                queryset = queryset.filter(
+                    status__in=['sent', 'viewed', 'proforma', 'partial', 'overdue']
+                )
             else:
                 queryset = queryset.filter(status=status)
 

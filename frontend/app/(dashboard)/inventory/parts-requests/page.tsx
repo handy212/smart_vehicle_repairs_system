@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 /**
- * Parts Requests is consolidated into Stores Workbench → Fulfillment.
+ * Parts Requests is consolidated into Parts Requests → Fulfillment.
  * Keep this route as a redirect so old bookmarks and deep links still work.
  */
 function PartsRequestsRedirectInner() {
@@ -20,7 +20,7 @@ function PartsRequestsRedirectInner() {
 
   return (
     <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
-      Redirecting to Stores Workbench…
+      Redirecting to Parts Requests…
     </div>
   );
 }
@@ -30,7 +30,7 @@ export default function PartsRequestsRedirectPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
-          Redirecting to Stores Workbench…
+          Redirecting to Parts Requests…
         </div>
       }
     >

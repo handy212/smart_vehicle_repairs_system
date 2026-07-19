@@ -229,7 +229,7 @@ export default function ControlPanelPage() {
           Configure SVR control accounts, QuickBooks mappings, accounting periods, and review ledger
           audit events. Subledger health:{" "}
           <Link href="/accounting/integrity" className="text-primary hover:underline">
-            Subledger Integrity
+            Integrity Check
           </Link>
           . App-wide changes:{" "}
           <Link href="/admin/audit-log" className="text-primary hover:underline">

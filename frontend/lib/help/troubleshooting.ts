@@ -162,7 +162,7 @@ export const troubleshootingGuides: HelpGuide[] = [
                             {
                                 problem: "Customer not receiving SMS",
                                 solution:
-                                    "Verify phone number format. Check Hubtel SMS is enabled in settings. Review SMS Console logs for delivery status.",
+                                    "Verify phone number format. Check Hubtel SMS is enabled in settings. Review Messages logs for delivery status.",
                             },
                             {
                                 problem: "Email notifications not arriving",

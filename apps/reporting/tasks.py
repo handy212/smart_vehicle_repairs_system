@@ -2,6 +2,8 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+
+from config.celery_queues import HEAVY_CELERY_QUEUE
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ def check_low_stock_items():
     return f'Created {count} stock alert(s)'
 
 
-@shared_task
+@shared_task(queue=HEAVY_CELERY_QUEUE)
 def generate_weekly_reports():
     """
     Process due weekly report schedules.

@@ -134,10 +134,10 @@ def mobile_workorder_list(request):
 
 @login_required  
 def mobile_inspection_form(request, vehicle_id=None):
-    """Deprecated: redirect to Next.js PWA inspection create."""
+    """Deprecated: redirect to the Next.js inspection create page."""
     if vehicle_id:
-        return redirect(f'/mobile/inspections/new?vehicle={vehicle_id}')
-    return redirect('/mobile/inspections/new')
+        return redirect(f'/inspections/new?vehicle={vehicle_id}')
+    return redirect('/inspections/new')
 
 
 @login_required
@@ -180,6 +180,29 @@ def mobile_quick_update(request):
         })
 
 
+def _search_result_url(result_type, object_id, is_customer=False):
+    """Return a frontend route appropriate for the current user surface."""
+    if is_customer:
+        portal_routes = {
+            'workorder': f'/portal/work-orders/{object_id}',
+            'customer': '/portal/profile',
+            'vehicle': f'/portal/vehicles/{object_id}',
+            'appointment': f'/portal/appointments/{object_id}',
+            'invoice': f'/portal/invoices/{object_id}',
+        }
+        return portal_routes.get(result_type)
+
+    staff_routes = {
+        'workorder': f'/workorders/{object_id}/',
+        'customer': f'/customers/{object_id}/',
+        'vehicle': f'/vehicles/{object_id}/',
+        'appointment': f'/appointments/{object_id}/',
+        'invoice': f'/billing/invoices/{object_id}/',
+        'part': f'/inventory/{object_id}/',
+    }
+    return staff_routes.get(result_type)
+
+
 @login_required
 def mobile_search_api(request):
     """API endpoint for mobile search functionality"""
@@ -188,6 +211,7 @@ def mobile_search_api(request):
     
     query = request.GET.get('q', '').strip()
     search_type = request.GET.get('type', 'all')
+    is_customer = getattr(request.user, 'role', None) == 'customer'
     
     logger.info(f"Search API called: query='{query}', type='{search_type}'")
     
@@ -201,6 +225,8 @@ def mobile_search_api(request):
         # Base query with branch filtering
         workorders_qs = WorkOrder.objects.select_related('customer', 'customer__user', 'vehicle')
         workorders_qs = filter_queryset_for_user_branches(workorders_qs, request.user, request)
+        if is_customer:
+            workorders_qs = workorders_qs.filter(customer__user=request.user)
         
         if query:
             workorders = workorders_qs.filter(
@@ -237,7 +263,7 @@ def mobile_search_api(request):
                 'id': wo.id,
                 'title': f'{wo.work_order_number or f"WO-{wo.id:04d}"} - {customer_name}',
                 'subtitle': f'{vehicle_info} • {description}',
-                'url': f'/workorders/{wo.id}/',
+                'url': _search_result_url('workorder', wo.id, is_customer),
                 'status': wo.status if hasattr(wo, 'status') else None,
             })
     
@@ -277,7 +303,10 @@ def mobile_search_api(request):
                         user__last_name__icontains=' '.join(query_words[1:])
                     )
             
-            customers = Customer.objects.select_related('user').filter(customer_q).distinct()[:10]
+            customers_qs = Customer.objects.select_related('user').filter(customer_q)
+            if is_customer:
+                customers_qs = customers_qs.filter(user=request.user)
+            customers = customers_qs.distinct()[:10]
             customers_list = list(customers)  # Evaluate queryset to get count
             logger.info(f"Found {len(customers_list)} customers for query '{query}'")
             if len(customers_list) > 0:
@@ -285,7 +314,10 @@ def mobile_search_api(request):
             customers = customers_list
         else:
             # Empty query for specific type - return all
-            customers = Customer.objects.select_related('user').order_by('-created_at')[:10]
+            customers = Customer.objects.select_related('user')
+            if is_customer:
+                customers = customers.filter(user=request.user)
+            customers = customers.order_by('-created_at')[:10]
         
         for customer in customers:
             customer_name = customer.full_name if hasattr(customer, 'full_name') else (
@@ -304,13 +336,16 @@ def mobile_search_api(request):
                 'id': customer.id,
                 'title': customer_name,
                 'subtitle': ' • '.join(subtitle_parts) if subtitle_parts else 'No contact info',
-                'url': f'/customers/{customer.id}/',
+                'url': _search_result_url('customer', customer.id, is_customer),
                 'status': customer.status if hasattr(customer, 'status') else None,
             })
     
     if search_type in ['all', 'vehicles']:
         if query:
-            vehicles = Vehicle.objects.select_related('owner', 'owner__user').filter(
+            vehicles_qs = Vehicle.objects.select_related('owner', 'owner__user')
+            if is_customer:
+                vehicles_qs = vehicles_qs.filter(owner__user=request.user)
+            vehicles = vehicles_qs.filter(
                 Q(make__icontains=query) |
                 Q(model__icontains=query) |
                 Q(license_plate__icontains=query) |
@@ -318,7 +353,10 @@ def mobile_search_api(request):
             )[:5]
         else:
             # Empty query for specific type - return all
-            vehicles = Vehicle.objects.select_related('owner', 'owner__user').order_by('-created_at')[:10]
+            vehicles = Vehicle.objects.select_related('owner', 'owner__user')
+            if is_customer:
+                vehicles = vehicles.filter(owner__user=request.user)
+            vehicles = vehicles.order_by('-created_at')[:10]
         
         for vehicle in vehicles:
             owner_name = 'Unknown'
@@ -332,7 +370,7 @@ def mobile_search_api(request):
                 'id': vehicle.id,
                 'title': f'{vehicle.year or ""} {vehicle.make or ""} {vehicle.model or ""}'.strip(),
                 'subtitle': f'{vehicle.license_plate or "No plate"} • {owner_name}',
-                'url': f'/vehicles/{vehicle.id}/',
+                'url': _search_result_url('vehicle', vehicle.id, is_customer),
                 'status': vehicle.status if hasattr(vehicle, 'status') else None,
             })
     
@@ -341,6 +379,8 @@ def mobile_search_api(request):
         # Base query with branch filtering
         appointments_qs = Appointment.objects.select_related('customer', 'customer__user', 'vehicle')
         appointments_qs = filter_queryset_for_user_branches(appointments_qs, request.user, request)
+        if is_customer:
+            appointments_qs = appointments_qs.filter(customer__user=request.user)
         
         if query:
             appointments = appointments_qs.filter(
@@ -371,7 +411,7 @@ def mobile_search_api(request):
                 'id': apt.id,
                 'title': f'{customer_name} - {apt.service_type or "Service"}',
                 'subtitle': f'{apt.appointment_date} at {apt.appointment_time} • {vehicle_info}',
-                'url': f'/appointments/{apt.id}/',
+                'url': _search_result_url('appointment', apt.id, is_customer),
                 'status': apt.status if hasattr(apt, 'status') else None,
             })
     
@@ -380,6 +420,8 @@ def mobile_search_api(request):
         # Base query with branch filtering
         invoices_qs = Invoice.objects.select_related('customer', 'customer__user')
         invoices_qs = filter_queryset_for_user_branches(invoices_qs, request.user, request)
+        if is_customer:
+            invoices_qs = invoices_qs.filter(customer__user=request.user)
         
         if query:
             invoices = invoices_qs.filter(
@@ -403,11 +445,11 @@ def mobile_search_api(request):
                 'id': inv.id,
                 'title': f'{inv.invoice_number} - {customer_name}',
                 'subtitle': f'${float(inv.total or 0):.2f} • {inv.invoice_date}',
-                'url': f'/billing/invoices/{inv.id}/',
+                'url': _search_result_url('invoice', inv.id, is_customer),
                 'status': inv.status if hasattr(inv, 'status') else None,
             })
     
-    if search_type in ['all', 'parts']:
+    if not is_customer and search_type in ['all', 'parts']:
         from apps.inventory.models import Part
         if query:
             parts = Part.objects.select_related('category').filter(
@@ -430,7 +472,7 @@ def mobile_search_api(request):
                 'id': part.id,
                 'title': f'{part.part_number} - {part.name}',
                 'subtitle': f'{category_name} • {stock_status}',
-                'url': f'/inventory/{part.id}/',
+                'url': _search_result_url('part', part.id, is_customer),
                 'status': 'low_stock' if part.is_low_stock else 'in_stock' if (part.quantity_in_stock or 0) > 0 else 'out_of_stock',
             })
     
@@ -523,7 +565,7 @@ def pwa_manifest(request):
                 "name": "Inspections",
                 "short_name": "Inspections",
                 "description": "Perform vehicle inspections",
-                "url": "/mobile/inspections/",
+                "url": "/inspections/",
                 "icons": [{"src": "/static/icons/shortcut-inspections.png", "sizes": "192x192"}]
             }
         ],

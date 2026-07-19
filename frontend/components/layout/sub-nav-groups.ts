@@ -76,7 +76,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       icon: ListChecks,
       items: [
         {
-          name: "Stores Workbench",
+          name: "Parts Requests",
           href: "/inventory/quotation-requests",
           permissions: [...STORES_QUOTATION_VIEW_PERMISSIONS, ...PARTS_REQUESTS_VIEW_PERMISSIONS],
           icon: ListChecks,
@@ -88,7 +88,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
           icon: FileText,
         },
         {
-          name: "Transfers",
+          name: "Stock Transfers",
           href: "/inventory/transfers",
           permissions: [...INVENTORY_TRANSFERS_VIEW_PERMISSIONS],
           icon: ArrowLeftRight,
@@ -120,7 +120,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
           icon: ClipboardList,
         },
         {
-          name: "Inventory GL Report",
+          name: "Stock Accounting",
           href: "/inventory/reports/accounting",
           permissions: [...INVENTORY_REPORTS_VIEW_PERMISSIONS],
           icon: PieChart,
@@ -165,7 +165,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
           icon: MinusSquare,
         },
         {
-          name: "Receivables",
+          name: "Customer Balances",
           href: "/billing/receivables",
           permissions: ["view_billing", "manage_billing", "view_payment_history"],
           icon: HandCoins,
@@ -182,7 +182,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Vendor Expenses", href: "/billing/expenses", permissions: ["view_bills", "manage_billing"], icon: Receipt },
         { name: "Vendor Credits", href: "/billing/vendor-credits", permissions: ["view_bills", "create_bills", "edit_bills", "manage_billing"], icon: MinusSquare },
         { name: "Payment History", href: "/billing/vendor-payments", permissions: ["view_bills", "manage_billing"], icon: Clock },
-        { name: "Payables", href: "/billing/payables", permissions: ["view_bills", "manage_billing"], icon: Building2 },
+        { name: "Vendor Balances", href: "/billing/payables", permissions: ["view_bills", "manage_billing"], icon: Building2 },
       ],
     },
   ],
@@ -243,7 +243,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
     },
     {
       id: "people",
-      label: "People",
+      label: "Team",
       icon: Users,
       items: [
         { name: "My HR", href: "/hr/me", icon: UserCheck },
@@ -277,11 +277,11 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
   ],
   sms: [
     {
-      id: "communications",
-      label: "Communications",
+      id: "messages",
+      label: "Messages",
       icon: MessageSquare,
       items: [
-        { name: "Console", href: "/sms", permission: "send_notifications", icon: MessageSquare },
+        { name: "SMS", href: "/sms", permission: "send_notifications", icon: MessageSquare },
         { name: "Templates", href: "/sms/templates", permission: "send_notifications", icon: Settings2 },
       ],
     },
@@ -307,7 +307,7 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
         { name: "Acquisitions", href: "/fixed-assets/acquisitions", permission: "view_assets", icon: ClipboardList },
         { name: "Depreciation", href: "/fixed-assets/depreciation", permission: "view_assets", icon: Calculator },
         { name: "Disposals", href: "/fixed-assets/disposals", permission: "edit_assets", icon: Undo2 },
-        { name: "Transfers", href: "/fixed-assets/transfers", permission: "edit_assets", icon: ArrowLeftRight },
+        { name: "Asset Transfers", href: "/fixed-assets/transfers", permission: "edit_assets", icon: ArrowLeftRight },
         { name: "Valuation", href: "/fixed-assets/reports/valuation", permission: "view_assets", icon: PieChart },
       ],
     },
@@ -327,21 +327,21 @@ export const SUB_NAV_GROUPS: Record<string, NavGroup[]> = {
       label: "Analytics",
       icon: Activity,
       items: [
-        { name: "Operations Intelligence", href: "/reports/operations", permission: "view_reports", icon: Activity },
+        { name: "Operations", href: "/reports/operations", permission: "view_reports", icon: Activity },
         { name: "Technician Efficiency", href: "/reports/efficiency", permission: "view_technician_reports", icon: Target },
-        { name: "Service Bundles", href: "/reports/bundles", permission: "view_reports", icon: Boxes },
+        { name: "Bundle Performance", href: "/reports/bundles", permission: "view_reports", icon: Boxes },
       ],
     },
   ],
 };
 
 export const SUB_NAV_TITLES: Record<string, string> = {
-  inventory: "Inventory",
+  inventory: "Parts & Stock",
   billing: "Billing",
   accounting: "Accounting",
-  admin: "Administration",
-  hr: "HR Management",
-  sms: "Communications",
+  admin: "Admin",
+  hr: "HR",
+  sms: "Messages",
   technicians: "Technicians",
   fixedAssets: "Fixed Assets",
   reports: "Reports",

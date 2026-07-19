@@ -1,6 +1,6 @@
 /** User-facing labels for operational income classification (API field: revenue_product). */
 
-export const INCOME_CATEGORY_PAGE_TITLE = "Income Categories";
+export const INCOME_CATEGORY_PAGE_TITLE = "Revenue Categories";
 
 export const INCOME_CATEGORY_SHORT = "Income category";
 

@@ -102,7 +102,7 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
         description: "Budget lines and variance tracking",
       },
       {
-        name: "Budgets by Year & Period Lock",
+        name: "Fiscal Year",
         href: "/accounting/fiscal-year",
         permission: "view_budgets",
         icon: Calendar,
@@ -126,7 +126,7 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "governance",
-    label: "Governance",
+    label: "Controls",
     icon: Shield,
     items: [
       {
@@ -137,14 +137,14 @@ export const ACCOUNTING_NAV_GROUPS: NavGroup[] = [
         description: "Control accounts, period lock, and close",
       },
       {
-        name: "Income Categories",
+        name: "Revenue Categories",
         href: "/accounting/revenue-products",
         permission: "view_accounting",
         icon: Tags,
         description: INCOME_CATEGORY_NAV_DESCRIPTION,
       },
       {
-        name: "Subledger Integrity",
+        name: "Integrity Check",
         href: "/accounting/integrity",
         permission: "view_financial_reports",
         icon: Scale,

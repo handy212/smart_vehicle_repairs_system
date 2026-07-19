@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 export const ACCESS_COOKIE = 'access_token';
 export const REFRESH_COOKIE = 'svr_refresh_token';
 export const IMPERSONATOR_COOKIE = 'svr_impersonator_refresh';
+export const SESSION_PRESENCE_COOKIE = 'svr_session_present';
 /** Match Django `JWT_REFRESH_COOKIE_PATH` (trailing slash). */
 const REFRESH_COOKIE_PATH = '/api/auth/';
 
@@ -22,40 +23,144 @@ type AuthTokenPayload = {
   requires_2fa?: boolean;
 };
 
-/** Set HttpOnly auth cookies on a Next.js response (frontend origin). */
+type CookieSameSite = 'lax' | 'strict' | 'none';
+
+type UpstreamCookie = {
+  name: string;
+  value: string;
+  maxAge?: number;
+  expires?: Date;
+  secure: boolean;
+  sameSite?: CookieSameSite;
+};
+
+type HeadersWithSetCookie = Headers & {
+  getSetCookie?: () => string[];
+};
+
+function upstreamSetCookieHeaders(headers?: Headers): string[] {
+  if (!headers) return [];
+
+  const values = (headers as HeadersWithSetCookie).getSetCookie?.();
+  if (values?.length) return values;
+
+  const combined = headers.get('set-cookie');
+  if (!combined) return [];
+  return combined.split(/,(?=\s*[^;,=\s]+=[^;,]*)/);
+}
+
+function parseUpstreamCookie(header: string): UpstreamCookie | undefined {
+  const parts = header.split(';').map((part) => part.trim());
+  const separator = parts[0]?.indexOf('=') ?? -1;
+  if (separator < 1) return undefined;
+
+  const cookie: UpstreamCookie = {
+    name: parts[0].slice(0, separator),
+    value: parts[0].slice(separator + 1),
+    secure: false,
+  };
+
+  for (const attribute of parts.slice(1)) {
+    const [rawName, ...rawValue] = attribute.split('=');
+    const name = rawName.toLowerCase();
+    const value = rawValue.join('=');
+    if (name === 'max-age' && /^-?\d+$/.test(value)) {
+      cookie.maxAge = Number(value);
+    } else if (name === 'expires') {
+      const expires = new Date(value);
+      if (!Number.isNaN(expires.getTime())) cookie.expires = expires;
+    } else if (name === 'secure') {
+      cookie.secure = true;
+    } else if (name === 'samesite') {
+      const sameSite = value.toLowerCase();
+      if (sameSite === 'lax' || sameSite === 'strict' || sameSite === 'none') {
+        cookie.sameSite = sameSite;
+      }
+    }
+  }
+
+  return cookie;
+}
+
+function jwtMaxAge(token: string, nowSeconds = Math.floor(Date.now() / 1000)): number | undefined {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return undefined;
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      exp?: unknown;
+    };
+    if (typeof decoded.exp !== 'number' || !Number.isFinite(decoded.exp)) return undefined;
+    return Math.max(0, Math.floor(decoded.exp - nowSeconds));
+  } catch {
+    return undefined;
+  }
+}
+
+function cookieMaxAge(cookie: UpstreamCookie, token: string): number | undefined {
+  if (cookie.maxAge !== undefined) return cookie.maxAge;
+  if (cookie.expires) {
+    return Math.max(0, Math.floor((cookie.expires.getTime() - Date.now()) / 1000));
+  }
+  return jwtMaxAge(token);
+}
+
+function authCookiesFromUpstream(headers?: Headers): Map<string, UpstreamCookie> {
+  const allowed = new Set([ACCESS_COOKIE, REFRESH_COOKIE, IMPERSONATOR_COOKIE]);
+  const cookies = new Map<string, UpstreamCookie>();
+  for (const header of upstreamSetCookieHeaders(headers)) {
+    const cookie = parseUpstreamCookie(header);
+    if (cookie && allowed.has(cookie.name)) cookies.set(cookie.name, cookie);
+  }
+  return cookies;
+}
+
+/**
+ * Mirror known upstream auth cookies onto the frontend origin. Token values are
+ * accepted only from trusted Django JSON/headers and never returned to client JS.
+ */
 export function applyAuthCookies(
   response: NextResponse,
   data: AuthTokenPayload,
+  upstreamHeaders?: Headers,
+  markerFallbackToken?: string,
 ): void {
-  const secure = cookieSecure();
+  const upstreamCookies = authCookiesFromUpstream(upstreamHeaders);
+  const candidates: Array<[string, string | undefined, string]> = [
+    [REFRESH_COOKIE, data.refresh, REFRESH_COOKIE_PATH],
+    [ACCESS_COOKIE, data.access, '/'],
+    [IMPERSONATOR_COOKIE, data.impersonator_refresh, REFRESH_COOKIE_PATH],
+  ];
+  let markerToken = markerFallbackToken;
+  let markerMaxAge = markerFallbackToken ? jwtMaxAge(markerFallbackToken) : undefined;
 
-  if (data.refresh) {
-    response.cookies.set(REFRESH_COOKIE, data.refresh, {
+  for (const [name, jsonToken, path] of candidates) {
+    const upstreamCookie = upstreamCookies.get(name);
+    const token = upstreamCookie?.value ?? jsonToken;
+    if (token === undefined) continue;
+
+    const metadata = upstreamCookie ?? { name, value: token, secure: false };
+    const maxAge = cookieMaxAge(metadata, token);
+    response.cookies.set(name, token, {
       httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: REFRESH_COOKIE_PATH,
-      maxAge: 24 * 60 * 60,
+      secure: metadata.secure || cookieSecure(),
+      sameSite: metadata.sameSite ?? 'lax',
+      path,
+      ...(maxAge !== undefined ? { maxAge } : {}),
     });
+
+    if (name === REFRESH_COOKIE && token && (maxAge === undefined || maxAge > 0)) {
+      markerToken = token;
+      markerMaxAge = maxAge;
+    }
   }
 
-  if (data.access) {
-    response.cookies.set(ACCESS_COOKIE, data.access, {
+  if (markerToken && (markerMaxAge === undefined || markerMaxAge > 0)) {
+    response.cookies.set(SESSION_PRESENCE_COOKIE, '1', {
       httpOnly: true,
-      secure,
+      secure: cookieSecure(),
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60,
-    });
-  }
-
-  if (data.impersonator_refresh) {
-    response.cookies.set(IMPERSONATOR_COOKIE, data.impersonator_refresh, {
-      httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: REFRESH_COOKIE_PATH,
-      maxAge: 24 * 60 * 60,
+      ...(markerMaxAge !== undefined ? { maxAge: markerMaxAge } : {}),
     });
   }
 }
@@ -82,6 +187,13 @@ export function clearAuthCookies(response: NextResponse): void {
     secure,
     sameSite: 'lax',
     path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
+  response.cookies.set(SESSION_PRESENCE_COOKIE, '', {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/',
     maxAge: 0,
   });
 }

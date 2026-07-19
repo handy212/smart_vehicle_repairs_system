@@ -12,24 +12,7 @@ import { MobileErrorState } from "@/components/mobile/MobileErrorState";
 import { MobilePageShell } from "@/components/mobile/MobilePageShell";
 import { usePullToRefresh } from "@/components/mobile/usePullToRefresh";
 import { cn } from "@/lib/utils";
-
-function getNotificationHref(notification: Notification): string | null {
-  const data = notification.data;
-  if (typeof data?.url === "string" && data.url.startsWith("/mobile/")) {
-    return data.url;
-  }
-  if (notification.notification_type === "inventory" && data?.work_order_id) {
-    return `/mobile/workorders/${data.work_order_id}`;
-  }
-  if (notification.related_object_type === "roadside" && notification.related_object_id) {
-    return `/mobile/roadside/${notification.related_object_id}`;
-  }
-  if (!data) return null;
-  if (data.request_id) return `/mobile/roadside/${data.request_id}`;
-  if (data.work_order_id) return `/mobile/workorders/${data.work_order_id}`;
-  if (data.appointment_id) return `/mobile/schedule`;
-  return null;
-}
+import { getMobileNotificationHref } from "@/lib/utils/navigation-safety";
 
 export default function MobileNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -118,7 +101,7 @@ export default function MobileNotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map((notification) => {
-            const href = getNotificationHref(notification);
+            const href = getMobileNotificationHref(notification, window.location.origin);
             const content = (
               <Card
                 className={cn(

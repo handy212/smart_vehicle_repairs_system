@@ -50,7 +50,7 @@ export default function SubledgerIntegrityPage() {
     <div className="space-y-4 w-full">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Subledger Integrity</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Integrity Check</h1>
           <p className="text-sm text-muted-foreground mt-1">
             GL control balances vs open AR/AP.
           </p>

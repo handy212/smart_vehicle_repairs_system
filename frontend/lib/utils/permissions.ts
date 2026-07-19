@@ -251,7 +251,7 @@ export const DASHBOARD_VIEW_PERMISSIONS = [
   PERMISSIONS.VIEW_ALL_REPORTS,
 ] as const;
 
-/** Stores Workbench (/inventory/quotation-requests) — view quotation queue.
+/** Parts Requests (/inventory/quotation-requests) — view quotation queue.
  * Intentionally excludes bare view_inventory so technicians (parts browse only)
  * do not see the stores workbench.
  */
@@ -262,7 +262,7 @@ export const STORES_QUOTATION_VIEW_PERMISSIONS = [
   PERMISSIONS.APPROVE_ESTIMATES,
 ] as const;
 
-/** Stores Workbench — mark recommendations as quotation-ready. */
+/** Parts Requests — mark recommendations as quotation-ready. */
 export const STORES_QUOTATION_COMPLETE_PERMISSIONS = [
   PERMISSIONS.MANAGE_DIAGNOSIS,
   PERMISSIONS.MANAGE_INVENTORY,

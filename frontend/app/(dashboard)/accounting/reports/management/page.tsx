@@ -559,7 +559,7 @@ export default function ManagementReportsPage() {
                                     {formatCurrency(unclassifiedOwner.invoiced)} invoiced on lines without an income category.
                                     Map task types, categories, and packages under{" "}
                                     <Link href="/accounting/revenue-products" className="underline font-medium">
-                                        Income Categories
+                                        Revenue Categories
                                     </Link>
                                     .
                                 </p>

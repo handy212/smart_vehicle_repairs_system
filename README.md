@@ -81,10 +81,19 @@ See [frontend/README.md](frontend/README.md) for structure, auth flow, and env v
 
 ### Celery (optional)
 
+Local (all lanes in one worker):
+
 ```bash
-celery -A config worker -l info
+celery -A config worker -l info -Q celery,heavy,qbo
 celery -A config beat -l info
 ```
+
+Docker Compose runs two workers:
+
+- `celery` — default queue (`celery`) for short jobs
+- `celery-heavy` — `heavy` + `qbo` for imports, backups, and QuickBooks sync
+
+See [`config/celery_queues.py`](config/celery_queues.py).
 
 ## Testing
 

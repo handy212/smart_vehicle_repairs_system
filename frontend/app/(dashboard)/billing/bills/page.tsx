@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Eye, X, DollarSign, Ban, CreditCard } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +23,7 @@ import { BadgeProps } from "@/components/ui/badge";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useQuickBooksConnection } from "@/hooks/useQuickBooksConnection";
 import { QboListCell } from "@/components/integrations/QboListCell";
+import { normalizeFilterState } from "@/lib/utils/filter-state";
 
 export default function BillsPage() {
     const [search, setSearch] = useState("");
@@ -36,11 +37,33 @@ export default function BillsPage() {
     };
 
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const vendorFromUrl = searchParams.get("vendor");
     const { formatCurrency } = useCurrency();
     const { hasPermission } = usePermissions();
     const { isLinked: isQboConnected, isOperational: isQboCanSync, connectionIssue: qboConnectionIssue } = useQuickBooksConnection();
+
+    const removeVendorFromUrl = () => {
+        if (!searchParams.has("vendor")) return;
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("vendor");
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    };
+
+    const clearAdvancedFilters = () => {
+        setAdvancedFilters({});
+        setPage(1);
+        removeVendorFromUrl();
+    };
+
+    const clearAllFilters = () => {
+        setSearch("");
+        setAdvancedFilters({});
+        setPage(1);
+        removeVendorFromUrl();
+    };
 
     const getFilterValue = (key: string) => {
         const value = advancedFilters[key];
@@ -222,7 +245,7 @@ export default function BillsPage() {
                 <CardContent className="p-3">
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
-                            <div className="relative">
+                            <div className="relative w-full sm:w-auto">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                                 <Input
                                     type="text"
@@ -232,7 +255,7 @@ export default function BillsPage() {
                                         setSearch(e.target.value);
                                         setPage(1);
                                     }}
-                                    className="pl-9 h-8 text-sm bg-card w-64 focus:w-80 transition-all duration-300"
+                                    className="pl-9 h-8 text-sm bg-card w-full sm:w-64 sm:focus:w-80 transition-all duration-300"
                                 />
                             </div>
 
@@ -240,24 +263,18 @@ export default function BillsPage() {
                                 filters={filterOptions}
                                 activeFilters={advancedFilters}
                                 onFiltersChange={(filters) => {
-                                    setAdvancedFilters(filters);
+                                    setAdvancedFilters(normalizeFilterState(filters));
                                     setPage(1);
                                 }}
-                                onClear={() => {
-                                    setAdvancedFilters({});
-                                }}
+                                onClear={clearAdvancedFilters}
                                 title="Advanced Bill Filters"
                             />
 
-                            {(search || Object.keys(advancedFilters).length > 0) && (
+                            {(search || vendorFromUrl || Object.keys(advancedFilters).length > 0) && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => {
-                                        setSearch("");
-                                        setAdvancedFilters({});
-                                        setPage(1);
-                                    }}
+                                    onClick={clearAllFilters}
                                     className="h-8 text-muted-foreground hover:text-destructive"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1" />

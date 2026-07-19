@@ -40,6 +40,7 @@ import { VehicleStats } from "./components/VehicleStats";
 import React from "react";
 import { VehicleTable } from "./components/VehicleTable";
 import { ServiceDueTable } from "./components/ServiceDueTable";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
 
 export default function VehiclesPage() {
   const router = useRouter();
@@ -123,8 +124,8 @@ export default function VehiclesPage() {
       label: "Last 30 Days",
       value: "last_30_days",
       filters: {
-        created_at_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        created_at_to: new Date().toISOString().split("T")[0],
+        created_at_from: toLocalCalendarDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+        created_at_to: toLocalCalendarDate(new Date()),
       },
     },
     { label: "Active", value: "active", filters: { status: "active" } },
@@ -238,21 +239,42 @@ export default function VehiclesPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           {/* Quick Filters - Precision Tabs */}
           <div className="flex p-1 bg-muted/50 rounded-lg border border-border/50 w-full md:w-auto overflow-x-auto no-scrollbar">
-            {["all", "active", "services_due", "in_service"].map((tab) => (
+            {[
+              { label: "All", value: "all", showCount: false },
+              { label: "Active", value: "active", showCount: false },
+              { label: "Service Due", value: "services_due", count: stats?.due_service_vehicles, showCount: true },
+              { label: "In Service", value: "in_service", count: stats?.in_service_vehicles, showCount: true },
+            ].map((tab) => (
               <button
-                key={tab}
+                key={tab.value}
+                type="button"
+                aria-pressed={vehicleStatus === tab.value}
                 onClick={() => {
-                  setVehicleStatus(tab);
+                  setVehicleStatus(tab.value);
+                  setAdvancedFilters((current) => {
+                    const next = { ...current };
+                    delete next.status;
+                    if (tab.value !== "services_due") {
+                      delete next.days_ahead;
+                      delete next.service_due_type;
+                    }
+                    return next;
+                  });
                   setPage(1);
                 }}
                 className={cn(
-                  "px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all duration-300 whitespace-nowrap",
-                  vehicleStatus === tab
+                  "inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all duration-300 whitespace-nowrap",
+                  vehicleStatus === tab.value
                     ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
-                {tab.replace("_", " ")}
+                <span>{tab.label}</span>
+                {tab.showCount && (
+                  <span className="tabular-nums text-[10px] opacity-75">
+                    ({statsLoading ? "—" : tab.count ?? 0})
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -277,6 +299,9 @@ export default function VehiclesPage() {
               quickFilters={quickFilters}
               activeFilters={advancedFilters}
               onFiltersChange={(f) => {
+                if (f.status && vehicleStatus !== "services_due") {
+                  setVehicleStatus("all");
+                }
                 setAdvancedFilters(f);
                 setPage(1);
               }}

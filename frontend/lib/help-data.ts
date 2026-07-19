@@ -42,7 +42,7 @@ export type HelpModule = {
 export const helpContent: Record<string, HelpModule> = {
     admin: {
         id: "admin",
-        title: "Admin & Configuration",
+        title: "Admin",
         description: "Settings, users, roles, branches, audit logs, backups, integrations, and feedback.",
         icon: Settings,
         keywords: ["configuration", "settings", "admin", "security", "roles", "users", "branches"],
@@ -290,7 +290,7 @@ export const helpContent: Record<string, HelpModule> = {
     },
     inventory: {
         id: "inventory",
-        title: "Inventory",
+        title: "Parts & Stock",
         description: "Parts, barcode scanning, imports, suppliers, purchase orders, transfers, categories, and bundles.",
         icon: Package,
         keywords: ["parts", "stock", "barcode", "supplier", "purchase order", "transfer", "bundle"],
@@ -298,14 +298,14 @@ export const helpContent: Record<string, HelpModule> = {
             {
                 title: "Parts and stock list",
                 steps: [
-                    "Open Inventory to search parts, use inventory filters, and review stock-related columns.",
+                    "Open Parts & Stock to search parts, use inventory filters, and review stock-related columns.",
                     "Use Scan Barcode to scan a barcode or QR code into inventory search.",
                     "Use Add Part to create a new part.",
                     "Use Import Excel, Export Excel, Export PDF, or Export for Import for the parts list.",
                     "Select multiple parts to delete in bulk when allowed.",
                 ],
                 actionLink: "/inventory",
-                actionLabel: "Open Inventory",
+                actionLabel: "Open Parts & Stock",
             },
             {
                 title: "Suppliers, POs, transfers, and bundles",
@@ -667,21 +667,21 @@ export const helpContent: Record<string, HelpModule> = {
     },
     sms: {
         id: "sms",
-        title: "SMS Console",
+        title: "Messages",
         description: "Manual SMS composition, customer recipient selection, scheduling, and SMS logs.",
         icon: MessageSquare,
-        keywords: ["message", "scheduled sms", "recipients", "templates"],
+        keywords: ["message", "sms", "scheduled sms", "recipients", "templates", "messages"],
         topics: [
             {
                 title: "Sending SMS messages",
                 steps: [
-                    "Open SMS Console to compose a message.",
+                    "Open Messages to compose a message.",
                     "Add recipients manually or search/select customers with phone numbers.",
                     "Use Schedule when the message should be sent later.",
                     "Use Send Message or Schedule after at least one recipient and message text are present.",
                 ],
                 actionLink: "/sms",
-                actionLabel: "Open SMS",
+                actionLabel: "Open Messages",
             },
             {
                 title: "Logs and templates",

@@ -106,6 +106,7 @@ SERVE_MEDIA = env.bool('SERVE_MEDIA', default=True)
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['public_settings'] = '1000/hour'
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['anon'] = '5000/hour'
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['login'] = '1000/minute'
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['refresh'] = '1000/minute'
 
 # Development logging
 LOGGING['root']['level'] = 'DEBUG'

@@ -6,7 +6,8 @@ import { useAuthStore } from "@/store/authStore";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { authApi } from "@/lib/api/auth";
-import { ensureApiSession } from "@/lib/auth/session";
+import { redirectToLoginOnce } from "@/lib/auth/refresh-access-token";
+import { getApiSessionOutcome } from "@/lib/auth/session";
 import { useModules } from "@/lib/hooks/useModules";
 import { shouldUseMobileApp } from "@/lib/utils/device-context";
 import { isMobileShellRole } from "@/lib/utils/post-login-redirect";
@@ -32,13 +33,21 @@ export default function DashboardLayoutWrapper({
     let isMounted = true;
 
     const checkAuth = async () => {
-      const hadCachedSession = useAuthStore.getState().isAuthenticated && !!useAuthStore.getState().user;
-
       try {
-        await ensureApiSession();
-        const currentUser = await authApi.getCurrentUser();
+        const outcome = await getApiSessionOutcome();
         if (!isMounted) return;
 
+        if (outcome.status === "expired") {
+          redirectToLoginOnce();
+          return;
+        }
+        if (outcome.status === "transient") {
+          return;
+        }
+
+        const currentUser =
+          useAuthStore.getState().user ?? (await authApi.getCurrentUser());
+        if (!isMounted) return;
         setUser(currentUser);
 
         if (currentUser.role === "customer") {
@@ -49,10 +58,8 @@ export default function DashboardLayoutWrapper({
           router.push("/mobile/dashboard");
         }
       } catch {
-        if (!isMounted) return;
-        if (!hadCachedSession) {
-          router.push("/login");
-        }
+        // Unexpected/network failures are not proof that the session expired.
+        // Keep rendering from the persisted auth store.
       } finally {
         if (isMounted) {
           setSessionChecked(true);
@@ -99,6 +106,10 @@ export default function DashboardLayoutWrapper({
 
   if (!mounted || waitingForAuth || waitingForModules) {
     return <AppShellSkeleton />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   if (user?.role === "customer") {

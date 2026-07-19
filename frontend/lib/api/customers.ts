@@ -94,6 +94,8 @@ export const customersApi = {
     date_to?: string;
     created_at__gte?: string;
     created_at__lte?: string;
+    customer_since__gte?: string;
+    customer_since__lte?: string;
     loyalty_tier?: string;
     ordering?: string;
     page_size?: number;
@@ -105,6 +107,8 @@ export const customersApi = {
 
   dashboardStats: async (): Promise<{
     total_customers: number;
+    individual_customers: number;
+    company_customers: number;
     active_customers: number;
     inactive_customers: number;
     active_contacts: number;

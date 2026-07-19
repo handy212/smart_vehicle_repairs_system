@@ -2,13 +2,17 @@
 Tests for vehicles app.
 """
 import pytest
+from datetime import timedelta
 from django.test import TestCase
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.test import APITestCase
 from model_bakery import baker
 
+from apps.accounts.admin_models import SystemModule
+from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle, VehicleDocument, VehicleMileageHistory
 
@@ -29,9 +33,14 @@ class VehicleModelTest(TestCase):
             phone='1234567890',
             role='customer'
         )
-        self.customer = Customer.objects.create(
-            user=self.user
+        self.branch = Branch.objects.create(
+            name='Vehicle Model Test Branch',
+            code='VMOD',
+            created_by=self.user,
         )
+        self.customer = Customer(user=self.user)
+        self.customer._numbering_branch = self.branch
+        self.customer.save()
 
     def test_create_vehicle(self):
         """Test creating a vehicle."""
@@ -252,12 +261,17 @@ class VehicleAPITest(APITestCase):
 
     def setUp(self):
         """Set up test data."""
+        SystemModule.objects.update_or_create(
+            slug='vehicles',
+            defaults={'name': 'Vehicles', 'is_enabled': True},
+        )
         self.admin_user = User.objects.create_user(
             email='admin@test.com',
             username='admin',
             password='admin123',
             role='admin',
-            is_staff=True
+            is_staff=True,
+            is_superuser=True,
         )
         self.customer_user = User.objects.create_user(
             email='customer@test.com',
@@ -267,6 +281,11 @@ class VehicleAPITest(APITestCase):
             phone='1234567890',
             password='customer123',
             role='customer'
+        )
+        self.branch = Branch.objects.create(
+            name='Vehicle API Branch',
+            code='VAPI',
+            created_by=self.admin_user,
         )
         self.customer = Customer.objects.create(
             user=self.customer_user
@@ -354,6 +373,37 @@ class VehicleAPITest(APITestCase):
         response = self.client.get(f'/api/vehicles/vehicles/{self.vehicle.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['make'], 'Toyota')
+
+    def test_advanced_filters_support_ranges_and_case_insensitive_names(self):
+        older = Vehicle.objects.create(
+            owner=self.customer,
+            make='Honda',
+            model='Civic',
+            year=2010,
+            vin='2HGFC2F59JH123456',
+            license_plate='OLD123',
+            current_mileage=0,
+        )
+        Vehicle.objects.filter(pk=older.pk).update(
+            created_at=timezone.now() - timedelta(days=30)
+        )
+        self.client.force_authenticate(user=self.admin_user)
+        today = timezone.localdate()
+
+        response = self.client.get('/api/vehicles/vehicles/', {
+            'make': 'toyota',
+            'model': 'camry',
+            'year__gte': 2015,
+            'year__lte': 2025,
+            'created_at__gte': today,
+            'created_at__lte': today,
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [row['id'] for row in response.data['results']],
+            [self.vehicle.id],
+        )
 
     def test_update_vehicle(self):
         """Test updating a vehicle."""

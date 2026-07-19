@@ -8,6 +8,8 @@ import { PortalMobileActionsBar } from "./components/PortalMobileActionsBar";
 import { AppShellSkeleton } from "@/components/shared/AppShellSkeleton";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { redirectToLoginOnce } from "@/lib/auth/refresh-access-token";
+import { useAuthStore } from "@/store/authStore";
 
 // Lazy load sidebar and navbar for better performance
 const PortalNavbar = dynamic(() => import("@/components/layout/PortalNavbar").then(mod => ({ default: mod.PortalNavbar })), {
@@ -28,10 +30,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  const { data: user, isLoading } = useCurrentUser({
+  const cachedUser = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const { data: currentUser, error, isLoading } = useCurrentUser({
     ensureSession: true,
     syncStore: true,
   });
+  const user = currentUser ?? cachedUser;
 
   // Handle hydration and localStorage
   useEffect(() => {
@@ -65,8 +71,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!mounted) return;
 
-    if (!isLoading && !user) {
-      router.push("/login");
+    const isExpiredError =
+      typeof error === "object" &&
+      error !== null &&
+      (("code" in error && error.code === "AUTH_EXPIRED") ||
+        ("response" in error &&
+          (error as { response?: { status?: number } }).response?.status === 401));
+
+    if (!isLoading && !user && ((!isAuthenticated && hasHydrated) || isExpiredError)) {
+      redirectToLoginOnce();
       return;
     }
 
@@ -75,7 +88,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       router.push("/dashboard");
       return;
     }
-  }, [user, isLoading, mounted, router]);
+  }, [user, error, isLoading, isAuthenticated, hasHydrated, mounted, router]);
 
   if (!mounted || isLoading || !user) {
     return <AppShellSkeleton />;

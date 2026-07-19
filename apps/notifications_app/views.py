@@ -704,7 +704,7 @@ def _build_sms_context(customer=None):
 
 class SMSConsoleViewSet(viewsets.ViewSet):
     """
-    ViewSet for SMS Console operations (Single & Bulk)
+    ViewSet for Messages / SMS operations (Single & Bulk)
     """
     permission_classes = [IsAuthenticated, IsModuleEnabled('sms')]
     
@@ -834,7 +834,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                     notification_type='custom',
                     channel='sms',
                     priority='normal',
-                    title='SMS Console Message',
+                    title='SMS Message',
                     message=rendered_message,
                     status='pending',
                     scheduled_for=scheduled_for
@@ -1031,7 +1031,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             notification_type='custom',
             channel='sms',
             priority=notification.priority,
-            title='Resent SMS Console Message',
+            title='Resent SMS Message',
             message=notification.message,
             status='pending',
             data={**notification.data, 'resent_from': notification.id},

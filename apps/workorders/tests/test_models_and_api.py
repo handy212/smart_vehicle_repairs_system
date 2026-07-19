@@ -11,6 +11,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from model_bakery import baker
 
+from apps.accounts.admin_models import SystemModule
 from apps.accounting.models import AccountingControl
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -495,12 +496,17 @@ class WorkOrderResumeAPITest(APITestCase):
     """Resume action should restore paused_from_status, not always in_progress."""
 
     def setUp(self):
+        SystemModule.objects.update_or_create(
+            slug='workorders',
+            defaults={'name': 'Work Orders', 'is_enabled': True},
+        )
         self.admin_user = User.objects.create_user(
             email='resume-admin@test.com',
             username='resume-admin',
             password='admin123',
             role='admin',
             is_staff=True,
+            is_superuser=True,
         )
         self.customer = baker.make(Customer)
         self.vehicle = baker.make(Vehicle, owner=self.customer)
@@ -558,12 +564,17 @@ class CompleteDiagnosisAutoStartAPITest(APITestCase):
     """complete_diagnosis without approval should route through start_work pipeline."""
 
     def setUp(self):
+        SystemModule.objects.update_or_create(
+            slug='workorders',
+            defaults={'name': 'Work Orders', 'is_enabled': True},
+        )
         self.admin_user = User.objects.create_user(
             email='diag-auto-admin@test.com',
             username='diag-auto-admin',
             password='admin123',
             role='admin',
             is_staff=True,
+            is_superuser=True,
         )
         self.customer = baker.make(Customer)
         self.vehicle = baker.make(Vehicle, owner=self.customer)
@@ -943,7 +954,11 @@ class OpenRecommendationLookupAPITest(APITestCase):
     """Test follow-up recommendation lookup for future work orders."""
 
     def test_returns_open_recommendations_from_completed_diagnosis_awaiting_approval(self):
-        user = baker.make(User, role='admin', is_staff=True)
+        SystemModule.objects.update_or_create(
+            slug='workorders',
+            defaults={'name': 'Work Orders', 'is_enabled': True},
+        )
+        user = baker.make(User, role='admin', is_staff=True, is_superuser=True)
         customer = baker.make(Customer)
         vehicle = baker.make(Vehicle, owner=customer)
         workorder = baker.make(
@@ -984,6 +999,10 @@ class OpenRecommendationLookupAPITest(APITestCase):
 
 class WorkOrderRatingAPITest(APITestCase):
     def setUp(self):
+        SystemModule.objects.update_or_create(
+            slug='workorders',
+            defaults={'name': 'Work Orders', 'is_enabled': True},
+        )
         self.admin_user = User.objects.create_user(
             email='wo-rating-admin@test.com',
             username='wo-rating-admin',
@@ -997,7 +1016,14 @@ class WorkOrderRatingAPITest(APITestCase):
             password='test123',
             role='customer'
         )
-        self.customer = Customer.objects.create(user=self.customer_user)
+        self.branch = Branch.objects.create(
+            name='Work Order Rating Test Branch',
+            code='WORATE',
+            created_by=self.admin_user,
+        )
+        self.customer = Customer(user=self.customer_user)
+        self.customer._numbering_branch = self.branch
+        self.customer.save()
         self.vehicle = Vehicle.objects.create(
             owner=self.customer,
             make='Honda',
@@ -1028,3 +1054,38 @@ class WorkOrderRatingAPITest(APITestCase):
         self.workorder.refresh_from_db()
         self.assertEqual(self.workorder.customer_rating, 4)
         self.assertEqual(self.workorder.customer_feedback, 'Good overall')
+
+
+class WorkOrderAdvancedDateFilterTest(APITestCase):
+    def test_created_at_upper_date_bound_includes_the_whole_day(self):
+        SystemModule.objects.update_or_create(
+            slug='workorders',
+            defaults={'name': 'Work Orders', 'is_enabled': True},
+        )
+        admin = baker.make(User, role='admin', is_staff=True, is_superuser=True)
+        branch = baker.make(Branch, created_by=admin)
+        customer = baker.make(Customer)
+        vehicle = baker.make(Vehicle, owner=customer)
+        workorder = baker.make(
+            WorkOrder,
+            customer=customer,
+            vehicle=vehicle,
+            branch=branch,
+            created_by=admin,
+        )
+        WorkOrder.objects.filter(pk=workorder.pk).update(
+            created_at=timezone.now().replace(hour=23, minute=45)
+        )
+        self.client.force_authenticate(admin)
+        today = timezone.localdate()
+
+        response = self.client.get('/api/workorders/work-orders/', {
+            'created_at__gte': today,
+            'created_at__lte': today,
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            workorder.id,
+            {row['id'] for row in response.data['results']},
+        )

@@ -18,7 +18,7 @@ class BillingService:
         
         proforma_count = queryset.filter(status='proforma').count()
         unpaid_count = queryset.filter(
-            status__in=['sent', 'viewed', 'proforma']
+            status__in=['sent', 'viewed', 'proforma', 'partial', 'overdue']
         ).count()
         
         total_paid = queryset.aggregate(total=Sum('amount_paid'))['total'] or 0

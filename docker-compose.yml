@@ -94,7 +94,7 @@ services:
       start_period: 60s
       retries: 3
 
-  # Celery Worker
+  # Celery Worker — default lane (short interactive jobs)
   celery:
     build:
       context: .
@@ -106,11 +106,64 @@ services:
       - config
       - worker
       - --loglevel=info
+      - -Q
+      - celery
       # Do not let Celery auto-detect all host CPUs inside the 1 GiB container.
       - --concurrency=2
       # Recycle children to bound memory growth from long-running integrations.
       - --max-tasks-per-child=100
       - --max-memory-per-child=220000
+      - -n
+      - celery@%h
+    environment:
+      - DJANGO_ENVIRONMENT=production
+      - DEBUG=False
+      - DJANGO_MIGRATE=0
+      - DJANGO_COLLECTSTATIC=0
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${DB_USER:-svr_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-svr_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      - EMAIL_BACKEND=${EMAIL_BACKEND}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
+    volumes:
+      - ./media:/app/media
+      - ./logs:/app/logs
+    networks:
+      - svr_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Celery Worker — heavy lane (imports, backups, QBO sync)
+  celery-heavy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: svr_celery_heavy
+    command:
+      - celery
+      - -A
+      - config
+      - worker
+      - --loglevel=info
+      - -Q
+      - heavy,qbo
+      - --concurrency=1
+      - --max-tasks-per-child=50
+      - --max-memory-per-child=350000
+      - -n
+      - heavy@%h
     environment:
       - DJANGO_ENVIRONMENT=production
       - DEBUG=False

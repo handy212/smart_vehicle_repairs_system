@@ -1329,7 +1329,7 @@ Please contact us to schedule an appointment or book online.'''
                 f'{requester} sent {rec_label} to stores for quotation on WO {work_order.work_order_number}.\n\n'
                 f'Vehicle: {vehicle_display}\n'
                 f'Parts synced: {parts_count}\n\n'
-                f'Open Stores Workbench → Quotes to price and mark ready.'
+                f'Open Parts Requests → Quotes to price and mark ready.'
             )
             data = {
                 'parts_count': parts_count,
@@ -1366,7 +1366,7 @@ Please contact us to schedule an appointment or book online.'''
         message = (
             f'{requester} submitted {parts_count} part request(s) for WO {work_order.work_order_number}.\n\n'
             f'Vehicle: {vehicle_display}\n'
-            f'Open Stores Workbench → Fulfillment to review, approve, and fulfill.'
+            f'Open Parts Requests → Fulfillment to review, approve, and fulfill.'
         )
         data = {'parts_count': parts_count, 'source': source}
         if diagnosis_id:

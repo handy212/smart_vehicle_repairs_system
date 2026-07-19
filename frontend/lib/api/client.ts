@@ -2,10 +2,14 @@ import axios, { AxiosRequestConfig, InternalAxiosRequestConfig, AxiosError } fro
 import { useBranchStore } from "@/store/branchStore";
 import { queueRequest } from "@/lib/offline/queue";
 import { getApiBaseUrl } from "@/lib/api/base-url";
-import { refreshAccessToken } from "@/lib/auth/refresh-access-token";
-import { getAccessToken, clearTokens } from "@/lib/utils/token";
-import { authApi } from "@/lib/api/auth";
+import {
+  redirectToLoginOnce,
+  refreshAccessToken,
+  resetLoginRedirectGuard,
+} from "@/lib/auth/refresh-access-token";
+import { getAccessToken } from "@/lib/utils/token";
 import { getUserFacingError } from "@/lib/api/errors";
+import { useAuthStore } from "@/store/authStore";
 
 export type ApiRequestConfig = AxiosRequestConfig & {
   skipAuth?: boolean;
@@ -32,6 +36,13 @@ type FailedQueueItem = {
   resolve: (ok: boolean) => void;
   reject: (error: unknown) => void;
 };
+
+type AuthExpiredError = Error & {
+  code: "AUTH_EXPIRED";
+};
+
+const createAuthExpiredError = (): AuthExpiredError =>
+  Object.assign(new Error("Session expired"), { code: "AUTH_EXPIRED" as const });
 
 const isOfflineQueuedError = (error: unknown): error is OfflineQueuedError => {
   return (
@@ -209,25 +220,24 @@ apiClient.interceptors.response.use(
       if (typeof window !== "undefined") {
         try {
           const refreshed = await refreshAccessToken();
-          if (!refreshed) {
-            const refreshError = new Error("Session expired");
+          if (refreshed.status === "expired") {
+            const refreshError = createAuthExpiredError();
             processQueue(refreshError, false);
-            clearTokens();
-            if (window.location.pathname !== "/login") {
-              window.location.href = "/login";
-            }
+            useAuthStore.getState().logout();
+            redirectToLoginOnce();
             return Promise.reject(refreshError);
           }
+          if (refreshed.status === "transient") {
+            processQueue(refreshed.error, false);
+            return Promise.reject(refreshed.error);
+          }
 
+          resetLoginRedirectGuard();
           processQueue(null, true);
 
           return apiClient(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError, false);
-          clearTokens();
-          if (window.location.pathname !== "/login") {
-            window.location.href = "/login";
-          }
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;

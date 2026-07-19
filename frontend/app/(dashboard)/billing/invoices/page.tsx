@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download, Mail, Edit, MoreVertical, ChevronDown, Eye, X, Printer, DollarSign, Ban, CreditCard, ClipboardList } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useState, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getUserFacingError } from "@/lib/api/errors";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
+import { normalizeFilterState } from "@/lib/utils/filter-state";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,11 +47,14 @@ import {
 
 export default function InvoicesPage() {
     const searchParams = useSearchParams();
+    const pathname = usePathname();
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
 
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>(() => {
         const status = searchParams.get("status");
+        if (status === "cancelled") return { status: "void" };
+        if (status === "partially_paid") return { status: "partial" };
         return status ? { status } : {};
     });
 
@@ -77,8 +82,35 @@ export default function InvoicesPage() {
     const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
     const { hasPermission } = usePermissions();
 
+    const removeStatusFromUrl = () => {
+        if (!searchParams.has("status")) return;
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("status");
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    };
 
+    const toggleStatusFilter = (status: string) => {
+        setAdvancedFilters((current) =>
+            current.status === status
+                ? normalizeFilterState({ ...current, status: undefined })
+                : normalizeFilterState({ ...current, status })
+        );
+        setPage(1);
+    };
 
+    const clearAdvancedFilters = () => {
+        setAdvancedFilters({});
+        setPage(1);
+        removeStatusFromUrl();
+    };
+
+    const clearAllFilters = () => {
+        setSearch("");
+        setAdvancedFilters({});
+        setPage(1);
+        removeStatusFromUrl();
+    };
 
     // Advanced filter options
     const filterOptions: FilterOption[] = [
@@ -96,7 +128,6 @@ export default function InvoicesPage() {
                 { value: "paid", label: "Paid" },
                 { value: "overdue", label: "Overdue" },
                 { value: "void", label: "Void" },
-                { value: "cancelled", label: "Cancelled" },
             ],
         },
         {
@@ -137,8 +168,8 @@ export default function InvoicesPage() {
             label: "This Month",
             value: "this_month",
             filters: {
-                invoice_date_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
-                invoice_date_to: new Date().toISOString().split("T")[0],
+                invoice_date_from: toLocalCalendarDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+                invoice_date_to: toLocalCalendarDate(new Date()),
             },
         },
     ];
@@ -371,7 +402,6 @@ export default function InvoicesPage() {
         switch (status) {
             case "paid":
                 return "success";
-            case "finalized":
             case "proforma":
                 return "info";
             case "draft":
@@ -381,7 +411,6 @@ export default function InvoicesPage() {
             case "overdue":
                 return "danger";
             case "void":
-            case "cancelled":
                 return "secondary";
             default:
                 return "default";
@@ -395,9 +424,8 @@ export default function InvoicesPage() {
             case "overdue":
                 return <AlertCircle className="w-4 h-4" />;
             case "void":
-            case "cancelled":
                 return <Ban className="w-4 h-4" />;
-            case "partially_paid":
+            case "partial":
                 return <CreditCard className="w-4 h-4" />;
             default:
                 return <FileText className="w-4 h-4" />;
@@ -413,6 +441,7 @@ export default function InvoicesPage() {
     const totalDue = data?.results?.reduce((sum, inv) => sum + parseFloat(inv.balance_due || inv.total || "0"), 0) || 0;
 
     const overdueCount = data?.results?.filter((inv) => inv.status === "overdue").length || 0;
+    const unpaidCount = (stats?.counts.unpaid ?? 0) + (stats?.counts.partially_paid ?? 0);
 
     return (
         <div className="space-y-4 min-h-screen">
@@ -511,26 +540,36 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-warning/10 bg-muted' : 'bg-card'}`}
-                    onClick={() => {
-                        const newStatus = advancedFilters.status === 'unpaid' ? null : 'unpaid';
-                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
-                        setPage(1);
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={advancedFilters.status === "unpaid"}
+                    onClick={() => toggleStatusFilter("unpaid")}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleStatusFilter("unpaid");
+                        }
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unpaid</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-primary">{stats?.counts.unpaid || 0}</span>
+                            <span className="text-lg font-bold text-primary">{unpaidCount}</span>
                             <FileText className="w-4 h-4 text-warning/50" />
                         </div>
                     </CardContent>
                 </Card>
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-success bg-success/10 bg-muted' : 'bg-card'}`}
-                    onClick={() => {
-                        const newStatus = advancedFilters.status === 'paid' ? null : 'paid';
-                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
-                        setPage(1);
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={advancedFilters.status === "paid"}
+                    onClick={() => toggleStatusFilter("paid")}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleStatusFilter("paid");
+                        }
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
@@ -543,10 +582,15 @@ export default function InvoicesPage() {
                 </Card>
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-primary bg-primary/10 bg-muted' : 'bg-card'}`}
-                    onClick={() => {
-                        const newStatus = advancedFilters.status === 'partial' ? null : 'partial';
-                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
-                        setPage(1);
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={advancedFilters.status === "partial"}
+                    onClick={() => toggleStatusFilter("partial")}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleStatusFilter("partial");
+                        }
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
@@ -559,10 +603,15 @@ export default function InvoicesPage() {
                 </Card>
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-destructive bg-destructive/10 bg-muted' : 'bg-card'}`}
-                    onClick={() => {
-                        const newStatus = advancedFilters.status === 'overdue' ? null : 'overdue';
-                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
-                        setPage(1);
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={advancedFilters.status === "overdue"}
+                    onClick={() => toggleStatusFilter("overdue")}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleStatusFilter("overdue");
+                        }
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
@@ -575,10 +624,15 @@ export default function InvoicesPage() {
                 </Card>
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-border bg-muted' : 'bg-card'}`}
-                    onClick={() => {
-                        const newStatus = advancedFilters.status === 'draft' ? null : 'draft';
-                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
-                        setPage(1);
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={advancedFilters.status === "draft"}
+                    onClick={() => toggleStatusFilter("draft")}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleStatusFilter("draft");
+                        }
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
@@ -591,10 +645,15 @@ export default function InvoicesPage() {
                 </Card>
                 <Card
                     className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'proforma' ? 'ring-2 ring-primary bg-primary/10 bg-muted' : 'bg-card'}`}
-                    onClick={() => {
-                        const newStatus = advancedFilters.status === 'proforma' ? null : 'proforma';
-                        setAdvancedFilters({ ...advancedFilters, status: newStatus });
-                        setPage(1);
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={advancedFilters.status === "proforma"}
+                    onClick={() => toggleStatusFilter("proforma")}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleStatusFilter("proforma");
+                        }
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
@@ -613,7 +672,7 @@ export default function InvoicesPage() {
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
                             {/* Search */}
-                            <div className="relative">
+                            <div className="relative w-full sm:w-auto">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                                 <Input
                                     type="text"
@@ -623,7 +682,7 @@ export default function InvoicesPage() {
                                         setSearch(e.target.value);
                                         setPage(1);
                                     }}
-                                    className="pl-9 h-8 text-sm bg-card w-64 focus:w-80 transition-all duration-300"
+                                    className="pl-9 h-8 text-sm bg-card w-full sm:w-64 sm:focus:w-80 transition-all duration-300"
                                 />
                             </div>
 
@@ -633,12 +692,10 @@ export default function InvoicesPage() {
                                 quickFilters={quickFilters}
                                 activeFilters={advancedFilters}
                                 onFiltersChange={(filters) => {
-                                    setAdvancedFilters(filters);
+                                    setAdvancedFilters(normalizeFilterState(filters));
                                     setPage(1);
                                 }}
-                                onClear={() => {
-                                    setAdvancedFilters({});
-                                }}
+                                onClear={clearAdvancedFilters}
                                 title="Advanced Invoice Filters"
                             />
 
@@ -647,11 +704,7 @@ export default function InvoicesPage() {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => {
-                                        setSearch("");
-                                        setAdvancedFilters({});
-                                        setPage(1);
-                                    }}
+                                    onClick={clearAllFilters}
                                     className="h-8 text-muted-foreground hover:text-destructive"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1" />
@@ -974,13 +1027,11 @@ export default function InvoicesPage() {
                                     <option value="" disabled>Select status</option>
                                     <option value="draft">Draft</option>
                                     <option value="proforma">Proforma</option>
-                                    <option value="finalized">Finalized</option>
                                     <option value="sent">Sent</option>
-                                    <option value="partially_paid">Partially Paid</option>
+                                    <option value="partial">Partially Paid</option>
                                     <option value="paid">Paid</option>
                                     <option value="overdue">Overdue</option>
                                     <option value="void">Void</option>
-                                    <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>
                         </div>

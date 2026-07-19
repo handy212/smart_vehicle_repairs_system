@@ -31,7 +31,6 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { toggleSortConfig } from "@/lib/utils/table-sort";
 import { usePermissions } from "@/lib/hooks/usePermissions";
@@ -41,24 +40,30 @@ import { CreditCard, Ban } from "lucide-react"; // Added missing icons
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { getUserFacingError } from "@/lib/api/errors";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
+import { normalizeFilterState } from "@/lib/utils/filter-state";
+
 export default function EstimatesPage() {
   const { hasPermission } = usePermissions();
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
 
-  const [statusFilter, setStatusFilter] = useState<string>("");
-
-  const [startDate, setStartDate] = useState("");
-
-  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
+
+  const toggleStatusFilter = (status: string) => {
+    setAdvancedFilters((current) =>
+      current.status === status
+        ? normalizeFilterState({ ...current, status: undefined })
+        : normalizeFilterState({ ...current, status })
+    );
+    setPage(1);
+  };
 
   // Advanced filter options
   const filterOptions: FilterOption[] = [
@@ -71,7 +76,7 @@ export default function EstimatesPage() {
         { value: "sent", label: "Sent" },
         { value: "viewed", label: "Viewed" },
         { value: "approved", label: "Approved" },
-        { value: "rejected", label: "Rejected" },
+        { value: "declined", label: "Declined" },
         { value: "converted", label: "Converted" },
         { value: "expired", label: "Expired" },
       ],
@@ -88,8 +93,8 @@ export default function EstimatesPage() {
       label: "This Month",
       value: "this_month",
       filters: {
-        estimate_date_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
-        estimate_date_to: new Date().toISOString().split("T")[0],
+        estimate_date_from: toLocalCalendarDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+        estimate_date_to: toLocalCalendarDate(new Date()),
       },
     },
     {
@@ -414,10 +419,15 @@ export default function EstimatesPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card
           className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-border bg-muted' : 'bg-card'}`}
-          onClick={() => {
-            const newStatus = advancedFilters.status === 'draft' ? null : 'draft';
-            setAdvancedFilters({ ...advancedFilters, status: newStatus });
-            setPage(1);
+          role="button"
+          tabIndex={0}
+          aria-pressed={advancedFilters.status === "draft"}
+          onClick={() => toggleStatusFilter("draft")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggleStatusFilter("draft");
+            }
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
@@ -430,10 +440,15 @@ export default function EstimatesPage() {
         </Card>
         <Card
           className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'sent' ? 'ring-2 ring-primary bg-primary/10 bg-muted' : 'bg-card'}`}
-          onClick={() => {
-            const newStatus = advancedFilters.status === 'sent' ? null : 'sent';
-            setAdvancedFilters({ ...advancedFilters, status: newStatus });
-            setPage(1);
+          role="button"
+          tabIndex={0}
+          aria-pressed={advancedFilters.status === "sent"}
+          onClick={() => toggleStatusFilter("sent")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggleStatusFilter("sent");
+            }
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
@@ -446,10 +461,15 @@ export default function EstimatesPage() {
         </Card>
         <Card
           className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-success bg-success/10 bg-muted' : 'bg-card'}`}
-          onClick={() => {
-            const newStatus = advancedFilters.status === 'approved' ? null : 'approved';
-            setAdvancedFilters({ ...advancedFilters, status: newStatus });
-            setPage(1);
+          role="button"
+          tabIndex={0}
+          aria-pressed={advancedFilters.status === "approved"}
+          onClick={() => toggleStatusFilter("approved")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggleStatusFilter("approved");
+            }
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
@@ -462,10 +482,15 @@ export default function EstimatesPage() {
         </Card>
         <Card
           className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'declined' ? 'ring-2 ring-destructive bg-destructive/10 bg-muted' : 'bg-card'}`}
-          onClick={() => {
-            const newStatus = advancedFilters.status === 'declined' ? null : 'declined';
-            setAdvancedFilters({ ...advancedFilters, status: newStatus });
-            setPage(1);
+          role="button"
+          tabIndex={0}
+          aria-pressed={advancedFilters.status === "declined"}
+          onClick={() => toggleStatusFilter("declined")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggleStatusFilter("declined");
+            }
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
@@ -478,10 +503,15 @@ export default function EstimatesPage() {
         </Card>
         <Card
           className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-primary bg-warning/10 bg-muted' : 'bg-card'}`}
-          onClick={() => {
-            const newStatus = advancedFilters.status === 'expired' ? null : 'expired';
-            setAdvancedFilters({ ...advancedFilters, status: newStatus });
-            setPage(1);
+          role="button"
+          tabIndex={0}
+          aria-pressed={advancedFilters.status === "expired"}
+          onClick={() => toggleStatusFilter("expired")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggleStatusFilter("expired");
+            }
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
@@ -500,7 +530,7 @@ export default function EstimatesPage() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3 flex-wrap">
               {/* Search */}
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                 <Input
                   type="text"
@@ -510,7 +540,7 @@ export default function EstimatesPage() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="pl-9 h-8 text-sm bg-card w-64 focus:w-80 transition-all duration-300"
+                  className="pl-9 h-8 text-sm bg-card w-full sm:w-64 sm:focus:w-80 transition-all duration-300"
                 />
               </div>
 
@@ -520,14 +550,12 @@ export default function EstimatesPage() {
                 quickFilters={quickFilters}
                 activeFilters={advancedFilters}
                 onFiltersChange={(filters) => {
-                  setAdvancedFilters(filters);
+                  setAdvancedFilters(normalizeFilterState(filters));
                   setPage(1);
                 }}
                 onClear={() => {
                   setAdvancedFilters({});
-                  setStatusFilter("");
-                  setStartDate("");
-                  setEndDate("");
+                  setPage(1);
                 }}
                 title="Advanced Estimate Filters"
               />
@@ -540,9 +568,6 @@ export default function EstimatesPage() {
                   onClick={() => {
                     setSearch("");
                     setAdvancedFilters({});
-                    setStatusFilter("");
-                    setStartDate("");
-                    setEndDate("");
                     setPage(1);
                   }}
                   className="h-8 text-muted-foreground hover:text-destructive"

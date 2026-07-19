@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserFacingError } from "@/lib/api/errors";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
 
 function getStatusVariant(status: string): ComponentProps<typeof Badge>["variant"] {
   switch (status) {
@@ -84,8 +85,8 @@ export default function GatePassPage() {
         label: "Last 7 Days",
         value: "last_7_days",
         filters: {
-          created_at_from: sevenDaysAgo.toISOString().split("T")[0],
-          created_at_to: today.toISOString().split("T")[0],
+          created_at_from: toLocalCalendarDate(sevenDaysAgo),
+          created_at_to: toLocalCalendarDate(today),
         },
       },
       {

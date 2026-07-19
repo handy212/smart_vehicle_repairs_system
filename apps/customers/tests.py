@@ -1,6 +1,7 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from apps.branches.models import Branch
 from apps.customers.models import Customer, CustomerContact
 from apps.customers.serializers import CustomerCreateSerializer, CustomerUpdateSerializer
 from rest_framework.test import APIClient
@@ -8,6 +9,7 @@ from datetime import timedelta
 
 User = get_user_model()
 
+@override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)
 class CustomerStatsTest(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -24,7 +26,13 @@ class CustomerStatsTest(TestCase):
         month_start = today.date().replace(day=1)
         for i in range(5):
             u = User.objects.create(username=f'cust{i}', email=f'c{i}@ex.com', role='customer')
-            Customer.objects.create(user=u, customer_number=f'CUST-{i:05d}', status='active')
+            Customer.objects.create(
+                user=u,
+                customer_number=f'CUST-{i:05d}',
+                status='active',
+                customer_type='business' if i == 0 else 'individual',
+                company_name='Acme Services' if i == 0 else '',
+            )
             
         # Create some customers for last month
         last_month_end = month_start - timedelta(days=1)
@@ -46,6 +54,8 @@ class CustomerStatsTest(TestCase):
         data = response.data
         
         self.assertEqual(data['total_customers'], 8)
+        self.assertEqual(data['individual_customers'], 7)
+        self.assertEqual(data['company_customers'], 1)
         self.assertEqual(data['new_this_month'], 5)
         # 5 this month, 3 last month. Growth = (5-3)/3 * 100 = 66.7%
         self.assertEqual(data['growth_percentage'], 66.7)
@@ -263,3 +273,66 @@ class CustomerNumberingTest(TestCase):
         second._numbering_branch = self.branch
         second.save()
         self.assertEqual(second.customer_number, 'C2')
+
+
+@override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)
+class CustomerAdvancedFilterTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_superuser(
+            username='filter-admin',
+            email='filter-admin@example.com',
+            password='password123',
+            role='admin',
+        )
+        self.branch = Branch.objects.create(
+            name='Customer Filter Branch',
+            code='CFB',
+            created_by=self.admin,
+        )
+        self.client.force_authenticate(self.admin)
+        recent_user = User.objects.create_user(
+            username='recent-customer',
+            email='recent@example.com',
+            role='customer',
+        )
+        old_user = User.objects.create_user(
+            username='old-customer',
+            email='old@example.com',
+            role='customer',
+        )
+        self.recent = Customer.objects.create(user=recent_user, status='active')
+        self.old = Customer.objects.create(user=old_user, status='active')
+        Customer.objects.filter(pk=self.recent.pk).update(
+            customer_since=timezone.localdate(),
+            created_at=timezone.now().replace(hour=23, minute=30),
+        )
+        Customer.objects.filter(pk=self.old.pk).update(
+            customer_since=timezone.localdate() - timedelta(days=90),
+            created_at=timezone.now() - timedelta(days=90),
+        )
+
+    def test_customer_since_and_created_at_date_bounds(self):
+        today = timezone.localdate()
+        response = self.client.get('/api/customers/customers/', {
+            'customer_since__gte': today,
+            'customer_since__lte': today,
+            'created_at__gte': today,
+            'created_at__lte': today,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row['id'] for row in response.data['results']],
+            [self.recent.id],
+        )
+
+    def test_custom_inactivity_days_must_be_within_safe_range(self):
+        for value in ('custom_0', 'custom_-1', 'custom_3651', 'custom_not-a-number'):
+            with self.subTest(value=value):
+                response = self.client.get(
+                    '/api/customers/customers/',
+                    {'inactive_period': value},
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('inactive_period', response.data)

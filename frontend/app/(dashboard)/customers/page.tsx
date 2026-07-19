@@ -46,6 +46,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { CustomerStats } from "./components/CustomerStats";
 import { CustomerTable } from "./components/CustomerTable";
 import { getUserFacingError } from "@/lib/api/errors";
+import { toLocalCalendarDate } from "@/lib/utils/calendar-date";
 
 // Customer List Page
 
@@ -90,7 +91,7 @@ export default function CustomersPage() {
       ],
     },
     {
-      key: "created_at",
+      key: "customer_since",
       label: "Customer Since",
       type: "daterange",
     },
@@ -110,6 +111,8 @@ export default function CustomersPage() {
       label: "Custom Inactivity (Days)",
       type: "number",
       placeholder: "e.g. 45",
+      min: 1,
+      max: 3650,
     },
   ];
 
@@ -123,8 +126,8 @@ export default function CustomersPage() {
         label: "Last 30 Days",
         value: "last_30_days",
         filters: {
-          created_at__gte: last30Days.toISOString().split("T")[0],
-          created_at__lte: today.toISOString().split("T")[0],
+          customer_since_from: toLocalCalendarDate(last30Days),
+          customer_since_to: toLocalCalendarDate(today),
         },
       },
       {
@@ -173,8 +176,8 @@ export default function CustomersPage() {
           search: debouncedSearch || undefined,
           customer_type: customerType === "all" ? (advancedFilters.customer_type || undefined) : customerType.toLowerCase(),
           status: advancedFilters.status || undefined,
-          created_at__gte: advancedFilters.created_at_from || undefined,
-          created_at__lte: advancedFilters.created_at_to || undefined,
+          customer_since__gte: advancedFilters.customer_since_from || undefined,
+          customer_since__lte: advancedFilters.customer_since_to || undefined,
           inactive_period: advancedFilters.inactive_days
             ? `custom_${advancedFilters.inactive_days}`
             : (advancedFilters.inactive_period || undefined),
@@ -355,24 +358,39 @@ export default function CustomersPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/20 p-1 rounded-xl">
         {/* Tabs */}
         <div className="flex items-center p-1 bg-muted rounded-xl w-full overflow-x-auto md:w-auto">
-          {["All", "Individuals", "Companies"].map((tab) => (
+          {[
+            { label: "All", value: "all", showCount: false },
+            { label: "Individuals", value: "individual", count: stats?.individual_customers, showCount: true },
+            { label: "Companies", value: "business", count: stats?.company_customers, showCount: true },
+          ].map((tab) => (
             <button
-              key={tab}
+              key={tab.value}
+              type="button"
+              aria-pressed={customerType === tab.value}
               onClick={() => {
-                setCustomerType(tab === "Companies" ? "business" : tab === "Individuals" ? "individual" : "all");
+                setCustomerType(tab.value);
+                setAdvancedFilters((current) => {
+                  if (!current.customer_type) return current;
+                  const next = { ...current };
+                  delete next.customer_type;
+                  return next;
+                });
                 setPage(1);
                 setSearch("");
               }}
               className={cn(
-                "px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
-                (tab === "All" && customerType === "all") ||
-                  (tab === "Individuals" && customerType === "individual") ||
-                  (tab === "Companies" && customerType === "business")
+                "inline-flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                customerType === tab.value
                   ? "bg-background text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab}
+              <span>{tab.label}</span>
+              {tab.showCount && (
+                <span className="tabular-nums text-[10px] opacity-75">
+                  ({statsLoading ? "—" : tab.count ?? 0})
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -397,6 +415,9 @@ export default function CustomersPage() {
             quickFilters={quickFilters}
             activeFilters={advancedFilters}
             onFiltersChange={(filters) => {
+              if (filters.customer_type) {
+                setCustomerType("all");
+              }
               setAdvancedFilters(filters);
               setPage(1);
             }}

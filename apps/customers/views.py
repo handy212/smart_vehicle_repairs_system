@@ -97,6 +97,35 @@ class CustomerViewSet(viewsets.ModelViewSet):
         'created_at', 'company_name', 'vehicle_count', 'vehicles_count',
     ]
     ordering = ['-created_at']
+
+    INACTIVE_PERIOD_DAYS = {
+        '3_months': 90,
+        '6_months': 180,
+        '1_year': 365,
+        '2_years': 730,
+    }
+    MAX_CUSTOM_INACTIVITY_DAYS = 3650
+
+    def _inactive_threshold_days(self, inactive_period):
+        if inactive_period in self.INACTIVE_PERIOD_DAYS:
+            return self.INACTIVE_PERIOD_DAYS[inactive_period]
+        if inactive_period and inactive_period.startswith('custom_'):
+            raw_days = inactive_period[len('custom_'):]
+            try:
+                threshold_days = int(raw_days)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError({
+                    'inactive_period': 'Custom inactivity days must be a whole number.'
+                })
+            if not 1 <= threshold_days <= self.MAX_CUSTOM_INACTIVITY_DAYS:
+                raise serializers.ValidationError({
+                    'inactive_period': (
+                        f'Custom inactivity days must be between 1 and '
+                        f'{self.MAX_CUSTOM_INACTIVITY_DAYS}.'
+                    )
+                })
+            return threshold_days
+        return 180
     
     def get_queryset(self):
         """Get queryset with optimizations"""
@@ -129,37 +158,27 @@ class CustomerViewSet(viewsets.ModelViewSet):
             if not status_param and not inactive_period:
                 queryset = queryset.filter(status='active')
             
-            # Date range filtering
+            # Created-at date range filtering (date-only upper bounds include the whole day).
             date_from = self.request.query_params.get('created_at__gte') or self.request.query_params.get('date_from')
             date_to = self.request.query_params.get('created_at__lte') or self.request.query_params.get('date_to')
             if date_from:
-                queryset = queryset.filter(created_at__gte=date_from)
+                queryset = queryset.filter(created_at__date__gte=date_from)
             if date_to:
-                queryset = queryset.filter(created_at__lte=date_to)
+                queryset = queryset.filter(created_at__date__lte=date_to)
+
+            customer_since_from = self.request.query_params.get('customer_since__gte')
+            customer_since_to = self.request.query_params.get('customer_since__lte')
+            if customer_since_from:
+                queryset = queryset.filter(customer_since__gte=customer_since_from)
+            if customer_since_to:
+                queryset = queryset.filter(customer_since__lte=customer_since_to)
             
             # Inactive period filtering
             if inactive_period:
                 from datetime import timedelta
                 from apps.workorders.models import WorkOrder
                 
-                # Map period to days
-                period_days = {
-                    '3_months': 90,
-                    '6_months': 180,
-                    '1_year': 365,
-                    '2_years': 730,
-                }
-                
-                if inactive_period in period_days:
-                    threshold_days = period_days[inactive_period]
-                elif inactive_period.startswith('custom_'):
-                    # Format: custom_180 (custom number of days)
-                    try:
-                        threshold_days = int(inactive_period.replace('custom_', ''))
-                    except ValueError:
-                        threshold_days = 180
-                else:
-                    threshold_days = 180  # Default 6 months
+                threshold_days = self._inactive_threshold_days(inactive_period)
                 
                 cutoff_date = timezone.now().date() - timedelta(days=threshold_days)
                 
@@ -201,23 +220,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             inactive_period = self.request.query_params.get('inactive_period')
             if inactive_period:
-                from datetime import timedelta
-                period_days = {
-                    '3_months': 90,
-                    '6_months': 180,
-                    '1_year': 365,
-                    '2_years': 730,
-                }
-                if inactive_period in period_days:
-                    threshold_days = period_days[inactive_period]
-                elif inactive_period.startswith('custom_'):
-                    try:
-                        threshold_days = int(inactive_period.replace('custom_', ''))
-                    except ValueError:
-                        threshold_days = 180
-                else:
-                    threshold_days = 180
-                context['inactive_threshold_days'] = threshold_days
+                context['inactive_threshold_days'] = self._inactive_threshold_days(
+                    inactive_period
+                )
         return context
 
     def perform_create(self, serializer):
@@ -574,6 +579,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 name='CustomerDashboardStatsResponse',
                 fields={
                     'total_customers': serializers.IntegerField(),
+                    'individual_customers': serializers.IntegerField(),
+                    'company_customers': serializers.IntegerField(),
                     'active_customers': serializers.IntegerField(),
                     'inactive_customers': serializers.IntegerField(),
                     'active_contacts': serializers.IntegerField(),
@@ -588,6 +595,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def dashboard_stats(self, request):
         """Get customer dashboard statistics"""
         total_customers = Customer.objects.count()
+        individual_customers = Customer.objects.filter(customer_type='individual').count()
+        company_customers = Customer.objects.filter(customer_type='business').count()
         active_customers = Customer.objects.filter(status='active').count()
         inactive_customers = Customer.objects.filter(status='inactive').count()
         
@@ -616,6 +625,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
             
         return Response({
             'total_customers': total_customers,
+            'individual_customers': individual_customers,
+            'company_customers': company_customers,
             'active_customers': active_customers,
             'inactive_customers': inactive_customers,
             'active_contacts': active_contacts,

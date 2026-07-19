@@ -319,7 +319,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
         
         # Use centralized branch resolution
         from apps.branches.utils import resolve_branch
-        branch = resolve_branch(self.request)
+        branch = resolve_branch(self.request, persist_session=False)
         
         # Use InventoryService for stock annotation
         queryset = InventoryService.get_stock_queryset(queryset, branch)
@@ -2415,8 +2415,14 @@ class TransferViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive', 'submit_for_approval', 'reject']:
             return base + [transfer_access]
         return base
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'source_branch', 'destination_branch']
+    search_fields = [
+        'transfer_number', 'notes',
+        'source_branch__name', 'source_branch__code',
+        'destination_branch__name', 'destination_branch__code',
+        'items__part__part_number', 'items__part__name',
+    ]
     ordering_fields = [
         'transfer_number', 'requested_date', 'status', 'created_at',
         'source_branch__name', 'destination_branch__name',

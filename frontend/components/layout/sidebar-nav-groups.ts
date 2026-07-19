@@ -52,6 +52,20 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
         module: "workorders",
       },
       {
+        name: "Inspections",
+        href: "/inspections",
+        icon: PremiumIcons.FileText,
+        permission: "view_inspections",
+        module: "inspections",
+      },
+      {
+        name: "Diagnosis",
+        href: "/diagnosis",
+        icon: PremiumIcons.Stethoscope,
+        permission: "view_diagnosis",
+        module: "diagnosis",
+      },
+      {
         name: "Gate Passes",
         href: "/gatepass",
         icon: PremiumIcons.FileText,
@@ -65,6 +79,27 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
         permission: "view_roadside",
         module: "roadside",
       },
+    ],
+  },
+  {
+    id: "parts-stock",
+    label: "Parts & Stock",
+    icon: PremiumIcons.Package,
+    items: [
+      {
+        name: "Inventory",
+        href: "/inventory",
+        icon: PremiumIcons.Package,
+        permission: "view_inventory",
+        module: "inventory",
+      },
+    ],
+  },
+  {
+    id: "people",
+    label: "Team",
+    icon: PremiumIcons.Users,
+    items: [
       {
         name: "Technicians",
         href: "/technicians",
@@ -83,16 +118,9 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "finance",
-    label: "Finance",
+    label: "Accounts",
     icon: PremiumIcons.Calculator,
     items: [
-      {
-        name: "Inventory",
-        href: "/inventory",
-        icon: PremiumIcons.Package,
-        permission: "view_inventory",
-        module: "inventory",
-      },
       {
         name: "Billing",
         href: "/billing",
@@ -124,24 +152,10 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: "tools-reports",
-    label: "Tools",
+    id: "reports",
+    label: "Reports",
     icon: PremiumIcons.BarChart,
     items: [
-      {
-        name: "Inspections",
-        href: "/inspections",
-        icon: PremiumIcons.FileText,
-        permission: "view_inspections",
-        module: "inspections",
-      },
-      {
-        name: "Diagnosis",
-        href: "/diagnosis",
-        icon: PremiumIcons.Stethoscope,
-        permission: "view_diagnosis",
-        module: "diagnosis",
-      },
       {
         name: "Reports",
         href: "/reports",
@@ -152,30 +166,23 @@ export const SIDEBAR_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: "communications",
-    label: "Communications",
-    icon: PremiumIcons.MessageSquare,
-    items: [
-      {
-        name: "SMS Console",
-        href: "/sms",
-        icon: PremiumIcons.MessageSquare,
-        permission: "send_notifications",
-        module: "sms",
-      },
-    ],
-  },
-  {
-    id: "system",
-    label: "System",
+    id: "admin",
+    label: "Admin",
     icon: PremiumIcons.Settings,
     items: [
       {
-        name: "Configurations",
+        name: "Settings",
         href: "/admin/settings",
         icon: PremiumIcons.Settings,
         permission: "manage_settings",
         module: "settings",
+      },
+      {
+        name: "Messages",
+        href: "/sms",
+        icon: PremiumIcons.MessageSquare,
+        permission: "send_notifications",
+        module: "sms",
       },
     ],
   },

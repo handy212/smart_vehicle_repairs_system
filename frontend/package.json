@@ -9,6 +9,7 @@
     "build": "NODE_OPTIONS='--max-old-space-size=8192' NEXT_TELEMETRY_DISABLED=1 next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "check:routes": "node scripts/check-internal-routes.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

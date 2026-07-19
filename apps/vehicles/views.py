@@ -1,6 +1,8 @@
 """
 Views for vehicles app
 """
+import django_filters
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -30,6 +32,29 @@ from .serializers import (
     VehicleServiceScheduleUpdateSerializer
 )
 from .vin_decoder import VehicleVINDecoder, get_vehicle_specs
+
+
+class VehicleFilter(django_filters.FilterSet):
+    """List filters used by the vehicle advanced-filter UI."""
+
+    make = django_filters.CharFilter(field_name='make', lookup_expr='iexact')
+    model = django_filters.CharFilter(field_name='model', lookup_expr='iexact')
+    created_at__gte = django_filters.DateFilter(
+        field_name='created_at', lookup_expr='date__gte'
+    )
+    created_at__lte = django_filters.DateFilter(
+        field_name='created_at', lookup_expr='date__lte'
+    )
+
+    class Meta:
+        model = Vehicle
+        fields = {
+            'status': ['exact'],
+            'year': ['exact', 'gte', 'lte'],
+            'engine_type': ['exact'],
+            'transmission_type': ['exact'],
+            'owner': ['exact'],
+        }
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
@@ -75,7 +100,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
         # Deny-by-default: custom actions must be explicitly listed above
         return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('view_vehicles')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'make', 'model', 'year', 'engine_type', 'transmission_type', 'owner']
+    filterset_class = VehicleFilter
     search_fields = ['vin', 'license_plate', 'make', 'model', 'owner__user__first_name', 
                      'owner__user__last_name', 'owner__company_name']
     ordering_fields = [

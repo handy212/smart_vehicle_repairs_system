@@ -299,9 +299,9 @@ export default function SMSConsolePage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                            SMS Console
+                            Messages
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">Manage customer communications and messaging stats</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">SMS and customer messaging stats</p>
                     </div>
                 </div>
 

@@ -1201,7 +1201,7 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                     <tr key={item.id ?? `stock-${idx}`} className="border-b border-[color:var(--outline-variant)] transition-colors hover:bg-muted/40">
                       <td className="px-4 py-2.5 text-xs font-medium text-foreground">
                         {item.id ? (
-                          <Link href={`/inventory/parts/${item.id}`} className="text-primary hover:underline">
+                          <Link href={`/inventory/${item.id}`} className="text-primary hover:underline">
                             {item.name}
                           </Link>
                         ) : (

@@ -8,6 +8,8 @@ from rest_framework.test import APITestCase
 from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
 from apps.billing.models import Invoice
+from apps.billing.services import BillingService
+from apps.branches.models import Branch
 from apps.customers.models import Customer
 
 
@@ -40,6 +42,11 @@ class CustomerInvoiceFilterTests(APITestCase):
             role="customer",
             first_name="Miles",
             last_name="Other",
+        )
+        self.branch = Branch.objects.create(
+            name="Invoice Filter Branch",
+            code="IFB",
+            created_by=self.staff_user,
         )
         self.customer = Customer.objects.create(user=self.customer_user)
         self.other_customer = Customer.objects.create(user=self.other_user)
@@ -90,3 +97,35 @@ class CustomerInvoiceFilterTests(APITestCase):
         self.assertIn(self.sent_invoice.id, invoice_ids)
         self.assertIn(self.viewed_invoice.id, invoice_ids)
         self.assertNotIn(self.other_invoice.id, invoice_ids)
+
+    def test_invoice_due_date_range_filters_are_supported(self):
+        self.sent_invoice.due_date = timezone.now().date() + timedelta(days=2)
+        self.sent_invoice.save(update_fields=["due_date"])
+        self.viewed_invoice.due_date = timezone.now().date() + timedelta(days=20)
+        self.viewed_invoice.save(update_fields=["due_date"])
+        self.client.force_authenticate(self.staff_user)
+
+        response = self.client.get("/api/billing/invoices/", {
+            "due_date__gte": timezone.now().date() + timedelta(days=1),
+            "due_date__lte": timezone.now().date() + timedelta(days=5),
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invoice_ids = {row["id"] for row in response.data["results"]}
+        self.assertIn(self.sent_invoice.id, invoice_ids)
+        self.assertNotIn(self.viewed_invoice.id, invoice_ids)
+
+    def test_unpaid_filter_and_stats_share_the_same_statuses(self):
+        partial = self._create_invoice(self.customer, "partial", "75.00")
+        overdue = self._create_invoice(self.customer, "overdue", "80.00")
+        self.client.force_authenticate(self.staff_user)
+
+        response = self.client.get("/api/billing/invoices/", {"status": "unpaid"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invoice_ids = {row["id"] for row in response.data["results"]}
+        self.assertTrue({
+            self.sent_invoice.id, self.viewed_invoice.id, partial.id, overdue.id
+        }.issubset(invoice_ids))
+        stats = BillingService.get_invoice_stats(Invoice.objects.all())
+        self.assertEqual(stats["counts"]["unpaid"], 5)

@@ -2,7 +2,15 @@ import axios from "axios";
 import { getAccessToken } from "@/lib/utils/token";
 
 export interface SearchResult {
-  type: "customer" | "vehicle" | "workorder" | "appointment" | "invoice" | "part";
+  type:
+    | "customer"
+    | "vehicle"
+    | "workorder"
+    | "appointment"
+    | "invoice"
+    | "estimate"
+    | "payment"
+    | "part";
   id: number;
   title: string;
   subtitle?: string;

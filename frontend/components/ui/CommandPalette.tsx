@@ -89,8 +89,8 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     id: "inventory",
-    title: "Inventory",
-    subtitle: "Parts and stock",
+    title: "Parts & Stock",
+    subtitle: "Inventory catalog and stock",
     url: "/inventory",
     icon: Package,
     permission: "view_inventory",

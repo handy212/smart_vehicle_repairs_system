@@ -1,6 +1,8 @@
 """
 Gate Pass API views
 """
+import django_filters
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,6 +23,19 @@ from apps.branches.utils import resolve_branch, filter_queryset_for_user_branche
 from apps.notifications_app.triggers import notification_triggers
 
 
+class GatePassFilter(django_filters.FilterSet):
+    created_at__gte = django_filters.DateFilter(
+        field_name='created_at', lookup_expr='date__gte'
+    )
+    created_at__lte = django_filters.DateFilter(
+        field_name='created_at', lookup_expr='date__lte'
+    )
+
+    class Meta:
+        model = GatePass
+        fields = ['status', 'work_order', 'customer', 'vehicle', 'branch']
+
+
 class GatePassViewSet(viewsets.ModelViewSet):
     """
     Gate Pass management with workflow actions
@@ -32,7 +47,7 @@ class GatePassViewSet(viewsets.ModelViewSet):
     )
     permission_classes = [IsAuthenticated, IsModuleEnabled('gatepass')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'work_order', 'customer', 'vehicle', 'branch']
+    filterset_class = GatePassFilter
     search_fields = [
         'gate_pass_number', 'work_order__work_order_number',
         'customer__user__first_name', 'customer__user__last_name',

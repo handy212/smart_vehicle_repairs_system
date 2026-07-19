@@ -5,10 +5,18 @@ import logging
 
 from celery import shared_task
 
+from config.celery_queues import HEAVY_CELERY_QUEUE
+
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, ignore_result=True, soft_time_limit=3600, time_limit=3900)
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    queue=HEAVY_CELERY_QUEUE,
+    soft_time_limit=3600,
+    time_limit=3900,
+)
 def run_import_preview_task(self, batch_id: int) -> str:
     from django.db import close_old_connections
 
@@ -31,7 +39,13 @@ def run_import_preview_task(self, batch_id: int) -> str:
         close_old_connections()
 
 
-@shared_task(bind=True, ignore_result=True, soft_time_limit=7200, time_limit=7500)
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    queue=HEAVY_CELERY_QUEUE,
+    soft_time_limit=7200,
+    time_limit=7500,
+)
 def run_import_commit_task(self, batch_id: int, force: bool = False) -> str:
     from django.db import close_old_connections
 
@@ -65,7 +79,13 @@ def run_import_commit_task(self, batch_id: int, force: bool = False) -> str:
         close_old_connections()
 
 
-@shared_task(bind=True, ignore_result=True, soft_time_limit=7200, time_limit=7500)
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    queue=HEAVY_CELERY_QUEUE,
+    soft_time_limit=7200,
+    time_limit=7500,
+)
 def run_wipe_task(
     self,
     job_id: str,

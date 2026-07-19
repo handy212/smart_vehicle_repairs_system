@@ -5,10 +5,11 @@ import logging
 
 from django.conf import settings
 
+from config.celery_queues import DEFAULT_CELERY_QUEUE, QBO_CELERY_QUEUE
+
 logger = logging.getLogger(__name__)
 
-QBO_OUTBOUND_QUEUE = 'qbo'
-DEFAULT_CELERY_QUEUE = 'celery'
+QBO_OUTBOUND_QUEUE = QBO_CELERY_QUEUE
 
 
 def _redis_client():

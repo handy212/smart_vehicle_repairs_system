@@ -4,9 +4,11 @@ Tests for gatepass app.
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from apps.accounts.admin_models import SystemModule
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.branches.models import Branch
@@ -178,9 +180,14 @@ class GatePassAPITest(APITestCase):
 
     def setUp(self):
         """Set up test data and authenticate."""
+        SystemModule.objects.update_or_create(
+            slug='gatepass',
+            defaults={'name': 'Gate Pass', 'is_enabled': True},
+        )
         self.admin = User.objects.create_user(
             email='gpapiadmin@test.com', username='gpapiadmin', password='test123',
-            first_name='GPAPI', last_name='Admin', phone='3333333333', role='admin'
+            first_name='GPAPI', last_name='Admin', phone='3333333333', role='admin',
+            is_staff=True, is_superuser=True,
         )
         self.branch = Branch.objects.create(
             name='GPAPI Branch', code='GPA', phone='1234567890',
@@ -226,6 +233,21 @@ class GatePassAPITest(APITestCase):
         response = self.client.get('/api/gatepass/gate-passes/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(response.data['count'], 1)
+
+    def test_created_at_date_bounds_include_the_end_date(self):
+        gate_pass = self._create_gate_pass()
+        today = timezone.localdate()
+
+        response = self.client.get('/api/gatepass/gate-passes/', {
+            'created_at__gte': today,
+            'created_at__lte': today,
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            gate_pass.id,
+            {row['id'] for row in response.data['results']},
+        )
 
     def test_retrieve_gate_pass(self):
         """Test retrieving a single gate pass."""

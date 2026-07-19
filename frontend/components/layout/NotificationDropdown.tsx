@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils/cn";
 import { useNotificationSound } from "@/lib/hooks/useNotificationSound";
 import { useNotificationLiveStore } from "@/components/notifications/RealtimeNotificationsBridge";
+import { getNotificationHref } from "@/lib/utils/navigation-safety";
 
 import { useAuthStore } from "@/store/authStore";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
@@ -111,114 +113,6 @@ export function NotificationDropdown() {
         }
     };
 
-    const getNotificationUrl = (notification: Notification): string | null => {
-        const data = notification.data as Record<string, unknown> | undefined;
-        if (typeof data?.url === 'string' && data.url) {
-            try {
-                const parsed = new URL(data.url, window.location.origin);
-                if (parsed.origin === window.location.origin) {
-                    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-                }
-            } catch {
-                if (data.url.startsWith('/')) {
-                    return data.url;
-                }
-            }
-        }
-
-        if (data?.work_order_id && notification.notification_type === 'inventory') {
-            if (data?.action === 'quotation_request' || data?.source === 'recommendations_quote') {
-                return `/inventory/quotation-requests?tab=quotes&work_order=${data.work_order_id}`;
-            }
-            return `/inventory/quotation-requests?tab=fulfillment&work_order=${data.work_order_id}`;
-        }
-
-        // Use related_object_type if available, otherwise fallback to notification_type
-        const typeRaw = notification.related_object_type || notification.notification_type;
-        if (!typeRaw || !notification.related_object_id) return null;
-
-        const type = typeRaw.toLowerCase();
-        const id = notification.related_object_id;
-        const isCustomer = user?.role === 'customer';
-
-        if (isCustomer) {
-            // Customer Portal Routes
-            switch (type) {
-                case "appointment":
-                    return `/portal/appointments/${id}`;
-                case "workorder":
-                case "work_order":
-                    return `/portal/work-orders/${id}`;
-                case "invoice":
-                    return `/portal/invoices/${id}`;
-                case "estimate":
-                    return `/portal/estimates/${id}`;
-                case "customer":
-                    return `/portal/profile`;
-                case "vehicle":
-                    return `/portal/vehicles/${id}`;
-                case "inspection":
-                    return `/portal/inspections/${id}`;
-                case "payment":
-                    return `/portal/payments/${id}`;
-                case "subscription":
-                    return `/portal/subscriptions/${id}`;
-                case "roadside":
-                case "roadside_request":
-                case "roadsideassistancerequest":
-                    return `/portal/roadside/${id}`;
-                default:
-                    return null;
-            }
-        } else {
-            // Staff/Admin Routes
-            switch (type) {
-                case "appointment":
-                    return `/appointments/${id}`;
-                case "workorder":
-                case "work_order":
-                    return `/workorders/${id}`;
-                case "work_order_part":
-                    if (data?.work_order_id) {
-                        return `/inventory/quotation-requests?tab=fulfillment&work_order=${data.work_order_id}`;
-                    }
-                    return `/inventory/quotation-requests?tab=fulfillment`;
-                case "invoice":
-                    return `/billing/invoices/${id}`;
-                case "estimate":
-                    return `/billing/estimates/${id}`;
-                case "customer":
-                    return `/customers/${id}`;
-                case "vehicle":
-                    return `/vehicles/${id}`;
-                case "inspection":
-                    return `/inspections/${id}`;
-                case "payment":
-                    return `/billing/payments/${id}`;
-                case "transfer":
-                case "inventory_transfer":
-                    return `/inventory/transfers/${id}`;
-                case "purchase_order":
-                case "purchase-order":
-                    return `/inventory/purchase-orders/${id}`;
-                case "part":
-                case "inventory":
-                    if (data?.work_order_id) {
-                        return `/inventory/quotation-requests?tab=fulfillment&work_order=${data.work_order_id}`;
-                    }
-                    return `/inventory/${id}`;
-                case "subscription":
-                    return `/billing/subscriptions/${id}`;
-                case "roadside":
-                case "roadside_request":
-                case "roadsideassistancerequest":
-                    return `/roadside/${id}`;
-                default:
-                    return null;
-            }
-        }
-    };
-
     const handleRead = (notification: Notification) => {
         if (!notification.is_read && !notification.read_at) {
             markAsReadMutation.mutate(notification.id);
@@ -279,7 +173,11 @@ export function NotificationDropdown() {
                     {notifications.length > 0 ? (
                         notifications.map((notification) => {
                             const isUnread = !notification.is_read && !notification.read_at;
-                            const url = getNotificationUrl(notification);
+                            const url = getNotificationHref(
+                                notification,
+                                user?.role,
+                                window.location.origin,
+                            );
                             const hasLink = !!url;
 
                             return (
@@ -296,7 +194,7 @@ export function NotificationDropdown() {
 
                                         // Navigate if URL exists
                                         if (url) {
-                                            router.push(url);
+                                            router.push(url as Route);
                                         }
                                     }}
                                 >

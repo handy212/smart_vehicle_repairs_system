@@ -28,6 +28,25 @@ This document describes the current JWT auth model, incremental improvements in 
 
 3. **Django cookie helpers** — [`apps/accounts/jwt_cookies.py`](../apps/accounts/jwt_cookies.py) and [`apps/accounts/authentication.py`](../apps/accounts/authentication.py).
 
+## What the session resilience fix does **not** cover
+
+Recent BFF/cookie and refresh hardening stops *unexpected* logouts from lost refresh
+cookies, refresh storms, and temporary API failures. It does **not** change these
+normal outcomes:
+
+| Situation | Expected behavior |
+|-----------|-------------------|
+| Refresh JWT lifetime ends (~24h default) | User must sign in again |
+| User deleted / DB reseeded while cookies remain | Refresh returns 401; session cleared; re-login required |
+| Manual logout, password reset, or token blacklist | Session ends |
+| Backend fully down | User may stay “signed in” locally but API calls fail until recovery |
+| Idle-timeout countdown UI | Not implemented in current source (any countdown is stale client/PWA assets) |
+| Permission / module 403s | Not an auth expiry; user stays logged in |
+
+After a database reset or user deletion, clear site cookies for the app origin and
+log in again. Hard-refresh (or update the service worker) if an old timeout warning
+still appears.
+
 ## Recommended next steps
 
 ### Phase A — Server-side verification (optional hardening)
