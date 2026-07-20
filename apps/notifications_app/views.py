@@ -1346,7 +1346,15 @@ class TemplateRenderView(APIView):
         try:
             if 'appointment' in template_type:
                 from apps.appointments.models import Appointment
-                obj = Appointment.objects.get(id=object_id)
+                queryset = filter_queryset_for_user_branches(
+                    Appointment.objects.select_related(
+                        'customer', 'customer__user', 'vehicle'
+                    ),
+                    request.user,
+                    request=request,
+                    use_active_branch=True,
+                )
+                obj = get_object_or_404(queryset, id=object_id)
                 
                 # Context
                 customer_name = obj.customer.company_name if obj.customer.company_name else obj.customer.user.get_full_name()
@@ -1366,7 +1374,15 @@ class TemplateRenderView(APIView):
                     
             elif 'work_order' in template_type:
                 from apps.workorders.models import WorkOrder
-                obj = WorkOrder.objects.get(id=object_id)
+                queryset = filter_queryset_for_user_branches(
+                    WorkOrder.objects.select_related(
+                        'customer', 'customer__user', 'vehicle'
+                    ),
+                    request.user,
+                    request=request,
+                    use_active_branch=True,
+                )
+                obj = get_object_or_404(queryset, id=object_id)
                 
                 customer_name = obj.customer.company_name if obj.customer.company_name else obj.customer.user.get_full_name()
                 context = {
@@ -1383,7 +1399,18 @@ class TemplateRenderView(APIView):
 
             elif 'invoice' in template_type:
                 from apps.billing.models import Invoice
-                obj = Invoice.objects.get(id=object_id)
+                queryset = filter_queryset_for_user_branches(
+                    Invoice.objects.select_related(
+                        'customer', 'customer__user', 'vehicle',
+                        'work_order', 'work_order__customer',
+                        'work_order__customer__user'
+                    ),
+                    request.user,
+                    request=request,
+                    use_active_branch=True,
+                    include_unassigned=True,
+                )
+                obj = get_object_or_404(queryset, id=object_id)
                  
                 context = {
                     'invoice_id': obj.id,
@@ -1421,6 +1448,11 @@ class TemplateRenderView(APIView):
 
             # Add more types as needed
             
+        except Http404:
+            return Response(
+                {'error': 'Object not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             return Response(
                 {'error': f'Error fetching object: {str(e)}'},
