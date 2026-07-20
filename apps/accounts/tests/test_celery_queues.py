@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.test import SimpleTestCase
 
 from config.celery_queues import (
@@ -34,3 +36,15 @@ class CeleryQueueRoutingTests(SimpleTestCase):
         from apps.quickbooks_online.celery_queue import QBO_OUTBOUND_QUEUE
 
         self.assertEqual(QBO_OUTBOUND_QUEUE, QBO_CELERY_QUEUE)
+
+    def test_release_scripts_restart_heavy_worker(self):
+        root = Path(__file__).resolve().parents[3]
+        expected = 'restart backend celery celery-heavy celerybeat frontend nginx'
+
+        for script in (
+            'deploy/release.sh',
+            'deploy/release-vps.sh',
+            'deploy/release-staging.sh',
+        ):
+            with self.subTest(script=script):
+                self.assertIn(expected, (root / script).read_text())
