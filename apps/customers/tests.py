@@ -1,6 +1,7 @@
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from apps.accounting.models import DocumentNumberSequence
 from apps.branches.models import Branch
 from apps.customers.models import Customer, CustomerContact
 from apps.customers.serializers import CustomerCreateSerializer, CustomerUpdateSerializer
@@ -62,6 +63,21 @@ class CustomerStatsTest(TestCase):
 
 
 class CustomerPrimaryContactCreationTest(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='primary_contact_admin',
+            email='primary_contact_admin@example.com',
+            password='password123',
+            role='admin',
+        )
+        Branch.objects.create(
+            name='Primary Contact Branch',
+            code='PCB',
+            is_active=True,
+            is_headquarters=True,
+            created_by=self.admin,
+        )
+
     def test_business_customer_creation_adds_primary_contact_record(self):
         serializer = CustomerCreateSerializer(data={
             'email': 'fleet@example.com',
@@ -273,6 +289,50 @@ class CustomerNumberingTest(TestCase):
         second._numbering_branch = self.branch
         second.save()
         self.assertEqual(second.customer_number, 'C2')
+
+    def test_customer_number_sequence_is_global_across_request_branches(self):
+        other_branch = Branch.objects.create(
+            name='Accra',
+            code='ACC',
+            phone='555-0200',
+            address='2 Ring Road',
+            city='Accra',
+            region='Greater Accra',
+            zip_code='00233',
+            country='Ghana',
+            is_active=True,
+            created_by=self.admin,
+        )
+
+        first_user = User.objects.create_user(
+            username='branch-cust-001',
+            email='branch-cust-001@example.com',
+            password='password123',
+            role='customer',
+        )
+        first = Customer(user=first_user, status='active')
+        first._numbering_branch = self.branch
+        first.save()
+
+        second_user = User.objects.create_user(
+            username='branch-cust-002',
+            email='branch-cust-002@example.com',
+            password='password123',
+            role='customer',
+        )
+        second = Customer(user=second_user, status='active')
+        second._numbering_branch = other_branch
+        second.save()
+
+        self.assertEqual(first.customer_number, 'C1')
+        self.assertEqual(second.customer_number, 'C2')
+        self.assertEqual(
+            DocumentNumberSequence.objects.filter(document_type='customer').count(),
+            1,
+        )
+        sequence = DocumentNumberSequence.objects.get(document_type='customer')
+        self.assertEqual(sequence.branch, self.branch)
+        self.assertEqual(sequence.last_sequence, 2)
 
 
 @override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)

@@ -45,7 +45,7 @@ echo "==> Collecting static files"
 "${COMPOSE[@]}" exec -T backend python manage.py collectstatic --noinput
 
 echo "==> Restarting application services"
-"${COMPOSE[@]}" restart backend celery celerybeat frontend nginx
+"${COMPOSE[@]}" restart backend celery celery-heavy celerybeat frontend nginx
 
 echo "==> Waiting for readiness"
 ready=false

@@ -27,7 +27,7 @@ echo "==> Collectstatic"
 "${COMPOSE[@]}" exec -T backend python manage.py collectstatic --noinput
 
 echo "==> Restarting app services"
-"${COMPOSE[@]}" restart backend celery celerybeat frontend nginx
+"${COMPOSE[@]}" restart backend celery celery-heavy celerybeat frontend nginx
 
 PORT="${STAGING_HTTP_PORT:-8080}"
 for _ in $(seq 1 30); do

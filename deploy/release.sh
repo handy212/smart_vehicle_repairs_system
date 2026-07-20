@@ -30,7 +30,7 @@ echo "==> Collecting static files"
 "${COMPOSE[@]}" exec -T backend python manage.py collectstatic --noinput
 
 echo "==> Restarting workers"
-"${COMPOSE[@]}" restart backend celery celerybeat frontend nginx
+"${COMPOSE[@]}" restart backend celery celery-heavy celerybeat frontend nginx
 
 echo "==> Waiting for readiness"
 for _ in $(seq 1 30); do
