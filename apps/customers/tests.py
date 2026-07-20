@@ -63,6 +63,21 @@ class CustomerStatsTest(TestCase):
 
 
 class CustomerPrimaryContactCreationTest(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='primary_contact_admin',
+            email='primary_contact_admin@example.com',
+            password='password123',
+            role='admin',
+        )
+        Branch.objects.create(
+            name='Primary Contact Branch',
+            code='PCB',
+            is_active=True,
+            is_headquarters=True,
+            created_by=self.admin,
+        )
+
     def test_business_customer_creation_adds_primary_contact_record(self):
         serializer = CustomerCreateSerializer(data={
             'email': 'fleet@example.com',
