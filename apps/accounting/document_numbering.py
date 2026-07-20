@@ -57,10 +57,14 @@ class DocumentNumberService:
         """
         Allocate the next customer number: C1, C2, C3, …
 
-        Global sequence (not per year / branch). Branch is only used to satisfy
-        DocumentNumberSequence's FK; HQ (or first active) is preferred.
+        Global sequence (not per year / branch). The sequence row is always
+        anchored to one canonical branch so all callers contend on the same
+        row, regardless of the branch that initiated customer creation.
         """
-        branch = resolve_numbering_branch(branch)
+        explicit_branch = branch
+        branch = resolve_numbering_branch()
+        if branch is None:
+            branch = resolve_numbering_branch(explicit_branch)
         if branch is None:
             raise ValidationError(
                 "Cannot assign a customer number without an active branch. "
