@@ -179,6 +179,22 @@ class StaffImporter(BaseImporter):
                 ))
                 continue
 
+            if existing_user and not self._can_update_existing_user(existing_user):
+                summary['rows_failed'] += 1
+                issues.append(RowIssue(
+                    row_number=row_number,
+                    level='error',
+                    entity_type='staff',
+                    action='skip',
+                    code='existing_non_staff_account',
+                    identifier=email,
+                    message=(
+                        f'Existing account {email} is not an import-managed staff account; '
+                        'skipped to avoid changing customer, superuser, or custom-role access.'
+                    ),
+                ))
+                continue
+
             action = 'update' if existing_user else 'create'
             if action == 'create':
                 summary['staff_to_create'] += 1
@@ -438,6 +454,11 @@ class StaffImporter(BaseImporter):
                 message=f'Invalid salary_type "{mapped["salary_type"]}"',
             ))
         return issues
+
+    def _can_update_existing_user(self, user) -> bool:
+        if getattr(user, 'is_superuser', False):
+            return False
+        return user.role in STAFF_PROFILE_ROLES and bool(getattr(user, 'is_staff', False))
 
     def _parse_date(self, value: Any):
         if value is None or value == '':
