@@ -181,6 +181,7 @@ class TestGatewayPaymentSettlement:
     def test_callback_records_verified_charge_when_invoice_was_paid_after_checkout(
         self, api_client, open_invoice, customer, staff_user
     ):
+        bank = AccountingControl.get_settings().default_bank_account
         Payment.objects.create(
             invoice=open_invoice,
             customer=customer,
@@ -188,6 +189,7 @@ class TestGatewayPaymentSettlement:
             payment_method='check',
             status='completed',
             processed_by=staff_user,
+            bank_account=bank,
         )
         open_invoice.refresh_from_db()
         assert open_invoice.status == 'paid'
