@@ -341,74 +341,87 @@ class RoadsideRequest(models.Model):
         if self.work_order_id:
             return self.work_order
 
-        if self.status in ('cancelled', 'failed'):
-            raise ValueError('Cannot create a work order from a cancelled or failed roadside request.')
-        if self.status not in self.WORK_ORDER_HANDOFF_STATUSES:
-            raise ValueError(
-                'Create a work order when the vehicle is on site, work is in progress, or the tow is completed.'
-            )
-        if not self.branch_id:
-            raise ValueError('Assign a branch before creating a work order.')
-        if not self.customer_id or not self.vehicle_id:
-            raise ValueError('Customer and vehicle are required to create a work order.')
-
-        code = job_type_code or self._default_job_type_code()
-        job_type = JobType.objects.filter(code=code, is_active=True).first()
-        if job_type is None and code:
-            job_type = JobType.objects.filter(code='general_repairs', is_active=True).first()
-
-        mileage = odometer_in
-        if mileage is None:
-            mileage = getattr(self.vehicle, 'current_mileage', None)
-        try:
-            mileage = int(mileage if mileage is not None else 0)
-        except (TypeError, ValueError):
-            mileage = 0
-        if mileage < 0:
-            mileage = 0
-
-        valid_priorities = {choice[0] for choice in WorkOrder.PRIORITY_CHOICES}
-        wo_priority = priority if priority in valid_priorities else 'high'
-
-        concern_lines = [
-            f"Roadside {self.request_number} — {self.get_service_type_display()}",
-        ]
-        if self.description and self.description.strip():
-            concern_lines.append(self.description.strip())
-        if self.breakdown_location:
-            concern_lines.append(f"Breakdown location: {self.breakdown_location}")
-        if self.destination:
-            concern_lines.append(f"Tow destination: {self.destination}")
-        customer_concerns = '\n'.join(concern_lines)
-
-        special_parts = [f"Converted from roadside request {self.request_number}."]
-        if self.notes and self.notes.strip():
-            special_parts.append(f"Roadside notes:\n{self.notes.strip()}")
-        special_instructions = '\n\n'.join(special_parts)
-
         with transaction.atomic():
+            roadside_request = (
+                type(self).objects.select_for_update()
+                .select_related('customer', 'vehicle', 'branch', 'created_by', 'work_order')
+                .get(pk=self.pk)
+            )
+
+            if roadside_request.work_order_id:
+                self.work_order = roadside_request.work_order
+                self.work_order_id = roadside_request.work_order_id
+                return roadside_request.work_order
+
+            if roadside_request.status in ('cancelled', 'failed'):
+                raise ValueError('Cannot create a work order from a cancelled or failed roadside request.')
+            if roadside_request.status not in self.WORK_ORDER_HANDOFF_STATUSES:
+                raise ValueError(
+                    'Create a work order when the vehicle is on site, work is in progress, or the tow is completed.'
+                )
+            if not roadside_request.branch_id:
+                raise ValueError('Assign a branch before creating a work order.')
+            if not roadside_request.customer_id or not roadside_request.vehicle_id:
+                raise ValueError('Customer and vehicle are required to create a work order.')
+
+            code = job_type_code or roadside_request._default_job_type_code()
+            job_type = JobType.objects.filter(code=code, is_active=True).first()
+            if job_type is None and code:
+                job_type = JobType.objects.filter(code='general_repairs', is_active=True).first()
+
+            mileage = odometer_in
+            if mileage is None:
+                mileage = getattr(roadside_request.vehicle, 'current_mileage', None)
+            try:
+                mileage = int(mileage if mileage is not None else 0)
+            except (TypeError, ValueError):
+                mileage = 0
+            if mileage < 0:
+                mileage = 0
+
+            valid_priorities = {choice[0] for choice in WorkOrder.PRIORITY_CHOICES}
+            wo_priority = priority if priority in valid_priorities else 'high'
+
+            concern_lines = [
+                f"Roadside {roadside_request.request_number} — {roadside_request.get_service_type_display()}",
+            ]
+            if roadside_request.description and roadside_request.description.strip():
+                concern_lines.append(roadside_request.description.strip())
+            if roadside_request.breakdown_location:
+                concern_lines.append(f"Breakdown location: {roadside_request.breakdown_location}")
+            if roadside_request.destination:
+                concern_lines.append(f"Tow destination: {roadside_request.destination}")
+            customer_concerns = '\n'.join(concern_lines)
+
+            special_parts = [f"Converted from roadside request {roadside_request.request_number}."]
+            if roadside_request.notes and roadside_request.notes.strip():
+                special_parts.append(f"Roadside notes:\n{roadside_request.notes.strip()}")
+            special_instructions = '\n\n'.join(special_parts)
+
             work_order = WorkOrder.objects.create(
-                customer=self.customer,
-                vehicle=self.vehicle,
-                branch=self.branch,
+                customer=roadside_request.customer,
+                vehicle=roadside_request.vehicle,
+                branch=roadside_request.branch,
                 customer_concerns=customer_concerns,
                 special_instructions=special_instructions,
                 status='draft',
                 priority=wo_priority,
-                created_by=user or self.created_by,
+                created_by=user or roadside_request.created_by,
                 odometer_in=mileage,
                 job_type=job_type,
             )
             if job_type is not None:
                 work_order.job_types.add(job_type)
 
+            roadside_request.work_order = work_order
+            roadside_request.save(update_fields=['work_order', 'updated_at'])
             self.work_order = work_order
-            self.save(update_fields=['work_order', 'updated_at'])
+            self.work_order_id = work_order.id
 
             WorkOrderNote.objects.create(
                 work_order=work_order,
                 note_type='internal',
-                note=f'Created from roadside request {self.request_number}.',
+                note=f'Created from roadside request {roadside_request.request_number}.',
                 created_by=user if getattr(user, 'is_authenticated', False) else None,
                 is_important=True,
             )

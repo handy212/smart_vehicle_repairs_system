@@ -1471,7 +1471,11 @@ class Payment(models.Model):
                 
                 # Only prevent payments if invoice is explicitly marked as paid
                 # This is the most reliable check - other statuses may still accept payments
-                if invoice.status == 'paid':
+                if invoice.status == 'paid' and not getattr(
+                    self,
+                    '_allow_paid_invoice_gateway_payment',
+                    False,
+                ):
                     from django.core.exceptions import ValidationError
                     inv_num = getattr(invoice, 'invoice_number', f'#{invoice.id}')
                     raise ValidationError(

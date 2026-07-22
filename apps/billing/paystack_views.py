@@ -274,19 +274,6 @@ def paystack_callback(request):
             reference=reference,
         )
 
-    invoice.refresh_from_db()
-    if invoice.status == 'paid' or invoice.amount_due <= 0:
-        logger.warning(
-            "Attempted to record payment for already paid invoice %s (reference: %s)",
-            invoice.id,
-            reference,
-        )
-        return _frontend_payment_redirect(
-            status='success',
-            invoice_id=invoice.id,
-            reference=reference,
-        )
-
     try:
         _record_verified_paystack_payment(invoice=invoice, reference=reference, data=data)
     except ValueError as e:
@@ -352,15 +339,6 @@ def _process_paystack_charge_success(event_data):
         ensure_payment_settlement_account(existing)
         return True
 
-    invoice.refresh_from_db()
-    if invoice.status == 'paid' or invoice.amount_due <= 0:
-        logger.info(
-            "Paystack webhook skipped paid invoice %s (reference: %s)",
-            invoice.id,
-            reference,
-        )
-        return True
-
     _record_verified_paystack_payment(invoice=invoice, reference=reference, data=data)
     return True
 
@@ -416,9 +394,11 @@ def paystack_webhook(request):
                 event_data.get('reference'),
             )
             try:
-                _process_paystack_charge_success(event_data)
+                handled = _process_paystack_charge_success(event_data)
             except Exception as e:
                 logger.error("Error recording Paystack webhook payment: %s", e, exc_info=True)
+                return HttpResponse(status=500)
+            if not handled:
                 return HttpResponse(status=500)
 
         elif event == 'transfer.success':

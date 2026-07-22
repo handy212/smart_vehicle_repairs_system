@@ -109,6 +109,19 @@ class RoadsideCreateWorkOrderTests(TestCase):
         self.assertEqual(again.id, wo.id)
         self.assertEqual(WorkOrder.objects.filter(customer=self.customer).count(), 1)
 
+    def test_stale_request_instance_returns_existing_work_order(self):
+        first = RoadsideRequest.objects.get(pk=self.request.pk)
+        stale = RoadsideRequest.objects.get(pk=self.request.pk)
+
+        wo = first.create_work_order(user=self.manager)
+        again = stale.create_work_order(user=self.manager)
+
+        self.assertEqual(again.id, wo.id)
+        self.assertEqual(
+            WorkOrder.objects.filter(customer=self.customer, vehicle=self.vehicle).count(),
+            1,
+        )
+
     def test_api_create_work_order(self):
         url = f'/api/roadside/requests/{self.request.id}/create_work_order/'
         response = self.client.post(url, {}, format='json')
