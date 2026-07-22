@@ -138,7 +138,7 @@ def record_gateway_payment(
     payment_date = parse_gateway_paid_at(paid_at)
 
     with transaction.atomic():
-        payment = Payment.objects.create(
+        payment = Payment(
             invoice=invoice,
             customer=invoice.customer,
             amount=amount,
@@ -150,6 +150,8 @@ def record_gateway_payment(
             processed_by=processed_by,
             bank_account=bank_account,
         )
+        payment._allow_paid_invoice_gateway_payment = True
+        payment.save()
         invoice.recalculate_amount_paid_from_collections()
 
     return payment, True
