@@ -94,14 +94,30 @@ def resolve_revenue_product_for_task(task, *, branch=None) -> RevenueProduct | N
             return product
 
     description = (getattr(task, 'description', '') or '').lower()
+    keyword_product = _revenue_product_from_task_keywords(description, branch=branch)
+    if keyword_product:
+        return keyword_product
+
+    return _active_product(branch=branch, code='labor_mechanical')
+
+
+def _revenue_product_from_task_keywords(description: str, *, branch=None) -> RevenueProduct | None:
+    """Best-effort discipline match from free-text task description."""
+    description = (description or '').lower()
+    if not description:
+        return None
+
     keyword_map = (
         ('spray', 'labor_spraying'),
         ('paint', 'labor_spraying'),
         ('body', 'labor_body'),
         ('electrical', 'labor_electrical'),
-        ('ac ', 'labor_ac'),
         ('a/c', 'labor_ac'),
         ('air con', 'labor_ac'),
+        ('aircon', 'labor_ac'),
+        ('exhaust', 'service_exhaust'),
+        ('muffler', 'service_exhaust'),
+        ('upholstery', 'service_upholstery'),
         ('alignment', 'service_wheel_alignment'),
         ('diagnos', 'service_diagnosis'),
         ('assessment', 'service_vehicle_assessment'),
@@ -109,6 +125,7 @@ def resolve_revenue_product_for_task(task, *, branch=None) -> RevenueProduct | N
         ('skim', 'service_vehicle_skimming'),
         ('sublet', 'sublet_general'),
         ('sub-contract', 'sublet_general'),
+        ('subcontract', 'sublet_general'),
     )
     for keyword, code in keyword_map:
         if keyword in description:
@@ -116,7 +133,14 @@ def resolve_revenue_product_for_task(task, *, branch=None) -> RevenueProduct | N
             if product:
                 return product
 
-    return _active_product(branch=branch, code='labor_mechanical')
+    # Word-boundary style AC match ("ac gas", "ac-repair", leading "ac ")
+    tokens = description.replace('-', ' ').replace('/', ' ').split()
+    if 'ac' in tokens:
+        product = _active_product(branch=branch, code='labor_ac')
+        if product:
+            return product
+
+    return None
 
 
 def resolve_revenue_product_for_part(part, *, branch=None) -> RevenueProduct | None:

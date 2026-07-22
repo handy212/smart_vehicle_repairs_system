@@ -42,6 +42,16 @@ services:
       start_period: 180s
       retries: 5
 
+  asgi:
+    mem_limit: 384m
+    cpus: "0.50"
+    environment:
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-True}
+      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-True}
+
   celery:
     mem_limit: 1g
     cpus: "1.0"

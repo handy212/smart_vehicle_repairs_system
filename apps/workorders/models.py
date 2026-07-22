@@ -2742,29 +2742,20 @@ class WorkOrderPart(models.Model):
         if update_fields is not None:
             update_fields = set(update_fields)
 
-        # Generate Requisition Number
+        # Generate Requisition Number (no year — keeps IDs short and stable)
         if not self.requisition_number:
-            # Format: REQ-YYYY-XXXXX (e.g. REQ-2024-00001)
-            # Use timestamp to ensure uniqueness and order
-            from django.utils import timezone
-            now = timezone.now()
-            year = now.year
-            
-            # Get last requisition number for this year to increment
-            last_req = WorkOrderPart.objects.filter(
-                requisition_number__startswith=f"REQ-{year}-"
-            ).order_by('requisition_number').last()
-            
+            last_req = (
+                WorkOrderPart.objects.filter(requisition_number__startswith='REQ-')
+                .order_by('requisition_number')
+                .last()
+            )
+            new_seq = 1
             if last_req and last_req.requisition_number:
                 try:
-                    last_seq = int(last_req.requisition_number.split('-')[-1])
-                    new_seq = last_seq + 1
+                    new_seq = int(last_req.requisition_number.split('-')[-1]) + 1
                 except ValueError:
                     new_seq = 1
-            else:
-                new_seq = 1
-                
-            self.requisition_number = f"REQ-{year}-{new_seq:05d}"
+            self.requisition_number = f"REQ-{new_seq:05d}"
 
         # Normalize numeric inputs because API/form payloads often send decimals as strings.
         self.quantity = Decimal(str(self.quantity or '0'))

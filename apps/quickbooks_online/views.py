@@ -436,6 +436,15 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, View):
                 if pending_key:
                     cache.set(pending_key, pending, 30)
             payload['outbound_pending'] = pending
+
+            never_key = f'qbo:never-synced-customers:{config.pk}' if config else None
+            never_count = cache.get(never_key) if never_key else None
+            if never_count is None:
+                from apps.quickbooks_online.bulk_outbound_sync import count_never_synced
+                never_count = count_never_synced(entity_types=['customer']).get('customer', 0)
+                if never_key:
+                    cache.set(never_key, never_count, 120)
+            payload['never_synced_customers'] = never_count
         elif has_keys:
             payload['connection_issue'] = 'QuickBooks credentials are saved but the company is not connected.'
 

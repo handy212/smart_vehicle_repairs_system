@@ -190,8 +190,8 @@ class Wave4RemediationTests(TestCase):
             status='draft',
             created_by=self.user,
         )
-        year = timezone.now().year
-        self.assertTrue(vendor_credit.credit_number.startswith(f'VC-{year}-HQ-'))
+        self.assertTrue(vendor_credit.credit_number.startswith('VC-HQ-'))
+        self.assertNotIn(str(timezone.now().year), vendor_credit.credit_number)
 
     def test_fixed_asset_acquisition_posts_gl(self):
         asset = FixedAsset.objects.create(

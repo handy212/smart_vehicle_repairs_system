@@ -61,17 +61,25 @@ export function QuickBooksOnlineCard() {
     }
 
     const pendingTotal = status?.outbound_pending?.eligible_total ?? 0;
+    const neverSyncedCustomers = status?.never_synced_customers ?? 0;
     const message =
-      pendingTotal > 0
-        ? `Push ${pendingTotal} eligible record(s) to QuickBooks now?`
-        : "Push all eligible failed/pending records to QuickBooks?";
+      neverSyncedCustomers > 0
+        ? `Queue ${pendingTotal} pending/failed mapping(s) and up to ${neverSyncedCustomers.toLocaleString()} never-synced customer(s) for QuickBooks? This runs in the background and may take a while.`
+        : pendingTotal > 0
+          ? `Push ${pendingTotal} eligible record(s) to QuickBooks now?`
+          : "Push all eligible failed/pending records to QuickBooks?";
     if (!confirm(message)) {
       return;
     }
 
     setPushingPending(true);
     try {
-      const result = await quickbooksApi.syncOutboundBulk();
+      const result = await quickbooksApi.syncOutboundBulk({
+        include_failed: true,
+        include_pending: true,
+        include_never_synced: true,
+        entity_types: ["customer"],
+      });
       toast({
         title: "Push Started",
         description: result.message,
@@ -280,7 +288,11 @@ export function QuickBooksOnlineCard() {
                 disabled={pushingPending || syncing || syncDisabled}
               >
                 <Upload className={`w-3.5 h-3.5 mr-2 ${pushingPending ? "animate-pulse" : ""}`} />
-                {pushingPending ? "Queuing…" : "Push All Pending to QBO"}
+                {pushingPending
+                  ? "Queuing…"
+                  : status?.never_synced_customers
+                    ? `Push pending + ${status.never_synced_customers.toLocaleString()} customers`
+                    : "Push All Pending to QBO"}
               </Button>
               <div className="flex items-center gap-2">
                 <Button

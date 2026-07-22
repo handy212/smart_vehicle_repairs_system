@@ -582,17 +582,28 @@ class QuickBooksService:
             return None
 
         user = local_customer.user
-        full_name = f"{user.first_name} {user.last_name}".strip()
-        if local_customer.company_name:
-            display_name = f"{local_customer.company_name} ({local_customer.customer_number})"
+        from .qbo_field_limits import qbo_safe_name
+
+        first_name = qbo_safe_name(user.first_name, max_length=25)
+        last_name = qbo_safe_name(user.last_name, max_length=25)
+        company_name = qbo_safe_name(local_customer.company_name, max_length=50)
+        full_name = f"{first_name} {last_name}".strip()
+        if company_name:
+            display_name = qbo_safe_name(
+                f"{company_name} ({local_customer.customer_number})",
+                max_length=100,
+            )
         else:
-            display_name = f"{full_name} ({local_customer.customer_number})"
+            display_name = qbo_safe_name(
+                f"{full_name} ({local_customer.customer_number})",
+                max_length=100,
+            )
 
         qb_customer, _is_new, load_error = self._load_qbo_entity(
             QBCustomer,
             local_customer,
             display_name=display_name,
-            company_name=local_customer.company_name or full_name,
+            company_name=company_name or full_name,
             name=full_name,
         )
         if load_error:
@@ -601,15 +612,15 @@ class QuickBooksService:
             return None
         
         # Map fields
-        if local_customer.company_name:
-            qb_customer.CompanyName = local_customer.company_name
+        if company_name:
+            qb_customer.CompanyName = company_name
             qb_customer.DisplayName = display_name
         else:
             qb_customer.DisplayName = display_name
             
         # Parse name
-        qb_customer.GivenName = user.first_name
-        qb_customer.FamilyName = user.last_name
+        qb_customer.GivenName = first_name
+        qb_customer.FamilyName = last_name
             
         # Contact info
         if user.email:
@@ -1462,8 +1473,8 @@ class QuickBooksService:
                 }
             )
             from .attachment_sync import sync_invoice_attachment
-            if is_new_qbo:
-                sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
+            # Always ensure PDF is present (idempotent — skips if same filename already linked).
+            sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
             self._schedule_converted_estimate_close_sync(local_invoice)
             return qb_invoice
         except Exception as e:
@@ -1497,8 +1508,7 @@ class QuickBooksService:
                         }
                     )
                     from .attachment_sync import sync_invoice_attachment
-                    if is_new_qbo:
-                        sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
+                    sync_invoice_attachment(self, local_invoice, str(qb_invoice.Id))
                     self._schedule_converted_estimate_close_sync(local_invoice)
                     return qb_invoice
                 except Exception as retry_exc:
@@ -1604,8 +1614,7 @@ class QuickBooksService:
             self._save_qb(qb_estimate, client)
             self._update_qbo_mapping(local_estimate, qb_estimate)
             from .attachment_sync import sync_estimate_attachment
-            if is_new_qbo:
-                sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
+            sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
             return qb_estimate
         except Exception as exc:
             from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
@@ -1629,8 +1638,7 @@ class QuickBooksService:
                     self._save_qb(qb_estimate, client)
                     self._update_qbo_mapping(local_estimate, qb_estimate)
                     from .attachment_sync import sync_estimate_attachment
-                    if is_new_qbo:
-                        sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
+                    sync_estimate_attachment(self, local_estimate, str(qb_estimate.Id))
                     return qb_estimate
                 except Exception as retry_exc:
                     logger.error('QBO Estimate Sync retry failed: %s', retry_exc)
@@ -1738,6 +1746,8 @@ class QuickBooksService:
         try:
             self._save_qb(qb_credit_memo, client)
             self._update_qbo_mapping(local_credit_note, qb_credit_memo)
+            from .attachment_sync import sync_credit_note_attachment
+            sync_credit_note_attachment(self, local_credit_note, str(qb_credit_memo.Id))
             return qb_credit_memo
         except Exception as exc:
             from .item_sync import _is_inv_start_before_txn_error, effective_sales_txn_date
@@ -1759,6 +1769,8 @@ class QuickBooksService:
                 try:
                     self._save_qb(qb_credit_memo, client)
                     self._update_qbo_mapping(local_credit_note, qb_credit_memo)
+                    from .attachment_sync import sync_credit_note_attachment
+                    sync_credit_note_attachment(self, local_credit_note, str(qb_credit_memo.Id))
                     return qb_credit_memo
                 except Exception as retry_exc:
                     logger.error('QBO Credit Memo Sync retry failed: %s', retry_exc)
@@ -1910,20 +1922,26 @@ class QuickBooksService:
             )
             return None
             
-        display_name = f"{local_supplier.name} ({local_supplier.supplier_code})"
+        from .qbo_field_limits import qbo_safe_name
+
+        supplier_name = qbo_safe_name(local_supplier.name, max_length=50)
+        display_name = qbo_safe_name(
+            f"{supplier_name} ({local_supplier.supplier_code})",
+            max_length=100,
+        )
         qb_vendor, _is_new, load_error = self._load_qbo_entity(
             QBVendor,
             local_supplier,
             display_name=display_name,
-            company_name=local_supplier.name,
-            name=local_supplier.name,
+            company_name=supplier_name,
+            name=supplier_name,
         )
         if load_error:
             self._fail_qbo_mapping(local_supplier, load_error)
             return None
                 
         qb_vendor.DisplayName = display_name
-        qb_vendor.CompanyName = local_supplier.name
+        qb_vendor.CompanyName = supplier_name
         
         if local_supplier.email:
             qb_vendor.PrimaryEmailAddr = {"Address": local_supplier.email}

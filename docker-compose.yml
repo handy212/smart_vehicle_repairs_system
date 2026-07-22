@@ -94,6 +94,56 @@ services:
       start_period: 60s
       retries: 3
 
+  # Daphne ASGI — WebSockets (/ws/notifications/, /ws/chat/)
+  asgi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: svr_asgi
+    command:
+      - daphne
+      - -b
+      - 0.0.0.0
+      - -p
+      - "8001"
+      - --access-log
+      - "-"
+      - --proxy-headers
+      - config.asgi:application
+    environment:
+      - DJANGO_ENVIRONMENT=production
+      - DEBUG=False
+      - DJANGO_MIGRATE=0
+      - DJANGO_COLLECTSTATIC=0
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DATABASE_URL=postgresql://${DB_USER:-svr_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-svr_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-False}
+    volumes:
+      - ./media:/app/media
+      - ./logs:/app/logs
+    networks:
+      - svr_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    expose:
+      - "8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health/live/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
   # Celery Worker — default lane (short interactive jobs)
   celery:
     build:
@@ -159,7 +209,7 @@ services:
       - --loglevel=info
       - -Q
       - heavy,qbo
-      - --concurrency=1
+      - --concurrency=2
       - --max-tasks-per-child=50
       - --max-memory-per-child=350000
       - -n
@@ -272,6 +322,8 @@ services:
       - svr_network
     depends_on:
       backend:
+        condition: service_healthy
+      asgi:
         condition: service_healthy
       frontend:
         condition: service_healthy

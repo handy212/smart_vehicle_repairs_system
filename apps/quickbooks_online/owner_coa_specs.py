@@ -81,10 +81,21 @@ CONTROL_ACCOUNT_QBO_PATTERNS = {
         'exclude_substrings': [],
     },
     'sales_revenue_account': {
-        'name_substrings': ['operating service', 'sales revenue', 'service/sales revenue'],
-        'account_numbers': ['650'],
+        # Owner chart uses nested product-income parents (5300/5380), not a single "sales revenue" leaf.
+        'name_substrings': [
+            'warehouse inventory sales',
+            'materials, parts & accessories sales',
+            'operating revenue',
+            'sales revenue',
+            'operating service',
+            'service/sales revenue',
+        ],
+        'account_numbers': ['5380', '5300', '5100', '650'],
         'account_types': ['Income'],
-        'exclude_substrings': ['kumasi sales', 'takoradi sales', 'tamale sales', 'sub-contractor', 'subcontractor'],
+        'exclude_substrings': [
+            ' – ', ' - accra', ' - kumasi', ' - takoradi', ' - tamale',
+            'sub-contractor', 'subcontractor',
+        ],
     },
     'sales_discount_account': {
         'name_substrings': ['sales return', 'returns and allowances', 'sales discount'],
@@ -141,10 +152,10 @@ CONTROL_ACCOUNT_QBO_PATTERNS = {
         'exclude_substrings': ['sales', 'cost', 'cogs', 'warehouse inventory sales'],
     },
     'cost_of_goods_sold_account': {
-        'name_substrings': ['cost of goods sold', 'cost of service'],
+        'name_substrings': ['cost of goods sold', 'cost of sales', 'cost of service'],
         'account_numbers': ['700'],
         'account_types': ['Cost of Goods Sold'],
-        'exclude_substrings': ['adjustment'],
+        'exclude_substrings': ['adjustment', 'change in inventory', 'freight', 'discount'],
     },
     'cash_over_short_account': {
         'name_substrings': ['cash over', 'cash short', 'over/short'],
@@ -159,7 +170,15 @@ CONTROL_ACCOUNT_QBO_PATTERNS = {
         'exclude_substrings': ['receipt', 'imbursement'],
     },
     'default_bank_account': {
-        'name_substrings': ['operating bank', 'absa', 'ecobank', 'gcb bank', 'first national', 'stanbic'],
+        'name_substrings': [
+            'cash and cash equivalents',
+            'operating bank',
+            'absa',
+            'ecobank',
+            'gcb bank',
+            'first national',
+            'stanbic',
+        ],
         'account_numbers': ['118'],
         'account_types': ['Bank'],
         'exclude_substrings': ['lpo', 'momo', 'receipt', 'petty', 'cash receipt'],
@@ -494,9 +513,34 @@ def branch_control_account_patterns(branch, control_field):
             'exclude_substrings': [],
         }
     if control_field == 'sales_revenue_account':
+        # Owner chart leaves look like "Warehouse Inventory Sales – Accra" (en/em dash).
+        city_aliases = {
+            'bolga': 'bolgatanga',
+            'bol': 'bolgatanga',
+            'ho': 'ho',
+            'acc': 'accra',
+            'ksi': 'kumasi',
+            'tdi': 'takoradi',
+            'tml': 'tamale',
+            'tkw': 'tarkwa',
+            'tma': 'tema',
+            'kof': 'koforidua',
+            'syi': 'sunyani',
+        }
+        cities = []
+        for token in tokens:
+            cities.append(token)
+            alias = city_aliases.get(token)
+            if alias and alias not in cities:
+                cities.append(alias)
         return {
-            'name_substrings': [f'{token} sales' for token in tokens] + [f'{token} revenue' for token in tokens],
-            'account_numbers': ['698', '651', '650', '655', '658', '661'],
+            'name_substrings': (
+                [f'warehouse inventory sales – {city}' for city in cities]
+                + [f'warehouse inventory sales - {city}' for city in cities]
+                + [f'{city} sales' for city in cities]
+                + [f'{city} revenue' for city in cities]
+            ),
+            'account_numbers': ['5381', '5382', '5383', '5384', '5385', '5386', '5387', '5388', '5389', '698', '650'],
             'account_types': ['Income'],
             'exclude_substrings': ['sub-contractor', 'subcontractor', 'cost', 'cogs'],
         }

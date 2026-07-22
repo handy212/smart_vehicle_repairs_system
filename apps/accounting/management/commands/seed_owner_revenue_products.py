@@ -102,15 +102,28 @@ class Command(BaseCommand):
         roadside_types = spec.get('roadside_service_types') or []
         if len(roadside_types) == 1:
             defaults['roadside_service_type'] = roadside_types[0]
+        else:
+            # Avoid clobbering an existing dedicated roadside row with null when
+            # this product owns multiple roadside types via wire_references only.
+            pass
 
         if dry_run:
-            exists = RevenueProduct.objects.filter(code=spec['code']).exists()
+            exists = RevenueProduct.objects.filter(code=spec['code'], branch__isnull=True).exists()
             action = 'create' if not exists else 'update'
             self.stdout.write(f'  Would {action} product {spec["code"]} ({spec["name"]})')
             return RevenueProduct(code=spec['code'], **defaults), not exists
 
+        # If another company product already owns this roadside type, clear it first.
+        roadside = defaults.get('roadside_service_type')
+        if roadside:
+            RevenueProduct.objects.filter(
+                branch__isnull=True,
+                roadside_service_type=roadside,
+            ).exclude(code=spec['code']).update(roadside_service_type=None)
+
         product, created = RevenueProduct.objects.update_or_create(
             code=spec['code'],
+            branch=None,
             defaults=defaults,
         )
         return product, created

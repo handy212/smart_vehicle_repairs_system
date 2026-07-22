@@ -1,0 +1,7 @@
+{
+  "timestamp": "20260719_020001",
+  "database": "database.dump",
+  "media": "media.tar.gz",
+  "retention_days": 30,
+  "status": "completed"
+}

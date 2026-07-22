@@ -26,7 +26,8 @@ case "${ALLOWED_HOSTS:-}|${API_URL:-}|${SECRET_KEY:-}|${DB_PASSWORD:-}" in
     ;;
 esac
 
-if ! grep -q 'server_name app.safetracksystems.com' deploy/nginx/default.conf.http-npm; then
+if ! grep -q 'server_name app.aamobilitygroup.com' deploy/nginx/default.conf.http-npm || \
+   ! grep -q 'server_name api.safetracksystems.com' deploy/nginx/default.conf.http-npm; then
   echo "ERROR: production nginx hostnames are missing; refusing release." >&2
   exit 1
 fi

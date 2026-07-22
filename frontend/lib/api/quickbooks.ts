@@ -38,6 +38,8 @@ export interface QBOStatus {
   oauth_redirect_uri?: string | null;
   oauth_keys_environment?: "sandbox" | "production" | null;
   outbound_pending?: QBOOutboundPendingCounts;
+  /** Eligible customers with no QBOMapping yet (approx). */
+  never_synced_customers?: number;
   error?: string;
 }
 
@@ -64,10 +66,18 @@ export const quickbooksApi = {
   syncOutboundBulk: async (params?: {
     include_failed?: boolean;
     include_pending?: boolean;
+    include_never_synced?: boolean;
+    entity_types?: string[];
+    never_synced_limit?: number;
+    stagger_seconds?: number;
   }) => {
     const response = await apiClient.post("/quickbooks/sync-outbound/bulk/", {
       include_failed: params?.include_failed ?? true,
       include_pending: params?.include_pending ?? true,
+      include_never_synced: params?.include_never_synced ?? false,
+      entity_types: params?.entity_types,
+      never_synced_limit: params?.never_synced_limit,
+      stagger_seconds: params?.stagger_seconds ?? 0,
     });
     return response.data as {
       status: string;

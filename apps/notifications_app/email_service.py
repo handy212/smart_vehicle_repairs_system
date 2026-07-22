@@ -220,17 +220,31 @@ class DjangoEmailService(EmailService):
     ) -> bool:
         """Send email using Django's email backend"""
         try:
+            from apps.accounts.settings_utils import (
+                get_email_settings,
+                get_email_connection,
+                format_from_email,
+            )
             email_settings = get_email_settings()
-            default_from = email_settings.get('email_from_address') or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
-            from_email = from_email or default_from
-            
+            if str(email_settings.get('email_enabled', 'true')).lower() in (
+                'false', '0', 'no', 'off',
+            ):
+                logger.error("Email delivery is disabled in system settings")
+                return False
+
+            from_email = from_email or format_from_email(email_settings)
+            reply_to = (email_settings.get('email_reply_to') or '').strip()
+            connection = get_email_connection()
+
             if html_message or attachments:
                 # Use EmailMultiAlternatives for HTML and attachments
                 email = EmailMultiAlternatives(
                     subject=subject,
                     body=message,
                     from_email=from_email,
-                    to=to
+                    to=to,
+                    reply_to=[reply_to] if reply_to else None,
+                    connection=connection,
                 )
                 
                 if html_message:
@@ -252,7 +266,8 @@ class DjangoEmailService(EmailService):
                     message=message,
                     from_email=from_email,
                     recipient_list=to,
-                    fail_silently=False
+                    fail_silently=False,
+                    connection=connection,
                 )
             
             logger.info(f"Email sent successfully via Django SMTP to {to}")

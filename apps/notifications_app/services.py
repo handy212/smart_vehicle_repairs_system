@@ -127,13 +127,23 @@ class NotificationService:
                 html_body = None
             
             # Get email from address from settings, fallback to Django default
+            from apps.accounts.settings_utils import (
+                get_email_settings,
+                get_email_connection,
+                format_from_email,
+            )
             email_settings = get_email_settings()
-            from_email = email_settings.get('email_from_address') or django_settings.DEFAULT_FROM_EMAIL
-            from_name = email_settings.get('email_from_name', '')
-            if from_name:
-                # Format: "Name <email@example.com>"
-                from_email = f"{from_name} <{from_email}>"
-            
+            if str(email_settings.get('email_enabled', 'true')).lower() in (
+                'false', '0', 'no', 'off',
+            ):
+                notification.mark_as_failed('Email delivery is disabled in settings')
+                self._log_action(notification, 'failed', 'Email disabled')
+                return False
+
+            from_email = format_from_email(email_settings)
+            reply_to = (email_settings.get('email_reply_to') or '').strip()
+            connection = get_email_connection()
+
             # Use EmailMultiAlternatives if HTML content exists, otherwise use send_mail
             if html_body:
                 email = EmailMultiAlternatives(
@@ -141,6 +151,8 @@ class NotificationService:
                     body=body,
                     from_email=from_email,
                     to=[recipient_email],
+                    reply_to=[reply_to] if reply_to else None,
+                    connection=connection,
                 )
                 email.attach_alternative(html_body, "text/html")
                 email.send()
@@ -151,6 +163,7 @@ class NotificationService:
                     from_email=from_email,
                     recipient_list=[recipient_email],
                     fail_silently=False,
+                    connection=connection,
                 )
             
             notification.mark_as_sent()

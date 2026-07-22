@@ -307,8 +307,7 @@ def get_branding_settings():
 
 
 def get_email_settings():
-    """Get all email settings, prioritizing environment variables"""
-    # Keys handled by get_setting priority logic
+    """Get email settings, prioritizing Admin → Settings (database) over .env."""
     keys = [
         'email_enabled',
         'email_backend',
@@ -323,7 +322,7 @@ def get_email_settings():
         'email_reply_to',
         'email_signature',
     ]
-    
+
     defaults = {
         'email_enabled': 'false',
         'email_backend': 'django.core.mail.backends.smtp.EmailBackend',
@@ -331,17 +330,54 @@ def get_email_settings():
         'email_use_tls': 'true',
         'email_use_ssl': 'false',
     }
-    
-    settings_dict = get_settings(keys, defaults)
-    
-    # Extra layer: override from Django settings directly for core SMTP props
-    from django.conf import settings
-    settings_dict['email_host'] = getattr(settings, 'EMAIL_HOST', settings_dict['email_host'])
-    settings_dict['email_port'] = str(getattr(settings, 'EMAIL_PORT', settings_dict['email_port']))
-    settings_dict['email_username'] = getattr(settings, 'EMAIL_HOST_USER', settings_dict['email_username'])
-    settings_dict['email_password'] = getattr(settings, 'EMAIL_HOST_PASSWORD', settings_dict['email_password'])
-    
-    return settings_dict
+
+    # Same pattern as SMS: admin UI values win when set.
+    return get_settings(keys, defaults, db_first=True)
+
+
+def get_email_connection(*, fail_silently: bool = False):
+    """
+    SMTP connection built from get_email_settings() so Admin → Email works
+    even when container .env still has placeholder EMAIL_* values.
+    """
+    from django.core.mail import get_connection
+
+    email_settings = get_email_settings()
+    use_tls = str(email_settings.get('email_use_tls', 'true')).lower() in ('true', '1', 'yes', 'on')
+    use_ssl = str(email_settings.get('email_use_ssl', 'false')).lower() in ('true', '1', 'yes', 'on')
+    try:
+        port = int(email_settings.get('email_port') or 587)
+    except (TypeError, ValueError):
+        port = 587
+
+    return get_connection(
+        backend=email_settings.get('email_backend')
+        or 'django.core.mail.backends.smtp.EmailBackend',
+        host=email_settings.get('email_host') or '',
+        port=port,
+        username=email_settings.get('email_username') or '',
+        password=email_settings.get('email_password') or '',
+        use_tls=use_tls,
+        use_ssl=use_ssl,
+        fail_silently=fail_silently,
+    )
+
+
+def format_from_email(email_settings=None) -> str:
+    """Build From header: Name <address> when a display name is configured."""
+    email_settings = email_settings or get_email_settings()
+    from django.conf import settings as django_settings
+
+    address = (
+        email_settings.get('email_from_address')
+        or getattr(django_settings, 'DEFAULT_FROM_EMAIL', '')
+        or email_settings.get('email_username')
+        or 'noreply@example.com'
+    )
+    name = (email_settings.get('email_from_name') or '').strip()
+    if name:
+        return f'{name} <{address}>'
+    return address
 
 
 def get_sms_settings():

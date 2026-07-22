@@ -314,7 +314,41 @@ export default function IntegrationsPage() {
             </Card>
           ) : null}
 
-          {activeCategory === "accounting" ? <QboIntegrationsSection /> : null}
+          {activeCategory === "accounting" ? (
+            <>
+              <Card className="border-border/80 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Intuit API credentials</CardTitle>
+                  <CardDescription>
+                    Paste Client ID and Secret from the Intuit Developer Portal (Keys tab). Use
+                    Production keys when sandbox mode is off. Save here before connecting.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isLoading && !settings.length ? (
+                    <p className="text-sm text-muted-foreground">Loading credentials…</p>
+                  ) : (
+                    renderFields([
+                      "quickbooks_client_id",
+                      "quickbooks_client_secret",
+                      "quickbooks_sandbox_enabled",
+                      "quickbooks_webhook_token",
+                    ]) || (
+                      <p className="text-sm text-muted-foreground">
+                        QuickBooks credential settings are missing. Contact support if this persists.
+                      </p>
+                    )
+                  )}
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    After saving a rotated Client Secret, open the <strong>Connection</strong> tab and
+                    click <strong>Connect QuickBooks</strong>. Register the redirect URI shown there in
+                    Intuit under the same key environment (Production vs Sandbox).
+                  </p>
+                </CardContent>
+              </Card>
+              <QboIntegrationsSection />
+            </>
+          ) : null}
 
           {activeCategory !== "accounting" &&
             products.map((product) => {

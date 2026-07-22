@@ -84,10 +84,23 @@ export const INTEGRATION_PRODUCTS: IntegrationProduct[] = [
     name: "QuickBooks Online",
     summary: "Sync invoices, payments, bills, and the chart of accounts.",
     icon: Calculator,
-    requiredCredentialKeys: [],
-    fieldGroups: [],
+    requiredCredentialKeys: ["quickbooks_client_id", "quickbooks_client_secret"],
+    fieldGroups: [
+      {
+        id: "credentials",
+        title: "Intuit API credentials",
+        description:
+          "Paste Client ID and Secret from the Intuit Developer Portal (Keys tab). Use Production keys when sandbox mode is off.",
+        keys: [
+          "quickbooks_client_id",
+          "quickbooks_client_secret",
+          "quickbooks_sandbox_enabled",
+          "quickbooks_webhook_token",
+        ],
+      },
+    ],
     custom: "quickbooks",
-    docsHint: "Connect your Intuit company, then map accounts and run sync.",
+    docsHint: "Save credentials, register the redirect URI in Intuit, then Connect on the Connection tab.",
   },
   {
     id: "sms",

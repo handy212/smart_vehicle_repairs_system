@@ -461,7 +461,7 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
 
 
 class QBOBulkOutboundSyncView(QBOConnectedMixin, APIView):
-    """Queue outbound sync for all eligible failed/pending QBOMapping rows."""
+    """Queue outbound sync for failed/pending mappings and optionally never-synced records."""
 
     permission_classes = [
         IsAuthenticated,
@@ -475,15 +475,44 @@ class QBOBulkOutboundSyncView(QBOConnectedMixin, APIView):
 
         include_failed = bool(request.data.get('include_failed', True))
         include_pending = bool(request.data.get('include_pending', True))
-        if not include_failed and not include_pending:
+        include_never_synced = bool(request.data.get('include_never_synced', False))
+        entity_types = request.data.get('entity_types')
+        if isinstance(entity_types, str):
+            entity_types = [entity_types]
+        if entity_types is not None and not isinstance(entity_types, list):
             return Response(
-                {'detail': 'At least one of include_failed or include_pending must be true.'},
+                {'detail': 'entity_types must be a list of entity type strings.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        never_synced_limit = request.data.get('never_synced_limit')
+        if never_synced_limit is not None:
+            try:
+                never_synced_limit = int(never_synced_limit)
+            except (TypeError, ValueError):
+                return Response(
+                    {'detail': 'never_synced_limit must be an integer.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not include_failed and not include_pending and not include_never_synced:
+            return Response(
+                {
+                    'detail': (
+                        'At least one of include_failed, include_pending, '
+                        'or include_never_synced must be true.'
+                    ),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         queued, skipped = sync_all_pending_outbound(
             include_failed=include_failed,
             include_pending=include_pending,
+            include_never_synced=include_never_synced,
+            entity_types=entity_types,
+            never_synced_limit=never_synced_limit,
+            stagger_seconds=float(request.data.get('stagger_seconds', 0.5) or 0.5),
         )
         counts = count_pending_outbound_syncs()
         return Response({
@@ -492,7 +521,7 @@ class QBOBulkOutboundSyncView(QBOConnectedMixin, APIView):
             'skipped_ineligible': len(skipped),
             'message': (
                 f'Queued {queued} outbound sync(s). '
-                f'{len(skipped)} mapping(s) skipped because the local record is not eligible.'
+                f'{len(skipped)} record(s) skipped because they are not eligible.'
             ),
             'counts': counts,
         })

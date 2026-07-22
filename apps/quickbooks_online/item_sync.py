@@ -15,9 +15,11 @@ logger = logging.getLogger(__name__)
 try:
     from quickbooks.objects.item import Item as QBItem
     from quickbooks.objects.base import Ref
+    from quickbooks.objects.account import Account as QBAccount
 except ModuleNotFoundError:
     QBItem = None
     Ref = None
+    QBAccount = None
 
 
 def _sdk_message():
@@ -99,13 +101,62 @@ def _income_from_revenue_product_template(local_part, mapping_service, client):
         return None
 
 
+def _normalize_acct_num(value: str | None) -> str:
+    return ''.join(ch for ch in (value or '') if ch.isalnum()).lower()
+
+
+def _income_from_owner_account_code(local_part, client):
+    """Resolve QBO income account from the part's revenue_product.owner_account_code."""
+    if local_part is None or client is None or QBAccount is None:
+        return None
+
+    revenue_product = getattr(local_part, 'revenue_product', None)
+    if revenue_product is None and getattr(local_part, 'revenue_product_id', None):
+        try:
+            from apps.accounting.models import RevenueProduct
+            revenue_product = RevenueProduct.objects.filter(pk=local_part.revenue_product_id).first()
+        except Exception:
+            revenue_product = None
+
+    code = _normalize_acct_num(getattr(revenue_product, 'owner_account_code', None) if revenue_product else None)
+    if not code:
+        return None
+
+    try:
+        accounts = QBAccount.query(
+            "SELECT * FROM Account WHERE AccountType IN ('Income', 'Other Income') MAXRESULTS 1000",
+            qb=client,
+        )
+    except Exception:
+        return None
+
+    for account in accounts or []:
+        acct_num = _normalize_acct_num(getattr(account, 'AcctNum', None))
+        if acct_num and acct_num == code:
+            return str(account.Id)
+        # Some exports prefix numbers (e.g. "o\\t5300"); also match by exact name label.
+        label = (getattr(revenue_product, 'owner_account_label', None) or getattr(revenue_product, 'name', '') or '').strip().lower()
+        name = (getattr(account, 'Name', '') or '').strip().lower()
+        if label and name == label:
+            return str(account.Id)
+    return None
+
+
 def _resolve_item_account_ids(mapping_service, local_part, client=None):
     income_id = None
     expense_id = None
     asset_id = None
 
+    # Prefer explicit owner chart code on the linked revenue product (category / branch leaf).
+    if client is not None:
+        income_id = _income_from_owner_account_code(local_part, client)
+
     if mapping_service:
-        income_id = mapping_service.resolve_control_account_qbo_id('sales_revenue_account')
+        if not income_id:
+            branch = getattr(getattr(local_part, 'revenue_product', None), 'branch', None)
+            income_id = mapping_service.resolve_control_account_qbo_id(
+                'sales_revenue_account', branch=branch,
+            )
         if local_part.item_type == 'inventory':
             expense_id = mapping_service.resolve_control_account_qbo_id('cost_of_goods_sold_account')
             asset_id = mapping_service.resolve_control_account_qbo_id('inventory_asset_account')

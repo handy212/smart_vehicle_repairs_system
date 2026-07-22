@@ -24,6 +24,7 @@ OUTBOUND_SYNC_PRIORITY = {
     'estimate': 40,
     'invoice': 50,
     'purchase_order': 50,
+    'inventory_adjustment': 55,
     'vendor_bill': 60,
     'vendor_expense': 65,
     'vendor_credit': 65,
@@ -132,15 +133,130 @@ def count_pending_outbound_syncs() -> dict[str, int]:
     }
 
 
-def queue_outbound_sync_candidates(candidates) -> int:
+def collect_never_synced_candidates(
+    *,
+    entity_types: Iterable[str] | None = None,
+    limit: int | None = None,
+):
+    """
+    Eligible local records that have no QBOMapping row yet.
+
+    These never appear in Push Pending (that only retries existing mappings).
+    """
+    types = list(entity_types) if entity_types else ['customer']
+    candidates = []
+    skipped = []
+
+    for entity_type in types:
+        cfg = OUTBOUND_SYNC_ENTITIES.get(entity_type)
+        if not cfg:
+            continue
+        model = apps.get_model(cfg['app_label'], cfg['model_name'])
+        ct = ContentType.objects.get_for_model(model)
+        mapped_ids = QBOMapping.objects.filter(content_type=ct).values_list(
+            'object_id', flat=True,
+        )
+        queryset = model.objects.exclude(pk__in=mapped_ids).order_by('pk')
+        remaining = None if limit is None else max(limit - len(candidates), 0)
+        if remaining is not None:
+            if remaining <= 0:
+                break
+            queryset = queryset[:remaining]
+
+        for instance in queryset.iterator(chunk_size=500):
+            eligible, reason = outbound_eligibility_reason(entity_type, instance)
+            if eligible:
+                candidates.append((entity_type, instance.id, cfg))
+                if limit is not None and len(candidates) >= limit:
+                    break
+            else:
+                skipped.append({
+                    'entity_type': entity_type,
+                    'object_id': instance.id,
+                    'reason': reason,
+                })
+        if limit is not None and len(candidates) >= limit:
+            break
+
+    return _sort_candidates_by_dependency(candidates), skipped
+
+
+def count_never_synced(*, entity_types: Iterable[str] | None = None) -> dict[str, int]:
+    """Approximate eligible never-synced counts by entity (skips full eligibility scan)."""
+    types = list(entity_types) if entity_types else list(OUTBOUND_SYNC_ENTITIES.keys())
+    counts: dict[str, int] = {}
+    for entity_type in types:
+        cfg = OUTBOUND_SYNC_ENTITIES.get(entity_type)
+        if not cfg:
+            continue
+        model = apps.get_model(cfg['app_label'], cfg['model_name'])
+        ct = ContentType.objects.get_for_model(model)
+        mapped_ids = QBOMapping.objects.filter(content_type=ct).values_list(
+            'object_id', flat=True,
+        )
+        qs = model.objects.exclude(pk__in=mapped_ids)
+        # Fast path for customers: customer_number required
+        if entity_type == 'customer':
+            qs = qs.exclude(customer_number__isnull=True).exclude(customer_number='')
+        counts[entity_type] = qs.count()
+    return counts
+
+
+def queue_outbound_sync_candidates(candidates, *, stagger_seconds: float = 0) -> int:
     """Queue Celery (or inline) sync for each candidate. Returns count queued."""
     from . import tasks as qbo_tasks
-    from .task_dispatch import schedule_entity_sync
+    from .celery_queue import QBO_OUTBOUND_QUEUE
+    from .sync_guard import mark_mapping_pending_for_entity
+    from .task_dispatch import _auto_sync_enabled, _sync_inline, schedule_entity_sync
+
+    if not candidates:
+        return 0
+
+    # Small batches / interactive paths keep the normal on_commit helper.
+    if stagger_seconds <= 0 and len(candidates) <= 50:
+        queued = 0
+        for entity_type, object_id, cfg in candidates:
+            task = getattr(qbo_tasks, cfg['task_name'])
+            schedule_entity_sync(entity_type, object_id, task=task)
+            queued += 1
+        return queued
+
+    if not _auto_sync_enabled():
+        return 0
 
     queued = 0
-    for entity_type, object_id, cfg in candidates:
+    for index, (entity_type, object_id, cfg) in enumerate(candidates):
         task = getattr(qbo_tasks, cfg['task_name'])
-        schedule_entity_sync(entity_type, object_id, task=task)
+        mark_mapping_pending_for_entity(entity_type, object_id)
+        countdown = int(index * stagger_seconds) if stagger_seconds > 0 else 0
+        if _sync_inline():
+            try:
+                task(object_id)
+            except Exception as exc:
+                logger.error(
+                    'Inline QBO sync failed for %s %s: %s',
+                    entity_type,
+                    object_id,
+                    exc,
+                )
+        else:
+            try:
+                task.apply_async(
+                    args=[object_id],
+                    queue=QBO_OUTBOUND_QUEUE,
+                    countdown=countdown,
+                )
+            except Exception as exc:
+                logger.warning(
+                    'Celery unavailable for QBO %s %s; running inline: %s',
+                    entity_type,
+                    object_id,
+                    exc,
+                )
+                try:
+                    task(object_id)
+                except Exception as inline_exc:
+                    logger.error('Fallback inline QBO sync failed: %s', inline_exc)
         queued += 1
     return queued
 
@@ -161,13 +277,53 @@ def retry_failed_outbound_syncs():
     return queued, skipped
 
 
-def sync_all_pending_outbound(*, include_failed: bool = True, include_pending: bool = True):
-    """Queue all eligible failed/pending mappings for outbound sync."""
+def sync_all_pending_outbound(
+    *,
+    include_failed: bool = True,
+    include_pending: bool = True,
+    include_never_synced: bool = False,
+    entity_types: Iterable[str] | None = None,
+    never_synced_limit: int | None = None,
+    stagger_seconds: float = 0.5,
+):
+    """
+    Queue outbound syncs.
+
+    - failed/pending: existing QBOMapping rows
+    - never_synced: local records with no mapping yet (e.g. imported customers)
+    """
     statuses = []
     if include_failed:
         statuses.append('failed')
     if include_pending:
         statuses.append('pending')
-    candidates, skipped = collect_outbound_sync_candidates(statuses=statuses)
-    queued = queue_outbound_sync_candidates(candidates)
-    return queued, skipped
+
+    candidates = []
+    skipped = []
+    if statuses:
+        mapped_candidates, mapped_skipped = collect_outbound_sync_candidates(
+            statuses=statuses,
+            entity_types=entity_types,
+        )
+        candidates.extend(mapped_candidates)
+        skipped.extend(mapped_skipped)
+
+    never_queued = 0
+    if include_never_synced:
+        never_candidates, never_skipped = collect_never_synced_candidates(
+            entity_types=entity_types or ['customer'],
+            limit=never_synced_limit,
+        )
+        skipped.extend(never_skipped)
+        never_queued = queue_outbound_sync_candidates(
+            never_candidates,
+            stagger_seconds=stagger_seconds,
+        )
+        # Avoid double-queueing the same ids if somehow also pending
+        never_ids = {(et, oid) for et, oid, _ in never_candidates}
+        candidates = [
+            c for c in candidates if (c[0], c[1]) not in never_ids
+        ]
+
+    mapped_queued = queue_outbound_sync_candidates(candidates)
+    return mapped_queued + never_queued, skipped

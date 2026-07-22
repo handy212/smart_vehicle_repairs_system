@@ -32,8 +32,14 @@ if DOCKER="$(resolve_docker)"; then
   for v in $("$DOCKER" volume ls -qf dangling=true 2>/dev/null || true); do
     [ -n "${v:-}" ] && "$DOCKER" volume rm "$v" >/dev/null 2>&1 || true
   done
-  # Ensure app infra is still up
-  bash "$PROJECT_DIR/scripts/start-docker-dev.sh" >/dev/null
+  # Restore local development infrastructure only when production is not
+  # already using the same host ports (5433 for Postgres, 6379 for Redis).
+  if [ "$("$DOCKER" inspect -f '{{.State.Running}}' svr_db 2>/dev/null || true)" = "true" ] || \
+     [ "$("$DOCKER" inspect -f '{{.State.Running}}' svr_redis 2>/dev/null || true)" = "true" ]; then
+    echo -e "${YELLOW}Production infrastructure is running; skipped local dev startup.${NC}"
+  else
+    bash "$PROJECT_DIR/scripts/start-docker-dev.sh" >/dev/null
+  fi
   "$DOCKER" system df
 else
   echo -e "${YELLOW}Docker not available — skipped Docker prune${NC}"

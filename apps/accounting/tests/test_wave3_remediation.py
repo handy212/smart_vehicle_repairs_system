@@ -143,14 +143,13 @@ class Wave3RemediationTests(TestCase):
     def test_document_number_service_allocates_sequential_numbers(self):
         first = DocumentNumberService.allocate('invoice', self.branch)
         second = DocumentNumberService.allocate('invoice', self.branch)
-        year = timezone.now().year
-        self.assertEqual(first, f'INV-{year}-HQ-000001')
-        self.assertEqual(second, f'INV-{year}-HQ-000002')
+        self.assertEqual(first, 'INV-HQ-000001')
+        self.assertEqual(second, 'INV-HQ-000002')
         self.assertEqual(
             DocumentNumberSequence.objects.filter(
                 document_type='invoice',
                 branch=self.branch,
-                fiscal_year=year,
+                fiscal_year=0,
             ).get().last_sequence,
             2,
         )
@@ -166,8 +165,8 @@ class Wave3RemediationTests(TestCase):
             invoice_date=timezone.now().date(),
             created_by=self.user,
         )
-        year = timezone.now().year
-        self.assertTrue(invoice.invoice_number.startswith(f'INV-{year}-HQ-'))
+        self.assertTrue(invoice.invoice_number.startswith('INV-HQ-'))
+        self.assertNotIn(str(timezone.now().year), invoice.invoice_number)
 
     def test_invoice_number_fits_long_branch_code(self):
         long_branch = Branch.objects.create(
@@ -190,8 +189,7 @@ class Wave3RemediationTests(TestCase):
             invoice_date=timezone.now().date(),
             created_by=self.user,
         )
-        year = timezone.now().year
-        self.assertEqual(invoice.invoice_number, f'INV-{year}-MAINBRANCH-000001')
+        self.assertEqual(invoice.invoice_number, 'INV-MAINBRANCH-000001')
         self.assertLessEqual(len(invoice.invoice_number), 32)
 
     def test_payment_and_bill_use_document_number_service(self):
@@ -218,7 +216,8 @@ class Wave3RemediationTests(TestCase):
             bank_account=self.bank_from,
         )
         year = timezone.now().year
-        self.assertTrue(payment.payment_number.startswith(f'PAY-{year}-HQ-'))
+        self.assertTrue(payment.payment_number.startswith('PAY-HQ-'))
+        self.assertNotIn(str(year), payment.payment_number)
 
         bill = Bill.objects.create(
             vendor=self.vendor,
@@ -226,7 +225,8 @@ class Wave3RemediationTests(TestCase):
             due_date=timezone.now().date(),
             created_by=self.user,
         )
-        self.assertTrue(bill.bill_number.startswith(f'BILL-{year}-HQ-'))
+        self.assertTrue(bill.bill_number.startswith('BILL-HQ-'))
+        self.assertNotIn(str(year), bill.bill_number)
 
         credit_note = CreditNote.objects.create(
             customer=self.customer,
@@ -236,7 +236,8 @@ class Wave3RemediationTests(TestCase):
         )
         credit_note.status = 'issued'
         credit_note.save()
-        self.assertTrue(credit_note.credit_note_number.startswith(f'CN-{year}-HQ-'))
+        self.assertTrue(credit_note.credit_note_number.startswith('CN-HQ-'))
+        self.assertNotIn(str(year), credit_note.credit_note_number)
 
     def test_transaction_blocks_inactive_account(self):
         expense = AccountingService.get_or_create_account('5001', 'Wave Expense', 'expense', 'debit')
