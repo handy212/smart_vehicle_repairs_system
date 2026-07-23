@@ -1,6 +1,0 @@
-timestamp=20260720_020001
-django_environment=production
-allowed_hosts=app.safetracksystems.com,api.safetracksystems.com,localhost,127.0.0.1
-api_url=https://api.safetracksystems.com/api
-db_name=svr_db
-db_user=svr_user
