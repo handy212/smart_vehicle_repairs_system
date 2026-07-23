@@ -103,6 +103,7 @@ frontend/playwright-report/
 # Project specific
 Attached_image.png
 .cursor/
+backups/
 
 # Firebase credentials (sensitive)
 firebase/*.json

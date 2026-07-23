@@ -33,6 +33,7 @@ if ! grep -q 'server_name app.aamobilitygroup.com' deploy/nginx/default.conf.htt
 fi
 
 echo "==> Building and starting updated services"
+docker network inspect proxy >/dev/null 2>&1 || docker network create proxy >/dev/null
 "${COMPOSE[@]}" up -d --build
 
 echo "==> Applying database migrations"

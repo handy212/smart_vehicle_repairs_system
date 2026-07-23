@@ -323,8 +323,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      asgi:
-        condition: service_healthy
       frontend:
         condition: service_healthy
     restart: unless-stopped

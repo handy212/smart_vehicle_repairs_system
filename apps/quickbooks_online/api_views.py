@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
+from apps.branches.utils import get_user_accessible_branches, filter_queryset_for_user_branches
 from apps.quickbooks_online.mapping_services import get_account_mapping_service
 from apps.quickbooks_online.models import QBOMapping, QBOSyncLog
 from apps.quickbooks_online.serializers import QBOMappingListSerializer, QBOSyncLogSerializer
@@ -21,6 +22,44 @@ from apps.quickbooks_online.bulk_outbound_sync import (
 )
 from apps.quickbooks_online.outbound_entities import OUTBOUND_SYNC_ENTITIES
 from apps.quickbooks_online.sync_policy import outbound_eligibility_reason
+
+
+BRANCH_SCOPED_ENTITY_LOOKUPS = {
+    'invoice': 'branch',
+    'payment': 'invoice__branch',
+    'purchase_order': 'branch',
+    'estimate': 'branch',
+    'credit_note': 'branch',
+    'vendor_bill': 'branch',
+    'vendor_credit': 'branch',
+    'bill_payment': 'bill__branch',
+    'vendor_expense': 'branch',
+    'part': 'branch',
+    'inventory_adjustment': 'branch',
+}
+
+
+def get_branch_scoped_qbo_entity(entity_type, entity_config, object_id, request):
+    """Load a sync target without letting branch-scoped users cross branch boundaries."""
+    model = apps.get_model(entity_config['app_label'], entity_config['model_name'])
+    base_queryset = model.objects.filter(id=object_id)
+
+    if entity_type == 'branch':
+        queryset = get_user_accessible_branches(request.user).filter(id=object_id)
+    else:
+        branch_lookup = BRANCH_SCOPED_ENTITY_LOOKUPS.get(entity_type)
+        if branch_lookup:
+            queryset = filter_queryset_for_user_branches(
+                base_queryset,
+                request.user,
+                request=request,
+                use_active_branch=False,
+                branch_lookup=branch_lookup,
+            )
+        else:
+            queryset = base_queryset
+
+    return queryset.first()
 
 
 class QBOConnectedMixin:
@@ -402,10 +441,13 @@ class QBOOutboundSyncView(QBOConnectedMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        model = apps.get_model(entity_config['app_label'], entity_config['model_name'])
-        try:
-            instance = model.objects.get(id=object_id)
-        except model.DoesNotExist:
+        instance = get_branch_scoped_qbo_entity(
+            entity_type,
+            entity_config,
+            object_id,
+            request,
+        )
+        if instance is None:
             return Response(
                 {'detail': f'{entity_config["model_name"]} {object_id} was not found.'},
                 status=status.HTTP_404_NOT_FOUND,
@@ -627,10 +669,13 @@ class QBOMappingClearView(QBOConnectedMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        model = apps.get_model(entity_config['app_label'], entity_config['model_name'])
-        try:
-            instance = model.objects.get(id=object_id)
-        except model.DoesNotExist:
+        instance = get_branch_scoped_qbo_entity(
+            entity_type,
+            entity_config,
+            object_id,
+            request,
+        )
+        if instance is None:
             return Response(
                 {'detail': f'{entity_config["model_name"]} {object_id} was not found.'},
                 status=status.HTTP_404_NOT_FOUND,
