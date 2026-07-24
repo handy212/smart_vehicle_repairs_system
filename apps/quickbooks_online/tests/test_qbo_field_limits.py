@@ -5,11 +5,25 @@ from apps.quickbooks_online.qbo_field_limits import QBO_DOC_NUMBER_MAX_LENGTH, q
 
 
 class QboDocNumberTests(SimpleTestCase):
-    def test_truncates_to_21_characters(self):
+    def test_structured_numbers_preserve_sequence_when_compacted(self):
+        first = 'BILL-MAINBRANCH-000001'
+        second = 'BILL-MAINBRANCH-000002'
+        self.assertEqual(len(first), 22)
+
+        first_result = qbo_doc_number(first)
+        second_result = qbo_doc_number(second)
+
+        self.assertEqual(len(first_result), QBO_DOC_NUMBER_MAX_LENGTH)
+        self.assertEqual(len(second_result), QBO_DOC_NUMBER_MAX_LENGTH)
+        self.assertTrue(first_result.endswith('-000001'))
+        self.assertTrue(second_result.endswith('-000002'))
+        self.assertNotEqual(first_result, second_result)
+
+    def test_legacy_structured_numbers_preserve_sequence_when_compacted(self):
         value = 'BILL-2026-ACCRA-000001'
         self.assertEqual(len(value), 22)
         result = qbo_doc_number(value)
-        self.assertEqual(result, value[:QBO_DOC_NUMBER_MAX_LENGTH])
+        self.assertTrue(result.endswith('-000001'))
         self.assertEqual(len(result), 21)
 
     def test_short_values_unchanged(self):

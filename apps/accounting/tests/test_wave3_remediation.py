@@ -154,6 +154,28 @@ class Wave3RemediationTests(TestCase):
             2,
         )
 
+    def test_document_number_service_advances_stale_sequence_floor(self):
+        Bill.objects.create(
+            vendor=self.vendor,
+            branch=self.branch,
+            bill_number='BILL-HQ-000006',
+            due_date=timezone.now().date(),
+            status='open',
+            subtotal=Decimal('10.00'),
+            tax_amount=Decimal('0.00'),
+            total=Decimal('10.00'),
+            amount_due=Decimal('10.00'),
+            created_by=self.user,
+        )
+        DocumentNumberSequence.objects.create(
+            document_type='bill',
+            branch=self.branch,
+            fiscal_year=0,
+            last_sequence=5,
+        )
+
+        self.assertEqual(DocumentNumberService.allocate('bill', self.branch), 'BILL-HQ-000007')
+
     def test_invoice_uses_document_number_service(self):
         invoice = Invoice.objects.create(
             customer=self.customer,

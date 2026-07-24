@@ -188,10 +188,9 @@ class DocumentNumberService:
                 fiscal_year=_PERPETUAL_YEAR,
                 defaults={'last_sequence': 0},
             )
-            if created or sequence.last_sequence == 0:
-                floor = cls._seed_floor_for_branch_sequence(document_type, branch)
-                if sequence.last_sequence < floor:
-                    sequence.last_sequence = floor
+            floor = cls._seed_floor_for_branch_sequence(document_type, branch)
+            if sequence.last_sequence < floor:
+                sequence.last_sequence = floor
             sequence.last_sequence += 1
             sequence.save(update_fields=['last_sequence', 'updated_at'])
             return f"{prefix}-{branch_code}-{sequence.last_sequence:06d}"
